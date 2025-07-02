@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+  <fullName>StatusPk__c</fullName>
+  <label>Status</label>
+  <description>Current status of the development ticket.</description>
+  <valueSet>
+    <valueSetDefinition>
+      <value>
+        <fullName>New</fullName>
+        <default>false</default>
+        <label>New</label>
+      </value>
+      <value>
+        <fullName>Grooming</fullName>
+        <default>false</default>
+        <label>Grooming</label>
+      </value>
+      <value>
+        <fullName>In Dev</fullName>
+        <default>false</default>
+        <label>In Dev</label>
+      </value>
+      <value>
+        <fullName>UAT</fullName>
+        <default>false</default>
+        <label>UAT</label>
+      </value>
+      <value>
+        <fullName>Ready to Deploy</fullName>
+        <default>false</default>
+        <label>Ready to Deploy</label>
+      </value>
+      <value>
+        <fullName>Deployed</fullName>
+        <default>false</default>
+        <label>Deployed</label>
+      </value>
+      <sorted>false</sorted>
+    </valueSetDefinition>
+  </valueSet>
+  <type>Picklist</type>
+</CustomField>

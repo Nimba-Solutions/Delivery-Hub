@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+  <fullName>EstimatedHoursNumber__c</fullName>
+  <label>Estimated Hours</label>
+  <description>Estimated number of hours for the task.</description>
+  <precision>6</precision>
+  <scale>2</scale>
+  <type>Number</type>
+</CustomField>

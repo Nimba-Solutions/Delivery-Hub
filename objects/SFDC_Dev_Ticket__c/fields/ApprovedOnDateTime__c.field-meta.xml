@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+  <fullName>ApprovedOnDateTime__c</fullName>
+  <label>Approved On</label>
+  <description>Date and time the ticket was approved.</description>
+  <type>DateTime</type>
+</CustomField>

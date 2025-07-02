@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+  <fullName>TypePk__c</fullName>
+  <label>Type</label>
+  <description>The category of development work.</description>
+  <valueSet>
+    <valueSetDefinition>
+      <value>
+        <fullName>Feature</fullName>
+        <default>false</default>
+        <label>Feature</label>
+      </value>
+      <value>
+        <fullName>Bug</fullName>
+        <default>false</default>
+        <label>Bug</label>
+      </value>
+      <value>
+        <fullName>Question</fullName>
+        <default>false</default>
+        <label>Question</label>
+      </value>
+      <sorted>false</sorted>
+    </valueSetDefinition>
+  </valueSet>
+  <type>Picklist</type>
+</CustomField>
