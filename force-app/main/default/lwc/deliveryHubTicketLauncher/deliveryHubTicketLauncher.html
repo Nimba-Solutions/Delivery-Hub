@@ -1,0 +1,33 @@
+<template>
+  <lightning-card title="Submit Development Ticket" icon-name="custom:custom63">
+    <div class="slds-p-around_medium">
+      <lightning-combobox
+        name="type"
+        label="Type"
+        value={type}
+        options={typeOptions}
+        onchange={handleChange}>
+      </lightning-combobox>
+
+      <lightning-textarea
+        name="notes"
+        label="Client Notes"
+        value={notes}
+        onchange={handleChange}>
+      </lightning-textarea>
+
+      <lightning-file-upload
+        label="Upload Screenshots"
+        name="fileUploader"
+        record-id="001000000000001AAA"
+        onuploadfinished={handleUploadFinished}>
+      </lightning-file-upload>
+
+      <lightning-button
+        class="slds-m-top_medium"
+        label="Submit Ticket"
+        onclick={handleSubmit}>
+      </lightning-button>
+    </div>
+  </lightning-card>
+</template>
