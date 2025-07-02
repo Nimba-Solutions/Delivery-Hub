@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+  <fullName>AcceptanceCriteriaTxt__c</fullName>
+  <label>Acceptance Criteria</label>
+  <description>Conditions that define when the task is complete.</description>
+  <visibleLines>3</visibleLines>
+  <length>32768</length>
+  <type>LongTextArea</type>
+</CustomField>
