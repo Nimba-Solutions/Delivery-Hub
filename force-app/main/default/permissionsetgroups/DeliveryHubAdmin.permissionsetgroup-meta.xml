@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSetGroup xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>This permission set grants full administrative access to all configuration and management capabilities within the Delivery Hub package.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Delivery Hub Admin</label>
+    <permissionSets>DeliveryHubAdmin_App</permissionSets>
+    <permissionSets>DeliveryHubApp</permissionSets>
+    <status>Updated</status>
+</PermissionSetGroup>

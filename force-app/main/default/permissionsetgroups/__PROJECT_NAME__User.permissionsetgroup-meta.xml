@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<PermissionSetGroup xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>This permission set provides standard user-level access to all basic functionality within the __PROJECT_LABEL__ package.</description>
-    <hasActivationRequired>false</hasActivationRequired>
-    <label>__PROJECT_LABEL__ User</label>
-    <permissionSets>__PROJECT_NAME__App</permissionSets>
-    <status>Updated</status>
-</PermissionSetGroup>
