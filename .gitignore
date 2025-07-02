@@ -8,7 +8,7 @@
 __pycache__
 
 # Robot Framework results
-robot/Delivery-Hub/results/
+robot/Standard-Unlocked/results/
 
 # Salesforce cache
 .sf/
