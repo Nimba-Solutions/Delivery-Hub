@@ -4,8 +4,6 @@ import { createRecord } from 'lightning/uiRecordApi';
 import SFDC_DEV_TICKET_OBJECT from '@salesforce/schema/SFDC_Dev_Ticket__c';
 import TYPE_FIELD from '@salesforce/schema/SFDC_Dev_Ticket__c.TypePk__c';
 import CLIENT_NOTES_FIELD from '@salesforce/schema/SFDC_Dev_Ticket__c.ClientNotesTxt__c';
-import STEPS_FIELD from '@salesforce/schema/SFDC_Dev_Ticket__c.StepsTxt__c';
-import ACCEPTANCE_CRITERIA_FIELD from '@salesforce/schema/SFDC_Dev_Ticket__c.AcceptanceCriteriaTxt__c';
 
 export default class DeliveryHubTicketLauncher extends LightningElement {
   @track type = '';
