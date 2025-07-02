@@ -1,8 +1,1 @@
-<?xml version="1.0" ?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-  <fullName>JiraIdTxt__c</fullName>
-  <label>Jira ID</label>
-  <description>External Jira ID for integration reference.</description>
-  <length>255</length>
-  <type>Text</type>
-</CustomField>
+<?xml version="1.0" encoding="UTF-8"?><CustomField xmlns="http://soap.sforce.com/2006/04/metadata"><fullName>JiraIdTxt__c</fullName><label>Jira ID</label><description>External Jira ID for integration reference.</description><length>255</length><type>Text</type></CustomField>
