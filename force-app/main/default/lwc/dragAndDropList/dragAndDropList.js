@@ -2,7 +2,6 @@ import { LightningElement, api } from 'lwc';
 
 export default class DragAndDropList extends LightningElement {
     @api records
-    @api sizeMode
     @api stage
 
     handleItemDrag(evt){
@@ -16,7 +15,7 @@ export default class DragAndDropList extends LightningElement {
         evt.preventDefault()
     }
 
-    handleDrop(evt){
+    handleDrop(){
         const event = new CustomEvent('itemdrop', {
             detail: this.stage
         })

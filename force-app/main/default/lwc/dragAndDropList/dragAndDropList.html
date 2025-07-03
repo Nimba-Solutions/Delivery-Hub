@@ -4,7 +4,7 @@
     ondragover={handleDragOver}
     style="height:70vh; overflow-y:auto;">
         <template for:each={records} for:item="recordItem">
-            <c-drag-and-drop-card size-mode={sizeMode} stage={stage} record={recordItem} key={recordItem.Id} onitemdrag={handleItemDrag}></c-drag-and-drop-card>
+            <c-drag-and-drop-card stage={stage} record={recordItem} key={recordItem.Id} onitemdrag={handleItemDrag}></c-drag-and-drop-card>
         </template>
     </ul>
 </template>
