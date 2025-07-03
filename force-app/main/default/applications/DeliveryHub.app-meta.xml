@@ -22,6 +22,8 @@
     <label>Delivery Hub</label>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
+    <tabs>DH_Ticket__c</tabs>
+    <tabs>draganddroplwc</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
 </CustomApplication>
