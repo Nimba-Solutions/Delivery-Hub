@@ -7,6 +7,7 @@ project:
         api_version: "61.0"
     dependencies:
         - github_url: https://github.com/Nimba-Solutions/Work-Item-Composer
+          unmanaged: True
     #     - version_id: 04t5G000004fz7mQAA # FlowScreenComponentsBasePack Version: 3.3.4
     #     - version_id: 04t5G0000043xu3QAA # https://unofficialsf.com/from-josh-dayment-improved-file-upload-in-flow-screens/
     git:
