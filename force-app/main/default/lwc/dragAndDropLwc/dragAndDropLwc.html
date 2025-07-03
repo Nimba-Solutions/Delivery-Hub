@@ -1,5 +1,7 @@
 <template>
+    <!-- Top controls -->
     <div class="slds-p-around_medium">
+        <!-- Persona selector -->
         <lightning-combobox
             name="persona"
             label="Persona View"
@@ -7,8 +9,20 @@
             options={personaOptions}
             onchange={handlePersonaChange}>
         </lightning-combobox>
+
+        <!-- Ticket Size Mode: only on standalone page -->
+        <template if:true={showSizeMode}>
+            <lightning-combobox
+                name="sizeMode"
+                label="Ticket Size Mode"
+                value={sizeMode}
+                options={sizeModeOptions}
+                onchange={handleSizeModeChange}>
+            </lightning-combobox>
+        </template>
     </div>
 
+    <!-- Kanban board -->
     <div class="card_wrapper">
         <template for:each={stageColumns} for:item="column">
             <div class="stageContainer" key={column.stage} style={calcWidth}>
@@ -29,7 +43,7 @@
         </template>
     </div>
 
-    <!-- Transition Modal -->
+    <!-- Transition modal -->
     <template if:true={showModal}>
         <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
             <div class="slds-modal__container">

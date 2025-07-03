@@ -81,6 +81,21 @@ export default class DragAndDropLwc extends LightningElement {
         return `width: calc(100vw / ${count})`;
     }
 
+    get showSizeMode() {
+        return true;
+    }
+
+    get sizeModeOptions() {
+        return [
+            { label: 'Equal Sized', value: 'equalSized' },
+            { label: 'Ticket Sized', value: 'ticketSize' }
+        ];
+    }
+
+    handleSizeModeChange(e) {
+        console.log('Size mode changed:', e.detail.value);
+    }
+
     handlePersonaChange(e) {
         this.persona = e.detail.value;
     }
