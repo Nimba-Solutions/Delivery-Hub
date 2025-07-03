@@ -1,7 +1,7 @@
 <template>
     <template if:true={isSameStage}>
    <li class="slds-item slds-var-m-around_small" draggable="true" ondragstart={itemDragStart}>
-       <article class="slds-tile slds-tile_board">
+       <article class="slds-tile slds-tile_board" style={cardStyle}>
            <h3 class="slds-truncate" title={record.Name}>
                <a href="#" data-id={record.Id} onclick={navigateOppHandler}>
                    <span class="slds-truncate" data-id={record.Id}>

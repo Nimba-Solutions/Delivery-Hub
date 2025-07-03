@@ -15,7 +15,7 @@ export default class DragAndDropList extends LightningElement {
         evt.preventDefault()
     }
 
-    handleDrop(evt){
+    handleDrop(){
         const event = new CustomEvent('itemdrop', {
             detail: this.stage
         })

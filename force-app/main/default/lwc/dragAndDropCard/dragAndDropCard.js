@@ -3,6 +3,7 @@ import { NavigationMixin } from 'lightning/navigation'
 export default class DragAndDropCard extends NavigationMixin(LightningElement) {
     @api stage
     @api record
+    @api sizeMode
 
     get isSameStage(){
         return this.stage === this.record.StageName
@@ -35,4 +36,14 @@ export default class DragAndDropCard extends NavigationMixin(LightningElement) {
         })
         this.dispatchEvent(event)
     }
+
+    get cardStyle() {
+        if (this.sizeMode === 'Ticket Size') {
+            const val = this.record.Amount || 0;
+            const height = val / 100;
+            return `height: ${height}px;`;
+        }
+        return 'height: 100px;';
+    }
+
 }
