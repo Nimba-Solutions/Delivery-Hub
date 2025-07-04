@@ -32,7 +32,11 @@
     <!-- Kanban board -->
     <div class="card_wrapper">
         <template for:each={stageColumns} for:item="column">
-            <div class="stageContainer" key={column.stage} style={calcWidth}>
+            <div
+                class="stageContainer"
+                key={column.stage}
+                data-stage={column.stage}
+                style={calcWidth}>
                 <h1 class="column_heading">{column.stage}</h1>
 
                 <template for:each={column.tickets} for:item="ticket">
@@ -40,10 +44,16 @@
                         key={ticket.Id}
                         class="ticket-card slds-box slds-m-around_x-small"
                         data-id={ticket.Id}
-                        onclick={handleCardClick}
-                        draggable="true"
-                        ondragstart={handleDragStart}>
-                        <p><strong>{ticket.BriefDescriptionTxt__c}</strong></p>
+                        onclick={handleCardClick}>
+                        <p>
+                            <strong>
+                                <a href="#"
+                                   data-id={ticket.Id}
+                                   onclick={handleNavigate}>
+                                    {ticket.BriefDescriptionTxt__c}
+                                </a>
+                            </strong>
+                        </p>
                         <p>Size: {ticket.DeveloperDaysSizeNumber__c}</p>
                         <p>ETA: {ticket.CalculatedETADate__c}</p>
                     </div>
@@ -58,7 +68,7 @@
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <h2 class="slds-text-heading_medium">
-                        Transition "{selectedRecord.BriefDescriptionTxt__c}"
+                        Move "{selectedRecord.BriefDescriptionTxt__c}"
                     </h2>
                 </header>
                 <div class="slds-modal__content">

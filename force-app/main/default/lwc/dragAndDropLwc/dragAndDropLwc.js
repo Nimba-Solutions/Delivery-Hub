@@ -1,7 +1,11 @@
 import { LightningElement, track, wire } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
+import { updateRecord } from 'lightning/uiRecordApi';
 import getTickets from '@salesforce/apex/DH_TicketController.getTickets';
+import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
+import ID_FIELD    from '@salesforce/schema/DH_Ticket__c.Id';
 
-export default class DragAndDropLwc extends LightningElement {
+export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track persona = 'Client';
     @track sizeMode = 'equalSized';
     @track showReal = true;
@@ -10,14 +14,14 @@ export default class DragAndDropLwc extends LightningElement {
     @track selectedStage = null;
 
     @track dummyRecords = [
-        { Id: '1', StageNamePk__c: 'Backlog', BriefDescriptionTxt__c: 'Alpha summary', DeveloperDaysSizeNumber__c: 2.5,  CalculatedETADate__c: '2025-07-10' },
-        { Id: '2', StageNamePk__c: 'Active Scoping', BriefDescriptionTxt__c: 'Beta scope',      DeveloperDaysSizeNumber__c: 3.0,  CalculatedETADate__c: '2025-07-11' },
-        { Id: '3', StageNamePk__c: 'Dev Complete',   BriefDescriptionTxt__c: 'Gamma done',      DeveloperDaysSizeNumber__c: 1.75, CalculatedETADate__c: '2025-07-09' },
-        { Id: '4', StageNamePk__c: 'Done',           BriefDescriptionTxt__c: 'Delta final',     DeveloperDaysSizeNumber__c: 4.0,  CalculatedETADate__c: '2025-07-08' }
+        { Id: '1', StageNamePk__c: 'Backlog',        BriefDescriptionTxt__c: 'Alpha summary', DeveloperDaysSizeNumber__c: 2.5, CalculatedETADate__c: '2025-07-10' },
+        { Id: '2', StageNamePk__c: 'Active Scoping', BriefDescriptionTxt__c: 'Beta scope',    DeveloperDaysSizeNumber__c: 3.0, CalculatedETADate__c: '2025-07-11' },
+        { Id: '3', StageNamePk__c: 'Dev Complete',   BriefDescriptionTxt__c: 'Gamma done',    DeveloperDaysSizeNumber__c: 1.75, CalculatedETADate__c: '2025-07-09' },
+        { Id: '4', StageNamePk__c: 'Done',           BriefDescriptionTxt__c: 'Delta final',   DeveloperDaysSizeNumber__c: 4.0, CalculatedETADate__c: '2025-07-08' }
     ];
 
     @track realRecords = [];
-    @track records = [];
+    @track records     = [];
 
     personaStatuses = {
         Client: [
@@ -58,8 +62,6 @@ export default class DragAndDropLwc extends LightningElement {
         if (data) {
             this.realRecords = data;
             this.mergeRecords();
-        } else if (error) {
-            console.error(error);
         }
     }
 
@@ -129,36 +131,65 @@ export default class DragAndDropLwc extends LightningElement {
         this.sizeMode = e.detail.value;
     }
 
+    handleNavigate(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        const recId = e.currentTarget.dataset.id;
+        this[NavigationMixin.Navigate]({
+            type: 'standard__recordPage',
+            attributes: {
+                recordId: recId,
+                objectApiName: 'DH_Ticket__c',
+                actionName: 'view'
+            }
+        });
+    }
+
     handleCardClick(e) {
         const id = e.currentTarget.dataset.id;
         this.selectedRecord = this.records.find(r => r.Id === id);
         this.selectedStage = null;
         this.showModal = true;
     }
+
     handleStageChange(e) {
         this.selectedStage = e.detail.value;
     }
+
     handleSaveTransition() {
-        if (this.selectedRecord && this.selectedStage) {
-            this.records = this.records.map(r =>
-                r.Id === this.selectedRecord.Id
-                    ? { ...r, StageNamePk__c: this.selectedStage }
-                    : r
-            );
+        const rec = this.selectedRecord;
+        const newStage = this.selectedStage;
+        if (rec && newStage) {
+            const fields = {};
+            fields[ID_FIELD.fieldApiName]    = rec.Id;
+            fields[STAGE_FIELD.fieldApiName] = newStage;
+
+            updateRecord({ fields })
+                .then(() => {
+                    // update our realRecords array
+                    this.realRecords = this.realRecords.map(r =>
+                        r.Id === rec.Id
+                            ? { ...r, StageNamePk__c: newStage }
+                            : r
+                    );
+                    // re‐merge so the card shows in the new column
+                    this.mergeRecords();
+                })
+                .catch(error => {
+                    console.error('Error updating ticket stage:', error);
+                });
         }
         this.closeModal();
     }
+
     handleCancelTransition() {
         this.closeModal();
     }
+
     closeModal() {
         this.showModal = false;
         this.selectedRecord = null;
         this.selectedStage = null;
-    }
-
-    handleDragStart(e) {
-        this.dispatchEvent(new CustomEvent('itemdrag', { detail: e.currentTarget.dataset.id }));
     }
 
     transitionMap = {
