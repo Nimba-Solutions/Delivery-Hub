@@ -10,7 +10,7 @@
             onchange={handlePersonaChange}>
         </lightning-combobox>
 
-        <!-- Ticket Size Mode: only on standalone page -->
+        <!-- Ticket Size Mode -->
         <template if:true={showSizeMode}>
             <lightning-combobox
                 name="sizeMode"
@@ -20,6 +20,13 @@
                 onchange={handleSizeModeChange}>
             </lightning-combobox>
         </template>
+
+        <!-- Toggle Data Source -->
+        <lightning-button
+            label={toggleButtonLabel}
+            onclick={toggleDataSource}
+            variant="neutral">
+        </lightning-button>
     </div>
 
     <!-- Kanban board -->
@@ -33,10 +40,12 @@
                         key={ticket.Id}
                         class="ticket-card slds-box slds-m-around_x-small"
                         data-id={ticket.Id}
-                        onclick={handleCardClick}>
-                        <p><strong>{ticket.Name}</strong></p>
-                        <p>{ticket.AccountName} ● ${ticket.Amount}</p>
-                        <p>Close: {ticket.CloseDate}</p>
+                        onclick={handleCardClick}
+                        draggable="true"
+                        ondragstart={handleDragStart}>
+                        <p><strong>{ticket.BriefDescriptionTxt__c}</strong></p>
+                        <p>Size: {ticket.DeveloperDaysSizeNumber__c}</p>
+                        <p>ETA: {ticket.CalculatedETADate__c}</p>
                     </div>
                 </template>
             </div>
@@ -49,7 +58,7 @@
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <h2 class="slds-text-heading_medium">
-                        Transition "{selectedRecord.Name}"
+                        Transition "{selectedRecord.BriefDescriptionTxt__c}"
                     </h2>
                 </header>
                 <div class="slds-modal__content">
