@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>IsActiveBool__c</fullName>
     <defaultValue>false</defaultValue>
+    <description>Indicates whether this ticket is active and should be displayed on the board</description>
     <label>Is Active</label>
     <trackTrending>false</trackTrending>
     <type>Checkbox</type>
