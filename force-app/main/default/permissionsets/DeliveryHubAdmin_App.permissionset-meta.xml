@@ -7,7 +7,32 @@
     <description>This permission set provides access to the &quot;Delivery Hub Admin&quot; Lightning App</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DH_Ticket__c.BriefDescriptionTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.CalculatedETADate__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>DH_Ticket__c.DetailsTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.DeveloperDaysSizeNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.EstimatedEndDevDate__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.EstimatedStartDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -17,12 +42,27 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DH_Ticket__c.IsActiveBool__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>DH_Ticket__c.PriorityPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DH_Ticket__c.SortOrderNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>DH_Ticket__c.SourceEventReplayIdTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.StageNamePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
