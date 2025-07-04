@@ -32,11 +32,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.TestCasesJsonTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>DH_Ticket__c.WorkItemNameTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
