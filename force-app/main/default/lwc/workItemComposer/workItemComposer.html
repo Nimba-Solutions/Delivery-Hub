@@ -1,0 +1,57 @@
+<template>
+  <lightning-card title="New Work Request" icon-name="standard:work_order">
+    <div class="slds-p-around_medium">
+      
+      <!-- Subject / Details -->
+      <lightning-textarea
+        label="Subject"
+        value={description}
+        onchange={handleDescriptionChange}
+        required>
+      </lightning-textarea>
+
+      <!-- Priority -->
+      <lightning-combobox
+        label="Priority"
+        options={priorities}
+        value={priority}
+        onchange={handlePriorityChange}>
+      </lightning-combobox>
+
+      <!-- Work Type -->
+      <lightning-radio-group
+        label="Work Type"
+        options={types}
+        value={type}
+        type="button"
+        onchange={handleTypeChange}>
+      </lightning-radio-group>
+
+      <hr class="slds-m-vertical_medium"/>
+
+      <!-- Test-Case Composer -->
+      <c-test-case-composer
+        test-cases={testCases} work-type={type}
+        ontestcaseschange={handleTestCasesChange}>
+      </c-test-case-composer>
+
+      <hr class="slds-m-vertical_medium"/>
+
+      <!-- File input -->
+      <lightning-input
+        type="file"
+        label="Attach Files"
+        multiple
+        onchange={handleFilesChange}>
+      </lightning-input>
+
+      <div class="slds-p-top_medium slds-grid slds-grid_align-end">
+        <lightning-button
+          label="Save Work Item"
+          variant="brand"
+          onclick={handleSaveWorkItem}>
+        </lightning-button>
+      </div>
+    </div>
+  </lightning-card>
+</template>
