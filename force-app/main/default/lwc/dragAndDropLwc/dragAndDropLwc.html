@@ -10,7 +10,7 @@
             onchange={handlePersonaChange}>
         </lightning-combobox>
 
-        <!-- Ticket Size Mode: only on standalone page -->
+        <!-- Ticket Size Mode -->
         <template if:true={showSizeMode}>
             <lightning-combobox
                 name="sizeMode"
@@ -20,12 +20,23 @@
                 onchange={handleSizeModeChange}>
             </lightning-combobox>
         </template>
+
+        <!-- Toggle Data Source -->
+        <lightning-button
+            label={toggleButtonLabel}
+            onclick={toggleDataSource}
+            variant="neutral">
+        </lightning-button>
     </div>
 
     <!-- Kanban board -->
     <div class="card_wrapper">
         <template for:each={stageColumns} for:item="column">
-            <div class="stageContainer" key={column.stage} style={calcWidth}>
+            <div
+                class="stageContainer"
+                key={column.stage}
+                data-stage={column.stage}
+                style={calcWidth}>
                 <h1 class="column_heading">{column.stage}</h1>
 
                 <template for:each={column.tickets} for:item="ticket">
@@ -34,9 +45,17 @@
                         class="ticket-card slds-box slds-m-around_x-small"
                         data-id={ticket.Id}
                         onclick={handleCardClick}>
-                        <p><strong>{ticket.Name}</strong></p>
-                        <p>{ticket.AccountName} ● ${ticket.Amount}</p>
-                        <p>Close: {ticket.CloseDate}</p>
+                        <p>
+                            <strong>
+                                <a href="#"
+                                   data-id={ticket.Id}
+                                   onclick={handleNavigate}>
+                                    {ticket.BriefDescriptionTxt__c}
+                                </a>
+                            </strong>
+                        </p>
+                        <p>Size: {ticket.DeveloperDaysSizeNumber__c}</p>
+                        <p>ETA: {ticket.CalculatedETADate__c}</p>
                     </div>
                 </template>
             </div>
@@ -49,7 +68,7 @@
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <h2 class="slds-text-heading_medium">
-                        Transition "{selectedRecord.Name}"
+                        Move "{selectedRecord.BriefDescriptionTxt__c}"
                     </h2>
                 </header>
                 <div class="slds-modal__content">

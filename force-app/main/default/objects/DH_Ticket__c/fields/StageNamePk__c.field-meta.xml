@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StageNamePk__c</fullName>
+    <description>Picklist of allowed ticket stages used by the drag-and-drop board</description>
+    <label>Stage Name</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Backlog</fullName>
+                <default>false</default>
+                <label>Backlog</label>
+            </value>
+            <value>
+                <fullName>Active Scoping</fullName>
+                <default>false</default>
+                <label>Active Scoping</label>
+            </value>
+            <value>
+                <fullName>Client Clarification (Pre-Dev)</fullName>
+                <default>false</default>
+                <label>Client Clarification (Pre-Dev)</label>
+            </value>
+            <value>
+                <fullName>Needs Dev Feedback (T-Shirt Sizing)</fullName>
+                <default>false</default>
+                <label>Needs Dev Feedback (T-Shirt Sizing)</label>
+            </value>
+            <value>
+                <fullName>Needs Dev Feedback (Proposal)</fullName>
+                <default>false</default>
+                <label>Needs Dev Feedback (Proposal)</label>
+            </value>
+            <value>
+                <fullName>Pending Development Approval</fullName>
+                <default>false</default>
+                <label>Pending Development Approval</label>
+            </value>
+            <value>
+                <fullName>Pending Client Approval</fullName>
+                <default>false</default>
+                <label>Pending Client Approval</label>
+            </value>
+            <value>
+                <fullName>Ready for Development</fullName>
+                <default>false</default>
+                <label>Ready for Development</label>
+            </value>
+            <value>
+                <fullName>In Development</fullName>
+                <default>false</default>
+                <label>In Development</label>
+            </value>
+            <value>
+                <fullName>Dev Blocked</fullName>
+                <default>false</default>
+                <label>Dev Blocked</label>
+            </value>
+            <value>
+                <fullName>Client Clarification (In-Dev)</fullName>
+                <default>false</default>
+                <label>Client Clarification (In-Dev)</label>
+            </value>
+            <value>
+                <fullName>Back For Development</fullName>
+                <default>false</default>
+                <label>Back For Development</label>
+            </value>
+            <value>
+                <fullName>Dev Complete</fullName>
+                <default>false</default>
+                <label>Dev Complete</label>
+            </value>
+            <value>
+                <fullName>Ready for Scratch Org Test</fullName>
+                <default>false</default>
+                <label>Ready for Scratch Org Test</label>
+            </value>
+            <value>
+                <fullName>Ready for QA</fullName>
+                <default>false</default>
+                <label>Ready for QA</label>
+            </value>
+            <value>
+                <fullName>In QA</fullName>
+                <default>false</default>
+                <label>In QA</label>
+            </value>
+            <value>
+                <fullName>In UAT</fullName>
+                <default>false</default>
+                <label>In UAT</label>
+            </value>
+            <value>
+                <fullName>Ready for UAT (Consultant)</fullName>
+                <default>false</default>
+                <label>Ready for UAT (Consultant)</label>
+            </value>
+            <value>
+                <fullName>Ready for UAT (Client)</fullName>
+                <default>false</default>
+                <label>Ready for UAT (Client)</label>
+            </value>
+            <value>
+                <fullName>Ready for UAT Approval</fullName>
+                <default>false</default>
+                <label>Ready for UAT Approval</label>
+            </value>
+            <value>
+                <fullName>Ready for Feature Merge</fullName>
+                <default>false</default>
+                <label>Ready for Feature Merge</label>
+            </value>
+            <value>
+                <fullName>Ready for Deployment</fullName>
+                <default>false</default>
+                <label>Ready for Deployment</label>
+            </value>
+            <value>
+                <fullName>Deployed to Prod</fullName>
+                <default>false</default>
+                <label>Deployed to Prod</label>
+            </value>
+            <value>
+                <fullName>Done</fullName>
+                <default>false</default>
+                <label>Done</label>
+            </value>
+            <value>
+                <fullName>Cancelled</fullName>
+                <default>false</default>
+                <label>Cancelled</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
