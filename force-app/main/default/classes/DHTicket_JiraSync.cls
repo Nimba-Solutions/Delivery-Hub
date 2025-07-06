@@ -15,21 +15,8 @@ public class DHTicket_JiraSync {
             String summary = String.isBlank(t.BriefDescriptionTxt__c) ? 'No summary provided' : t.BriefDescriptionTxt__c;
             String description = String.isBlank(t.DetailsTxt__c) ? 'No description provided' : t.DetailsTxt__c;
 
-            Map<String, Object> descriptionADF = new Map<String, Object>{
-                'type' => 'doc',
-                'version' => 1,
-                'content' => new List<Object>{
-                    new Map<String, Object>{
-                        'type' => 'paragraph',
-                        'content' => new List<Object>{
-                            new Map<String, Object>{
-                                'type' => 'text',
-                                'text' => description
-                            }
-                        }
-                    }
-                }
-            };
+            // NEW: Convert HTML description to Jira ADF
+            Map<String, Object> descriptionADF = HtmlToAdfConverter.convert(description);
 
             String body = JSON.serialize(new Map<String, Object>{
                 'fields' => new Map<String, Object>{
@@ -75,21 +62,8 @@ public class DHTicket_JiraSync {
             String summary = String.isBlank(t.BriefDescriptionTxt__c) ? 'No summary provided' : t.BriefDescriptionTxt__c;
             String description = String.isBlank(t.DetailsTxt__c) ? 'No description provided' : t.DetailsTxt__c;
 
-            Map<String, Object> descriptionADF = new Map<String, Object>{
-                'type' => 'doc',
-                'version' => 1,
-                'content' => new List<Object>{
-                    new Map<String, Object>{
-                        'type' => 'paragraph',
-                        'content' => new List<Object>{
-                            new Map<String, Object>{
-                                'type' => 'text',
-                                'text' => description
-                            }
-                        }
-                    }
-                }
-            };
+            // NEW: Convert HTML description to Jira ADF
+            Map<String, Object> descriptionADF = HtmlToAdfConverter.convert(description);
 
             String body = JSON.serialize(new Map<String, Object>{
                 'fields' => new Map<String, Object>{
