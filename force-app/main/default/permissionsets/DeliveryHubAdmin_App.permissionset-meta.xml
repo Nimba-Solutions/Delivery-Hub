@@ -47,6 +47,21 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DH_Ticket__c.JiraLastResponseTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.JiraSyncStatusTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.JiraTicketKeyTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>DH_Ticket__c.PriorityPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
