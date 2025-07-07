@@ -12,6 +12,8 @@
     <select value={displayMode} onchange={handleDisplayModeChange}>
       <template for:each={displayModeOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
     </select>
+    <label>Active Devs:</label>
+    <input type="number" min="1" value={numDevs} onchange={handleNumDevsChange}/>
   </div>
 
   <template if:false={isTableMode}>
@@ -27,7 +29,8 @@
                   <div class="ticket-meta">
                     {ticket.StageNamePk__c}
                     <template if:true={ticket.DeveloperDaysSizeNumber__c}><span class="ticket-size">Size:{ticket.DeveloperDaysSizeNumber__c}</span></template>
-                    <template if:true={ticket.CalculatedETADate__c}><span>| ETA:{ticket.CalculatedETADate__c}</span></template>
+                    <!-- Remove one of these after testing! -->
+                    <template if:true={ticket.calculatedETA}><span>|ETA: {ticket.calculatedETA}</span></template>
                   </div>
                   <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button>
                 </div>
@@ -52,6 +55,7 @@
                   <div key={ticket.Id} style="margin-bottom:4px;">
                     <span class="ticket-title" style="cursor:pointer;text-decoration:underline" data-id={ticket.Id} onclick={handleTitleClick}>{ticket.BriefDescriptionTxt__c}</span>
                     <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>({ticket.DeveloperDaysSizeNumber__c})</span>
+                    <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>| ETA: {ticket.calculatedETA}</span>
                     <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id} style="margin-left:6px;font-size:.93em;padding:1px 9px;">Advance/Backtrack</button>
                   </div>
                 </template>

@@ -4,6 +4,9 @@ import { updateRecord } from 'lightning/uiRecordApi';
 import getTickets from '@salesforce/apex/DH_TicketController.getTickets';
 import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
 import ID_FIELD from '@salesforce/schema/DH_Ticket__c.Id';
+import getTicketETAs from '@salesforce/apex/DH_TicketETAService.getTicketETAs';
+
+
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track persona = 'Client';
@@ -15,6 +18,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track realRecords = [];
     @track moveComment = '';
     @track recentComments = [];
+    @track numDevs = 2; // Default to 2 devs, or whatever you want
+    @track etaResults = [];
 
     statusColorMap = {
         'Backlog': '#FAFAFA',
@@ -187,8 +192,12 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     wiredTickets({ error, data }) {
         if (data) {
             this.realRecords = data;
+            this.loadETAs(); // Will refresh etaResults
+            // Try forcing LWC to refresh rendering:
+            this.realRecords = [...data]; // This helps trigger reactivity
         }
     }
+
 
     get personaOptions() {
         return Object.keys(this.personaColumnStatusMap).map(p => ({ label: p, value: p }));
@@ -217,13 +226,39 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     get isTableMode() {
         return this.displayMode === 'table';
     }
+
+    get enrichedTickets() {
+        const norm = id => (id || '').substring(0, 15);
+
+        const etaMap = new Map(
+            (this.etaResults || [])
+                .filter(dto => !!dto.ticketId)
+                .map(dto => [norm(dto.ticketId), dto])
+        );
+
+        return (this.realRecords || []).map(rec => {
+            const etaDto = etaMap.get(norm(rec.Id));
+            if (!etaDto) {
+                console.warn('⚠️ No ETA found for', rec.Name || rec.Id, norm(rec.Id));
+            }
+            return {
+                ...rec,
+                calculatedETA: etaDto && etaDto.calculatedETA
+                    ? new Date(etaDto.calculatedETA).toLocaleDateString()
+                    : '—'
+            };
+        });
+    }
+
+
+
     get stageColumns() {
         const personaColumns = this.personaColumnStatusMap[this.persona] || {};
         return Object.keys(personaColumns).map(colName => {
             const groupedStatuses = personaColumns[colName];
             return {
                 stage: colName,
-                tickets: (this.realRecords || [])
+                tickets: (this.enrichedTickets || [])
                     .filter(r => groupedStatuses.includes(r.StageNamePk__c))
                     .map(r => ({
                         ...r,
@@ -232,6 +267,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
             };
         });
     }
+
 
     get advanceOptions() {
         if (!this.selectedRecord) return [];
@@ -287,6 +323,39 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         return opts;
     }
 
+    handleNumDevsChange(e) {
+        this.numDevs = parseInt(e.target.value, 10) || 1;
+        this.loadETAs();
+        console.log('here');
+    }
+
+    loadETAs() {
+        getTicketETAs({ numberOfDevs: this.numDevs })
+            .then(data => {
+                // Track-reactive copy for Lightning
+                this.etaResults = [...data];
+
+                /* ①  VERIFY WHAT APEX RETURNED */
+                console.log('①  ETA DTOs from Apex');
+                console.table(this.etaResults.map(d => ({
+                    dtoId : d.ticketId,
+                    eta   : d.calculatedETA
+                })));
+            })
+            .catch(err => {
+                this.etaResults = [];
+                console.error('ETA error:', err);
+            });
+    }
+
+
+
+
+
+
+    getTicketETA(ticketId) {
+        return (this.etaResults || []).find(e => e.ticketId === ticketId) || {};
+    }
 
     handlePersonaChange(e) {
         this.persona = e.detail ? e.detail.value : e.target.value;
