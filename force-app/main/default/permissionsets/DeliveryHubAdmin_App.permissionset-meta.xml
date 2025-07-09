@@ -27,6 +27,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DH_Ticket__c.Epic__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>DH_Ticket__c.EstimatedEndDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -83,6 +88,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>DH_Ticket__c.StatusPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.Tags__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
