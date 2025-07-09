@@ -1,4 +1,5 @@
 import { LightningElement, track, wire } from 'lwc';
+import { refreshApex } from '@salesforce/apex';
 import { NavigationMixin } from 'lightning/navigation';
 import { updateRecord } from 'lightning/uiRecordApi';
 import getTickets from '@salesforce/apex/DH_TicketController.getTickets';
@@ -20,6 +21,11 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track recentComments = [];
     @track numDevs = 2; // Default to 2 devs, or whatever you want
     @track etaResults = [];
+    @track showAllColumns = true;
+    @track showCreateModal = false;
+    @track nextSortOrder = 1;
+    ticketsWire;
+
 
     statusColorMap = {
         'Backlog': '#FAFAFA',
@@ -47,17 +53,62 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         'Cancelled': '#BDBDBD'
     };
 
+    /** Who owns each status next **/
+    statusOwnerMap = {
+        // ── Client ─────────────────────────
+        'Backlog': 'Client',
+        'Active Scoping': 'Client',
+        'Client Clarification (Pre-Dev)': 'Client',
+        'Pending Client Approval': 'Client',
+        'Client Clarification (In-Dev)': 'Client',
+        'Ready for UAT (Client)': 'Client',
+        'Deployed to Prod': 'Client',
+        'Done': 'Client',
+        'Cancelled': 'Client',
+
+        // ── Consultant / PM ────────────────
+        'Pending Development Approval': 'Consultant',
+        'Ready for UAT (Consultant)': 'Consultant',
+        'Ready for Feature Merge': 'Consultant',
+        'Ready for Deployment': 'Consultant',
+
+        // ── Developer ──────────────────────
+        'Needs Dev Feedback (T-Shirt Sizing)': 'Developer',
+        'Needs Dev Feedback (Proposal)': 'Developer',
+        'Ready for Development': 'Developer',
+        'In Development': 'Developer',
+        'Dev Blocked': 'Developer',
+        'Back For Development': 'Developer',
+        'Dev Complete': 'Developer',
+
+        // ── QA ─────────────────────────────
+        'Ready for Scratch Org Test': 'QA',
+        'Ready for QA': 'QA',
+        'In QA': 'QA'
+    };
+
+    /** Color palette per persona **/
+    ownerColorMap = {
+        Client:     '#2196F3',   // blue
+        Consultant: '#FFD600',   // yellow
+        Developer:  '#FF9100',   // orange
+        QA:         '#00C853',   // green
+        Default:    '#BDBDBD'    // grey fallback
+    };
+
+
     personaColumnStatusMap = {
         Client: {
-            'Backlog': ['Backlog'],
-            'Active Scoping': ['Active Scoping'],
-            'Client Clarification (Pre-Dev)': ['Client Clarification (Pre-Dev)'],
-            'Pending Client Approval': ['Pending Client Approval'],
-            'Client Clarification (In-Dev)': ['Client Clarification (In-Dev)'],
-            'In Development': ['In Development', 'Dev Blocked', 'Back For Development', 'Dev Complete'],
-            'In Review': ['Ready for Scratch Org Test', 'Ready for QA', 'In QA'],
+            'Backlog'               : ['Backlog'],
+            'Active Scoping'        : ['Active Scoping'],
+            'Pre-Dev Review'        : ['Needs Dev Feedback (T-Shirt Sizing)', 'Needs Dev Feedback (Proposal)', 'Pending Development Approval', 'Ready for Development'],
+            'Client Clarification (Pre-Dev)'  : ['Client Clarification (Pre-Dev)'],
+            'Pending Client Approval' : ['Pending Client Approval'],
+            'Client Clarification (In-Dev)' : ['Client Clarification (In-Dev)'],
+            'In Development'        : ['In Development', 'Dev Blocked', 'Back For Development', 'Dev Complete'],
+            'In Review'             : ['Ready for Scratch Org Test', 'Ready for QA', 'In QA', 'Ready for UAT (Consultant)', 'Ready for UAT Approval', 'Ready for Feature Merge', 'Ready for Deployment'],
             'Ready for UAT (Client)': ['Ready for UAT (Client)'],
-            'Deployed to Prod': ['Deployed to Prod']
+            'Deployed to Prod'      : ['Deployed to Prod']
         },
         Consultant: {
             'Incoming': ['Active Scoping', 'Client Clarification (Pre-Dev)', 'Pending Client Approval'],
@@ -137,11 +188,13 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     'Ready for Deployment': ['Ready for Feature Merge', 'Ready for UAT (Client)', 'Cancelled'],
     'Deployed to Prod': ['Ready for Deployment', 'Ready for Feature Merge', 'Cancelled'],
     'Done': ['Deployed to Prod', 'Ready for Deployment', 'Cancelled'],
-    'Backlog': [],
+    'Backlog': ['Cancelled'],
     'Cancelled': []
     };
 
-
+    personaAdvanceOverrides = {};
+    personaBacktrackOverrides = {};
+    /*
     // ----------- ADVANCE/BACKTRACK BUTTON OVERRIDES -------------
     personaAdvanceOverrides = {
         Client: {
@@ -187,16 +240,62 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         }
         // ...Add for other personas as needed...
     };
-
+    */
+    /** keep a reference so we can refresh it later */
     @wire(getTickets)
-    wiredTickets({ error, data }) {
+    wiredTickets(result) {
+        this.ticketsWire = result;              // ⬅️ store the wire
+
+        const { data, error } = result;
         if (data) {
-            this.realRecords = data;
-            this.loadETAs(); // Will refresh etaResults
-            // Try forcing LWC to refresh rendering:
-            this.realRecords = [...data]; // This helps trigger reactivity
+            this.realRecords = [...data];       // reactive copy
+            this.loadETAs();                    // refresh ETAs
+        } else if (error) {
+            // optional: surface the error some other way
+            console.error('Ticket wire error', error);
         }
     }
+
+
+    /* Toolbar button */
+    openCreateModal() { this.showCreateModal = true; }
+
+    /* “Cancel” in form */
+    handleCreateCancel() { this.showCreateModal = false; }
+
+    /* Called when the record-edit form saves successfully */
+    handleCreateSuccess() {
+        this.showCreateModal = false;
+        // Re-query tickets so the new card appears:
+        this.refreshTickets();
+    }
+
+    refreshTickets() {
+        refreshApex(this.ticketsWire)           // bypass cache & rerun wire
+            .then(() => this.loadETAs())        // pull fresh ETAs afterwards
+            .catch(err => console.error('Ticket reload error', err));
+    }
+
+    openCreateModal() {
+        // find current max SortOrderNumber__c and add 1
+        const nums = (this.realRecords || [])
+            .map(r => r.SortOrderNumber__c)
+            .filter(n => n !== null && n !== undefined);
+        this.nextSortOrder = nums.length ? Math.max(...nums) + 1 : 1;
+
+        this.showCreateModal = true;
+    }
+
+    /* ---------- defaults for the create form ---------- */
+    get createDefaults() {
+        return {
+            StageNamePk__c     : 'Backlog',
+            SortOrderNumber__c : this.nextSortOrder,
+            PriorityPk__c      : 'Medium',
+            IsActiveBool__c    : true
+        };
+    }
+
 
 
     get personaOptions() {
@@ -252,76 +351,125 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
 
 
+    /* ---------- stageColumns ---------- */
     get stageColumns() {
-        const personaColumns = this.personaColumnStatusMap[this.persona] || {};
-        return Object.keys(personaColumns).map(colName => {
-            const groupedStatuses = personaColumns[colName];
-            return {
-                stage: colName,
-                tickets: (this.enrichedTickets || [])
-                    .filter(r => groupedStatuses.includes(r.StageNamePk__c))
-                    .map(r => ({
-                        ...r,
-                        cardColor: this.statusColorMap[r.StageNamePk__c] || '#eee'
-                    }))
-            };
-        });
+        // All columns defined for the current persona
+        const personaCols = this.personaColumnStatusMap[this.persona] || {};
+
+        return Object.keys(personaCols)
+            // Optionally hide lanes not owned by this persona
+            .filter(col =>
+                this.showAllColumns || this.columnOwner(col) === this.persona
+            )
+            // Build the column objects the template consumes
+            .map(col => {
+                const statuses = personaCols[col];
+                const owner    = this.columnOwner(col);
+                const color    = this.ownerColorMap[owner] || this.ownerColorMap.Default;
+
+                return {
+                    stage       : col,
+                    /* NEW — full inline-style string for the header div */
+                    headerStyle : `background:${color};color:#fff;`,
+
+                    // Cards in this column
+                    tickets     : (this.enrichedTickets || [])
+                        .filter(t => statuses.includes(t.StageNamePk__c))
+                        .map(t => ({
+                            ...t,
+                            cardColor: this.statusColorMap[t.StageNamePk__c] || '#eee'
+                        }))
+                };
+            });
     }
+
+
 
 
     get advanceOptions() {
         if (!this.selectedRecord) return [];
-        const stage = this.selectedRecord.StageNamePk__c;
-        const persona = this.persona;
-        const nextStages = this.transitionMap[stage] || [];
-        let opts = nextStages
-            .filter(target => target !== stage)
-            .map(target => {
-                const override = this.personaAdvanceOverrides?.[persona]?.[stage]?.[target] || {};
-                let defaultIcon = '➡️';
-                let defaultStyle = 'background:#e6f3ff;color:#222;';
-                if (target === 'Active Scoping') { defaultIcon = '🚀'; defaultStyle = 'background:#38c172;color:#fff;'; }
-                if (target === 'Cancelled') { defaultIcon = '🛑'; defaultStyle = 'background:#ef4444;color:#fff;'; }
+
+        const currStage  = this.selectedRecord.StageNamePk__c;
+        const persona    = this.persona;
+        const nextStages = this.transitionMap[currStage] || [];
+
+        return nextStages
+            .filter(tgt => tgt !== currStage)
+            .map(tgt => {
+                // persona-specific override (if any)
+                const override = this.personaAdvanceOverrides?.[persona]?.[currStage]?.[tgt] || {};
+
+                // NEW: colour by target owner
+                const owner = this.statusOwnerMap[tgt] || 'Default';
+                const style = override.style
+                    || `background:${this.ownerColorMap[owner]};color:#fff;`;
+
+                // icon fallbacks
+                let icon = override.icon || '➡️';
+                if (tgt === 'Active Scoping') icon = '🚀';
+                if (tgt === 'Cancelled')      icon = '🛑';
+
                 return {
-                    value: target,
-                    label: override.label || target,
-                    icon: override.icon || defaultIcon,
-                    style: override.style || defaultStyle,
+                    value: tgt,
+                    label: override.label || tgt,
+                    icon,
+                    style,
                     autofocus: override.autofocus || false
                 };
             });
-        return opts;
     }
+
 
     get backtrackOptions() {
         if (!this.selectedRecord) return [];
-        const stage = this.selectedRecord.StageNamePk__c;
-        const persona = this.persona;
-        let opts = [];
-        // Prefer persona-specific overrides if present
-        if (this.personaBacktrackOverrides?.[persona]?.[stage]) {
-            const custom = this.personaBacktrackOverrides[persona][stage];
-            opts = Object.keys(custom).map(target => {
-                const override = custom[target];
+
+        const currStage = this.selectedRecord.StageNamePk__c;
+        const persona   = this.persona;
+        let targets     = [];
+
+        /* persona-specific overrides take priority */
+        if (this.personaBacktrackOverrides?.[persona]?.[currStage]) {
+            const custom = this.personaBacktrackOverrides[persona][currStage];
+            targets = Object.keys(custom).map(tgt => {
+                const override = custom[tgt];
+                const owner = this.statusOwnerMap[tgt] || 'Default';
+                const style = override.style
+                    || `background:${this.ownerColorMap[owner]};color:#fff;`;
+
                 return {
-                    value: target,
-                    label: override.label || target,
-                    icon: override.icon || '🔙',
-                    style: override.style || '',
+                    value: tgt,
+                    label: override.label || tgt,
+                    icon : override.icon  || '🔙',
+                    style
                 };
             });
         } else {
-            // Use backtrack map if no overrides
-            const prevStages = this.backtrackMap[stage] || [];
-            opts = prevStages.map(target => ({
-                value: target,
-                label: target,
-                icon: '⬅️',
-                style: target === 'Cancelled' ? 'background:#ef4444;color:#fff;' : ''
-            }));
+            /* default list from backtrackMap */
+            const prevStages = this.backtrackMap[currStage] || [];
+            targets = prevStages.map(tgt => {
+                const owner = this.statusOwnerMap[tgt] || 'Default';
+                return {
+                    value: tgt,
+                    label: tgt,
+                    icon : '⬅️',
+                    style: `background:${this.ownerColorMap[owner]};color:#fff;`
+                };
+            });
         }
-        return opts;
+        return targets;
     }
+
+    handleToggleColumns(e) {
+        this.showAllColumns = e.target.checked;
+    }
+
+    columnOwner(colName) {
+        // Take first status mapped to that column and look it up
+        const statuses = this.personaColumnStatusMap[this.persona]?.[colName] || [];
+        const first    = statuses[0];
+        return this.statusOwnerMap[first] || 'Default';
+    }
+
 
     handleNumDevsChange(e) {
         this.numDevs = parseInt(e.target.value, 10) || 1;
