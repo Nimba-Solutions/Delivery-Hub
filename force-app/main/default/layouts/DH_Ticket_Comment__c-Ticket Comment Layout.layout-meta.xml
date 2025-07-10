@@ -34,6 +34,10 @@
                 <behavior>Edit</behavior>
                 <field>SyncedDateTime__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>JiraSyncStatusTxt__c</field>
+            </layoutItems>
         </layoutColumns>
         <layoutColumns/>
         <style>TwoColumnsTopToBottom</style>

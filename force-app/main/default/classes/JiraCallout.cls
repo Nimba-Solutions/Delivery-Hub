@@ -73,4 +73,35 @@ public with sharing class JiraCallout {
         return issues;
     }
 
+    public static HttpResponse addComment(String jiraKey, String commentBody) {
+        // Build endpoint for adding a comment to an issue
+        String endpoint = 'issue/' + jiraKey + '/comment';
+
+        // Create JSON body as plain text
+		String bodyJson = buildADFCommentBody(commentBody);
+
+        return httpHelper(endpoint, 'POST', bodyJson);
+    }
+
+    
+    public static String buildADFCommentBody(String commentText) {
+        Map<String, Object> textNode = new Map<String, Object>{
+            'type' => 'text',
+            'text' => commentText
+        };
+        Map<String, Object> paragraphNode = new Map<String, Object>{
+            'type' => 'paragraph',
+            'content' => new List<Object>{ textNode }
+        };
+        Map<String, Object> bodyNode = new Map<String, Object>{
+            'type' => 'doc',
+            'version' => 1,
+            'content' => new List<Object>{ paragraphNode }
+        };
+        Map<String, Object> root = new Map<String, Object>{
+            'body' => bodyNode
+        };
+        return JSON.serialize(root);
+    }
+
 }

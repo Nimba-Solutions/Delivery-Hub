@@ -37,7 +37,8 @@ public with sharing class DH_AuditLogger {
                    + 'Time: ' + String.valueOf(Datetime.now());
         insert new DH_Ticket_Comment__c(
             TicketId__c = ticketId,
-            BodyTxt__c = msg
+            BodyTxt__c = msg,
+            SourcePk__c = source
         );
     }
 }

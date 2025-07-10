@@ -86,6 +86,7 @@ public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SOb
             Boolean needsUpdate = false;
 
             // --- Description sync ---
+            /*
             Object jiraDescriptionObj = fields.get('description');
             String jiraDescription = jiraDescriptionObj != null ? JSON.serialize(jiraDescriptionObj) : null;
             if (sfTicket.DetailsTxt__c != jiraDescription) {
@@ -99,7 +100,7 @@ public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SOb
                 );
                 sfTicket.DetailsTxt__c = jiraDescription;
                 needsUpdate = true;
-            }
+            }*/
 
             // --- Status sync ---
             String jiraStatus = null;
@@ -125,6 +126,9 @@ public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SOb
             }
         }
         if (!ticketsToUpdate.isEmpty()) {
+            for(DH_Ticket__c ticket:ticketsToUpdate) {
+                ticket.JiraSyncStatusTxt__c = 'Synced From JIRA ' + String.valueOf(system.now());
+            }
             update ticketsToUpdate;
         }
     }
