@@ -7,6 +7,31 @@
     <description>This permission set provides access to the &quot;Delivery Hub Admin&quot; Lightning App</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DH_Ticket_Comment__c.AuthorTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket_Comment__c.BodyTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket_Comment__c.JiraCommentIdTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket_Comment__c.SourcePk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket_Comment__c.SyncedDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>DH_Ticket__c.BriefDescriptionTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -23,6 +48,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>DH_Ticket__c.DeveloperDaysSizeNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>DH_Ticket__c.Epic__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -87,6 +117,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DH_Ticket__c.Tags__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>DH_Ticket__c.WorkItemNameTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -97,6 +132,15 @@
     </fieldPermissions>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub Admin App</label>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
+        <object>DH_Ticket_Comment__c</object>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>true</allowDelete>

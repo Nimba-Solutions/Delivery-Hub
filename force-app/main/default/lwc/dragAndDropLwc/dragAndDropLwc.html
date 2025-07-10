@@ -12,15 +12,26 @@
     <select value={displayMode} onchange={handleDisplayModeChange}>
       <template for:each={displayModeOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
     </select>
+    <label style="margin-left:1rem;">
+        <input type="checkbox" checked={showAllColumns} onchange={handleToggleColumns}/>
+        Show internal columns
+    </label>
     <label>Active Devs:</label>
     <input type="number" min="1" value={numDevs} onchange={handleNumDevsChange}/>
+    <lightning-button label="+ New Ticket"
+                  variant="brand"
+                  onclick={openCreateModal}
+                  class="slds-m-left_medium">
+    </lightning-button>
   </div>
 
   <template if:false={isTableMode}>
     <div class={mainBoardClass}>
       <template for:each={stageColumns} for:item="col">
         <div key={col.stage} class="stageContainer">
-          <div class="column_heading">{col.stage}</div>
+          <div class="column_heading" style={col.headerStyle}>
+              {col.stage}
+          </div>
           <div class="card_wrapper">
             <template if:true={col.tickets.length}>
               <template for:each={col.tickets} for:item="ticket">
@@ -45,7 +56,13 @@
 
   <template if:true={isTableMode}>
     <table class="kanban-table">
-      <thead><tr><template for:each={stageColumns} for:item="col"><th key={col.stage}>{col.stage}</th></template></tr></thead>
+      <thead>
+        <tr>
+          <template for:each={stageColumns} for:item="col">
+            <th key={col.stage} style={col.headerStyle}>{col.stage}</th>
+          </template>
+        </tr>
+      </thead>
       <tbody>
         <tr>
           <template for:each={stageColumns} for:item="col">
@@ -56,7 +73,7 @@
                     <span class="ticket-title" style="cursor:pointer;text-decoration:underline" data-id={ticket.Id} onclick={handleTitleClick}>{ticket.BriefDescriptionTxt__c}</span>
                     <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>({ticket.DeveloperDaysSizeNumber__c})</span>
                     <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>| ETA: {ticket.calculatedETA}</span>
-                    <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id} style="margin-left:6px;font-size:.93em;padding:1px 9px;">Advance/Backtrack</button>
+                    <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id} style="margin-left:6px;font-size:.93em;padding:1px 9px;">Action</button>
                   </div>
                 </template>
               </template>
@@ -130,5 +147,56 @@
         </div>
     </section>
 </template>
+
+<!-- ───────────────── New Ticket Modal ───────────────── -->
+<!-- ──────────────── New Ticket Modal ──────────────── -->
+<template if:true={showCreateModal}>
+  <section class="modal-backdrop" tabindex="0">
+    <div class="modal-body">
+      <h3>Create New Ticket</h3>
+
+      <!-- ⚠️ REPLACE the opening tag -->
+<lightning-record-edit-form
+        object-api-name="DH_Ticket__c"
+        density="compact"
+        default-field-values={createDefaults}
+        onsuccess={handleCreateSuccess}
+        oncancel={handleCreateCancel}>
+
+    <!-- leave the ordinary input-fields – they’ll show
+         whatever comes from default-field-values        -->
+    <lightning-input-field field-name="BriefDescriptionTxt__c"></lightning-input-field>
+    <lightning-input-field field-name="StageNamePk__c"
+                          value={createDefaults.StageNamePk__c}>
+    </lightning-input-field>
+
+    <lightning-input-field field-name="SortOrderNumber__c"
+                          value={createDefaults.SortOrderNumber__c}>
+    </lightning-input-field>
+
+    <lightning-input-field field-name="PriorityPk__c"
+                          value={createDefaults.PriorityPk__c}>
+    </lightning-input-field>
+    <lightning-input-field field-name="DeveloperDaysSizeNumber__c"></lightning-input-field>
+    <lightning-input-field field-name="Tags__c"></lightning-input-field>
+    <lightning-input-field field-name="Epic__c"></lightning-input-field>
+    <lightning-input-field field-name="IsActiveBool__c" value={createDefaults.IsActiveBool__c}></lightning-input-field>
+
+
+    <div class="slds-m-top_medium" style="text-align:right;">
+        <lightning-button variant="neutral" label="Cancel"
+                          onclick={handleCreateCancel}></lightning-button>
+        <lightning-button variant="brand"  type="submit" label="Create"
+                          class="slds-m-left_small"></lightning-button>
+    </div>
+</lightning-record-edit-form>
+
+    </div>
+  </section>
+</template>
+<!-- ───────────── End New Ticket Modal ───────────── -->
+
+<!-- ─────────────── End New Ticket Modal ─────────────── -->
+
 
 </template>
