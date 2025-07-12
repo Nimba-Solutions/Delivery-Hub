@@ -4,6 +4,18 @@
     <select value={persona} onchange={handlePersonaChange}>
       <template for:each={personaOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
     </select>
+    <label style="margin-left:1rem;">Overall:</label>
+    <select value={overallFilter} onchange={handleOverallFilterChange}>
+        <template for:each={overallFilterOptions} for:item="opt">
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+        </template>
+    </select>
+    <label style="margin-left:1rem;">Show:</label>
+    <select value={intentionFilter} onchange={handleIntentionFilterChange}>
+        <template for:each={intentionFilterOptions} for:item="opt">
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+        </template>
+    </select>
     <label>Size Mode:</label>
     <select value={sizeMode} onchange={handleSizeModeChange}>
       <template for:each={sizeModeOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
@@ -29,9 +41,9 @@
     <div class={mainBoardClass}>
       <template for:each={stageColumns} for:item="col">
         <div key={col.stage} class="stageContainer">
-          <div class="column_heading" style={col.headerStyle}>
-              {col.stage}
-          </div>
+            <div class="column_heading" style={col.headerStyle}>
+                {col.displayName}
+            </div>
           <div class="card_wrapper">
             <template if:true={col.tickets.length}>
               <template for:each={col.tickets} for:item="ticket">
@@ -59,7 +71,7 @@
       <thead>
         <tr>
           <template for:each={stageColumns} for:item="col">
-            <th key={col.stage} style={col.headerStyle}>{col.stage}</th>
+            <th key={col.stage} style={col.headerStyle}>{col.displayName}</th>
           </template>
         </tr>
       </thead>
