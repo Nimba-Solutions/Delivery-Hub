@@ -53,7 +53,13 @@
                     {ticket.StageNamePk__c}
                     <template if:true={ticket.DeveloperDaysSizeNumber__c}><span class="ticket-size">Size:{ticket.DeveloperDaysSizeNumber__c}</span></template>
                     <!-- Remove one of these after testing! -->
-                    <template if:true={ticket.calculatedETA}><span>|ETA: {ticket.calculatedETA}</span></template>
+                    <template if:true={ticket.calculatedETA}><span>|ETA: {ticket.calculatedETA}</span>
+
+<span class="ticket-sortorder" style="margin-left:5px;font-size:.97em;color:#999;">
+  | Order: {ticket.SortOrderNumber__c}
+</span>
+
+                    </template>
                   </div>
                   <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button>
                 </div>
@@ -85,6 +91,9 @@
                     <span class="ticket-title" style="cursor:pointer;text-decoration:underline" data-id={ticket.Id} onclick={handleTitleClick}>{ticket.BriefDescriptionTxt__c}</span>
                     <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>({ticket.DeveloperDaysSizeNumber__c})</span>
                     <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>| ETA: {ticket.calculatedETA}</span>
+                    
+                    <span style="margin-left:4px;font-size:.97em;color:#999;">Order:{ticket.SortOrderNumber__c}</span>
+
                     <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id} style="margin-left:6px;font-size:.93em;padding:1px 9px;">Action</button>
                   </div>
                 </template>
