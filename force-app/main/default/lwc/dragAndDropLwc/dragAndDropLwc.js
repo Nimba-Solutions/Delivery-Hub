@@ -63,6 +63,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         'Active Scoping':           { bg: '#2196F3', color: '#fff' }, // blue
         'Pending Client Prioritization': { bg: '#2196F3', color: '#fff' }, // blue
         'Pending Client Approval':  { bg: '#2196F3', color: '#fff' }, // blue
+        'Client Clarification (Pre-Dev)':  { bg: '#2196F3', color: '#fff' }, // blue
 
         // --- Pre-dev/Dev columns (yellow, with black text) ---
         'Quick Estimate':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
@@ -75,7 +76,15 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         // --- Other columns: fallback to blue ---
         'Ready for UAT (Client)':   { bg: '#2196F3', color: '#fff' }, // blue
         'Deployed to Prod':         { bg: '#2196F3', color: '#fff' }, // blue
-        'Done':                     { bg: '#607D8B', color: '#fff' }
+        'Done':                     { bg: '#607D8B', color: '#fff' },
+        
+        'Needs Dev Feedback (T-Shirt Sizing)':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Needs Dev Feedback (Proposal)':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Dev Complete':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Back For Development':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Ready for Scratch Org Test':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Ready for QA':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Ready for UAT (Consultant)':           { bg: '#FFD54F', color: '#222' } // yellow, dark text
     };
 
 
@@ -519,18 +528,18 @@ backtrackMap = {
         'Cancelled'
     ],
     'Dev Blocked': [
-        'In Development',
+        'Ready for Development',
         'Pending Development Approval',
+        'Pending Client Approval',
         'Cancelled'
     ],
     'Client Clarification (In-Dev)': [
-        'Dev Blocked',
-        'In Development',
-        'Back For Development',
+        'Pending Client Approval',
         'Cancelled'
     ],
     'Back For Development': [
         'Client Clarification (In-Dev)',
+        'Pending Client Approval',
         'Dev Blocked',
         'In Development',
         'Cancelled'
@@ -873,15 +882,17 @@ backtrackMap = {
         return nextStages
             .filter(tgt => tgt !== currStage)
             .map(tgt => {
-                // persona-specific override (if any)
                 const override = this.personaAdvanceOverrides?.[persona]?.[currStage]?.[tgt] || {};
 
-                // NEW: colour by target owner
-                const owner = this.statusOwnerMap[tgt] || 'Default';
-                const style = override.style
-                    || `background:${this.ownerColorMap[owner]};color:#fff;`;
+                // 🔥 Use columnHeaderStyleMap for the target status
+                let style = '';
+                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
+                    const { bg, color } = this.columnHeaderStyleMap[tgt];
+                    style = `background:${bg};color:${color};`;
+                } else {
+                    style = 'background:#e0e0e0;color:#222;';
+                }
 
-                // icon fallbacks
                 let icon = override.icon || '➡️';
                 if (tgt === 'Active Scoping') icon = '🚀';
                 if (tgt === 'Cancelled')      icon = '🛑';
@@ -904,15 +915,18 @@ backtrackMap = {
         const persona   = this.persona;
         let targets     = [];
 
-        /* persona-specific overrides take priority */
         if (this.personaBacktrackOverrides?.[persona]?.[currStage]) {
             const custom = this.personaBacktrackOverrides[persona][currStage];
             targets = Object.keys(custom).map(tgt => {
                 const override = custom[tgt];
-                const owner = this.statusOwnerMap[tgt] || 'Default';
-                const style = override.style
-                    || `background:${this.ownerColorMap[owner]};color:#fff;`;
-
+                // 🔥 Use columnHeaderStyleMap for the target status
+                let style = '';
+                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
+                    const { bg, color } = this.columnHeaderStyleMap[tgt];
+                    style = `background:${bg};color:${color};`;
+                } else {
+                    style = 'background:#e0e0e0;color:#222;';
+                }
                 return {
                     value: tgt,
                     label: override.label || tgt,
@@ -921,20 +935,27 @@ backtrackMap = {
                 };
             });
         } else {
-            /* default list from backtrackMap */
             const prevStages = this.backtrackMap[currStage] || [];
             targets = prevStages.map(tgt => {
-                const owner = this.statusOwnerMap[tgt] || 'Default';
+                // 🔥 Use columnHeaderStyleMap for the target status
+                let style = '';
+                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
+                    const { bg, color } = this.columnHeaderStyleMap[tgt];
+                    style = `background:${bg};color:${color};`;
+                } else {
+                    style = 'background:#e0e0e0;color:#222;';
+                }
                 return {
                     value: tgt,
                     label: tgt,
                     icon : '⬅️',
-                    style: `background:${this.ownerColorMap[owner]};color:#fff;`
+                    style
                 };
             });
         }
         return targets;
     }
+
 
     get overallFilterOptions() {
         return [
