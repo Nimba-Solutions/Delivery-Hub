@@ -5,7 +5,7 @@ import { updateRecord } from 'lightning/uiRecordApi';
 import getTickets from '@salesforce/apex/DH_TicketController.getTickets';
 import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
 import ID_FIELD from '@salesforce/schema/DH_Ticket__c.Id';
-import getTicketETAs from '@salesforce/apex/DH_TicketETAService.getTicketETAs';
+import getTicketETAsWithPriority from '@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority';
 
 
 
@@ -1010,23 +1010,27 @@ backtrackMap = {
     }
 
     loadETAs() {
-        getTicketETAs({ numberOfDevs: this.numDevs })
-            .then(data => {
-                // Track-reactive copy for Lightning
-                this.etaResults = [...data];
-
-                /* ①  VERIFY WHAT APEX RETURNED */
-                console.log('①  ETA DTOs from Apex');
-                console.table(this.etaResults.map(d => ({
-                    dtoId : d.ticketId,
-                    eta   : d.calculatedETA
-                })));
+        // For now, pass null or [] as prioritizedTicketIds unless you add a "prioritize to top" feature in the UI.
+        getTicketETAsWithPriority({ numberOfDevs: this.numDevs, prioritizedTicketIds: null })
+            .then(result => {
+                this.etaResults = result && result.tickets ? [...result.tickets] : [];
+                // If you want to handle warnings:
+                if (result && result.pushedBackTicketNumbers && result.pushedBackTicketNumbers.length) {
+                    // Show a toast or inline warning
+                    console.warn('⚠️ These tickets were pushed back by prioritization:', result.pushedBackTicketNumbers);
+                    // Optionally save for UI
+                    this.pushedBackTicketNumbers = result.pushedBackTicketNumbers;
+                } else {
+                    this.pushedBackTicketNumbers = [];
+                }
             })
             .catch(err => {
                 this.etaResults = [];
+                this.pushedBackTicketNumbers = [];
                 console.error('ETA error:', err);
             });
     }
+
 
 
 
