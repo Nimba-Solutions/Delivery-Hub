@@ -18,7 +18,10 @@ public with sharing class DH_TicketController {
                    CalculatedETADate__c,
                    DeveloperDaysSizeNumber__c,
                    StageNamePk__c,
-                   SortOrderNumber__c
+                   Client_Intention__c,
+                   SortOrderNumber__c,
+                   Epic__c,
+                   Tags__c
             FROM DH_Ticket__c
             WHERE IsActiveBool__c = true
             ORDER BY SortOrderNumber__c
