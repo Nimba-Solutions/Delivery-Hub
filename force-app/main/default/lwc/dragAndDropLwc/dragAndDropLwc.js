@@ -793,21 +793,31 @@ backtrackMap = {
                 stage: colName,
                 displayName: this.columnDisplayNames[colName] || colName,
                 headerStyle,
-                tickets: enriched.filter(t => statuses.includes(t.StageNamePk__c))
+                tickets: enriched
+                    .filter(t => statuses.includes(t.StageNamePk__c))
+                    .filter(t => {
+                        // Only filter if intention is not "all"
+                        if (this.intentionFilter === 'all') return true;
+                        // Debug log
+                        console.log(
+                            `[Intent Filter] Ticket:`, t.Id, 
+                            '| Stage:', t.StageNamePk__c, 
+                            '| Client_Intention__c:', t.Client_Intention__c, 
+                            '| Current Filter:', this.intentionFilter
+                        );
+                        // Compare picklist value, trimming for safety
+                        return (t.Client_Intention__c || '').trim().toLowerCase() === this.intentionFilter.toLowerCase();
+                    })
                     .map(t => {
-                        // Fix card color as well (yellow for quick estimate/proposal, orange for In Development)
+                        // You can add your cardColor logic here if you want
                         let cardColor = this.statusColorMap[t.StageNamePk__c] || '#eee';
-                        if (colName === 'Quick Estimate' || colName === 'Proposal Needed' || colName === 'Ready for Development') {
-                            cardColor = '#FFD54F'; // yellow
-                        }
-                        if (colName === 'In Development') {
-                            cardColor = '#FF9100'; // orange
-                        }
                         return { ...t, cardColor };
                     })
             };
         });
     }
+
+
 
 
 
