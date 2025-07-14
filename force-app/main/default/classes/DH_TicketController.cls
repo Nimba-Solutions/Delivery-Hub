@@ -70,4 +70,51 @@ public with sharing class DH_TicketController {
         insert demo;
         return demo;
     }
+
+    @AuraEnabled
+    public static void updateTicketSortOrders(List<Map<String, Object>> updates) {
+        List<DH_Ticket__c> tickets = new List<DH_Ticket__c>();
+        for (Map<String, Object> u : updates) {
+            Object sortOrderRaw = u.get('SortOrderNumber__c');
+            Decimal sortOrder;
+            if (sortOrderRaw == null) {
+                sortOrder = null;
+            } else if (sortOrderRaw instanceof Decimal) {
+                sortOrder = (Decimal)sortOrderRaw;
+            } else if (sortOrderRaw instanceof Integer) {
+                sortOrder = Decimal.valueOf((Integer)sortOrderRaw);
+            } else if (sortOrderRaw instanceof Long) {
+                sortOrder = Decimal.valueOf(((Long)sortOrderRaw).intValue());
+            } else if (sortOrderRaw instanceof Double) {
+                sortOrder = Decimal.valueOf(((Double)sortOrderRaw).intValue());
+            } else if (sortOrderRaw instanceof String) {
+                sortOrder = Decimal.valueOf((String)sortOrderRaw);
+            } else {
+                sortOrder = null;
+            }
+            tickets.add(new DH_Ticket__c(
+                Id = (String)u.get('Id'),
+                SortOrderNumber__c = sortOrder
+            ));
+        }
+        update tickets;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static Boolean isMarketingEnabled() {
+        try {
+            Cloud_Nimbus_LLC_Marketing__mdt m = [
+                SELECT Enabled__c
+                FROM Cloud_Nimbus_LLC_Marketing__mdt
+                WHERE DeveloperName = 'Cloud_Nimbus_LLC_Marketing_Enabled'
+                LIMIT 1
+            ];
+            return m != null && m.Enabled__c;
+        } catch (Exception e) {
+            // Optional: log exception or handle gracefully
+            return false;
+        }
+    }
+
+
 }

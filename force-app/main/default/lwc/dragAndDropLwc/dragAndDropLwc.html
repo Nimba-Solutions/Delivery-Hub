@@ -45,33 +45,26 @@
                 {col.displayName}
             </div>
           <div class="card_wrapper">
-            <template for:each={col.tickets} for:item="ticket" for:index="index">
-  <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}">
-    <div class="ticket-title" data-id={ticket.Id} onclick={handleTitleClick}>
-      {ticket.BriefDescriptionTxt__c}
-    </div>
-    <div class="ticket-meta">
-      {ticket.StageNamePk__c}
-      <template if:true={ticket.DeveloperDaysSizeNumber__c}>
-        <span class="ticket-size">Size:{ticket.DeveloperDaysSizeNumber__c}</span>
-      </template>
-      <template if:true={ticket.calculatedETA}>
-        <span>| ETA: {ticket.calculatedETA}</span>
-        <span class="ticket-sortorder" style="margin-left:5px;font-size:.97em;color:#999;">
-          | Order: {ticket.SortOrderNumber__c}
-        </span>
-      </template>
-    </div>
-    <div class="ticket-arrows">
-      <button class="arrow-btn" data-id={ticket.Id} data-col={col.stage} data-dir="up"
-        onclick={handleArrowClick}><!-- disabled={index === 0}>-->&uarr;</button>
-      <button class="arrow-btn" data-id={ticket.Id} data-col={col.stage} data-dir="down"
-        onclick={handleArrowClick}><!-- disabled={index === col.tickets.length - 1}>-->&darr;</button>
-    </div>
-    <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button>
-  </div>
-</template>
+            <template if:true={col.tickets.length}>
+              <template for:each={col.tickets} for:item="ticket">
+                <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}">
+                  <div class="ticket-title" data-id={ticket.Id} onclick={handleTitleClick}>{ticket.BriefDescriptionTxt__c}</div>
+                  <div class="ticket-meta">
+                    {ticket.StageNamePk__c}
+                    <template if:true={ticket.DeveloperDaysSizeNumber__c}><span class="ticket-size">Size:{ticket.DeveloperDaysSizeNumber__c}</span></template>
+                    <!-- Remove one of these after testing! -->
+                    <template if:true={ticket.calculatedETA}><span>|ETA: {ticket.calculatedETA}</span>
 
+<span class="ticket-sortorder" style="margin-left:5px;font-size:.97em;color:#999;">
+  | Order: {ticket.SortOrderNumber__c}
+</span>
+
+                    </template>
+                  </div>
+                  <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button>
+                </div>
+              </template>
+            </template>
             <template if:false={col.tickets.length}><div class="empty-col-placeholder">No tickets</div></template>
           </div>
         </div>
@@ -175,15 +168,6 @@
         </div>
     </section>
 </template>
-
-<template if:true={marketingEnabled}>
-  <div class="help-footer" style="margin:2rem 0 1rem 0; text-align:center;">
-      <a href={helpMailtoLink} style="color:#2196f3;font-size:1.1em;">
-          Email support@cloudnimbusllc.com for help
-      </a>
-  </div>
-</template>
-
 
 <!-- ───────────────── New Ticket Modal ───────────────── -->
 <!-- ──────────────── New Ticket Modal ──────────────── -->
