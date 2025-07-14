@@ -6,7 +6,8 @@ import getTickets from '@salesforce/apex/DH_TicketController.getTickets';
 import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
 import ID_FIELD from '@salesforce/schema/DH_Ticket__c.Id';
 import getTicketETAsWithPriority from '@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority';
-
+import updateTicketSortOrders from '@salesforce/apex/DH_TicketController.updateTicketSortOrders';
+import isMarketingEnabled from '@salesforce/apex/DH_TicketController.isMarketingEnabled';
 
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
@@ -27,6 +28,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track overallFilter = 'all';
     @track intentionFilter = 'all';
     ticketsWire;
+    @track marketingEnabled = false;
 
 
     statusColorMap = {
@@ -670,6 +672,13 @@ backtrackMap = {
         }
     }
 
+    @wire(isMarketingEnabled)
+        wiredMarketingEnabled({ error, data }) {
+            if (data !== undefined) {
+                this.marketingEnabled = data;
+            }
+        }
+
 
     /* Toolbar button */
     openCreateModal() { this.showCreateModal = true; }
@@ -1114,4 +1123,59 @@ backtrackMap = {
         this.selectedStage = null;
         this.moveComment = '';
     }
+
+    handleArrowClick(e) {
+        const ticketId = e.currentTarget.dataset.id;
+        const colStage = e.currentTarget.dataset.col;
+        const direction = e.currentTarget.dataset.dir; // "up" or "down"
+
+        // Find the column object
+        const columns = this.stageColumns;
+        const colObj = columns.find(c => c.stage === colStage);
+        if (!colObj) return;
+
+        const idx = colObj.tickets.findIndex(t => t.Id === ticketId);
+        if (idx === -1) return;
+
+        let targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+        if (targetIdx < 0 || targetIdx >= colObj.tickets.length) return; // Out of bounds
+
+        // Swap the two tickets
+        const temp = colObj.tickets[idx];
+        colObj.tickets[idx] = colObj.tickets[targetIdx];
+        colObj.tickets[targetIdx] = temp;
+
+        // Update SortOrderNumber__c in memory
+        colObj.tickets.forEach((t, i) => t.SortOrderNumber__c = i + 1);
+
+        // Call Apex to persist the new order (implement this method as needed)
+        this.bulkUpdateSortOrders(
+            colObj.tickets.map(t => ({
+                Id: t.Id,
+                SortOrderNumber__c: t.SortOrderNumber__c
+            }))
+        );
+
+        // Optionally, re-render
+        this.refreshTickets();
+    }
+
+    bulkUpdateSortOrders(updates) {
+        updateTicketSortOrders({ updates })
+            .then(() => this.refreshTickets())
+            .catch(err => console.error('Bulk sort update error', err));
+    }
+
+    get helpMailtoLink() {
+        // You can't get the current user's email everywhere
+        // so just prompt for it in the body if not available
+        const url = window.location.href;
+        let subject = `Support Request - ${url}`;
+        let body = `Describe your issue here...\n\n---\nURL: ${url}\n`;
+        body += `Your email: \n`; // user fills it in
+
+        return 'mailto:support@cloudnimbusllc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}';
+    }
+
+
 }
