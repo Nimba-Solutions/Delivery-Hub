@@ -135,11 +135,11 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     columnDisplayNames = {
         'Backlog': 'Backlog',
         'Active Scoping': 'Active Scoping',
-        'Quick Estimate': 'Quick Estimate',
+        'Quick Estimate': 'Ready for Estimate',
         'Pending Client Prioritization': 'Client Prioritization / Feedback', // <-- NEW LABEL!
-        'Proposal Needed': 'Proposal Needed',
+        'Proposal Needed': 'Approved for Analysis',
         'Pending Client Approval': 'Pending Client Approval',
-        'Ready for Development': 'Ready for Development',
+        'Ready for Development': 'Approved for Development',
         'Client Clarification (In-Dev)': 'Client Clarification (In-Dev)',
         'In Development': 'In Development',
         'In Review': 'In Review',
