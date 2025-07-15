@@ -45,33 +45,26 @@
                 {col.displayName}
             </div>
           <div class="card_wrapper">
-            <template for:each={col.tickets} for:item="ticket" for:index="index">
-  <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}">
-    <div class="ticket-title" data-id={ticket.Id} onclick={handleTitleClick}>
-      {ticket.BriefDescriptionTxt__c}
-    </div>
-    <div class="ticket-meta">
-      {ticket.StageNamePk__c}
-      <template if:true={ticket.DeveloperDaysSizeNumber__c}>
-        <span class="ticket-size">Size:{ticket.DeveloperDaysSizeNumber__c}</span>
-      </template>
-      <template if:true={ticket.calculatedETA}>
-        <span>| ETA: {ticket.calculatedETA}</span>
-        <span class="ticket-sortorder" style="margin-left:5px;font-size:.97em;color:#999;">
-          | Order: {ticket.SortOrderNumber__c}
-        </span>
-      </template>
-    </div>
-    <div class="ticket-arrows">
-      <button class="arrow-btn" data-id={ticket.Id} data-col={col.stage} data-dir="up"
-        onclick={handleArrowClick}><!-- disabled={index === 0}>-->&uarr;</button>
-      <button class="arrow-btn" data-id={ticket.Id} data-col={col.stage} data-dir="down"
-        onclick={handleArrowClick}><!-- disabled={index === col.tickets.length - 1}>-->&darr;</button>
-    </div>
-    <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button>
-  </div>
-</template>
+            <template if:true={col.tickets.length}>
+              <template for:each={col.tickets} for:item="ticket">
+                <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}">
+                  <div class="ticket-title" data-id={ticket.Id} onclick={handleTitleClick}>{ticket.BriefDescriptionTxt__c}</div>
+                  <div class="ticket-meta">
+                    {ticket.StageNamePk__c}
+                    <template if:true={ticket.DeveloperDaysSizeNumber__c}><span class="ticket-size">Size:{ticket.DeveloperDaysSizeNumber__c}</span></template>
+                    <!-- Remove one of these after testing! -->
+                    <template if:true={ticket.calculatedETA}><span>|ETA: {ticket.calculatedETA}</span>
 
+<span class="ticket-sortorder" style="margin-left:5px;font-size:.97em;color:#999;">
+  | Order: {ticket.SortOrderNumber__c}
+</span>
+
+                    </template>
+                  </div>
+                  <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button>
+                </div>
+              </template>
+            </template>
             <template if:false={col.tickets.length}><div class="empty-col-placeholder">No tickets</div></template>
           </div>
         </div>
@@ -115,90 +108,116 @@
     </table>
   </template>
 
- <template if:true={showCreateModal}>
-  <section class="slds-modal slds-fade-in-open custom-modal" tabindex="0" onkeydown={handleModalKeydown}>
-    <div class="slds-modal__container">
-
-      <!-- Modal Header -->
-      <header class="slds-modal__header" style="border-bottom:1px solid #f0f0f0; padding-bottom:1em;">
-        <lightning-icon icon-name="utility:new_window" alternative-text="New" size="small" class="slds-m-right_small"></lightning-icon>
-        <h2 class="slds-text-heading_medium" style="display:inline-block;">Create New Ticket</h2>
-        <button class="slds-modal__close" onclick={handleCreateCancel} title="Close">
-          <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
-        </button>
-        <p class="slds-text-body_small" style="margin-top:.35em;color:#666;">
-          Fill out the details below. You can add files or edit details later.
-        </p>
-        <template if:true={showSpinner}>
-          <div style="margin-top:0.75em;">
-            <lightning-spinner alternative-text="Loading..." size="small"></lightning-spinner>
-          </div>
-        </template>
-      </header>
-
-      <!-- Modal Content -->
-      <div class="slds-modal__content slds-p-around_medium" style="background:#fafcff; border-radius:1rem;">
-        <template if:false={showSpinner}>
-          <lightning-record-edit-form
-            object-api-name="DH_Ticket__c"
-            density="compact"
-            default-field-values={createDefaults}
-            onsuccess={handleCreateSuccess}
-            oncancel={handleCreateCancel}>
-            
-            <!-- Key Fields -->
-            <lightning-input-field field-name="BriefDescriptionTxt__c" required></lightning-input-field>
-            <lightning-input-field field-name="DetailsTxt__c"></lightning-input-field>
-            <lightning-input-field field-name="StageNamePk__c"></lightning-input-field>
-            <lightning-input-field field-name="DeveloperDaysSizeNumber__c" value={defaultSize}></lightning-input-field>
-            <lightning-input-field field-name="PriorityPk__c"></lightning-input-field>
-
-            <!-- Attachments -->
-            <div style="margin: 1.2em 0 1.5em 0;">
-              <lightning-file-upload
-                label="Attach files"
-                name="ticketFiles"
-                
-                record-id={dummyRecordId}
-                onuploadfinished={handleFileUpload}
-                multiple><!-- accept={acceptedFormats} -->
-              </lightning-file-upload>
+  <template if:true={showModal}>
+    <section class="modal-backdrop" tabindex="0" onkeydown={handleModalKeydown}>
+        <div class="modal-body" tabindex="0">
+            <h3>Move Side Quest: {selectedRecord.BriefDescriptionTxt__c}</h3>
+            <p style="font-size:.97em;color:#666;">
+                Current Status: <b>{selectedRecord.StageNamePk__c}</b>
+            </p>
+            <template if:true={hasRecentComments}>
+                <div class="modal-section">
+                    <h4 style="margin-bottom:0.5em;">Recent Comments</h4>
+                    <template for:each={recentComments} for:item="cmt">
+                        <div key={cmt.id} class="comment-history-row">
+                            <span class="persona-icon" style="margin-right:6px;">{cmt.icon}</span>
+                            <b>{cmt.user}</b>
+                            <span class="comment-text">{cmt.text}</span>
+                            <span class="comment-meta">({cmt.date})</span>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <template if:true={advanceOptions.length}>
+                <div class="modal-section">
+                    <h4 style="color:#0070d2;">Advance</h4>
+                    <template for:each={advanceOptions} for:item="opt">
+                        <button key={opt.value}
+                                class="advance-btn"
+                                style={opt.style}
+                                onclick={handleAdvanceOption}
+                                data-value={opt.value}
+                                autofocus={opt.autofocus}>
+                            <span class="persona-icon">{opt.icon}</span> {opt.label}
+                        </button>
+                    </template>
+                </div>
+            </template>
+            <template if:true={backtrackOptions.length}>
+                <div class="modal-section">
+                    <h4 style="color:#555;">Backtrack</h4>
+                    <template for:each={backtrackOptions} for:item="opt">
+                        <button key={opt.value}
+                                class="backtrack-btn"
+                                style={opt.style}
+                                onclick={handleBacktrackOption}
+                                data-value={opt.value}
+                                autofocus={opt.autofocus}>
+                            <span class="persona-icon">{opt.icon}</span> {opt.label}
+                        </button>
+                    </template>
+                </div>
+            </template>
+            <div class="modal-section" style="margin-top:1.3rem;">
+                <label for="comment">Comment (optional):</label>
+                <textarea id="comment" class="comment-box" value={moveComment} onchange={handleCommentChange}></textarea>
             </div>
-
-            <!-- Advanced Section (collapsible) -->
-            <details style="margin-bottom:1.1em;">
-              <summary style="cursor:pointer;color:#005fb2;">Advanced fields</summary>
-              <lightning-input-field field-name="Tags__c"></lightning-input-field>
-              <lightning-input-field field-name="Epic__c"></lightning-input-field>
-              <lightning-input-field field-name="SortOrderNumber__c" value={nextSortOrder}></lightning-input-field>
-              <lightning-input-field field-name="IsActiveBool__c" value={createDefaults.IsActiveBool__c}></lightning-input-field>
-              <!-- Uncomment if needed:
-              <lightning-input-field field-name="Client_Intention__c"></lightning-input-field>
-              -->
-            </details>
-
-            <!-- Action Buttons -->
-            <div class="slds-m-top_medium" style="text-align:right;">
-              <lightning-button variant="neutral" label="Cancel" onclick={handleCreateCancel}></lightning-button>
-              <lightning-button variant="brand"  type="submit" label="Create" class="slds-m-left_small"></lightning-button>
+            <div style="margin-top:2rem;text-align:right;">
+                <button onclick={handleCancelTransition} class="cancel-btn">Cancel</button>
             </div>
-          </lightning-record-edit-form>
-        </template>
-      </div>
+        </div>
+    </section>
+</template>
+
+<!-- ───────────────── New Ticket Modal ───────────────── -->
+<!-- ──────────────── New Ticket Modal ──────────────── -->
+<template if:true={showCreateModal}>
+  <section class="modal-backdrop" tabindex="0">
+    <div class="modal-body">
+      <h3>Create New Ticket</h3>
+
+      <!-- ⚠️ REPLACE the opening tag -->
+<lightning-record-edit-form
+        object-api-name="DH_Ticket__c"
+        density="compact"
+        default-field-values={createDefaults}
+        onsuccess={handleCreateSuccess}
+        oncancel={handleCreateCancel}>
+
+    <!-- leave the ordinary input-fields – they’ll show
+         whatever comes from default-field-values        -->
+    <lightning-input-field field-name="BriefDescriptionTxt__c"></lightning-input-field>
+    <lightning-input-field field-name="StageNamePk__c"
+                          value={createDefaults.StageNamePk__c}>
+    </lightning-input-field>
+
+    <lightning-input-field field-name="SortOrderNumber__c"
+                          value={createDefaults.SortOrderNumber__c}>
+    </lightning-input-field>
+
+    <lightning-input-field field-name="PriorityPk__c"
+                          value={createDefaults.PriorityPk__c}>
+    </lightning-input-field>
+    <lightning-input-field field-name="DeveloperDaysSizeNumber__c"></lightning-input-field>
+    <lightning-input-field field-name="Tags__c"></lightning-input-field>
+    <lightning-input-field field-name="Epic__c"></lightning-input-field>
+    <lightning-input-field field-name="IsActiveBool__c" value={createDefaults.IsActiveBool__c}></lightning-input-field>
+
+
+    <div class="slds-m-top_medium" style="text-align:right;">
+        <lightning-button variant="neutral" label="Cancel"
+                          onclick={handleCreateCancel}></lightning-button>
+        <lightning-button variant="brand"  type="submit" label="Create"
+                          class="slds-m-left_small"></lightning-button>
+    </div>
+</lightning-record-edit-form>
+
     </div>
   </section>
-  <div class="slds-backdrop slds-backdrop_open"></div>
 </template>
+<!-- ───────────── End New Ticket Modal ───────────── -->
 
+<!-- ─────────────── End New Ticket Modal ─────────────── -->
 
-
-
-<template if:true={marketingEnabled}>
-  <div class="help-footer" style="margin:2rem 0 1rem 0; text-align:center;">
-      <a href={helpMailtoLink} style="color:#2196f3;font-size:1.1em;">
-          Email support@cloudnimbusllc.com for help
-      </a>
-  </div>
-</template>
 
 </template>

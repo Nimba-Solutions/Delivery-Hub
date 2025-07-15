@@ -1,16 +1,12 @@
 import { LightningElement, track, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
 import { updateRecord } from 'lightning/uiRecordApi';
 import getTickets from '@salesforce/apex/DH_TicketController.getTickets';
 import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
 import ID_FIELD from '@salesforce/schema/DH_Ticket__c.Id';
 import getTicketETAsWithPriority from '@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority';
-import updateTicketSortOrders from '@salesforce/apex/DH_TicketController.updateTicketSortOrders';
-import isMarketingEnabled from '@salesforce/apex/DH_TicketController.isMarketingEnabled';
-import linkFilesToTicket from '@salesforce/apex/DH_TicketController.linkFilesToTicket';
-import USER_ID from '@salesforce/user/Id';
+
 
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
@@ -26,18 +22,12 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track numDevs = 2; // Default to 2 devs, or whatever you want
     @track etaResults = [];
     @track showAllColumns = true;
-
     @track showCreateModal = false;
-    @track showSpinner = false;
-    @track uploadedFileIds = [];
     @track nextSortOrder = 1;
-
     @track overallFilter = 'all';
     @track intentionFilter = 'all';
     ticketsWire;
-    @track marketingEnabled = false;
 
-    acceptedFormats = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx'];
 
     statusColorMap = {
         'Backlog': '#FAFAFA',
@@ -618,19 +608,108 @@ backtrackMap = {
 
     personaAdvanceOverrides = {};
     personaBacktrackOverrides = {};
-
-    @wire(isMarketingEnabled)
-        wiredMarketingEnabled({ error, data }) {
-            if (data !== undefined) {
-                this.marketingEnabled = data;
+    /*
+    // ----------- ADVANCE/BACKTRACK BUTTON OVERRIDES -------------
+    personaAdvanceOverrides = {
+        Client: {
+            'Backlog': {
+                'Active Scoping': { icon: '🚀', label: 'Active Scoping', style: 'background:#38c172;color:#fff;' }
+            },
+            'Active Scoping': {
+                'Client Clarification (Pre-Dev)': { icon: '💬', label: 'Clarification (Pre-Dev)', style: 'background:#fbcb43;color:#2d2d2d;' },
+                'Needs Dev Feedback (T-Shirt Sizing)': { icon: '📝', label: 'Dev Feedback (Sizing)', style: 'background:#ffe082;color:#005fb2;' },
+                'Needs Dev Feedback (Proposal)': { icon: '📝', label: 'Dev Feedback (Proposal)', style: 'background:#ffe082;color:#005fb2;' },
+                'Pending Development Approval': { icon: '🛠️', label: 'Pending Dev Approval', style: 'background:#b2dfdb;color:#005fb2;' }
             }
+            // ...Add more as needed...
+        },
+        Consultant: {
+            'Needs Dev Feedback (T-Shirt Sizing)': {
+                'Client Clarification (Pre-Dev)': { icon: '🗨️', label: 'Client Clarification (Pre-Dev)', style: 'background:#ffd54f;' },
+                'Pending Client Approval': { icon: '✅', label: 'Pending Client Approval', style: 'background:#38c172;color:#fff;' }
+            }
+            // ...etc.
         }
+        // ...Add for other personas as needed...
+    };
+
+    personaBacktrackOverrides = {
+        Client: {
+            'Backlog': {
+                'Cancelled': { icon: '🛑', label: 'Cancelled', style: 'background:#ef4444;color:#fff;' }
+            },
+            'Active Scoping': {
+                'Backlog': { icon: '↩️', label: 'Backlog', style: 'background:#ffa726;color:#222;' },
+                'Cancelled': { icon: '🛑', label: 'Cancelled', style: 'background:#ef4444;color:#fff;' }
+            }
+            // ...Add more as needed...
+        },
+        Consultant: {
+            'Needs Dev Feedback (T-Shirt Sizing)': {
+                'Cancelled': { icon: '🛑', label: 'Cancelled', style: 'background:#ef4444;color:#fff;' },
+                'Backlog': { icon: '↩️', label: 'Backlog', style: 'background:#ffa726;color:#222;' },
+                'Active Scoping': { icon: '🔙', label: 'Active Scoping', style: 'background:#ffe082;color:#333;' }
+            }
+            // ...etc.
+        }
+        // ...Add for other personas as needed...
+    };
+    */
+    /** keep a reference so we can refresh it later */
+    @wire(getTickets)
+    wiredTickets(result) {
+        this.ticketsWire = result;              // ⬅️ store the wire
+
+        const { data, error } = result;
+        if (data) {
+            this.realRecords = [...data];       // reactive copy
+            this.loadETAs();                    // refresh ETAs
+        } else if (error) {
+            // optional: surface the error some other way
+            console.error('Ticket wire error', error);
+        }
+    }
+
+
+    /* Toolbar button */
+    openCreateModal() { this.showCreateModal = true; }
+
+    /* “Cancel” in form */
+    handleCreateCancel() { this.showCreateModal = false; }
+
+    /* Called when the record-edit form saves successfully */
+    handleCreateSuccess() {
+        this.showCreateModal = false;
+        // Re-query tickets so the new card appears:
+        this.refreshTickets();
+    }
 
     refreshTickets() {
         refreshApex(this.ticketsWire)           // bypass cache & rerun wire
             .then(() => this.loadETAs())        // pull fresh ETAs afterwards
             .catch(err => console.error('Ticket reload error', err));
     }
+
+    openCreateModal() {
+        // find current max SortOrderNumber__c and add 1
+        const nums = (this.realRecords || [])
+            .map(r => r.SortOrderNumber__c)
+            .filter(n => n !== null && n !== undefined);
+        this.nextSortOrder = nums.length ? Math.max(...nums) + 1 : 1;
+
+        this.showCreateModal = true;
+    }
+
+    /* ---------- defaults for the create form ---------- */
+    get createDefaults() {
+        return {
+            StageNamePk__c     : 'Backlog',
+            SortOrderNumber__c : this.nextSortOrder,
+            PriorityPk__c      : 'Medium',
+            IsActiveBool__c    : true
+        };
+    }
+
 
     get personaOptions() {
         return Object.keys(this.personaColumnStatusMap).map(p => ({ label: p, value: p }));
@@ -1035,139 +1114,4 @@ backtrackMap = {
         this.selectedStage = null;
         this.moveComment = '';
     }
-
-    handleArrowClick(e) {
-        const ticketId = e.currentTarget.dataset.id;
-        const colStage = e.currentTarget.dataset.col;
-        const direction = e.currentTarget.dataset.dir; // "up" or "down"
-
-        // Find the column object
-        const columns = this.stageColumns;
-        const colObj = columns.find(c => c.stage === colStage);
-        if (!colObj) return;
-
-        const idx = colObj.tickets.findIndex(t => t.Id === ticketId);
-        if (idx === -1) return;
-
-        let targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-        if (targetIdx < 0 || targetIdx >= colObj.tickets.length) return; // Out of bounds
-
-        // Swap the two tickets
-        const temp = colObj.tickets[idx];
-        colObj.tickets[idx] = colObj.tickets[targetIdx];
-        colObj.tickets[targetIdx] = temp;
-
-        // Update SortOrderNumber__c in memory
-        colObj.tickets.forEach((t, i) => t.SortOrderNumber__c = i + 1);
-
-        // Call Apex to persist the new order (implement this method as needed)
-        this.bulkUpdateSortOrders(
-            colObj.tickets.map(t => ({
-                Id: t.Id,
-                SortOrderNumber__c: t.SortOrderNumber__c
-            }))
-        );
-
-        // Optionally, re-render
-        this.refreshTickets();
-    }
-
-    bulkUpdateSortOrders(updates) {
-        updateTicketSortOrders({ updates })
-            .then(() => this.refreshTickets())
-            .catch(err => console.error('Bulk sort update error', err));
-    }
-
-    get helpMailtoLink() {
-        // You can't get the current user's email everywhere
-        // so just prompt for it in the body if not available
-        const url = window.location.href;
-        let subject = `Support Request - ${url}`;
-        let body = `Describe your issue here...\n\n---\nURL: ${url}\n`;
-        body += `Your email: \n`; // user fills it in
-
-        return 'mailto:support@cloudnimbusllc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}';
-    }
-
-    get dummyRecordId() {
-        // Temporary owner for files before ticket exists
-        return USER_ID;
-    }
-
-    get defaultSize() { return 1; } // Or your preferred default
-
-    get createDefaults() {
-        return {
-            StageNamePk__c: 'Backlog',
-            SortOrderNumber__c: this.nextSortOrder,
-            PriorityPk__c: 'Medium',
-            IsActiveBool__c: true,
-            DeveloperDaysSizeNumber__c: this.defaultSize
-        };
-    }
-
-    // Use your tickets wire to set nextSortOrder:
-    @wire(getTickets)
-    wiredTickets(result) {
-        this.ticketsWire = result;
-        const { data } = result;
-        if (data) {
-            this.realRecords = [...data];
-            // Find next sort order based on existing tickets
-            const nums = this.realRecords.map(r => r.SortOrderNumber__c).filter(n => n !== null && n !== undefined);
-            this.nextSortOrder = nums.length ? Math.max(...nums) + 1 : 1;
-        }
-    }
-
-    openCreateModal() {
-        // Only show spinner if tickets aren't loaded yet
-        if (!this.realRecords) {
-            this.showSpinner = true;
-            setTimeout(() => { this.showSpinner = false; }, 1000); // fallback
-            return;
-        }
-        this.showCreateModal = true;
-    }
-
-    handleCreateCancel() {
-        this.showCreateModal = false;
-        this.uploadedFileIds = [];
-    }
-
-    handleFileUpload(event) {
-        const files = event.detail.files;
-        // Allow multiple file uploads
-        this.uploadedFileIds = files.map(f => f.documentId);
-    }
-
-    handleCreateSuccess(event) {
-        const ticketId = event.detail.id;
-        // Link any files
-        if (this.uploadedFileIds.length) {
-            linkFilesToTicket({ ticketId, contentDocumentIds: this.uploadedFileIds })
-                .then(() => {
-                    this.showToast('Ticket created!', 'Your ticket and files were added.', 'success');
-                    this.finishCreate();
-                })
-                .catch(err => {
-                    this.showToast('Files not attached', 'The ticket was created, but there was a problem attaching your files.', 'warning');
-                    this.finishCreate();
-                });
-        } else {
-            this.showToast('Ticket created!', 'Your ticket was added.', 'success');
-            this.finishCreate();
-        }
-    }
-
-    finishCreate() {
-        this.showCreateModal = false;
-        this.uploadedFileIds = [];
-        this.refreshTickets();
-    }
-
-    showToast(title, message, variant) {
-        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
-    }
-
-
 }

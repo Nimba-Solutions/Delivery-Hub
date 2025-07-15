@@ -116,5 +116,19 @@ public with sharing class DH_TicketController {
         }
     }
 
+    @AuraEnabled
+    public static void linkFilesToTicket(Id ticketId, List<Id> contentDocumentIds) {
+        List<ContentDocumentLink> links = new List<ContentDocumentLink>();
+        for (Id docId : contentDocumentIds) {
+            links.add(new ContentDocumentLink(
+                ContentDocumentId = docId,
+                LinkedEntityId = ticketId,
+                ShareType = 'V',
+                Visibility = 'AllUsers'
+            ));
+        }
+        insert links;
+    }
+
 
 }
