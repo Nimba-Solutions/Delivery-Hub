@@ -39,7 +39,7 @@ public with sharing class DH_JiraSyncWorker
 
             String body = JSON.serialize(new Map<String,Object>{
                 'fields' => new Map<String,Object>{
-                    'project'     => new Map<String,String>{ 'key' => 'GP' },
+                    'project'     => new Map<String,String>{ 'key' => 'DHS' },
                     'summary'     => summary,
                     'description' => adf,
                     'issuetype'   => new Map<String,String>{ 'name' => 'Task' }

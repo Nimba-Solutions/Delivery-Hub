@@ -5,7 +5,7 @@ import { updateRecord } from 'lightning/uiRecordApi';
 import getTickets from '@salesforce/apex/DH_TicketController.getTickets';
 import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
 import ID_FIELD from '@salesforce/schema/DH_Ticket__c.Id';
-import getTicketETAs from '@salesforce/apex/DH_TicketETAService.getTicketETAs';
+import getTicketETAsWithPriority from '@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority';
 
 
 
@@ -24,20 +24,23 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track showAllColumns = true;
     @track showCreateModal = false;
     @track nextSortOrder = 1;
+    @track overallFilter = 'all';
+    @track intentionFilter = 'all';
     ticketsWire;
 
 
     statusColorMap = {
         'Backlog': '#FAFAFA',
         'Active Scoping': '#FFE082',
+        'Quick Estimate': '#FFD54F', // not a status but a column, see below!
+        'Pending Client Prioritization': '#FFD54F', // YELLOW
         'Client Clarification (Pre-Dev)': '#FFD54F',
         'Pending Client Approval': '#FFE0B2',
-        'Client Clarification (In-Dev)': '#FFB300',
         'Needs Dev Feedback (T-Shirt Sizing)': '#FFD180',
         'Needs Dev Feedback (Proposal)': '#FFD180',
-        'Pending Development Approval': '#B2DFDB',
-        'Ready for Development': '#E1BEE7',
-        'In Development': '#BBDEFB',
+        'Pending Development Approval': '#FFD54F', // now yellow, not blue
+        'Ready for Development': '#FFD54F',
+        'In Development': '#FF9100', // Orange
         'Dev Blocked': '#FF5252',
         'Back For Development': '#FFD180',
         'Dev Complete': '#A5D6A7',
@@ -53,12 +56,45 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         'Cancelled': '#BDBDBD'
     };
 
+    // Custom header color logic for Client persona
+    columnHeaderStyleMap = {
+        // --- Client action columns ---
+        'Backlog':                  { bg: '#2196F3', color: '#fff' }, // blue
+        'Active Scoping':           { bg: '#2196F3', color: '#fff' }, // blue
+        'Pending Client Prioritization': { bg: '#2196F3', color: '#fff' }, // blue
+        'Pending Client Approval':  { bg: '#2196F3', color: '#fff' }, // blue
+        'Client Clarification (Pre-Dev)':  { bg: '#2196F3', color: '#fff' }, // blue
+
+        // --- Pre-dev/Dev columns (yellow, with black text) ---
+        'Quick Estimate':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Proposal Needed':          { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Pending Development Approval': { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Client Clarification (In-Dev)': { bg: '#2196F3', color: '#fff' }, // force blue
+        'Ready for Development':    { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'In Development':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'In Review':                { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        // --- Other columns: fallback to blue ---
+        'Ready for UAT (Client)':   { bg: '#2196F3', color: '#fff' }, // blue
+        'Deployed to Prod':         { bg: '#2196F3', color: '#fff' }, // blue
+        'Done':                     { bg: '#607D8B', color: '#fff' },
+        
+        'Needs Dev Feedback (T-Shirt Sizing)':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Needs Dev Feedback (Proposal)':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Dev Complete':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Back For Development':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Ready for Scratch Org Test':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Ready for QA':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
+        'Ready for UAT (Consultant)':           { bg: '#FFD54F', color: '#222' } // yellow, dark text
+    };
+
+
     /** Who owns each status next **/
     statusOwnerMap = {
         // ── Client ─────────────────────────
         'Backlog': 'Client',
         'Active Scoping': 'Client',
         'Client Clarification (Pre-Dev)': 'Client',
+        'Pending Client Prioritization': 'Client',
         'Pending Client Approval': 'Client',
         'Client Clarification (In-Dev)': 'Client',
         'Ready for UAT (Client)': 'Client',
@@ -96,100 +132,478 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         Default:    '#BDBDBD'    // grey fallback
     };
 
+    columnDisplayNames = {
+        'Backlog': 'Backlog',
+        'Active Scoping': 'Active Scoping',
+        'Quick Estimate': 'Ready for Estimate',
+        'Pending Client Prioritization': 'Client Prioritization / Feedback', // <-- NEW LABEL!
+        'Proposal Needed': 'Approved for Analysis',
+        'Pending Client Approval': 'Pending Client Approval',
+        'Ready for Development': 'Approved for Development',
+        'Client Clarification (In-Dev)': 'Client Clarification (In-Dev)',
+        'In Development': 'In Development',
+        'In Review': 'In Review',
+        'Ready for UAT (Client)': 'Ready for UAT (Client)',
+        'Deployed to Prod': 'Deployed to Prod',
+        'Done': 'Done'
+        // ... (add other columns if you want custom labels)
+    };
+
 
     personaColumnStatusMap = {
         Client: {
-            'Backlog'               : ['Backlog'],
-            'Active Scoping'        : ['Active Scoping'],
-            'Pre-Dev Review'        : ['Needs Dev Feedback (T-Shirt Sizing)', 'Needs Dev Feedback (Proposal)', 'Pending Development Approval', 'Ready for Development'],
-            'Client Clarification (Pre-Dev)'  : ['Client Clarification (Pre-Dev)'],
-            'Pending Client Approval' : ['Pending Client Approval'],
-            'Client Clarification (In-Dev)' : ['Client Clarification (In-Dev)'],
-            'In Development'        : ['In Development', 'Dev Blocked', 'Back For Development', 'Dev Complete'],
-            'In Review'             : ['Ready for Scratch Org Test', 'Ready for QA', 'In QA', 'Ready for UAT (Consultant)', 'Ready for UAT Approval', 'Ready for Feature Merge', 'Ready for Deployment'],
+            'Backlog': ['Backlog'],
+            'Active Scoping': ['Active Scoping'],
+            'Quick Estimate': ['Needs Dev Feedback (T-Shirt Sizing)'],
+            'Pending Client Prioritization': [
+            'Client Clarification (Pre-Dev)',      // <-- Add here!
+            'Pending Client Prioritization'
+            ],
+            'Proposal Needed': ['Needs Dev Feedback (Proposal)','Pending Development Approval'],
+            'Pending Client Approval': ['Pending Client Approval'],
+            'Ready for Development': [
+                'Ready for Development'
+            ],
+            'Client Clarification (In-Dev)': ['Client Clarification (In-Dev)'],
+            'In Development': [
+            'In Development',
+            'Dev Blocked',
+            'Back For Development',
+            'Dev Complete'
+            ],
+            'In Review': [
+            'Ready for Scratch Org Test',
+            'Ready for QA',
+            'In QA',
+            'Ready for UAT (Consultant)',
+            'Ready for UAT Approval',
+            'Ready for Feature Merge',
+            'Ready for Deployment'
+            ],
             'Ready for UAT (Client)': ['Ready for UAT (Client)'],
-            'Deployed to Prod'      : ['Deployed to Prod']
-        },
-        Consultant: {
-            'Incoming': ['Active Scoping', 'Client Clarification (Pre-Dev)', 'Pending Client Approval'],
-            'Needs Dev Feedback (T-Shirt Sizing)': ['Needs Dev Feedback (T-Shirt Sizing)'],
-            'Pending Development Approval': ['Pending Development Approval'],
-            'In Development': ['In Development', 'Dev Blocked', 'Back For Development', 'Dev Complete'],
-            'In Review': ['Ready for Scratch Org Test', 'Ready for QA', 'In QA'],
-            'Ready for UAT Approval': ['Ready for UAT (Consultant)'],
-            'Ready for Feature Merge': ['Ready for Feature Merge'],
-            'Ready for Deployment': ['Ready for Deployment'],
+            'Deployed to Prod': ['Deployed to Prod'],
             'Done': ['Done']
         },
-        Developer: {
-            'Incoming': ['Pending Client Approval'],
-            'Needs Dev Feedback (Proposal)': ['Needs Dev Feedback (Proposal)'],
-            'Ready for Development': ['Ready for Development'],
-            'In Development': ['In Development'],
-            'Dev Blocked': ['Dev Blocked'],
-            'Dev Complete': ['Dev Complete'],
-            'Back For Development': ['Back For Development']
+        Consultant: {
+            'Intake': [
+                'Active Scoping',
+                'Client Clarification (Pre-Dev)',
+                'Pending Client Approval'
+            ],
+            'Quick Estimate': ['Needs Dev Feedback (T-Shirt Sizing)'],
+            'Proposal Needed': ['Needs Dev Feedback (Proposal)'],
+            'Dev Approval': ['Pending Development Approval'],
+            'Pre-Dev Complete': ['Ready for Development'],
+            'In Development': [
+                'In Development',
+                'Dev Blocked',
+                'Back For Development',
+                'Dev Complete'
+            ],
+            'Review & UAT': [
+                'Ready for Scratch Org Test',
+                'Ready for QA',
+                'In QA',
+                'Ready for UAT (Consultant)',
+                'Ready for UAT Approval'
+            ],
+            'Feature Merge & Deploy': [
+                'Ready for Feature Merge',
+                'Ready for Deployment'
+            ],
+            'Deployed to Prod': ['Deployed to Prod'],
+            'Done': ['Done']
         },
+
+        Developer: {
+            'Pending Work': [
+                'Pending Client Approval',
+                'Pending Development Approval',
+                'Ready for Development'
+            ],
+            'Dev In Progress': [
+                'In Development'
+            ],
+            'Dev Blocked': [
+                'Dev Blocked'
+            ],
+            'Dev Complete': [
+                'Dev Complete'
+            ],
+            'Review & Fixes': [
+                'Back For Development'
+            ],
+            'QA & UAT': [
+                'Ready for Scratch Org Test',
+                'Ready for QA',
+                'In QA',
+                'Ready for UAT (Consultant)',
+                'Ready for UAT (Client)'
+            ],
+            'Ready for Deploy': [
+                'Ready for Feature Merge',
+                'Ready for Deployment'
+            ],
+            'Deployed to Prod': ['Deployed to Prod'],
+            'Done': ['Done']
+        },
+
         QA: {
-            'Incoming': ['In Development', 'Dev Blocked', 'Back For Development', 'Dev Complete'],
-            'Ready for Scratch Org Test': ['Ready for Scratch Org Test'],
             'Ready for QA': ['Ready for QA'],
             'In QA': ['In QA'],
-            'In UAT': ['Ready for UAT (Consultant)', 'Ready for UAT (Client)']
+            'In Dev': [
+                'In Development',
+                'Dev Blocked',
+                'Back For Development',
+                'Dev Complete'
+            ],
+            'Scratch Org Test': ['Ready for Scratch Org Test'],
+            'UAT': [
+                'Ready for UAT (Consultant)',
+                'Ready for UAT (Client)'
+            ],
+            'Ready for Merge': ['Ready for Feature Merge'],
+            'Ready for Deploy': ['Ready for Deployment'],
+            'Deployed to Prod': ['Deployed to Prod'],
+            'Done': ['Done']
+        }
+    };
+
+    personaBoardViews = {
+        Client: {
+            all: [
+                'Backlog',
+                'Active Scoping',
+                'Quick Estimate',
+                'Pending Client Prioritization',
+                'Proposal Needed',
+                'Pending Client Approval',
+                'Ready for Development',
+                'Client Clarification (In-Dev)',
+                'In Development',
+                'In Review',
+                'Ready for UAT (Client)',
+                'Deployed to Prod',
+                'Done'
+            ],
+            predev: [
+                'Backlog',
+                'Active Scoping',
+                'Quick Estimate',
+                'Pending Client Prioritization',
+                'Proposal Needed',
+                'Pending Client Approval',
+                'Ready for Development'
+            ],
+            indev: [
+                'Client Clarification (In-Dev)',
+                'In Development',
+                'In Review',
+                'Ready for UAT (Client)'
+            ],
+            deployed: [
+                'Deployed to Prod',
+                'Done'
+            ]
+        },
+        Consultant: {
+            all: [
+                'Intake',
+                'Quick Estimate',
+                'Proposal Needed',
+                'Dev Approval',
+                'Pre-Dev Complete',
+                'In Development',
+                'Review & UAT',
+                'Feature Merge & Deploy',
+                'Deployed to Prod',
+                'Done'
+            ],
+            predev: [
+                'Intake',
+                'Quick Estimate',
+                'Proposal Needed',
+                'Dev Approval',
+                'Pre-Dev Complete'
+            ],
+            indev: [
+                'In Development',
+                'Review & UAT',
+                'Feature Merge & Deploy'
+            ],
+            deployed: [
+                'Deployed to Prod',
+                'Done'
+            ]
+        },
+        Developer: {
+            all: [
+                'Pending Work',
+                'Dev In Progress',
+                'Dev Blocked',
+                'Dev Complete',
+                'Review & Fixes',
+                'QA & UAT',
+                'Ready for Deploy',
+                'Deployed to Prod',
+                'Done'
+            ],
+            predev: [
+                'Pending Work'
+            ],
+            indev: [
+                'Dev In Progress',
+                'Dev Blocked',
+                'Dev Complete',
+                'Review & Fixes',
+                'QA & UAT',
+                'Ready for Deploy'
+            ],
+            deployed: [
+                'Deployed to Prod',
+                'Done'
+            ]
+        },
+        QA: {
+            all: [
+                'Ready for QA',
+                'In QA',
+                'In Dev',
+                'Scratch Org Test',
+                'UAT',
+                'Ready for Merge',
+                'Ready for Deploy',
+                'Deployed to Prod',
+                'Done'
+            ],
+            predev: [
+                'In Dev'
+            ],
+            indev: [
+                'Ready for QA',
+                'In QA',
+                'Scratch Org Test',
+                'UAT',
+                'Ready for Merge',
+                'Ready for Deploy'
+            ],
+            deployed: [
+                'Deployed to Prod',
+                'Done'
+            ]
         }
     };
 
     transitionMap = {
-        'Backlog': ['Active Scoping'],
-        'Active Scoping': ['Client Clarification (Pre-Dev)', 'Needs Dev Feedback (T-Shirt Sizing)', 'Needs Dev Feedback (Proposal)', 'Pending Development Approval'],
-        'Client Clarification (Pre-Dev)': ['Pending Client Approval', 'Pending Development Approval'],
-        'Needs Dev Feedback (T-Shirt Sizing)': ['Client Clarification (Pre-Dev)', 'Pending Client Approval', 'Pending Development Approval'],
-        'Needs Dev Feedback (Proposal)': ['Pending Development Approval'],
-        'Pending Development Approval': ['Ready for Development', 'Pending Client Approval'],
-        'Pending Client Approval': ['Ready for Development'],
-        'Ready for Development': ['In Development'],
-        'In Development': ['Dev Complete', 'Dev Blocked', 'Client Clarification (In-Dev)'],
-        'Dev Blocked': ['In Development', 'Client Clarification (In-Dev)', 'Pending Development Approval'],
-        'Client Clarification (In-Dev)': ['Back For Development', 'Dev Blocked', 'Pending Development Approval'],
-        'Back For Development': ['In Development'],
-        'Dev Complete': ['Ready for Scratch Org Test', 'Ready for QA', 'Ready for UAT (Consultant)', 'Ready for UAT (Client)'],
-        'Ready for Scratch Org Test': ['Ready for QA'],
-        'Ready for QA': ['In QA'],
-        'In QA': ['Ready for UAT (Consultant)', 'Ready for UAT (Client)', 'Dev Complete'],
-        'Ready for UAT (Consultant)': ['Ready for UAT (Client)'],
-        'Ready for UAT (Client)': ['Ready for Feature Merge'],
-        'Ready for Feature Merge': ['Ready for Deployment'],
-        'Ready for Deployment': ['Deployed to Prod'],
-        'Deployed to Prod': ['Done'],
-        'Done': [],
-        'Cancelled': ['Backlog']
-    };
+    'Backlog': ['Active Scoping','Needs Dev Feedback (T-Shirt Sizing)','Client Clarification (Pre-Dev)'],
+    'Active Scoping': [
+        'Client Clarification (Pre-Dev)',
+        'Needs Dev Feedback (T-Shirt Sizing)'
+    ],
+    'Needs Dev Feedback (T-Shirt Sizing)': [
+        'Pending Client Prioritization'
+    ],
+    'Pending Client Prioritization': [
+        'Needs Dev Feedback (Proposal)'
+    ],
+    'Needs Dev Feedback (Proposal)': [
+        'Pending Development Approval'
+    ],
+    'Client Clarification (Pre-Dev)': [
+        'Pending Client Approval',
+        'Pending Development Approval'
+    ],
+    'Pending Client Approval': [
+        'Ready for Development'
+    ],
+    'Pending Development Approval': [
+        'Pending Client Approval',
+        'Ready for Development'
+    ],
+    'Ready for Development': [
+        'In Development'
+    ],
+    'In Development': [
+        'Dev Complete',
+        'Dev Blocked'
+    ],
+    'Dev Blocked': [
+        'In Development',
+        'Pending Development Approval'
+    ],
+    // Back For Development is only a forward step from "Client Clarification (In-Dev)"
+    'Client Clarification (In-Dev)': [
+        'Back For Development'
+    ],
+    'Back For Development': [
+        'In Development'
+    ],
+    'Dev Complete': [
+        'Ready for Scratch Org Test',
+        'Ready for QA',
+        'Ready for UAT (Consultant)',
+        'Ready for UAT (Client)'
+    ],
+    'Ready for Scratch Org Test': [
+        'Ready for QA'
+    ],
+    'Ready for QA': [
+        'In QA'
+    ],
+    'In QA': [
+        'Ready for UAT (Consultant)',
+        'Ready for UAT (Client)',
+        'Dev Complete'
+    ],
+    'Ready for UAT (Consultant)': [
+        'Ready for UAT (Client)'
+    ],
+    'Ready for UAT (Client)': [
+        'Ready for Feature Merge'
+    ],
+    'Ready for Feature Merge': [
+        'Ready for Deployment'
+    ],
+    'Ready for Deployment': [
+        'Deployed to Prod'
+    ],
+    'Deployed to Prod': [
+        'Done'
+    ],
+    'Done': [],
+    'Cancelled': ['Backlog']
+};
 
 
-    backtrackMap = {
-    'Active Scoping': ['Backlog', 'Cancelled'],
-    'Client Clarification (Pre-Dev)': ['Active Scoping', 'Cancelled'],
-    'Needs Dev Feedback (T-Shirt Sizing)': ['Active Scoping', 'Backlog', 'Cancelled'],
-    'Needs Dev Feedback (Proposal)': ['Active Scoping', 'Backlog', 'Cancelled'],
-    'Pending Development Approval': ['Needs Dev Feedback (Proposal)', 'Client Clarification (Pre-Dev)'],
-    'Pending Client Approval': ['Active Scoping', 'Client Clarification (Pre-Dev)', 'Needs Dev Feedback (T-Shirt Sizing)', 'Needs Dev Feedback (Proposal)', 'Cancelled'],
-    'Ready for Development': ['Pending Development Approval', 'Pending Client Approval', 'Cancelled'],
-    'In Development': ['Ready for Development', 'Back For Development','Client Clarification (In-Dev)', 'Cancelled'],
-    'Dev Blocked': ['In Development', 'Ready for Development', 'Pending Development Approval', 'Cancelled'],
-    'Client Clarification (In-Dev)': ['Dev Blocked', 'In Development', 'Back For Development', 'Cancelled'],
-    'Back For Development': ['Client Clarification (In-Dev)', 'Dev Blocked', 'In Development', 'Cancelled'],
-    'Dev Complete': ['In Development', 'Dev Blocked', 'Back For Development', 'Cancelled'],
-    'Ready for Scratch Org Test': ['Dev Complete', 'In Development', 'Cancelled'],
-    'Ready for QA': ['Ready for Scratch Org Test', 'Dev Complete', 'Cancelled'],
-    'In QA': ['Ready for QA', 'Ready for Scratch Org Test', 'Cancelled'],
-    'Ready for UAT (Consultant)': ['In QA', 'Ready for QA', 'Cancelled'],
-    'Ready for UAT (Client)': ['Ready for UAT (Consultant)', 'In QA', 'Cancelled'],
-    'Ready for Feature Merge': ['Ready for UAT (Client)', 'Ready for UAT (Consultant)', 'Cancelled'],
-    'Ready for Deployment': ['Ready for Feature Merge', 'Ready for UAT (Client)', 'Cancelled'],
-    'Deployed to Prod': ['Ready for Deployment', 'Ready for Feature Merge', 'Cancelled'],
-    'Done': ['Deployed to Prod', 'Ready for Deployment', 'Cancelled'],
-    'Backlog': ['Cancelled'],
+
+
+backtrackMap = {
+    'Active Scoping': [
+        'Backlog',
+        'Cancelled'
+    ],
+    'Client Clarification (Pre-Dev)': [
+        'Active Scoping',
+        'Needs Dev Feedback (T-Shirt Sizing)',
+        'Cancelled'
+    ],
+    'Needs Dev Feedback (T-Shirt Sizing)': [
+        'Active Scoping',
+        'Backlog',
+        'Cancelled'
+    ],
+    'Pending Client Prioritization': [
+        'Needs Dev Feedback (T-Shirt Sizing)',
+        'Active Scoping',
+        'Backlog',
+        'Cancelled'
+    ],
+    'Needs Dev Feedback (Proposal)': [
+        'Pending Client Prioritization',
+        'Needs Dev Feedback (T-Shirt Sizing)',
+        'Cancelled'
+    ],
+    'Pending Development Approval': [
+        'Needs Dev Feedback (Proposal)',
+        'Pending Client Prioritization',
+        'Active Scoping',
+        'Backlog',
+        'Cancelled'
+    ],
+    'Pending Client Approval': [
+        'Needs Dev Feedback (Proposal)',
+        'Pending Client Prioritization',
+        'Cancelled'
+    ],
+    'Ready for Development': [
+        'Pending Client Approval',
+        'Pending Development Approval',
+        'Cancelled'
+    ],
+    'In Development': [
+        'Ready for Development',
+        'Back For Development',
+        'Dev Blocked',
+        'Client Clarification (In-Dev)', // <-- now only a backtrack!
+        'Cancelled'
+    ],
+    'Dev Blocked': [
+        'Ready for Development',
+        'Pending Development Approval',
+        'Pending Client Approval',
+        'Cancelled'
+    ],
+    'Client Clarification (In-Dev)': [
+        'Pending Client Approval',
+        'Cancelled'
+    ],
+    'Back For Development': [
+        'Client Clarification (In-Dev)',
+        'Pending Client Approval',
+        'Dev Blocked',
+        'In Development',
+        'Cancelled'
+    ],
+    'Dev Complete': [
+        'In Development',
+        'Dev Blocked',
+        'Back For Development',
+        'Ready for QA',
+        'Cancelled'
+    ],
+    'Ready for Scratch Org Test': [
+        'Dev Complete',
+        'Cancelled'
+    ],
+    'Ready for QA': [
+        'Ready for Scratch Org Test',
+        'Dev Complete',
+        'Cancelled'
+    ],
+    'In QA': [
+        'Ready for QA',
+        'Ready for Scratch Org Test',
+        'Dev Complete',
+        'Cancelled'
+    ],
+    'Ready for UAT (Consultant)': [
+        'In QA',
+        'Ready for QA',
+        'Cancelled'
+    ],
+    'Ready for UAT (Client)': [
+        'Ready for UAT (Consultant)',
+        'In QA',
+        'Cancelled'
+    ],
+    'Ready for Feature Merge': [
+        'Ready for UAT (Client)',
+        'Ready for UAT (Consultant)',
+        'Cancelled'
+    ],
+    'Ready for Deployment': [
+        'Ready for Feature Merge',
+        'Cancelled'
+    ],
+    'Deployed to Prod': [
+        'Ready for Deployment',
+        'Cancelled'
+    ],
+    'Done': [
+        'Deployed to Prod',
+        'Ready for Deployment',
+        'Cancelled'
+    ],
+    'Backlog': [
+        'Cancelled'
+    ],
     'Cancelled': []
+};
+
+
+    intentionColor = {
+        'Will Do': '#2196F3',
+        'Sizing Only': '#FFD54F'
     };
 
     personaAdvanceOverrides = {};
@@ -297,7 +711,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     }
 
 
-
     get personaOptions() {
         return Object.keys(this.personaColumnStatusMap).map(p => ({ label: p, value: p }));
     }
@@ -353,35 +766,118 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
     /* ---------- stageColumns ---------- */
     get stageColumns() {
-        // All columns defined for the current persona
-        const personaCols = this.personaColumnStatusMap[this.persona] || {};
+        const persona = this.persona;
+        const boardViews = this.personaBoardViews?.[persona] || {};
+        let colNames = boardViews?.[this.overallFilter] || [];
+        const statusMap = this.personaColumnStatusMap?.[persona] || {};
+        const enriched = this.enrichedTickets || [];
 
-        return Object.keys(personaCols)
-            // Optionally hide lanes not owned by this persona
-            .filter(col =>
-                this.showAllColumns || this.columnOwner(col) === this.persona
-            )
-            // Build the column objects the template consumes
-            .map(col => {
-                const statuses = personaCols[col];
-                const owner    = this.columnOwner(col);
-                const color    = this.ownerColorMap[owner] || this.ownerColorMap.Default;
+        // Filter columns for "Show Internal Columns" toggle
+        if (!this.showAllColumns) {
+            colNames = colNames.filter(col => this.columnOwner(col) === persona);
+        }
 
-                return {
-                    stage       : col,
-                    /* NEW — full inline-style string for the header div */
-                    headerStyle : `background:${color};color:#fff;`,
-
-                    // Cards in this column
-                    tickets     : (this.enrichedTickets || [])
-                        .filter(t => statuses.includes(t.StageNamePk__c))
-                        .map(t => ({
-                            ...t,
-                            cardColor: this.statusColorMap[t.StageNamePk__c] || '#eee'
-                        }))
-                };
-            });
+        return (colNames || []).map(colName => {
+            const statuses = statusMap[colName] || [];
+            // Prefer custom style if present, else fallback to persona color logic
+            let headerStyle;
+            if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[colName]) {
+                const { bg, color } = this.columnHeaderStyleMap[colName];
+                headerStyle = `background:${bg};color:${color};`;
+            } else {
+                const owner = this.columnOwner(colName);
+                const color = this.ownerColorMap[owner] || this.ownerColorMap.Default;
+                headerStyle = `background:${color};color:#fff;`;
+            }
+            return {
+                stage: colName,
+                displayName: this.columnDisplayNames[colName] || colName,
+                headerStyle,
+                tickets: enriched
+                    .filter(t => statuses.includes(t.StageNamePk__c))
+                    .filter(t => {
+                        // Only filter if intention is not "all"
+                        if (this.intentionFilter === 'all') return true;
+                        // Debug log
+                        console.log(
+                            `[Intent Filter] Ticket:`, t.Id, 
+                            '| Stage:', t.StageNamePk__c, 
+                            '| Client_Intention__c:', t.Client_Intention__c, 
+                            '| Current Filter:', this.intentionFilter
+                        );
+                        // Compare picklist value, trimming for safety
+                        return (t.Client_Intention__c || '').trim().toLowerCase() === this.intentionFilter.toLowerCase();
+                    })
+                    .map(t => {
+                        // You can add your cardColor logic here if you want
+                        let cardColor = this.statusColorMap[t.StageNamePk__c] || '#eee';
+                        return { ...t, cardColor };
+                    })
+            };
+        });
     }
+
+
+
+
+
+    getColumnDisplayName(colKey) {
+        return this.columnDisplayNames?.[colKey] || colKey;
+    }
+
+
+
+    // Helper for client persona column headers
+    getClientColumnHeaderColor(colName) {
+        // Pre-Dev columns (yellow)
+        const yellowCols = [
+            'Quick Estimate',
+            'Proposal Needed',
+            'Pending Development Approval',
+            'Ready for Development'
+        ];
+        // In-Dev/Review columns (orange)
+        const orangeCols = [
+            'In Development',
+            'In Review',
+            'Ready for UAT (Client)'
+        ];
+        // Deployed/Done columns (blue)
+        const blueCols = [
+            'Deployed to Prod',
+            'Done'
+        ];
+        if (yellowCols.includes(colName)) return '#FFE082';
+        if (orangeCols.includes(colName)) return '#FF9100';
+        if (blueCols.includes(colName))   return '#90caf9';
+        // Backlog/Active Scoping – light gray or light blue
+        if (colName === 'Backlog' || colName === 'Active Scoping') return '#bbdefb';
+        return '#2196F3'; // Default blue for anything else
+    }
+
+    // ...and keep getClientCardColor as previously provided:
+    getClientCardColor(status) {
+        if (this.persona !== 'Client') {
+            return this.statusColorMap[status] || '#eee';
+        }
+        const predev = [
+            'Backlog', 'Active Scoping', 'Quick Estimate', 'Proposal Needed',
+            'Pending Development Approval', 'Pending Client Approval', 'Ready for Development'
+        ];
+        const indev = [
+            'In Development', 'Dev Blocked', 'Back For Development', 'Dev Complete',
+            'Ready for Scratch Org Test', 'Ready for QA', 'In QA',
+            'Ready for UAT (Consultant)', 'Ready for UAT Approval', 'Ready for UAT (Client)',
+            'Ready for Feature Merge', 'Ready for Deployment'
+        ];
+        if (predev.includes(status))   return '#FFE082'; // yellow
+        if (indev.includes(status))    return '#FF9100'; // orange
+        if (['Deployed to Prod', 'Done', 'Cancelled'].includes(status)) return '#90caf9'; // blue/grey
+        return '#eee';
+    }
+
+
+
 
 
 
@@ -396,15 +892,17 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         return nextStages
             .filter(tgt => tgt !== currStage)
             .map(tgt => {
-                // persona-specific override (if any)
                 const override = this.personaAdvanceOverrides?.[persona]?.[currStage]?.[tgt] || {};
 
-                // NEW: colour by target owner
-                const owner = this.statusOwnerMap[tgt] || 'Default';
-                const style = override.style
-                    || `background:${this.ownerColorMap[owner]};color:#fff;`;
+                // 🔥 Use columnHeaderStyleMap for the target status
+                let style = '';
+                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
+                    const { bg, color } = this.columnHeaderStyleMap[tgt];
+                    style = `background:${bg};color:${color};`;
+                } else {
+                    style = 'background:#e0e0e0;color:#222;';
+                }
 
-                // icon fallbacks
                 let icon = override.icon || '➡️';
                 if (tgt === 'Active Scoping') icon = '🚀';
                 if (tgt === 'Cancelled')      icon = '🛑';
@@ -427,15 +925,18 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         const persona   = this.persona;
         let targets     = [];
 
-        /* persona-specific overrides take priority */
         if (this.personaBacktrackOverrides?.[persona]?.[currStage]) {
             const custom = this.personaBacktrackOverrides[persona][currStage];
             targets = Object.keys(custom).map(tgt => {
                 const override = custom[tgt];
-                const owner = this.statusOwnerMap[tgt] || 'Default';
-                const style = override.style
-                    || `background:${this.ownerColorMap[owner]};color:#fff;`;
-
+                // 🔥 Use columnHeaderStyleMap for the target status
+                let style = '';
+                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
+                    const { bg, color } = this.columnHeaderStyleMap[tgt];
+                    style = `background:${bg};color:${color};`;
+                } else {
+                    style = 'background:#e0e0e0;color:#222;';
+                }
                 return {
                     value: tgt,
                     label: override.label || tgt,
@@ -444,19 +945,50 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
                 };
             });
         } else {
-            /* default list from backtrackMap */
             const prevStages = this.backtrackMap[currStage] || [];
             targets = prevStages.map(tgt => {
-                const owner = this.statusOwnerMap[tgt] || 'Default';
+                // 🔥 Use columnHeaderStyleMap for the target status
+                let style = '';
+                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
+                    const { bg, color } = this.columnHeaderStyleMap[tgt];
+                    style = `background:${bg};color:${color};`;
+                } else {
+                    style = 'background:#e0e0e0;color:#222;';
+                }
                 return {
                     value: tgt,
                     label: tgt,
                     icon : '⬅️',
-                    style: `background:${this.ownerColorMap[owner]};color:#fff;`
+                    style
                 };
             });
         }
         return targets;
+    }
+
+
+    get overallFilterOptions() {
+        return [
+            { label: 'All', value: 'all' },
+            { label: 'Pre-Dev', value: 'predev' },
+            { label: 'In-Dev & Review', value: 'indev' },
+            { label: 'Deployed/Done', value: 'deployed' }
+        ];
+    }
+
+    get intentionFilterOptions() {
+        return [
+            { label: 'All', value: 'all' },
+            { label: 'Will Do', value: 'Will Do' },
+            { label: 'Sizing Only', value: 'Sizing Only' }
+        ];
+    }
+    handleIntentionFilterChange(e) {
+        this.intentionFilter = e.detail ? e.detail.value : e.target.value;
+    }
+
+    handleOverallFilterChange(e) {
+        this.overallFilter = e.detail ? e.detail.value : e.target.value;
     }
 
     handleToggleColumns(e) {
@@ -478,23 +1010,27 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     }
 
     loadETAs() {
-        getTicketETAs({ numberOfDevs: this.numDevs })
-            .then(data => {
-                // Track-reactive copy for Lightning
-                this.etaResults = [...data];
-
-                /* ①  VERIFY WHAT APEX RETURNED */
-                console.log('①  ETA DTOs from Apex');
-                console.table(this.etaResults.map(d => ({
-                    dtoId : d.ticketId,
-                    eta   : d.calculatedETA
-                })));
+        // For now, pass null or [] as prioritizedTicketIds unless you add a "prioritize to top" feature in the UI.
+        getTicketETAsWithPriority({ numberOfDevs: this.numDevs, prioritizedTicketIds: null })
+            .then(result => {
+                this.etaResults = result && result.tickets ? [...result.tickets] : [];
+                // If you want to handle warnings:
+                if (result && result.pushedBackTicketNumbers && result.pushedBackTicketNumbers.length) {
+                    // Show a toast or inline warning
+                    console.warn('⚠️ These tickets were pushed back by prioritization:', result.pushedBackTicketNumbers);
+                    // Optionally save for UI
+                    this.pushedBackTicketNumbers = result.pushedBackTicketNumbers;
+                } else {
+                    this.pushedBackTicketNumbers = [];
+                }
             })
             .catch(err => {
                 this.etaResults = [];
+                this.pushedBackTicketNumbers = [];
                 console.error('ETA error:', err);
             });
     }
+
 
 
 
