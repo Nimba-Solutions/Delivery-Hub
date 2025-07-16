@@ -30,6 +30,11 @@
                 <label>Needs Dev Feedback (T-Shirt Sizing)</label>
             </value>
             <value>
+                <fullName>Pending Client Prioritization</fullName>
+                <default>false</default>
+                <label>Pending Client Prioritization</label>
+            </value>
+            <value>
                 <fullName>Needs Dev Feedback (Proposal)</fullName>
                 <default>false</default>
                 <label>Needs Dev Feedback (Proposal)</label>
