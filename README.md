@@ -1,5 +1,7 @@
 # Standard-Unlocked
 
+Notes for draganddroplwc https://www.salesforcetroop.com/kanban-board-lwc-project
+
 This repository contains everything you need to realize enterprise-grade Salesforce CICD practices without making an enterprise-grade investment. 
 
 The included [Github Actions](.github/workflows) provide a standardized (and mostly automated!) framework for building, testing, and delivering solutions in a consistent and repeatable manner. 
