@@ -20,7 +20,7 @@ public class DHTicket_JiraSync {
 
             String body = JSON.serialize(new Map<String, Object>{
                 'fields' => new Map<String, Object>{
-                    'project' => new Map<String, String>{ 'key' => 'GP' },
+                    'project' => new Map<String, String>{ 'key' => 'DHS' },
                     'summary' => summary,
                     'description' => descriptionADF,
                     'issuetype' => new Map<String, String>{ 'name' => 'Task' }
