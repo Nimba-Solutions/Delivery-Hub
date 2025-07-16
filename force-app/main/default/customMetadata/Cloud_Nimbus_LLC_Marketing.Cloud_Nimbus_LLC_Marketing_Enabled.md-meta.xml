@@ -3,7 +3,7 @@
     <label>Cloud Nimbus LLC Marketing Enabled</label>
     <protected>false</protected>
     <values>
-        <field>Enabled__c</field>
+        <field>EnabledBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
 </CustomMetadata>
