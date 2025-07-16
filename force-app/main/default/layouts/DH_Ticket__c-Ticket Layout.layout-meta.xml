@@ -50,7 +50,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Client_Intention__c</field>
+                <field>ClientIntentionPk__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

@@ -18,7 +18,7 @@ public with sharing class DH_TicketController {
                    CalculatedETADate__c,
                    DeveloperDaysSizeNumber__c,
                    StageNamePk__c,
-                   Client_Intention__c,
+                   ClientIntentionPk__c,
                    SortOrderNumber__c,
                    Epic__c,
                    Tags__c
@@ -104,12 +104,12 @@ public with sharing class DH_TicketController {
     public static Boolean isMarketingEnabled() {
         try {
             Cloud_Nimbus_LLC_Marketing__mdt m = [
-                SELECT Enabled__c
+                SELECT EnabledBool__c
                 FROM Cloud_Nimbus_LLC_Marketing__mdt
                 WHERE DeveloperName = 'Cloud_Nimbus_LLC_Marketing_Enabled'
                 LIMIT 1
             ];
-            return m != null && m.Enabled__c;
+            return m != null && m.EnabledBool__c;
         } catch (Exception e) {
             // Optional: log exception or handle gracefully
             return false;
