@@ -104,4 +104,42 @@ public with sharing class JiraCallout {
         return JSON.serialize(root);
     }
 
+    /**
+     * @description Uploads a file to a Jira issue.
+     * @param jiraKey The key of the Jira issue (e.g., 'DHS-123').
+     * @param filename The name of the file being uploaded.
+     * @param fileBody The Blob content of the file.
+     * @return HttpResponse from the callout.
+     */
+    public static HttpResponse addAttachment(String jiraKey, String filename, Blob fileBody) {
+        String endpoint = 'callout:Jira/issue/' + jiraKey + '/attachments';
+        Http http = new Http();
+        HttpRequest req = new HttpRequest();
+        req.setMethod('POST');
+        req.setEndpoint(endpoint);
+
+        // This header is required by Jira for attachments
+        req.setHeader('X-Atlassian-Token', 'no-check');
+
+        // Build the multipart form body
+        String boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW';
+        req.setHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
+
+        String bodyStart = '--' + boundary + '\r\n' +
+                         'Content-Disposition: form-data; name="file"; filename="' + filename + '"\r\n' +
+                         'Content-Type: application/octet-stream\r\n\r\n';
+
+        String bodyEnd = '\r\n--' + boundary + '--';
+
+        // Combine the parts into a single blob for the request body
+        Blob requestBody = Blob.valueOf(bodyStart);
+        requestBody = Blob.valueOf(bodyStart).append(fileBody);
+        requestBody = requestBody.append(Blob.valueOf(bodyEnd));
+
+        req.setBodyAsBlob(requestBody);
+        req.setTimeout(120000); // Set 2-minute timeout for large files
+
+        return http.send(req);
+    }
+
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Ticket__c</fullName>
+    <externalId>false</externalId>
+    <label>Ticket</label>
+    <referenceTo>DH_Ticket__c</referenceTo>
+    <relationshipLabel>Attachment Sync Logs</relationshipLabel>
+    <relationshipName>Attachment_Sync_Logs</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

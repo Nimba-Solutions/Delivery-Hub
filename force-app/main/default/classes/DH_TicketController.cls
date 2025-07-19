@@ -130,5 +130,27 @@ public with sharing class DH_TicketController {
         insert links;
     }
 
+    @AuraEnabled
+    public static void linkFilesAndSync(Id ticketId, List<Id> contentDocumentIds) {
+        // Step 1: Create the ContentDocumentLink records to officially link files to the ticket
+        List<ContentDocumentLink> links = new List<ContentDocumentLink>();
+        for (Id docId : contentDocumentIds) {
+            links.add(new ContentDocumentLink(
+                ContentDocumentId = docId,
+                LinkedEntityId = ticketId,
+                ShareType = 'V' // 'V' = Viewer, 'I' = Inferred
+            ));
+        }
+        if (!links.isEmpty()) {
+            // Use Security.stripInaccessible for FLS compliance
+            SObjectAccessDecision decision = Security.stripInaccessible(
+                AccessType.CREATABLE, links);
+            insert decision.getRecords();
+        }
+
+        // Step 2: Call the future method to sync these files to Jira
+        DH_AttachmentSyncService.syncFilesToJira(ticketId, contentDocumentIds);
+    }
+
 
 }
