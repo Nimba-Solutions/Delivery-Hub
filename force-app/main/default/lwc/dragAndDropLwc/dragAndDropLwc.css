@@ -577,3 +577,32 @@
 .kanban-column.drag-over .empty-column-placeholder {
     display: none;
 }
+
+
+/* The placeholder that shows where the card will land */
+.drag-placeholder {
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 2px dashed rgba(59, 130, 246, 0.5);
+    border-radius: var(--radius);
+    margin: 0.5rem 0; /* Match card margin */
+    transition: all 0.2s;
+}
+
+/* The original card being dragged ("ghost") */
+.ticket-card.is-dragging {
+    opacity: 0; /* Make it invisible, browser provides its own ghost image */
+    /* If you dislike the browser ghost, you can use: opacity: 0.5; transform: rotate(3deg); */
+    /* but opacity: 0 is usually smoother */
+}
+
+/* --- Revised Empty State Logic --- */
+
+/* The empty placeholder is visible by default... */
+.empty-column-placeholder {
+    display: flex; /* or block */
+}
+
+/* ...but if the column has tickets, the placeholder is hidden. */
+.kanban-column-body.has-tickets .empty-column-placeholder {
+    display: none;
+}

@@ -86,7 +86,7 @@
                         </div>
 
                         <!-- Column Body -->
-                        <div class="kanban-column-body">
+                        <div class={col.bodyClasses}>
                             <template if:true={col.tickets.length}>
                                 <template for:each={col.tickets} for:item="ticket">
                                     <!-- New Ticket Card -->

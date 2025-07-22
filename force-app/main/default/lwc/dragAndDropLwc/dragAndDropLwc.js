@@ -603,6 +603,21 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
                 const color = this.ownerColorMap[owner] || this.ownerColorMap.Default;
                 headerStyle = `background:${color};color:#fff;`;
             }
+            const columnTickets = enriched
+                .filter(t => statuses.includes(t.StageNamePk__c))
+                .filter(t => {
+                    if (this.intentionFilter === 'all') return true;
+                    return (t.Client_Intention__c || '').trim().toLowerCase() === this.intentionFilter.toLowerCase();
+                })
+                .map(t => {
+                    // Your existing mapping for cardColor, etc., can go here if you have it.
+                    // For this fix, we just need the tickets themselves.
+                    return { ...t };
+                });
+
+            // STEP 2: NOW that `columnTickets` exists, use it to define `bodyClasses`.
+            const bodyClasses = `kanban-column-body ${columnTickets.length > 0 ? 'has-tickets' : 'is-empty'}`;
+            
             return {
                 stage: colName,
                 displayName: this.columnDisplayNames[colName] || colName,
@@ -631,6 +646,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
                         let cardColor = this.statusColorMap[t.StageNamePk__c] || "#eee";
                         return { ...t, cardColor };
                     }),
+                bodyClasses: bodyClasses
             };
         });
 
@@ -793,6 +809,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
             { label: "Sizing Only", value: "Sizing Only" },
         ];
     }
+
     handleIntentionFilterChange(e) {
         this.intentionFilter = e.detail ? e.detail.value : e.target.value;
     }
@@ -922,44 +939,60 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     handleDragStart(event) {
         this.isDragging = true;
         const ticketId = event.target.dataset.id;
-        event.dataTransfer.setData("text/plain", ticketId);
-        event.dataTransfer.effectAllowed = "move";
-        this.draggedItem = this.enrichedTickets.find((t) => t.Id === ticketId);
+        event.dataTransfer.setData('text/plain', ticketId);
+        event.dataTransfer.effectAllowed = 'move';
+        this.draggedItem = this.enrichedTickets.find(t => t.Id === ticketId);
 
-        // Add a class to the dragged element for styling
-        event.target.classList.add("is-dragging");
+        // Create a placeholder element on the fly
+        this.placeholder = document.createElement('div');
+        this.placeholder.className = 'drag-placeholder';
+        // Match the height of the card being dragged for a 1:1 space
+        this.placeholder.style.height = `${event.target.offsetHeight}px`;
+
+        // Add a class to the original element so we can make it look like a "ghost"
+        setTimeout(() => {
+            event.target.classList.add('is-dragging');
+        }, 0);
     }
 
-    handleDragEnd(event) {
+    handleDragEnd() {
         this.isDragging = false;
-        // Use querySelector to be safe, as event.target might not be available
-        const draggingCard = this.template.querySelector(".is-dragging");
+        const draggingCard = this.template.querySelector('.is-dragging');
         if (draggingCard) {
-            draggingCard.classList.remove("is-dragging");
+            draggingCard.classList.remove('is-dragging');
         }
+        // Remove the placeholder from the DOM
+        if (this.placeholder && this.placeholder.parentNode) {
+            this.placeholder.parentNode.removeChild(this.placeholder);
+        }
+        this.placeholder = null;
+        
         // Clean up any leftover column highlighting
-        this.template.querySelectorAll(".kanban-column.drag-over").forEach((col) => {
-            col.classList.remove("drag-over");
+        this.template.querySelectorAll('.kanban-column.drag-over').forEach(col => {
+            col.classList.remove('drag-over');
         });
     }
 
     handleDragOver(event) {
         event.preventDefault();
-        const column = event.currentTarget.closest(".kanban-column");
+        const column = event.currentTarget.closest('.kanban-column');
         if (!column) return;
+        
+        // Highlight the column
+        if (!column.classList.contains('drag-over')) {
+            // Debounce adding class to avoid excessive repaints
+            this.template.querySelectorAll('.kanban-column.drag-over').forEach(col => col.classList.remove('drag-over'));
+            column.classList.add('drag-over');
+        }
 
-        // Add highlighting class to the column
-        column.classList.add("drag-over");
-
-        // Logic to "make space"
-        const cardsContainer = column.querySelector(".kanban-column-body");
+        // Instead of moving the card, we move the placeholder
+        const cardsContainer = column.querySelector('.kanban-column-body');
         const afterElement = this.getDragAfterElement(cardsContainer, event.clientY);
-        const draggingCard = this.template.querySelector(".is-dragging");
 
         if (afterElement == null) {
-            cardsContainer.appendChild(draggingCard);
+            cardsContainer.appendChild(this.placeholder);
         } else {
-            cardsContainer.insertBefore(draggingCard, afterElement);
+            cardsContainer.insertBefore(this.placeholder, afterElement);
         }
     }
 
@@ -1018,66 +1051,70 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
     async handleDrop(event) {
         event.preventDefault();
-        const droppedOnCard = event.target.closest(".ticket-card");
-        const droppedOnColumn = event.target.closest(".kanban-column");
-
-        if (!droppedOnColumn) return; // Dropped outside a valid column
 
         const ticketId = this.draggedItem.Id;
-        const targetColumnStage = droppedOnColumn.dataset.stage;
+        const sourceColumnStage = this.stageColumns.find(col => col.tickets.some(t => t.Id === ticketId)).stage;
+        
+        const dropColumnEl = event.target.closest('.kanban-column');
+        if (!dropColumnEl) {
+            this.handleDragEnd(); // Abort if dropped outside a valid column
+            return;
+        }
+        const targetColumnStage = dropColumnEl.dataset.stage;
 
-        // SCENARIO 1: REORDERING inside a column (dropped on another card)
-        if (droppedOnCard) {
-            const targetCardId = droppedOnCard.dataset.id;
-            if (targetCardId === ticketId) return; // Dropped on itself
-
-            const columnTickets = this.stageColumns.find((c) => c.stage === targetColumnStage).tickets;
-            let newSortOrder = this.calculateNewSortOrder(targetCardId, columnTickets);
-
+        // SCENARIO 1: INTRA-COLUMN DROP (Reordering)
+        if (sourceColumnStage === targetColumnStage) {
+            const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets;
+            const newSortOrder = this.calculateNewSortOrder(this.placeholder, columnTickets);
+            
             try {
-                // Assumes a new Apex method: updateTicketSortOrder
                 await updateTicketSortOrder({ ticketId: ticketId, newSortOrder: newSortOrder });
-                this.showToast("Success", "Ticket reordered.", "success");
+                this.showToast('Success', 'Ticket reordered.', 'success');
             } catch (error) {
-                this.showToast("Error", "Failed to reorder ticket.", "error");
+                this.showToast('Error', 'Failed to reorder ticket.', 'error');
                 console.error(error);
             }
-        }
-        // SCENARIO 2: CHANGING STATUS (dropped on column but not on a card)
+        } 
+        // SCENARIO 2: INTER-COLUMN DROP (Status Change)
         else {
-            const currentStage = this.stageColumns.find((col) => col.tickets.some((t) => t.Id === ticketId)).stage;
-            if (targetColumnStage === currentStage) return; // No status change
-
             const statuses = this.personaColumnStatusMap[this.persona][targetColumnStage] || [];
             const newInternalStage = statuses[0];
 
             if (newInternalStage) {
                 try {
+                    // When moving to a new column, you might want to set a default sort order,
+                    // e.g., place it at the top. Here we don't pass a sort order and let Apex handle it.
                     await updateTicketStage({ ticketId: ticketId, newStage: newInternalStage });
-                    this.showToast("Success", "Ticket moved.", "success");
+                    this.showToast('Success', 'Ticket moved.', 'success');
                 } catch (error) {
-                    this.showToast("Error", "Failed to move ticket.", "error");
+                    this.showToast('Error', 'Failed to move ticket.', 'error');
+                    console.error(error);
                 }
             }
         }
 
         this.refreshTickets();
-        this.draggedItem = {}; // Clear after drop
-        const droppedOnColumn2 = event.target.closest(".kanban-column");
-        if (droppedOnColumn2) {
-            droppedOnColumn2.classList.remove("drag-over");
-        }
+        // DragEnd will handle final cleanup
     }
 
     // 3. ADD this new helper function to calculate sort order
-    calculateNewSortOrder(targetCardId, columnTickets) {
-        const targetIndex = columnTickets.findIndex((t) => t.Id === targetCardId);
-
-        const sortBefore = targetIndex > 0 ? columnTickets[targetIndex - 1].SortOrderNumber__c : 0;
-        const sortAfter = columnTickets[targetIndex].SortOrderNumber__c;
-
-        // For simplicity, we place it just before the target card
-        return (sortBefore + sortAfter) / 2.0;
+    calculateNewSortOrder(placeholder, columnTickets) {
+        const prevSibling = placeholder.previousElementSibling;
+        const nextSibling = placeholder.nextElementSibling;
+        
+        // Find the corresponding ticket data for the siblings
+        const prevTicket = prevSibling ? columnTickets.find(t => t.Id === prevSibling.dataset.id) : null;
+        const nextTicket = nextSibling ? columnTickets.find(t => t.Id === nextSibling.dataset.id) : null;
+        
+        const sortBefore = prevTicket ? prevTicket.SortOrderNumber__c : 0;
+        
+        if (nextTicket) {
+            // Dropped between two cards
+            return (sortBefore + nextTicket.SortOrderNumber__c) / 2.0;
+        } else {
+            // Dropped at the end of the list
+            return sortBefore + 1; // Or a larger number like 1000 to be safe
+        }
     }
 
     // 4. ADD a handler to open the modal (you may have this already)
