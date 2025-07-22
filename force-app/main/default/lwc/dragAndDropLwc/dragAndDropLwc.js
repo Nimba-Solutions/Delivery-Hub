@@ -8,6 +8,7 @@ import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
 import ID_FIELD from '@salesforce/schema/DH_Ticket__c.Id';
 import getTicketETAsWithPriority from '@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority';
 import updateTicketStage from '@salesforce/apex/DragAndDropLwcController.updateTicketStage';
+import updateTicketSortOrder from '@salesforce/apex/DragAndDropLwcController.updateTicketSortOrder';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
@@ -28,6 +29,9 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track overallFilter = 'all';
     @track intentionFilter = 'all';
     @track uploadedFileIds = [];
+    @track showMode = 'overall'; 
+    @track draggedItem = {};
+
     ticketsWire;
 
 
@@ -60,33 +64,44 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
     // Custom header color logic for Client persona
     columnHeaderStyleMap = {
-        // --- Client action columns ---
-        'Backlog':                  { bg: '#2196F3', color: '#fff' }, // blue
-        'Active Scoping':           { bg: '#2196F3', color: '#fff' }, // blue
-        'Pending Client Prioritization': { bg: '#2196F3', color: '#fff' }, // blue
-        'Pending Client Approval':  { bg: '#2196F3', color: '#fff' }, // blue
-        'Client Clarification (Pre-Dev)':  { bg: '#2196F3', color: '#fff' }, // blue
-
-        // --- Pre-dev/Dev columns (yellow, with black text) ---
-        'Quick Estimate':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Proposal Needed':          { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Pending Development Approval': { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Client Clarification (In-Dev)': { bg: '#2196F3', color: '#fff' }, // force blue
-        'Ready for Development':    { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'In Development':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'In Review':                { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        // --- Other columns: fallback to blue ---
-        'Ready for UAT (Client)':   { bg: '#2196F3', color: '#fff' }, // blue
-        'Deployed to Prod':         { bg: '#2196F3', color: '#fff' }, // blue
-        'Done':                     { bg: '#607D8B', color: '#fff' },
+        // --- Client Action Columns (Blue Scheme) ---
+        'Backlog':                        { bg: 'rgba(59, 130, 246, 0.3)', color: '#2563EB' },
+        'Active Scoping':                 { bg: 'rgba(59, 130, 246, 0.3)', color: '#2563EB' },
+        'Pending Client Prioritization':  { bg: 'rgba(59, 130, 246, 0.3)', color: '#2563EB' },
+        'Pending Client Approval':        { bg: 'rgba(59, 130, 246, 0.3)', color: '#2563EB' },
+        'Client Clarification (Pre-Dev)': { bg: 'rgba(59, 130, 246, 0.3)', color: '#2563EB' },
+        'Client Clarification (In-Dev)':  { bg: 'rgba(59, 130, 246, 0.3)', color: '#2563EB' },
+        'Ready for UAT (Client)':         { bg: 'rgba(59, 130, 246, 0.3)', color: '#2563EB' },
         
-        'Needs Dev Feedback (T-Shirt Sizing)':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Needs Dev Feedback (Proposal)':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Dev Complete':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Back For Development':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Ready for Scratch Org Test':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Ready for QA':           { bg: '#FFD54F', color: '#222' }, // yellow, dark text
-        'Ready for UAT (Consultant)':           { bg: '#FFD54F', color: '#222' } // yellow, dark text
+        // --- Pre-Dev & Sizing Columns (Amber/Yellow Scheme) ---
+        'Quick Estimate':                 { bg: 'rgba(245, 158, 11, 0.3)', color: '#D97706' },
+        'Needs Dev Feedback (T-Shirt Sizing)': { bg: 'rgba(245, 158, 11, 0.3)', color: '#D97706' },
+        'Needs Dev Feedback (Proposal)':  { bg: 'rgba(245, 158, 11, 0.3)', color: '#D97706' },
+        'Proposal Needed':                { bg: 'rgba(245, 158, 11, 0.3)', color: '#D97706' },
+        'Pending Development Approval':   { bg: 'rgba(245, 158, 11, 0.3)', color: '#D97706' },
+
+        // --- Development Columns (Green Scheme) ---
+        'Ready for Development':          { bg: 'rgba(34, 197, 94, 0.3)', color: '#16A34A' },
+        'In Development':                 { bg: 'rgba(34, 197, 94, 0.3)', color: '#16A34A' },
+        'Dev Complete':                   { bg: 'rgba(34, 197, 94, 0.3)', color: '#16A34A' },
+        'Back For Development':           { bg: 'rgba(34, 197, 94, 0.3)', color: '#16A34A' },
+        
+        // --- QA & Review Columns (Teal/Cyan Scheme) ---
+        'In Review':                      { bg: 'rgba(20, 184, 166, 0.3)', color: '#0D9488' },
+        'Ready for Scratch Org Test':     { bg: 'rgba(20, 184, 166, 0.3)', color: '#0D9488' },
+        'Ready for QA':                   { bg: 'rgba(20, 184, 166, 0.3)', color: '#0D9488' },
+        'In QA':                          { bg: 'rgba(20, 184, 166, 0.3)', color: '#0D9488' },
+        'Ready for UAT (Consultant)':     { bg: 'rgba(20, 184, 166, 0.3)', color: '#0D9488' },
+
+        // --- Deployment Columns (Indigo/Purple Scheme) ---
+        'Ready for Feature Merge':        { bg: 'rgba(139, 92, 246, 0.3)', color: '#7C3AED' },
+        'Ready for Deployment':           { bg: 'rgba(139, 92, 246, 0.3)', color: '#7C3AED' },
+        'Deployed to Prod':               { bg: 'rgba(99, 102, 241, 0.3)', color: '#4F46E5' },
+
+        // --- Final State Columns (Neutral/Special Schemes) ---
+        'Done':                           { bg: 'rgba(100, 116, 139, 0.3)', color: '#475569' }, // Slate Grey
+        'Dev Blocked':                    { bg: 'rgba(239, 68, 68, 0.3)', color: '#DC2626' },   // Red
+        'Cancelled':                      { bg: 'rgba(156, 163, 175, 0.3)', color: '#6B7280' },  // Light Grey
     };
 
 
@@ -703,6 +718,21 @@ backtrackMap = {
         this.uploadedFileIds.push(...uploadedFiles.map(file => file.documentId));
     }
 
+    handleShowModeChange(event) {
+        const selectedMode = event.currentTarget.dataset.mode;
+        this.showMode = selectedMode;
+
+        // Optional: Update button styles manually if :active pseudo-class isn't sufficient
+        const buttons = this.template.querySelectorAll('.toolbar-button');
+        buttons.forEach(button => {
+            if (button.dataset.mode === selectedMode) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+    }
+
     refreshTickets() {
         refreshApex(this.ticketsWire)           // bypass cache & rerun wire
             .then(() => this.loadETAs())        // pull fresh ETAs afterwards
@@ -769,17 +799,40 @@ backtrackMap = {
 
         return (this.realRecords || []).map(rec => {
             const etaDto = etaMap.get(norm(rec.Id));
-            if (!etaDto) {
-                console.warn('⚠️ No ETA found for', rec.Name || rec.Id, norm(rec.Id));
-            }
+            
+            // --- START OF NEW ADDITIONS ---
+            
+            // Helper to convert status to a CSS-friendly class name
+            const getStatusClass = (status) => {
+                if (!status) return 'border-default';
+                // Example: 'Ready for QA' -> 'border-ready-for-qa'
+                return 'border-' + status.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            };
+
+            // Helper to create an array from a tag string
+            const getTagsArray = (tagsString) => {
+                if (!tagsString || typeof tagsString !== 'string') return [];
+                return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag);
+            };
+
+            // --- END OF NEW ADDITIONS ---
+
             return {
                 ...rec,
                 calculatedETA: etaDto && etaDto.calculatedETA
                     ? new Date(etaDto.calculatedETA).toLocaleDateString()
-                    : '—'
+                    : '—',
+
+                // --- NEW DYNAMIC PROPERTIES FOR THE TEMPLATE ---
+                OwnerName: rec.Owner?.Name, // Assuming Owner relationship is queried
+                isHighPriority: rec.PriorityPk__c?.toLowerCase() === 'high',
+                tags: getTagsArray(rec.Tags__c),
+                cardClasses: `ticket-card ${getStatusClass(rec.StageNamePk__c)}`,
+                priorityClasses: `priority-badge priority-${rec.PriorityPk__c?.toLowerCase()}`
             };
         });
     }
+
 
 
 
@@ -791,12 +844,11 @@ backtrackMap = {
         const statusMap = this.personaColumnStatusMap?.[persona] || {};
         const enriched = this.enrichedTickets || [];
 
-        // Filter columns for "Show Internal Columns" toggle
         if (!this.showAllColumns) {
             colNames = colNames.filter(col => this.columnOwner(col) === persona);
         }
 
-        return (colNames || []).map(colName => {
+        let columns = (colNames || []).map(colName => {
             const statuses = statusMap[colName] || [];
             // Prefer custom style if present, else fallback to persona color logic
             let headerStyle;
@@ -834,6 +886,11 @@ backtrackMap = {
                     })
             };
         });
+
+        if (this.showMode === 'active') {
+            return columns.filter(col => col.tickets.length > 0);
+        }
+        return columns;
     }
 
 
@@ -868,9 +925,9 @@ backtrackMap = {
         ];
         if (yellowCols.includes(colName)) return '#FFE082';
         if (orangeCols.includes(colName)) return '#FF9100';
-        if (blueCols.includes(colName))   return '#90caf9';
+        if (blueCols.includes(colName))   return '#e3f2fd';
         // Backlog/Active Scoping – light gray or light blue
-        if (colName === 'Backlog' || colName === 'Active Scoping') return '#bbdefb';
+        if (colName === 'Backlog' || colName === 'Active Scoping') return '#e3f2fd';
         return '#2196F3'; // Default blue for anything else
     }
 
@@ -1070,16 +1127,21 @@ backtrackMap = {
         this.displayMode = e.detail ? e.detail.value : e.target.value;
     }
     handleTitleClick(e) {
-        const id = e.target.dataset.id;
-        this[NavigationMixin.Navigate]({
-            type: 'standard__recordPage',
-            attributes: {
-                recordId: id,
-                objectApiName: 'DH_Ticket__c',
-                actionName: 'view'
-            }
-        });
+        // Changed e.target to e.currentTarget
+        const id = e.currentTarget.dataset.id; 
+        
+        if (id) {
+            this[NavigationMixin.Navigate]({
+                type: 'standard__recordPage',
+                attributes: {
+                    recordId: id,
+                    objectApiName: 'DH_Ticket__c',
+                    actionName: 'view'
+                }
+            });
+        }
     }
+
     handleCardClick(e) {
         const id = e.currentTarget?.dataset?.id || e.target?.dataset?.id;
         this.selectedRecord = (this.realRecords || []).find(r => r.Id === id);
@@ -1135,10 +1197,11 @@ backtrackMap = {
     }
 
     handleDragStart(event) {
-        console.log('handleDragStart called');
         const ticketId = event.target.dataset.id;
-        console.log('ticketId '+ticketId);
         event.dataTransfer.setData('text/plain', ticketId);
+
+        // Store details of the dragged ticket
+        this.draggedItem = this.enrichedTickets.find(t => t.Id === ticketId);
     }
 
     handleDragOver(event) {
@@ -1177,24 +1240,71 @@ backtrackMap = {
 
     async handleDrop(event) {
         event.preventDefault();
-        const ticketId = event.dataTransfer.getData('text/plain');
-        const targetColumn = event.target.closest('.stageContainer');
-        const targetStageDisplay = targetColumn?.dataset.stage;
+        const droppedOnCard = event.target.closest('.ticket-card');
+        const droppedOnColumn = event.target.closest('.kanban-column');
 
-        // Map display column name to internal status
-        const statuses = this.personaColumnStatusMap[this.persona][targetStageDisplay] || [];
-        const internalStage = statuses[0]; // Use the first mapped status
+        if (!droppedOnColumn) return; // Dropped outside a valid column
 
-        if (ticketId && internalStage) {
+        const ticketId = this.draggedItem.Id;
+        const targetColumnStage = droppedOnColumn.dataset.stage;
+
+        // SCENARIO 1: REORDERING inside a column (dropped on another card)
+        if (droppedOnCard) {
+            const targetCardId = droppedOnCard.dataset.id;
+            if (targetCardId === ticketId) return; // Dropped on itself
+
+            const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets;
+            let newSortOrder = this.calculateNewSortOrder(targetCardId, columnTickets);
+
             try {
-                await updateTicketStage({ ticketId, newStage: internalStage });
-
-                this.showToast('Success', 'Ticket moved successfully', 'success');
-                this.refreshTickets();
+                // Assumes a new Apex method: updateTicketSortOrder
+                await updateTicketSortOrder({ ticketId: ticketId, newSortOrder: newSortOrder });
+                this.showToast('Success', 'Ticket reordered.', 'success');
             } catch (error) {
-                this.showToast('Error', 'Failed to move ticket', 'error');
+                this.showToast('Error', 'Failed to reorder ticket.', 'error');
+                console.error(error);
+            }
+
+        }
+        // SCENARIO 2: CHANGING STATUS (dropped on column but not on a card)
+        else {
+            const currentStage = this.stageColumns.find(col => col.tickets.some(t => t.Id === ticketId)).stage;
+            if (targetColumnStage === currentStage) return; // No status change
+
+            const statuses = this.personaColumnStatusMap[this.persona][targetColumnStage] || [];
+            const newInternalStage = statuses[0];
+
+            if (newInternalStage) {
+                try {
+                    await updateTicketStage({ ticketId: ticketId, newStage: newInternalStage });
+                    this.showToast('Success', 'Ticket moved.', 'success');
+                } catch (error) {
+                    this.showToast('Error', 'Failed to move ticket.', 'error');
+                }
             }
         }
+
+        this.refreshTickets();
+        this.draggedItem = {}; // Clear after drop
+    }
+
+    // 3. ADD this new helper function to calculate sort order
+    calculateNewSortOrder(targetCardId, columnTickets) {
+        const targetIndex = columnTickets.findIndex(t => t.Id === targetCardId);
+        
+        const sortBefore = (targetIndex > 0) ? columnTickets[targetIndex - 1].SortOrderNumber__c : 0;
+        const sortAfter = columnTickets[targetIndex].SortOrderNumber__c;
+
+        // For simplicity, we place it just before the target card
+        return (sortBefore + sortAfter) / 2.0;
+    }
+
+    // 4. ADD a handler to open the modal (you may have this already)
+    handleCardClick(e) {
+        const id = e.currentTarget.dataset.id;
+        this.selectedRecord = (this.realRecords || []).find(r => r.Id === id);
+        this.showModal = true;
+        this.moveComment = '';
     }
 
 

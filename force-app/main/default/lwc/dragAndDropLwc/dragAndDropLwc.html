@@ -1,120 +1,150 @@
 <template>
-  <div class="toolbar">
-    <label>Persona:</label>
-    <select value={persona} onchange={handlePersonaChange}>
-      <template for:each={personaOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
-    </select>
-    <label style="margin-left:1rem;">Overall:</label>
-    <select value={overallFilter} onchange={handleOverallFilterChange}>
-        <template for:each={overallFilterOptions} for:item="opt">
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-        </template>
-    </select>
-    <label style="margin-left:1rem;">Show:</label>
-    <select value={intentionFilter} onchange={handleIntentionFilterChange}>
-        <template for:each={intentionFilterOptions} for:item="opt">
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-        </template>
-    </select>
-    <label>Size Mode:</label>
-    <select value={sizeMode} onchange={handleSizeModeChange}>
-      <template for:each={sizeModeOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
-    </select>
-    <label>Display Mode:</label>
-    <select value={displayMode} onchange={handleDisplayModeChange}>
-      <template for:each={displayModeOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
-    </select>
-    <label style="margin-left:1rem;">
-        <input type="checkbox" checked={showAllColumns} onchange={handleToggleColumns}/>
-        Show internal columns
-    </label>
-    <label>Active Devs:</label>
-    <input type="number" min="1" value={numDevs} onchange={handleNumDevsChange}/>
-    <lightning-button label="+ New Ticket"
-                  variant="brand"
-                  onclick={openCreateModal}
-                  class="slds-m-left_medium">
-    </lightning-button>
-  </div>
-
-  <template if:false={isTableMode}>
-    <div class={mainBoardClass}>
-      <template for:each={stageColumns} for:item="col">
-        <div key={col.stage} class="stageContainer" ondrop={handleDrop} ondragover={handleDragOver} data-stage={col.stage}>
-            <div class="column_heading" style={col.headerStyle}>
-                {col.displayName}
+    <!-- Main Container -->
+    <div class="kanban-container">
+        <!-- New Toolbar -->
+        <div class="kanban-toolbar-container">
+            <!-- Top Level: Main Actions -->
+            <div class="kanban-toolbar">
+                <div class="toolbar-left">
+                    <div class="viewing-as-wrapper">
+                        <lightning-icon icon-name="utility:user_role" size="x-small"></lightning-icon>
+                        <label for="persona-select" class="slds-assistive-text">Viewing as</label>
+                        <div class="slds-select_container">
+                            <select id="persona-select" class="slds-select view-as-select" value={persona} onchange={handlePersonaChange}>
+                                <template for:each={personaOptions} for:item="opt">
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="toolbar-center">
+                    <div class="button-group">
+                        <button class="toolbar-button active" data-mode="overall" onclick={handleShowModeChange}>Overall</button>
+                        <button class="toolbar-button" data-mode="active" onclick={handleShowModeChange}>Active</button>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <div class="active-devs-wrapper">
+                        <span>Active Devs:</span>
+                        <input type="number" min="1" class="dev-count-input" value={numDevs} onchange={handleNumDevsChange}/>
+                    </div>
+                    <button class="new-ticket-button" onclick={openCreateModal}>
+                        <lightning-icon icon-name="utility:add" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        New Ticket
+                    </button>
+                </div>
             </div>
-          <div class="card_wrapper">
-            <template for:each={col.tickets} for:item="ticket" for:index="index">
-  <!-- <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}"> -->
-    <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}" draggable="true" ondragstart={handleDragStart} ondragover={handleDragOver} ondrop={handleDrop} data-id={ticket.Id}>
-    <div class="ticket-title" data-id={ticket.Id} onclick={handleTitleClick}>
-      {ticket.BriefDescriptionTxt__c}
-    </div>
-    <div class="ticket-meta">
-      {ticket.StageNamePk__c}
-      <template if:true={ticket.DeveloperDaysSizeNumber__c}>
-        <span class="ticket-size">Size:{ticket.DeveloperDaysSizeNumber__c}</span>
-      </template>
-      <template if:true={ticket.calculatedETA}>
-        <span>| ETA: {ticket.calculatedETA}</span>
-        <span class="ticket-sortorder" style="margin-left:5px;font-size:.97em;color:#999;">
-          | Order: {ticket.SortOrderNumber__c}
-        </span>
-      </template>
-    </div>
-    <div class="ticket-arrows">
-      <button class="arrow-btn" data-id={ticket.Id} data-col={col.stage} data-dir="up"
-        onclick={handleArrowClick}><!-- disabled={index === 0}>-->&uarr;</button>
-      <button class="arrow-btn" data-id={ticket.Id} data-col={col.stage} data-dir="down"
-        onclick={handleArrowClick}><!-- disabled={index === col.tickets.length - 1}>-->&darr;</button>
-    </div>
-    <!-- <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button> -->
-  </div>
-</template>
 
-            <template if:false={col.tickets.length}><div class="empty-col-placeholder">No tickets</div></template>
-          </div>
+            <!-- Second Level: Filters -->
+            <div class="kanban-filter-bar">
+                <div class="filter-group">
+                    <label class="filter-label">Board View:</label>
+                    <select class="slds-select" value={overallFilter} onchange={handleOverallFilterChange}>
+                        <template for:each={overallFilterOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Intention:</label>
+                    <select class="slds-select" value={intentionFilter} onchange={handleIntentionFilterChange}>
+                        <template for:each={intentionFilterOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Display Mode:</label>
+                    <select class="slds-select" value={displayMode} onchange={handleDisplayModeChange}>
+                        <template for:each={displayModeOptions} for:item="opt"><option key={opt.value} value={opt.value}>{opt.label}</option></template>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <lightning-input type="checkbox" label="Show internal columns" checked={showAllColumns} onchange={handleToggleColumns}></lightning-input>
+                </div>
+            </div>
         </div>
-      </template>
-    </div>
-  </template>
 
-  <template if:true={isTableMode}>
-    <table class="kanban-table">
-      <thead>
-        <tr>
-          <template for:each={stageColumns} for:item="col">
-            <th key={col.stage} style={col.headerStyle}>{col.displayName}</th>
-          </template>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <template for:each={stageColumns} for:item="col">
-            <td key={col.stage}>
-              <template if:true={col.tickets.length}>
-                <template for:each={col.tickets} for:item="ticket">
-                  <div key={ticket.Id} style="margin-bottom:4px;">
-                    <span class="ticket-title" style="cursor:pointer;text-decoration:underline" data-id={ticket.Id} onclick={handleTitleClick}>{ticket.BriefDescriptionTxt__c}</span>
-                    <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>({ticket.DeveloperDaysSizeNumber__c})</span>
-                    <span class="ticket-size" if:true={ticket.DeveloperDaysSizeNumber__c}>| ETA: {ticket.calculatedETA}</span>
-                    
-                    <span style="margin-left:4px;font-size:.97em;color:#999;">Order:{ticket.SortOrderNumber__c}</span>
+        <!-- Kanban Board -->
+        <div class="kanban-board">
+            <div class="kanban-columns-container">
+                <template for:each={stageColumns} for:item="col">
+                    <div key={col.stage} class="kanban-column" ondrop={handleDrop} ondragover={handleDragOver} data-stage={col.stage}>
+                        <!-- Column Header -->
+                        <div class="kanban-column-header" style={col.headerStyle}>
+                            <h2 class="column-title">{col.displayName}</h2>
+                            <span class="ticket-count-badge">{col.tickets.length}</span>
+                        </div>
 
-                    <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id} style="margin-left:6px;font-size:.93em;padding:1px 9px;">Action</button>
-                  </div>
+                        <!-- Column Body -->
+                        <div class="kanban-column-body">
+                            <template if:true={col.tickets.length}>
+                                <template for:each={col.tickets} for:item="ticket">
+                                    <!-- New Ticket Card -->
+                                    <div key={ticket.Id} class={ticket.cardClasses} draggable="true" ondragstart={handleDragStart} data-id={ticket.Id} onclick={handleTitleClick}>
+                                        <!-- Priority Indicator -->
+                                        <template if:true={ticket.isHighPriority}>
+                                            <div class="priority-indicator">
+                                                <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
+                                            </div>
+                                        </template>
+
+                                        <!-- Title -->
+                                        <h3 class="ticket-title-text">{ticket.BriefDescriptionTxt__c}</h3>
+
+                                        <!-- Description -->
+                                        <p class="ticket-description">{ticket.DetailsTxt__c}</p>
+
+                                        <!-- Metadata Row -->
+                                        <div class="ticket-metadata">
+                                            <div class="meta-item">
+                                                <lightning-icon icon-name="utility:hashtag" size="xx-small"></lightning-icon>
+                                                <span>Size: {ticket.DeveloperDaysSizeNumber__c}</span>
+                                            </div>
+                                            <div class="meta-item">
+                                                <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                                                <span>{ticket.calculatedETA}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tags -->
+                                        <template if:true={ticket.tags.length}>
+                                            <div class="ticket-tags">
+                                                <template for:each={ticket.tags} for:item="tag">
+                                                    <span key={tag} class="tag-badge">{tag}</span>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- Footer -->
+                                        <div class="ticket-footer">
+                                            <span class={ticket.priorityClasses}>{ticket.PriorityPk__c}</span>
+                                            
+                                            <!-- NEW ACTION BUTTON -->
+                                            <button class="ticket-action-button" title="Move Ticket" data-id={ticket.Id} onclick={handleCardClick}>
+                                                <lightning-icon icon-name="utility:chevrons_right" size="xx-small" alternative-text="Move"></lightning-icon>
+                                            </button>
+                                            
+                                            <template if:true={ticket.OwnerName}>
+                                                <div class="assignee">
+                                                    <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
+                                                    <span>{ticket.OwnerName}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                            <template if:false={col.tickets.length}>
+                                <div class="empty-column-placeholder">
+                                    <div class="placeholder-text">No tickets here</div>
+                                    <div class="placeholder-subtext">Drag tickets to this column</div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
                 </template>
-              </template>
-              <template if:false={col.tickets.length}>
-                <span style="color:#bbb;font-style:italic;">No tickets</span>
-              </template>
-            </td>
-          </template>
-        </tr>
-      </tbody>
-    </table>
-  </template>
+            </div>
+        </div>
+    </div>
+    
 
  <template if:true={showCreateModal}>
   <section class="slds-modal slds-fade-in-open custom-modal" tabindex="0" onkeydown={handleModalKeydown}>
@@ -203,64 +233,57 @@
 </template>
 
 
-  <template if:true={showModal}>
-    <section class="modal-backdrop" tabindex="0" onkeydown={handleModalKeydown}>
-        <div class="modal-body" tabindex="0">
-            <h3>Move Side Quest: {selectedRecord.BriefDescriptionTxt__c}</h3>
-            <p style="font-size:.97em;color:#666;">
-                Current Status: <b>{selectedRecord.StageNamePk__c}</b>
-            </p>
-            <template if:true={hasRecentComments}>
-                <div class="modal-section">
-                    <h4 style="margin-bottom:0.5em;">Recent Comments</h4>
-                    <template for:each={recentComments} for:item="cmt">
-                        <div key={cmt.id} class="comment-history-row">
-                            <span class="persona-icon" style="margin-right:6px;">{cmt.icon}</span>
-                            <b>{cmt.user}</b>
-                            <span class="comment-text">{cmt.text}</span>
-                            <span class="comment-meta">({cmt.date})</span>
+    <template if:true={showModal}>
+        <section class="modal-backdrop" tabindex="0">
+            <div class="modal-body" role="dialog">
+                <!-- Modal Header -->
+                <header class="modal-header">
+                    <h3>Move Side Quest: {selectedRecord.BriefDescriptionTxt__c}</h3>
+                    <p>Current Status: <strong>{selectedRecord.StageNamePk__c}</strong></p>
+                </header>
+
+                <!-- Modal Content -->
+                <div class="modal-content">
+                    <!-- Advance Options -->
+                    <template if:true={advanceOptions.length}>
+                        <div class="modal-section">
+                            <h4 class="section-title-advance">Advance</h4>
+                            <div class="button-container">
+                                <template for:each={advanceOptions} for:item="opt">
+                                    <button key={opt.value} class="move-btn" style={opt.style} data-value={opt.value} onclick={handleAdvanceOption}>
+                                        <span class="persona-icon">{opt.icon}</span> {opt.label}
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </template>
-                </div>
-            </template>
-            <template if:true={advanceOptions.length}>
-                <div class="modal-section">
-                    <h4 style="color:#0070d2;">Advance</h4>
-                    <template for:each={advanceOptions} for:item="opt">
-                        <button key={opt.value}
-                                class="advance-btn"
-                                style={opt.style}
-                                onclick={handleAdvanceOption}
-                                data-value={opt.value}
-                                autofocus={opt.autofocus}>
-                            <span class="persona-icon">{opt.icon}</span> {opt.label}
-                        </button>
+
+                    <!-- Backtrack Options -->
+                    <template if:true={backtrackOptions.length}>
+                        <div class="modal-section">
+                            <h4 class="section-title-backtrack">Backtrack</h4>
+                            <div class="button-container">
+                                <template for:each={backtrackOptions} for:item="opt">
+                                    <button key={opt.value} class="move-btn" style={opt.style} data-value={opt.value} onclick={handleBacktrackOption}>
+                                        <span class="persona-icon">{opt.icon}</span> {opt.label}
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
                     </template>
+                    
+                    <!-- Comment Box -->
+                    <div class="modal-section">
+                        <label for="comment" class="comment-label">Comment (optional):</label>
+                        <textarea id="comment" class="comment-box" value={moveComment} onchange={handleCommentChange}></textarea>
+                    </div>
                 </div>
-            </template>
-            <template if:true={backtrackOptions.length}>
-                <div class="modal-section">
-                    <h4 style="color:#555;">Backtrack</h4>
-                    <template for:each={backtrackOptions} for:item="opt">
-                        <button key={opt.value}
-                                class="backtrack-btn"
-                                style={opt.style}
-                                onclick={handleBacktrackOption}
-                                data-value={opt.value}
-                                autofocus={opt.autofocus}>
-                            <span class="persona-icon">{opt.icon}</span> {opt.label}
-                        </button>
-                    </template>
-                </div>
-            </template>
-            <div class="modal-section" style="margin-top:1.3rem;">
-                <label for="comment">Comment (optional):</label>
-                <textarea id="comment" class="comment-box" value={moveComment} onchange={handleCommentChange}></textarea>
+
+                <!-- Modal Footer -->
+                <footer class="modal-footer">
+                    <button class="cancel-btn" onclick={handleCancelTransition}>Cancel</button>
+                </footer>
             </div>
-            <div style="margin-top:2rem;text-align:right;">
-                <button onclick={handleCancelTransition} class="cancel-btn">Cancel</button>
-            </div>
-        </div>
-    </section>
-  </template>
+        </section>
+    </template>
 </template>
