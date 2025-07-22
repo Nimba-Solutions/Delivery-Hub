@@ -40,13 +40,14 @@
   <template if:false={isTableMode}>
     <div class={mainBoardClass}>
       <template for:each={stageColumns} for:item="col">
-        <div key={col.stage} class="stageContainer">
+        <div key={col.stage} class="stageContainer" ondrop={handleDrop} ondragover={handleDragOver} data-stage={col.stage}>
             <div class="column_heading" style={col.headerStyle}>
                 {col.displayName}
             </div>
           <div class="card_wrapper">
             <template for:each={col.tickets} for:item="ticket" for:index="index">
-  <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}">
+  <!-- <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}"> -->
+    <div key={ticket.Id} class="ticket-card" style="background:{ticket.cardColor}" draggable="true" ondragstart={handleDragStart} ondragover={handleDragOver} ondrop={handleDrop} data-id={ticket.Id}>
     <div class="ticket-title" data-id={ticket.Id} onclick={handleTitleClick}>
       {ticket.BriefDescriptionTxt__c}
     </div>
@@ -68,7 +69,7 @@
       <button class="arrow-btn" data-id={ticket.Id} data-col={col.stage} data-dir="down"
         onclick={handleArrowClick}><!-- disabled={index === col.tickets.length - 1}>-->&darr;</button>
     </div>
-    <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button>
+    <!-- <button class="slds-button" onclick={handleCardClick} data-id={ticket.Id}>Advance/Backtrack</button> -->
   </div>
 </template>
 
@@ -120,11 +121,11 @@
     <div class="slds-modal__container">
 
       <!-- Modal Header -->
-      <header class="slds-modal__header" style="border-bottom:1px solid #f0f0f0; padding-bottom:1em;">
+      <header class="slds-modal__header" style="border-bottom:1px solid #f0f0f0; padding-bottom:1em; border-top-left-radius:1rem; border-top-right-radius:1rem;">
         <lightning-icon icon-name="utility:new_window" alternative-text="New" size="small" class="slds-m-right_small"></lightning-icon>
         <h2 class="slds-text-heading_medium" style="display:inline-block;">Create New Ticket</h2>
-        <button class="slds-modal__close" onclick={handleCreateCancel} title="Close">
-          <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
+        <button class="slds-modal__close" onclick={handleCreateCancel} title="Close" style = "padding-right: 30px; margin-right:10px; border-radius:0.5rem;">
+          <lightning-icon icon-name="utility:close" size="small" alternative-text="Close" ></lightning-icon>
         </button>
         <p class="slds-text-body_small" style="margin-top:.35em;color:#666;">
           Fill out the details below. You can add files or edit details later.
@@ -137,7 +138,7 @@
       </header>
 
       <!-- Modal Content -->
-      <div class="slds-modal__content slds-p-around_medium" style="background:#fafcff; border-radius:1rem;">
+      <div class="slds-modal__content slds-p-around_medium" style="background:#fafcff;  border-bottom-left-radius:1rem; border-bottom-right-radius:1rem;">
         <template if:false={showSpinner}>
           <lightning-record-edit-form
             object-api-name="DH_Ticket__c"

@@ -73,7 +73,7 @@ public with sharing class JiraCallout {
         return issues;
     }
 
-    public static HttpResponse addComment(String jiraKey, String commentBody) {
+   /* public static HttpResponse addComment(String jiraKey, String commentBody) {
         // Build endpoint for adding a comment to an issue
         String endpoint = 'issue/' + jiraKey + '/comment';
 
@@ -81,7 +81,23 @@ public with sharing class JiraCallout {
 		String bodyJson = buildADFCommentBody(commentBody);
 
         return httpHelper(endpoint, 'POST', bodyJson);
+    }*/
+    
+    public static HttpResponse addComment(String jiraKey, String adfJsonBody) {
+        // The adfJsonBody itself is the ADF document.
+        // The Jira API expects this ADF document to be the value of a "body" field
+        // within the overall JSON payload for the comment.
+        
+        // So, we wrap the provided adfJsonBody in the required {"body": ...} structure.
+        String fullRequestBody = '{"body": ' + adfJsonBody + '}';
+
+        // Build endpoint for adding a comment to an issue
+        String relativeEndpoint = 'issue/' + jiraKey + '/comment';
+
+        // Call the httpHelper with the correctly formatted full request body
+        return httpHelper(relativeEndpoint, 'POST', fullRequestBody);
     }
+    
 
     
     public static String buildADFCommentBody(String commentText) {
@@ -133,8 +149,7 @@ public with sharing class JiraCallout {
 
         // Combine the parts into a single blob for the request body
         Blob requestBody = Blob.valueOf(bodyStart);
-        requestBody = Blob.valueOf(bodyStart).append(fileBody);
-        requestBody = requestBody.append(Blob.valueOf(bodyEnd));
+        requestBody = Blob.valueOf(bodyStart + EncodingUtil.base64Encode(fileBody) + bodyEnd);
 
         req.setBodyAsBlob(requestBody);
         req.setTimeout(120000); // Set 2-minute timeout for large files
