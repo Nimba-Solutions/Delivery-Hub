@@ -599,10 +599,13 @@
 
 /* The empty placeholder is visible by default... */
 .empty-column-placeholder {
-    display: flex; /* or block */
+    display: flex;
+    pointer-events: none;
 }
+
 
 /* ...but if the column has tickets, the placeholder is hidden. */
 .kanban-column-body.has-tickets .empty-column-placeholder {
     display: none;
 }
+

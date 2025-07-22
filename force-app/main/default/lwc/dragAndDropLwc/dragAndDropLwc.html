@@ -139,8 +139,7 @@
                                             <!-- Action Button - ONLY this button should open the modal -->
                                             <button class="ticket-action-button" title="Move Ticket" data-id={ticket.Id}
                                                 onclick={handleCardClick}>
-                                                <lightning-icon icon-name="utility:layers" size="xx-small"
-                                                    alternative-text="Move"></lightning-icon>
+                                                <lightning-icon icon-name="utility:change_record_type" size="xx-small" alternative-text="Change Status"></lightning-icon>
                                             </button>
 
                                             <template if:true={ticket.OwnerName}>
