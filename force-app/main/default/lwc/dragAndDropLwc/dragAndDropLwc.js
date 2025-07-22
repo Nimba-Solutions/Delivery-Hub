@@ -573,7 +573,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
                 OwnerName: rec.Owner?.Name, // Assuming Owner relationship is queried
                 isHighPriority: rec.PriorityPk__c?.toLowerCase() === "high",
                 tags: getTagsArray(rec.Tags__c),
-                cardClasses: `ticket-card ${getStatusClass(rec.StageNamePk__c)}`,
+                cardClasses: `ticket-card`,
                 priorityClasses: `priority-badge priority-${rec.PriorityPk__c?.toLowerCase()}`,
             };
         });
@@ -592,60 +592,35 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         }
 
         let columns = (colNames || []).map((colName) => {
-            const statuses = statusMap[colName] || [];
-            // Prefer custom style if present, else fallback to persona color logic
-            let headerStyle;
-            if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[colName]) {
-                const { bg, color } = this.columnHeaderStyleMap[colName];
-                headerStyle = `background:${bg};color:${color};`;
-            } else {
-                const owner = this.columnOwner(colName);
-                const color = this.ownerColorMap[owner] || this.ownerColorMap.Default;
-                headerStyle = `background:${color};color:#fff;`;
-            }
+            // Step 1: Get the style config for the column just once.
+            const columnStyleConfig = this.columnHeaderStyleMap[colName] || { bg: '#ffffff', color: '#11182c' };
+            const headerStyle = `background:${columnStyleConfig.bg};color:${columnStyleConfig.color};`;
+
+            // Step 2: Filter and map the tickets.
             const columnTickets = enriched
-                .filter(t => statuses.includes(t.StageNamePk__c))
+                .filter(t => (statusMap[colName] || []).includes(t.StageNamePk__c))
                 .filter(t => {
                     if (this.intentionFilter === 'all') return true;
                     return (t.Client_Intention__c || '').trim().toLowerCase() === this.intentionFilter.toLowerCase();
                 })
-                .map(t => {
-                    // Your existing mapping for cardColor, etc., can go here if you have it.
-                    // For this fix, we just need the tickets themselves.
-                    return { ...t };
+                .map(ticket => {
+                    // --- START OF THE FIX ---
+                    // For each ticket, create a style string that sets the BORDER color
+                    // to match the column header's main text color for a clean look.
+                    return {
+                        ...ticket,
+                        cardStyle: `border-left-color: ${columnStyleConfig.bg} !important;`
+                    };
+                    // --- END OF THE FIX ---
                 });
-
-            // STEP 2: NOW that `columnTickets` exists, use it to define `bodyClasses`.
+            
             const bodyClasses = `kanban-column-body ${columnTickets.length > 0 ? 'has-tickets' : 'is-empty'}`;
             
             return {
                 stage: colName,
                 displayName: this.columnDisplayNames[colName] || colName,
                 headerStyle,
-                tickets: enriched
-                    .filter((t) => statuses.includes(t.StageNamePk__c))
-                    .filter((t) => {
-                        // Only filter if intention is not "all"
-                        if (this.intentionFilter === "all") return true;
-                        // Debug log
-                        console.log(
-                            `[Intent Filter] Ticket:`,
-                            t.Id,
-                            "| Stage:",
-                            t.StageNamePk__c,
-                            "| Client_Intention__c:",
-                            t.Client_Intention__c,
-                            "| Current Filter:",
-                            this.intentionFilter
-                        );
-                        // Compare picklist value, trimming for safety
-                        return (t.Client_Intention__c || "").trim().toLowerCase() === this.intentionFilter.toLowerCase();
-                    })
-                    .map((t) => {
-                        // You can add your cardColor logic here if you want
-                        let cardColor = this.statusColorMap[t.StageNamePk__c] || "#eee";
-                        return { ...t, cardColor };
-                    }),
+                tickets: columnTickets,
                 bodyClasses: bodyClasses
             };
         });
@@ -655,6 +630,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         }
         return columns;
     }
+
 
     getColumnDisplayName(colKey) {
         return this.columnDisplayNames?.[colKey] || colKey;
@@ -980,7 +956,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         if (board) {
             board.classList.remove('drag-is-active');
         }
-        
+
     }
 
     handleDragOver(event) {

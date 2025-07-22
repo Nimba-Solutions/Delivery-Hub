@@ -90,8 +90,7 @@
                             <template if:true={col.tickets.length}>
                                 <template for:each={col.tickets} for:item="ticket">
                                     <!-- New Ticket Card -->
-                                    <div key={ticket.Id} class={ticket.cardClasses} draggable="true"
-                                        ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={ticket.Id}>
+                                    <div key={ticket.Id} class={ticket.cardClasses} draggable="true" style={ticket.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={ticket.Id}>
                                         <!-- Priority Indicator -->
                                         <template if:true={ticket.isHighPriority}>
                                             <div class="priority-indicator">
@@ -139,7 +138,7 @@
                                             <!-- Action Button - ONLY this button should open the modal -->
                                             <button class="ticket-action-button" title="Move Ticket" data-id={ticket.Id}
                                                 onclick={handleCardClick}>
-                                                <lightning-icon icon-name="utility:change_record_type" size="xx-small" alternative-text="Change Status"></lightning-icon>
+                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
                                             </button>
 
                                             <template if:true={ticket.OwnerName}>
