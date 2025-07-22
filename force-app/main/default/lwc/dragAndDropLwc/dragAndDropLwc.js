@@ -7,8 +7,8 @@ import linkFilesAndSync from '@salesforce/apex/DH_TicketController.linkFilesAndS
 import STAGE_FIELD from '@salesforce/schema/DH_Ticket__c.StageNamePk__c';
 import ID_FIELD from '@salesforce/schema/DH_Ticket__c.Id';
 import getTicketETAsWithPriority from '@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority';
-
-
+import updateTicketStage from '@salesforce/apex/DragAndDropLwcController.updateTicketStage';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track persona = 'Client';
@@ -1132,5 +1132,78 @@ backtrackMap = {
         this.selectedRecord = null;
         this.selectedStage = null;
         this.moveComment = '';
+    }
+
+    handleDragStart(event) {
+        console.log('handleDragStart called');
+        const ticketId = event.target.dataset.id;
+        console.log('ticketId '+ticketId);
+        event.dataTransfer.setData('text/plain', ticketId);
+    }
+
+    handleDragOver(event) {
+        console.log('handleDragOver called');
+        event.preventDefault();
+    }
+
+    // async handleDrop(event) {
+    //     console.log('handleDrop called');
+    //     event.preventDefault();
+    //     const ticketId = event.dataTransfer.getData('text/plain');
+    //     console.log('ticketId '+ticketId);
+    //     const targetColumn = event.target.closest('.stageContainer');
+    //     console.log('targetColumn '+targetColumn);
+    //     const targetStage = targetColumn?.dataset.stage;
+    //     console.log('targetStage '+targetStage);
+
+    //     if (ticketId && targetStage) {
+    //         try {
+    //             console.log('enter try');
+    //             // Call Apex method to update the ticket stage
+    //             await updateTicketStage({ ticketId, newStage: targetStage });
+
+    //             // Show success *
+    //             this.showToast('Success', 'Ticket moved successfully', 'success');
+    //             this.refreshTickets();
+    //             // Refresh the data
+                
+    //         } catch (error) {
+    //             console.log('enter catch');
+    //             // Show error *
+    //             this.showToast('Error', 'Failed to move ticket', 'error');
+    //         }
+    //     }
+    // }
+
+    async handleDrop(event) {
+        event.preventDefault();
+        const ticketId = event.dataTransfer.getData('text/plain');
+        const targetColumn = event.target.closest('.stageContainer');
+        const targetStageDisplay = targetColumn?.dataset.stage;
+
+        // Map display column name to internal status
+        const statuses = this.personaColumnStatusMap[this.persona][targetStageDisplay] || [];
+        const internalStage = statuses[0]; // Use the first mapped status
+
+        if (ticketId && internalStage) {
+            try {
+                await updateTicketStage({ ticketId, newStage: internalStage });
+
+                this.showToast('Success', 'Ticket moved successfully', 'success');
+                this.refreshTickets();
+            } catch (error) {
+                this.showToast('Error', 'Failed to move ticket', 'error');
+            }
+        }
+    }
+
+
+    showToast(title, message, variant) {
+        const event = new ShowToastEvent({
+            title,
+            message,
+            variant,
+        });
+        this.dispatchEvent(event);
     }
 }
