@@ -46,7 +46,9 @@
     border-bottom: 1px solid var(--gray-200);
 }
 
-.toolbar-left, .toolbar-center, .toolbar-right {
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -127,7 +129,6 @@
     --sds-c-icon-color-foreground-default: white;
 }
 
-
 /* Kanban Column */
 .kanban-column {
     width: 300px;
@@ -205,13 +206,28 @@
 }
 
 /* Card border colors */
-.border-requirements, .border-design { border-left-color: #60a5fa; }
-.border-development, .border-testing { border-left-color: #4ade80; }
-.border-ready-for-qa, .border-qa-in-progress { border-left-color: #facc15; }
-.border-ready-for-prod, .border-deployed { border-left-color: #a78bfa; }
-.border-done { border-left-color: #22c55e; }
-.border-default { border-left-color: var(--gray-400); }
-
+.border-requirements,
+.border-design {
+    border-left-color: #60a5fa;
+}
+.border-development,
+.border-testing {
+    border-left-color: #4ade80;
+}
+.border-ready-for-qa,
+.border-qa-in-progress {
+    border-left-color: #facc15;
+}
+.border-ready-for-prod,
+.border-deployed {
+    border-left-color: #a78bfa;
+}
+.border-done {
+    border-left-color: #22c55e;
+}
+.border-default {
+    border-left-color: var(--gray-400);
+}
 
 .priority-indicator {
     position: absolute;
@@ -364,7 +380,10 @@
 /* --- New Modal Styles --- */
 .modal-backdrop {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: rgba(0, 0, 0, 0.4);
     z-index: 1000;
     display: flex;
@@ -377,7 +396,7 @@
     max-width: 520px;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
 }
@@ -405,13 +424,18 @@
     margin-bottom: 1.25rem;
 }
 
-.section-title-advance, .section-title-backtrack {
+.section-title-advance,
+.section-title-backtrack {
     font-size: 0.9rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
-.section-title-advance { color: #2563EB; }
-.section-title-backtrack { color: var(--gray-800); }
+.section-title-advance {
+    color: #2563eb;
+}
+.section-title-backtrack {
+    color: var(--gray-800);
+}
 
 .button-container {
     display: flex;
@@ -471,4 +495,85 @@
     padding: 0.5rem 1rem;
     border-radius: 6px;
     cursor: pointer;
+}
+
+/* Style for the column being hovered over */
+.kanban-column.drag-over {
+    background-color: rgba(59, 130, 246, 0.05); /* Light blue tint */
+    border: 2px dashed rgba(59, 130, 246, 0.4);
+}
+
+/* Style for the ticket being dragged */
+.ticket-card.is-dragging {
+    opacity: 0.4;
+    transform: scale(1.05) rotate(3deg);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Enhanced Empty Column Placeholder --- */
+.empty-column-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--gray-400);
+    min-height: 150px; /* Give it some height */
+}
+
+.placeholder-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--gray-200);
+    margin-bottom: 1rem;
+}
+
+.placeholder-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+.placeholder-subtext {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+/* Add this to your existing ticket card styles */
+.ticket-card {
+    transition: box-shadow 0.2s, transform 0.2s, opacity 0.2s; /* Add opacity to transition */
+}
+
+.ticket-action-button {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* This is key: it pushes the button left of the assignee */
+    margin-left: auto;
+    margin-right: 8px;
+
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.2s, background-color 0.2s;
+}
+
+/* Show the button when hovering over the card */
+.ticket-card:hover .ticket-action-button {
+    opacity: 0.6;
+}
+
+.ticket-action-button:hover {
+    opacity: 1;
+    background-color: var(--gray-200);
+}
+
+.kanban-column.drag-over .empty-column-placeholder {
+    display: none;
 }
