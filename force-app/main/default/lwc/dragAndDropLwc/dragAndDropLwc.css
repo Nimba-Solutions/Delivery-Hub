@@ -609,3 +609,6 @@
     display: none;
 }
 
+.kanban-board.drag-is-active .empty-column-placeholder {
+    display: none;
+}

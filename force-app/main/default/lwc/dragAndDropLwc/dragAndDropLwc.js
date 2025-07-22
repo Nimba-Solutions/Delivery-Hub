@@ -948,7 +948,11 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         this.placeholder.className = 'drag-placeholder';
         // Match the height of the card being dragged for a 1:1 space
         this.placeholder.style.height = `${event.target.offsetHeight}px`;
-
+        
+        const board = this.template.querySelector('.js-kanban-board');
+        if (board) {
+            board.classList.add('drag-is-active');
+        }
         // Add a class to the original element so we can make it look like a "ghost"
         setTimeout(() => {
             event.target.classList.add('is-dragging');
@@ -971,6 +975,12 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         this.template.querySelectorAll('.kanban-column.drag-over').forEach(col => {
             col.classList.remove('drag-over');
         });
+
+        const board = this.template.querySelector('.js-kanban-board');
+        if (board) {
+            board.classList.remove('drag-is-active');
+        }
+        
     }
 
     handleDragOver(event) {

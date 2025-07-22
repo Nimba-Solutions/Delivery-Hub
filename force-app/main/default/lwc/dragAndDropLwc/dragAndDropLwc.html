@@ -74,7 +74,7 @@
         </div>
 
         <!-- Kanban Board -->
-        <div class="kanban-board">
+        <div class="kanban-board js-kanban-board">
             <div class="kanban-columns-container">
                 <template for:each={stageColumns} for:item="col">
                     <div key={col.stage} class="kanban-column" ondrop={handleDrop} ondragover={handleDragOver}
