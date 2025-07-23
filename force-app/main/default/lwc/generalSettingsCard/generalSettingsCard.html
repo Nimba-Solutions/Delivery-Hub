@@ -1,0 +1,105 @@
+<template>
+    <div class="settings-card">
+        <!-- Card Header -->
+        <div class="card-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <lightning-icon icon-name="utility:settings" alternative-text="General Settings" size="small"></lightning-icon>
+                </div>
+                <div class="header-text">
+                    <h2 class="card-title">General Settings</h2>
+                    <p class="card-subtitle">Configure general application preferences and behavior</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- Theme Selection -->
+            <div class="form-section">
+                <div class="form-group">
+                    <div class="form-label-wrapper">
+                        <lightning-icon icon-name="utility:palette" alternative-text="Theme" size="x-small"></lightning-icon>
+                        <label class="form-label">Theme</label>
+                    </div>
+                    <div class="select-wrapper">
+                        <select class="custom-select" value={theme} onchange={handleThemeChange}>
+                            <template for:each={themeOptions} for:item="option">
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="form-help">
+                        Choose your preferred color theme. System will match your device's setting.
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Notifications Toggle -->
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:notification" alternative-text="Notifications" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Enable Notifications</label>
+                        </div>
+                        <div class="toggle-help">
+                            Receive notifications for ticket updates and system events
+                        </div>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle" onclick={handleNotificationsToggle}>
+                            <input type="checkbox" checked={notifications} class="toggle-input" />
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Auto Save Toggle -->
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:save" alternative-text="Auto Save" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Auto Save</label>
+                        </div>
+                        <div class="toggle-help">
+                            Automatically save changes as you work
+                        </div>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle" onclick={handleAutoSaveToggle}>
+                            <input type="checkbox" checked={autoSave} class="toggle-input" />
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Application Information -->
+            <div class="info-section">
+                <h4 class="info-title">Application Information</h4>
+                <div class="info-content">
+                    <div class="info-item">
+                        <span class="info-label">Version:</span>
+                        <span class="info-value">1.0.0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Build:</span>
+                        <span class="info-value">Production</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Last Updated:</span>
+                        <span class="info-value">{currentDate}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
