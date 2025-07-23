@@ -148,8 +148,13 @@
                                                     <span>{ticket.OwnerName}</span>
                                                 </div>
                                             </template>
+                                            <template if:true={ticket.isCurrentlyBlocked}>
+                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small"
+                                                            title="This ticket is blocked."></lightning-icon>
+                                            </template>
                                         </div>
                                     </div>
+                                    
                                 </template>
                             </template>
                             <template if:false={col.tickets.length}>
@@ -384,4 +389,43 @@
             </div>
         </section>
     </template>
+
+    <template if:true={showTransitionModal}>
+    <section class="slds-modal slds-fade-in-open" tabindex="-1">
+        <div class="slds-modal__container">
+            <!-- Modal Header -->
+            <header class="slds-modal__header">
+                <h2 class.bind="slds-text-heading_medium slds-hyphenate">Additional Information Required</h2>
+                <p class="slds-m-top_x-small">Please provide the following details to move the ticket to <strong>{transitionTargetStage}</strong>.</p>
+            </header>
+
+            <!-- Modal Content -->
+            <div class="slds-modal__content slds-p-around_medium">
+                <lightning-record-edit-form
+                    object-api-name="DH_Ticket__c"
+                    record-id={transitionTicketId}
+                    onsuccess={handleTransitionSuccess}
+                    onerror={handleTransitionError}>
+
+                    <!-- Dynamic Fields Section -->
+                    <template for:each={transitionRequiredFields} for:item="fieldName">
+                        <lightning-input-field key={fieldName} field-name={fieldName} variant="label-stacked"></lightning-input-field>
+                    </template>
+
+                    <!-- Hidden Fields for Submission -->
+                     <div class="slds-hide">
+                         <lightning-input-field field-name="StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
+                     </div>
+
+                    <!-- Footer with Action Buttons -->
+                    <footer class="slds-modal__footer slds-m-top_medium">
+                        <lightning-button variant="neutral" label="Cancel" onclick={closeTransitionModal}></lightning-button>
+                        <lightning-button variant="brand" type="submit" label="Save & Move Ticket" class="slds-m-left_x-small"></lightning-button>
+                    </footer>
+                </lightning-record-edit-form>
+            </div>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+</template>
 </template>

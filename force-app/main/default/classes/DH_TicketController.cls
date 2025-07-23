@@ -21,7 +21,8 @@ public with sharing class DH_TicketController {
                    ClientIntentionPk__c,
                    SortOrderNumber__c,
                    Epic__c,
-                   Tags__c
+                   Tags__c,(SELECT Id, Blocking_Ticket__c, Blocking_Ticket__r.Name FROM Ticket_Dependency1__r), // 'Blocked_By__r' is the child relationship name for Blocked_Ticket__c
+           (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r) 
             FROM DH_Ticket__c
             WHERE IsActiveBool__c = true
             ORDER BY SortOrderNumber__c
@@ -440,4 +441,5 @@ public with sharing class DH_TicketController {
         return suggestions;
     }
 
+    
 }

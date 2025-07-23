@@ -10,6 +10,7 @@ import ID_FIELD from "@salesforce/schema/DH_Ticket__c.Id";
 import getTicketETAsWithPriority from "@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority";
 import updateTicketStage from "@salesforce/apex/DragAndDropLwcController.updateTicketStage";
 import updateTicketSortOrder from "@salesforce/apex/DragAndDropLwcController.updateTicketSortOrder";
+import getRequiredFieldsForStage from '@salesforce/apex/DH_TicketController.getRequiredFieldsForStage';
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
@@ -42,7 +43,10 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   @track createTicketDescription = "";
   @track estimatedDaysValue = null;
   @track formFieldValues = {};
-
+  @track showTransitionModal = false;
+  @track transitionTicketId = null;
+  @track transitionTargetStage = null;
+  @track transitionRequiredFields = [];
   ticketsWire;
 
   statusColorMap = {
@@ -752,6 +756,17 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     return (this.realRecords || []).map((rec) => {
       const etaDto = etaMap.get(norm(rec.Id));
 
+      const isBlockedBy = (rec.Ticket_Dependency1__r || []).map(dep => ({
+            id: dep.Blocking_Ticket__c,
+            name: dep.Blocking_Ticket__r.Name,
+            dependencyId: dep.Id
+        }));
+
+        const isBlocking = (rec.Ticket_Dependency__r || []).map(dep => ({
+            id: dep.Blocked_Ticket__c,
+            name: dep.Blocked_Ticket__r.Name,
+            dependencyId: dep.Id
+        }));
       // --- START OF NEW ADDITIONS ---
 
       // Helper to convert status to a CSS-friendly class name
@@ -778,6 +793,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
       // --- END OF NEW ADDITIONS ---
 
+      
+
       return {
         ...rec,
         calculatedETA:
@@ -786,6 +803,9 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
             : "—",
 
         // --- NEW DYNAMIC PROPERTIES FOR THE TEMPLATE ---
+        isBlockedBy: isBlockedBy,
+        isBlocking: isBlocking,
+        isCurrentlyBlocked: isBlockedBy.length > 0,
         OwnerName: rec.Owner?.Name, // Assuming Owner relationship is queried
         isHighPriority: rec.PriorityPk__c?.toLowerCase() === "high",
         tags: getTagsArray(rec.Tags__c),
@@ -1113,16 +1133,106 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     this.showModal = true;
     this.moveComment = "";
   }
-  handleAdvanceOption(e) {
-    const newStage = e.target.dataset.value;
-    this.selectedStage = newStage;
-    this.handleSaveTransition();
-  }
-  handleBacktrackOption(e) {
-    const newStage = e.target.dataset.value;
-    this.selectedStage = newStage;
-    this.handleSaveTransition();
-  }
+  // handleAdvanceOption(e) {
+  //   const newStage = e.target.dataset.value;
+  //   this.selectedStage = newStage;
+  //   this.handleSaveTransition();
+  // }
+
+//   async handleAdvanceOption(e) {
+//     const newStage = e.target.dataset.value;
+//     const ticketId = this.selectedRecord.Id;
+
+//     try {
+//         const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
+
+//         if (requiredFields && requiredFields.length > 0) {
+//             // Fields are required. Close the current modal and open the new one.
+//             this.closeModal(); // Close the simple move modal
+            
+//             this.transitionTicketId = ticketId;
+//             this.transitionTargetStage = newStage;
+//             this.transitionRequiredFields = requiredFields;
+//             this.showTransitionModal = true;
+//         } else {
+//             // No fields required, proceed with the original save.
+//             this.selectedStage = newStage;
+//             this.handleSaveTransition();
+//         }
+//     } catch (error) {
+//         this.showToast('Error', 'Could not check for required fields.', 'error');
+//         console.error(error);
+//     }
+// }
+//   handleBacktrackOption(e) {
+//     const newStage = e.target.dataset.value;
+//     this.selectedStage = newStage;
+//     this.handleSaveTransition();
+//   }
+
+async handleAdvanceOption(e) {
+        const newStage = e.target.dataset.value;
+        const ticketId = this.selectedRecord.Id;
+
+        try {
+            // Call Apex to see if the destination stage has required fields
+            const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
+
+            if (requiredFields && requiredFields.length > 0) {
+                // --- FIELDS ARE REQUIRED ---
+                // 1. Close the current selection modal
+                this.closeModal(); 
+                
+                // 2. Set the properties for the new transition modal
+                this.transitionTicketId = ticketId;
+                this.transitionTargetStage = newStage;
+                this.transitionRequiredFields = requiredFields;
+                
+                // 3. Show the new modal that asks for the fields
+                this.showTransitionModal = true;
+            } else {
+                // --- NO FIELDS REQUIRED ---
+                // Proceed with the original, direct move
+                this.selectedStage = newStage;
+                this.handleSaveTransition();
+            }
+        } catch (error) {
+            this.showToast('Error', 'Could not check for stage requirements.', 'error');
+            console.error('Error checking for required fields:', error);
+        }
+    }
+
+    async handleBacktrackOption(e) {
+        const newStage = e.target.dataset.value;
+        const ticketId = this.selectedRecord.Id;
+
+        try {
+            // Call Apex to see if the destination stage has required fields
+            const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
+
+            if (requiredFields && requiredFields.length > 0) {
+                // --- FIELDS ARE REQUIRED ---
+                // 1. Close the current selection modal
+                this.closeModal(); 
+
+                // 2. Set the properties for the new transition modal
+                this.transitionTicketId = ticketId;
+                this.transitionTargetStage = newStage;
+                this.transitionRequiredFields = requiredFields;
+
+                // 3. Show the new modal that asks for the fields
+                this.showTransitionModal = true;
+            } else {
+                // --- NO FIELDS REQUIRED ---
+                // Proceed with the original, direct move
+                this.selectedStage = newStage;
+                this.handleSaveTransition();
+            }
+        } catch (error) {
+            this.showToast('Error', 'Could not check for stage requirements.', 'error');
+            console.error('Error checking for required fields:', error);
+        }
+    }
   handleStageChange(e) {
     this.selectedStage = e.detail ? e.detail.value : e.target.value;
   }
@@ -1260,96 +1370,160 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     ).element;
   }
 
+  
+
   // async handleDrop(event) {
-  //     console.log('handleDrop called');
-  //     event.preventDefault();
-  //     const ticketId = event.dataTransfer.getData('text/plain');
-  //     console.log('ticketId '+ticketId);
-  //     const targetColumn = event.target.closest('.stageContainer');
-  //     console.log('targetColumn '+targetColumn);
-  //     const targetStage = targetColumn?.dataset.stage;
-  //     console.log('targetStage '+targetStage);
+  //   event.preventDefault();
 
-  //     if (ticketId && targetStage) {
-  //         try {
-  //             console.log('enter try');
-  //             // Call Apex method to update the ticket stage
-  //             await updateTicketStage({ ticketId, newStage: targetStage });
+  //   const ticketId = this.draggedItem.Id;
+  //   const sourceColumnStage = this.stageColumns.find((col) =>
+  //     col.tickets.some((t) => t.Id === ticketId)
+  //   ).stage;
 
-  //             // Show success *
-  //             this.showToast('Success', 'Ticket moved successfully', 'success');
-  //             this.refreshTickets();
-  //             // Refresh the data
+  //   const dropColumnEl = event.target.closest(".kanban-column");
+  //   if (!dropColumnEl) {
+  //     this.handleDragEnd(); // Abort if dropped outside a valid column
+  //     return;
+  //   }
+  //   const targetColumnStage = dropColumnEl.dataset.stage;
 
-  //         } catch (error) {
-  //             console.log('enter catch');
-  //             // Show error *
-  //             this.showToast('Error', 'Failed to move ticket', 'error');
-  //         }
+  //   // SCENARIO 1: INTRA-COLUMN DROP (Reordering)
+  //   if (sourceColumnStage === targetColumnStage) {
+  //     const columnTickets = this.stageColumns.find(
+  //       (c) => c.stage === targetColumnStage
+  //     ).tickets;
+  //     const newSortOrder = this.calculateNewSortOrder(
+  //       this.placeholder,
+  //       columnTickets
+  //     );
+
+  //     try {
+  //       await updateTicketSortOrder({
+  //         ticketId: ticketId,
+  //         newSortOrder: newSortOrder,
+  //       });
+  //       this.showToast("Success", "Ticket reordered.", "success");
+  //     } catch (error) {
+  //       this.showToast("Error", "Failed to reorder ticket.", "error");
+  //       console.error(error);
   //     }
+  //   }
+  //   // SCENARIO 2: INTER-COLUMN DROP (Status Change)
+  //   else {
+  //     const statuses =
+  //       this.personaColumnStatusMap[this.persona][targetColumnStage] || [];
+  //     const newInternalStage = statuses[0];
+
+  //     if (newInternalStage) {
+  //       try {
+  //         // When moving to a new column, you might want to set a default sort order,
+  //         // e.g., place it at the top. Here we don't pass a sort order and let Apex handle it.
+  //         await updateTicketStage({
+  //           ticketId: ticketId,
+  //           newStage: newInternalStage,
+  //         });
+  //         this.showToast("Success", "Ticket moved.", "success");
+  //       } catch (error) {
+  //         this.showToast("Error", "Failed to move ticket.", "error");
+  //         console.error(error);
+  //       }
+  //     }
+  //   }
+
+  //   this.refreshTickets();
+  //   // DragEnd will handle final cleanup
   // }
 
   async handleDrop(event) {
     event.preventDefault();
-
     const ticketId = this.draggedItem.Id;
-    const sourceColumnStage = this.stageColumns.find((col) =>
-      col.tickets.some((t) => t.Id === ticketId)
-    ).stage;
-
-    const dropColumnEl = event.target.closest(".kanban-column");
+    const dropColumnEl = event.target.closest('.kanban-column');
     if (!dropColumnEl) {
-      this.handleDragEnd(); // Abort if dropped outside a valid column
-      return;
+        this.handleDragEnd(); // Abort if dropped outside a valid column
+        return;
     }
+
     const targetColumnStage = dropColumnEl.dataset.stage;
+    const sourceColumnStage = this.stageColumns.find(col => col.tickets.some(t => t.Id === ticketId)).stage;
+    
+    // Always clean up drag styles
+    this.handleDragEnd();
 
-    // SCENARIO 1: INTRA-COLUMN DROP (Reordering)
+    // SCENARIO 1: INTRA-COLUMN DROP (Reordering - no status change)
     if (sourceColumnStage === targetColumnStage) {
-      const columnTickets = this.stageColumns.find(
-        (c) => c.stage === targetColumnStage
-      ).tickets;
-      const newSortOrder = this.calculateNewSortOrder(
-        this.placeholder,
-        columnTickets
-      );
-
-      try {
-        await updateTicketSortOrder({
-          ticketId: ticketId,
-          newSortOrder: newSortOrder,
-        });
-        this.showToast("Success", "Ticket reordered.", "success");
-      } catch (error) {
-        this.showToast("Error", "Failed to reorder ticket.", "error");
-        console.error(error);
-      }
-    }
-    // SCENARIO 2: INTER-COLUMN DROP (Status Change)
-    else {
-      const statuses =
-        this.personaColumnStatusMap[this.persona][targetColumnStage] || [];
-      const newInternalStage = statuses[0];
-
-      if (newInternalStage) {
+        const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets;
+        const newSortOrder = this.calculateNewSortOrder(this.placeholder, columnTickets);
         try {
-          // When moving to a new column, you might want to set a default sort order,
-          // e.g., place it at the top. Here we don't pass a sort order and let Apex handle it.
-          await updateTicketStage({
-            ticketId: ticketId,
-            newStage: newInternalStage,
-          });
-          this.showToast("Success", "Ticket moved.", "success");
+            await updateTicketSortOrder({ ticketId: ticketId, newSortOrder: newSortOrder });
+            this.showToast('Success', 'Ticket reordered.', 'success');
+            this.refreshTickets();
         } catch (error) {
-          this.showToast("Error", "Failed to move ticket.", "error");
-          console.error(error);
+            this.showToast('Error', 'Failed to reorder ticket.', 'error');
+            console.error(error);
         }
-      }
+        return; // Stop execution here
     }
 
+    // SCENARIO 2: INTER-COLUMN DROP (Status Change)
+    const newInternalStage = (this.personaColumnStatusMap[this.persona][targetColumnStage] || [])[0];
+
+    if (newInternalStage) {
+        try {
+            // Check if this transition requires extra fields
+            console.log('stage '+newInternalStage);
+            const requiredFields = await getRequiredFieldsForStage({ targetStage: newInternalStage });
+            console.log('requiredfields '+requiredFields);
+            if (requiredFields && requiredFields.length > 0) {
+                // --- FIELDS ARE REQUIRED: Show the modal ---
+                console.log('enter required fields if');
+                this.transitionTicketId = ticketId;
+                this.transitionTargetStage = newInternalStage;
+                this.transitionRequiredFields = requiredFields;
+                this.showTransitionModal = true;
+            } else {
+                // --- NO FIELDS REQUIRED: Perform the original direct update ---
+                await updateTicketStage({ ticketId: ticketId, newStage: newInternalStage })
+                    .then(() => {
+                        this.showToast('Success', 'Ticket moved.', 'success');
+                        this.refreshTickets();
+                    })
+                    .catch(error => {
+                        // This will now catch the error from your trigger!
+                        const errorMessage = error.body.message || 'An unknown error occurred.';
+                        this.showToast('Move Failed', errorMessage, 'error');
+                        // No need to refresh data, as the move was prevented
+                    });
+                // this.showToast('Success', 'Ticket moved successfully.', 'success');
+                this.refreshTickets();
+            }
+        } catch (error) {
+            this.showToast('Error Moving Ticket', error.body ? error.body.message : error.message, 'error');
+            console.error('Error on drop:', error);
+        }
+    }
+}
+
+closeTransitionModal() {
+    this.showTransitionModal = false;
+    this.transitionTicketId = null;
+    this.transitionTargetStage = null;
+    this.transitionRequiredFields = [];
+}
+
+handleTransitionSuccess(event) {
+    this.showToast('Success', 'Ticket has been successfully updated and moved.', 'success');
+    // The form automatically saved the record, now we just close the modal and refresh
+    this.closeTransitionModal();
     this.refreshTickets();
-    // DragEnd will handle final cleanup
-  }
+}
+
+handleTransitionError(event) {
+    // The lightning-record-edit-form automatically displays field-level errors.
+    // This handler is for more general errors.
+    this.showToast('Error Saving Ticket', 'Please review the fields and try again.', 'error');
+    console.error('Error on transition save:', JSON.stringify(event.detail));
+}
+
 
   // 3. ADD this new helper function to calculate sort order
   calculateNewSortOrder(placeholder, columnTickets) {
