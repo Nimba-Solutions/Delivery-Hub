@@ -612,3 +612,39 @@
 .kanban-board.drag-is-active .empty-column-placeholder {
     display: none;
 }
+
+/* --- AI Enhancement Styles --- */
+.ai-badge {
+    background-color: #f3e8ff; /* Light purple */
+    color: #6b21a8; /* Dark purple */
+    font-weight: 500;
+    --sds-c-icon-color-foreground: #6b21a8;
+}
+
+.ai-enhancement-box {
+    background: linear-gradient(to right, #f5f3ff, #eef2ff); /* from-purple-50 to-blue-50 */
+    border-radius: 0.75rem;
+    border: 1px solid #ddd6fe; /* purple-200 */
+}
+
+.ai-suggestions-box {
+    border: 2px solid #c4b5fd; /* purple-300 */
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05);
+}
+
+.eta-badge {
+    background-color: #fef3c7; /* amber-100 */
+    color: #92400e; /* amber-800 */
+    font-weight: 500;
+    --sds-c-icon-color-foreground: #b45309; /* amber-700 */
+}
+
+.slds-form-element__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #4b5563; /* gray-600 */
+    margin-bottom: 0.25rem;
+}
