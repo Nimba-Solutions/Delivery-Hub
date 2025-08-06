@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>OpenAI_Model__c</fullName>
+    <defaultValue>&quot;gpt-4-turbo&quot;</defaultValue>
+    <description>The OpenAI model to use for AI features</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Specify which OpenAI model to use</inlineHelpText>
+    <label>OpenAI Model</label>
+    <length>80</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

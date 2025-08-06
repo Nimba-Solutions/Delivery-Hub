@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>JIRA_Instance_URL__c</fullName>
+    <description>URL of the JIRA instance for integration</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enter the URL of your JIRA instance</inlineHelpText>
+    <label>JIRA Instance URL</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Url</type>
+</CustomField>

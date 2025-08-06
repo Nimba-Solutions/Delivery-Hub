@@ -148,19 +148,19 @@
     <enableFeeds>false</enableFeeds>
     <enableHistory>false</enableHistory>
     <enableLicensing>false</enableLicensing>
-    <enableReports>false</enableReports>
+    <enableReports>true</enableReports>
     <enableSearch>false</enableSearch>
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>Ticket</label>
+    <label>DH Ticket</label>
     <nameField>
-        <displayFormat>TCK-{0000}</displayFormat>
+        <displayFormat>DH-{0000}</displayFormat>
         <label>Ticket Number</label>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>Tickets</pluralLabel>
+    <pluralLabel>DH Tickets</pluralLabel>
     <searchLayouts></searchLayouts>
-    <sharingModel>Private</sharingModel>
+    <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>
 </CustomObject>

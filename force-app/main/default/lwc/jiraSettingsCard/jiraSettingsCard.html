@@ -1,0 +1,234 @@
+<template>
+    <div class="slds-card">
+        <div class="slds-card__header slds-grid">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="utility:settings" alternative-text="JIRA Integration" size="small"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span>JIRA Integration</span>
+                    </h2>
+                    <p class="slds-card__header-subtitle">Connect your JIRA instance to sync tickets and projects</p>
+                </div>
+            </header>
+        </div>
+        
+        <div class="slds-card__body slds-card__body_inner">
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <div class="slds-spinner_container">
+                    <div role="status" class="slds-spinner slds-spinner_medium">
+                        <span class="slds-assistive-text">Loading</span>
+                        <div class="slds-spinner__dot-a"></div>
+                        <div class="slds-spinner__dot-b"></div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Enable JIRA Integration -->
+            <div class="slds-form-element slds-m-bottom_large">
+                <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                    <div class="slds-col">
+                        <label class="slds-form-element__label slds-text-body_regular toggle-label">Enable JIRA Integration</label>
+                        <div class="slds-form-element__help">
+                            Sync tickets between this Kanban board and your JIRA project
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex">
+                        <lightning-input
+                            type="toggle"
+                            name="jiraEnabled"
+                            checked={jiraEnabled}
+                            onchange={handleJiraEnabled}>
+                        </lightning-input>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slds-border_top slds-m-vertical_medium"></div>
+
+            <!-- JIRA Configuration -->
+            <div class="slds-m-bottom_large">
+                <!-- JIRA Instance URL -->
+                <div class="slds-form-element slds-m-bottom_medium">
+                    <label class="slds-form-element__label slds-text-body_small toggle-label" for="jira-url">JIRA Instance URL</label>
+                    <div class="slds-form-element__control">
+                        <lightning-input
+                            name="jiraInstanceUrl"
+                            type="url"
+                            value={jiraInstanceUrl}
+                            placeholder="https://yourcompany.atlassian.net"
+                            onchange={handleInputChange}
+                            disabled={allInputDisabled}>
+                        </lightning-input>
+                    </div>
+                </div>
+
+                <!-- Username and Project Key -->
+                <div class="slds-grid slds-gutters_medium slds-m-bottom_medium">
+                    <div class="slds-col">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label slds-text-body_small toggle-label" for="jira-username">Username/Email</label>
+                            <div class="slds-form-element__control">
+                                <lightning-input
+                                    name="jiraUsername"
+                                    type="email"
+                                    value={jiraUsername}
+                                    placeholder="your.email@company.com"
+                                    onchange={handleInputChange}
+                                    disabled={allInputDisabled}>
+                                </lightning-input>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label slds-text-body_small toggle-label" for="jira-project-key">Project Key</label>
+                            <div class="slds-form-element__control">
+                                <lightning-input
+                                    name="jiraProjectKey"
+                                    value={jiraProjectKey}
+                                    placeholder="PROJ"
+                                    onchange={handleInputChange}
+                                    disabled={allInputDisabled}>
+                                </lightning-input>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Token -->
+                <div class="slds-form-element slds-m-bottom_large">
+                    <label class="slds-form-element__label slds-text-body_small toggle-label" for="jira-token">API Token</label>
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_right">
+                        <div class="slds-grid slds-gutters_small">
+                            <div class="slds-col slds-grow">
+                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_right">
+                                    <lightning-input
+                                        name="jiraApiToken"
+                                        type={apiTokenInputType}
+                                        value={jiraApiToken}
+                                        placeholder="Your JIRA API token"
+                                        onchange={handleInputChange}
+                                        disabled={allInputDisabled}>
+                                    </lightning-input>
+                                    <button class="slds-button slds-button_icon slds-input__icon slds-input__icon_right" 
+                                            onclick={toggleApiTokenVisibility} 
+                                            type="button"
+                                            disabled={allInputDisabled}
+                                            title="Toggle API Token Visibility">
+                                        <lightning-icon icon-name={eyeIconName} size="x-small" alternative-text="Toggle visibility"></lightning-icon>
+                                        <span class="slds-assistive-text">Toggle API Token Visibility</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-no-flex slds-p-top_large">
+                                <lightning-button
+                                    label={testButtonLabel}
+                                    onclick={testJiraConnection}
+                                    disabled={isTestButtonDisabled}
+                                    variant="outline-brand"
+                                    icon-name="utility:test"
+                                    icon-position="left"
+                                    >
+                                </lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Results -->
+                <template if:true={showSuccessAlert}>
+                    <div class="slds-notify slds-notify_alert slds-alert_success slds-m-bottom_medium" role="alert">
+                        <span class="slds-assistive-text">Success</span>
+                        <div class="slds-media slds-media_center">
+                            <div class="slds-media__figure">
+                                <lightning-icon icon-name="utility:success" alternative-text="Success" size="x-small" variant="inverse"></lightning-icon>
+                            </div>
+                            <div class="slds-media__body">
+                                <p>Successfully connected to JIRA!</p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                
+                <template if:true={showErrorAlert}>
+                    <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium" role="alert">
+                        <span class="slds-assistive-text">Error</span>
+                        <div class="slds-media slds-media_center">
+                            <div class="slds-media__figure">
+                                <lightning-icon icon-name="utility:error" alternative-text="Error" size="x-small" variant="inverse"></lightning-icon>
+                            </div>
+                            <div class="slds-media__body">
+                                <p>Failed to connect to JIRA. Please check your configuration.</p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="slds-border_top slds-m-vertical_medium"></div>
+
+            <!-- Actions -->
+            <div class="slds-grid slds-grid_align-spread slds-m-bottom_large">
+                <div class="slds-col">
+                    <lightning-button
+                    label="Save"
+                    onclick={handleSave}
+                    variant="brand" 
+                    disabled={isSaveButtonDisabled}
+                    class="slds-m-right_small">
+                </lightning-button>
+                    <lightning-button
+                        label="Reset Settings"
+                        onclick={resetJiraSettings}
+                        variant="destructive-text"
+                        disabled={allInputDisabled}>
+                    </lightning-button>
+                </div>
+            </div>
+
+            <div class="slds-border_top slds-m-vertical_medium"></div>
+
+            <!-- Setup Guide -->
+            <div class="info-section slds-p-around_medium slds-m-bottom_medium">
+                <h4 class="slds-text-heading_small slds-m-bottom_small">How to set up JIRA Integration:</h4>
+                <!-- MODIFIED: The list now uses a single class for consistent styling -->
+                <ul class="setup-list slds-text-body_small slds-text-color_weak">
+                    <li class="slds-m-bottom_x-small"><strong>Get your JIRA URL:</strong> Usually https://yourcompany.atlassian.net</li>
+                    <li class="slds-m-bottom_x-small">
+                        <strong>Create an API Token:</strong>
+                        <ul class="slds-m-left_medium slds-m-top_xx-small">
+                            <li>Go to id.atlassian.com/manage-profile/security/api-tokens</li>
+                            <li>Click "Create API token"</li>
+                            <li>Give it a name and copy the token</li>
+                        </ul>
+                    </li>
+                    <li class="slds-m-bottom_x-small"><strong>Find your Project Key:</strong> Usually visible in your JIRA project URL</li>
+                    <li class="slds-m-bottom_x-small"><strong>Use your email:</strong> The email you use to log into JIRA</li>
+                </ul>
+                <lightning-button
+                    label="Create JIRA API Token"
+                    onclick={openJiraTokenPage}
+                    variant="outline-brand"
+                    icon-name="utility:new_window"
+                    icon-position="left"
+                    class="slds-m-top_small">
+                </lightning-button>
+            </div>
+
+            <!-- Features Info -->
+            <div class="info-section slds-p-around_medium">
+                <h4 class="slds-text-heading_small slds-m-bottom_small">What you can do with JIRA Integration:</h4>
+                <!-- This list already uses the desired checkmark style -->
+                <ul class="feature-list slds-text-body_small slds-text-color_weak">
+                    <li class="slds-m-bottom_xx-small">Sync tickets automatically between Kanban board and JIRA</li>
+                    <li class="slds-m-bottom_xx-small">Create JIRA issues directly from the Kanban board</li>
+                    <li class="slds-m-bottom_xx-small">Keep status updates synchronized</li>
+                    <li>Import existing JIRA issues into your board</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</template>

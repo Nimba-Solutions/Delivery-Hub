@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>JIRA_Enabled__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Controls whether JIRA integration is enabled</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enable or disable JIRA integration</inlineHelpText>
+    <label>JIRA Enabled</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

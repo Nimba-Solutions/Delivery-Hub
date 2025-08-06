@@ -65,4 +65,40 @@ public with sharing class DH_TicketTriggerHandler {
         // adjust if you later base the rule on a different field / value
         return row.StatusPk__c == 'In Progress';
     }
+    
+    public static void handleBeforeUpdate(List<DH_Ticket__c> newTickets, Map<Id, DH_Ticket__c> oldMap) {
+        // Define which stages are considered "active work"
+        Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'}; // Add all relevant stages
+
+        // Collect IDs of tickets moving into an active stage
+        Set<Id> ticketsToCheck = new Set<Id>();
+        for (DH_Ticket__c ticket : newTickets) {
+            String oldStage = oldMap.get(ticket.Id).StageNamePk__c;
+            String newStage = ticket.StageNamePk__c;
+            // Check if the stage is changing TO an active stage FROM a non-active one
+            if (activeDevStages.contains(newStage) && !activeDevStages.contains(oldStage)) {
+                ticketsToCheck.add(ticket.Id);
+            }
+        }
+
+        if (!ticketsToCheck.isEmpty()) {
+            // Find all unresolved tickets that are blocking the ones we're checking
+            List<Ticket_Dependency__c> unresolvedBlockers = [
+                SELECT Blocked_Ticket__c, Blocking_Ticket__r.Name, Blocking_Ticket__r.StageNamePk__c
+                FROM Ticket_Dependency__c
+                WHERE Blocked_Ticket__c IN :ticketsToCheck
+                AND Blocking_Ticket__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled') // Define your "complete" statuses
+            ];
+
+            // Add an error to any ticket that has an unresolved blocker
+            for (Ticket_Dependency__c dependency : unresolvedBlockers) {
+                // Find the ticket in the trigger context and add the error
+                for (DH_Ticket__c ticket : newTickets) {
+                    if (ticket.Id == dependency.Blocked_Ticket__c) {
+                        ticket.addError('This ticket cannot be started. It is blocked by ticket: ' + dependency.Blocking_Ticket__r.Name);
+                    }
+                }
+            }
+        }
+    }
 }

@@ -1,0 +1,994 @@
+/* CSS Custom Properties - Brand Design System */
+:host {
+    --brand-primary: #4f46e5;
+    --brand-primary-light: #eef2ff;
+    --brand-primary-dark: #4338ca;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #11182c;
+    --white: #ffffff;
+    
+    /* Status Colors - Success */
+    --success-50: #ecfdf5;
+    --success-500: #10b981;
+    --success-600: #059669;
+    --success-700: #047857;
+    
+    /* Status Colors - Warning */
+    --warning-50: #fffbeb;
+    --warning-500: #f59e0b;
+    --warning-600: #d97706;
+    --warning-700: #b45309;
+    
+    /* Status Colors - Error */
+    --red-50: #fef2f2;
+    --red-500: #ef4444;
+    --red-600: #dc2626;
+    --red-700: #b91c1c;
+    
+    /* Status Colors - Info */
+    --blue-50: #eff6ff;
+    --blue-500: #3b82f6;
+    --blue-600: #2563eb;
+    --blue-700: #1d4ed8;
+    
+    /* Additional Status Color Variants for Better Contrast */
+    --success-100: #dcfce7;
+    --success-800: #166534;
+    --warning-100: #fef3c7;
+    --warning-800: #92400e;
+    --red-100: #fee2e2;
+    --red-800: #991b1b;
+    --blue-100: #dbeafe;
+    --blue-800: #1e40af;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --radius-sm: 0.375rem;
+    --radius: 0.75rem;
+    --radius-lg: 1rem;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    display: block;
+}
+
+/* Main Container */
+.settings-container {
+    background-color: var(--gray-100);
+    min-height: 100vh;
+    padding: 1.5rem;
+    transition: background-color 0.3s ease;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.settings-header {
+    background-color: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--gray-200);
+    transition: all 0.3s ease;
+    animation: slideInFromTop 0.6s ease-out;
+}
+
+.settings-header:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+}
+
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-icon {
+    color: var(--brand-primary);
+}
+
+.header-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 0.25rem 0;
+}
+
+.header-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    margin: 0;
+}
+
+/* Tab Navigation - Matching main app toolbar style */
+.tab-navigation {
+    margin-bottom: 1.5rem;
+}
+
+.button-group {
+    display: flex;
+    background-color: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: transparent;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-right: 1px solid var(--gray-200);
+}
+
+.tab-button:last-child {
+    border-right: none;
+}
+
+.tab-button:hover {
+    color: var(--brand-primary);
+    background-color: var(--brand-primary-light);
+}
+
+.tab-button.active {
+    background-color: var(--brand-primary);
+    color: var(--white);
+    font-weight: 600;
+}
+
+/* Tab Content */
+.tab-content {
+    background-color: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: slideInFromBottom 0.7s ease-out;
+}
+
+.tab-content:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+@keyframes slideInFromBottom {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .settings-container {
+        padding: 1rem;
+    }
+    
+    .settings-header {
+        padding: 1rem;
+    }
+    
+    .header-title {
+        font-size: var(--font-size-lg);
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .tab-button {
+        border-right: none;
+        border-bottom: 1px solid var(--gray-200);
+        padding: 1rem;
+    }
+    
+    .tab-button:last-child {
+        border-bottom: none;
+    }
+}
+
+/* ===== ALERT AND NOTIFICATION STYLING ===== */
+
+/* Base Alert Styling */
+.slds-notify {
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius);
+    border-width: 1px;
+    border-style: solid;
+    margin: 0.5rem 0;
+    animation: slideInAlert 0.3s ease-out;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Alert Animation */
+@keyframes slideInAlert {
+    from {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Success Alert */
+.slds-alert_success {
+    background-color: var(--success-50);
+    border-color: var(--success-500);
+    color: var(--success-700);
+}
+
+.slds-alert_success::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--success-500);
+}
+
+.slds-alert_success .slds-media__body p {
+    color: var(--success-700);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.slds-alert_success lightning-icon {
+    color: var(--success-600);
+}
+
+/* Warning Alert */
+.slds-alert_warning {
+    background-color: var(--warning-50);
+    border-color: var(--warning-500);
+    color: var(--warning-700);
+}
+
+.slds-alert_warning::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--warning-500);
+}
+
+.slds-alert_warning .slds-media__body p {
+    color: var(--warning-700);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.slds-alert_warning lightning-icon {
+    color: var(--warning-600);
+}
+
+/* Error Alert */
+.slds-alert_error {
+    background-color: var(--red-50);
+    border-color: var(--red-500);
+    color: var(--red-700);
+}
+
+.slds-alert_error::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--red-500);
+}
+
+.slds-alert_error .slds-media__body p {
+    color: var(--red-700);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.slds-alert_error lightning-icon {
+    color: var(--red-600);
+}
+
+/* Info Alert */
+.slds-alert_info {
+    background-color: var(--blue-50);
+    border-color: var(--blue-500);
+    color: var(--blue-700);
+}
+
+.slds-alert_info::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--blue-500);
+}
+
+.slds-alert_info .slds-media__body p {
+    color: var(--blue-700);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.slds-alert_info lightning-icon {
+    color: var(--blue-600);
+}
+
+/* Alert Media Layout */
+.slds-notify .slds-media {
+    align-items: flex-start;
+}
+
+.slds-notify .slds-media__figure {
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+    margin-top: 0.125rem; /* Align icon with first line of text */
+}
+
+.slds-notify .slds-media__body {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Alert Icon Sizing */
+.slds-notify lightning-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Alert Accessibility */
+.slds-notify[role="alert"] {
+    position: relative;
+}
+
+/* Alert Focus States for Keyboard Navigation */
+.slds-notify:focus-within {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+/* Compact Alert Variant */
+.slds-notify.slds-alert_compact {
+    padding: 0.5rem 0.75rem;
+}
+
+.slds-notify.slds-alert_compact .slds-media__figure {
+    margin-right: 0.5rem;
+}
+
+.slds-notify.slds-alert_compact lightning-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
+.slds-notify.slds-alert_compact .slds-media__body p {
+    font-size: var(--font-size-xs);
+}
+
+/* Alert with Actions */
+.slds-notify .alert-actions {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.slds-notify .alert-actions lightning-button {
+    font-size: var(--font-size-xs);
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .slds-notify {
+        border-width: 2px;
+    }
+    
+    .slds-alert_success {
+        background-color: var(--white);
+        border-color: var(--success-700);
+    }
+    
+    .slds-alert_warning {
+        background-color: var(--white);
+        border-color: var(--warning-700);
+    }
+    
+    .slds-alert_error {
+        background-color: var(--white);
+        border-color: var(--red-700);
+    }
+    
+    .slds-alert_info {
+        background-color: var(--white);
+        border-color: var(--blue-700);
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .slds-notify {
+        animation: none;
+    }
+}
+
+/* ===== ADDITIONAL ALERT UTILITY CLASSES ===== */
+
+/* Alert with Strong Emphasis */
+.slds-alert_strong.slds-alert_success {
+    background-color: var(--success-100);
+    border-color: var(--success-600);
+    color: var(--success-800);
+}
+
+.slds-alert_strong.slds-alert_warning {
+    background-color: var(--warning-100);
+    border-color: var(--warning-600);
+    color: var(--warning-800);
+}
+
+.slds-alert_strong.slds-alert_error {
+    background-color: var(--red-100);
+    border-color: var(--red-600);
+    color: var(--red-800);
+}
+
+.slds-alert_strong.slds-alert_info {
+    background-color: var(--blue-100);
+    border-color: var(--blue-600);
+    color: var(--blue-800);
+}
+
+/* Alert with Subtle Styling */
+.slds-alert_subtle {
+    border: none;
+    box-shadow: none;
+    padding: 0.75rem;
+}
+
+.slds-alert_subtle::before {
+    display: none;
+}
+
+.slds-alert_subtle.slds-alert_success {
+    background-color: var(--success-50);
+    color: var(--success-700);
+}
+
+.slds-alert_subtle.slds-alert_warning {
+    background-color: var(--warning-50);
+    color: var(--warning-700);
+}
+
+.slds-alert_subtle.slds-alert_error {
+    background-color: var(--red-50);
+    color: var(--red-700);
+}
+
+.slds-alert_subtle.slds-alert_info {
+    background-color: var(--blue-50);
+    color: var(--blue-700);
+}
+
+/* Dismissible Alert */
+.slds-alert_dismissible {
+    padding-right: 2.5rem;
+}
+
+.slds-alert_dismissible .alert-dismiss {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    transition: opacity 0.2s ease;
+}
+
+.slds-alert_dismissible .alert-dismiss:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.slds-alert_dismissible .alert-dismiss:focus {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 1px;
+    opacity: 1;
+}
+
+/* Alert with Title */
+.slds-notify .alert-title {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
+}
+
+.slds-notify .alert-message {
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Loading Alert */
+.slds-alert_loading {
+    background-color: var(--gray-50);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.slds-alert_loading::before {
+    background-color: var(--gray-400);
+}
+
+.slds-alert_loading .slds-media__body p {
+    color: var(--gray-700);
+}
+
+.slds-alert_loading lightning-icon {
+    color: var(--gray-500);
+}
+
+/* Alert Spacing Utilities */
+.slds-alert_no-margin {
+    margin: 0;
+}
+
+.slds-alert_margin-small {
+    margin: 0.25rem 0;
+}
+
+.slds-alert_margin-large {
+    margin: 1rem 0;
+}
+
+/* Alert Size Variants */
+.slds-alert_large {
+    padding: 1.25rem 1.5rem;
+}
+
+.slds-alert_large .slds-media__figure {
+    margin-right: 1rem;
+}
+
+.slds-alert_large lightning-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.slds-alert_large .slds-media__body p {
+    font-size: var(--font-size-base);
+}
+
+/* Alert with List Content */
+.slds-notify ul,
+.slds-notify ol {
+    margin: 0.5rem 0 0 1rem;
+    padding: 0;
+}
+
+.slds-notify li {
+    margin-bottom: 0.25rem;
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+}
+
+/* Alert Link Styling */
+.slds-notify a {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.slds-notify a:hover {
+    text-decoration: none;
+}
+
+.slds-alert_success a {
+    color: var(--success-800);
+}
+
+.slds-alert_warning a {
+    color: var(--warning-800);
+}
+
+.slds-alert_error a {
+    color: var(--red-800);
+}
+
+.slds-alert_info a {
+    color: var(--blue-800);
+}
+
+.slds-assistive-text {
+    position: absolute !important;
+    margin: -1px !important;
+    border: 0 !important;
+    padding: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+}
+
+/* ===== SHARED FORM CONTROL STYLES ===== */
+/* These styles are inherited by all child components */
+
+/* Input Field Styling - Standardized across all components */
+lightning-input {
+    --slds-c-input-color-background: var(--white);
+    --slds-c-input-color-border: var(--gray-200);
+    --slds-c-input-color-border-focus: var(--brand-primary);
+    --slds-c-input-shadow-focus: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    --slds-c-input-radius-border: var(--radius-sm);
+    --slds-c-input-font-size: var(--font-size-sm);
+    --slds-c-input-color-text: var(--gray-900);
+    --slds-c-input-spacing-block-start: 0.75rem;
+    --slds-c-input-spacing-block-end: 0.75rem;
+    --slds-c-input-spacing-inline-start: 1rem;
+    --slds-c-input-spacing-inline-end: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+lightning-input:hover:not([disabled]) {
+    --slds-c-input-color-border: var(--gray-400);
+}
+
+lightning-input[disabled] {
+    --slds-c-input-color-background: var(--gray-100);
+    --slds-c-input-color-border: var(--gray-200);
+    --slds-c-input-color-text: var(--gray-400);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Combobox/Dropdown Styling - Consistent with input fields */
+lightning-combobox {
+    --slds-c-combobox-color-background: var(--white);
+    --slds-c-combobox-color-border: var(--gray-200);
+    --slds-c-combobox-color-border-focus: var(--brand-primary);
+    --slds-c-combobox-shadow-focus: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    --slds-c-combobox-radius-border: var(--radius-sm);
+    --slds-c-combobox-font-size: var(--font-size-sm);
+    --slds-c-combobox-color-text: var(--gray-900);
+    --slds-c-combobox-spacing-block-start: 0.75rem;
+    --slds-c-combobox-spacing-block-end: 0.75rem;
+    --slds-c-combobox-spacing-inline-start: 1rem;
+    --slds-c-combobox-spacing-inline-end: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+lightning-combobox:hover:not([disabled]) {
+    --slds-c-combobox-color-border: var(--gray-400);
+}
+
+lightning-combobox[disabled] {
+    --slds-c-combobox-color-background: var(--gray-100);
+    --slds-c-combobox-color-border: var(--gray-200);
+    --slds-c-combobox-color-text: var(--gray-400);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Toggle Switch Styling - Brand colors with proper disabled states */
+lightning-input[type="toggle"] {
+    --slds-c-checkbox-toggle-color-background: var(--gray-200);
+    --slds-c-checkbox-toggle-color-background-checked: var(--brand-primary);
+    --slds-c-checkbox-toggle-color-border: var(--gray-300);
+    --slds-c-checkbox-toggle-color-border-checked: var(--brand-primary);
+    --slds-c-checkbox-toggle-thumb-color-background: var(--white);
+    --slds-c-checkbox-toggle-thumb-color-background-checked: var(--white);
+    --slds-c-checkbox-toggle-shadow-focus: 0 0 0 2px var(--brand-primary-light);
+    --slds-c-checkbox-toggle-sizing-width: 44px;
+    --slds-c-checkbox-toggle-sizing-height: 24px;
+    transition: all 0.2s ease;
+}
+
+lightning-input[type="toggle"]:hover:not([disabled]) {
+    --slds-c-checkbox-toggle-color-background: var(--gray-300);
+    --slds-c-checkbox-toggle-color-background-checked: var(--brand-primary-dark);
+    --slds-c-checkbox-toggle-color-border: var(--gray-400);
+    --slds-c-checkbox-toggle-color-border-checked: var(--brand-primary-dark);
+}
+
+lightning-input[type="toggle"][disabled] {
+    --slds-c-checkbox-toggle-color-background: var(--gray-400);
+    --slds-c-checkbox-toggle-color-background-checked: var(--gray-400);
+    --slds-c-checkbox-toggle-color-border: var(--gray-400);
+    --slds-c-checkbox-toggle-color-border-checked: var(--gray-400);
+    --slds-c-checkbox-toggle-thumb-color-background: var(--white);
+    --slds-c-checkbox-toggle-thumb-color-background-checked: var(--white);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Button Styling - Consistent with main application patterns */
+lightning-button {
+    --slds-c-button-radius-border: var(--radius-sm);
+    --slds-c-button-font-weight: 600;
+    --slds-c-button-font-size: var(--font-size-sm);
+    transition: all 0.2s ease;
+}
+
+/* Primary Brand Button */
+lightning-button[variant="brand"] {
+    --slds-c-button-brand-color-background: var(--brand-primary);
+    --slds-c-button-brand-color-background-hover: var(--brand-primary-dark);
+    --slds-c-button-brand-color-background-active: var(--brand-primary-dark);
+    --slds-c-button-brand-text-color: var(--white);
+    --slds-c-button-brand-text-color-hover: var(--white);
+    --slds-c-button-brand-text-color-active: var(--white);
+}
+
+/* Outline Brand Button */
+lightning-button[variant="outline-brand"] {
+    --slds-c-button-brand-color-background: transparent;
+    --slds-c-button-brand-color-border: var(--brand-primary);
+    --slds-c-button-brand-text-color: var(--brand-primary);
+    --slds-c-button-brand-color-background-hover: var(--brand-primary-light);
+    --slds-c-button-brand-color-border-hover: var(--brand-primary-dark);
+    --slds-c-button-brand-text-color-hover: var(--brand-primary-dark);
+    --slds-c-button-brand-color-background-active: var(--brand-primary-light);
+    --slds-c-button-brand-text-color-active: var(--brand-primary-dark);
+}
+
+/* Neutral Button */
+lightning-button[variant="neutral"] {
+    --slds-c-button-neutral-color-background: var(--white);
+    --slds-c-button-neutral-color-border: var(--gray-300);
+    --slds-c-button-neutral-text-color: var(--gray-700);
+    --slds-c-button-neutral-color-background-hover: var(--gray-50);
+    --slds-c-button-neutral-color-border-hover: var(--gray-400);
+    --slds-c-button-neutral-text-color-hover: var(--gray-800);
+}
+
+/* Destructive Text Button */
+lightning-button[variant="destructive-text"] {
+    --slds-c-button-destructive-text-color: var(--red-500);
+    --slds-c-button-destructive-text-color-hover: var(--red-600);
+    --slds-c-button-destructive-text-color-active: var(--red-700);
+    font-weight: 500;
+}
+
+/* Disabled Button States */
+lightning-button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Focus States for Accessibility */
+lightning-button:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+/* Form Label Styling - Consistent across all components */
+.slds-form-element__label {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-600);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Override for specific label variants */
+.slds-text-body_regular.slds-form-element__label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-800);
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.slds-text-body_small.slds-form-element__label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-900);
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* Form Help Text */
+.slds-form-element__help {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+    line-height: 1.4;
+}
+
+/* Input Icon Styling - Consistent behavior */
+.slds-input__icon {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    transition: color 0.2s ease, background-color 0.2s ease;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+}
+
+.slds-input__icon:hover:not([disabled]) {
+    color: var(--gray-600);
+    background-color: var(--gray-100);
+}
+
+.slds-input__icon:focus {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+.slds-input__icon[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.slds-input__icon lightning-icon {
+    color: inherit;
+}
+
+/* Custom Select Styling (for non-Lightning components) */
+.custom-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    background-color: var(--white);
+    font-size: var(--font-size-sm);
+    color: var(--gray-900);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+
+.custom-select:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.custom-select:hover:not([disabled]) {
+    border-color: var(--gray-400);
+}
+
+.custom-select[disabled] {
+    background-color: var(--gray-100);
+    border-color: var(--gray-200);
+    color: var(--gray-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Custom Toggle Styling (for non-Lightning components) */
+.custom-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--gray-200);
+    transition: 0.2s ease;
+    border-radius: 24px;
+    border: 1px solid var(--gray-300);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--white);
+    transition: 0.2s ease;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-input:checked + .toggle-slider {
+    background-color: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+
+.toggle-input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.custom-toggle:hover .toggle-slider:not(.toggle-input:disabled + .toggle-slider) {
+    box-shadow: 0 0 0 8px rgba(79, 70, 229, 0.1);
+}
+
+.toggle-input:disabled + .toggle-slider {
+    background-color: var(--gray-400);
+    border-color: var(--gray-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.toggle-input:focus + .toggle-slider {
+    box-shadow: 0 0 0 2px var(--brand-primary-light);
+}

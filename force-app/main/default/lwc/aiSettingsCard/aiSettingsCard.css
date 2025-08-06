@@ -1,0 +1,381 @@
+/* CSS Custom Properties - Brand Design System */
+:host {
+    --brand-primary: #4f46e5;
+    --brand-primary-light: #eef2ff;
+    --brand-primary-dark: #4338ca;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #11182c;
+    --white: #ffffff;
+    --warning-50: #fffbeb;
+    --warning-100: #fef3c7;
+    --warning-500: #f59e0b;
+    --warning-600: #d97706;
+    --warning-700: #b45309;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --radius-sm: 0.375rem;
+    --radius: 0.75rem;
+    --radius-lg: 1rem;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    display: block;
+}
+
+/* Override SLDS Card Styling */
+.slds-card {
+    background-color: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: cardSlideIn 0.7s ease-out;
+}
+
+.slds-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+    border-color: var(--brand-primary);
+}
+
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slds-card__header {
+    background-color: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.slds-card__header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.05), transparent);
+    transition: left 0.6s ease;
+}
+
+.slds-card:hover .slds-card__header::before {
+    left: 100%;
+}
+
+.slds-card__header-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.slds-card__header-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+}
+
+.slds-card__body {
+    padding: 1.5rem;
+}
+
+/* Icon Styling - Consistent sizing and colors */
+lightning-icon[icon-name="utility:einstein"] {
+    --slds-c-icon-color-foreground-default: var(--brand-primary);
+    transition: all 0.3s ease;
+}
+
+lightning-icon[icon-name="utility:zap"] {
+    --slds-c-icon-color-foreground-default: var(--brand-primary);
+    transition: all 0.3s ease;
+}
+
+lightning-icon[icon-name="utility:clock"] {
+    --slds-c-icon-color-foreground-default: var(--gray-500);
+    transition: all 0.3s ease;
+}
+
+lightning-icon[icon-name="utility:info"] {
+    --slds-c-icon-color-foreground-default: var(--brand-primary);
+    transition: all 0.3s ease;
+}
+
+.slds-card:hover lightning-icon[icon-name="utility:einstein"],
+.slds-card:hover lightning-icon[icon-name="utility:zap"],
+.slds-card:hover lightning-icon[icon-name="utility:info"] {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.slds-form-element .slds-grid:hover lightning-icon {
+    transform: scale(1.05);
+}
+
+/* ===== ALERT STYLING INHERITANCE ===== */
+/* Alert styles are inherited from settingsContainer */
+
+/* Component-specific alert adjustments */
+.slds-notify.slds-alert_warning {
+    /* Enhanced warning styling for AI features */
+    background: linear-gradient(135deg, var(--warning-50) 0%, rgba(251, 191, 36, 0.1) 100%);
+}
+
+.slds-notify.slds-alert_warning .slds-media__body p {
+    font-weight: 500;
+}
+
+/* Form Elements - Brand styling */
+.slds-form-element {
+    margin-bottom: 1.5rem;
+}
+
+.slds-form-element:last-child {
+    margin-bottom: 0;
+}
+
+.slds-border_top {
+    border-top: 1px solid var(--gray-200);
+}
+
+.slds-m-vertical_medium {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.slds-m-bottom_large {
+    margin-bottom: 1.5rem;
+}
+
+.slds-m-bottom_medium {
+    margin-bottom: 1rem;
+}
+
+/* Form label styling is now inherited from settingsContainer */
+
+/* Toggle styling is now inherited from settingsContainer */
+
+/* Individual Feature Items */
+.slds-form-element .slds-grid {
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    margin: 0.5rem 0;
+}
+
+.slds-form-element .slds-grid:hover {
+    background-color: var(--gray-50);
+    transform: translateX(4px);
+}
+
+.slds-grid_align-spread {
+    justify-content: space-between;
+}
+
+.slds-grid_vertical-align-center {
+    align-items: center;
+}
+
+.slds-col {
+    flex: 1;
+}
+
+.slds-no-flex {
+    flex: none;
+}
+
+/* Media objects for icons and labels */
+.slds-media {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.slds-media_center {
+    align-items: center;
+}
+
+.slds-media__figure {
+    flex-shrink: 0;
+}
+
+.slds-media__body {
+    flex: 1;
+}
+
+/* Info Section - Gradient background */
+.info-section {
+    background: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--gray-50) 100%);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-top: 1rem;
+    transition: all 0.3s ease;
+}
+
+.info-section:hover {
+    background: linear-gradient(135deg, var(--brand-primary-light) 0%, rgba(79, 70, 229, 0.1) 100%);
+    border-color: var(--brand-primary);
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+}
+
+.slds-p-around_medium {
+    padding: 1.25rem;
+}
+
+.slds-media_top {
+    align-items: flex-start;
+}
+
+.slds-text-heading_small {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 0.5rem 0;
+}
+
+.slds-text-body_small {
+    font-size: var(--font-size-xs);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.slds-text-color_weak {
+    color: var(--gray-600);
+}
+
+.slds-m-bottom_x-small {
+    margin-bottom: 0.25rem;
+}
+
+.slds-m-bottom_small {
+    margin-bottom: 0.5rem;
+}
+
+.slds-m-bottom_xx-small {
+    margin-bottom: 0.125rem;
+}
+
+/* Custom list styling in info section */
+.info-section ul {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.info-section li {
+    position: relative;
+    padding-left: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.info-section li:before {
+    content: "•";
+    color: var(--brand-primary);
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+/* Icon Sizing and Colors - Consistent across all icons */
+lightning-icon[size="small"] {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+lightning-icon[size="x-small"] {
+    width: 1rem;
+    height: 1rem;
+}
+
+lightning-icon[size="xx-small"] {
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
+/* Specific icon color overrides */
+lightning-icon[icon-name="utility:warning"] {
+    --slds-c-icon-color-foreground-default: var(--warning-600);
+}
+
+/* Spacing utilities */
+.slds-m-vertical_medium {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.slds-m-bottom_large {
+    margin-bottom: 1.5rem;
+}
+
+.slds-m-bottom_medium {
+    margin-bottom: 1rem;
+}
+
+.slds-m-bottom_x-small {
+    margin-bottom: 0.25rem;
+}
+
+.slds-m-bottom_small {
+    margin-bottom: 0.5rem;
+}
+
+.slds-m-bottom_xx-small {
+    margin-bottom: 0.125rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .slds-card__body {
+        padding: 1rem;
+    }
+    
+    .slds-card__header {
+        padding: 1rem;
+    }
+    
+    .slds-grid {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .slds-grid_align-spread {
+        align-items: flex-start;
+    }
+    
+    .info-section {
+        padding: 1rem;
+    }
+    
+    .slds-p-around_medium {
+        padding: 1rem;
+    }
+}
+
+.toggle-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-800);
+}

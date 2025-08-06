@@ -11,5 +11,5 @@
     <columns>CalculatedETADate__c</columns>
     <columns>SortOrderNumber__c</columns>
     <filterScope>Everything</filterScope>
-    <label>All</label>
+    <label>All Kanban</label>
 </ListView>
