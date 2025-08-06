@@ -3,7 +3,8 @@
         <div class="slds-card__header slds-grid">
             <header class="slds-media slds-media_center slds-has-flexi-truncate">
                 <div class="slds-media__figure">
-                    <lightning-icon icon-name="utility:key" alternative-text="OpenAI Configuration" size="small"></lightning-icon>
+                    <lightning-icon icon-name="utility:key" alternative-text="OpenAI Configuration"
+                        size="small"></lightning-icon>
                 </div>
                 <div class="slds-media__body">
                     <h2 class="slds-card__header-title">
@@ -13,51 +14,54 @@
                 </div>
             </header>
         </div>
-        
+
         <div class="slds-card__body slds-card__body_inner">
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <div class="slds-spinner_container">
+                    <div role="status" class="slds-spinner slds-spinner_medium">
+                        <span class="slds-assistive-text">Loading</span>
+                        <div class="slds-spinner__dot-a"></div>
+                        <div class="slds-spinner__dot-b"></div>
+                    </div>
+                </div>
+            </template>
+
             <!-- API Key Section -->
             <div class="slds-form-element slds-m-bottom_large">
-                <label class="slds-form-element__label slds-text-body_small" for="openai-key">API Key</label>
+                <label class="slds-form-element__label slds-text-body_small toggle-label" for="openai-key">API Key</label>
                 <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_right">
-                    <div class="slds-grid slds-grid_align-end slds-gutters_small">
+                    <div class="slds-grid slds-gutters_small">
                         <div class="slds-col slds-grow">
                             <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_right">
-                                <lightning-input
-                                    name="openai-key"
-                                    type={apiKeyInputType}
-                                    value={openaiApiKey}
-                                    placeholder="sk-..."
-                                    onchange={handleApiKeyChange}>
+                                <lightning-input name="openaiApiKey" type={apiKeyInputType} value={openaiApiKey}
+                                    placeholder="sk-..." onchange={handleInputChange}>
                                 </lightning-input>
-                                <button class="slds-button slds-button_icon slds-input__icon slds-input__icon_right" 
-                                        onclick={toggleApiKeyVisibility} 
-                                        type="button"
-                                        title="Toggle API Key Visibility">
-                                    <lightning-icon icon-name={eyeIconName} size="x-small" alternative-text="Toggle visibility"></lightning-icon>
+                                <button class="slds-button slds-button_icon slds-input__icon slds-input__icon_right"
+                                    onclick={toggleApiKeyVisibility} type="button" title="Toggle API Key Visibility">
+                                    <lightning-icon icon-name={eyeIconName} size="x-small"
+                                        alternative-text="Toggle visibility"></lightning-icon>
                                     <span class="slds-assistive-text">Toggle API Key Visibility</span>
                                 </button>
                             </div>
                         </div>
-                        <div class="slds-col slds-no-flex">
-                            <lightning-button
-                                label={testButtonLabel}
-                                onclick={testConnection}
-                                disabled={isTestButtonDisabled}
-                                variant="outline-brand"
-                                icon-name="utility:test"
+                        <div class="slds-col slds-no-flex slds-p-top_x-large">
+                            <lightning-button label={testButtonLabel} onclick={testConnection}
+                                disabled={isTestButtonDisabled} variant="outline-brand" icon-name="utility:test"
                                 icon-position="left">
                             </lightning-button>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Test Results -->
                 <template if:true={showSuccessAlert}>
                     <div class="slds-notify slds-notify_alert slds-alert_success slds-m-top_small" role="alert">
                         <span class="slds-assistive-text">Success</span>
                         <div class="slds-media slds-media_center">
                             <div class="slds-media__figure">
-                                <lightning-icon icon-name="utility:success" alternative-text="Success" size="x-small" variant="inverse"></lightning-icon>
+                                <lightning-icon icon-name="utility:success" alternative-text="Success" size="x-small"
+                                    variant="inverse"></lightning-icon>
                             </div>
                             <div class="slds-media__body">
                                 <p>API key is valid and working correctly!</p>
@@ -65,13 +69,14 @@
                         </div>
                     </div>
                 </template>
-                
+
                 <template if:true={showErrorAlert}>
                     <div class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small" role="alert">
                         <span class="slds-assistive-text">Error</span>
                         <div class="slds-media slds-media_center">
                             <div class="slds-media__figure">
-                                <lightning-icon icon-name="utility:error" alternative-text="Error" size="x-small" variant="inverse"></lightning-icon>
+                                <lightning-icon icon-name="utility:error" alternative-text="Error" size="x-small"
+                                    variant="inverse"></lightning-icon>
                             </div>
                             <div class="slds-media__body">
                                 <p>Failed to connect. Please check your API key.</p>
@@ -85,17 +90,14 @@
 
             <!-- Model Selection -->
             <div class="slds-form-element slds-m-bottom_large">
-                <label class="slds-form-element__label slds-text-body_small" for="openai-model">Model</label>
+                <label class="slds-form-element__label slds-text-body_small toggle-label" for="openai-model">Model</label>
                 <div class="slds-form-element__control">
-                    <lightning-combobox
-                        name="openai-model"
-                        value={openaiModel}
-                        placeholder="Select Model"
-                        options={modelOptions}
-                        onchange={handleModelChange}>
+                    <lightning-combobox name="openaiModel" value={openaiModel} placeholder="Select Model"
+                        options={modelOptions} onchange={handleInputChange}>
                     </lightning-combobox>
                     <div class="slds-form-element__help slds-m-top_x-small">
-                        GPT-4.1 is recommended for best results. O3 provides advanced reasoning but is slower.
+                        Choose the model that best fits your needs. GPT-4o Mini is a great balance of performance and
+                        cost.
                     </div>
                 </div>
             </div>
@@ -105,10 +107,11 @@
             <!-- Actions -->
             <div class="slds-grid slds-grid_align-spread slds-m-bottom_large">
                 <div class="slds-col">
-                    <lightning-button
-                        label="Reset Settings"
-                        onclick={resetSettings}
-                        variant="destructive-text">
+
+                    <lightning-button label="Save" onclick={handleSave} variant="brand" disabled={isSaveDisabled}
+                        class="slds-m-right_small">
+                    </lightning-button>
+                    <lightning-button label="Reset Settings" onclick={resetSettings} variant="destructive-text">
                     </lightning-button>
                 </div>
             </div>
@@ -119,19 +122,14 @@
             <div class="info-section slds-p-around_medium slds-m-bottom_medium">
                 <h4 class="slds-text-heading_small slds-m-bottom_small">How to get your OpenAI API Key:</h4>
                 <ol class="setup-list slds-text-body_small slds-text-color_weak">
-                    <li class="slds-m-bottom_x-small">1. Visit the OpenAI Platform at platform.openai.com</li>
-                    <li class="slds-m-bottom_x-small">2. Sign up or log in to your account</li>
-                    <li class="slds-m-bottom_x-small">3. Navigate to API Keys in your dashboard</li>
-                    <li class="slds-m-bottom_x-small">4. Click "Create new secret key"</li>
-                    <li class="slds-m-bottom_x-small">5. Copy the key and paste it above</li>
+                    <li class="slds-m-bottom_x-small"> Visit the OpenAI Platform at platform.openai.com</li>
+                    <li class="slds-m-bottom_x-small"> Sign up or log in to your account</li>
+                    <li class="slds-m-bottom_x-small"> Navigate to API Keys in your dashboard</li>
+                    <li class="slds-m-bottom_x-small"> Click "Create new secret key"</li>
+                    <li class="slds-m-bottom_x-small"> Copy the key and paste it above</li>
                 </ol>
-                <lightning-button
-                    label="Open OpenAI Platform"
-                    onclick={openOpenAIPlatform}
-                    variant="outline-brand"
-                    icon-name="utility:new_window"
-                    icon-position="left"
-                    class="slds-m-top_small">
+                <lightning-button label="Open OpenAI Platform" onclick={openOpenAIPlatform} variant="outline-brand"
+                    icon-name="utility:new_window" icon-position="left" class="slds-m-top_small">
                 </lightning-button>
             </div>
 
@@ -140,10 +138,12 @@
                 <span class="slds-assistive-text">Information</span>
                 <div class="slds-media slds-media_center">
                     <div class="slds-media__figure">
-                        <lightning-icon icon-name="utility:key" alternative-text="Security" size="x-small" variant="inverse"></lightning-icon>
+                        <lightning-icon icon-name="utility:key" alternative-text="Security" size="x-small"
+                            variant="inverse"></lightning-icon>
                     </div>
                     <div class="slds-media__body">
-                        <p>Your API key is stored securely in Salesforce and is never sent to our servers. It's only used to communicate directly with OpenAI's API.</p>
+                        <p>Your API key is stored securely in Salesforce and is never sent to our servers. It's only
+                            used to communicate directly with OpenAI's API.</p>
                     </div>
                 </div>
             </div>

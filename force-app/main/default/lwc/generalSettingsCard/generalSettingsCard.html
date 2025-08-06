@@ -15,7 +15,7 @@
         
         <div class="card-body">
             <!-- Theme Selection -->
-            <div class="form-section">
+            <!-- <div class="form-section">
                 <div class="form-group">
                     <div class="form-label-wrapper">
                         <lightning-icon icon-name="utility:palette" alternative-text="Theme" size="x-small"></lightning-icon>
@@ -32,7 +32,7 @@
                         Choose your preferred color theme. System will match your device's setting.
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <div class="section-divider"></div>
 
@@ -49,9 +49,15 @@
                         </div>
                     </div>
                     <div class="toggle-control">
-                        <div class="custom-toggle" onclick={handleNotificationsToggle}>
-                            <input type="checkbox" checked={notifications} class="toggle-input" />
-                            <span class="toggle-slider"></span>
+                        <div class="custom-toggle">
+                            <!-- <input type="checkbox" checked={notifications} class="toggle-input" /> -->
+                            <lightning-input
+                            type="toggle"
+                            
+                            checked={notifications}
+                            onchange={handleNotificationsToggle}>
+                        </lightning-input>
+                           
                         </div>
                     </div>
                 </div>
@@ -60,7 +66,7 @@
             <div class="section-divider"></div>
 
             <!-- Auto Save Toggle -->
-            <div class="form-section">
+            <!-- <div class="form-section">
                 <div class="toggle-group">
                     <div class="toggle-content">
                         <div class="toggle-label-wrapper">
@@ -78,12 +84,12 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <div class="section-divider"></div>
 
             <!-- Application Information -->
-            <div class="info-section">
+            <!-- <div class="info-section">
                 <h4 class="info-title">Application Information</h4>
                 <div class="info-content">
                     <div class="info-item">
@@ -99,7 +105,7 @@
                         <span class="info-value">{currentDate}</span>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
 </template>

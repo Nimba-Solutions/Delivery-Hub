@@ -1,15 +1,43 @@
-import { LightningElement, track } from 'lwc';
+import { LightningElement, track, wire } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import getSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.getSettings';
+import saveJiraSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.saveJiraSettings';
+import testJiraConnectionApex from '@salesforce/apex/DH_DeliveryHubSettingsController.testJiraConnection';
+import saveJiraEnabledState from '@salesforce/apex/DH_DeliveryHubSettingsController.saveJiraEnabledState';
 
-export default class JiraSettingsCard extends LightningElement {
+export default class JiraSettingCard extends LightningElement {
+    // --- Tracked Properties for Settings ---
     @track jiraEnabled = false;
-    @track jiraUrl = '';
+    @track jiraInstanceUrl = '';
     @track jiraUsername = '';
     @track jiraApiToken = '';
     @track jiraProjectKey = '';
+
+    // --- Properties for UI State ---
+    @track isLoading = true;
     @track showApiToken = false;
     @track isTestingConnection = false;
-    @track testResult = null; // 'success', 'error', or null
+    @track testResult = null;
+    @track isConnectionVerified = false;
 
+    // --- Wired Apex ---
+    @wire(getSettings)
+    wiredSettings({ error, data }) {
+        this.isLoading = false;
+        if (data) {
+            this.jiraEnabled = data.jiraEnabled || false;
+            this.jiraInstanceUrl = data.jiraInstanceUrl;
+            this.jiraUsername = data.jiraUsername;
+            this.jiraApiToken = data.jiraApiToken;
+            this.jiraProjectKey = data.jiraProjectKey;
+            this.isConnectionVerified = data.Jira_Api_tested__c || false;
+        } else if (error) {
+            this.showToast('Error Loading JIRA Settings', error.body?.message || error.message, 'error');
+        }
+    }
+
+    // --- Getters for Dynamic UI ---
+    
     get apiTokenInputType() {
         return this.showApiToken ? 'text' : 'password';
     }
@@ -18,12 +46,19 @@ export default class JiraSettingsCard extends LightningElement {
         return this.showApiToken ? 'utility:hide' : 'utility:preview';
     }
 
-    get isConfigurationComplete() {
-        return this.jiraUrl && this.jiraUsername && this.jiraApiToken && this.jiraProjectKey;
+    get testButtonLabel() {
+        return this.isTestingConnection ? 'Testing...' : 'Test';
     }
 
     get isTestButtonDisabled() {
-        return !this.jiraEnabled || !this.isConfigurationComplete || this.isTestingConnection;
+        return !this.jiraEnabled || !this.jiraInstanceUrl || !this.jiraUsername || !this.jiraApiToken || !this.jiraProjectKey || this.isTestingConnection;
+    }
+
+    get isSaveButtonDisabled() {
+        if (!this.jiraEnabled) {
+            return true; 
+        }
+        return !this.isConnectionVerified;
     }
 
     get showSuccessAlert() {
@@ -33,34 +68,41 @@ export default class JiraSettingsCard extends LightningElement {
     get showErrorAlert() {
         return this.testResult === 'error';
     }
-
-    get testButtonLabel() {
-        return this.isTestingConnection ? 'Testing...' : 'Test';
+    
+    get allInputDisabled() {
+        return !this.jiraEnabled;
     }
 
-    handleJiraEnabledChange(event) {
+    // --- Handlers for User Actions ---
+
+    handleInputChange(event) {
+        const { name, value } = event.target;
+        
+        if (name === 'jiraProjectKey') {
+            this[name] = value.toUpperCase();
+        } else {
+            this[name] = value;
+        }
+        this.testResult = null;
+        this.isConnectionVerified = false;
+    }
+    
+    async handleJiraEnabled(event) {
         this.jiraEnabled = event.target.checked;
-        this.saveSettings();
-    }
+        this.testResult = null;
+        this.isConnectionVerified = false;
 
-    handleJiraUrlChange(event) {
-        this.jiraUrl = event.target.value;
-        this.saveSettings();
-    }
-
-    handleJiraUsernameChange(event) {
-        this.jiraUsername = event.target.value;
-        this.saveSettings();
-    }
-
-    handleJiraApiTokenChange(event) {
-        this.jiraApiToken = event.target.value;
-        this.saveSettings();
-    }
-
-    handleJiraProjectKeyChange(event) {
-        this.jiraProjectKey = event.target.value.toUpperCase();
-        this.saveSettings();
+        this.isLoading = true;
+        try {
+            await saveJiraEnabledState({ enabled: this.jiraEnabled });
+            const status = this.jiraEnabled ? 'enabled' : 'disabled';
+            this.showToast('Status Updated', `JIRA integration has been ${status}.`, 'success');
+        } catch (error) {
+            this.showToast('Error Updating Status', error.body?.message || error.message, 'error');
+            this.jiraEnabled = !this.jiraEnabled;
+        } finally {
+            this.isLoading = false;
+        }
     }
 
     toggleApiTokenVisibility() {
@@ -68,53 +110,92 @@ export default class JiraSettingsCard extends LightningElement {
     }
 
     async testJiraConnection() {
-        if (!this.isConfigurationComplete) return;
-        
         this.isTestingConnection = true;
         this.testResult = null;
-        
+        this.isConnectionVerified = false;
+
+        console.log('jirainstacnceurl '+this.jiraInstanceUrl);
+
         try {
-            // Mock test - in real implementation, this would call an Apex method
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            this.testResult = 'success';
+            const result = await testJiraConnectionApex({
+                jiraUrl: this.jiraInstanceUrl,
+                username: this.jiraUsername,
+                token: this.jiraApiToken,
+                projectKey: this.jiraProjectKey
+            });
+
+            if (result === 'Success') {
+                this.testResult = 'success';
+                this.isConnectionVerified = true;
+                this.showToast('Success', 'JIRA connection is valid!', 'success');
+            } else {
+                this.testResult = 'error';
+                this.showToast('Connection Failed', result, 'error');
+            }
         } catch (error) {
             this.testResult = 'error';
+            this.showToast('Connection Error', error.body?.message || error.message, 'error');
         } finally {
             this.isTestingConnection = false;
         }
     }
 
-    resetJiraSettings() {
-        this.jiraEnabled = false;
-        this.jiraUrl = '';
-        this.jiraUsername = '';
-        this.jiraApiToken = '';
-        this.jiraProjectKey = '';
-        this.testResult = null;
-        this.saveSettings();
+    // --- MODIFIED: This function now re-fetches settings from Apex ---
+    async resetJiraSettings() {
+        if (confirm('Are you sure you want to revert your changes to the last saved configuration?')) {
+            this.isLoading = true;
+            try {
+                // Imperatively call Apex to get the latest saved settings
+                const savedData = await getSettings();
+
+                if (savedData) {
+                    this.jiraEnabled = savedData.jiraEnabled || false;
+                    this.jiraInstanceUrl = savedData.jiraInstanceUrl;
+                    this.jiraUsername = savedData.jiraUsername;
+                    this.jiraApiToken = savedData.jiraApiToken;
+                    this.jiraProjectKey = savedData.jiraProjectKey;
+                    this.isConnectionVerified = savedData.Jira_Api_tested__c || false;
+                }
+                
+                // Clear any transient UI state like test alerts
+                this.testResult = null;
+
+                this.showToast('Reset Complete', 'Settings have been reverted to the last saved state.', 'success');
+            } catch (error) {
+                this.showToast('Error Reverting', 'Could not fetch the saved settings. ' + (error.body?.message || error.message), 'error');
+            } finally {
+                this.isLoading = false;
+            }
+        }
     }
 
     openJiraTokenPage() {
         window.open('https://id.atlassian.com/manage-profile/security/api-tokens', '_blank');
     }
 
-    saveSettings() {
-        // Implementation to save JIRA settings to Salesforce
-        console.log('Saving JIRA settings:', {
-            jiraEnabled: this.jiraEnabled,
-            jiraUrl: this.jiraUrl,
-            jiraUsername: this.jiraUsername,
-            jiraApiToken: this.jiraApiToken,
-            jiraProjectKey: this.jiraProjectKey
-        });
+    // --- Apex Callouts ---
+
+    async handleSave() {
+        this.isLoading = true;
+        try {
+            await saveJiraSettings({
+                enabled: this.jiraEnabled, // Correctly pass the enabled state
+                url: this.jiraInstanceUrl,
+                username: this.jiraUsername,
+                token: this.jiraApiToken,
+                projectKey: this.jiraProjectKey,
+                isVerified: this.isConnectionVerified
+            });
+            this.showToast('Success', 'JIRA settings have been saved.', 'success');
+        } catch (error) {
+            this.showToast('Error Saving', error.body?.message || error.message, 'error');
+        } finally {
+            this.isLoading = false;
+        }
     }
 
-    connectedCallback() {
-        this.loadSettings();
-    }
-
-    loadSettings() {
-        // Implementation to load JIRA settings from Salesforce
-        console.log('Loading JIRA settings...');
+    // --- Utility ---
+    showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
     }
 }

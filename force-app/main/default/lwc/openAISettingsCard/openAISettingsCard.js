@@ -1,19 +1,118 @@
-import { LightningElement, track } from 'lwc';
+import { LightningElement, track, wire } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import getSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.getSettings';
+import saveOpenAISettings from '@salesforce/apex/DH_DeliveryHubSettingsController.saveOpenAISettings';
+import testOpenAIConnection from '@salesforce/apex/DH_DeliveryHubSettingsController.testOpenAIConnection';
 
-export default class OpenAISettingsCard extends LightningElement {
+export default class OpenAISettingCard extends LightningElement {
     @track openaiApiKey = '';
-    @track openaiModel = 'gpt-4.1-2025-04-14';
+    @track openaiModel = '';
+    isLoading = true;
     @track showApiKey = false;
     @track isTestingConnection = false;
-    @track testResult = null; // 'success', 'error', or null
+    @track testResult = null; // Can be 'success' or 'error'
+    @track apiTested = false;
 
-    get modelOptions() {
-        return [
-            { label: 'GPT-4.1 (Recommended)', value: 'gpt-4.1-2025-04-14' },
-            { label: 'O3 (Reasoning)', value: 'o3-2025-04-16' },
-            { label: 'O4 Mini (Fast)', value: 'o4-mini-2025-04-16' },
-            { label: 'GPT-4.1 Mini', value: 'gpt-4.1-mini-2025-04-14' }
-        ];
+    @wire(getSettings)
+    wiredSettings({ error, data }) {
+        this.isLoading = false;
+        if (data) {
+            this.openaiApiKey = data.openaiApiKey;
+            this.openaiModel = data.openaiModel || 'gpt-4o-mini'; // Default value
+            this.apiTested = data.openAiApiTested;
+        } else if (error) {
+            this.showToast('Error Loading OpenAI Settings', error.body.message, 'error');
+        }
+    }
+
+    handleInputChange(event) {
+        const { name, value } = event.target;
+        this[name] = value;
+        // When the user changes the API key, the previous test result is no longer valid.
+        if (name === 'openaiApiKey') {
+            this.testResult = null;
+            this.apiTested = false;
+        }
+    }
+
+    async handleSave() {
+        this.isLoading = true;
+        try {
+            await saveOpenAISettings({
+                apiKey: this.openaiApiKey,
+                model: this.openaiModel,
+                tested: this.apiTested
+            });
+            this.showToast('Success', 'OpenAI settings saved.', 'success');
+        } catch (error) {
+            this.showToast('Error Saving OpenAI Settings', error.body.message, 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    async testConnection() {
+        if (!this.openaiApiKey) return;
+        this.isTestingConnection = true;
+        this.testResult = null;
+
+        try {
+            const result = await testOpenAIConnection({ apiKey: this.openaiApiKey });
+            if (result === 'Success') {
+                this.testResult = 'success';
+                this.apiTested = true;
+                this.showToast('Success', 'OpenAI connection test successful!', 'success');
+            } else {
+                this.testResult = 'error';
+                this.apiTested = false;
+                this.showToast('Connection Failed', result, 'error');
+            }
+        } catch (error) {
+            this.testResult = 'error';
+            this.apiTested = false;
+            this.showToast('Error', 'Failed to test connection: ' + (error.body?.message || error.message), 'error');
+        } finally {
+            this.isTestingConnection = false;
+        }
+    }
+
+    // --- MODIFIED: This function now re-fetches settings from Apex ---
+    async resetSettings() {
+        if (confirm('Are you sure you want to revert your changes to the last saved configuration?')) {
+            this.isLoading = true;
+            try {
+                // Imperatively call Apex to get the latest saved settings
+                const savedData = await getSettings();
+
+                if (savedData) {
+                    this.openaiApiKey = savedData.openaiApiKey;
+                    this.openaiModel = savedData.openaiModel || 'gpt-4o-mini';
+                    this.apiTested = savedData.openAiApiTested || false;
+                }
+                
+                // Clear any transient UI state like test alerts
+                this.testResult = null;
+                
+                this.showToast('Reset Complete', 'Settings have been reverted to the last saved state.', 'success');
+            } catch (error) {
+                this.showToast('Error Reverting', 'Could not fetch the saved settings. ' + (error.body?.message || error.message), 'error');
+            } finally {
+                this.isLoading = false;
+            }
+        }
+    }
+    
+    // --- UI Helpers & Getters ---
+    showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+    }
+
+    toggleApiKeyVisibility() {
+        this.showApiKey = !this.showApiKey;
+    }
+    
+    openOpenAIPlatform() {
+        window.open('https://platform.openai.com/api-keys', '_blank');
     }
 
     get apiKeyInputType() {
@@ -24,8 +123,16 @@ export default class OpenAISettingsCard extends LightningElement {
         return this.showApiKey ? 'utility:hide' : 'utility:preview';
     }
 
+    get testButtonLabel() {
+        return this.isTestingConnection ? 'Testing...' : 'Test';
+    }
+
     get isTestButtonDisabled() {
         return !this.openaiApiKey || this.isTestingConnection;
+    }
+
+    get isSaveDisabled() {
+        return !this.apiTested;
     }
 
     get showSuccessAlert() {
@@ -35,68 +142,13 @@ export default class OpenAISettingsCard extends LightningElement {
     get showErrorAlert() {
         return this.testResult === 'error';
     }
-
-    get testButtonLabel() {
-        return this.isTestingConnection ? 'Testing...' : 'Test';
-    }
-
-    handleApiKeyChange(event) {
-        this.openaiApiKey = event.target.value;
-        this.testResult = null;
-        this.saveSettings();
-    }
-
-    handleModelChange(event) {
-        this.openaiModel = event.detail.value;
-        this.saveSettings();
-    }
-
-    toggleApiKeyVisibility() {
-        this.showApiKey = !this.showApiKey;
-    }
-
-    async testConnection() {
-        if (!this.openaiApiKey) return;
-        
-        this.isTestingConnection = true;
-        this.testResult = null;
-        
-        try {
-            // Mock test - in real implementation, this would call an Apex method
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            this.testResult = 'success';
-        } catch (error) {
-            this.testResult = 'error';
-        } finally {
-            this.isTestingConnection = false;
-        }
-    }
-
-    resetSettings() {
-        this.openaiApiKey = '';
-        this.openaiModel = 'gpt-4.1-2025-04-14';
-        this.testResult = null;
-        this.saveSettings();
-    }
-
-    openOpenAIPlatform() {
-        window.open('https://platform.openai.com/api-keys', '_blank');
-    }
-
-    saveSettings() {
-        // Implementation to save OpenAI settings to Salesforce
-        console.log('Saving OpenAI settings:', {
-            openaiApiKey: this.openaiApiKey,
-            openaiModel: this.openaiModel
-        });
-    }
-
-    connectedCallback() {
-        this.loadSettings();
-    }
-
-    loadSettings() {
-        // Implementation to load OpenAI settings from Salesforce
-        console.log('Loading OpenAI settings...');
+    
+    get modelOptions() {
+        return [
+            { label: 'GPT-4o Mini (Recommended)', value: 'gpt-4o-mini' },
+            { label: 'GPT-4o', value: 'gpt-4o' },
+            { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' },
+            { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' }
+        ];
     }
 }

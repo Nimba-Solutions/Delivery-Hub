@@ -11,7 +11,10 @@ import getTicketETAsWithPriority from "@salesforce/apex/DH_TicketETAService.getT
 import updateTicketStage from "@salesforce/apex/DragAndDropLwcController.updateTicketStage";
 import updateTicketSortOrder from "@salesforce/apex/DragAndDropLwcController.updateTicketSortOrder";
 import getRequiredFieldsForStage from '@salesforce/apex/DH_TicketController.getRequiredFieldsForStage';
-import { ShowToastEvent } from "lightning/platformShowToastEvent";
+import searchForPotentialBlockers from '@salesforce/apex/DragAndDropLwcController.searchForPotentialBlockers';
+import createDependency from '@salesforce/apex/DragAndDropLwcController.createDependency';
+import removeDependency from '@salesforce/apex/DragAndDropLwcController.removeDependency';
+import { ShowToastEvent } from "lightning/platformShowToastEvent";import getSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.getSettings';
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   @track persona = "Client";
@@ -35,7 +38,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   @track draggedItem = {};
   @track isDragging = false;
   @track placeholder = null;
-
+  @track AiEnhancementEnabled = true;
+  @track AiEstimation = true;
   // AI Enhancement properties
   @track isAiProcessing = false;
   @track aiSuggestions = null;
@@ -48,6 +52,12 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   @track transitionTargetStage = null;
   @track transitionRequiredFields = [];
   ticketsWire;
+
+  @track isModalOpen = false;
+    @track selectedTicket = {};
+    @track searchTerm = '';
+    @track searchResults = [];
+    @track isSearching = false;
 
   statusColorMap = {
     Backlog: "#FAFAFA",
@@ -635,6 +645,20 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       console.error("Ticket wire error", error);
     }
   }
+
+  @wire(getSettings)
+      wiredSettings({ error, data }) {
+      
+          if (data) {
+              this.AiEnhancementEnabled = data.aiSuggestionsEnabled || false;
+              this.AiEstimation = data.aiEstimationEnabled || false;
+              
+              this.hasValidOpenAIKey = data.openAiApiTested || false;
+          } else if (error) {
+              this.showToast('Error Loading AI Settings', error.body.message, 'error');
+          }
+      }
+  
 
   /* Toolbar button */
   openCreateModal() {
@@ -1266,6 +1290,9 @@ async handleAdvanceOption(e) {
     this.selectedRecord = null;
     this.selectedStage = null;
     this.moveComment = "";
+    this.isModalOpen = false;
+        this.searchResults = [];
+        this.searchTerm = '';
   }
 
   handleDragStart(event) {
@@ -1557,6 +1584,23 @@ handleTransitionError(event) {
     this.moveComment = "";
   }
 
+  // handleCardClick(e) {
+  //   const id = e.currentTarget.dataset.id;
+  //   this.selectedRecord = (this.realRecords || []).find((r) => r.Id === id);
+  //   this.showModal = true;
+  //   this.moveComment = "";
+  // }
+
+  handleManageDependenciesClick(event) {
+        const ticketId = event.currentTarget.dataset.id;
+        console.log('ticketId '+ticketId);
+        // Find the full ticket object from your enriched data
+        this.selectedTicket = this.enrichedTickets.find(t => t.Id === ticketId);
+        if (this.selectedTicket) {
+            this.isModalOpen = true;
+        }
+    }
+
   showToast(title, message, variant) {
     const event = new ShowToastEvent({
       title,
@@ -1769,7 +1813,7 @@ handleTransitionError(event) {
         appliedFields.push("description");
       }
 
-      if (this.aiSuggestions.estimatedDays) {
+      if (this.aiSuggestions.estimatedDays && this.AiEstimation) {
         this.estimatedDaysValue = this.aiSuggestions.estimatedDays;
         this.formFieldValues["DeveloperDaysSizeNumber__c"] = this.aiSuggestions.estimatedDays;
         appliedFields.push("estimated days");
@@ -1889,4 +1933,71 @@ handleTransitionError(event) {
     // Re-query tickets so the new card appears:
     this.refreshTickets();
   }
+
+
+    // closeModal() {
+    //     this.isModalOpen = false;
+    //     this.searchResults = [];
+    //     this.searchTerm = '';
+    // }
+
+    handleSearchTermChange(event) {
+        this.searchTerm = event.target.value;
+    }
+
+    async handleSearch() {
+        if (this.searchTerm.length < 3) {
+            // Optional: Add a toast message to enter more characters
+            return;
+        }
+        console.log('issearching');
+        this.isSearching = true;
+
+        // Create a set of existing dependency IDs to exclude them from the search
+        const existingDependencyIds = new Set([
+            ...this.selectedTicket.isBlockedBy.map(d => d.id),
+            ...this.selectedTicket.isBlocking.map(d => d.id)
+        ]);
+        
+        try {
+            this.searchResults = await searchForPotentialBlockers({
+                searchTerm: this.searchTerm,
+                currentTicketId: this.selectedTicket.Id,
+                existingDependencyIds: [...existingDependencyIds]
+            });
+        } catch (error) {
+            // Handle error with a toast message
+        } finally {
+            this.isSearching = false;
+        }
+    }
+
+    async handleSelectBlockingTicket(event) {
+        const blockingTicketId = event.currentTarget.dataset.blockingId;
+        
+        try {
+            await createDependency({
+                blockedTicketId: this.selectedTicket.Id,
+                blockingTicketId: blockingTicketId
+            });
+            // Show success toast
+            this.closeModal();
+            this.refreshTickets(); // Your method to refresh all board data
+        } catch (error) {
+            // Handle error with a toast message
+        }
+    }
+
+    async handleRemoveDependency(event) {
+        const dependencyId = event.currentTarget.dataset.dependencyId;
+        
+        try {
+            await removeDependency({ dependencyId: dependencyId });
+            // Show success toast
+            this.closeModal();
+            this.refreshTickets(); // Refresh board data
+        } catch (error) {
+            // Handle error with a toast message
+        }
+    }
 }

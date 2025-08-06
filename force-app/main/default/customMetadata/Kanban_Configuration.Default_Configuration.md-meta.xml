@@ -3,10 +3,6 @@
     <label>Default Configuration</label>
     <protected>false</protected>
     <values>
-        <field>Pre_Development_Stages__c</field>
-        <value xsi:type="xsd:string">Backlog,Active Scoping,Client Clarification (Pre-Dev),Needs Dev Feedback (T-Shirt Sizing),Pending Client Prioritization,Needs Dev Feedback (Proposal),Pending Development Approval,Pending Client Approval</value>
-    </values>
-    <values>
         <field>Active_Development_Stages__c</field>
         <value xsi:type="xsd:string">Ready for Development,In Development,Back For Development</value>
     </values>
@@ -15,19 +11,23 @@
         <value xsi:type="xsd:string">Dev Blocked,Client Clarification (In-Dev)</value>
     </values>
     <values>
+        <field>Default_Dev_Count__c</field>
+        <value xsi:type="xsd:double">2.0</value>
+    </values>
+    <values>
         <field>Post_Development_Stages__c</field>
         <value xsi:type="xsd:string">Dev Complete,Ready for Scratch Org Test,Ready for QA,In QA,In UAT,Ready for UAT (Consultant),Ready for UAT (Client),Ready for UAT Approval,Ready for Feature Merge,Ready for Deployment,Deployed to Prod,Done</value>
     </values>
     <values>
+        <field>Pre_Development_Stages__c</field>
+        <value xsi:type="xsd:string">Backlog,Active Scoping,Client Clarification (Pre-Dev),Needs Dev Feedback (T-Shirt Sizing),Pending Client Prioritization,Needs Dev Feedback (Proposal),Pending Development Approval,Pending Client Approval</value>
+    </values>
+    <values>
         <field>Priority_Weights__c</field>
-        <value xsi:type="xsd:string">{"High": 1, "Medium": 2, "Low": 3}</value>
+        <value xsi:type="xsd:string">{&quot;High&quot;: 1, &quot;Medium&quot;: 2, &quot;Low&quot;: 3}</value>
     </values>
     <values>
         <field>UAT_Buffer_Days__c</field>
         <value xsi:type="xsd:double">5.0</value>
-    </values>
-    <values>
-        <field>Default_Dev_Count__c</field>
-        <value xsi:type="xsd:double">2.0</value>
     </values>
 </CustomMetadata>

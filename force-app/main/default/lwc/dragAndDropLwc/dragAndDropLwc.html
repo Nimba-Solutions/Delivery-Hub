@@ -140,6 +140,10 @@
                                                 onclick={handleCardClick}>
                                                 <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
                                             </button>
+                                            <button class="ticket-block-button" title="Move Ticket" data-id={ticket.Id}
+                                                onclick={handleManageDependenciesClick}>
+                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Change Status"></lightning-icon>
+                                            </button>
 
                                             <template if:true={ticket.OwnerName}>
                                                 <div class="assignee">
@@ -185,15 +189,17 @@
                         </div>
                         <div class="slds-media__body">
                             <h2 class="slds-text-heading_medium">Create New Ticket
+                                  <template if:true={AiEnhancementEnabled}>
                                 <span class="slds-badge slds-m-left_small ai-badge">
                                     <lightning-icon icon-name="utility:sparkle" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
                                     AI Enhanced
                                 </span>
+                                </template>
                             </h2>
                         </div>
                     </div>
                     <button class="slds-modal__close" onclick={handleCreateCancel} title="Close"
-                        style="border-radius:0.5rem;">
+                        style="border-radius:0.5rem; padding-right:30px;">
                         <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
                     </button>
                 </header>
@@ -203,6 +209,7 @@
                     style="background:#fafcff;  border-bottom-left-radius:1rem; border-bottom-right-radius:1rem;">
                     
                     <!-- AI Enhancement Section -->
+                     <template if:true={AiEnhancementEnabled}>
                     <div class="ai-enhancement-box slds-p-around_medium slds-m-bottom_medium">
                         <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
                             <div class="slds-col">
@@ -226,10 +233,11 @@
                             Let AI help you create a comprehensive ticket with an enhanced title, detailed description, and estimated development time.
                         </p>
                     </div>
+                    </template>
 
                     <!-- AI Processing Spinner -->
                     <template if:true={isAiProcessing}>
-                        <div class="slds-m-vertical_large">
+                        <div class="slds-m-vertical_large exampleHolder slds-text-align_center slds-grid slds-grid_align-center">
                             <lightning-spinner alternative-text="AI is processing..." size="medium"></lightning-spinner>
                         </div>
                     </template>
@@ -428,4 +436,81 @@
     </section>
     <div class="slds-backdrop slds-backdrop_open"></div>
 </template>
+<template if:true={isModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <!-- Modal Header -->
+                <header class="slds-modal__header">
+                    <h2 class="slds-modal__title slds-hyphenate">Manage Dependencies for {selectedTicket.Name}</h2>
+                </header>
+
+                <!-- Modal Content -->
+                <div class="slds-modal__content slds-p-around_medium">
+                    <!-- Display Existing Dependencies -->
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Blocked By:</h3>
+                    <template if:false={selectedTicket.isBlockedBy.length}>
+                        <p>This ticket is not blocked by any other tickets.</p>
+                    </template>
+                    <template for:each={selectedTicket.isBlockedBy} for:item="dep">
+                        <lightning-pill key={dep.dependencyId} label={dep.name} onremove={handleRemoveDependency} data-dependency-id={dep.dependencyId}>
+                        </lightning-pill>
+                    </template>
+
+                    <hr class="slds-m-vertical_medium" />
+
+                    <!-- Add New Dependency Section -->
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Add a Blocker</h3>
+                    <div class="slds-grid slds-gutters">
+                        <div class="slds-col slds-size_2-of-3">
+                            <lightning-input
+                                type="search"
+                                label="Search for a ticket to block this one"
+                                variant="label-hidden"
+                                placeholder="Search by name or description..."
+                                onchange={handleSearchTermChange}
+                                value={searchTerm}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3">
+                            <lightning-button
+                                label="Search"
+                                variant="brand"
+                                onclick={handleSearch}
+                                disabled={isSearching}>
+                            </lightning-button>
+                        </div>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div class="slds-m-top_medium">
+                        <template if:true={isSearching}>
+                            <lightning-spinner alternative-text="Searching..." size="small"></lightning-spinner>
+                        </template>
+                        <template for:each={searchResults} for:item="result">
+                            <div key={result.Id} class="slds-box slds-box_x-small slds-m-bottom_x-small slds-grid">
+                                <div class="slds-col">
+                                    <strong>{result.Name}</strong>
+                                    <p class="slds-text-body_small">{result.StageNamePk__c}</p>
+                                </div>
+                                <div class="slds-col slds-no-flex">
+                                    <lightning-button
+                                        label="Select"
+                                        data-blocking-id={result.Id}
+                                        onclick={handleSelectBlockingTicket}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={closeModal}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
 </template>

@@ -370,6 +370,28 @@
     opacity: 0.2;
     transition: opacity 0.2s;
 }
+
+.ticket-block-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* margin-left: auto; Pushes button to the right before assignee */
+    margin-right: 8px;
+    opacity: 0.2;
+    transition: opacity 0.2s;
+}
+
+.ticket-card:hover .ticket-block-button {
+    opacity: 1;
+}
+.ticket-block-button:hover {
+    background-color: var(--gray-200);
+}
 .ticket-card:hover .ticket-action-button {
     opacity: 1;
 }
@@ -647,4 +669,11 @@
     letter-spacing: .05em;
     color: #4b5563; /* gray-600 */
     margin-bottom: 0.25rem;
+}
+
+.exampleHolder{
+    position: relative;
+    display: inline-block;
+    width: 80px;
+    height: 80px;
 }

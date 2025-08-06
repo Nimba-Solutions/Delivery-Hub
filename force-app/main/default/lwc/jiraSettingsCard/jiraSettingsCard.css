@@ -232,80 +232,6 @@
     margin-bottom: 1rem;
 }
 
-.setup-list {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-}
-
-.setup-list li {
-    font-size: var(--font-size-sm);
-    color: var(--gray-700);
-    margin-bottom: 0.75rem;
-    line-height: 1.5;
-    position: relative;
-    padding: 0.5rem 0 0.5rem 1.5rem;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-}
-
-.setup-list li:hover {
-    background-color: rgba(79, 70, 229, 0.05);
-    transform: translateX(4px);
-    color: var(--gray-800);
-}
-
-.setup-list li:before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 1.1em;
-    width: 6px;
-    height: 6px;
-    background-color: var(--brand-primary);
-    border-radius: 50%;
-    transition: all 0.2s ease;
-}
-
-.setup-list li:hover:before {
-    background-color: var(--brand-primary-dark);
-    transform: scale(1.3);
-}
-
-.setup-list li:last-child {
-    margin-bottom: 0;
-}
-
-.setup-list li strong {
-    color: var(--gray-900);
-    font-weight: 600;
-}
-
-/* Nested Lists in Setup Guide */
-.setup-list ul {
-    list-style: none;
-    padding-left: 0;
-    margin: 0.5rem 0 0 0;
-}
-
-.setup-list ul li {
-    font-size: var(--font-size-xs);
-    color: var(--gray-600);
-    margin-bottom: 0.25rem;
-    padding-left: 1rem;
-    position: relative;
-}
-
-.setup-list ul li:before {
-    content: "•";
-    position: absolute;
-    left: 0;
-    top: 0;
-    color: var(--gray-400);
-    font-weight: bold;
-}
-
-/* Feature List Styling */
 .info-section ul {
     list-style: none;
     padding-left: 0;
@@ -315,24 +241,60 @@
 .info-section ul li {
     font-size: var(--font-size-sm);
     color: var(--gray-700);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     line-height: 1.5;
     position: relative;
-    padding-left: 1.5rem;
+    padding: 0.5rem 0 0.5rem 1.75rem; /* Adjusted padding for alignment */
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
 }
 
-.info-section ul li:before {
+.info-section ul li:hover {
+    background-color: rgba(79, 70, 229, 0.05);
+    transform: translateX(4px);
+    color: var(--gray-800);
+}
+
+.toggle-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+/* Apply the checkmark to all list items */
+.info-section ul li::before {
     content: "✓";
     position: absolute;
-    left: 0;
-    top: 0;
+    left: 0.5rem; /* Position checkmark */
+    top: 0.8rem; /* Align checkmark vertically */
     color: var(--success-500);
     font-weight: bold;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-base); /* Larger checkmark */
+    line-height: 1;
 }
 
-.info-section ul li:last-child {
-    margin-bottom: 0;
+.info-section li strong {
+    color: var(--gray-900);
+    font-weight: 600;
+}
+
+/* Nested list specific adjustments */
+.info-section .setup-list ul {
+    margin: 0.5rem 0 0 0;
+}
+
+.info-section .setup-list ul li {
+    font-size: var(--font-size-xs);
+    color: var(--gray-600);
+    margin-bottom: 0.25rem;
+    padding-left: 1.5rem; /* Indent nested items */
+}
+
+/* Adjust checkmark position for nested list items */
+.info-section .setup-list ul li::before {
+    left: 0.25rem;
+    top: 0.5rem;
+    font-size: var(--font-size-sm);
 }
 
 /* Button in Info Section */

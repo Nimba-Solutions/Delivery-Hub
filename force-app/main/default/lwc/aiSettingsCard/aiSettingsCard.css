@@ -373,3 +373,9 @@ lightning-icon[icon-name="utility:warning"] {
         padding: 1rem;
     }
 }
+
+.toggle-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-800);
+}

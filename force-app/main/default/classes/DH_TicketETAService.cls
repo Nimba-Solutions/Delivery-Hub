@@ -33,6 +33,7 @@ public with sharing class DH_TicketETAService {
 
         try {
             // Instantiate and run the core calculation engine. This runs synchronously.
+              
             System.debug('Creating ETACalculator with prioritizedTicketIds: ' + prioritizedTicketIds);
             ETACalculator calculator = new ETACalculator(prioritizedTicketIds);
             
@@ -329,6 +330,19 @@ public with sharing class DH_TicketETAService {
 
         private List<TicketWrapper> buildAndSortMasterQueue(List<DH_Ticket__c> allTickets, Set<Id> developerIds) {
             System.debug('Building master work queue...');
+
+            Set<Id> incompleteTicketIds = new Set<Id>();
+            for(DH_Ticket__c t : allTickets) {
+                if (t.StageNamePk__c != 'Done' && t.StageNamePk__c != 'Deployed to Prod') {
+                    incompleteTicketIds.add(t.Id);
+                }
+            }
+
+            // 2. Find all dependencies where the blocker is one of these incomplete tickets
+            Set<Id> allBlockedTicketIds = new Set<Id>();
+            for (Ticket_Dependency__c dep : [SELECT Blocked_Ticket__c FROM Ticket_Dependency__c WHERE Blocking_Ticket__c IN :incompleteTicketIds]) {
+                allBlockedTicketIds.add(dep.Blocked_Ticket__c);
+            }
             
             if(config.Pre_Development_Stages__c == null) {
                 System.debug('WARNING: Pre_Development_Stages__c is null');
@@ -364,6 +378,11 @@ public with sharing class DH_TicketETAService {
             Integer skippedCount = 0;
             
             for(DH_Ticket__c t : allTickets){
+                if (allBlockedTicketIds.contains(t.Id)) {
+                    System.debug('Ticket ' + t.Id + ' SKIPPED - It is blocked by an incomplete ticket.');
+                    skippedCount++;
+                    continue; // Go to the next ticket
+                }
                 String stage = t.StageNamePk__c == null ? '' : t.StageNamePk__c.toLowerCase().trim();
                 System.debug('Evaluating ticket ' + t.Id + ' (' + t.Name + ') with stage: "' + stage + '"');
                 
@@ -410,7 +429,7 @@ public with sharing class DH_TicketETAService {
             System.debug('Selected developer: ' + nextDev + ' available on: ' + earliestDate);
             return nextDev;
         }
-
+		@TestVisible
         private Date addBusinessDays(Date inputDate, Integer daysToAdd) {
             Date resultDate = inputDate;
             if(inputDate == null || daysToAdd == null || daysToAdd <= 0) return inputDate;

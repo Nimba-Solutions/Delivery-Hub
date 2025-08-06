@@ -370,32 +370,64 @@ public with sharing class DH_TicketController {
      * @description Gets OpenAI API key from custom metadata or settings
      * @return String The API key
      */
-    private static String getOpenAIApiKey() {
-        try {
-            // Try to get from custom metadata first
-            List<OpenAI_Configuration__mdt> configs = [
-                SELECT API_Key__c 
-                FROM OpenAI_Configuration__mdt 
-                WHERE DeveloperName = 'Default_Config' 
-                LIMIT 1
-            ];
+    // private static String getOpenAIApiKey() {
+    //     try {
+    //         // Try to get from custom metadata first
+    //         List<OpenAI_Configuration__mdt> configs = [
+    //             SELECT API_Key__c 
+    //             FROM OpenAI_Configuration__mdt 
+    //             WHERE DeveloperName = 'Default_Config' 
+    //             LIMIT 1
+    //         ];
             
-            if (!configs.isEmpty() && String.isNotBlank(configs[0].API_Key__c)) {
-                return configs[0].API_Key__c;
-            }
+    //         if (!configs.isEmpty() && String.isNotBlank(configs[0].API_Key__c)) {
+    //             return configs[0].API_Key__c;
+    //         }
 
-            // Fallback: try custom settings
-            OpenAI_Settings__c settings = OpenAI_Settings__c.getOrgDefaults();
-            if (settings != null && String.isNotBlank(settings.API_Key__c)) {
-                return settings.API_Key__c;
-            }
+    //         // Fallback: try custom settings
+    //         OpenAI_Settings__c settings = OpenAI_Settings__c.getOrgDefaults();
+    //         if (settings != null && String.isNotBlank(settings.API_Key__c)) {
+    //             return settings.API_Key__c;
+    //         }
 
-        } catch (Exception e) {
-            System.debug('Error retrieving OpenAI API key: ' + e.getMessage());
+    //     } catch (Exception e) {
+    //         System.debug('Error retrieving OpenAI API key: ' + e.getMessage());
+    //     }
+
+    //     return null;
+    // }
+
+    private static String getOpenAIApiKey() {
+    try {
+
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        
+        // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
+        if (settings != null && settings.Open_Ai_Api_tested__c == true && String.isNotBlank(settings.OpenAI_API_Key__c)) {
+            System.debug('Giving custom setttngs api key');
+            return settings.OpenAI_API_Key__c;
         }
 
-        return null;
+        List<OpenAI_Configuration__mdt> configs = [
+            SELECT API_Key__c 
+            FROM OpenAI_Configuration__mdt 
+            WHERE DeveloperName = 'OpenAI' 
+            LIMIT 1
+        ];
+        
+        if (!configs.isEmpty() && String.isNotBlank(configs[0].API_Key__c)) {
+            return configs[0].API_Key__c;
+        }
+        
+
+    } catch (Exception e) {
+        System.debug('Error retrieving OpenAI API key: ' + e.getMessage());
     }
+
+    // Return null if no valid and tested key is found
+    return null;
+}
+
 
     /**
      * @description Provides fallback suggestions when OpenAI is unavailable
@@ -437,9 +469,14 @@ public with sharing class DH_TicketController {
             suggestions.description = 'A comprehensive implementation based on the initial request. This includes clarifying the primary objective, defining clear user impact, outlining detailed acceptance criteria, and establishing proper testing strategies. The solution will follow best practices for code quality, security, and maintainability while ensuring scalable architecture design.';
             suggestions.estimatedDays = 5;
         }
-
         return suggestions;
     }
 
-    
+    public static AISuggestionWrapper test_parseOpenAIResponse(String responseBody) {
+        return parseOpenAIResponse(responseBody);
+    }
+
+    public static String test_extractJsonFromContent(String content) {
+        return extractJsonFromContent(content);
+    }
 }
