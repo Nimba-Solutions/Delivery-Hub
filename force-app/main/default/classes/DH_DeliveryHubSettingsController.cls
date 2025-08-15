@@ -22,11 +22,11 @@ public with sharing class DH_DeliveryHubSettingsController {
    /* @AuraEnabled(cacheable=true)
     public static SettingsWrapper getSettings() {
         // getInstance() automatically gets the settings for the current user/profile/org
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
+        DH_Delivery_Hub_Settings__c settings = DH_Delivery_Hub_Settings__c.getInstance();
         
         if (settings == null) { 
             // Return defaults if no settings record exists yet
-            settings = Delivery_Hub_Settings__c.getOrgDefaults();
+            settings = DH_Delivery_Hub_Settings__c.getOrgDefaults();
         }
 
         SettingsWrapper wrapper = new SettingsWrapper();
@@ -53,9 +53,9 @@ public with sharing class DH_DeliveryHubSettingsController {
         SettingsWrapper wrapper = (SettingsWrapper) JSON.deserialize(settingsJson, SettingsWrapper.class);
 
         // Upsert the org-wide settings record
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DH_Delivery_Hub_Settings__c settings = DH_Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings == null) {
-            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
+            settings = new DH_Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
         }
         
         settings.AI_Suggestions_Enabled__c = wrapper.aiSuggestionsEnabled;
@@ -79,9 +79,9 @@ public with sharing class DH_DeliveryHubSettingsController {
      */
    /* @AuraEnabled
     public static void saveOpenAISettings(String apiKey, String model) {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DH_Delivery_Hub_Settings__c settings = DH_Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings == null) {
-            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
+            settings = new DH_Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
         }
         
         settings.OpenAI_API_Key__c = apiKey;
@@ -100,9 +100,9 @@ public with sharing class DH_DeliveryHubSettingsController {
      */
   /*  @AuraEnabled
     public static void saveJiraSettings(Boolean enabled, String jiraUrl, String username, String apiToken, String projectKey) {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DH_Delivery_Hub_Settings__c settings = DH_Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings == null) {
-            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
+            settings = new DH_Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
         }
         
         settings.JIRA_Enabled__c = enabled;
@@ -211,7 +211,7 @@ public with sharing class DH_DeliveryHubSettingsController {
      */
     @AuraEnabled(cacheable=true)
     public static SettingsDTO getSettings() {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DH_Delivery_Hub_Settings__c settings = DH_Delivery_Hub_Settings__c.getOrgDefaults();
         SettingsDTO dto = new SettingsDTO();
 
         if (settings != null) {
@@ -232,24 +232,24 @@ public with sharing class DH_DeliveryHubSettingsController {
         return dto;
     }
 
-    private static Delivery_Hub_Settings__c getOrCreateSettings() {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+    private static DH_Delivery_Hub_Settings__c getOrCreateSettings() {
+        DH_Delivery_Hub_Settings__c settings = DH_Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings == null) {
-            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
+            settings = new DH_Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
         }
         return settings;
     }
 
     @AuraEnabled
     public static void saveGeneralSettings(Boolean enableNotifications) {
-        Delivery_Hub_Settings__c settings = getOrCreateSettings();
+        DH_Delivery_Hub_Settings__c settings = getOrCreateSettings();
         settings.Enable_Notifications__c = enableNotifications;
         upsert settings;
     }
 
     @AuraEnabled
     public static void saveAiSettings(Boolean suggestions, Boolean descriptions, Boolean estimation) {
-        Delivery_Hub_Settings__c settings = getOrCreateSettings();
+        DH_Delivery_Hub_Settings__c settings = getOrCreateSettings();
         settings.AI_Suggestions_Enabled__c = suggestions;
         settings.Auto_Generate_Descriptions__c = descriptions;
         settings.AI_Estimation_Enabled__c = estimation;
@@ -261,7 +261,7 @@ public with sharing class DH_DeliveryHubSettingsController {
     
     @AuraEnabled
     public static void saveOpenAISettings(String apiKey, String model, boolean tested) {
-        Delivery_Hub_Settings__c settings = getOrCreateSettings();
+        DH_Delivery_Hub_Settings__c settings = getOrCreateSettings();
         settings.OpenAI_API_Key__c = apiKey;
         settings.OpenAI_Model__c = model;
         settings.Open_Ai_Api_tested__c = tested;
@@ -270,7 +270,7 @@ public with sharing class DH_DeliveryHubSettingsController {
 
     @AuraEnabled
     public static void saveJiraSettings( String url, String username, String token, String projectKey, Boolean isVerified) {
-        Delivery_Hub_Settings__c settings = getOrCreateSettings();
+        DH_Delivery_Hub_Settings__c settings = getOrCreateSettings();
         // settings.JIRA_Enabled__c = enabled;
         settings.JIRA_Instance_URL__c = url;
         settings.JIRA_Username__c = username;
@@ -282,7 +282,7 @@ public with sharing class DH_DeliveryHubSettingsController {
 
     @AuraEnabled
     public static void saveJiraEnabledState(Boolean enabled) {
-        Delivery_Hub_Settings__c settings = getOrCreateSettings();
+        DH_Delivery_Hub_Settings__c settings = getOrCreateSettings();
         settings.JIRA_Enabled__c = enabled;
        
         upsert settings;

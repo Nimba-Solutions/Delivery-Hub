@@ -17,7 +17,7 @@ private class DH_TicketControllerTest {
         insert tickets;
 
         // Optional: create Metadata for AI key test
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        DH_Delivery_Hub_Settings__c settings = new DH_Delivery_Hub_Settings__c(
             Name = 'Org_Default',
             OpenAI_API_Key__c = 'test-api-key',
             Open_Ai_Api_tested__c = true

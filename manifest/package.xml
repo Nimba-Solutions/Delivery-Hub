@@ -53,19 +53,19 @@
         <members>DH_Ticket__c.Estimated_Dev_Start_Date__c</members>
         <members>DH_Ticket__c.Projected_UAT_Ready_Date__c</members>
         <members>DH_Ticket__c.StageNamePk__c</members>
-        <members>Delivery_Hub_Settings__c.AI_Estimation_Enabled__c</members>
-        <members>Delivery_Hub_Settings__c.AI_Suggestions_Enabled__c</members>
-        <members>Delivery_Hub_Settings__c.Auto_Generate_Descriptions__c</members>
-        <members>Delivery_Hub_Settings__c.Enable_Notifications__c</members>
-        <members>Delivery_Hub_Settings__c.JIRA_API_Token__c</members>
-        <members>Delivery_Hub_Settings__c.JIRA_Enabled__c</members>
-        <members>Delivery_Hub_Settings__c.JIRA_Instance_URL__c</members>
-        <members>Delivery_Hub_Settings__c.JIRA_Project_Key__c</members>
-        <members>Delivery_Hub_Settings__c.JIRA_Username__c</members>
-        <members>Delivery_Hub_Settings__c.JIra_Api_tested__c</members>
-        <members>Delivery_Hub_Settings__c.OpenAI_API_Key__c</members>
-        <members>Delivery_Hub_Settings__c.OpenAI_Model__c</members>
-        <members>Delivery_Hub_Settings__c.Open_Ai_Api_tested__c</members>
+        <members>DH_Delivery_Hub_Settings__c.AI_Estimation_Enabled__c</members>
+        <members>DH_Delivery_Hub_Settings__c.AI_Suggestions_Enabled__c</members>
+        <members>DH_Delivery_Hub_Settings__c.Auto_Generate_Descriptions__c</members>
+        <members>DH_Delivery_Hub_Settings__c.Enable_Notifications__c</members>
+        <members>DH_Delivery_Hub_Settings__c.JIRA_API_Token__c</members>
+        <members>DH_Delivery_Hub_Settings__c.JIRA_Enabled__c</members>
+        <members>DH_Delivery_Hub_Settings__c.JIRA_Instance_URL__c</members>
+        <members>DH_Delivery_Hub_Settings__c.JIRA_Project_Key__c</members>
+        <members>DH_Delivery_Hub_Settings__c.JIRA_Username__c</members>
+        <members>DH_Delivery_Hub_Settings__c.JIra_Api_tested__c</members>
+        <members>DH_Delivery_Hub_Settings__c.OpenAI_API_Key__c</members>
+        <members>DH_Delivery_Hub_Settings__c.OpenAI_Model__c</members>
+        <members>DH_Delivery_Hub_Settings__c.Open_Ai_Api_tested__c</members>
         <members>Kanban_App_Settings__c.AI_Estimation_Enabled__c</members>
         <members>Kanban_App_Settings__c.AI_Suggestions_Enabled__c</members>
         <members>Kanban_App_Settings__c.Auto_Generate_Descriptions__c</members>
@@ -94,7 +94,7 @@
         <members>DH_Attachment_Sync_Log__c</members>
         <members>DH_Ticket_Status_Log__c</members>
         <members>DH_Ticket__c</members>
-        <members>Delivery_Hub_Settings__c</members>
+        <members>DH_Delivery_Hub_Settings__c</members>
         <members>Kanban_App_Settings__c</members>
         <members>Kanban_Stage_Field_Requirement__mdt</members>
         <members>OpenAI_Configuration__mdt</members>
