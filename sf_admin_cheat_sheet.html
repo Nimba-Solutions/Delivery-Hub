@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Admin “Nova” Cheat Sheet — 2025-08-19</title>
+<style>
+:root {
+  --bg: #0b0c10;
+  --panel: #12131a;
+  --muted: #9aa4af;
+  --text: #e7ecf2;
+  --accent: #7dd3fc;
+  --accent2: #a78bfa;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --link: #60a5fa;
+  --code: #0f172a;
+  --chip: #1f2937;
+}
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans"; }
+main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 80px; }
+header { position: sticky; top:0; background: linear-gradient(180deg, rgba(11,12,16,.9), rgba(11,12,16,.6)); backdrop-filter: blur(6px); z-index: 10; }
+header .bar { display:flex; align-items:center; gap:16px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
+h1 { font-size: 28px; margin: 0; letter-spacing:.2px; }
+small.sub { color: var(--muted); }
+nav.toc { display:grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 10px; padding: 16px 20px; }
+nav.toc a { display:block; background: var(--panel); color: var(--text); text-decoration:none; padding:10px 12px; border:1px solid rgba(255,255,255,.08); border-radius:8px; }
+nav.toc a:hover { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(125,211,252,.15) inset; }
+section { background: var(--panel); margin: 18px 0; padding: 18px; border-radius: 12px; border:1px solid rgba(255,255,255,.08); }
+section h2 { margin-top: 0; font-size: 22px; }
+h3 { margin: 18px 0 8px; font-size: 18px; }
+p, li { line-height: 1.55; }
+.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.kbd { padding: 2px 6px; border-radius: 6px; background: var(--chip); border:1px solid rgba(255,255,255,.08); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+.badge { display:inline-flex; align-items:center; gap:6px; padding: 2px 8px; border-radius: 999px; border:1px solid rgba(255,255,255,.12); background: #111827; font-size:12px; }
+.badge.ok { border-color: rgba(52,211,153,.5); }
+.badge.warn { border-color: rgba(251,191,36,.5); }
+.badge.bad { border-color: rgba(248,113,113,.5); }
+.callout { border-left: 3px solid var(--accent); background: #0f1117; padding: 12px 14px; border-radius: 8px; }
+.callout.warn { border-left-color: var(--warn); }
+.callout.ok { border-left-color: var(--ok); }
+hr.sep { border: none; border-top: 1px dashed rgba(255,255,255,.12); margin: 18px 0; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid rgba(255,255,255,.08); padding: 8px 10px; vertical-align: top; }
+th { background: #11131b; }
+code, pre { background: var(--code); color: #d8dee9; padding: 2px 6px; border-radius: 6px; }
+pre { padding: 12px; overflow: auto; }
+a { color: var(--link); }
+details { border:1px solid rgba(255,255,255,.08); background:#0f1117; border-radius:8px; padding: 10px 12px; }
+details summary { cursor:pointer; font-weight:600; }
+/* Mini diagram blocks */
+.diagram { background: #0e1118; border:1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 12px; }
+svg { max-width: 100%; height: auto; display:block; }
+.small { font-size: 13px; color: var(--muted); }
+footer { color: var(--muted); text-align:center; margin-top:32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Salesforce Admin “Nova” Cheat Sheet</h1>
+    <small class="sub">High-density exam prep • Generated 2025-08-19</small>
+  </div>
+  <nav class="toc">
+    <a href="#mental-model">0. Mental Models</a>
+    <a href="#security">1. Security & Access (Profiles → OWD → Sharing)</a>
+    <a href="#data-model">2. Standard Data Model (Sales, Service, Marketing)</a>
+    <a href="#record-types">3. Record Types & Business Processes</a>
+    <a href="#automation">4. Automation (Flow, Approvals, Events)</a>
+    <a href="#sales-cloud">5. Sales Cloud (Lead→Opp, Products, Forecasts)</a>
+    <a href="#service-cloud">6. Service Cloud (Cases, Entitlements, Omni)</a>
+    <a href="#reporting">7. Reporting & Dashboards</a>
+    <a href="#data-governance">8. Data Mgmt & Governance</a>
+    <a href="#identity">9. Identity, My Domain, SSO, Certificates, Keys</a>
+    <a href="#experience">10. Experience Cloud (Sharing Sets, Guest)</a>
+    <a href="#events">11. Event-Driven Patterns (PE/HVPE, CDC)</a>
+    <a href="#devops">12. Environments & DevOps</a>
+    <a href="#exam">13. Exam Strategy & Traps</a>
+    <a href="#glossary">Appendix: Glossary</a>
+  </nav>
+</header>
+<main>
+
+<section id="mental-model">
+  <h2>0) Mental Models — How Salesforce Thinks</h2>
+  <div class="grid-2">
+    <div class="diagram">
+      <h3>Metadata-Driven Stack</h3>
+      <svg viewBox="0 0 620 300" role="img" aria-label="Metadata-driven stack">
+        <rect x="10" y="20" width="600" height="40" rx="8" fill="#1f2937"/><text x="20" y="45" fill="#e5e7eb" font-size="14">Org Settings (Company, Fiscal, Currencies, Hours)</text>
+        <rect x="10" y="70" width="600" height="40" rx="8" fill="#1f2937"/><text x="20" y="95" fill="#e5e7eb" font-size="14">Schema (Objects, Fields, Relationships, Record Types)</text>
+        <rect x="10" y="120" width="600" height="40" rx="8" fill="#1f2937"/><text x="20" y="145" fill="#e5e7eb" font-size="14">Security (Profiles, Perm Sets, OWD, Sharing, FLS)</text>
+        <rect x="10" y="170" width="600" height="40" rx="8" fill="#1f2937"/><text x="20" y="195" fill="#e5e7eb" font-size="14">Automation (Validation, Flow, Approvals, Events)</text>
+        <rect x="10" y="220" width="600" height="40" rx="8" fill="#1f2937"/><text x="20" y="245" fill="#e5e7eb" font-size="14">UI (Layouts, LWC, Lightning Pages, Utility Bar)</text>
+      </svg>
+      <p class="small">Runtime compiles these layers on every transaction. Your job: pick the right layer.</p>
+    </div>
+    <div class="diagram">
+      <h3>Order of Execution (Save)</h3>
+      <svg viewBox="0 0 620 310" role="img">
+        <g font-size="13" fill="#e5e7eb">
+          <rect x="10" y="10" width="600" height="34" rx="6" fill="#1f2937"/><text x="20" y="32">System Validation (req’d fields, FK, type)</text>
+          <rect x="10" y="50" width="600" height="34" rx="6" fill="#1f2937"/><text x="20" y="72">Before Triggers / Before-save Flow</text>
+          <rect x="10" y="90" width="600" height="34" rx="6" fill="#1f2937"/><text x="20" y="112">Custom Validation Rules</text>
+          <rect x="10" y="130" width="600" height="34" rx="6" fill="#1f2937"/><text x="20" y="152">After Triggers / After-save Flow</text>
+          <rect x="10" y="170" width="600" height="34" rx="6" fill="#1f2937"/><text x="20" y="192">Assignment / Auto-Response / Escalation (Cases/Leads)</text>
+          <rect x="10" y="210" width="600" height="34" rx="6" fill="#1f2937"/><text x="20" y="232">Roll-ups & Workflow / PB (legacy)</text>
+          <rect x="10" y="250" width="600" height="34" rx="6" fill="#1f2937"/><text x="20" y="272">Commit → Async (Email, PE/HVPE, CDC, Async Flows)</text>
+        </g>
+      </svg>
+      <details class="small"><summary>Exam zingers</summary>
+        <ul>
+          <li>Only <b>before</b>-save can set field values efficiently.</li>
+          <li>Assignment rules only at <b>creation</b>. Escalation is <b>time-based</b>.</li>
+          <li>Publish events <b>after commit</b> to avoid duplicates on rollback.</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <h2>1) Security & Access — Profiles → Permission Sets → OWD → Sharing</h2>
+  <div class="grid-2">
+    <div>
+      <h3>Layered Security Pyramid</h3>
+      <svg viewBox="0 0 620 280" role="img">
+        <g>
+          <rect x="10" y="220" width="600" height="40" rx="6" fill="#1f2937"/><text x="20" y="245" fill="#e5e7eb" font-size="14">Profiles (baseline CRUD, FLS, login rules)</text>
+          <rect x="40" y="180" width="540" height="40" rx="6" fill="#1f2937"/><text x="50" y="205" fill="#e5e7eb" font-size="14">Permission Sets / Groups (additive rights, muting)</text>
+          <rect x="70" y="140" width="480" height="40" rx="6" fill="#1f2937"/><text x="80" y="165" fill="#e5e7eb" font-size="14">OWD (baseline record visibility)</text>
+          <rect x="100" y="100" width="420" height="40" rx="6" fill="#1f2937"/><text x="110" y="125" fill="#e5e7eb" font-size="14">Role Hierarchy / Teams / Manual Sharing</text>
+          <rect x="130" y="60" width="360" height="40" rx="6" fill="#1f2937"/><text x="140" y="85" fill="#e5e7eb" font-size="14">Sharing Rules (owner-based, criteria-based)</text>
+          <rect x="160" y="20" width="300" height="40" rx="6" fill="#1f2937"/><text x="170" y="45" fill="#e5e7eb" font-size="14">Restriction Rules / Scoping Rules</text>
+        </g>
+      </svg>
+      <p class="small">Profiles/PermSets decide what you <em>can do</em>; OWD/Sharing decide which <em>records</em> you can do it to.</p>
+    </div>
+    <div>
+      <h3>Quick Matrices</h3>
+      <table>
+        <thead><tr><th>Need</th><th>Use</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Limit field visibility everywhere (UI, API, Reports)</td><td><b>FLS</b> (Profile/Perm Set)</td><td>Layouts are cosmetic; FLS is real security.</td></tr>
+          <tr><td>Default org record access</td><td><b>OWD</b></td><td>Private / PRO / PRW / Controlled by Parent.</td></tr>
+          <tr><td>Open access beyond OWD</td><td><b>Sharing Rules</b></td><td>Owner-based or criteria-based; additive only.</td></tr>
+          <tr><td>Portal users see their own records</td><td><b>Sharing Sets</b></td><td>Map user’s Account/Contact to records.</td></tr>
+          <tr><td>Hide subset of records even after sharing</td><td><b>Restriction Rules</b></td><td>Post-filter; security tightening.</td></tr>
+          <tr><td>Default filters for UX</td><td><b>Scoping Rules</b></td><td>Convenience, not security.</td></tr>
+        </tbody>
+      </table>
+      <details><summary>Exam traps</summary>
+        <ul>
+          <li>Permission Sets cannot override lack of visibility from OWD/sharing.</li>
+          <li>Page layout ≠ security. Use FLS for true hide.</li>
+          <li>Record type availability is granted by Profile; it is not a security barrier.</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="data-model">
+  <h2>2) Standard Data Model — Sales, Service, Marketing</h2>
+  <div class="grid-2">
+    <div class="diagram">
+      <h3>Core CRM ERD (mini)</h3>
+      <svg viewBox="0 0 620 340" role="img">
+        <g font-size="12" fill="#e5e7eb">
+          <rect x="20" y="20" width="140" height="44" rx="6" fill="#1f2937"/><text x="30" y="45">Account</text>
+          <rect x="200" y="20" width="140" height="44" rx="6" fill="#1f2937"/><text x="210" y="45">Contact</text>
+          <line x1="160" y1="42" x2="200" y2="42" stroke="#475569"/>
+          <rect x="380" y="20" width="180" height="44" rx="6" fill="#1f2937"/><text x="390" y="45">Opportunity</text>
+          <line x1="340" y1="42" x2="380" y2="42" stroke="#475569"/>
+          <rect x="380" y="90" width="180" height="44" rx="6" fill="#1f2937"/><text x="390" y="115">OppLineItem (↔ Product2)</text>
+          <rect x="380" y="160" width="180" height="44" rx="6" fill="#1f2937"/><text x="390" y="185">PricebookEntry</text>
+          <rect x="380" y="230" width="180" height="44" rx="6" fill="#1f2937"/><text x="390" y="255">Product2</text>
+          <rect x="20" y="100" width="140" height="44" rx="6" fill="#1f2937"/><text x="30" y="125">Case</text>
+          <line x1="90" y1="64" x2="90" y2="100" stroke="#475569"/>
+          <rect x="200" y="100" width="140" height="44" rx="6" fill="#1f2937"/><text x="210" y="125">Asset</text>
+          <line x1="200" y1="122" x2="160" y2="122" stroke="#475569"/>
+          <rect x="20" y="180" width="140" height="44" rx="6" fill="#1f2937"/><text x="30" y="205">Campaign</text>
+          <rect x="200" y="180" width="140" height="44" rx="6" fill="#1f2937"/><text x="210" y="205">CampaignMember</text>
+          <line x1="160" y1="202" x2="200" y2="202" stroke="#475569"/>
+          <rect x="20" y="260" width="140" height="44" rx="6" fill="#1f2937"/><text x="30" y="285">Lead</text>
+          <line x1="90" y1="224" x2="90" y2="260" stroke="#475569"/>
+        </g>
+      </svg>
+      <p class="small">Lead converts → Account + Contact (+ Opportunity). OppLineItem bridges Opportunity ↔ Product2 via PricebookEntry.</p>
+    </div>
+    <div>
+      <h3>Key Relationships & Limits</h3>
+      <ul>
+        <li><b>Master-Detail</b> (tight): child inherits owner/sharing; parent delete cascades; enables roll-ups.</li>
+        <li><b>Lookup</b> (loose): optional, no ownership inheritance.</li>
+        <li><b>Junction</b>: two M-D to parent objects to model M:N (e.g., <span class="kbd">ProjectResource__c</span>).</li>
+        <li><b>Record Types</b>: max ~200/object; govern picklists, page layouts, business processes.</li>
+      </ul>
+      <details><summary>Sales vs Service quick cues</summary>
+        <ul>
+          <li><b>Sales</b>: Lead → Opp; Products/Pricebooks; Forecasts; Quotes/Orders (optionally CPQ).</li>
+          <li><b>Service</b>: Case lifecycle; Assignment/Escalation; Entitlements/Milestones; Knowledge; Omni.</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="record-types">
+  <h2>3) Record Types & Business Processes</h2>
+  <div class="grid-2">
+    <div>
+      <h3>What Record Types Do</h3>
+      <ul>
+        <li>Control <b>picklist subsets</b> per context.</li>
+        <li>Select <b>page layouts</b> per profile × record type.</li>
+        <li>Bind to <b>Business Processes</b> (Lead Status, Case Status, Opp Stage sets).</li>
+      </ul>
+      <div class="callout warn"><b>Not security.</b> Record types do not grant access; profiles/perm sets and sharing do.</div>
+    </div>
+    <div class="diagram">
+      <h3>Business Process Binding</h3>
+      <svg viewBox="0 0 620 220">
+        <g font-size="12" fill="#e5e7eb">
+          <rect x="20" y="20" width="180" height="40" rx="6" fill="#1f2937"/><text x="30" y="45">Business Process</text>
+          <rect x="220" y="20" width="180" height="40" rx="6" fill="#1f2937"/><text x="230" y="45">Record Type</text>
+          <rect x="420" y="20" width="180" height="40" rx="6" fill="#1f2937"/><text x="430" y="45">Page Layout</text>
+          <line x1="200" y1="40" x2="220" y2="40" stroke="#475569"/>
+          <line x1="400" y1="40" x2="420" y2="40" stroke="#475569"/>
+          <rect x="220" y="90" width="180" height="40" rx="6" fill="#1f2937"/><text x="230" y="115">Profile (availability + default)</text>
+          <line x1="310" y1="60" x2="310" y2="90" stroke="#475569"/>
+        </g>
+      </svg>
+      <p class="small">Users only see record types their profile allows; defaults apply when only one choice.</p>
+    </div>
+  </div>
+</section>
+
+<section id="automation">
+  <h2>4) Automation — Flow First, Approvals for Human Gates, Events for Decoupling</h2>
+  <div class="grid-2">
+    <div>
+      <h3>Decision Tree</h3>
+      <ul>
+        <li>Need to block save / set fields efficiently → <b>Before-save Record-Triggered Flow</b>.</li>
+        <li>Need related-record updates / emails after save → <b>After-save Flow</b>.</li>
+        <li>Human decision & record lock → <b>Approval Process</b>.</li>
+        <li>Multi-subscriber async reaction or integration → <b>Platform Events</b> (HVPE for scale).</li>
+        <li>Legacy-only: Workflow (outbound message), Process Builder (migrate to Flow).</li>
+      </ul>
+      <details><summary>Approval essentials</summary>
+        <ul>
+          <li>On submit: record locks; steps can be serial/parallel.</li>
+          <li>Actions: field updates, emails, tasks, outbound messages.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="diagram">
+      <h3>Automation Capability Matrix</h3>
+      <table>
+        <thead><tr><th>Capability</th><th>Flow</th><th>Approval</th><th>PE/HVPE</th><th>Workflow/PB</th></tr></thead>
+        <tbody>
+          <tr><td>Set fields before commit</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+          <tr><td>Guided UI (wizard)</td><td>✅ (Screen)</td><td>❌</td><td>❌</td><td>❌</td></tr>
+          <tr><td>Async fan-out</td><td>⚠️ (Invoker)</td><td>❌</td><td>✅</td><td>❌</td></tr>
+          <tr><td>Outbound Message</td><td>❌</td><td>❌</td><td>❌</td><td>✅ (legacy)</td></tr>
+          <tr><td>Lock record for approval</td><td>❌</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="sales-cloud">
+  <h2>5) Sales Cloud — Lead→Opp, Products/Pricebooks, Forecasts</h2>
+  <div class="grid-2">
+    <div>
+      <h3>Lead Conversion</h3>
+      <ul>
+        <li>Maps Lead → <b>Account</b> + <b>Contact</b> + (optional) <b>Opportunity</b>.</li>
+        <li>Field mapping required; duplicates managed via dupe rules.</li>
+        <li>Converted leads are read-only; cannot “unconvert”.</li>
+      </ul>
+      <h3>Products & Pricing</h3>
+      <ul>
+        <li><b>Product2</b> (SKU via <span class="kbd">ProductCode</span>), <b>Pricebook</b> (context), <b>PricebookEntry</b> (bridge).</li>
+        <li><b>OpportunityLineItem</b> holds price/qty/discount (can use <b>Schedules</b>).</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Forecasts & Quotes</h3>
+      <ul>
+        <li><b>Collaborative Forecasts</b>: forecast types (revenue/qty/product/territory), categories (Pipeline/Best/Commit/Closed).</li>
+        <li><b>Quotes</b> can sync to Opp; <b>Orders</b> represent commitments.</li>
+        <li>CPQ adds bundles, rules, subscriptions, proration.</li>
+      </ul>
+      <div class="callout"><b>Exam cue:</b> Forecasting categories ≠ stages; mapping is configurable.</div>
+    </div>
+  </div>
+</section>
+
+<section id="service-cloud">
+  <h2>6) Service Cloud — Cases, Entitlements, Omni-Channel</h2>
+  <div class="grid-3">
+    <div>
+      <h3>Cases</h3>
+      <ul>
+        <li>Channels: Web-to-Case, Email-to-Case, Chat/Messaging, Phone, Community.</li>
+        <li><b>Assignment Rules</b> at create; <b>Escalation Rules</b> time-based.</li>
+        <li>Case Teams vs Queues: collaboration vs ownership pool.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Entitlements & Milestones</h3>
+      <ul>
+        <li>Define SLA response/resolution clocks; timers can pause/resume.</li>
+        <li>Milestone actions on approaching/violation (notify, escalate).</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Omni-Channel & Productivity</h3>
+      <ul>
+        <li>Routes work by priority/capacity/skills; prevents cherry-picking.</li>
+        <li><b>Macros</b> automate agent clicks; <b>Quick Text</b> for snippets.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="reporting">
+  <h2>7) Reporting & Dashboards</h2>
+  <div class="grid-2">
+    <div>
+      <h3>Report Types & Formulas</h3>
+      <ul>
+        <li>Tabular / Summary / Matrix / Joined.</li>
+        <li>Custom Report Types define join paths; beware “with/without” relationships.</li>
+        <li>Row-level vs Summary formulas; Buckets; Cross filters (with subfilters).</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Dashboards</h3>
+      <ul>
+        <li>Components, filters, <b>Dynamic Dashboards</b> (cannot be scheduled).</li>
+        <li>Historical trending & reporting snapshots for change-over-time.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="data-governance">
+  <h2>8) Data Management & Governance</h2>
+  <div class="grid-3">
+    <div>
+      <h3>Data Ops</h3>
+      <ul>
+        <li>Import Wizard (simple), <b>Data Loader</b> (bulk CSV), API-based ETL.</li>
+        <li>Mass Transfer / Mass Delete (selected objects).</li>
+        <li><b>Duplicate</b> & <b>Matching Rules</b> (alert vs block).</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Scale & External</h3>
+      <ul>
+        <li><b>Big Objects</b> for billions (read-only, indexed queries).</li>
+        <li><b>External Objects</b> via Salesforce Connect (OData); data stays outside.</li>
+        <li><b>External Services</b> (OpenAPI) → invocable actions in Flow.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Compliance & Protection</h3>
+      <ul>
+        <li>Shield Encryption (deterministic vs probabilistic), <b>Key Management</b>, BYOK.</li>
+        <li>Field History / Field Audit Trail; Event Monitoring.</li>
+        <li>Data Classification & Health Check; Optimizer.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="identity">
+  <h2>9) Identity — My Domain, SSO, Certificates, Session Policies</h2>
+  <div class="grid-2">
+    <div>
+      <h3>My Domain</h3>
+      <ul>
+        <li>Org-specific login URL; enables Lightning, SSO, Experience Cloud branding.</li>
+        <li>Required before using modern components and SSO.</li>
+      </ul>
+      <h3>SSO & Certs</h3>
+      <ul>
+        <li>SAML/OIDC; JWT OAuth for server-to-server.</li>
+        <li>Certificates for signing/verification; rotate before expiry.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Session & Access Controls</h3>
+      <ul>
+        <li>Login hours & IPs (profile-level), MFA, Session Security Levels.</li>
+        <li>CORS, CSP Trusted Sites, Named/External Credentials for callouts.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="experience">
+  <h2>10) Experience Cloud — External & Guest Access</h2>
+  <div class="grid-2">
+    <div>
+      <h3>Sharing Sets</h3>
+      <p>Grant access to records related to a portal user’s Account/Contact (e.g., customers see <em>their</em> Cases/Orders).</p>
+    </div>
+    <div>
+      <h3>Guest Users</h3>
+      <p>Unauthenticated users with a highly constrained profile; avoid write access; audit public exposure.</p>
+    </div>
+  </div>
+</section>
+
+<section id="events">
+  <h2>11) Events — Platform Events, HVPE, CDC</h2>
+  <div class="grid-2">
+    <div>
+      <h3>When to Use What</h3>
+      <ul>
+        <li><b>CDC</b>: replicate object CRUD changes externally; zero-code capture.</li>
+        <li><b>PE</b>: business milestone events (internal/external subscribers).</li>
+        <li><b>HVPE</b>: high throughput, large fan-out (paid add-on).</li>
+      </ul>
+      <div class="callout warn">Publish <b>after commit</b>; include idempotency keys; keep payloads lean (IDs).</div>
+    </div>
+    <div>
+      <h3>Inside vs Outside</h3>
+      <ul>
+        <li><b>In-org</b>: After-save Flow/Apex or PE trigger; Queueables for heavy work.</li>
+        <li><b>External</b>: Pub/Sub API (gRPC) with replay; Event Relay to cloud bus.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="devops">
+  <h2>12) Environments & DevOps</h2>
+  <div class="grid-3">
+    <div>
+      <h3>Sandboxes</h3>
+      <ul>
+        <li>Dev/Dev Pro/Partial/Full; refresh cadence & templates.</li>
+        <li>Seeding & anonymization for test data.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Deployments</h3>
+      <ul>
+        <li>Change Sets (admin-friendly) vs SFDX (source-driven) vs DevOps Center.</li>
+        <li>Run tests in prod deployments; backout plan & post-deploy steps.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Packaging</h3>
+      <ul>
+        <li>Unlocked Packages for modular metadata; Managed for ISVs.</li>
+        <li>Permission Set Groups & Muting for access packaging.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="exam">
+  <h2>13) Exam Strategy & Traps</h2>
+  <div class="grid-2">
+    <div>
+      <h3>High-Yield Topics</h3>
+      <ul>
+        <li>Security model (Profiles vs Perm Sets vs OWD vs Sharing vs Restriction).</li>
+        <li>Automation choices (Flow vs Approval vs Events; legacy trivia).</li>
+        <li>Reporting (report types, dynamic dashboards, formulas, cross filters).</li>
+        <li>Lead conversion, Sales vs Service quirks, Campaign Members.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Common Traps</h3>
+      <ul>
+        <li>Page layout is not security; <b>FLS</b> governs API/reports.</li>
+        <li>Assignment rules only on creation; Escalation is time-based.</li>
+        <li>Dynamic dashboards cannot be scheduled.</li>
+        <li>Record Types control picklists/layouts, <em>not</em> access.</li>
+        <li>Permission Sets add; cannot restrict.</li>
+      </ul>
+    </div>
+  </div>
+  <details><summary>Last-Week Checklist</summary>
+    <ul>
+      <li>Draw the security pyramid from memory.</li>
+      <li>Explain order of execution including where approvals/events sit.</li>
+      <li>Build a quick Flow: before-save (set fields), after-save (create related).</li>
+      <li>Create a custom report type with a cross filter and a summary formula.</li>
+      <li>Configure a case assignment rule + escalation rule + entitlement milestone.</li>
+    </ul>
+  </details>
+</section>
+
+<section id="glossary">
+  <h2>Appendix: Glossary & Quick Definitions</h2>
+  <div class="grid-3">
+    <div>
+      <h3>Security</h3>
+      <ul class="small">
+        <li><b>FLS</b>: Field-level read/edit access.</li>
+        <li><b>OWD</b>: Org baseline record visibility.</li>
+        <li><b>Restriction Rule</b>: Post-filter visibility reducer.</li>
+        <li><b>Scoping Rule</b>: Default UX filter.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Automation</h3>
+      <ul class="small">
+        <li><b>Flow</b>: Declarative logic engine (record/screen/scheduled).</li>
+        <li><b>Approval</b>: Human gate + locking.</li>
+        <li><b>PE/HVPE</b>: Publish/subscribe domain events; HVPE for scale.</li>
+        <li><b>CDC</b>: Object change streams for replication.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Data</h3>
+      <ul class="small">
+        <li><b>Big Object</b>: Massive, read-optimized archive object.</li>
+        <li><b>External Object</b>: Virtualized table via OData.</li>
+        <li><b>PricebookEntry</b>: Bridge for Product2 pricing.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>© 2025 Nova — “Be precise. Be kind. Be unstoppable.” • Print-friendly & offline-ready</footer>
+
+</main>
+</body>
+</html>
