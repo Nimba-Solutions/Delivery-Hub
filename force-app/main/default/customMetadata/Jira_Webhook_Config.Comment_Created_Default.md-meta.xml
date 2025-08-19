@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Comment Created Default</label>
+    <protected>false</protected>
+    <values>
+        <field>Enabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Event_Type__c</field>
+        <value xsi:type="xsd:string">comment_created</value>
+    </values>
+    <values>
+        <field>Field_Mapping__c</field>
+        <value xsi:type="xsd:string">{&quot;id&quot;: &quot;JiraCommentIdTxt__c&quot;, &quot;body&quot;: &quot;BodyTxt__c&quot;, &quot;author.displayName&quot;: &quot;AuthorTxt__c&quot;, &quot;created&quot;: &quot;CreatedDate__c&quot;}</value>
+    </values>
+    <values>
+        <field>Priority__c</field>
+        <value xsi:type="xsd:double">40.0</value>
+    </values>
+    <values>
+        <field>Retry_Attempts__c</field>
+        <value xsi:type="xsd:double">5.0</value>
+    </values>
+    <values>
+        <field>Sync_Direction__c</field>
+        <value xsi:type="xsd:string">Jira_to_Salesforce</value>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Field_Mapping__c</fullName>
+    <description>JSON configuration for custom field mappings between Jira and Salesforce. Format: {&quot;jiraField&quot;: &quot;salesforceField&quot;, &quot;status&quot;: &quot;StatusPk__c&quot;, &quot;assignee&quot;: &quot;AssignedToTxt__c&quot;}</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Field Mapping</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>

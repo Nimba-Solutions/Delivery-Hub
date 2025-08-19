@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Issue Updated Default</label>
+    <protected>false</protected>
+    <values>
+        <field>Enabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Event_Type__c</field>
+        <value xsi:type="xsd:string">jira:issue_updated</value>
+    </values>
+    <values>
+        <field>Field_Mapping__c</field>
+        <value xsi:type="xsd:string">{&quot;key&quot;: &quot;JiraTicketKeyTxt__c&quot;, &quot;summary&quot;: &quot;BriefDescriptionTxt__c&quot;, &quot;description&quot;: &quot;DescriptionTxt__c&quot;, &quot;status.name&quot;: &quot;StatusPk__c&quot;, &quot;assignee.displayName&quot;: &quot;AssignedToTxt__c&quot;, &quot;priority.name&quot;: &quot;PriorityPk__c&quot;}</value>
+    </values>
+    <values>
+        <field>Priority__c</field>
+        <value xsi:type="xsd:double">20.0</value>
+    </values>
+    <values>
+        <field>Retry_Attempts__c</field>
+        <value xsi:type="xsd:double">5.0</value>
+    </values>
+    <values>
+        <field>Sync_Direction__c</field>
+        <value xsi:type="xsd:string">Jira_to_Salesforce</value>
+    </values>
+</CustomMetadata>
