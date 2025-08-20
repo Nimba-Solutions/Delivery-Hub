@@ -5,31 +5,31 @@
     </columns>
     <columns>
         <aggregateTypes>Sum</aggregateTypes>
-        <field>DH_Ticket__c.DeveloperDaysSizeNumber__c</field>
+        <field>Ticket__c.DeveloperDaysSizeNumber__c</field>
     </columns>
     <columns>
         <aggregateTypes>Sum</aggregateTypes>
-        <field>DH_Ticket__c.SortOrderNumber__c</field>
+        <field>Ticket__c.SortOrderNumber__c</field>
     </columns>
     <columns>
         <aggregateTypes>Sum</aggregateTypes>
-        <field>DH_Ticket__c.IsActiveBool__c</field>
+        <field>Ticket__c.IsActiveBool__c</field>
     </columns>
     <columns>
-        <field>DH_Ticket__c.StatusPk__c</field>
+        <field>Ticket__c.StatusPk__c</field>
     </columns>
     <columns>
-        <field>DH_Ticket__c.BriefDescriptionTxt__c</field>
+        <field>Ticket__c.BriefDescriptionTxt__c</field>
     </columns>
     <columns>
-        <field>DH_Ticket__c.JiraTicketKeyTxt__c</field>
+        <field>Ticket__c.JiraTicketKeyTxt__c</field>
     </columns>
     <columns>
-        <field>DH_Ticket__c.Tags__c</field>
+        <field>Ticket__c.Tags__c</field>
     </columns>
     <filter>
         <criteriaItems>
-            <column>DH_Ticket__c.StageNamePk__c</column>
+            <column>Ticket__c.StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>contains</operator>
@@ -40,7 +40,7 @@
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
-        <field>DH_Ticket__c.Epic__c</field>
+        <field>Ticket__c.Epic__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
     <name>New DH Tickets Report</name>
@@ -48,13 +48,13 @@
         <name>co</name>
         <value>1</value>
     </params>
-    <reportType>CustomEntity$DH_Ticket__c</reportType>
+    <reportType>CustomEntity$Ticket__c</reportType>
     <scope>user</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
     <showSubTotals>true</showSubTotals>
     <timeFrameFilter>
-        <dateColumn>DH_Ticket__c.CalculatedETADate__c</dateColumn>
+        <dateColumn>Ticket__c.CalculatedETADate__c</dateColumn>
         <interval>INTERVAL_CUSTOM</interval>
     </timeFrameFilter>
 </Report>

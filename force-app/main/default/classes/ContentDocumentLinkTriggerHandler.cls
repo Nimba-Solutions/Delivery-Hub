@@ -1,13 +1,13 @@
 public class ContentDocumentLinkTriggerHandler {
     
     public static void handleAfterInsert(List<ContentDocumentLink> newLinks) {
-        // Filter for links to DH_Ticket__c records
+        // Filter for links to Ticket__c records
         List<String> ticketIds = new List<String>();
         List<String> contentDocumentIds = new List<String>();
         
         for (ContentDocumentLink link : newLinks) {
-            // Check if the linked entity is a DH_Ticket__c record
-            if (String.valueOf(link.LinkedEntityId).startsWith(DH_Ticket__c.SObjectType.getDescribe().getKeyPrefix())) {
+            // Check if the linked entity is a Ticket__c record
+            if (String.valueOf(link.LinkedEntityId).startsWith(Ticket__c.SObjectType.getDescribe().getKeyPrefix())) {
                 ticketIds.add(link.LinkedEntityId);
                 contentDocumentIds.add(link.ContentDocumentId);
             }
@@ -30,7 +30,7 @@ public class ContentDocumentLinkTriggerHandler {
             // Sync files for each ticket
             for (String ticketId : ticketToContentDocsMap.keySet()) {
                 List<String> contentDocs = ticketToContentDocsMap.get(ticketId);
-                DH_AttachmentSyncService.syncFilesToJira(ticketId, contentDocs);
+                AttachmentSyncService.syncFilesToJira(ticketId, contentDocs);
             }
         }
     }

@@ -1,5 +1,5 @@
 import { LightningElement, api, track } from "lwc";
-import testOpenAIConnection from "@salesforce/apex/DH_KanbanSettingsController.testOpenAIConnection";
+import testOpenAIConnection from "@salesforce/apex/KanbanSettingsController.testOpenAIConnection";
 export default class KanbanOpenAiSettings extends LightningElement {
     @api settings;
 

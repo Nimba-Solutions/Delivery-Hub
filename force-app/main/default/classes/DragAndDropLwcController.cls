@@ -4,7 +4,7 @@ public with sharing class DragAndDropLwcController {
     @AuraEnabled
     public static void updateTicketStage(Id ticketId, String newStage) {
         try {
-            DH_Ticket__c ticket = [SELECT Id, StageNamePk__c FROM DH_Ticket__c WHERE Id = :ticketId LIMIT 1];
+            Ticket__c ticket = [SELECT Id, StageNamePk__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
             ticket.StageNamePk__c = newStage;
             update ticket;
         } catch (Exception e) {
@@ -15,7 +15,7 @@ public with sharing class DragAndDropLwcController {
     @AuraEnabled
     public static void updateTicketSortOrder(Id ticketId, Decimal newSortOrder) {
         try {
-            DH_Ticket__c ticket = new DH_Ticket__c(
+            Ticket__c ticket = new Ticket__c(
                 Id = ticketId,
                 SortOrderNumber__c = newSortOrder
             );
@@ -54,7 +54,7 @@ public with sharing class DragAndDropLwcController {
     }
     
    @AuraEnabled(cacheable=true)
-    public static List<DH_Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds) { // <-- CORRECTED
+    public static List<Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds) { // <-- CORRECTED
         String queryTerm = '%' + searchTerm + '%';
         
         // Create a Set for efficient "NOT IN" filtering in the SOQL query.
@@ -67,7 +67,7 @@ public with sharing class DragAndDropLwcController {
     
         return [
             SELECT Id, Name, StageNamePk__c
-            FROM DH_Ticket__c
+            FROM Ticket__c
             WHERE (Name LIKE :queryTerm OR BriefDescriptionTxt__c LIKE :queryTerm)
             AND Id NOT IN :exclusionIds
             AND StageNamePk__c != 'Done'

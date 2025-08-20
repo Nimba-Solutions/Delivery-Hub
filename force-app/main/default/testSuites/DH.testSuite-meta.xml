@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ApexTestSuite xmlns="http://soap.sforce.com/2006/04/metadata">
     <testClassName>AccountApiTest</testClassName>
-    <testClassName>DH_AttachmentSyncServiceTest</testClassName>
-    <testClassName>DH_DeliveryHubSettingsControllerTest</testClassName>
-    <testClassName>DH_JiraAttachmentSyncBatchTest</testClassName>
-    <testClassName>DH_JiraToSFSyncBatchTest</testClassName>
-    <testClassName>DH_TicketControllerTest</testClassName>
-    <testClassName>DH_TicketETAServiceTest</testClassName>
-    <testClassName>DH_TicketTriggerHandlerTest</testClassName>
+    <testClassName>AttachmentSyncServiceTest</testClassName>
+    <testClassName>DeliveryHubSettingsControllerTest</testClassName>
+    <testClassName>JiraAttachmentSyncBatchTest</testClassName>
+    <testClassName>JiraToSFSyncBatchTest</testClassName>
+    <testClassName>TicketControllerTest</testClassName>
+    <testClassName>TicketETAServiceTest</testClassName>
+    <testClassName>TicketTriggerHandlerTest</testClassName>
     <testClassName>JiraCalloutMock</testClassName>
 </ApexTestSuite>
