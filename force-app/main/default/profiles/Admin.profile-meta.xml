@@ -10,7 +10,7 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DHTicket_JiraSyncTest</apexClass>
+        <apexClass>Ticket_JiraSyncTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>

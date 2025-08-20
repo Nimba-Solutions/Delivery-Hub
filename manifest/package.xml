@@ -2,7 +2,7 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
         <members>ContentDocumentLinkTriggerHandler</members>
-        <members>DHTicket_JiraSyncTest</members>
+        <members>Ticket_JiraSyncTest</members>
         <members>AttachmentSyncService</members>
         <members>AttachmentSyncServiceTest</members>
         <members>DeliveryHubSettingsController</members>

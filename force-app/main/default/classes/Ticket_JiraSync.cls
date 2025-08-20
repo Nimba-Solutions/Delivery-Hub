@@ -1,4 +1,4 @@
-public class DHTicket_JiraSync {
+public class Ticket_JiraSync {
 
     @future(callout=true)
     public static void createJiraIssues(Set<Id> ticketIds) {

@@ -1,5 +1,5 @@
 @isTest
-public class DHTicket_JiraSyncTest {
+public class Ticket_JiraSyncTest {
 
     // Mock HTTP Callout Class
     public class MockJiraCallout implements HttpCalloutMock {
@@ -46,7 +46,7 @@ public class DHTicket_JiraSyncTest {
         Ticket__c t = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = null LIMIT 1];
 
         Test.startTest();
-        DHTicket_JiraSync.createJiraIssues(new Set<Id>{ t.Id });
+        Ticket_JiraSync.createJiraIssues(new Set<Id>{ t.Id });
         Test.stopTest();
 
         // Verify ticket is updated
@@ -62,7 +62,7 @@ public class DHTicket_JiraSyncTest {
         Ticket__c t = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c != null LIMIT 1];
 
         Test.startTest();
-        DHTicket_JiraSync.updateJiraIssues(new Set<Id>{ t.Id });
+        Ticket_JiraSync.updateJiraIssues(new Set<Id>{ t.Id });
         Test.stopTest();
 
         // No exceptions = success

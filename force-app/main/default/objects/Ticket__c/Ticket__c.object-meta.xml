@@ -153,13 +153,13 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>DH Ticket</label>
+    <label>Ticket</label>
     <nameField>
         <displayFormat>DH-{0000}</displayFormat>
         <label>Ticket Number</label>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>DH Tickets</pluralLabel>
+    <pluralLabel>Tickets</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>

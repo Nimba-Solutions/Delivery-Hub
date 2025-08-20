@@ -6,5 +6,5 @@
     <fields>BriefDescriptionTxt__c</fields>
     <fields>DeveloperDaysSizeNumber__c</fields>
     <fields>CalculatedETADate__c</fields>
-    <label>DH Compact Layout</label>
+    <label>Compact Layout</label>
 </CompactLayout>
