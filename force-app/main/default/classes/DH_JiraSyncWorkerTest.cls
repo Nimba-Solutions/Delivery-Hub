@@ -1,5 +1,5 @@
 @isTest
-private class DH_JiraSyncWorkerTest {
+private class JiraSyncWorkerTest {
 
     // Mock implementation of the JiraCallout.httpHelper method
     private class MockJiraHttpResponseGenerator implements HttpCalloutMock {
@@ -28,9 +28,9 @@ private class DH_JiraSyncWorkerTest {
 
     @testSetup
     static void setup() {
-        List<DH_Ticket__c> tickets = new List<DH_Ticket__c>();
+        List<Ticket__c> tickets = new List<Ticket__c>();
         for (Integer i = 0; i < 2; i++) {
-            tickets.add(new DH_Ticket__c(
+            tickets.add(new Ticket__c(
                 BriefDescriptionTxt__c = 'Test Summary ' + i,
                 DetailsTxt__c = '<p>Test Description ' + i + '</p>',
                 StageNamePk__c = 'In Progress'
@@ -43,18 +43,18 @@ private class DH_JiraSyncWorkerTest {
     static void testCreateJiraIssues() {
         Test.setMock(HttpCalloutMock.class, new MockJiraHttpResponseGenerator());
 
-        List<DH_Ticket__c> tickets = [SELECT Id FROM DH_Ticket__c];
+        List<Ticket__c> tickets = [SELECT Id FROM Ticket__c];
         Set<Id> ticketIds = new Set<Id>();
-        for (DH_Ticket__c t : tickets) {
+        for (Ticket__c t : tickets) {
             ticketIds.add(t.Id);
         }
 
         Test.startTest();
-        DH_JiraSyncWorker worker = new DH_JiraSyncWorker(DH_JiraSyncWorker.Mode.CREATE, ticketIds);
+        JiraSyncWorker worker = new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, ticketIds);
         System.enqueueJob(worker);
         Test.stopTest();
 
-        List<DH_Ticket__c> updated = [SELECT JiraTicketKeyTxt__c, JiraSyncStatusTxt__c FROM DH_Ticket__c];
+        List<Ticket__c> updated = [SELECT JiraTicketKeyTxt__c, JiraSyncStatusTxt__c FROM Ticket__c];
         System.assertEquals('Created', updated[0].JiraSyncStatusTxt__c);
         System.assertEquals(true, updated[0].JiraTicketKeyTxt__c != null);
     }
@@ -63,32 +63,32 @@ private class DH_JiraSyncWorkerTest {
     static void testUpdateJiraIssues() {
         Test.setMock(HttpCalloutMock.class, new MockJiraHttpResponseGenerator());
 
-        List<DH_Ticket__c> tickets = [SELECT Id FROM DH_Ticket__c];
-        List<DH_Ticket__c> toUpdate = new List<DH_Ticket__c>();
-        for (DH_Ticket__c t : tickets) {
+        List<Ticket__c> tickets = [SELECT Id FROM Ticket__c];
+        List<Ticket__c> toUpdate = new List<Ticket__c>();
+        for (Ticket__c t : tickets) {
             t.JiraTicketKeyTxt__c = 'DHS-123';
             toUpdate.add(t);
         }
         update toUpdate;
 
         Set<Id> ticketIds = new Set<Id>();
-        for (DH_Ticket__c t : toUpdate) {
+        for (Ticket__c t : toUpdate) {
             ticketIds.add(t.Id);
         }
 
         Test.startTest();
-        DH_JiraSyncWorker worker = new DH_JiraSyncWorker(DH_JiraSyncWorker.Mode.UPDATE_JIRA, ticketIds);
+        JiraSyncWorker worker = new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA, ticketIds);
         System.enqueueJob(worker);
         Test.stopTest();
 
-        List<DH_Ticket__c> updated = [SELECT JiraSyncStatusTxt__c FROM DH_Ticket__c];
+        List<Ticket__c> updated = [SELECT JiraSyncStatusTxt__c FROM Ticket__c];
         System.assertEquals(true, updated[0].JiraSyncStatusTxt__c == null || updated[0].JiraSyncStatusTxt__c.contains('Transitioned'));
     }
 
     @isTest
     static void testEmptyIds() {
         Test.startTest();
-        DH_JiraSyncWorker worker = new DH_JiraSyncWorker(DH_JiraSyncWorker.Mode.CREATE, new Set<Id>());
+        JiraSyncWorker worker = new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, new Set<Id>());
         System.enqueueJob(worker);
         Test.stopTest();
         // No assertions needed; just ensures no exceptions are thrown

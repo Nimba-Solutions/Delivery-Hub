@@ -2,15 +2,15 @@ public class DHTicket_JiraSync {
 
     @future(callout=true)
     public static void createJiraIssues(Set<Id> ticketIds) {
-        List<DH_Ticket__c> tickets = [
+        List<Ticket__c> tickets = [
             SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c 
-            FROM DH_Ticket__c 
+            FROM Ticket__c 
             WHERE Id IN :ticketIds
         ];
-        List<DH_Ticket__c> updates = new List<DH_Ticket__c>();
+        List<Ticket__c> updates = new List<Ticket__c>();
 
-        for (DH_Ticket__c t : tickets) {
-            DH_Ticket__c updateRec = new DH_Ticket__c(Id = t.Id);
+        for (Ticket__c t : tickets) {
+            Ticket__c updateRec = new Ticket__c(Id = t.Id);
 
             String summary = String.isBlank(t.BriefDescriptionTxt__c) ? 'No summary provided' : t.BriefDescriptionTxt__c;
             String description = String.isBlank(t.DetailsTxt__c) ? 'No description provided' : t.DetailsTxt__c;
@@ -52,13 +52,13 @@ public class DHTicket_JiraSync {
 
     @future(callout=true)
     public static void updateJiraIssues(Set<Id> ticketIds) {
-        List<DH_Ticket__c> tickets = [
+        List<Ticket__c> tickets = [
             SELECT Id, JiraTicketKeyTxt__c, BriefDescriptionTxt__c, DetailsTxt__c 
-            FROM DH_Ticket__c 
+            FROM Ticket__c 
             WHERE Id IN :ticketIds AND JiraTicketKeyTxt__c != null
         ];
 
-        for (DH_Ticket__c t : tickets) {
+        for (Ticket__c t : tickets) {
             String summary = String.isBlank(t.BriefDescriptionTxt__c) ? 'No summary provided' : t.BriefDescriptionTxt__c;
             String description = String.isBlank(t.DetailsTxt__c) ? 'No description provided' : t.DetailsTxt__c;
 

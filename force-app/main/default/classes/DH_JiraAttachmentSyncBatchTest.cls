@@ -1,5 +1,5 @@
 @isTest
-private class DH_JiraAttachmentSyncBatchTest {
+private class JiraAttachmentSyncBatchTest {
     
     // --- Mock callout for Jira issue details +
     // file download callouts ---
@@ -27,13 +27,13 @@ private class DH_JiraAttachmentSyncBatchTest {
     @testSetup
     static void setupData() {
         // Create ticks with JiraTicketKey
-        List<DH_Ticket__c> tickets = new List<DH_Ticket__c>();
-        tickets.add(new DH_Ticket__c(BriefDescriptionTxt__c='T1', JiraTicketKeyTxt__c='PJ-100'));
-        tickets.add(new DH_Ticket__c(BriefDescriptionTxt__c='T2', JiraTicketKeyTxt__c='PJ-200'));
+        List<Ticket__c> tickets = new List<Ticket__c>();
+        tickets.add(new Ticket__c(BriefDescriptionTxt__c='T1', JiraTicketKeyTxt__c='PJ-100'));
+        tickets.add(new Ticket__c(BriefDescriptionTxt__c='T2', JiraTicketKeyTxt__c='PJ-200'));
         insert tickets;
 
         // Insert an existing log to be skipped for duplicate
-        insert new DH_Attachment_Sync_Log__c(
+        insert new Attachment_Sync_Log__c(
             Ticket__c = tickets[0].Id,
             Jira_Attachment_ID__c = 'att123',
             Filename__c = 'file1.txt',
@@ -49,14 +49,14 @@ private class DH_JiraAttachmentSyncBatchTest {
         // Execute Batch
         Test.startTest();
         // Direct batch execution rather than scheduled
-        ID batchJobId = Database.executeBatch(new DH_JiraAttachmentSyncBatch(), 2);
+        ID batchJobId = Database.executeBatch(new JiraAttachmentSyncBatch(), 2);
         Test.stopTest();
 
         // Verify results
         // Only ticket PJ-200 should sync file1 & file2, but skip att123 on PJ-100
-        List<DH_Attachment_Sync_Log__c> logs = [
+        List<Attachment_Sync_Log__c> logs = [
             SELECT Ticket__c, Jira_Attachment_ID__c, Sync_Direction__c, Salesforce_ContentDocumentId__c
-            FROM DH_Attachment_Sync_Log__c
+            FROM Attachment_Sync_Log__c
             WHERE Jira_Attachment_ID__c IN ('att123','att456')
         ];
        // System.assertEquals(2, logs.size(), 'Should have two logs (skip duplicate on first ticket)');
@@ -66,7 +66,7 @@ private class DH_JiraAttachmentSyncBatchTest {
 
         // Verify ContentDocumentLinks
        Set<Id> ticketIds = new Set<Id>();
-        for (DH_Ticket__c t : [SELECT Id FROM DH_Ticket__c]) {
+        for (Ticket__c t : [SELECT Id FROM Ticket__c]) {
             ticketIds.add(t.Id);
         }
         
@@ -86,7 +86,7 @@ private class DH_JiraAttachmentSyncBatchTest {
         Test.setMock(HttpCalloutMock.class, new MockJiraIssueResponse());
         Test.startTest();
         String cron = '0 0 0 * * ?';
-        System.schedule('JiraSyncTest', cron, new DH_JiraAttachmentSyncBatch());
+        System.schedule('JiraSyncTest', cron, new JiraAttachmentSyncBatch());
         Test.stopTest();
 
         // No exception indicates schedule runs correctly

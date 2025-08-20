@@ -1,4 +1,4 @@
-public with sharing class DH_JiraSyncWorker
+public with sharing class JiraSyncWorker
         implements Queueable, Database.AllowsCallouts {
 
     public enum Mode { CREATE, UPDATE_JIRA }
@@ -6,13 +6,13 @@ public with sharing class DH_JiraSyncWorker
     private Mode    mode;
     private Set<Id> ticketIds;
 
-    public DH_JiraSyncWorker(Mode m, Set<Id> ids) {
+    public JiraSyncWorker(Mode m, Set<Id> ids) {
         this.mode      = m;
         this.ticketIds = (ids != null) ? new Set<Id>(ids) : new Set<Id>();
     }
 
     public void execute(QueueableContext qc) {
-        if (mode == DH_JiraSyncWorker.Mode.CREATE) {
+        if (mode == JiraSyncWorker.Mode.CREATE) {
             createJiraIssues(ticketIds);
         } else {
             updateJiraIssues(ticketIds);
@@ -22,14 +22,14 @@ public with sharing class DH_JiraSyncWorker
     private static void createJiraIssues(Set<Id> ids) {
         if (ids.isEmpty()) return;
 
-        List<DH_Ticket__c> tickets = [
+        List<Ticket__c> tickets = [
             SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c
-            FROM   DH_Ticket__c WHERE Id IN :ids
+            FROM   Ticket__c WHERE Id IN :ids
         ];
 
-        List<DH_Ticket__c> updates = new List<DH_Ticket__c>();
+        List<Ticket__c> updates = new List<Ticket__c>();
 
-        for (DH_Ticket__c t : tickets) {
+        for (Ticket__c t : tickets) {
             String summary     = String.isBlank(t.BriefDescriptionTxt__c)
                                ? 'No summary provided' : t.BriefDescriptionTxt__c;
             String description = String.isBlank(t.DetailsTxt__c)
@@ -46,7 +46,7 @@ public with sharing class DH_JiraSyncWorker
                 }
             });
 
-            DH_Ticket__c upd = new DH_Ticket__c(Id = t.Id);
+            Ticket__c upd = new Ticket__c(Id = t.Id);
 
             try {
                 HttpResponse res = JiraCallout.httpHelper('issue', 'POST', body);
@@ -73,18 +73,18 @@ public with sharing class DH_JiraSyncWorker
     private static void updateJiraIssues(Set<Id> ids) {
         if (ids.isEmpty()) return;
 
-        List<DH_Ticket__c> tickets = [
+        List<Ticket__c> tickets = [
             SELECT Id, JiraTicketKeyTxt__c, StageNamePk__c,
                    BriefDescriptionTxt__c, DetailsTxt__c
-            FROM   DH_Ticket__c
+            FROM   Ticket__c
             WHERE  Id IN :ids AND JiraTicketKeyTxt__c != null
         ];
 
-        List<DH_Ticket__c> updates = new List<DH_Ticket__c>();
+        List<Ticket__c> updates = new List<Ticket__c>();
 
-        for (DH_Ticket__c t : tickets) {
+        for (Ticket__c t : tickets) {
             Boolean updated = false;
-            DH_Ticket__c upd = new DH_Ticket__c(Id = t.Id);
+            Ticket__c upd = new Ticket__c(Id = t.Id);
 
             // 1. ordinary field updates (no status)
             String summary  = String.isBlank(t.BriefDescriptionTxt__c)

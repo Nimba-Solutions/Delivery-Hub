@@ -21,16 +21,16 @@ public class DHTicket_JiraSyncTest {
 
     @testSetup
     static void setupData() {
-        List<DH_Ticket__c> tickets = new List<DH_Ticket__c>();
+        List<Ticket__c> tickets = new List<Ticket__c>();
 
         // Create one ticket to test createJiraIssues
-        tickets.add(new DH_Ticket__c(
+        tickets.add(new Ticket__c(
             BriefDescriptionTxt__c = 'Create Test Ticket',
             DetailsTxt__c = '<p>Details for create</p>'
         ));
 
         // Create one ticket to test updateJiraIssues
-        tickets.add(new DH_Ticket__c(
+        tickets.add(new Ticket__c(
             BriefDescriptionTxt__c = 'Update Test Ticket',
             DetailsTxt__c = '<p>Details for update</p>',
             JiraTicketKeyTxt__c = 'DHS-999'
@@ -43,14 +43,14 @@ public class DHTicket_JiraSyncTest {
     static void testCreateJiraIssues() {
         Test.setMock(HttpCalloutMock.class, new MockJiraCallout());
 
-        DH_Ticket__c t = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c = null LIMIT 1];
+        Ticket__c t = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = null LIMIT 1];
 
         Test.startTest();
         DHTicket_JiraSync.createJiraIssues(new Set<Id>{ t.Id });
         Test.stopTest();
 
         // Verify ticket is updated
-        t = [SELECT JiraTicketKeyTxt__c, JiraSyncStatusTxt__c FROM DH_Ticket__c WHERE Id = :t.Id];
+        t = [SELECT JiraTicketKeyTxt__c, JiraSyncStatusTxt__c FROM Ticket__c WHERE Id = :t.Id];
         System.assertEquals('DHS-123', t.JiraTicketKeyTxt__c);
         System.assertEquals('Created', t.JiraSyncStatusTxt__c);
     }
@@ -59,7 +59,7 @@ public class DHTicket_JiraSyncTest {
     static void testUpdateJiraIssues() {
         Test.setMock(HttpCalloutMock.class, new MockJiraCallout());
 
-        DH_Ticket__c t = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c != null LIMIT 1];
+        Ticket__c t = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c != null LIMIT 1];
 
         Test.startTest();
         DHTicket_JiraSync.updateJiraIssues(new Set<Id>{ t.Id });

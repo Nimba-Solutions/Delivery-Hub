@@ -1,5 +1,5 @@
 /**
-* @File Name : DH_JiraToSFSyncBatch.cls
+* @File Name : JiraToSFSyncBatch.cls
 * @Description : Batchable & Schedulable class to sync Jira changes into Salesforce.
 * @Author :
 * @Last Modified By :
@@ -11,24 +11,24 @@
 * 1.0 | July 9, 2025 |   | Initial Version
 **/
 
-public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SObject>, Schedulable, Database.AllowsCallouts {
+public with sharing class JiraToSFSyncBatch implements Database.Batchable<SObject>, Schedulable, Database.AllowsCallouts {
 
     public static Integer SYNC_WINDOW_MINS = 60; // Change as needed
 
     // Schedulable entry point
     public void execute(SchedulableContext sc) {
-        Database.executeBatch(new DH_JiraToSFSyncBatch());
+        Database.executeBatch(new JiraToSFSyncBatch());
     }
 
     // Invocable for Flow/button use
     @InvocableMethod(label='Sync Tickets From Jira')
     public static void runOnDemand(List<Id> ids) {
-        Database.executeBatch(new DH_JiraToSFSyncBatch());
+        Database.executeBatch(new JiraToSFSyncBatch());
     }
 
     // Batch start: dummy query, all logic in execute()
     public Database.QueryLocator start(Database.BatchableContext BC) {
-        return Database.getQueryLocator([SELECT Id FROM DH_Ticket__c WHERE Id != null LIMIT 1]);
+        return Database.getQueryLocator([SELECT Id FROM Ticket__c WHERE Id != null LIMIT 1]);
     }
 
     // Main batch logic
@@ -46,23 +46,23 @@ public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SOb
         }
 
         // 2. Query all matching tickets in one go
-        Map<String, DH_Ticket__c> ticketsByJiraKey = new Map<String, DH_Ticket__c>();
+        Map<String, Ticket__c> ticketsByJiraKey = new Map<String, Ticket__c>();
         if (!jiraKeys.isEmpty()) {
-            for (DH_Ticket__c t : [
+            for (Ticket__c t : [
                 SELECT Id, JiraTicketKeyTxt__c, DetailsTxt__c, BriefDescriptionTxt__c, StageNamePk__c
-                FROM DH_Ticket__c
+                FROM Ticket__c
                 WHERE JiraTicketKeyTxt__c IN :jiraKeys
             ]) {
                 ticketsByJiraKey.put(t.JiraTicketKeyTxt__c, t);
             }
         }
 
-        List<DH_Ticket__c> ticketsToUpdate = new List<DH_Ticket__c>();
+        List<Ticket__c> ticketsToUpdate = new List<Ticket__c>();
 
         // 3. Loop through Jira issues and update as needed
         for (Map<String, Object> issue : jiraIssues) {
             String jiraKey = (String)issue.get('key');
-            DH_Ticket__c sfTicket = ticketsByJiraKey.get(jiraKey);
+            Ticket__c sfTicket = ticketsByJiraKey.get(jiraKey);
             if (sfTicket == null) continue;
             Map<String, Object> fields = (Map<String, Object>)issue.get('fields');
 
@@ -90,7 +90,7 @@ public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SOb
             Object jiraDescriptionObj = fields.get('description');
             String jiraDescription = jiraDescriptionObj != null ? JSON.serialize(jiraDescriptionObj) : null;
             if (sfTicket.DetailsTxt__c != jiraDescription) {
-                DH_AuditLogger.logFieldChange(
+                AuditLogger.logFieldChange(
                     sfTicket.Id,
                     'Description',
                     sfTicket.DetailsTxt__c,
@@ -109,7 +109,7 @@ public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SOb
                 jiraStatus = statusMap != null && statusMap.containsKey('name') ? String.valueOf(statusMap.get('name')) : null;
             }
             if (jiraStatus != null && sfTicket.StageNamePk__c != jiraStatus) {
-                DH_AuditLogger.logFieldChange(
+                AuditLogger.logFieldChange(
                     sfTicket.Id,
                     'Status',
                     sfTicket.StageNamePk__c,
@@ -126,7 +126,7 @@ public with sharing class DH_JiraToSFSyncBatch implements Database.Batchable<SOb
             }
         }
         if (!ticketsToUpdate.isEmpty()) {
-            for(DH_Ticket__c ticket:ticketsToUpdate) {
+            for(Ticket__c ticket:ticketsToUpdate) {
                 ticket.JiraSyncStatusTxt__c = 'Synced From JIRA ' + String.valueOf(system.now());
             }
             update ticketsToUpdate;

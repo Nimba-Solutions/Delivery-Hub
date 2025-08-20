@@ -138,7 +138,7 @@
         <fields>NAME</fields>
         <fields>BodyTxt__c</fields>
         <fields>CREATED_DATE</fields>
-        <relatedList>DH_Ticket_Comment__c.TicketId__c</relatedList>
+        <relatedList>Ticket_Comment__c.TicketId__c</relatedList>
         <sortField>CREATED_DATE</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>

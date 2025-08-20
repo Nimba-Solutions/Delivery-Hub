@@ -1,4 +1,4 @@
-public with sharing class DH_DeliveryHubSettingsController {
+public with sharing class DeliveryHubSettingsController {
 
     // Wrapper class to pass settings data to and from the LWC
    /* public class SettingsWrapper {

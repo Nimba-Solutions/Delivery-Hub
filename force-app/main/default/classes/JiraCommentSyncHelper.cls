@@ -1,18 +1,18 @@
 public with sharing class JiraCommentSyncHelper {
 
-    public static void handleAfterInsert(Map<Id, DH_Ticket_Comment__c> commentMap) {
+    public static void handleAfterInsert(Map<Id, Ticket_Comment__c> commentMap) {
         Set<Id> ticketIds = new Set<Id>();
-        for (DH_Ticket_Comment__c comment : commentMap.values()) {
+        for (Ticket_Comment__c comment : commentMap.values()) {
             ticketIds.add(comment.TicketId__c);
         }
 
-        Map<Id, DH_Ticket__c> ticketMap = new Map<Id, DH_Ticket__c>(
-            [SELECT Id, JiraTicketKeyTxt__c FROM DH_Ticket__c WHERE Id IN :ticketIds]
+        Map<Id, Ticket__c> ticketMap = new Map<Id, Ticket__c>(
+            [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c WHERE Id IN :ticketIds]
         );
 
         List<Id> commentIdsToSync = new List<Id>();
-        for (DH_Ticket_Comment__c comment : commentMap.values()) {
-            DH_Ticket__c ticket = ticketMap.get(comment.TicketId__c);
+        for (Ticket_Comment__c comment : commentMap.values()) {
+            Ticket__c ticket = ticketMap.get(comment.TicketId__c);
             if (
                 comment.SourcePk__c != 'Jira' &&
                 !String.isBlank(comment.BodyTxt__c) &&
@@ -36,16 +36,16 @@ public with sharing class JiraCommentSyncHelper {
         }
 
         public void execute(QueueableContext context) {
-            List<DH_Ticket_Comment__c> comments = [
+            List<Ticket_Comment__c> comments = [
                 SELECT Id, BodyTxt__c, TicketId__c, JiraSyncStatusTxt__c,
                        TicketId__r.JiraTicketKeyTxt__c
-                FROM DH_Ticket_Comment__c
+                FROM Ticket_Comment__c
                 WHERE Id IN :commentIds
             ];
             
-            List<DH_Ticket_Comment__c> commentsToUpdate = new List<DH_Ticket_Comment__c>();
+            List<Ticket_Comment__c> commentsToUpdate = new List<Ticket_Comment__c>();
             
-            for (DH_Ticket_Comment__c comment : comments) {
+            for (Ticket_Comment__c comment : comments) {
                 String status;
                 String jiraKey = comment.TicketId__r != null ? comment.TicketId__r.JiraTicketKeyTxt__c : null;
                 String htmlCommentBody = comment.BodyTxt__c; // Original HTML body

@@ -1,12 +1,12 @@
 @isTest
-public class DH_TicketTriggerHandlerTest {
-    private static DH_Ticket__c t1;
-    private static DH_Ticket__c t2;
+public class TicketTriggerHandlerTest {
+    private static Ticket__c t1;
+    private static Ticket__c t2;
     private static User dev;
 
     @testSetup
     static void setup() {
-        DH_Ticket__c t = new DH_Ticket__c(
+        Ticket__c t = new Ticket__c(
             BriefDescriptionTxt__c = 'Desc Two',
             StatusPk__c = 'In Progress',
             StageNamePk__c = 'Ready for QA',
@@ -21,11 +21,11 @@ public class DH_TicketTriggerHandlerTest {
     static void testActiveToActiveStageNoBlock() {
         // Change t2 from one active stage to another active stage
         t2.StageNamePk__c = 'In Development'; // Assuming this is another active stage
-        Map<Id, DH_Ticket__c> oldMap = new Map<Id, DH_Ticket__c>{ t2.Id => t2.clone(false, true, false, false) };
-        List<DH_Ticket__c> newList = new List<DH_Ticket__c>{ t2 };
+        Map<Id, Ticket__c> oldMap = new Map<Id, Ticket__c>{ t2.Id => t2.clone(false, true, false, false) };
+        List<Ticket__c> newList = new List<Ticket__c>{ t2 };
 
         Test.startTest();
-        DH_TicketTriggerHandler.handleBeforeUpdate(newList, oldMap);
+        TicketTriggerHandler.handleBeforeUpdate(newList, oldMap);
         Test.stopTest();
 
         System.assertEquals(false, newList[0].hasErrors());

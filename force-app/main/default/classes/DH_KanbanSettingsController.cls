@@ -1,4 +1,4 @@
-public with sharing class DH_KanbanSettingsController {
+public with sharing class KanbanSettingsController {
 
     // Wrapper class to pass settings data to and from the LWC
     public class SettingsWrapper {

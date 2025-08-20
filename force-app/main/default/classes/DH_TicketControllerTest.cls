@@ -1,11 +1,11 @@
 @isTest
-private class DH_TicketControllerTest {
+private class TicketControllerTest {
 
     @testSetup
     static void setupData() {
         // Dummy Ticket records
-        List<DH_Ticket__c> tickets = new List<DH_Ticket__c>{
-            new DH_Ticket__c(
+        List<Ticket__c> tickets = new List<Ticket__c>{
+            new Ticket__c(
                 BriefDescriptionTxt__c = 'Login screen issue',
                 CalculatedETADate__c = Date.today().addDays(5),
                 DeveloperDaysSizeNumber__c = 2,
@@ -30,7 +30,7 @@ private class DH_TicketControllerTest {
     @isTest
     static void testGetTickets() {
         Test.startTest();
-        List<DH_Ticket__c> results = DH_TicketController.getTickets();
+        List<Ticket__c> results = TicketController.getTickets();
         Test.stopTest();
         System.assert(!results.isEmpty(), 'Tickets should be returned');
     }
@@ -38,14 +38,14 @@ private class DH_TicketControllerTest {
     @isTest
     static void testCreateDummyTickets() {
         Test.startTest();
-        List<DH_Ticket__c> created = DH_TicketController.createDummyTickets();
+        List<Ticket__c> created = TicketController.createDummyTickets();
         Test.stopTest();
         System.assertEquals(4, created.size(), '4 dummy tickets should be created');
     }
 
     @isTest
     static void testUpdateTicketSortOrders() {
-        List<DH_Ticket__c> tickets = [SELECT Id, SortOrderNumber__c FROM DH_Ticket__c LIMIT 1];
+        List<Ticket__c> tickets = [SELECT Id, SortOrderNumber__c FROM Ticket__c LIMIT 1];
 
         List<Map<String, Object>> updates = new List<Map<String, Object>>();
         updates.add(new Map<String, Object>{
@@ -54,10 +54,10 @@ private class DH_TicketControllerTest {
         });
 
         Test.startTest();
-        DH_TicketController.updateTicketSortOrders(updates);
+        TicketController.updateTicketSortOrders(updates);
         Test.stopTest();
 
-        DH_Ticket__c updated = [SELECT SortOrderNumber__c FROM DH_Ticket__c WHERE Id = :tickets[0].Id];
+        Ticket__c updated = [SELECT SortOrderNumber__c FROM Ticket__c WHERE Id = :tickets[0].Id];
         System.assertEquals(5, updated.SortOrderNumber__c.intValue());
     }
 
@@ -73,10 +73,10 @@ private class DH_TicketControllerTest {
     // Step 2: Query ContentDocumentId (needed for linking)
     Id contentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId;
 
-        Id ticketId = [SELECT Id FROM DH_Ticket__c LIMIT 1].Id;
+        Id ticketId = [SELECT Id FROM Ticket__c LIMIT 1].Id;
 
         Test.startTest();
-        DH_TicketController.linkFilesToTicket(ticketId, new List<Id>{contentDocumentId});
+        TicketController.linkFilesToTicket(ticketId, new List<Id>{contentDocumentId});
         Test.stopTest();
 
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :ticketId];
@@ -95,10 +95,10 @@ private class DH_TicketControllerTest {
     // Step 2: Query ContentDocumentId (needed for linking)
     Id contentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId;
 
-        Id ticketId = [SELECT Id FROM DH_Ticket__c LIMIT 1].Id;
+        Id ticketId = [SELECT Id FROM Ticket__c LIMIT 1].Id;
 
         Test.startTest();
-        DH_TicketController.linkFilesAndSync(ticketId, new List<Id>{contentDocumentId});
+        TicketController.linkFilesAndSync(ticketId, new List<Id>{contentDocumentId});
         Test.stopTest();
 
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :ticketId];
@@ -110,7 +110,7 @@ private class DH_TicketControllerTest {
     static void testGetAiEnhancedTicketDetails_withFallback() {
         // Simulate missing API key to force fallback
         Test.startTest();
-        DH_TicketController.AISuggestionWrapper result = DH_TicketController.getAiEnhancedTicketDetails('Login bug', 'User cannot log in');
+        TicketController.AISuggestionWrapper result = TicketController.getAiEnhancedTicketDetails('Login bug', 'User cannot log in');
         Test.stopTest();
 
         System.assertNotEquals(null, result);
@@ -121,8 +121,8 @@ private class DH_TicketControllerTest {
 
     @isTest
     static void testTriggerExecution() {
-        List<DH_Ticket__c> tickets = new List<DH_Ticket__c>{
-            new DH_Ticket__c(
+        List<Ticket__c> tickets = new List<Ticket__c>{
+            new Ticket__c(
                 BriefDescriptionTxt__c = 'Trigger Test',
                 CalculatedETADate__c = Date.today(),
                 DeveloperDaysSizeNumber__c = 1,
@@ -142,7 +142,7 @@ private class DH_TicketControllerTest {
         
 
         Test.startTest();
-        DH_TicketController.getRequiredFieldsForStage('In QA');
+        TicketController.getRequiredFieldsForStage('In QA');
         Test.stopTest();
 
     }
@@ -161,7 +161,7 @@ private class DH_TicketControllerTest {
         });
 
         Test.startTest();
-        DH_TicketController.AISuggestionWrapper result = DH_TicketController.test_parseOpenAIResponse(mockResponse);
+        TicketController.AISuggestionWrapper result = TicketController.test_parseOpenAIResponse(mockResponse);
         Test.stopTest();
 
         System.assertEquals('Enhanced Login Feature', result.title);
@@ -174,7 +174,7 @@ private class DH_TicketControllerTest {
         String wrappedText = 'Some intro text\n{\n"title": "Test", "description": "Test desc", "estimatedDays": 2\n}\nMore trailing text';
         
         Test.startTest();
-        String jsonResult = DH_TicketController.test_extractJsonFromContent(wrappedText);
+        String jsonResult = TicketController.test_extractJsonFromContent(wrappedText);
         Test.stopTest();
 
         System.assert(jsonResult.contains('"title": "Test"'));
@@ -195,7 +195,7 @@ private class DH_TicketControllerTest {
 
         try {
             Test.startTest();
-            DH_TicketController.test_parseOpenAIResponse(badResponse);
+            TicketController.test_parseOpenAIResponse(badResponse);
             Test.stopTest();
             //System.assert(false, 'Exception expected for invalid JSON');
         } catch (AuraHandledException e) {
@@ -208,7 +208,7 @@ private class DH_TicketControllerTest {
     static void testExtractJsonFromContent_Invalid() {
         try {
             Test.startTest();
-            DH_TicketController.test_extractJsonFromContent('Just some text, no JSON brackets');
+            TicketController.test_extractJsonFromContent('Just some text, no JSON brackets');
             Test.stopTest();
            // System.assert(false, 'Exception expected for missing brackets');
         } catch (AuraHandledException e) {

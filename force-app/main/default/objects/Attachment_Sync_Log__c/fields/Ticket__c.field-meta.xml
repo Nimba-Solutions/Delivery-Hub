@@ -3,7 +3,7 @@
     <fullName>Ticket__c</fullName>
     <externalId>false</externalId>
     <label>Ticket</label>
-    <referenceTo>DH_Ticket__c</referenceTo>
+    <referenceTo>Ticket__c</referenceTo>
     <relationshipLabel>Attachment Sync Logs</relationshipLabel>
     <relationshipName>Attachment_Sync_Logs</relationshipName>
     <relationshipOrder>0</relationshipOrder>

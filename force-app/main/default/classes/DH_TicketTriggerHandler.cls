@@ -2,12 +2,12 @@
  * Aggregates Ticket rows that need a Jira *create* or *update*,
  * then enqueues **one** worker job for each operation type.
  */
-public with sharing class DH_TicketTriggerHandler {
+public with sharing class TicketTriggerHandler {
 
     /* Public entry used by the trigger ----------------------------------- */
     public static void handleAfter(
-        List<DH_Ticket__c> newRows,
-        Map<Id, DH_Ticket__c> oldMap,
+        List<Ticket__c> newRows,
+        Map<Id, Ticket__c> oldMap,
         Boolean isInsert,
         Boolean isUpdate
     ){
@@ -17,7 +17,7 @@ public with sharing class DH_TicketTriggerHandler {
 
         /* -------- INSERT -------- */
         if (isInsert){
-            for (DH_Ticket__c row : newRows){
+            for (Ticket__c row : newRows){
                 if (isEligible(row) && String.isBlank(row.JiraTicketKeyTxt__c)){
                     toCreate.add(row.Id);
                 }
@@ -26,8 +26,8 @@ public with sharing class DH_TicketTriggerHandler {
 
         /* -------- UPDATE -------- */
         if (isUpdate){
-            for (DH_Ticket__c row : newRows){
-                DH_Ticket__c oldRow = oldMap.get(row.Id);
+            for (Ticket__c row : newRows){
+                Ticket__c oldRow = oldMap.get(row.Id);
                 if (!isEligible(row))              continue;     // still not “In Progress”
                 
                 /* Need a Jira issue but none yet –> CREATE */
@@ -50,29 +50,29 @@ public with sharing class DH_TicketTriggerHandler {
         /* -------- Enqueue worker jobs -------- */
         if (!toCreate.isEmpty()){
             System.enqueueJob(
-                new DH_JiraSyncWorker(DH_JiraSyncWorker.Mode.CREATE,       toCreate)
+                new JiraSyncWorker(JiraSyncWorker.Mode.CREATE,       toCreate)
             );
         }
         if (!toUpdate.isEmpty()){
             System.enqueueJob(
-                new DH_JiraSyncWorker(DH_JiraSyncWorker.Mode.UPDATE_JIRA,  toUpdate)
+                new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA,  toUpdate)
             );
         }
     }
 
     /* Helper : which Tickets do we sync?  -------------------------------- */
-    private static Boolean isEligible(DH_Ticket__c row){
+    private static Boolean isEligible(Ticket__c row){
         // adjust if you later base the rule on a different field / value
         return row.StatusPk__c == 'In Progress';
     }
     
-    public static void handleBeforeUpdate(List<DH_Ticket__c> newTickets, Map<Id, DH_Ticket__c> oldMap) {
+    public static void handleBeforeUpdate(List<Ticket__c> newTickets, Map<Id, Ticket__c> oldMap) {
         // Define which stages are considered "active work"
         Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'}; // Add all relevant stages
 
         // Collect IDs of tickets moving into an active stage
         Set<Id> ticketsToCheck = new Set<Id>();
-        for (DH_Ticket__c ticket : newTickets) {
+        for (Ticket__c ticket : newTickets) {
             String oldStage = oldMap.get(ticket.Id).StageNamePk__c;
             String newStage = ticket.StageNamePk__c;
             // Check if the stage is changing TO an active stage FROM a non-active one
@@ -93,7 +93,7 @@ public with sharing class DH_TicketTriggerHandler {
             // Add an error to any ticket that has an unresolved blocker
             for (Ticket_Dependency__c dependency : unresolvedBlockers) {
                 // Find the ticket in the trigger context and add the error
-                for (DH_Ticket__c ticket : newTickets) {
+                for (Ticket__c ticket : newTickets) {
                     if (ticket.Id == dependency.Blocked_Ticket__c) {
                         ticket.addError('This ticket cannot be started. It is blocked by ticket: ' + dependency.Blocking_Ticket__r.Name);
                     }

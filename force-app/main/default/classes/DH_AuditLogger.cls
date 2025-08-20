@@ -1,5 +1,5 @@
 /**
-* @File Name : DH_AuditLogger.cls
+* @File Name : AuditLogger.cls
 * @Description :
 * @Author :
 * @Last Modified By :
@@ -11,7 +11,7 @@
 * 1.0 | July 9, 2025 |   | Initial Version
 **/
 
-public with sharing class DH_AuditLogger {
+public with sharing class AuditLogger {
     /**
      * Logs a field change as a human-readable comment on the ticket.
      * 
@@ -35,7 +35,7 @@ public with sharing class DH_AuditLogger {
                    + 'OLD: "' + (oldValue == null ? '' : oldValue) + '"\n'
                    + 'NEW: "' + (newValue == null ? '' : newValue) + '"\n'
                    + 'Time: ' + String.valueOf(Datetime.now());
-        insert new DH_Ticket_Comment__c(
+        insert new Ticket_Comment__c(
             TicketId__c = ticketId,
             BodyTxt__c = msg,
             SourcePk__c = source

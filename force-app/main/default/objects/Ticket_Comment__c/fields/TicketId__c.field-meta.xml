@@ -3,7 +3,7 @@
     <fullName>TicketId__c</fullName>
     <description>Parent DH Ticket that this comment belongs to (master-detail).</description>
     <label>Ticket</label>
-    <referenceTo>DH_Ticket__c</referenceTo>
+    <referenceTo>Ticket__c</referenceTo>
     <relationshipLabel>Ticket Comments</relationshipLabel>
     <relationshipName>Ticket_Comments</relationshipName>
     <relationshipOrder>0</relationshipOrder>

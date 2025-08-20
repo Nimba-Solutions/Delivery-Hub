@@ -1,5 +1,5 @@
 /**
- * @description An advanced service to calculate and update dynamic ETAs for DH_Ticket__c records.
+ * @description An advanced service to calculate and update dynamic ETAs for Ticket__c records.
  * This service implements a simulation engine based on developer availability, ticket priority, and workload.
  * It is designed to be called from LWC, Triggers (via Queueable), or on a nightly schedule.
  *
@@ -7,7 +7,7 @@
  * @author Mahipal Jat
  * @date July 22, 2025
  */
-public with sharing class DH_TicketETAService {
+public with sharing class TicketETAService {
 
     // #################################################################################
     // SECTION 1: LWC Integration & DTOs
@@ -23,7 +23,7 @@ public with sharing class DH_TicketETAService {
     @AuraEnabled
     // <<< FIX 1: Changed parameter from Set<Id> to List<Id> which is supported by AuraEnabled.
     public static ETAResult getTicketETAsWithPriority(Integer numberOfDevs, List<Id> prioritizedTicketIds) {
-        System.debug('=== DH_TicketETAService.getTicketETAsWithPriority START ===');
+        System.debug('=== TicketETAService.getTicketETAsWithPriority START ===');
         System.debug('Input numberOfDevs: ' + numberOfDevs);
         System.debug('Input prioritizedTicketIds: ' + prioritizedTicketIds);
         
@@ -46,16 +46,16 @@ public with sharing class DH_TicketETAService {
 
             // After execution, the records in the database are updated.
             // Query the fresh data to return to the LWC.
-            List<DH_Ticket__c> queriedTickets = [
+            List<Ticket__c> queriedTickets = [
                 SELECT Id, Projected_UAT_Ready_Date__c
-                FROM DH_Ticket__c
+                FROM Ticket__c
                 WHERE Id IN :processedIds
             ];
             
             System.debug('Queried tickets count: ' + queriedTickets.size());
             System.debug('Queried tickets: ' + queriedTickets);
             
-            for(DH_Ticket__c ticket : queriedTickets) {
+            for(Ticket__c ticket : queriedTickets) {
                 System.debug('Processing ticket: ' + ticket.Id + ', ETA: ' + ticket.Projected_UAT_Ready_Date__c);
                 TicketETADTO dto = new TicketETADTO();
                 dto.ticketId = ticket.Id;
@@ -75,7 +75,7 @@ public with sharing class DH_TicketETAService {
             throw new AuraHandledException('Error calculating ETAs: ' + e.getMessage());
         }
         
-        System.debug('=== DH_TicketETAService.getTicketETAsWithPriority END ===');
+        System.debug('=== TicketETAService.getTicketETAsWithPriority END ===');
         return result;
     }
 
@@ -99,7 +99,7 @@ public with sharing class DH_TicketETAService {
 
     /**
      * @description Queueable job to run the ETA calculation asynchronously.
-     * This should be called from a trigger on DH_Ticket__c when relevant fields change.
+     * This should be called from a trigger on Ticket__c when relevant fields change.
      */
     public class RecalculateAllETAsQueueable implements Queueable {
         public void execute(QueueableContext context) {
@@ -162,7 +162,7 @@ public with sharing class DH_TicketETAService {
             System.debug('Number of developers: ' + developers.size());
 
             System.debug('Loading all tickets...');
-            List<DH_Ticket__c> allTickets = loadTickets();
+            List<Ticket__c> allTickets = loadTickets();
             System.debug('Total tickets loaded: ' + allTickets.size());
             System.debug('All tickets: ' + allTickets);
 
@@ -184,7 +184,7 @@ public with sharing class DH_TicketETAService {
 
             // --- Phase 3: The Simulation Loop ---
             System.debug('Phase 3: Starting simulation loop...');
-            List<DH_Ticket__c> ticketsToUpdate = new List<DH_Ticket__c>();
+            List<Ticket__c> ticketsToUpdate = new List<Ticket__c>();
             
             for(TicketWrapper wrapper : masterWorkQueue) {
                 System.debug('Processing ticket: ' + wrapper.ticket.Id + ' (' + wrapper.ticket.Name + ')');
@@ -240,9 +240,9 @@ public with sharing class DH_TicketETAService {
             // Null out dates for any tickets that were NOT in the queue (i.e., blocked or post-dev)
             System.debug('Nulling out dates for tickets not in queue...');
             Integer nulledCount = 0;
-            for (DH_Ticket__c ticket : allTickets) {
+            for (Ticket__c ticket : allTickets) {
                 if (!this.processedTicketIds.contains(ticket.Id)) {
-                    ticketsToUpdate.add(new DH_Ticket__c(
+                    ticketsToUpdate.add(new Ticket__c(
                         Id = ticket.Id,
                         Estimated_Dev_Start_Date__c = null,
                         Estimated_Dev_Completion_Date__c = null,
@@ -314,25 +314,25 @@ public with sharing class DH_TicketETAService {
             return new Map<Id, User>(developers);
         }
 
-        private List<DH_Ticket__c> loadTickets() {
+        private List<Ticket__c> loadTickets() {
             System.debug('Loading all tickets...');
-            List<DH_Ticket__c> tickets = [
+            List<Ticket__c> tickets = [
                 SELECT Id, Name, StageNamePk__c, PriorityPk__c, DeveloperDaysSizeNumber__c,
                        SortOrderNumber__c, Developer__c, CreatedDate
-                FROM DH_Ticket__c
+                FROM Ticket__c
             ];
             System.debug('Found ' + tickets.size() + ' total tickets');
-            for(DH_Ticket__c ticket : tickets) {
+            for(Ticket__c ticket : tickets) {
                 System.debug('Ticket: ' + ticket.Id + ' (' + ticket.Name + ') - Stage: ' + ticket.StageNamePk__c + ', Priority: ' + ticket.PriorityPk__c + ', Size: ' + ticket.DeveloperDaysSizeNumber__c);
             }
             return tickets;
         }
 
-        private List<TicketWrapper> buildAndSortMasterQueue(List<DH_Ticket__c> allTickets, Set<Id> developerIds) {
+        private List<TicketWrapper> buildAndSortMasterQueue(List<Ticket__c> allTickets, Set<Id> developerIds) {
             System.debug('Building master work queue...');
 
             Set<Id> incompleteTicketIds = new Set<Id>();
-            for(DH_Ticket__c t : allTickets) {
+            for(Ticket__c t : allTickets) {
                 if (t.StageNamePk__c != 'Done' && t.StageNamePk__c != 'Deployed to Prod') {
                     incompleteTicketIds.add(t.Id);
                 }
@@ -377,7 +377,7 @@ public with sharing class DH_TicketETAService {
             Integer queuedCount = 0;
             Integer skippedCount = 0;
             
-            for(DH_Ticket__c t : allTickets){
+            for(Ticket__c t : allTickets){
                 if (allBlockedTicketIds.contains(t.Id)) {
                     System.debug('Ticket ' + t.Id + ' SKIPPED - It is blocked by an incomplete ticket.');
                     skippedCount++;
@@ -455,15 +455,15 @@ public with sharing class DH_TicketETAService {
     // #################################################################################
 
     /**
-     * @description Wrapper class for DH_Ticket__c to implement complex, multi-level sorting.
+     * @description Wrapper class for Ticket__c to implement complex, multi-level sorting.
      */
     private class TicketWrapper implements Comparable {
-        public DH_Ticket__c ticket { get; private set; }
+        public Ticket__c ticket { get; private set; }
         private final Integer stageCategory;     // 1 for ACTIVE_DEV, 2 for PRE_DEV
         private final Decimal priorityWeight;    // Lower is better (e.g., High=1, Med=2)
         private final Boolean isPrioritizedByLWC; // Absolute highest priority
 
-        public TicketWrapper(DH_Ticket__c t, Kanban_Configuration__mdt config, Map<String, Decimal> priorityWeights, Set<Id> prioritizedIds) {
+        public TicketWrapper(Ticket__c t, Kanban_Configuration__mdt config, Map<String, Decimal> priorityWeights, Set<Id> prioritizedIds) {
             System.debug('Creating TicketWrapper for ticket: ' + t.Id + ' (' + t.Name + ')');
             this.ticket = t;
             this.isPrioritizedByLWC = prioritizedIds.contains(t.Id);

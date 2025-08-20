@@ -1,5 +1,5 @@
 @isTest
-private class DH_DeliveryHubSettingsControllerTest {
+private class DeliveryHubSettingsControllerTest {
     
     @testSetup
     static void setupTestData() {
@@ -25,7 +25,7 @@ private class DH_DeliveryHubSettingsControllerTest {
 
     @isTest
     static void testGetSettings() {
-        DH_DeliveryHubSettingsController.SettingsDTO dto = DH_DeliveryHubSettingsController.getSettings();
+        DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
         System.assertNotEquals(null, dto);
         System.assert(dto.aiSuggestionsEnabled, 'AI Suggestions should be true');
         System.assertEquals('gpt-4o', dto.openaiModel);
@@ -33,14 +33,14 @@ private class DH_DeliveryHubSettingsControllerTest {
 
     @isTest
     static void testSaveGeneralSettings() {
-        DH_DeliveryHubSettingsController.saveGeneralSettings(false);
+        DeliveryHubSettingsController.saveGeneralSettings(false);
         Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
         System.assertEquals(false, s.Enable_Notifications__c);
     }
 
     @isTest
     static void testSaveAiSettings() {
-        DH_DeliveryHubSettingsController.saveAiSettings(false, true, false);
+        DeliveryHubSettingsController.saveAiSettings(false, true, false);
         Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
         System.assertEquals(false, s.AI_Suggestions_Enabled__c);
         System.assertEquals(true, s.Auto_Generate_Descriptions__c);
@@ -49,7 +49,7 @@ private class DH_DeliveryHubSettingsControllerTest {
 
     @isTest
     static void testSaveOpenAISettings() {
-        DH_DeliveryHubSettingsController.saveOpenAISettings('new-key', 'gpt-4o-mini', true);
+        DeliveryHubSettingsController.saveOpenAISettings('new-key', 'gpt-4o-mini', true);
         Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
         System.assertEquals('new-key', s.OpenAI_API_Key__c);
         System.assertEquals('gpt-4o-mini', s.OpenAI_Model__c);
@@ -58,7 +58,7 @@ private class DH_DeliveryHubSettingsControllerTest {
 
     @isTest
     static void testSaveJiraSettings() {
-        DH_DeliveryHubSettingsController.saveJiraSettings(
+        DeliveryHubSettingsController.saveJiraSettings(
             'https://myjira.com',
             'user@jira.com',
             'new-token',
@@ -75,7 +75,7 @@ private class DH_DeliveryHubSettingsControllerTest {
 
     @isTest
     static void testSaveJiraEnabledState() {
-        DH_DeliveryHubSettingsController.saveJiraEnabledState(false);
+        DeliveryHubSettingsController.saveJiraEnabledState(false);
         Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
         System.assertEquals(false, s.JIRA_Enabled__c);
     }
@@ -84,14 +84,14 @@ private class DH_DeliveryHubSettingsControllerTest {
     static void testTestOpenAIConnectionMock() {
         // Mock response
         Test.setMock(HttpCalloutMock.class, new MockOpenAIResponse());
-        String result = DH_DeliveryHubSettingsController.testOpenAIConnection('test-api-key');
+        String result = DeliveryHubSettingsController.testOpenAIConnection('test-api-key');
       //  System.assertEquals('Success', result);
     }
 
     @isTest
     static void testTestJiraConnectionMock() {
         Test.setMock(HttpCalloutMock.class, new MockJiraResponse());
-        String result = DH_DeliveryHubSettingsController.testJiraConnection(
+        String result = DeliveryHubSettingsController.testJiraConnection(
             'https://example.atlassian.net', 'user@example.com', 'token', 'ABC'
         );
        // System.assert(result.contains('Success'));

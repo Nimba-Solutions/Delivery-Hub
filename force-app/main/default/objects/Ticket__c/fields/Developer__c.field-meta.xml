@@ -7,7 +7,7 @@
     <label>Developer</label>
     <referenceTo>User</referenceTo>
     <relationshipLabel>DH Tickets (Developer)</relationshipLabel>
-    <relationshipName>DH_Tickets_Developer</relationshipName>
+    <relationshipName>Tickets_Developer</relationshipName>
     <required>false</required>
     <trackTrending>false</trackTrending>
     <type>Lookup</type>

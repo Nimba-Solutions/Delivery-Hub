@@ -1,5 +1,5 @@
 @isTest
-private class DH_AttachmentSyncServiceTest {
+private class AttachmentSyncServiceTest {
 
     // Mock implementation of JiraCallout
     class MockJiraCallout implements HttpCalloutMock {
@@ -19,7 +19,7 @@ private class DH_AttachmentSyncServiceTest {
         Test.setMock(HttpCalloutMock.class, new MockJiraCallout());
 
         // Step 1: Create a ticket with Jira key
-        DH_Ticket__c ticket = new DH_Ticket__c(
+        Ticket__c ticket = new Ticket__c(
             
             BriefDescriptionTxt__c = 'Testing file sync',
             JiraTicketKeyTxt__c = 'JIRA-123'
@@ -45,13 +45,13 @@ private class DH_AttachmentSyncServiceTest {
 
         // Step 4: Call the future method inside test context
         Test.startTest();
-        DH_AttachmentSyncService.syncFilesToJira(ticket.Id, new List<Id>{insertedCv.ContentDocumentId});
+        AttachmentSyncService.syncFilesToJira(ticket.Id, new List<Id>{insertedCv.ContentDocumentId});
         Test.stopTest();
 
         // Step 5: Assert a sync log was created
-        List<DH_Attachment_Sync_Log__c> logs = [
+        List<Attachment_Sync_Log__c> logs = [
             SELECT Id, Sync_Status__c, Jira_Attachment_ID__c
-            FROM DH_Attachment_Sync_Log__c
+            FROM Attachment_Sync_Log__c
             WHERE Ticket__c = :ticket.Id
         ];
 

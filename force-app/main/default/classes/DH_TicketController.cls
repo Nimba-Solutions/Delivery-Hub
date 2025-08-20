@@ -1,16 +1,16 @@
 /**
- * @description Controller for retrieving and seeding demo DH_Ticket__c records.
+ * @description Controller for retrieving and seeding demo Ticket__c records.
  */
-public with sharing class DH_TicketController {
+public with sharing class TicketController {
 
     /**
-     * @description Returns all active DH_Ticket__c records, ordered by SortOrderNumber__c.
+     * @description Returns all active Ticket__c records, ordered by SortOrderNumber__c.
      */
     @AuraEnabled(cacheable=true)
-    public static List<DH_Ticket__c> getTickets() {
-        if (!Schema.sObjectType.DH_Ticket__c.isAccessible()
-            || !Schema.sObjectType.DH_Ticket__c.fields.StageNamePk__c.isAccessible()) {
-            return new List<DH_Ticket__c>();
+    public static List<Ticket__c> getTickets() {
+        if (!Schema.sObjectType.Ticket__c.isAccessible()
+            || !Schema.sObjectType.Ticket__c.fields.StageNamePk__c.isAccessible()) {
+            return new List<Ticket__c>();
         }
         return [
             SELECT Id,
@@ -23,19 +23,19 @@ public with sharing class DH_TicketController {
                    Epic__c,
                    Tags__c,(SELECT Id, Blocking_Ticket__c, Blocking_Ticket__r.Name FROM Ticket_Dependency1__r), // 'Blocked_By__r' is the child relationship name for Blocked_Ticket__c
            (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r) 
-            FROM DH_Ticket__c
+            FROM Ticket__c
             WHERE IsActiveBool__c = true
             ORDER BY SortOrderNumber__c
         ];
     }
 
     /**
-     * @description Creates demo DH_Ticket__c records and returns them.
+     * @description Creates demo Ticket__c records and returns them.
      */
     @AuraEnabled
-    public static List<DH_Ticket__c> createDummyTickets() {
-        List<DH_Ticket__c> demo = new List<DH_Ticket__c>{
-            new DH_Ticket__c(
+    public static List<Ticket__c> createDummyTickets() {
+        List<Ticket__c> demo = new List<Ticket__c>{
+            new Ticket__c(
                 BriefDescriptionTxt__c='Alpha summary',
                 CalculatedETADate__c=Date.today().addDays(7),
                 DeveloperDaysSizeNumber__c=2.5,
@@ -43,7 +43,7 @@ public with sharing class DH_TicketController {
                 SortOrderNumber__c=1,
                 IsActiveBool__c=true
             ),
-            new DH_Ticket__c(
+            new Ticket__c(
                 BriefDescriptionTxt__c='Beta scope',
                 CalculatedETADate__c=Date.today().addDays(10),
                 DeveloperDaysSizeNumber__c=3.0,
@@ -51,7 +51,7 @@ public with sharing class DH_TicketController {
                 SortOrderNumber__c=1,
                 IsActiveBool__c=true
             ),
-            new DH_Ticket__c(
+            new Ticket__c(
                 BriefDescriptionTxt__c='Gamma done',
                 CalculatedETADate__c=Date.today().addDays(5),
                 DeveloperDaysSizeNumber__c=1.75,
@@ -59,7 +59,7 @@ public with sharing class DH_TicketController {
                 SortOrderNumber__c=1,
                 IsActiveBool__c=true
             ),
-            new DH_Ticket__c(
+            new Ticket__c(
                 BriefDescriptionTxt__c='Delta final',
                 CalculatedETADate__c=Date.today().addDays(3),
                 DeveloperDaysSizeNumber__c=4.0,
@@ -74,7 +74,7 @@ public with sharing class DH_TicketController {
 
     @AuraEnabled
     public static void updateTicketSortOrders(List<Map<String, Object>> updates) {
-        List<DH_Ticket__c> tickets = new List<DH_Ticket__c>();
+        List<Ticket__c> tickets = new List<Ticket__c>();
         for (Map<String, Object> u : updates) {
             Object sortOrderRaw = u.get('SortOrderNumber__c');
             Decimal sortOrder;
@@ -93,7 +93,7 @@ public with sharing class DH_TicketController {
             } else {
                 sortOrder = null;
             }
-            tickets.add(new DH_Ticket__c(
+            tickets.add(new Ticket__c(
                 Id = (String)u.get('Id'),
                 SortOrderNumber__c = sortOrder
             ));
@@ -150,7 +150,7 @@ public with sharing class DH_TicketController {
         }
 
         // Step 2: Call the future method to sync these files to Jira
-        DH_AttachmentSyncService.syncFilesToJira(ticketId, contentDocumentIds);
+        AttachmentSyncService.syncFilesToJira(ticketId, contentDocumentIds);
     }
 
      @AuraEnabled(cacheable=true)

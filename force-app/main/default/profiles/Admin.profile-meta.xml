@@ -14,63 +14,63 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_AttachmentSyncService</apexClass>
+        <apexClass>AttachmentSyncService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_AttachmentSyncServiceTest</apexClass>
+        <apexClass>AttachmentSyncServiceTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_DeliveryHubSettingsController</apexClass>
+        <apexClass>DeliveryHubSettingsController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_DeliveryHubSettingsControllerTest</apexClass>
+        <apexClass>DeliveryHubSettingsControllerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraAttachmentSyncBatch</apexClass>
+        <apexClass>JiraAttachmentSyncBatch</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraAttachmentSyncBatchTest</apexClass>
+        <apexClass>JiraAttachmentSyncBatchTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraSyncWorkerTest</apexClass>
+        <apexClass>JiraSyncWorkerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraToSFSyncBatchTest</apexClass>
+        <apexClass>JiraToSFSyncBatchTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_KanbanSettingsController</apexClass>
+        <apexClass>KanbanSettingsController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketController</apexClass>
+        <apexClass>TicketController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketControllerTest</apexClass>
+        <apexClass>TicketControllerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketETAService</apexClass>
+        <apexClass>TicketETAService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketETAServiceTest</apexClass>
+        <apexClass>TicketETAServiceTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketTriggerHandler</apexClass>
+        <apexClass>TicketTriggerHandler</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketTriggerHandlerTest</apexClass>
+        <apexClass>TicketTriggerHandlerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
@@ -96,172 +96,172 @@
     <custom>false</custom>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Attachment_Sync_Log__c.Error_Details__c</field>
+        <field>Attachment_Sync_Log__c.Error_Details__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Attachment_Sync_Log__c.Filename__c</field>
+        <field>Attachment_Sync_Log__c.Filename__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Attachment_Sync_Log__c.Jira_Attachment_ID__c</field>
+        <field>Attachment_Sync_Log__c.Jira_Attachment_ID__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Attachment_Sync_Log__c.Salesforce_ContentDocumentId__c</field>
+        <field>Attachment_Sync_Log__c.Salesforce_ContentDocumentId__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Attachment_Sync_Log__c.Sync_Direction__c</field>
+        <field>Attachment_Sync_Log__c.Sync_Direction__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Attachment_Sync_Log__c.Sync_Status__c</field>
+        <field>Attachment_Sync_Log__c.Sync_Status__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Status_Log__c.FromTxt__c</field>
+        <field>Ticket_Status_Log__c.FromTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Status_Log__c.TimeSpentInStatusNumber__c</field>
+        <field>Ticket_Status_Log__c.TimeSpentInStatusNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Status_Log__c.ToTxt__c</field>
+        <field>Ticket_Status_Log__c.ToTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.BriefDescriptionTxt__c</field>
+        <field>Ticket__c.BriefDescriptionTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.CalculatedETADate__c</field>
+        <field>Ticket__c.CalculatedETADate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.ClientIntentionPk__c</field>
+        <field>Ticket__c.ClientIntentionPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.DetailsTxt__c</field>
+        <field>Ticket__c.DetailsTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.DeveloperDaysSizeNumber__c</field>
+        <field>Ticket__c.DeveloperDaysSizeNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Developer__c</field>
+        <field>Ticket__c.Developer__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Epic__c</field>
+        <field>Ticket__c.Epic__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.EstimatedEndDevDate__c</field>
+        <field>Ticket__c.EstimatedEndDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.EstimatedStartDevDate__c</field>
+        <field>Ticket__c.EstimatedStartDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Ticket__c.Estimated_Dev_Completion_Date__c</field>
+        <field>Ticket__c.Estimated_Dev_Completion_Date__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Ticket__c.Estimated_Dev_Start_Date__c</field>
+        <field>Ticket__c.Estimated_Dev_Start_Date__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.EventReceivedOnDateTime__c</field>
+        <field>Ticket__c.EventReceivedOnDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.IsActiveBool__c</field>
+        <field>Ticket__c.IsActiveBool__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.JiraLastResponseTxt__c</field>
+        <field>Ticket__c.JiraLastResponseTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.JiraSyncStatusTxt__c</field>
+        <field>Ticket__c.JiraSyncStatusTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.JiraTicketKeyTxt__c</field>
+        <field>Ticket__c.JiraTicketKeyTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.PriorityPk__c</field>
+        <field>Ticket__c.PriorityPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Projected_UAT_Ready_Date__c</field>
+        <field>Ticket__c.Projected_UAT_Ready_Date__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.SortOrderNumber__c</field>
+        <field>Ticket__c.SortOrderNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.SourceEventReplayIdTxt__c</field>
+        <field>Ticket__c.SourceEventReplayIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.StageNamePk__c</field>
+        <field>Ticket__c.StageNamePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.StatusPk__c</field>
+        <field>Ticket__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Tags__c</field>
+        <field>Ticket__c.Tags__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.WorkItemNameTxt__c</field>
+        <field>Ticket__c.WorkItemNameTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.WorkItemTypeTxt__c</field>
+        <field>Ticket__c.WorkItemTypeTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -340,7 +340,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <layoutAssignments>
-        <layout>DH_Ticket_Status_Log__c-Ticket Status Log Layout</layout>
+        <layout>Ticket_Status_Log__c-Ticket Status Log Layout</layout>
     </layoutAssignments>
     <layoutAssignments>
         <layout>Kanban_Stage_Field_Requirement__mdt-Kanban Stage Field Requirement Layout</layout>
@@ -357,7 +357,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>DH_Attachment_Sync_Log__c</object>
+        <object>Attachment_Sync_Log__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -366,7 +366,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>DH_Ticket_Status_Log__c</object>
+        <object>Ticket_Status_Log__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -375,7 +375,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>DH_Ticket__c</object>
+        <object>Ticket__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -388,7 +388,7 @@
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <tabVisibilities>
-        <tab>DH_Ticket__c</tab>
+        <tab>Ticket__c</tab>
         <visibility>DefaultOn</visibility>
     </tabVisibilities>
     <tabVisibilities>

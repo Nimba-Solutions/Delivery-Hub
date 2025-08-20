@@ -1,14 +1,14 @@
-public with sharing class DH_AttachmentSyncService {
+public with sharing class AttachmentSyncService {
 
     @future(callout=true)
     public static void syncFilesToJira(Id ticketId, List<Id> contentDocumentIds) {
         // 1. Get the Jira Key from the ticket
-        List<DH_Ticket__c> tickets = [SELECT Id, JiraTicketKeyTxt__c FROM DH_Ticket__c WHERE Id = :ticketId LIMIT 1];
+        List<Ticket__c> tickets = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
         if (tickets.isEmpty() || String.isBlank(tickets[0].JiraTicketKeyTxt__c)) {
             // Cannot sync without a Jira Key. Log this appropriately.
             return;
         }
-        DH_Ticket__c ticket = tickets[0];
+        Ticket__c ticket = tickets[0];
 
         // 2. Get the file content from ContentVersion
         List<ContentVersion> versions = [
@@ -16,7 +16,7 @@ public with sharing class DH_AttachmentSyncService {
             FROM ContentVersion WHERE ContentDocumentId IN :contentDocumentIds AND IsLatest = true
         ];
 
-        List<DH_Attachment_Sync_Log__c> logsToInsert = new List<DH_Attachment_Sync_Log__c>();
+        List<Attachment_Sync_Log__c> logsToInsert = new List<Attachment_Sync_Log__c>();
 
         for (ContentVersion cv : versions) {
             String status = 'Success';
@@ -43,7 +43,7 @@ public with sharing class DH_AttachmentSyncService {
             }
 
             // 4. Create a log entry for the attempt
-            logsToInsert.add(new DH_Attachment_Sync_Log__c(
+            logsToInsert.add(new Attachment_Sync_Log__c(
                 Ticket__c = ticketId,
                 Jira_Attachment_ID__c = jiraAttachmentId, // Will be null on failure
                 Salesforce_ContentDocumentId__c = cv.ContentDocumentId,
