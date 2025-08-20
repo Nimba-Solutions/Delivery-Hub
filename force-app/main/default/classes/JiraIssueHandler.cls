@@ -92,7 +92,7 @@ public without sharing class JiraIssueHandler {
      * @param payload The webhook payload containing updated issue data
      * @return Boolean indicating if the operation was successful
      */
-    public static Boolean handleIssueUpdated(Map<String, Object> payload) {
+   /* public static Boolean handleIssueUpdated(Map<String, Object> payload) {
         System.debug('JiraIssueHandler.handleIssueUpdated - Processing issue update');
         
         try {
@@ -149,7 +149,54 @@ public without sharing class JiraIssueHandler {
             System.debug(LoggingLevel.ERROR, 'Stack trace: ' + e.getStackTraceString());
             return false;
         }
+    }*/
+    
+    public static Boolean handleIssueUpdated(Map<String, Object> payload) {
+    System.debug('JiraIssueHandler.handleIssueUpdated - Processing issue update');
+    
+    try {
+        Map<String, Object> issue = (Map<String, Object>)payload.get('issue');
+        if (issue == null) {
+            System.debug(LoggingLevel.ERROR, 'Issue object not found in payload');
+            return false;
+        }
+        
+        String issueKey = (String)issue.get('key');
+        System.debug('Updating ticket for Jira issue: ' + issueKey);
+        
+        List<DH_Ticket__c> existingTickets = [
+            SELECT Id FROM DH_Ticket__c 
+            WHERE JiraTicketKeyTxt__c = :issueKey 
+            LIMIT 1
+        ];
+        
+        if (existingTickets.isEmpty()) {
+            System.debug('No existing ticket found for issue key: ' + issueKey + ', creating new ticket');
+            return handleIssueCreated(payload);
+        }
+        
+        DH_Ticket__c updatedTicket = new DH_Ticket__c(Id = existingTickets[0].Id);
+        
+        mapJiraFieldsToTicket(issue, updatedTicket);
+        
+        updatedTicket.JiraSyncStatusTxt__c = SYNC_STATUS_UPDATED;
+        
+        // The Security.stripInaccessible check is removed because the class is 'without sharing',
+        // allowing the DML operation to run in system context and bypass user permissions.
+        // This is appropriate for a system-to-system integration.
+        
+        update updatedTicket;
+        
+        System.debug('Successfully updated ticket for Jira issue: ' + issueKey);
+        return true;
+        
+    } catch (Exception e) {
+        System.debug(LoggingLevel.ERROR, 'Error updating ticket from Jira issue: ' + e.getMessage());
+        System.debug(LoggingLevel.ERROR, 'Stack trace: ' + e.getStackTraceString());
+        return false;
     }
+}
+
     
     /**
      * @description Handles Jira issue deleted events by marking tickets as inactive

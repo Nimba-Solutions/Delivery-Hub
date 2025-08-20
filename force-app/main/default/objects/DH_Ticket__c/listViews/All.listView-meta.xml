@@ -2,6 +2,7 @@
 <ListView xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>All</fullName>
     <columns>NAME</columns>
+    <columns>JiraTicketKeyTxt__c</columns>
     <columns>BriefDescriptionTxt__c</columns>
     <columns>DeveloperDaysSizeNumber__c</columns>
     <columns>IsActiveBool__c</columns>

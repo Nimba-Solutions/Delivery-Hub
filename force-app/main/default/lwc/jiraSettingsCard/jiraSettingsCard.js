@@ -120,7 +120,7 @@ export default class JiraSettingCard extends LightningElement {
             const result = await testJiraConnectionApex({
                 jiraUrl: this.jiraInstanceUrl,
                 username: this.jiraUsername,
-                token: this.jiraApiToken,
+                apiToken: this.jiraApiToken,
                 projectKey: this.jiraProjectKey
             });
 

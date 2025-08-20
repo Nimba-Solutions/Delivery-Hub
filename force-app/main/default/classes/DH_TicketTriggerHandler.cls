@@ -17,7 +17,12 @@ public with sharing class DH_TicketTriggerHandler {
 
         /* -------- INSERT -------- */
         if (isInsert){
+            System.debug('entering insert');
+           
             for (DH_Ticket__c row : newRows){
+                System.debug('isEligible'+isEligible(row));
+                System.debug('isEligible'+row.JiraTicketKeyTxt__c);
+                System.debug('is Blank'+String.isBlank(row.JiraTicketKeyTxt__c));
                 if (isEligible(row) && String.isBlank(row.JiraTicketKeyTxt__c)){
                     toCreate.add(row.Id);
                 }
@@ -26,13 +31,16 @@ public with sharing class DH_TicketTriggerHandler {
 
         /* -------- UPDATE -------- */
         if (isUpdate){
+            System.debug('entering update');
             for (DH_Ticket__c row : newRows){
                 DH_Ticket__c oldRow = oldMap.get(row.Id);
                 if (!isEligible(row))              continue;     // still not “In Progress”
                 
                 /* Need a Jira issue but none yet –> CREATE */
                 if (String.isBlank(row.JiraTicketKeyTxt__c)){
+                    System.debug('jira key is not available');
                     toCreate.add(row.Id);
+                    System.debug('tocreate '+toCreate);
                     continue;
                 }
 
@@ -49,11 +57,13 @@ public with sharing class DH_TicketTriggerHandler {
 
         /* -------- Enqueue worker jobs -------- */
         if (!toCreate.isEmpty()){
+            System.debug('enqueing jobs update');
             System.enqueueJob(
                 new DH_JiraSyncWorker(DH_JiraSyncWorker.Mode.CREATE,       toCreate)
             );
         }
         if (!toUpdate.isEmpty()){
+            System.debug('enqueing jobs');
             System.enqueueJob(
                 new DH_JiraSyncWorker(DH_JiraSyncWorker.Mode.UPDATE_JIRA,  toUpdate)
             );

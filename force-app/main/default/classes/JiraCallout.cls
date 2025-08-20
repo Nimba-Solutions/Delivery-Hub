@@ -3,7 +3,7 @@ public with sharing class JiraCallout {
     /**
      * Makes an HTTP callout to Jira using the provided endpoint/method/body.
      */
-    public static HttpResponse httpHelper(String endpoint, String method, String body) {
+ public static HttpResponse httpHelper(String endpoint, String method, String body) {
         Http h = new Http();
         HttpRequest req = new HttpRequest();
         if (body != null) {
@@ -19,6 +19,52 @@ public with sharing class JiraCallout {
         return res;
     }
 
+    
+   /** private static Delivery_Hub_Settings__c cfg() {
+        Delivery_Hub_Settings__c c = Delivery_Hub_Settings__c.getInstance();
+        if (c == null) throw new AuraHandledException('Integration settings not found.');
+        if (String.isBlank(c.JIRA_Instance_URL__c)) throw new AuraHandledException('JIRA_Instance_URL__c is missing.');
+        return c;
+    }
+    private static String baseUrl() {
+        String b = cfg().JIRA_Instance_URL__c;
+        return b.endsWith('/') ? b.left(b.length()-1) : b;
+    }
+    private static void applyAuth(HttpRequest req) {
+        Delivery_Hub_Settings__c c = cfg();
+       
+        if (String.isBlank(c.JIRA_Username__c) || String.isBlank(c.JIRA_API_Token__c)) {
+            throw new AuraHandledException('Jira email or API key is missing.');
+        }
+        String basic = c.JIRA_Username__c + ':' + c.JIRA_API_Token__c;
+        req.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(basic)));
+    }
+    private static String normalizePath(String endpointPath) {
+        return (endpointPath.startsWith('/') ? endpointPath : '/' + endpointPath);
+    }
+    private static void applyCommon(HttpRequest req, String method, String fullUrl, String bodyJson) {
+        req.setMethod(method);
+        req.setEndpoint(fullUrl);
+        req.setHeader('Accept', 'application/json');
+        req.setTimeout(120000);
+        if (bodyJson != null) {
+            req.setHeader('Content-Type', 'application/json');
+            req.setBody(bodyJson);
+        }
+        applyAuth(req);
+    }
+
+    // ---- 1) Exact signature you already have
+    public static HttpResponse httpHelper(String endpoint, String method, String body) {
+        HttpRequest req = new HttpRequest();
+        String url = baseUrl() + normalizePath(endpoint);
+        applyCommon(req, method, url, body);
+        Http http = new Http();
+        HttpResponse res = http.send(req);
+        System.debug(res.getBody());
+        return res;
+    }
+*/
     public static HttpResponse getProject(String key) {
         return httpHelper('project/' + key, 'GET', null);
     }

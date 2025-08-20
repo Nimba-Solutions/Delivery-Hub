@@ -20,6 +20,7 @@ public with sharing class DH_JiraSyncWorker
     }
 
     private static void createJiraIssues(Set<Id> ids) {
+        System.debug('entering createJiraIssues');
         if (ids.isEmpty()) return;
 
         List<DH_Ticket__c> tickets = [
@@ -46,6 +47,7 @@ public with sharing class DH_JiraSyncWorker
                 }
             });
 
+            System.debug('body');
             DH_Ticket__c upd = new DH_Ticket__c(Id = t.Id);
 
             try {
@@ -55,15 +57,18 @@ public with sharing class DH_JiraSyncWorker
                         (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
                     upd.JiraTicketKeyTxt__c = String.valueOf(parsed.get('key'));
                     upd.JiraSyncStatusTxt__c = 'Created';
+                    System.debug('created');
                 } else {
                     String statusMsg = 'Create failed: ' + res.getStatus() + ' | ' + res.getBody();
                     upd.JiraSyncStatusTxt__c = left255(statusMsg);
                     upd.JiraLastResponseTxt__c = res.getBody();
+                    System.debug('kuch to gadbad h');
                 }
             } catch (Exception e) {
                 String errMsg = 'Create EX: ' + e.getMessage();
                 upd.JiraSyncStatusTxt__c = left255(errMsg);
                 upd.JiraLastResponseTxt__c = e.getMessage();
+                System.debug('entered catfch');
             }
             updates.add(upd);
         }
