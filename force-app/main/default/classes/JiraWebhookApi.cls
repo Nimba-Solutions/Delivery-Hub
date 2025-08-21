@@ -37,15 +37,15 @@ global with sharing class JiraWebhookApi {
             return;
         }
 
-        // Example action: upsert DH_Ticket__c by Jira key
-        List<DH_Ticket__c> existing = [
+        // Example action: upsert Ticket__c by Jira key
+        List<Ticket__c> existing = [
             SELECT Id, JiraTicketKeyTxt__c
-            FROM DH_Ticket__c
+            FROM Ticket__c
             WHERE JiraTicketKeyTxt__c = :payload.issue.key
             LIMIT 1
         ];
 
-        DH_Ticket__c rec = existing.isEmpty() ? new DH_Ticket__c() : existing[0];
+        Ticket__c rec = existing.isEmpty() ? new Ticket__c() : existing[0];
         rec.JiraTicketKeyTxt__c = payload.issue.key;
         if (payload.issue.fields != null) {
             rec.BriefDescriptionTxt__c = payload.issue.fields.summary;

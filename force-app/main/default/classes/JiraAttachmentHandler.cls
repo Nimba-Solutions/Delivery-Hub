@@ -1,7 +1,7 @@
 /**
  * @description Handler class for processing Jira attachment webhook events.
  * This class manages the synchronization of attachments between Jira issues and
- * Salesforce DH_Ticket__c records, including downloading attachment content,
+ * Salesforce Ticket__c records, including downloading attachment content,
  * creating ContentVersion records, and maintaining sync logs.
  *
  * The handler supports the following operations:
@@ -42,22 +42,22 @@ public without sharing class JiraAttachmentHandler {
             
             System.debug('Processing attachment: ' + filename + ' (ID: ' + attachmentId + ') for issue: ' + issueKey);
             
-            // Find the corresponding DH_Ticket__c record
-            List<DH_Ticket__c> tickets = [
+            // Find the corresponding Ticket__c record
+            List<Ticket__c> tickets = [
                 SELECT Id, JiraTicketKeyTxt__c 
-                FROM DH_Ticket__c 
+                FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey 
                 LIMIT 1
             ];
             
             if (tickets.isEmpty()) {
-                System.debug(LoggingLevel.WARN, 'No DH_Ticket__c found for Jira issue key: ' + issueKey);
+                System.debug(LoggingLevel.WARN, 'No Ticket__c found for Jira issue key: ' + issueKey);
                 createSyncLog(null, attachmentId, filename, 'Jira to SF', 'Failed', 
                              'No corresponding ticket found for issue key: ' + issueKey, null);
                 return false;
             }
             
-            DH_Ticket__c ticket = tickets[0];
+            Ticket__c ticket = tickets[0];
             
             // Validate file size before attempting download
             if (!validateFileSize(fileSize, filename, ticket.Id, attachmentId)) {
@@ -133,27 +133,27 @@ public without sharing class JiraAttachmentHandler {
             
             System.debug('Processing attachment removal: ' + filename + ' (ID: ' + attachmentId + ') for issue: ' + issueKey);
             
-            // Find the corresponding DH_Ticket__c record
-            List<DH_Ticket__c> tickets = [
+            // Find the corresponding Ticket__c record
+            List<Ticket__c> tickets = [
                 SELECT Id, JiraTicketKeyTxt__c 
-                FROM DH_Ticket__c 
+                FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey 
                 LIMIT 1
             ];
             
             if (tickets.isEmpty()) {
-                System.debug(LoggingLevel.WARN, 'No DH_Ticket__c found for Jira issue key: ' + issueKey);
+                System.debug(LoggingLevel.WARN, 'No Ticket__c found for Jira issue key: ' + issueKey);
                 createSyncLog(null, attachmentId, filename, 'Jira to SF', 'Failed', 
                              'No corresponding ticket found for issue key: ' + issueKey, null);
                 return false;
             }
             
-            DH_Ticket__c ticket = tickets[0];
+            Ticket__c ticket = tickets[0];
             
             // Find existing sync log to get ContentDocument ID
-            List<DH_Attachment_Sync_Log__c> existingLogs = [
+            List<Attachment_Sync_Log__c> existingLogs = [
                 SELECT Id, Salesforce_ContentDocumentId__c, Sync_Status__c
-                FROM DH_Attachment_Sync_Log__c
+                FROM Attachment_Sync_Log__c
                 WHERE Ticket__c = :ticket.Id 
                 AND Jira_Attachment_ID__c = :attachmentId
                 AND Sync_Status__c = 'Success'
@@ -457,7 +457,7 @@ public without sharing class JiraAttachmentHandler {
         }
         
         try {
-            DH_Attachment_Sync_Log__c syncLog = new DH_Attachment_Sync_Log__c();
+            Attachment_Sync_Log__c syncLog = new Attachment_Sync_Log__c();
             syncLog.Ticket__c = ticketId;
             syncLog.Jira_Attachment_ID__c = jiraAttachmentId;
             syncLog.Filename__c = filename;
@@ -467,7 +467,7 @@ public without sharing class JiraAttachmentHandler {
             syncLog.Salesforce_ContentDocumentId__c = contentDocumentId;
             
             // Use Security.stripInaccessible for FLS compliance
-            List<DH_Attachment_Sync_Log__c> logList = new List<DH_Attachment_Sync_Log__c>{ syncLog };
+            List<Attachment_Sync_Log__c> logList = new List<Attachment_Sync_Log__c>{ syncLog };
             SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, logList);
             
             insert decision.getRecords();

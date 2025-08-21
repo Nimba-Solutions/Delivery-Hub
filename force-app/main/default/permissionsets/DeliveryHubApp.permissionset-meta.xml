@@ -7,167 +7,167 @@
     <description>This permission set provides access to the &quot;Delivery Hub&quot; Lightning App</description>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Comment__c.AuthorTxt__c</field>
+        <field>Ticket_Comment__c.AuthorTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Comment__c.BodyTxt__c</field>
+        <field>Ticket_Comment__c.BodyTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Comment__c.JiraCommentIdTxt__c</field>
+        <field>Ticket_Comment__c.JiraCommentIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Comment__c.JiraSyncStatusTxt__c</field>
+        <field>Ticket_Comment__c.JiraSyncStatusTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Comment__c.SourcePk__c</field>
+        <field>Ticket_Comment__c.SourcePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket_Comment__c.SyncedDateTime__c</field>
+        <field>Ticket_Comment__c.SyncedDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.BriefDescriptionTxt__c</field>
+        <field>Ticket__c.BriefDescriptionTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.CalculatedETADate__c</field>
+        <field>Ticket__c.CalculatedETADate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.ClientIntentionPk__c</field>
+        <field>Ticket__c.ClientIntentionPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.DetailsTxt__c</field>
+        <field>Ticket__c.DetailsTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.DeveloperDaysSizeNumber__c</field>
+        <field>Ticket__c.DeveloperDaysSizeNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Developer__c</field>
+        <field>Ticket__c.Developer__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Epic__c</field>
+        <field>Ticket__c.Epic__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.EstimatedEndDevDate__c</field>
+        <field>Ticket__c.EstimatedEndDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.EstimatedStartDevDate__c</field>
+        <field>Ticket__c.EstimatedStartDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Estimated_Dev_Completion_Date__c</field>
+        <field>Ticket__c.Estimated_Dev_Completion_Date__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Estimated_Dev_Start_Date__c</field>
+        <field>Ticket__c.Estimated_Dev_Start_Date__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.EventReceivedOnDateTime__c</field>
+        <field>Ticket__c.EventReceivedOnDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.IsActiveBool__c</field>
+        <field>Ticket__c.IsActiveBool__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.JiraIssueIdTxt__c</field>
+        <field>Ticket__c.JiraIssueIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.JiraLastResponseTxt__c</field>
+        <field>Ticket__c.JiraLastResponseTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.JiraSyncStatusTxt__c</field>
+        <field>Ticket__c.JiraSyncStatusTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.JiraTicketKeyTxt__c</field>
+        <field>Ticket__c.JiraTicketKeyTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.LastJiraUpdateDate__c</field>
+        <field>Ticket__c.LastJiraUpdateDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.PriorityPk__c</field>
+        <field>Ticket__c.PriorityPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Projected_UAT_Ready_Date__c</field>
+        <field>Ticket__c.Projected_UAT_Ready_Date__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.SortOrderNumber__c</field>
+        <field>Ticket__c.SortOrderNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.SourceEventReplayIdTxt__c</field>
+        <field>Ticket__c.SourceEventReplayIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.StageNamePk__c</field>
+        <field>Ticket__c.StageNamePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.StatusPk__c</field>
+        <field>Ticket__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.Tags__c</field>
+        <field>Ticket__c.Tags__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.WorkItemNameTxt__c</field>
+        <field>Ticket__c.WorkItemNameTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.WorkItemTypeTxt__c</field>
+        <field>Ticket__c.WorkItemTypeTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <hasActivationRequired>false</hasActivationRequired>
@@ -178,7 +178,7 @@
         <allowEdit>false</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
-        <object>DH_Ticket_Comment__c</object>
+        <object>Ticket_Comment__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -187,7 +187,7 @@
         <allowEdit>false</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
-        <object>DH_Ticket__c</object>
+        <object>Ticket__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
 </PermissionSet>

@@ -4,14 +4,14 @@ private class JiraCommentSyncHelperTest {
     @isTest
     static void testHandleAfterInsertAndQueueableSuccess() {
         // Create a test ticket with a Jira Key
-        DH_Ticket__c ticket = new DH_Ticket__c(
+        Ticket__c ticket = new Ticket__c(
            
             JiraTicketKeyTxt__c = 'JIRA-123'
         );
         insert ticket;
 
         // Create a comment to trigger sync
-        DH_Ticket_Comment__c comment = new DH_Ticket_Comment__c(
+        Ticket_Comment__c comment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,
             BodyTxt__c = '<p>This is <b>bold</b> and <i>italic</i>.</p>',
             SourcePk__c = 'Salesforce'
@@ -20,24 +20,24 @@ private class JiraCommentSyncHelperTest {
         
 
         // Load inserted comment
-        Map<Id, DH_Ticket_Comment__c> commentMap = new Map<Id, DH_Ticket_Comment__c>{comment.Id => comment};
+        Map<Id, Ticket_Comment__c> commentMap = new Map<Id, Ticket_Comment__c>{comment.Id => comment};
         
         Test.startTest();
         JiraCommentSyncHelper.handleAfterInsert(commentMap);
         Test.stopTest();
 
         // Reload and verify sync status is updated
-        comment = [SELECT JiraSyncStatusTxt__c FROM DH_Ticket_Comment__c WHERE Id = :comment.Id];
+        comment = [SELECT JiraSyncStatusTxt__c FROM Ticket_Comment__c WHERE Id = :comment.Id];
         //System.assertNotEquals(null, comment.JiraSyncStatusTxt__c);
     }
 
     @isTest
     static void testQueueableHandlesMissingJiraKey() {
         // Create a ticket without a Jira Key
-        DH_Ticket__c ticket = new DH_Ticket__c(JiraTicketKeyTxt__c = 'JIRA-1234');
+        Ticket__c ticket = new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-1234');
         insert ticket;
 
-        DH_Ticket_Comment__c comment = new DH_Ticket_Comment__c(
+        Ticket_Comment__c comment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,
             BodyTxt__c = '<p>Comment with no Jira key.</p>',
             SourcePk__c = 'Salesforce'
@@ -48,7 +48,7 @@ private class JiraCommentSyncHelperTest {
         System.enqueueJob(new JiraCommentSyncHelper.JiraCommentSyncHelperQueueable(new List<Id>{comment.Id}));
         Test.stopTest();
 
-        comment = [SELECT JiraSyncStatusTxt__c FROM DH_Ticket_Comment__c WHERE Id = :comment.Id];
+        comment = [SELECT JiraSyncStatusTxt__c FROM Ticket_Comment__c WHERE Id = :comment.Id];
        // System.assertEquals('No Jira Key on ticket', comment.JiraSyncStatusTxt__c);
     }
 
@@ -71,23 +71,23 @@ private class JiraCommentSyncHelperTest {
 
     @isTest
     static void testHandleAfterInsertWithInvalidConditions() {
-        DH_Ticket__c ticket = new DH_Ticket__c( JiraTicketKeyTxt__c = null);
+        Ticket__c ticket = new Ticket__c( JiraTicketKeyTxt__c = null);
         insert ticket;
 
-        DH_Ticket_Comment__c comment = new DH_Ticket_Comment__c(
+        Ticket_Comment__c comment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,
             BodyTxt__c = null,
             SourcePk__c = 'Salesforce'
         );
         insert comment;
 
-        Map<Id, DH_Ticket_Comment__c> commentMap = new Map<Id, DH_Ticket_Comment__c>{comment.Id => comment};
+        Map<Id, Ticket_Comment__c> commentMap = new Map<Id, Ticket_Comment__c>{comment.Id => comment};
 
         Test.startTest();
         JiraCommentSyncHelper.handleAfterInsert(commentMap);
         Test.stopTest();
 
-        comment = [SELECT JiraSyncStatusTxt__c FROM DH_Ticket_Comment__c WHERE Id = :comment.Id];
+        comment = [SELECT JiraSyncStatusTxt__c FROM Ticket_Comment__c WHERE Id = :comment.Id];
        // System.assertEquals(null, comment.JiraSyncStatusTxt__c);
     }
 }

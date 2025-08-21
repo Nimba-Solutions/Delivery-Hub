@@ -20,7 +20,7 @@ private class JiraCommentHandlerTest {
     @testSetup
     static void setupTestData() {
         // Create a test ticket
-        DH_Ticket__c testTicket = new DH_Ticket__c(
+        Ticket__c testTicket = new Ticket__c(
             JiraTicketKeyTxt__c = TEST_JIRA_KEY,
             BriefDescriptionTxt__c = 'Test ticket for comment sync'
         );
@@ -43,15 +43,15 @@ private class JiraCommentHandlerTest {
         System.assert(result, 'Comment creation should succeed');
         
         // Verify comment was created
-        List<DH_Ticket_Comment__c> comments = [
+        List<Ticket_Comment__c> comments = [
             SELECT Id, JiraCommentIdTxt__c, AuthorTxt__c, BodyTxt__c, SourcePk__c, TicketId__c
-            FROM DH_Ticket_Comment__c
+            FROM Ticket_Comment__c
             WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
         ];
         
         System.assertEquals(1, comments.size(), 'Should create one comment');
         
-        DH_Ticket_Comment__c comment = comments[0];
+        Ticket_Comment__c comment = comments[0];
         System.assertEquals(TEST_COMMENT_ID, comment.JiraCommentIdTxt__c, 'Should set Jira comment ID');
         System.assertEquals(TEST_AUTHOR_NAME, comment.AuthorTxt__c, 'Should set author name');
         System.assertEquals('Jira', comment.SourcePk__c, 'Should set source as Jira');
@@ -64,8 +64,8 @@ private class JiraCommentHandlerTest {
     @isTest
     static void testHandleCommentCreated_DuplicatePrevention() {
         // Create existing comment
-        DH_Ticket__c ticket = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c = :TEST_JIRA_KEY LIMIT 1];
-        DH_Ticket_Comment__c existingComment = new DH_Ticket_Comment__c(
+        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = :TEST_JIRA_KEY LIMIT 1];
+        Ticket_Comment__c existingComment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,
             JiraCommentIdTxt__c = TEST_COMMENT_ID,
             AuthorTxt__c = 'Existing Author',
@@ -85,8 +85,8 @@ private class JiraCommentHandlerTest {
         System.assert(result, 'Should handle duplicate gracefully');
         
         // Verify only one comment exists
-        List<DH_Ticket_Comment__c> comments = [
-            SELECT Id FROM DH_Ticket_Comment__c WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
+        List<Ticket_Comment__c> comments = [
+            SELECT Id FROM Ticket_Comment__c WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
         ];
         System.assertEquals(1, comments.size(), 'Should not create duplicate comment');
     }
@@ -107,8 +107,8 @@ private class JiraCommentHandlerTest {
         System.assert(!result, 'Should fail when ticket not found');
         
         // Verify no comment was created
-        List<DH_Ticket_Comment__c> comments = [
-            SELECT Id FROM DH_Ticket_Comment__c WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
+        List<Ticket_Comment__c> comments = [
+            SELECT Id FROM Ticket_Comment__c WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
         ];
         System.assertEquals(0, comments.size(), 'Should not create comment without ticket');
     }
@@ -119,8 +119,8 @@ private class JiraCommentHandlerTest {
     @isTest
     static void testHandleCommentUpdated_Success() {
         // Create existing comment
-        DH_Ticket__c ticket = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c = :TEST_JIRA_KEY LIMIT 1];
-        DH_Ticket_Comment__c existingComment = new DH_Ticket_Comment__c(
+        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = :TEST_JIRA_KEY LIMIT 1];
+        Ticket_Comment__c existingComment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,
             JiraCommentIdTxt__c = TEST_COMMENT_ID,
             AuthorTxt__c = 'Original Author',
@@ -141,9 +141,9 @@ private class JiraCommentHandlerTest {
         System.assert(result, 'Comment update should succeed');
         
         // Verify comment was updated
-        DH_Ticket_Comment__c updatedComment = [
+        Ticket_Comment__c updatedComment = [
             SELECT Id, AuthorTxt__c, BodyTxt__c, SyncedDateTime__c
-            FROM DH_Ticket_Comment__c
+            FROM Ticket_Comment__c
             WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
             LIMIT 1
         ];
@@ -168,8 +168,8 @@ private class JiraCommentHandlerTest {
         System.assert(result, 'Should create comment if not found during update');
         
         // Verify comment was created
-        List<DH_Ticket_Comment__c> comments = [
-            SELECT Id FROM DH_Ticket_Comment__c WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
+        List<Ticket_Comment__c> comments = [
+            SELECT Id FROM Ticket_Comment__c WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
         ];
         System.assertEquals(1, comments.size(), 'Should create comment when updating non-existent comment');
     }
@@ -180,8 +180,8 @@ private class JiraCommentHandlerTest {
     @isTest
     static void testHandleCommentDeleted_Success() {
         // Create existing comment
-        DH_Ticket__c ticket = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c = :TEST_JIRA_KEY LIMIT 1];
-        DH_Ticket_Comment__c existingComment = new DH_Ticket_Comment__c(
+        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = :TEST_JIRA_KEY LIMIT 1];
+        Ticket_Comment__c existingComment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,
             JiraCommentIdTxt__c = TEST_COMMENT_ID,
             AuthorTxt__c = TEST_AUTHOR_NAME,
@@ -205,9 +205,9 @@ private class JiraCommentHandlerTest {
         System.assert(result, 'Comment deletion should succeed');
         
         // Verify comment was marked as deleted
-        DH_Ticket_Comment__c deletedComment = [
+        Ticket_Comment__c deletedComment = [
             SELECT Id, BodyTxt__c, SyncedDateTime__c
-            FROM DH_Ticket_Comment__c
+            FROM Ticket_Comment__c
             WHERE JiraCommentIdTxt__c = :TEST_COMMENT_ID
             LIMIT 1
         ];

@@ -1,6 +1,6 @@
 /**
  * @description Handler class for processing Jira comment webhook events.
- * This class manages the synchronization of Jira comments with DH_Ticket_Comment__c records,
+ * This class manages the synchronization of Jira comments with Ticket_Comment__c records,
  * handling creation, updates, and deletion events from Jira webhooks.
  *
  * The handler supports:
@@ -20,7 +20,7 @@ public without sharing class JiraCommentHandler {
     private static final String DEFAULT_AUTHOR = 'Unknown Jira User';
     
     /**
-     * @description Handles Jira comment created events by creating new DH_Ticket_Comment__c records
+     * @description Handles Jira comment created events by creating new Ticket_Comment__c records
      * @param payload The webhook payload containing comment and issue data
      * @return Boolean indicating if the comment was created successfully
      */
@@ -44,9 +44,9 @@ public without sharing class JiraCommentHandler {
             String issueKey = (String)issueData.get('key');
             
             // Check if comment already exists to prevent duplicates
-            List<DH_Ticket_Comment__c> existingComments = [
+            List<Ticket_Comment__c> existingComments = [
                 SELECT Id, JiraCommentIdTxt__c 
-                FROM DH_Ticket_Comment__c 
+                FROM Ticket_Comment__c 
                 WHERE JiraCommentIdTxt__c = :jiraCommentId
                 LIMIT 1
             ];
@@ -66,12 +66,12 @@ public without sharing class JiraCommentHandler {
             Id ticketId = (Id)linkResult.get('ticketId');
             
             // Create the comment record
-            DH_Ticket_Comment__c newComment = buildCommentFromPayload(commentData, ticketId);
+            Ticket_Comment__c newComment = buildCommentFromPayload(commentData, ticketId);
             
             // Apply field-level security
-            newComment = (DH_Ticket_Comment__c)Security.stripInaccessible(
+            newComment = (Ticket_Comment__c)Security.stripInaccessible(
                 AccessType.CREATABLE, 
-                new List<DH_Ticket_Comment__c>{newComment}
+                new List<Ticket_Comment__c>{newComment}
             ).getRecords()[0];
             
             insert newComment;
@@ -87,7 +87,7 @@ public without sharing class JiraCommentHandler {
     }
     
     /**
-     * @description Handles Jira comment updated events by updating existing DH_Ticket_Comment__c records
+     * @description Handles Jira comment updated events by updating existing Ticket_Comment__c records
      * @param payload The webhook payload containing updated comment and issue data
      * @return Boolean indicating if the comment was updated successfully
      */
@@ -110,9 +110,9 @@ public without sharing class JiraCommentHandler {
             String issueKey = (String)issueData.get('key');
             
             // Find existing comment record
-            List<DH_Ticket_Comment__c> existingComments = [
+            List<Ticket_Comment__c> existingComments = [
                 SELECT Id, JiraCommentIdTxt__c, TicketId__c, AuthorTxt__c, BodyTxt__c, SyncedDateTime__c
-                FROM DH_Ticket_Comment__c 
+                FROM Ticket_Comment__c 
                 WHERE JiraCommentIdTxt__c = :jiraCommentId
                 LIMIT 1
             ];
@@ -123,15 +123,15 @@ public without sharing class JiraCommentHandler {
                 return handleCommentCreated(payload);
             }
             
-            DH_Ticket_Comment__c existingComment = existingComments[0];
+            Ticket_Comment__c existingComment = existingComments[0];
             
             // Update comment fields with new data
             updateCommentFromPayload(existingComment, commentData);
             
             // Apply field-level security
-            existingComment = (DH_Ticket_Comment__c)Security.stripInaccessible(
+            existingComment = (Ticket_Comment__c)Security.stripInaccessible(
                 AccessType.UPDATABLE, 
-                new List<DH_Ticket_Comment__c>{existingComment}
+                new List<Ticket_Comment__c>{existingComment}
             ).getRecords()[0];
             
             update existingComment;
@@ -147,7 +147,7 @@ public without sharing class JiraCommentHandler {
     }
     
     /**
-     * @description Handles Jira comment deleted events by marking DH_Ticket_Comment__c records as deleted
+     * @description Handles Jira comment deleted events by marking Ticket_Comment__c records as deleted
      * @param payload The webhook payload containing deleted comment and issue data
      * @return Boolean indicating if the comment was marked as deleted successfully
      */
@@ -171,9 +171,9 @@ public without sharing class JiraCommentHandler {
             }
             
             // Find existing comment record
-            List<DH_Ticket_Comment__c> existingComments = [
+            List<Ticket_Comment__c> existingComments = [
                 SELECT Id, JiraCommentIdTxt__c, BodyTxt__c, SyncedDateTime__c
-                FROM DH_Ticket_Comment__c 
+                FROM Ticket_Comment__c 
                 WHERE JiraCommentIdTxt__c = :jiraCommentId
                 LIMIT 1
             ];
@@ -183,16 +183,16 @@ public without sharing class JiraCommentHandler {
                 return true; // Not an error, comment may have been already deleted
             }
             
-            DH_Ticket_Comment__c existingComment = existingComments[0];
+            Ticket_Comment__c existingComment = existingComments[0];
             
             // Mark comment as deleted by updating body and sync timestamp
             existingComment.BodyTxt__c = '[Comment deleted in Jira]';
             existingComment.SyncedDateTime__c = System.now();
             
             // Apply field-level security
-            existingComment = (DH_Ticket_Comment__c)Security.stripInaccessible(
+            existingComment = (Ticket_Comment__c)Security.stripInaccessible(
                 AccessType.UPDATABLE, 
-                new List<DH_Ticket_Comment__c>{existingComment}
+                new List<Ticket_Comment__c>{existingComment}
             ).getRecords()[0];
             
             update existingComment;
@@ -208,13 +208,13 @@ public without sharing class JiraCommentHandler {
     }
     
     /**
-     * @description Builds a new DH_Ticket_Comment__c record from Jira webhook payload data
+     * @description Builds a new Ticket_Comment__c record from Jira webhook payload data
      * @param commentData The comment data from the webhook payload
      * @param ticketId The Salesforce ticket ID to associate the comment with
-     * @return DH_Ticket_Comment__c The populated comment record
+     * @return Ticket_Comment__c The populated comment record
      */
-    private static DH_Ticket_Comment__c buildCommentFromPayload(Map<String, Object> commentData, Id ticketId) {
-        DH_Ticket_Comment__c comment = new DH_Ticket_Comment__c();
+    private static Ticket_Comment__c buildCommentFromPayload(Map<String, Object> commentData, Id ticketId) {
+        Ticket_Comment__c comment = new Ticket_Comment__c();
         
         // Set basic fields
         comment.TicketId__c = ticketId;
@@ -245,11 +245,11 @@ public without sharing class JiraCommentHandler {
     }
     
     /**
-     * @description Updates an existing DH_Ticket_Comment__c record with data from Jira webhook payload
+     * @description Updates an existing Ticket_Comment__c record with data from Jira webhook payload
      * @param existingComment The existing comment record to update
      * @param commentData The comment data from the webhook payload
      */
-    private static void updateCommentFromPayload(DH_Ticket_Comment__c existingComment, Map<String, Object> commentData) {
+    private static void updateCommentFromPayload(Ticket_Comment__c existingComment, Map<String, Object> commentData) {
         // Update sync timestamp
         existingComment.SyncedDateTime__c = System.now();
         
@@ -386,7 +386,7 @@ public without sharing class JiraCommentHandler {
     }
     
     /**
-     * @description Finds a DH_Ticket__c record by its Jira issue key
+     * @description Finds a Ticket__c record by its Jira issue key
      * @param issueKey The Jira issue key to search for
      * @return Id The Salesforce ticket ID, or null if not found
      */
@@ -396,9 +396,9 @@ public without sharing class JiraCommentHandler {
         }
         
         try {
-            List<DH_Ticket__c> tickets = [
+            List<Ticket__c> tickets = [
                 SELECT Id, JiraTicketKeyTxt__c
-                FROM DH_Ticket__c 
+                FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey
                 LIMIT 1
             ];
@@ -738,7 +738,7 @@ public without sharing class JiraCommentHandler {
     }
     
     /**
-     * @description Enhanced utility to link comments to correct DH_Ticket__c records using Jira issue keys
+     * @description Enhanced utility to link comments to correct Ticket__c records using Jira issue keys
      * Includes validation and error handling for missing or invalid tickets
      * @param issueKey The Jira issue key to search for
      * @param createIfMissing Whether to attempt creating a ticket if not found
@@ -762,9 +762,9 @@ public without sharing class JiraCommentHandler {
             
             System.debug('linkCommentToTicketEnhanced issueKey -> ' + issueKey);
             // Search for existing ticket
-            List<DH_Ticket__c> existingTickets = [
+            List<Ticket__c> existingTickets = [
                 SELECT Id, JiraTicketKeyTxt__c, Name, CreatedDate
-                FROM DH_Ticket__c 
+                FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey
                 LIMIT 1
             ];
@@ -772,7 +772,7 @@ public without sharing class JiraCommentHandler {
             
             if (!existingTickets.isEmpty()) {
                 // Ticket found
-                DH_Ticket__c ticket = existingTickets[0];
+                Ticket__c ticket = existingTickets[0];
                 linkResult.put('success', true);
                 linkResult.put('ticketId', ticket.Id);
                 linkResult.put('ticketExists', true);
@@ -783,15 +783,15 @@ public without sharing class JiraCommentHandler {
             } else if (createIfMissing) {
                 // Attempt to create ticket if requested
                 try {
-                    DH_Ticket__c newTicket = new DH_Ticket__c(
+                    Ticket__c newTicket = new Ticket__c(
                         JiraTicketKeyTxt__c = issueKey,
                         BriefDescriptionTxt__c = 'Auto-created from Jira comment sync: ' + issueKey
                     );
                     
                     // Apply field-level security
-                    newTicket = (DH_Ticket__c)Security.stripInaccessible(
+                    newTicket = (Ticket__c)Security.stripInaccessible(
                         AccessType.CREATABLE, 
-                        new List<DH_Ticket__c>{newTicket}
+                        new List<Ticket__c>{newTicket}
                     ).getRecords()[0];
                     
                     insert newTicket;

@@ -1,12 +1,12 @@
 /**
  * @description Handler class for processing Jira issue webhook events.
- * This class handles the creation, update, and deletion of DH_Ticket__c records
+ * This class handles the creation, update, and deletion of Ticket__c records
  * based on Jira issue webhook payloads. It extends the existing sync patterns
- * used in DH_JiraSyncWorker and provides field mapping utilities.
+ * used in JiraSyncWorker and provides field mapping utilities.
  *
  * Supported operations:
- * - Issue Created: Creates new DH_Ticket__c records from Jira issues
- * - Issue Updated: Updates existing DH_Ticket__c records with changed field values
+ * - Issue Created: Creates new Ticket__c records from Jira issues
+ * - Issue Updated: Updates existing Ticket__c records with changed field values
  * - Issue Deleted: Marks tickets as inactive when Jira issues are deleted
  *
  * The handler implements comprehensive field mapping between Jira and Salesforce
@@ -22,7 +22,7 @@ public without sharing class JiraIssueHandler {
     private static final String SYNC_STATUS_ERROR = 'Webhook Error';
     
     /**
-     * @description Handles Jira issue created events by creating new DH_Ticket__c records
+     * @description Handles Jira issue created events by creating new Ticket__c records
      * @param payload The webhook payload containing issue data
      * @return Boolean indicating if the operation was successful
      */
@@ -40,9 +40,9 @@ public without sharing class JiraIssueHandler {
             System.debug('Creating ticket for Jira issue: ' + issueKey);
             
             // Check if ticket already exists to prevent duplicates
-            List<DH_Ticket__c> existingTickets = [
+            List<Ticket__c> existingTickets = [
                 SELECT Id, JiraTicketKeyTxt__c 
-                FROM DH_Ticket__c 
+                FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey 
                 LIMIT 1
             ];
@@ -53,7 +53,7 @@ public without sharing class JiraIssueHandler {
             }
             
             // Create new ticket record
-            DH_Ticket__c newTicket = new DH_Ticket__c();
+            Ticket__c newTicket = new Ticket__c();
             
             // Map Jira fields to Salesforce fields
             mapJiraFieldsToTicket(issue, newTicket);
@@ -66,7 +66,7 @@ public without sharing class JiraIssueHandler {
             // Apply field-level security
             // SObjectAccessDecision decision = Security.stripInaccessible(
             //     AccessType.CREATABLE, 
-            //     new List<DH_Ticket__c>{newTicket}
+            //     new List<Ticket__c>{newTicket}
             // );
             
             // if (decision.getRemovedFields().size() > 0) {
@@ -75,7 +75,7 @@ public without sharing class JiraIssueHandler {
             
             // Insert the ticket
             // insert decision.getRecords();
-            insert new List<DH_Ticket__c>{newTicket};
+            insert new List<Ticket__c>{newTicket};
             
             System.debug('Successfully created ticket for Jira issue: ' + issueKey);
             return true;
@@ -88,7 +88,7 @@ public without sharing class JiraIssueHandler {
     }
     
     /**
-     * @description Handles Jira issue updated events by updating existing DH_Ticket__c records
+     * @description Handles Jira issue updated events by updating existing Ticket__c records
      * @param payload The webhook payload containing updated issue data
      * @return Boolean indicating if the operation was successful
      */
@@ -106,10 +106,10 @@ public without sharing class JiraIssueHandler {
             System.debug('Updating ticket for Jira issue: ' + issueKey);
             
             // Find existing ticket
-            List<DH_Ticket__c> existingTickets = [
+            List<Ticket__c> existingTickets = [
                 SELECT Id, JiraTicketKeyTxt__c, JiraIssueIdTxt__c, BriefDescriptionTxt__c, DetailsTxt__c,
                        StatusPk__c, Developer__c, PriorityPk__c, IsActiveBool__c, LastJiraUpdateDate__c
-                FROM DH_Ticket__c 
+                FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey 
                 LIMIT 1
             ];
@@ -119,8 +119,8 @@ public without sharing class JiraIssueHandler {
                 return handleIssueCreated(payload);
             }
             
-            DH_Ticket__c existingTicket = existingTickets[0];
-            DH_Ticket__c updatedTicket = new DH_Ticket__c(Id = existingTicket.Id);
+            Ticket__c existingTicket = existingTickets[0];
+            Ticket__c updatedTicket = new Ticket__c(Id = existingTicket.Id);
             
             // Map updated Jira fields to Salesforce fields
             mapJiraFieldsToTicket(issue, updatedTicket);
@@ -131,7 +131,7 @@ public without sharing class JiraIssueHandler {
             // Apply field-level security
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPDATABLE, 
-                new List<DH_Ticket__c>{updatedTicket}
+                new List<Ticket__c>{updatedTicket}
             );
             
             if (decision.getRemovedFields().size() > 0) {
@@ -164,8 +164,8 @@ public without sharing class JiraIssueHandler {
         String issueKey = (String)issue.get('key');
         System.debug('Updating ticket for Jira issue: ' + issueKey);
         
-        List<DH_Ticket__c> existingTickets = [
-            SELECT Id FROM DH_Ticket__c 
+        List<Ticket__c> existingTickets = [
+            SELECT Id FROM Ticket__c 
             WHERE JiraTicketKeyTxt__c = :issueKey 
             LIMIT 1
         ];
@@ -175,7 +175,7 @@ public without sharing class JiraIssueHandler {
             return handleIssueCreated(payload);
         }
         
-        DH_Ticket__c updatedTicket = new DH_Ticket__c(Id = existingTickets[0].Id);
+        Ticket__c updatedTicket = new Ticket__c(Id = existingTickets[0].Id);
         
         mapJiraFieldsToTicket(issue, updatedTicket);
         
@@ -217,9 +217,9 @@ public without sharing class JiraIssueHandler {
             System.debug('Marking ticket as inactive for deleted Jira issue: ' + issueKey);
             
             // Find existing ticket
-            List<DH_Ticket__c> existingTickets = [
+            List<Ticket__c> existingTickets = [
                 SELECT Id, JiraTicketKeyTxt__c, JiraIssueIdTxt__c, IsActiveBool__c
-                FROM DH_Ticket__c 
+                FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey 
                 LIMIT 1
             ];
@@ -229,8 +229,8 @@ public without sharing class JiraIssueHandler {
                 return true; // Not an error - ticket may have been deleted already
             }
             
-            DH_Ticket__c existingTicket = existingTickets[0];
-            DH_Ticket__c updatedTicket = new DH_Ticket__c(
+            Ticket__c existingTicket = existingTickets[0];
+            Ticket__c updatedTicket = new Ticket__c(
                 Id = existingTicket.Id,
                 IsActiveBool__c = false,
                 JiraSyncStatusTxt__c = SYNC_STATUS_DELETED
@@ -239,7 +239,7 @@ public without sharing class JiraIssueHandler {
             // Apply field-level security
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPDATABLE, 
-                new List<DH_Ticket__c>{updatedTicket}
+                new List<Ticket__c>{updatedTicket}
             );
             
             // Update the ticket
@@ -256,11 +256,11 @@ public without sharing class JiraIssueHandler {
     }
     
     /**
-     * @description Maps Jira issue fields to DH_Ticket__c fields using enhanced mapping utility
+     * @description Maps Jira issue fields to Ticket__c fields using enhanced mapping utility
      * @param issue The Jira issue object from webhook payload
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    public static void mapJiraFieldsToTicket(Map<String, Object> issue, DH_Ticket__c ticket) {
+    public static void mapJiraFieldsToTicket(Map<String, Object> issue, Ticket__c ticket) {
         System.debug('JiraIssueHandler.mapJiraFieldsToTicket - Using enhanced field mapping utility');
         
         try {

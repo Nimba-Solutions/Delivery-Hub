@@ -1,7 +1,7 @@
 /**
  * @description Utility class for enhanced field mapping between Jira and Salesforce.
  * This class provides comprehensive mapping utilities for converting Jira issue fields
- * to DH_Ticket__c fields, including status mapping, assignee mapping, and date/time
+ * to Ticket__c fields, including status mapping, assignee mapping, and date/time
  * conversion utilities. It supports configurable mappings and handles various Jira
  * field formats and data types.
  *
@@ -21,11 +21,11 @@ public class JiraFieldMappingUtil {
     private static Map<String, Set<String>> picklistValueCache = new Map<String, Set<String>>();
     
     /**
-     * @description Enhanced mapping of Jira issue fields to DH_Ticket__c with additional fields
+     * @description Enhanced mapping of Jira issue fields to Ticket__c with additional fields
      * @param issue The Jira issue object from webhook payload
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    public static void mapJiraIssueToTicket(Map<String, Object> issue, DH_Ticket__c ticket) {
+    public static void mapJiraIssueToTicket(Map<String, Object> issue, Ticket__c ticket) {
         System.debug('JiraFieldMappingUtil.mapJiraIssueToTicket - Enhanced field mapping');
         
         try {
@@ -73,9 +73,9 @@ public class JiraFieldMappingUtil {
     /**
      * @description Maps basic Jira fields (summary, description) to Salesforce
      * @param fields The Jira fields object
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    private static void mapBasicFields(Map<String, Object> fields, DH_Ticket__c ticket) {
+    private static void mapBasicFields(Map<String, Object> fields, Ticket__c ticket) {
         // Map summary to BriefDescriptionTxt__c with length validation
         String summary = (String)fields.get('summary');
         if (String.isNotBlank(summary)) {
@@ -106,9 +106,9 @@ public class JiraFieldMappingUtil {
     /**
      * @description Maps Jira status to Salesforce StatusPk__c with validation
      * @param fields The Jira fields object
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    private static void mapStatusField(Map<String, Object> fields, DH_Ticket__c ticket) {
+    private static void mapStatusField(Map<String, Object> fields, Ticket__c ticket) {
         Map<String, Object> status = (Map<String, Object>)fields.get('status');
         if (status == null) {
             return;
@@ -132,9 +132,9 @@ public class JiraFieldMappingUtil {
     /**
      * @description Maps Jira assignee to Salesforce Developer__c with caching
      * @param fields The Jira fields object
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    private static void mapAssigneeField(Map<String, Object> fields, DH_Ticket__c ticket) {
+    private static void mapAssigneeField(Map<String, Object> fields, Ticket__c ticket) {
         Map<String, Object> assignee = (Map<String, Object>)fields.get('assignee');
         if (assignee == null) {
             return;
@@ -152,9 +152,9 @@ public class JiraFieldMappingUtil {
     /**
      * @description Maps Jira priority to Salesforce PriorityPk__c with validation
      * @param fields The Jira fields object
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    private static void mapPriorityField(Map<String, Object> fields, DH_Ticket__c ticket) {
+    private static void mapPriorityField(Map<String, Object> fields, Ticket__c ticket) {
         Map<String, Object> priority = (Map<String, Object>)fields.get('priority');
         if (priority == null) {
             return;
@@ -172,9 +172,9 @@ public class JiraFieldMappingUtil {
     /**
      * @description Maps Jira date fields to Salesforce date/datetime fields
      * @param fields The Jira fields object
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    private static void mapDateFields(Map<String, Object> fields, DH_Ticket__c ticket) {
+    private static void mapDateFields(Map<String, Object> fields, Ticket__c ticket) {
         // Map created date
         String createdDate = (String)fields.get('created');
         if (String.isNotBlank(createdDate)) {
@@ -200,9 +200,9 @@ public class JiraFieldMappingUtil {
     /**
      * @description Maps custom Jira fields based on configuration
      * @param fields The Jira fields object
-     * @param ticket The DH_Ticket__c record to populate
+     * @param ticket The Ticket__c record to populate
      */
-    private static void mapCustomFields(Map<String, Object> fields, DH_Ticket__c ticket) {
+    private static void mapCustomFields(Map<String, Object> fields, Ticket__c ticket) {
         // This method can be enhanced to support configurable field mappings
         // via custom metadata types in future iterations
         
