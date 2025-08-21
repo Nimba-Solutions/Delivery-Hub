@@ -3,21 +3,21 @@
     <types>
         <members>ContentDocumentLinkTriggerHandler</members>
         <members>Ticket_JiraSyncTest</members>
-        <members>DH_AttachmentSyncService</members>
-        <members>DH_AttachmentSyncServiceTest</members>
-        <members>DH_DeliveryHubSettingsController</members>
-        <members>DH_DeliveryHubSettingsControllerTest</members>
-        <members>DH_JiraAttachmentSyncBatch</members>
-        <members>DH_JiraAttachmentSyncBatchTest</members>
-        <members>DH_JiraSyncWorkerTest</members>
-        <members>DH_JiraToSFSyncBatchTest</members>
-        <members>DH_KanbanSettingsController</members>
-        <members>DH_TicketController</members>
-        <members>DH_TicketControllerTest</members>
-        <members>DH_TicketETAService</members>
-        <members>DH_TicketETAServiceTest</members>
-        <members>DH_TicketTriggerHandler</members>
-        <members>DH_TicketTriggerHandlerTest</members>
+        <members>AttachmentSyncService</members>
+        <members>AttachmentSyncServiceTest</members>
+        <members>DeliveryHubSettingsController</members>
+        <members>DeliveryHubSettingsControllerTest</members>
+        <members>JiraAttachmentSyncBatch</members>
+        <members>JiraAttachmentSyncBatchTest</members>
+        <members>JiraSyncWorkerTest</members>
+        <members>JiraToSFSyncBatchTest</members>
+        <members>KanbanSettingsController</members>
+        <members>TicketController</members>
+        <members>TicketControllerTest</members>
+        <members>TicketETAService</members>
+        <members>TicketETAServiceTest</members>
+        <members>TicketTriggerHandler</members>
+        <members>TicketTriggerHandlerTest</members>
         <members>DragAndDropLwcController</members>
         <members>JiraCalloutMock</members>
         <members>JiraCommentSyncHelper</members>
@@ -30,7 +30,7 @@
     </types>
     <types>
         <members>ContentDocumentLinkTrigger</members>
-        <members>DH_TicketTrigger</members>
+        <members>TicketTrigger</members>
         <name>ApexTrigger</name>
     </types>
     <types>
@@ -147,7 +147,7 @@
         <name>RemoteSiteSetting</name>
     </types>
     <types>
-        <members>DeliveryHub/New_DH_Tickets_Report_b9q</members>
+        <members>DeliveryHub/New_Tickets_Report_b9q</members>
         <name>Report</name>
     </types>
     <types>

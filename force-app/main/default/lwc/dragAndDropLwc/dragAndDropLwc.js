@@ -2,19 +2,19 @@ import { LightningElement, track, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import { NavigationMixin } from "lightning/navigation";
 import { updateRecord } from "lightning/uiRecordApi";
-import getTickets from "@salesforce/apex/DH_TicketController.getTickets";
-import linkFilesAndSync from "@salesforce/apex/DH_TicketController.linkFilesAndSync";
-import getAiEnhancedTicketDetails from "@salesforce/apex/DH_TicketController.getAiEnhancedTicketDetails";
-import STAGE_FIELD from "@salesforce/schema/DH_Ticket__c.StageNamePk__c";
-import ID_FIELD from "@salesforce/schema/DH_Ticket__c.Id";
-import getTicketETAsWithPriority from "@salesforce/apex/DH_TicketETAService.getTicketETAsWithPriority";
+import getTickets from "@salesforce/apex/TicketController.getTickets";
+import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
+import getAiEnhancedTicketDetails from "@salesforce/apex/TicketController.getAiEnhancedTicketDetails";
+import STAGE_FIELD from "@salesforce/schema/Ticket__c.StageNamePk__c";
+import ID_FIELD from "@salesforce/schema/Ticket__c.Id";
+import getTicketETAsWithPriority from "@salesforce/apex/TicketETAService.getTicketETAsWithPriority";
 import updateTicketStage from "@salesforce/apex/DragAndDropLwcController.updateTicketStage";
 import updateTicketSortOrder from "@salesforce/apex/DragAndDropLwcController.updateTicketSortOrder";
-import getRequiredFieldsForStage from '@salesforce/apex/DH_TicketController.getRequiredFieldsForStage';
+import getRequiredFieldsForStage from '@salesforce/apex/TicketController.getRequiredFieldsForStage';
 import searchForPotentialBlockers from '@salesforce/apex/DragAndDropLwcController.searchForPotentialBlockers';
 import createDependency from '@salesforce/apex/DragAndDropLwcController.createDependency';
 import removeDependency from '@salesforce/apex/DragAndDropLwcController.removeDependency';
-import { ShowToastEvent } from "lightning/platformShowToastEvent";import getSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.getSettings';
+import { ShowToastEvent } from "lightning/platformShowToastEvent";import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   @track persona = "Client";
@@ -1143,7 +1143,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         type: "standard__recordPage",
         attributes: {
           recordId: id,
-          objectApiName: "DH_Ticket__c",
+          objectApiName: "Ticket__c",
           actionName: "view",
         },
       });

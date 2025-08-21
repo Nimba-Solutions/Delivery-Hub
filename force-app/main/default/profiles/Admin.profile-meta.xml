@@ -14,63 +14,63 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_AttachmentSyncService</apexClass>
+        <apexClass>AttachmentSyncService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_AttachmentSyncServiceTest</apexClass>
+        <apexClass>AttachmentSyncServiceTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_DeliveryHubSettingsController</apexClass>
+        <apexClass>DeliveryHubSettingsController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_DeliveryHubSettingsControllerTest</apexClass>
+        <apexClass>DeliveryHubSettingsControllerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraAttachmentSyncBatch</apexClass>
+        <apexClass>JiraAttachmentSyncBatch</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraAttachmentSyncBatchTest</apexClass>
+        <apexClass>JiraAttachmentSyncBatchTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraSyncWorkerTest</apexClass>
+        <apexClass>JiraSyncWorkerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraToSFSyncBatchTest</apexClass>
+        <apexClass>JiraToSFSyncBatchTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_KanbanSettingsController</apexClass>
+        <apexClass>KanbanSettingsController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketController</apexClass>
+        <apexClass>TicketController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketControllerTest</apexClass>
+        <apexClass>TicketControllerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketETAService</apexClass>
+        <apexClass>TicketETAService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketETAServiceTest</apexClass>
+        <apexClass>TicketETAServiceTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketTriggerHandler</apexClass>
+        <apexClass>TicketTriggerHandler</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketTriggerHandlerTest</apexClass>
+        <apexClass>TicketTriggerHandlerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>

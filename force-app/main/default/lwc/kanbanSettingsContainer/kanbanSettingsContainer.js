@@ -1,6 +1,6 @@
 import { LightningElement, track, wire } from 'lwc';
-import getSettings from '@salesforce/apex/DH_KanbanSettingsController.getSettings';
-import saveSettings from '@salesforce/apex/DH_KanbanSettingsController.saveSettings';
+import getSettings from '@salesforce/apex/KanbanSettingsController.getSettings';
+import saveSettings from '@salesforce/apex/KanbanSettingsController.saveSettings';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class KanbanSettingsContainer extends LightningElement {
