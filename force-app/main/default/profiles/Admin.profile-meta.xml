@@ -9,11 +9,11 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_JiraSyncWorker</apexClass>
+        <apexClass>JiraSyncWorker</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DH_TicketTriggerHandler</apexClass>
+        <apexClass>TicketTriggerHandler</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
@@ -107,17 +107,17 @@
     <custom>false</custom>
     <fieldPermissions>
         <editable>true</editable>
-        <field>DH_Ticket__c.BriefDescriptionTxt__c</field>
+        <field>Ticket__c.BriefDescriptionTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Ticket__c.JiraIssueIdTxt__c</field>
+        <field>Ticket__c.JiraIssueIdTxt__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DH_Ticket__c.LastJiraUpdateDate__c</field>
+        <field>Ticket__c.LastJiraUpdateDate__c</field>
         <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
