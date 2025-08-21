@@ -2,7 +2,7 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
         <members>ContentDocumentLinkTriggerHandler</members>
-        <members>DHTicket_JiraSyncTest</members>
+        <members>Ticket_JiraSyncTest</members>
         <members>DH_AttachmentSyncService</members>
         <members>DH_AttachmentSyncServiceTest</members>
         <members>DH_DeliveryHubSettingsController</members>
@@ -38,21 +38,21 @@
         <name>CustomApplication</name>
     </types>
     <types>
-        <members>DH_Attachment_Sync_Log__c.Error_Details__c</members>
-        <members>DH_Attachment_Sync_Log__c.Filename__c</members>
-        <members>DH_Attachment_Sync_Log__c.Jira_Attachment_ID__c</members>
-        <members>DH_Attachment_Sync_Log__c.Salesforce_ContentDocumentId__c</members>
-        <members>DH_Attachment_Sync_Log__c.Sync_Direction__c</members>
-        <members>DH_Attachment_Sync_Log__c.Sync_Status__c</members>
-        <members>DH_Attachment_Sync_Log__c.Ticket__c</members>
-        <members>DH_Ticket_Status_Log__c.FromTxt__c</members>
-        <members>DH_Ticket_Status_Log__c.TimeSpentInStatusNumber__c</members>
-        <members>DH_Ticket_Status_Log__c.ToTxt__c</members>
-        <members>DH_Ticket__c.Developer__c</members>
-        <members>DH_Ticket__c.Estimated_Dev_Completion_Date__c</members>
-        <members>DH_Ticket__c.Estimated_Dev_Start_Date__c</members>
-        <members>DH_Ticket__c.Projected_UAT_Ready_Date__c</members>
-        <members>DH_Ticket__c.StageNamePk__c</members>
+        <members>Attachment_Sync_Log__c.Error_Details__c</members>
+        <members>Attachment_Sync_Log__c.Filename__c</members>
+        <members>Attachment_Sync_Log__c.Jira_Attachment_ID__c</members>
+        <members>Attachment_Sync_Log__c.Salesforce_ContentDocumentId__c</members>
+        <members>Attachment_Sync_Log__c.Sync_Direction__c</members>
+        <members>Attachment_Sync_Log__c.Sync_Status__c</members>
+        <members>Attachment_Sync_Log__c.Ticket__c</members>
+        <members>Ticket_Status_Log__c.FromTxt__c</members>
+        <members>Ticket_Status_Log__c.TimeSpentInStatusNumber__c</members>
+        <members>Ticket_Status_Log__c.ToTxt__c</members>
+        <members>Ticket__c.Developer__c</members>
+        <members>Ticket__c.Estimated_Dev_Completion_Date__c</members>
+        <members>Ticket__c.Estimated_Dev_Start_Date__c</members>
+        <members>Ticket__c.Projected_UAT_Ready_Date__c</members>
+        <members>Ticket__c.StageNamePk__c</members>
         <members>Delivery_Hub_Settings__c.AI_Estimation_Enabled__c</members>
         <members>Delivery_Hub_Settings__c.AI_Suggestions_Enabled__c</members>
         <members>Delivery_Hub_Settings__c.Auto_Generate_Descriptions__c</members>
@@ -91,9 +91,9 @@
         <name>CustomMetadata</name>
     </types>
     <types>
-        <members>DH_Attachment_Sync_Log__c</members>
-        <members>DH_Ticket_Status_Log__c</members>
-        <members>DH_Ticket__c</members>
+        <members>Attachment_Sync_Log__c</members>
+        <members>Ticket_Status_Log__c</members>
+        <members>Ticket__c</members>
         <members>Delivery_Hub_Settings__c</members>
         <members>Kanban_App_Settings__c</members>
         <members>Kanban_Stage_Field_Requirement__mdt</members>
@@ -115,7 +115,7 @@
         <name>FlexiPage</name>
     </types>
     <types>
-        <members>DH_Ticket_Status_Log__c-Ticket Status Log Layout</members>
+        <members>Ticket_Status_Log__c-Ticket Status Log Layout</members>
         <members>Kanban_Stage_Field_Requirement__mdt-Kanban Stage Field Requirement Layout</members>
         <members>OpenAI_Configuration__mdt-OpenAI Configuration Layout</members>
         <members>Ticket_Dependency__c-Ticket Dependency Layout</members>
@@ -133,7 +133,7 @@
         <name>LightningComponentBundle</name>
     </types>
     <types>
-        <members>DH_Ticket__c.All</members>
+        <members>Ticket__c.All</members>
         <name>ListView</name>
     </types>
     <types>
