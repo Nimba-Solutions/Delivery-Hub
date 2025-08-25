@@ -39,7 +39,6 @@
     <label>Delivery Hub</label>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
-    <tabs>Work_Streams</tabs>
     <tabs>Delivery_Hub_Settings</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
