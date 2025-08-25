@@ -156,10 +156,6 @@
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <tabSettings>
-        <tab>DH_Ticket__c</tab>
-        <visibility>Visible</visibility>
-    </tabSettings>
-    <tabSettings>
         <tab>standard-home</tab>
         <visibility>Visible</visibility>
     </tabSettings>
