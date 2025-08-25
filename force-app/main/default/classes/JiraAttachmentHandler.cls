@@ -1,7 +1,7 @@
 /**
  * @description Handler class for processing Jira attachment webhook events.
  * This class manages the synchronization of attachments between Jira issues and
- * Salesforce Ticket__c records, including downloading attachment content,
+ * Salesforce DH_Ticket__c records, including downloading attachment content,
  * creating ContentVersion records, and maintaining sync logs.
  *
  * The handler supports the following operations:
@@ -15,105 +15,211 @@ public without sharing class JiraAttachmentHandler {
     // Salesforce file size limits (in bytes)
     private static final Integer MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB for ContentVersion
     private static final Integer MAX_HEAP_SIZE = 6 * 1024 * 1024;  // 6MB heap limit consideration
-    
-    /**
-     * @description Handles attachment added events from Jira webhooks
-     * @param payload The webhook payload containing attachment and issue information
-     * @return Boolean indicating if the operation was successful
-     */
+    private static final Integer MAX_REDIRECTS = 5;
+
     public static Boolean handleAttachmentAdded(Map<String, Object> payload) {
-        System.debug('JiraAttachmentHandler.handleAttachmentAdded called');
-        
-        try {
-            // Extract attachment and issue information from payload
-            Map<String, Object> attachment = (Map<String, Object>)payload.get('attachment');
-            Map<String, Object> issue = (Map<String, Object>)payload.get('issue');
-            
-            if (attachment == null || issue == null) {
-                System.debug(LoggingLevel.ERROR, 'Missing attachment or issue data in payload');
-                return false;
-            }
-            
-            String attachmentId = (String)attachment.get('id');
-            String filename = (String)attachment.get('filename');
-            String issueKey = (String)issue.get('key');
-            Integer fileSize = (Integer)attachment.get('size');
-            String contentUrl = (String)attachment.get('content');
-            
-            System.debug('Processing attachment: ' + filename + ' (ID: ' + attachmentId + ') for issue: ' + issueKey);
-            
-            // Find the corresponding Ticket__c record
-            List<Ticket__c> tickets = [
-                SELECT Id, JiraTicketKeyTxt__c 
-                FROM Ticket__c 
-                WHERE JiraTicketKeyTxt__c = :issueKey 
-                LIMIT 1
-            ];
-            
-            if (tickets.isEmpty()) {
-                System.debug(LoggingLevel.WARN, 'No Ticket__c found for Jira issue key: ' + issueKey);
-                createSyncLog(null, attachmentId, filename, 'Jira to SF', 'Failed', 
-                             'No corresponding ticket found for issue key: ' + issueKey, null);
-                return false;
-            }
-            
-            Ticket__c ticket = tickets[0];
-            
-            // Validate file size before attempting download
-            if (!validateFileSize(fileSize, filename, ticket.Id, attachmentId)) {
-                return false; // Validation creates its own sync log
-            }
-            
-            // Download attachment content from Jira
-            Blob attachmentContent = downloadAttachmentFromJira(contentUrl, attachmentId, filename, ticket.Id);
-            if (attachmentContent == null) {
-                return false; // Download method creates its own sync log on failure
-            }
-            
-            // Create ContentVersion record
-            String contentDocumentId = createContentVersion(attachmentContent, filename, ticket.Id, attachmentId);
-            if (contentDocumentId == null) {
-                return false; // Creation method creates its own sync log on failure
-            }
-            
-            // Create ContentDocumentLink to associate with ticket
-            Boolean linkCreated = createContentDocumentLink(contentDocumentId, ticket.Id, attachmentId, filename);
-            if (!linkCreated) {
-                return false; // Link creation method creates its own sync log on failure
-            }
-            
-            // Create success sync log
-            createSyncLog(ticket.Id, attachmentId, filename, 'Jira to SF', 'Success', 
-                         null, contentDocumentId);
-            
-            System.debug('Attachment successfully synced from Jira to SF: ' + filename);
-            return true;
-            
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Error in handleAttachmentAdded: ' + e.getMessage());
-            System.debug(LoggingLevel.ERROR, 'Stack trace: ' + e.getStackTraceString());
-            
-            // Create error sync log with available information
-            try {
-                Map<String, Object> attachment = (Map<String, Object>)payload.get('attachment');
-                String attachmentId = attachment != null ? (String)attachment.get('id') : 'unknown';
-                String filename = attachment != null ? (String)attachment.get('filename') : 'unknown';
-                
-                createSyncLog(null, attachmentId, filename, 'Jira to SF', 'Failed', 
-                             'Unexpected error: ' + e.getMessage(), null);
-            } catch (Exception logError) {
-                System.debug(LoggingLevel.ERROR, 'Failed to create error sync log: ' + logError.getMessage());
-            }
-            
+        Map<String, Object> attachment = (Map<String, Object>) payload.get('attachment');
+        Map<String, Object> issue = (Map<String, Object>) payload.get('issue');
+
+        if (attachment == null || issue == null) {
+            System.debug('JiraAttachmentHandler: Payload is missing attachment or issue details.');
             return false;
+        }
+
+        String contentUrl = (String) attachment.get('content');
+        String filename = (String) attachment.get('filename');
+        String issueKey = (String) issue.get('key');
+
+        if (String.isBlank(contentUrl) || String.isBlank(filename) || String.isBlank(issueKey)) {
+            System.debug('JiraAttachmentHandler: Missing contentUrl, filename, or issueKey.');
+            return false;
+        }
+
+        // Find the corresponding Salesforce record
+        // Assuming you have a custom object DH_Ticket__c with a field Jira_Ticket_Key__c
+        List<DH_Ticket__c> tickets = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c = :issueKey LIMIT 1];
+        if (tickets.isEmpty()) {
+            System.debug('JiraAttachmentHandler: Could not find a matching Salesforce ticket for Jira key: ' + issueKey);
+            return false;
+        }
+        Id parentId = tickets[0].Id;
+
+        try {
+            Blob fileBody = downloadAttachment(contentUrl, 0);
+            if (fileBody != null) {
+                createSalesforceFile(parentId, filename, fileBody);
+                return true;
+            }
+        } catch (Exception e) {
+            System.debug('JiraAttachmentHandler: Error processing attachment: ' + e.getMessage());
+        }
+
+        return false;
+    }
+
+    /* public static Blob downloadAttachment(String url, Integer redirectCount) {
+        if (redirectCount > MAX_REDIRECTS) {
+            throw new CalloutException('Exceeded max redirects for URL: ' + url);
+        }
+
+        // --- FINAL FIX FOR CROSS-DOMAIN REDIRECT ---
+        // If the URL is for Jira's media API, we must make a direct callout
+        // because it's a different domain than the main Jira Named Credential.
+        System.debug('url of download attachment'+url);
+        if (url != null && url.startsWith('https://api.media.atlassian')) {
+            System.debug('Handling direct callout to Jira Media API: ' + url);
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint(url);
+            req.setMethod('GET');
+            req.setTimeout(120000);
+            
+            // For this direct callout, we must add authentication headers manually.
+            // These credentials should be stored securely (e.g., in Custom Metadata or protected Custom Settings).
+            // Do not hardcode credentials in production code.
+            String jiraUsername = ''; // TODO: Replace with your Jira email from a secure source
+            String apiToken = ''; // TODO: Replace with your Jira API Token from a secure source
+            String basicAuth = jiraUsername + ':' + apiToken;
+            req.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(basicAuth)));
+
+            HttpResponse mediaRes = new Http().send(req);
+            
+            if (mediaRes.getStatusCode() == 200) {
+                System.debug('media status code'+mediaRes.getStatusCode());
+                return mediaRes.getBodyAsBlob();
+            } else {
+                System.debug('Failed to download from Media API. Status: ' + mediaRes.getStatus() + ' Body: ' + mediaRes.getBody());
+                return null;
+            }
+        }
+
+        // For all initial calls, use the standard JiraCallout helper
+        String relativePath = getRelativePathFromUrl(url);
+        System.debug('JiraAttachmentHandler: Calling httpHelper with relative path: ' + relativePath);
+        HttpResponse res = JiraCallout.httpHelper(relativePath, 'GET', null);
+        
+        if (res.getStatusCode() >= 300 && res.getStatusCode() < 400 && res.getHeader('Location') != null) {
+            // The location header contains the new media API URL.
+            // We recursively call this method, and the 'if' block above will handle the direct callout.
+            return downloadAttachment(res.getHeader('Location'), redirectCount + 1);
+        } else if (res.getStatusCode() == 200) {
+            return res.getBodyAsBlob();
+        } else {
+            System.debug('JiraAttachmentHandler: Failed to download file. Status: ' + res.getStatus() + ' Code: ' + res.getStatusCode());
+            return null;
+        }
+    }*/
+    
+    public static Blob downloadAttachment(String url, Integer redirectCount) {
+        if (redirectCount > MAX_REDIRECTS) {
+            throw new CalloutException('Exceeded max redirects for URL: ' + url);
+        }
+    
+        // --- FINAL FIX FOR CROSS-DOMAIN REDIRECT ---
+        // If the URL is for Jira's media API, we must make a direct callout.
+        System.debug('url of download attachment'+url);
+        if (url != null && url.startsWith('https://api.media.atlassian')) {
+            System.debug('Handling direct callout to Jira Media API: ' + url);
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint(url);
+            req.setMethod('GET');
+            req.setTimeout(120000);
+    
+            // --- CHANGE STARTS HERE ---
+            // Fetch credentials securely from Custom Settings instead of hardcoding.
+            Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+            String jiraUsername = '';
+            String apiToken = '';
+    
+            if (settings != null) {
+                // Safely assign values, defaulting to empty strings if null.
+                jiraUsername = String.isNotBlank(settings.JIRA_Username__c) ? settings.JIRA_Username__c : '';
+                apiToken = String.isNotBlank(settings.JIRA_API_Token__c) ? settings.JIRA_API_Token__c : '';
+            }
+    
+            // Check if credentials were successfully retrieved.
+            if (String.isBlank(jiraUsername) || String.isBlank(apiToken)) {
+                System.debug(LoggingLevel.ERROR, 'Jira credentials not found in Delivery_Hub_Settings__c. Cannot authenticate to media API.');
+                // Return null to indicate failure, consistent with other error paths in this method.
+                return null;
+            }
+    
+            String basicAuth = jiraUsername + ':' + apiToken;
+            req.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(basicAuth)));
+            // --- CHANGE ENDS HERE ---
+    
+            HttpResponse mediaRes = new Http().send(req);
+            
+            if (mediaRes.getStatusCode() == 200) {
+                System.debug('media status code'+mediaRes.getStatusCode());
+                return mediaRes.getBodyAsBlob();
+            } else {
+                System.debug('Failed to download from Media API. Status: ' + mediaRes.getStatus() + ' Body: ' + mediaRes.getBody());
+                return null;
+            }
+        }
+    
+        // For all initial calls, use the standard JiraCallout helper
+        String relativePath = getRelativePathFromUrl(url);
+        System.debug('JiraAttachmentHandler: Calling httpHelper with relative path: ' + relativePath);
+        HttpResponse res = JiraCallout.httpHelper(relativePath, 'GET', null);
+        
+        if (res.getStatusCode() >= 300 && res.getStatusCode() < 400 && res.getHeader('Location') != null) {
+            // The location header contains the new media API URL.
+            // We recursively call this method, and the 'if' block above will handle the direct callout.
+            return downloadAttachment(res.getHeader('Location'), redirectCount + 1);
+        } else if (res.getStatusCode() == 200) {
+            return res.getBodyAsBlob();
+        } else {
+            System.debug('JiraAttachmentHandler: Failed to download file. Status: ' + res.getStatus() + ' Code: ' + res.getStatusCode());
+            return null;
         }
     }
     
-    /**
-     * @description Handles attachment removed events from Jira webhooks
-     * @param payload The webhook payload containing attachment and issue information
-     * @return Boolean indicating if the operation was successful
-     */
+    private static String getRelativePathFromUrl(String contentUrl) {
+        if (String.isBlank(contentUrl)) return null;
+        try {
+            String path = new URL(contentUrl).getPath();
+            return path.startsWith('/') ? path.substring(1) : path;
+        } catch(Exception e) {
+            System.debug('Could not parse URL. Error: ' + e.getMessage());
+            Integer restApiIndex = contentUrl.indexOf('/rest/api/');
+            return (restApiIndex != -1) ? contentUrl.substring(restApiIndex + 1) : null;
+        }
+    }
+
+    public static void createSalesforceFile(Id parentId, String filename, Blob body) {
+        // --- START OF FINAL FIX ---
+        // 1. Get the OwnerId from the parent DH_Ticket__c record.
+        DH_Ticket__c ticket = [SELECT Id,Name,OwnerId FROM DH_Ticket__c WHERE Id = :parentId LIMIT 1];
+        if (ticket == null) {
+            System.debug('Cannot create file. Parent ticket not found for ID: ' + parentId);
+            return;
+        }
+		System.debug('ticket owner name'+ticket.OwnerId);
+        // 2. Create the ContentVersion and explicitly set the OwnerId.
+        ContentVersion cv = new ContentVersion(
+            VersionData = body,
+            Title = filename,
+            PathOnClient = filename,
+			FirstPublishLocationId = ticket.Id
+        );
+        insert cv;
+        // --- END OF FINAL FIX ---
+
+        // The rest of the logic remains the same.
+        ContentVersion insertedCv = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
+
+        ContentDocumentLink cdl = new ContentDocumentLink(
+            ContentDocumentId = insertedCv.ContentDocumentId,
+            LinkedEntityId = parentId,
+            ShareType = 'V',
+            Visibility = 'AllUsers'
+        );
+        insert cdl;
+        
+        System.debug('Successfully created and linked file: ' + filename + ' to ticket: ' + parentId);
+    }
+   
     public static Boolean handleAttachmentRemoved(Map<String, Object> payload) {
         System.debug('JiraAttachmentHandler.handleAttachmentRemoved called');
         
@@ -133,27 +239,27 @@ public without sharing class JiraAttachmentHandler {
             
             System.debug('Processing attachment removal: ' + filename + ' (ID: ' + attachmentId + ') for issue: ' + issueKey);
             
-            // Find the corresponding Ticket__c record
-            List<Ticket__c> tickets = [
+            // Find the corresponding DH_Ticket__c record
+            List<DH_Ticket__c> tickets = [
                 SELECT Id, JiraTicketKeyTxt__c 
-                FROM Ticket__c 
+                FROM DH_Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey 
                 LIMIT 1
             ];
             
             if (tickets.isEmpty()) {
-                System.debug(LoggingLevel.WARN, 'No Ticket__c found for Jira issue key: ' + issueKey);
+                System.debug(LoggingLevel.WARN, 'No DH_Ticket__c found for Jira issue key: ' + issueKey);
                 createSyncLog(null, attachmentId, filename, 'Jira to SF', 'Failed', 
                              'No corresponding ticket found for issue key: ' + issueKey, null);
                 return false;
             }
             
-            Ticket__c ticket = tickets[0];
+            DH_Ticket__c ticket = tickets[0];
             
             // Find existing sync log to get ContentDocument ID
-            List<Attachment_Sync_Log__c> existingLogs = [
+            List<DH_Attachment_Sync_Log__c> existingLogs = [
                 SELECT Id, Salesforce_ContentDocumentId__c, Sync_Status__c
-                FROM Attachment_Sync_Log__c
+                FROM DH_Attachment_Sync_Log__c
                 WHERE Ticket__c = :ticket.Id 
                 AND Jira_Attachment_ID__c = :attachmentId
                 AND Sync_Status__c = 'Success'
@@ -331,6 +437,7 @@ public without sharing class JiraAttachmentHandler {
             cv.Title = filename;
             cv.PathOnClient = filename;
             cv.VersionData = attachmentContent;
+            
             cv.IsMajorVersion = true;
             cv.Description = 'Synced from Jira attachment ID: ' + attachmentId;
             
@@ -457,7 +564,7 @@ public without sharing class JiraAttachmentHandler {
         }
         
         try {
-            Attachment_Sync_Log__c syncLog = new Attachment_Sync_Log__c();
+            DH_Attachment_Sync_Log__c syncLog = new DH_Attachment_Sync_Log__c();
             syncLog.Ticket__c = ticketId;
             syncLog.Jira_Attachment_ID__c = jiraAttachmentId;
             syncLog.Filename__c = filename;
@@ -467,7 +574,7 @@ public without sharing class JiraAttachmentHandler {
             syncLog.Salesforce_ContentDocumentId__c = contentDocumentId;
             
             // Use Security.stripInaccessible for FLS compliance
-            List<Attachment_Sync_Log__c> logList = new List<Attachment_Sync_Log__c>{ syncLog };
+            List<DH_Attachment_Sync_Log__c> logList = new List<DH_Attachment_Sync_Log__c>{ syncLog };
             SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, logList);
             
             insert decision.getRecords();

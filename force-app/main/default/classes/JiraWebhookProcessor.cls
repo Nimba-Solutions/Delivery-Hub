@@ -11,7 +11,7 @@
  *
  * Processing failures are logged and can be retried using the JiraWebhookRetryService.
  */
-public without sharing class JiraWebhookProcessor implements Queueable {
+public without sharing class JiraWebhookProcessor implements Queueable,Database.AllowsCallouts {
     
     // Event type constants
     private static final String EVENT_ISSUE_CREATED = 'jira:issue_created';
@@ -28,7 +28,7 @@ public without sharing class JiraWebhookProcessor implements Queueable {
     private Map<String, Object> payload;
     private String webhookId;
     private Integer retryCount;
-    
+    private static final String FIELD_ID_ATTACHMENT = 'attachment';
     /**
      * @description Constructor for webhook processor
      * @param eventType The webhook event type
@@ -168,21 +168,27 @@ public without sharing class JiraWebhookProcessor implements Queueable {
      * @return Boolean indicating if routing and processing was successful
      */
     private Boolean routeToEventProcessor() {
-        try {
-            if (isIssueEvent(eventType)) {
-                return processIssueEvent();
-            } else if (isCommentEvent(eventType)) {
-                return processCommentEvent();
-            } else if (isAttachmentEvent(eventType)) {
-                return processAttachmentEvent();
-            } else {
-                System.debug(LoggingLevel.WARN, 'Unsupported event type for processing: ' + eventType);
-                return false;
+        System.debug('JiraWebhookProcessor routing event: ' + this.eventType);
+        Boolean processingSuccess = false;
+
+        if (isIssueEvent(this.eventType)) {
+            // Step 1: Always process the standard issue field updates first.
+            processingSuccess = processIssueEvent();
+
+            // Step 2: After processing fields, check if this update also contains an attachment change.
+            // This is crucial because a single 'issue_updated' event can contain both.
+            if (processingSuccess) {
+                processAttachmentChanges(this.payload);
             }
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Error routing event to processor: ' + e.getMessage());
-            throw e; // Re-throw to be caught by main execute method
+        } else {
+            logProcessingError('Unsupported Event Type', 'Event type "' + this.eventType + '" is not supported.',null);
+            
         }
+
+        if (processingSuccess) {
+            logProcessingSuccess();
+        }
+        return processingSuccess;
     }
     
     /**
@@ -421,6 +427,84 @@ public without sharing class JiraWebhookProcessor implements Queueable {
         Long timestamp = System.now().getTime();
         Integer randomNum = Math.round(Math.random() * 10000);
         return 'WH_' + timestamp + '_' + randomNum;
+    }
+    
+    /**
+     * @description NEW: Inspects the payload for attachment additions or removals
+     * and calls the JiraAttachmentHandler.
+     * @param payload The webhook payload from the issue event.
+     */
+    private void processAttachmentChanges(Map<String, Object> payload) {
+    Map<String, Object> changelog = (Map<String, Object>)payload.get('changelog');
+    if (changelog == null || !changelog.containsKey('items')) {
+        return; 
+    }
+
+    Map<String, Object> issue = (Map<String, Object>)payload.get('issue');
+    if (issue == null) return;
+    
+    // Find the Salesforce Ticket ID first
+    String issueKey = (String)issue.get('key');
+    List<DH_Ticket__c> tickets = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c = :issueKey LIMIT 1];
+    if (tickets.isEmpty()) {
+        System.debug('Could not find ticket to attach file to for key: ' + issueKey);
+        return;
+    }
+    Id ticketId = tickets[0].Id;
+
+    List<Object> items = (List<Object>)changelog.get('items');
+    for (Object itemObj : items) {
+        Map<String, Object> item = (Map<String, Object>)itemObj;
+        if ((String)item.get('fieldId') == FIELD_ID_ATTACHMENT) {
+            // Attachment ADDED
+            if (item.get('to') != null && item.get('fromString') == null) {
+                System.debug('Attachment addition detected. Enqueuing attachment processor job.');
+                Map<String, Object> attachmentDetails = findAttachmentDetailsById(issue, (String)item.get('to'));
+                
+                if (attachmentDetails != null) {
+                    String contentUrl = (String)attachmentDetails.get('content');
+                    String filename = (String)attachmentDetails.get('filename');
+
+                    // Enqueue the new job to handle the callout in a separate transaction
+                    JiraAttachmentProcessor processor = new JiraAttachmentProcessor(ticketId, contentUrl, filename);
+                    System.enqueueJob(processor);
+                }
+            }
+            // Attachment REMOVED
+            else if (item.get('from') != null && item.get('toString') == null) {
+                // The logic for handling removed attachments can remain here,
+                // as it only performs DML and does not require a callout.
+                Map<String, Object> handlerPayload = new Map<String, Object>{
+                    'issue' => issue,
+                    'attachment' => new Map<String, Object>{
+                        'id' => (String)item.get('from'),
+                        'filename' => (String)item.get('fromString')
+                    }
+                };
+                JiraAttachmentHandler.handleAttachmentRemoved(handlerPayload);
+            }
+        }
+    }
+}    
+    /**
+     * @description NEW: Helper method to find full attachment details from the issue payload
+     * using the attachment ID from the changelog.
+     * @param issue The 'issue' map from the webhook payload.
+     * @param attachmentId The ID of the attachment to find.
+     * @return A map containing the details of the found attachment, or null.
+     */
+    private Map<String, Object> findAttachmentDetailsById(Map<String, Object> issue, String attachmentId) {
+        Map<String, Object> fields = (Map<String, Object>)issue.get('fields');
+        if (fields != null && fields.containsKey('attachment')) {
+            List<Object> attachments = (List<Object>)fields.get('attachment');
+            for (Object attachmentObj : attachments) {
+                Map<String, Object> attachment = (Map<String, Object>)attachmentObj;
+                if ((String)attachment.get('id') == attachmentId) {
+                    return attachment;
+                }
+            }
+        }
+        return null;
     }
     
     /**

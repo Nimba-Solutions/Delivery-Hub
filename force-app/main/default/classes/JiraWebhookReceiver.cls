@@ -39,6 +39,19 @@ global without sharing class JiraWebhookReceiver {
         res.addHeader('Content-Type', 'application/json');
         
         try {
+            Sync_In_Propgress__c syncSettings = Sync_In_Propgress__c.getOrgDefaults();
+            if (syncSettings != null && syncSettings.Salesforce_to_jira__c == true) {
+                System.debug('Jira webhook processing skipped: A Salesforce-to-Jira sync is currently marked as in progress.');
+                sendSuccessResponse(res, 'Webhook event ignored to prevent recursion.', 'IgnoredDueToSyncFlag');
+                return; 
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Could not read Sync_In_Propgress__c custom setting. Error: ' + e.getMessage());
+            sendErrorResponse(res, 500, 'Configuration Error', 'Could not verify sync status due to a configuration issue.');
+            return;
+        }
+        
+        try {
             // Step 1: Validate authentication
             // if (!validateAuthentication(req)) {
             //     sendErrorResponse(res, 401, 'Unauthorized', 'Invalid or missing authentication credentials');
