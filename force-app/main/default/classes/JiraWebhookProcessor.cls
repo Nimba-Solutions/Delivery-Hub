@@ -445,7 +445,7 @@ public without sharing class JiraWebhookProcessor implements Queueable,Database.
     
     // Find the Salesforce Ticket ID first
     String issueKey = (String)issue.get('key');
-    List<DH_Ticket__c> tickets = [SELECT Id FROM DH_Ticket__c WHERE JiraTicketKeyTxt__c = :issueKey LIMIT 1];
+    List<Ticket__c> tickets = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = :issueKey LIMIT 1];
     if (tickets.isEmpty()) {
         System.debug('Could not find ticket to attach file to for key: ' + issueKey);
         return;
