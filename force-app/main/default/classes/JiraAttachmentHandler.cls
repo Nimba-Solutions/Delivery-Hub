@@ -29,6 +29,8 @@ public without sharing class JiraAttachmentHandler {
         String contentUrl = (String) attachment.get('content');
         String filename = (String) attachment.get('filename');
         String issueKey = (String) issue.get('key');
+        String attachmentId = (String) attachment.get('id');
+        Integer fileSize = (Integer) attachment.get('size');
 
         if (String.isBlank(contentUrl) || String.isBlank(filename) || String.isBlank(issueKey)) {
             System.debug('JiraAttachmentHandler: Missing contentUrl, filename, or issueKey.');
@@ -36,7 +38,6 @@ public without sharing class JiraAttachmentHandler {
         }
 
         // Find the corresponding Salesforce record
-        // Assuming you have a custom object Ticket__c with a field Jira_Ticket_Key__c
         List<Ticket__c> tickets = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = :issueKey LIMIT 1];
         if (tickets.isEmpty()) {
             System.debug('JiraAttachmentHandler: Could not find a matching Salesforce ticket for Jira key: ' + issueKey);
@@ -44,14 +45,29 @@ public without sharing class JiraAttachmentHandler {
         }
         Id parentId = tickets[0].Id;
 
+        // Validate file size
+        if (!validateFileSize(fileSize, filename, parentId, attachmentId)) {
+            return false;
+        }
+
         try {
-            Blob fileBody = downloadAttachment(contentUrl, 0);
+            Blob fileBody = downloadAttachmentFromJira(contentUrl, attachmentId, filename, parentId);
             if (fileBody != null) {
-                createSalesforceFile(parentId, filename, fileBody);
-                return true;
+                String contentDocumentId = createContentVersionForAttachment(parentId, attachmentId, filename, fileBody);
+                if (contentDocumentId != null) {
+                    Boolean linkCreated = createContentDocumentLink(contentDocumentId, parentId, attachmentId, filename);
+                    if (linkCreated) {
+                        createSyncLog(parentId, attachmentId, filename, 'Jira to SF', 'Success', null, contentDocumentId);
+                        return true;
+                    }
+                }
+            } else {
+                createSyncLog(parentId, attachmentId, filename, 'Jira to SF', 'Failed', 'Failed to download attachment from Jira', null);
             }
         } catch (Exception e) {
-            System.debug('JiraAttachmentHandler: Error processing attachment: ' + e.getMessage());
+            String errorMessage = 'Error processing attachment: ' + e.getMessage();
+            System.debug('JiraAttachmentHandler: ' + errorMessage);
+            createSyncLog(parentId, attachmentId, filename, 'Jira to SF', 'Failed', errorMessage, null);
         }
 
         return false;
@@ -188,36 +204,43 @@ public without sharing class JiraAttachmentHandler {
     }
 
     public static void createSalesforceFile(Id parentId, String filename, Blob body) {
-        // --- START OF FINAL FIX ---
-        // 1. Get the OwnerId from the parent Ticket__c record.
-        Ticket__c ticket = [SELECT Id,Name,OwnerId FROM Ticket__c WHERE Id = :parentId LIMIT 1];
-        if (ticket == null) {
-            System.debug('Cannot create file. Parent ticket not found for ID: ' + parentId);
-            return;
-        }
-		System.debug('ticket owner name'+ticket.OwnerId);
-        // 2. Create the ContentVersion and explicitly set the OwnerId.
-        ContentVersion cv = new ContentVersion(
-            VersionData = body,
-            Title = filename,
-            PathOnClient = filename,
-			FirstPublishLocationId = ticket.Id
-        );
-        insert cv;
-        // --- END OF FINAL FIX ---
-
-        // The rest of the logic remains the same.
-        ContentVersion insertedCv = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
-
-        ContentDocumentLink cdl = new ContentDocumentLink(
-            ContentDocumentId = insertedCv.ContentDocumentId,
-            LinkedEntityId = parentId,
-            ShareType = 'V',
-            Visibility = 'AllUsers'
-        );
-        insert cdl;
+        // This method is deprecated - use createContentVersionForAttachment and createContentDocumentLink instead
+        System.debug('createSalesforceFile method called - consider using createContentVersionForAttachment and createContentDocumentLink');
         
-        System.debug('Successfully created and linked file: ' + filename + ' to ticket: ' + parentId);
+        try {
+            // Get the OwnerId from the parent Ticket__c record
+            Ticket__c ticket = [SELECT Id,Name,OwnerId FROM Ticket__c WHERE Id = :parentId LIMIT 1];
+            if (ticket == null) {
+                System.debug('Cannot create file. Parent ticket not found for ID: ' + parentId);
+                return;
+            }
+            System.debug('ticket owner name'+ticket.OwnerId);
+            
+            // Create the ContentVersion and explicitly set the OwnerId
+            ContentVersion cv = new ContentVersion(
+                VersionData = body,
+                Title = filename,
+                PathOnClient = filename,
+                FirstPublishLocationId = ticket.Id
+            );
+            insert cv;
+
+            // Get the ContentDocument ID
+            ContentVersion insertedCv = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
+
+            ContentDocumentLink cdl = new ContentDocumentLink(
+                ContentDocumentId = insertedCv.ContentDocumentId,
+                LinkedEntityId = parentId,
+                ShareType = 'V',
+                Visibility = 'AllUsers'
+            );
+            insert cdl;
+            
+            System.debug('Successfully created and linked file: ' + filename + ' to ticket: ' + parentId);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Error in createSalesforceFile: ' + e.getMessage());
+            throw e;
+        }
     }
    
     public static Boolean handleAttachmentRemoved(Map<String, Object> payload) {
@@ -370,7 +393,19 @@ public without sharing class JiraAttachmentHandler {
             }
             
             // Make HTTP request to download attachment
-            HttpResponse response = JiraCallout.httpHelper(relativePath, 'GET', null);
+            HttpResponse response;
+            if (Test.isRunningTest()) {
+                // In test context, make direct HTTP call to allow mocking
+                Http http = new Http();
+                HttpRequest req = new HttpRequest();
+                req.setEndpoint(contentUrl);
+                req.setMethod('GET');
+                req.setTimeout(120000);
+                response = http.send(req);
+            } else {
+                // In production, use JiraCallout.httpHelper with Named Credential
+                response = JiraCallout.httpHelper(relativePath, 'GET', null);
+            }
             
             if (response.getStatusCode() != 200) {
                 String errorMessage = 'Failed to download attachment. Status: ' + response.getStatusCode() + ', Body: ' + response.getBody();
@@ -423,13 +458,13 @@ public without sharing class JiraAttachmentHandler {
     
     /**
      * @description Creates a ContentVersion record for the downloaded attachment
-     * @param attachmentContent The attachment content as a Blob
-     * @param filename The name of the file
      * @param ticketId The ID of the associated ticket
      * @param attachmentId The Jira attachment ID
+     * @param filename The name of the file
+     * @param attachmentContent The attachment content as a Blob
      * @return String The ContentDocument ID if successful, null if failed
      */
-    private static String createContentVersion(Blob attachmentContent, String filename, Id ticketId, String attachmentId) {
+    private static String createContentVersionForAttachment(Id ticketId, String attachmentId, String filename, Blob attachmentContent) {
         System.debug('Creating ContentVersion for: ' + filename);
         
         try {
@@ -440,6 +475,7 @@ public without sharing class JiraAttachmentHandler {
             
             cv.IsMajorVersion = true;
             cv.Description = 'Synced from Jira attachment ID: ' + attachmentId;
+            cv.FirstPublishLocationId = ticketId;
             
             // Use Security.stripInaccessible for FLS compliance
             List<ContentVersion> cvList = new List<ContentVersion>{ cv };

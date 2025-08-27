@@ -307,10 +307,12 @@ public class JiraAttachmentHandlerTest {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(statusCode);
-            res.setBody(responseBody);
             
             if (statusCode == 200) {
+                res.setBodyAsBlob(Blob.valueOf(responseBody));
                 res.setHeader('Content-Type', 'application/octet-stream');
+            } else {
+                res.setBody(responseBody);
             }
             
             return res;
