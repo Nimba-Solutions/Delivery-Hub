@@ -24,8 +24,8 @@ private class JiraWebhookConfigServiceTest {
         
         // Assert
         System.assertNotEquals(null, config, 'Configuration should be found for jira:issue_created');
-        System.assertEquals('jira:issue_created', config.Event_Type__c, 'Event type should match');
-        System.assertEquals(true, config.Enabled__c, 'Issue created should be enabled by default');
+        System.assertEquals('jira:issue_created', config.EventTypePk__c, 'Event type should match');
+        System.assertEquals(true, config.EnabledBool__c, 'Issue created should be enabled by default');
     }
     
     /**
@@ -104,7 +104,8 @@ private class JiraWebhookConfigServiceTest {
                           'Issue created should have 5 retry attempts');
         System.assertEquals(3, JiraWebhookConfigService.getMaxRetryAttempts('jira:issue_deleted'), 
                           'Issue deleted should have 3 retry attempts');
-        //System.assertEquals(5, JiraWebhookConfigService.getMaxRetryAttempts('invalid_event'), 'Invalid event should return default 5 retry attempts');
+        System.assertEquals(5, JiraWebhookConfigService.getMaxRetryAttempts('invalid_event'), 
+                          'Invalid event should return default 5 retry attempts');
     }
     
     /**
@@ -251,9 +252,9 @@ private class JiraWebhookConfigServiceTest {
         Map<String, String> mappings = JiraWebhookConfigService.getFieldMappings('comment_created');
         
         // Assert
-        /*System.assertEquals('JiraCommentIdTxt__c', mappings.get('id'), 'Comment ID should map correctly');
+        System.assertEquals('JiraCommentIdTxt__c', mappings.get('id'), 'Comment ID should map correctly');
         System.assertEquals('BodyTxt__c', mappings.get('body'), 'Comment body should map correctly');
-        System.assertEquals('AuthorTxt__c', mappings.get('author.displayName'), 'Comment author should map correctly');*/
+        System.assertEquals('AuthorTxt__c', mappings.get('author.displayName'), 'Comment author should map correctly');
     }
     
     /**

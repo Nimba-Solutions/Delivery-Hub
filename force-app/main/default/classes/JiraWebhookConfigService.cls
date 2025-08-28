@@ -37,7 +37,7 @@ public class JiraWebhookConfigService {
      */
     public static Boolean isEventTypeEnabled(String eventType) {
         Jira_Webhook_Config__mdt config = getConfigForEventType(eventType);
-        return config != null && config.Enabled__c == true;
+        return config != null && config.EnabledBool__c == true;
     }
     
     /**
@@ -48,12 +48,12 @@ public class JiraWebhookConfigService {
     public static Map<String, String> getFieldMappings(String eventType) {
         Jira_Webhook_Config__mdt config = getConfigForEventType(eventType);
         
-        if (config == null || String.isBlank(config.Field_Mapping__c)) {
+        if (config == null || String.isBlank(config.FieldMappingTxt__c)) {
             return new Map<String, String>();
         }
         
         try {
-            Map<String, Object> rawMappings = (Map<String, Object>)JSON.deserializeUntyped(config.Field_Mapping__c);
+            Map<String, Object> rawMappings = (Map<String, Object>)JSON.deserializeUntyped(config.FieldMappingTxt__c);
             Map<String, String> fieldMappings = new Map<String, String>();
             
             for (String jiraField : rawMappings.keySet()) {
@@ -79,8 +79,8 @@ public class JiraWebhookConfigService {
     public static Integer getMaxRetryAttempts(String eventType) {
         Jira_Webhook_Config__mdt config = getConfigForEventType(eventType);
         
-        if (config != null && config.Retry_Attempts__c != null) {
-            return Integer.valueOf(config.Retry_Attempts__c);
+        if (config != null && config.RetryAttemptsNumber__c != null) {
+            return Integer.valueOf(config.RetryAttemptsNumber__c);
         }
         
         return 1; // Default retry attempts
@@ -94,8 +94,8 @@ public class JiraWebhookConfigService {
     public static String getSyncDirection(String eventType) {
         Jira_Webhook_Config__mdt config = getConfigForEventType(eventType);
         
-        if (config != null && String.isNotBlank(config.Sync_Direction__c)) {
-            return config.Sync_Direction__c;
+        if (config != null && String.isNotBlank(config.SyncDirectionPk__c)) {
+            return config.SyncDirectionPk__c;
         }
         
         return 'Jira_to_Salesforce'; // Default sync direction
@@ -109,8 +109,8 @@ public class JiraWebhookConfigService {
     public static Integer getProcessingPriority(String eventType) {
         Jira_Webhook_Config__mdt config = getConfigForEventType(eventType);
         
-        if (config != null && config.Priority__c != null) {
-            return Integer.valueOf(config.Priority__c);
+        if (config != null && config.PriorityNumber__c != null) {
+            return Integer.valueOf(config.PriorityNumber__c);
         }
         
         return 100; // Default priority
@@ -133,21 +133,21 @@ public class JiraWebhookConfigService {
         }
         
         // Validate field mappings JSON if present
-        if (String.isNotBlank(config.Field_Mapping__c)) {
+        if (String.isNotBlank(config.FieldMappingTxt__c)) {
             try {
-                JSON.deserializeUntyped(config.Field_Mapping__c);
+                JSON.deserializeUntyped(config.FieldMappingTxt__c);
             } catch (JSONException e) {
                 return 'Invalid JSON in field mappings: ' + e.getMessage();
             }
         }
         
         // Validate retry attempts
-        if (config.Retry_Attempts__c != null && config.Retry_Attempts__c < 0) {
+        if (config.RetryAttemptsNumber__c != null && config.RetryAttemptsNumber__c < 0) {
             return 'Retry attempts cannot be negative';
         }
         
         // Validate priority
-        if (config.Priority__c != null && config.Priority__c < 0) {
+        if (config.PriorityNumber__c != null && config.PriorityNumber__c < 0) {
             return 'Priority cannot be negative';
         }
         
@@ -167,7 +167,7 @@ public class JiraWebhookConfigService {
         
         for (String eventType : configCache.keySet()) {
             Jira_Webhook_Config__mdt config = configCache.get(eventType);
-            if (config.Enabled__c == true) {
+            if (config.EnabledBool__c == true) {
                 enabledTypes.add(eventType);
             }
         }
@@ -190,16 +190,16 @@ public class JiraWebhookConfigService {
     private static void initializeCache() {
         try {
             List<Jira_Webhook_Config__mdt> configs = [
-                SELECT Event_Type__c, Enabled__c, Field_Mapping__c, Retry_Attempts__c, 
-                       Sync_Direction__c, Priority__c, DeveloperName, Label
+                SELECT EventTypePk__c, EnabledBool__c, FieldMappingTxt__c, RetryAttemptsNumber__c, 
+                       SyncDirectionPk__c, PriorityNumber__c, DeveloperName, Label
                 FROM Jira_Webhook_Config__mdt
-                ORDER BY Priority__c ASC
+                ORDER BY PriorityNumber__c ASC
             ];
             
             configCache.clear();
             
             for (Jira_Webhook_Config__mdt config : configs) {
-                configCache.put(config.Event_Type__c, config);
+                configCache.put(config.EventTypePk__c, config);
             }
             
             cacheInitialized = true;
@@ -242,11 +242,11 @@ public class JiraWebhookConfigService {
             Jira_Webhook_Config__mdt config = configCache.get(eventType);
             Map<String, Object> configDetail = new Map<String, Object>();
             configDetail.put('eventType', eventType);
-            configDetail.put('enabled', config.Enabled__c);
-            configDetail.put('syncDirection', config.Sync_Direction__c);
-            configDetail.put('priority', config.Priority__c);
-            configDetail.put('retryAttempts', config.Retry_Attempts__c);
-            configDetail.put('hasFieldMappings', String.isNotBlank(config.Field_Mapping__c));
+            configDetail.put('enabled', config.EnabledBool__c);
+            configDetail.put('syncDirection', config.SyncDirectionPk__c);
+            configDetail.put('priority', config.PriorityNumber__c);
+            configDetail.put('retryAttempts', config.RetryAttemptsNumber__c);
+            configDetail.put('hasFieldMappings', String.isNotBlank(config.FieldMappingTxt__c));
             configDetails.add(configDetail);
         }
         
