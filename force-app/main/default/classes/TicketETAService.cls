@@ -127,6 +127,7 @@ public with sharing class TicketETAService {
     /**
      * @description Private inner class containing the main ETA simulation logic.
      */
+    @TestVisible
     private class ETACalculator {
         private Kanban_Configuration__mdt config;
         private final Set<Id> prioritizedTicketIds;
