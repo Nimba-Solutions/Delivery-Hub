@@ -3,27 +3,27 @@
     <label>Attachment Created Default</label>
     <protected>false</protected>
     <values>
-        <field>Enabled__c</field>
+        <field>EnabledBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>Event_Type__c</field>
+        <field>EventTypePk__c</field>
         <value xsi:type="xsd:string">attachment_created</value>
     </values>
     <values>
-        <field>Field_Mapping__c</field>
+        <field>FieldMappingTxt__c</field>
         <value xsi:type="xsd:string">{&quot;id&quot;: &quot;JiraAttachmentIdTxt__c&quot;, &quot;filename&quot;: &quot;Title&quot;, &quot;size&quot;: &quot;ContentSize&quot;, &quot;mimeType&quot;: &quot;FileType&quot;}</value>
     </values>
     <values>
-        <field>Priority__c</field>
+        <field>PriorityNumber__c</field>
         <value xsi:type="xsd:double">70.0</value>
     </values>
     <values>
-        <field>Retry_Attempts__c</field>
+        <field>RetryAttemptsNumber__c</field>
         <value xsi:type="xsd:double">3.0</value>
     </values>
     <values>
-        <field>Sync_Direction__c</field>
+        <field>SyncDirectionPk__c</field>
         <value xsi:type="xsd:string">Jira_to_Salesforce</value>
     </values>
 </CustomMetadata>

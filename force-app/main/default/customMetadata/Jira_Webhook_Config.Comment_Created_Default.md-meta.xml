@@ -3,27 +3,27 @@
     <label>Comment Created Default</label>
     <protected>false</protected>
     <values>
-        <field>Enabled__c</field>
+        <field>EnabledBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>Event_Type__c</field>
+        <field>EventTypePk__c</field>
         <value xsi:type="xsd:string">comment_created</value>
     </values>
     <values>
-        <field>Field_Mapping__c</field>
+        <field>FieldMappingTxt__c</field>
         <value xsi:type="xsd:string">{&quot;id&quot;: &quot;JiraCommentIdTxt__c&quot;, &quot;body&quot;: &quot;BodyTxt__c&quot;, &quot;author.displayName&quot;: &quot;AuthorTxt__c&quot;, &quot;created&quot;: &quot;CreatedDate__c&quot;}</value>
     </values>
     <values>
-        <field>Priority__c</field>
+        <field>PriorityNumber__c</field>
         <value xsi:type="xsd:double">40.0</value>
     </values>
     <values>
-        <field>Retry_Attempts__c</field>
+        <field>RetryAttemptsNumber__c</field>
         <value xsi:type="xsd:double">5.0</value>
     </values>
     <values>
-        <field>Sync_Direction__c</field>
+        <field>SyncDirectionPk__c</field>
         <value xsi:type="xsd:string">Jira_to_Salesforce</value>
     </values>
 </CustomMetadata>

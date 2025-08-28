@@ -3,27 +3,27 @@
     <label>Issue Updated Default</label>
     <protected>false</protected>
     <values>
-        <field>Enabled__c</field>
+        <field>EnabledBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>Event_Type__c</field>
+        <field>EventTypePk__c</field>
         <value xsi:type="xsd:string">jira:issue_updated</value>
     </values>
     <values>
-        <field>Field_Mapping__c</field>
+        <field>FieldMappingTxt__c</field>
         <value xsi:type="xsd:string">{&quot;key&quot;: &quot;JiraTicketKeyTxt__c&quot;, &quot;summary&quot;: &quot;BriefDescriptionTxt__c&quot;, &quot;description&quot;: &quot;DescriptionTxt__c&quot;, &quot;status.name&quot;: &quot;StatusPk__c&quot;, &quot;assignee.displayName&quot;: &quot;AssignedToTxt__c&quot;, &quot;priority.name&quot;: &quot;PriorityPk__c&quot;}</value>
     </values>
     <values>
-        <field>Priority__c</field>
+        <field>PriorityNumber__c</field>
         <value xsi:type="xsd:double">20.0</value>
     </values>
     <values>
-        <field>Retry_Attempts__c</field>
+        <field>RetryAttemptsNumber__c</field>
         <value xsi:type="xsd:double">5.0</value>
     </values>
     <values>
-        <field>Sync_Direction__c</field>
+        <field>SyncDirectionPk__c</field>
         <value xsi:type="xsd:string">Jira_to_Salesforce</value>
     </values>
 </CustomMetadata>
