@@ -23,7 +23,7 @@ private class JiraFieldMappingUtilTest {
      * @description Test the main mapping method with a full, valid Jira payload.
      */
     @isTest
-    static void testMapJiraIssueToTicket_FullPayload() {
+    static void testMapJiraIssueToTicketFullPayload() {
         // 1. Setup
         User dev = [SELECT Id, Email FROM User WHERE Email = 'testuser@example.com' LIMIT 1];
         Ticket__c ticket = new Ticket__c();
