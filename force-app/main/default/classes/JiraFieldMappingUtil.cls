@@ -108,6 +108,7 @@ public class JiraFieldMappingUtil {
      * @param fields The Jira fields object
      * @param ticket The Ticket__c record to populate
      */
+    @TestVisible
     private static void mapStatusField(Map<String, Object> fields, Ticket__c ticket) {
         Map<String, Object> status = (Map<String, Object>)fields.get('status');
         if (status == null) {
@@ -134,6 +135,8 @@ public class JiraFieldMappingUtil {
      * @param fields The Jira fields object
      * @param ticket The Ticket__c record to populate
      */
+    
+    @TestVisible
     private static void mapAssigneeField(Map<String, Object> fields, Ticket__c ticket) {
         Map<String, Object> assignee = (Map<String, Object>)fields.get('assignee');
         if (assignee == null) {
@@ -154,6 +157,7 @@ public class JiraFieldMappingUtil {
      * @param fields The Jira fields object
      * @param ticket The Ticket__c record to populate
      */
+    @TestVisible
     private static void mapPriorityField(Map<String, Object> fields, Ticket__c ticket) {
         Map<String, Object> priority = (Map<String, Object>)fields.get('priority');
         if (priority == null) {
