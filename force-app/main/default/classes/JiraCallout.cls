@@ -10,10 +10,10 @@ public with sharing class JiraCallout {
             try {
                 Sync_In_Propgress__c setting = Sync_In_Propgress__c.getOrgDefaults();
                 if (setting == null) {
-                    setting = new Sync_In_Propgress__c(Salesforce_to_jira__c = true); // Or appropriate default name
+                    setting = new Sync_In_Propgress__c(SalesforceToJiraBool__c = true); // Or appropriate default name
                 }
-                if (setting.Salesforce_to_jira__c != true) {
-                    setting.Salesforce_to_jira__c = true;
+                if (setting.SalesforceToJiraBool__c != true) {
+                    setting.SalesforceToJiraBool__c = true;
                     upsert setting; // Use upsert for safety
                     System.debug('Salesforce-to-Jira sync flag set to TRUE.');
                 }

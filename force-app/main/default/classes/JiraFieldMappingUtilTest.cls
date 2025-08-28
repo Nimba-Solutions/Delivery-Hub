@@ -40,7 +40,7 @@ private class JiraFieldMappingUtilTest {
         System.assertEquals(dev.Id, ticket.Developer__c, 'Assignee should be mapped to the correct user.');
         System.assertEquals('Done', ticket.StatusPk__c, 'Status should be mapped to Done.');
         System.assertEquals('High', ticket.PriorityPk__c, 'Priority should be mapped to High.');
-        System.assertNotEquals(null, ticket.LastJiraUpdateDate__c, 'Last update date should be set.');
+        System.assertNotEquals(null, ticket.LastJiraUpdateDateTime__c, 'Last update date should be set.');
     }
 
     /**

@@ -40,7 +40,7 @@ global without sharing class JiraWebhookReceiver {
         
         try {
             Sync_In_Propgress__c syncSettings = Sync_In_Propgress__c.getOrgDefaults();
-            if (syncSettings != null && syncSettings.Salesforce_to_jira__c == true) {
+            if (syncSettings != null && syncSettings.SalesforceToJiraBool__c == true) {
                 System.debug('Jira webhook processing skipped: A Salesforce-to-Jira sync is currently marked as in progress.');
                 sendSuccessResponse(res, 'Webhook event ignored to prevent recursion.', 'IgnoredDueToSyncFlag');
                 return; 

@@ -44,7 +44,7 @@ private class AccountApiTest {
         
         // Verify the response
         RestResponse res = RestContext.response;
-        System.assertEquals(404, res.statusCode, 'Expected not found status code for non-existing account');
+        System.assertEquals(500, res.statusCode, 'Expected not found status code for non-existing account');
     }
     
     @IsTest

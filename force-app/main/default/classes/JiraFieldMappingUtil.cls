@@ -42,7 +42,7 @@ public class JiraFieldMappingUtil {
             }
             
             // Set last update timestamp
-            ticket.LastJiraUpdateDate__c = System.now();
+            ticket.LastJiraUpdateDateTime__c = System.now();
             
             // Map basic fields
             mapBasicFields(fields, ticket);
@@ -190,7 +190,7 @@ public class JiraFieldMappingUtil {
         String updatedDate = (String)fields.get('updated');
         if (String.isNotBlank(updatedDate)) {
             Datetime updatedDateTime = convertJiraTimestampToDatetime(updatedDate);
-            ticket.LastJiraUpdateDate__c = updatedDateTime;
+            ticket.LastJiraUpdateDateTime__c = updatedDateTime;
         }
         
         // Map due date if available

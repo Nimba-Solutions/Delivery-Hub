@@ -10,7 +10,7 @@ private class UnsetSyncFlagQueueableTest {
         // Custom settings must be inserted in a test context.
         Sync_In_Propgress__c setting = new Sync_In_Propgress__c(
             Name = 'SyncSetting', // A name is required for list custom settings
-            Salesforce_to_jira__c = true
+            SalesforceToJiraBool__c = true
         );
         insert setting;
 
@@ -23,7 +23,7 @@ private class UnsetSyncFlagQueueableTest {
         // 3. Assert: Verify that the flag has been updated to false.
         Sync_In_Propgress__c resultSetting = Sync_In_Propgress__c.getOrgDefaults();
         System.assertNotEquals(null, resultSetting, 'The custom setting should exist.');
-        System.assertEquals(false, resultSetting.Salesforce_to_jira__c, 'The sync flag should have been unset to false.');
+        System.assertEquals(false, resultSetting.SalesforceToJiraBool__c, 'The sync flag should have been unset to false.');
     }
 
     /**
@@ -34,7 +34,7 @@ private class UnsetSyncFlagQueueableTest {
         // 1. Setup: Create the custom setting with the sync flag already set to false.
         Sync_In_Propgress__c setting = new Sync_In_Propgress__c(
             Name = 'SyncSetting',
-            Salesforce_to_jira__c = false
+            SalesforceToJiraBool__c = false
         );
         insert setting;
 
@@ -46,7 +46,7 @@ private class UnsetSyncFlagQueueableTest {
         // 3. Assert: Verify that the flag remains false.
         Sync_In_Propgress__c resultSetting = Sync_In_Propgress__c.getOrgDefaults();
         System.assertNotEquals(null, resultSetting, 'The custom setting should exist.');
-        System.assertEquals(false, resultSetting.Salesforce_to_jira__c, 'The sync flag should remain false.');
+        System.assertEquals(false, resultSetting.SalesforceToJiraBool__c, 'The sync flag should remain false.');
     }
 
     /**

@@ -122,7 +122,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.LastJiraUpdateDate__c</field>
+        <field>Ticket__c.LastJiraUpdateDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

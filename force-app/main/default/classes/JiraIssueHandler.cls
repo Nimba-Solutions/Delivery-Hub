@@ -108,7 +108,7 @@ public without sharing class JiraIssueHandler {
             // Find existing ticket
             List<Ticket__c> existingTickets = [
                 SELECT Id, JiraTicketKeyTxt__c, JiraIssueIdTxt__c, BriefDescriptionTxt__c, DetailsTxt__c,
-                       StatusPk__c, Developer__c, PriorityPk__c, IsActiveBool__c, LastJiraUpdateDate__c
+                       StatusPk__c, Developer__c, PriorityPk__c, IsActiveBool__c, LastJiraUpdateDateTime__c
                 FROM Ticket__c 
                 WHERE JiraTicketKeyTxt__c = :issueKey 
                 LIMIT 1

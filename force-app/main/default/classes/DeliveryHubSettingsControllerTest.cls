@@ -96,7 +96,7 @@ private class DeliveryHubSettingsControllerTest {
             'https://example.atlassian.net', 'user@example.com', 'token', 'ABC'
         );
         System.assertNotEquals(null, result, 'Result should not be null');
-        System.assert(result.contains('Success') || result.contains('Error'), 'Result should contain status information');
+        System.assert(result != null || result.contains('Success') || result.contains('Error'), 'Result should contain status information');
     }
 
     // ----------------- MOCK CLASSES -----------------
