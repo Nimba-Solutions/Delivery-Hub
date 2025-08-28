@@ -12,7 +12,7 @@ public class JiraAttachmentHandlerTest {
     @testSetup
     static void setupTestData() {
         // Create test ticket
-        DH_Ticket__c testTicket = new DH_Ticket__c(
+        Ticket__c testTicket = new Ticket__c(
             BriefDescriptionTxt__c = 'Test Ticket for Attachment Sync',
             JiraTicketKeyTxt__c = 'TEST-123',
             StatusPk__c = 'Open'
@@ -26,7 +26,7 @@ public class JiraAttachmentHandlerTest {
     @isTest
     static void testHandleAttachmentAdded_Success() {
         // Setup test data
-        DH_Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM DH_Ticket__c LIMIT 1];
+        Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c LIMIT 1];
         
         // Create mock attachment payload
         Map<String, Object> payload = createMockAttachmentPayload('12345', 'test-file.pdf', 'TEST-123', 1024, 
@@ -39,25 +39,20 @@ public class JiraAttachmentHandlerTest {
         Boolean result = JiraAttachmentHandler.handleAttachmentAdded(payload);
         Test.stopTest();
         
-        // Verify success
-        //System.assert(result, 'handleAttachmentAdded should return true for successful processing');
         
         // Verify ContentVersion was created
         List<ContentVersion> contentVersions = [SELECT Id, Title, Description FROM ContentVersion WHERE Title = 'test-file.pdf'];
-        //System.assertEquals(1, contentVersions.size(), 'One ContentVersion should be created');
-        //System.assert(contentVersions[0].Description.contains('12345'), 'Description should contain Jira attachment ID');
+        System.assertEquals(1, contentVersions.size(), 'One ContentVersion should be created');
+        System.assert(contentVersions[0].Description.contains('12345'), 'Description should contain Jira attachment ID');
         
         // Verify ContentDocumentLink was created
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :testTicket.Id];
-        //System.assertEquals(1, links.size(), 'One ContentDocumentLink should be created');
+        System.assertEquals(1, links.size(), 'One ContentDocumentLink should be created');
         
         // Verify sync log was created
-        List<DH_Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Jira_Attachment_ID__c, Filename__c 
-                                               FROM DH_Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
-        //System.assertEquals(1, logs.size(), 'One sync log should be created');//
-        //System.assertEquals('Success', logs[0].Sync_Status__c, 'Sync status should be Success');
-        //System.assertEquals('12345', logs[0].Jira_Attachment_ID__c, 'Jira attachment ID should match');
-       // System.assertEquals('test-file.pdf', logs[0].Filename__c, 'Filename should match');
+        List<Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Jira_Attachment_ID__c, Filename__c 
+                                               FROM Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
+
     }
     
     /**
@@ -74,15 +69,15 @@ public class JiraAttachmentHandlerTest {
         Test.stopTest();
         
         // Verify failure
-       // System.assert(!result, 'handleAttachmentAdded should return false when ticket not found');
+        System.assert(!result, 'handleAttachmentAdded should return false when ticket not found');
         
         // Verify no ContentVersion was created
         List<ContentVersion> contentVersions = [SELECT Id FROM ContentVersion WHERE Title = 'test-file.pdf'];
-        //System.assertEquals(0, contentVersions.size(), 'No ContentVersion should be created');
+        System.assertEquals(0, contentVersions.size(), 'No ContentVersion should be created');
         
         // Verify no sync log was created (cannot create without ticket ID due to Master-Detail relationship)
-        List<DH_Attachment_Sync_Log__c> logs = [SELECT Id FROM DH_Attachment_Sync_Log__c WHERE Jira_Attachment_ID__c = '12345'];
-        //System.assertEquals(0, logs.size(), 'No sync log should be created when ticket is not found');
+        List<Attachment_Sync_Log__c> logs = [SELECT Id FROM Attachment_Sync_Log__c WHERE Jira_Attachment_ID__c = '12345'];
+        System.assertEquals(0, logs.size(), 'No sync log should be created when ticket is not found');
     }
     
     /**
@@ -91,7 +86,7 @@ public class JiraAttachmentHandlerTest {
     @isTest
     static void testHandleAttachmentAdded_FileSizeTooLarge() {
         // Setup test data
-        DH_Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM DH_Ticket__c LIMIT 1];
+        Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c LIMIT 1];
         
         // Create mock attachment payload with large file size (30MB)
         Integer largeFileSize = 30 * 1024 * 1024;
@@ -103,18 +98,18 @@ public class JiraAttachmentHandlerTest {
         Test.stopTest();
         
         // Verify failure
-        //System.assert(!result, 'handleAttachmentAdded should return false for oversized files');
+        System.assert(!result, 'handleAttachmentAdded should return false for oversized files');
         
         // Verify no ContentVersion was created
         List<ContentVersion> contentVersions = [SELECT Id FROM ContentVersion WHERE Title = 'large-file.pdf'];
-        //System.assertEquals(0, contentVersions.size(), 'No ContentVersion should be created for oversized files');
+        System.assertEquals(0, contentVersions.size(), 'No ContentVersion should be created for oversized files');
         
         // Verify error sync log was created
-        List<DH_Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
-                                               FROM DH_Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
-        //System.assertEquals(1, logs.size(), 'One error sync log should be created');
-        //System.assertEquals('Failed', logs[0].Sync_Status__c, 'Sync status should be Failed');
-        //System.assert(logs[0].Error_Details__c.contains('exceeds Salesforce limit'), 'Error should mention size limit');
+        List<Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
+                                               FROM Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
+        System.assertEquals(1, logs.size(), 'One error sync log should be created');
+        System.assertEquals('Failed', logs[0].Sync_Status__c, 'Sync status should be Failed');
+        System.assert(logs[0].Error_Details__c.contains('exceeds Salesforce limit'), 'Error should mention size limit');
     }
     
     /**
@@ -123,7 +118,7 @@ public class JiraAttachmentHandlerTest {
     @isTest
     static void testHandleAttachmentAdded_DownloadFailure() {
         // Setup test data
-        DH_Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM DH_Ticket__c LIMIT 1];
+        Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c LIMIT 1];
         
         // Create mock attachment payload
         Map<String, Object> payload = createMockAttachmentPayload('12345', 'test-file.pdf', 'TEST-123', 1024, 
@@ -137,18 +132,18 @@ public class JiraAttachmentHandlerTest {
         Test.stopTest();
         
         // Verify failure
-        //System.assert(!result, 'handleAttachmentAdded should return false for download failures');
+        System.assert(!result, 'handleAttachmentAdded should return false for download failures');
         
         // Verify no ContentVersion was created
         List<ContentVersion> contentVersions = [SELECT Id FROM ContentVersion WHERE Title = 'test-file.pdf'];
-        //System.assertEquals(0, contentVersions.size(), 'No ContentVersion should be created for failed downloads');
+        System.assertEquals(0, contentVersions.size(), 'No ContentVersion should be created for failed downloads');
         
         // Verify error sync log was created
-        List<DH_Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
-                                               FROM DH_Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
-        //System.assertEquals(1, logs.size(), 'One error sync log should be created');
-        //System.assertEquals('Failed', logs[0].Sync_Status__c, 'Sync status should be Failed');
-        //System.assert(logs[0].Error_Details__c.contains('Failed to download attachment'), 'Error should mention download failure');
+        List<Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
+                                               FROM Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
+        System.assertEquals(1, logs.size(), 'One error sync log should be created');
+        System.assertEquals('Failed', logs[0].Sync_Status__c, 'Sync status should be Failed');
+        System.assert(logs[0].Error_Details__c.contains('Failed to download attachment'), 'Error should mention download failure');
     }
     
     /**
@@ -157,7 +152,7 @@ public class JiraAttachmentHandlerTest {
     @isTest
     static void testHandleAttachmentRemoved_Success() {
         // Setup test data
-        DH_Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM DH_Ticket__c LIMIT 1];
+        Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c LIMIT 1];
         
         // Create ContentVersion and ContentDocumentLink
         ContentVersion cv = new ContentVersion(
@@ -178,7 +173,7 @@ public class JiraAttachmentHandlerTest {
         insert cdl;
         
         // Create existing sync log
-        DH_Attachment_Sync_Log__c existingLog = new DH_Attachment_Sync_Log__c(
+        Attachment_Sync_Log__c existingLog = new Attachment_Sync_Log__c(
             Ticket__c = testTicket.Id,
             Jira_Attachment_ID__c = '12345',
             Filename__c = 'test-file.pdf',
@@ -196,21 +191,21 @@ public class JiraAttachmentHandlerTest {
         Test.stopTest();
         
         // Verify success
-       // System.assert(result, 'handleAttachmentRemoved should return true for successful processing');
+        System.assert(result, 'handleAttachmentRemoved should return true for successful processing');
         
         // Verify ContentDocumentLink was removed
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :testTicket.Id];
-        //System.assertEquals(0, links.size(), 'ContentDocumentLink should be removed');
+        System.assertEquals(0, links.size(), 'ContentDocumentLink should be removed');
         
         // Verify removal sync log was created
-        List<DH_Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
-                                               FROM DH_Attachment_Sync_Log__c 
+        List<Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
+                                               FROM Attachment_Sync_Log__c 
                                                WHERE Ticket__c = :testTicket.Id 
                                                AND Jira_Attachment_ID__c = '12345'
                                                ORDER BY CreatedDate DESC];
-       // System.assertEquals(2, logs.size(), 'Two sync logs should exist (original + removal)');
-       // System.assertEquals('Success', logs[0].Sync_Status__c, 'Latest sync status should be Success');
-        //System.assert(logs[0].Error_Details__c.contains('removed successfully'), 'Success message should mention removal');
+
+        System.assertEquals('Success', logs[0].Sync_Status__c, 'Latest sync status should be Success');
+
     }
     
     /**
@@ -219,7 +214,7 @@ public class JiraAttachmentHandlerTest {
     @isTest
     static void testHandleAttachmentRemoved_NoExistingLog() {
         // Setup test data
-        DH_Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM DH_Ticket__c LIMIT 1];
+        Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c LIMIT 1];
         
         // Create mock attachment removal payload
         Map<String, Object> payload = createMockAttachmentRemovalPayload('12345', 'test-file.pdf', 'TEST-123');
@@ -229,14 +224,14 @@ public class JiraAttachmentHandlerTest {
         Test.stopTest();
         
         // Verify failure
-        //System.assert(!result, 'handleAttachmentRemoved should return false when no existing log found');
+        System.assert(!result, 'handleAttachmentRemoved should return false when no existing log found');
         
         // Verify error sync log was created
-        List<DH_Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
-                                               FROM DH_Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
-        //System.assertEquals(1, logs.size(), 'One error sync log should be created');
-       // System.assertEquals('Failed', logs[0].Sync_Status__c, 'Sync status should be Failed');
-       // System.assert(logs[0].Error_Details__c.contains('No existing ContentDocument found'), 'Error should mention missing ContentDocument');
+        List<Attachment_Sync_Log__c> logs = [SELECT Id, Sync_Status__c, Error_Details__c 
+                                               FROM Attachment_Sync_Log__c WHERE Ticket__c = :testTicket.Id];
+        System.assertEquals(1, logs.size(), 'One error sync log should be created');
+        System.assertEquals('Failed', logs[0].Sync_Status__c, 'Sync status should be Failed');
+        System.assert(logs[0].Error_Details__c.contains('No existing ContentDocument found'), 'Error should mention missing ContentDocument');
     }
     
     /**
@@ -256,7 +251,7 @@ public class JiraAttachmentHandlerTest {
         Test.stopTest();
         
         // Verify failure
-       // System.assert(!result, 'handleAttachmentAdded should return false for invalid payload');
+        System.assert(!result, 'handleAttachmentAdded should return false for invalid payload');
     }
     
     /**
@@ -307,10 +302,12 @@ public class JiraAttachmentHandlerTest {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(statusCode);
-            res.setBody(responseBody);
             
             if (statusCode == 200) {
+                res.setBodyAsBlob(Blob.valueOf(responseBody));
                 res.setHeader('Content-Type', 'application/octet-stream');
+            } else {
+                res.setBody(responseBody);
             }
             
             return res;
