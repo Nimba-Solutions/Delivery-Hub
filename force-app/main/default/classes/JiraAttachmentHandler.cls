@@ -22,7 +22,7 @@ public without sharing class JiraAttachmentHandler {
         Map<String, Object> issue = (Map<String, Object>) payload.get('issue');
 
         if (attachment == null || issue == null) {
-            System.debug('JiraAttachmentHandler: Payload is missing attachment or issue details.');
+            System.debug(LoggingLevel.ERROR, 'JiraAttachmentHandler: Payload is missing attachment or issue details.');
             return false;
         }
 

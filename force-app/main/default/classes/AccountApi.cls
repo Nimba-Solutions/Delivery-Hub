@@ -1,6 +1,14 @@
+/**
+ * @description REST API for Account operations
+ * @author Delivery Hub Team
+ * @date 2025
+ */
 @RestResource(urlMapping='/v1/accounts/*')
 global with sharing class AccountApi {
     
+    /**
+     * @description Retrieves an account by ID from the URL path
+     */
     @HttpGet
     global static void doGet() {
         RestRequest req = RestContext.request;
@@ -23,6 +31,9 @@ global with sharing class AccountApi {
         }
     }
     
+    /**
+     * @description Creates a new account from JSON request body
+     */
     @HttpPost
     global static void doPost() {
         RestRequest req = RestContext.request;

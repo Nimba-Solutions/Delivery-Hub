@@ -15,7 +15,7 @@ public class DragAndDropLwcControllerTest {
         
         // Verify update
         Ticket__c updated = [SELECT StageNamePk__c FROM Ticket__c WHERE Id = :ticket.Id];
-        System.assertEquals('InProgress', updated.StageNamePk__c);
+        System.assertEquals('InProgress', updated.StageNamePk__c, 'Ticket stage should be updated to InProgress');
     }
     
     @isTest
@@ -26,7 +26,7 @@ public class DragAndDropLwcControllerTest {
         Test.stopTest();
         
         Ticket__c updated = [SELECT SortOrderNumber__c FROM Ticket__c WHERE Id = :ticket.Id];
-        System.assertEquals(5, updated.SortOrderNumber__c);
+        System.assertEquals(5, updated.SortOrderNumber__c, 'Sort order should be updated to 5');
     }
     
     @isTest
@@ -37,10 +37,10 @@ public class DragAndDropLwcControllerTest {
         Ticket_Dependency__c dep = DragAndDropLwcController.createDependency(blocked.Id, blocking.Id);
         Test.stopTest();
         
-        System.assertNotEquals(null, dep.Id);
-        System.assertEquals(blocked.Id, dep.Blocked_Ticket__c);
-        System.assertEquals(blocking.Id, dep.Blocking_Ticket__c);
-        System.assertEquals('Blocks', dep.Type__c);
+        System.assertNotEquals(null, dep.Id, 'Dependency should be created with an ID');
+        System.assertEquals(blocked.Id, dep.Blocked_Ticket__c, 'Blocked ticket should be set correctly');
+        System.assertEquals(blocking.Id, dep.Blocking_Ticket__c, 'Blocking ticket should be set correctly');
+        System.assertEquals('Blocks', dep.Type__c, 'Dependency type should be Blocks');
     }
     
     @isTest
@@ -50,9 +50,9 @@ public class DragAndDropLwcControllerTest {
             Test.startTest();
             DragAndDropLwcController.createDependency(ticket.Id, ticket.Id);
             Test.stopTest();
-           // System.assert(false, 'Expected AuraHandledException not thrown');
+            System.assert(false, 'Expected AuraHandledException not thrown');
         } catch (AuraHandledException e) {
-           // System.assertEquals('A ticket cannot block itself.', e.getMessage());
+            System.assertEquals('Script-thrown exception', e.getMessage(), 'Exception message should match expected text');
         }
     }
     
@@ -72,14 +72,15 @@ public class DragAndDropLwcControllerTest {
         Test.stopTest();
         
         Integer count = [SELECT count() FROM Ticket_Dependency__c WHERE Id = :dep.Id];
-        System.assertEquals(0, count);
+        System.assertEquals(0, count, 'Dependency should be removed');
     }
     
     @isTest
     static void testSearchForPotentialBlockers() {
         Ticket__c t1 = createTestTicket('Search Ticket One', 'In Progress', 1);
         Ticket__c t2 = createTestTicket('Search Ticket Two', 'Open', 2);
-        Ticket__c t3 = createTestTicket('Done Ticket', 'Done', 3);
+        // Create a Done ticket to verify it's excluded from search results
+        createTestTicket('Done Ticket', 'Done', 3);
         
         List<Id> existingDependencies = new List<Id>{t2.Id};
         

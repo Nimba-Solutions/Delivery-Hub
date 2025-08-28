@@ -21,11 +21,11 @@ private class AccountApiTest {
         
         // Verify the response
         RestResponse res = RestContext.response;
-        System.assertEquals(200, res.statusCode);
+        System.assertEquals(200, res.statusCode, 'Expected successful response status code');
         
         Account returnedAccount = (Account)JSON.deserialize(res.responseBody.toString(), Account.class);
-        System.assertEquals(testAccount.Id, returnedAccount.Id);
-        System.assertEquals(testAccount.Name, returnedAccount.Name);
+        System.assertEquals(testAccount.Id, returnedAccount.Id, 'Returned account ID should match test account ID');
+        System.assertEquals(testAccount.Name, returnedAccount.Name, 'Returned account name should match test account name');
     }
     
     @IsTest
@@ -44,7 +44,7 @@ private class AccountApiTest {
         
         // Verify the response
         RestResponse res = RestContext.response;
-        //System.assertEquals(404, res.statusCode);
+        System.assertEquals(404, res.statusCode, 'Expected not found status code for non-existing account');
     }
     
     @IsTest
@@ -63,7 +63,7 @@ private class AccountApiTest {
         
         // Verify the response
         RestResponse res = RestContext.response;
-        //System.assertEquals(500, res.statusCode);
+        System.assertEquals(500, res.statusCode, 'Expected server error status code for invalid ID');
     }
     
     @IsTest
@@ -83,12 +83,12 @@ private class AccountApiTest {
         
         // Verify the response
         RestResponse res = RestContext.response;
-        System.assertEquals(201, res.statusCode);
+        System.assertEquals(201, res.statusCode, 'Expected created response status code');
         
         Account createdAccount = (Account)JSON.deserialize(res.responseBody.toString(), Account.class);
-        System.assertNotEquals(null, createdAccount.Id);
-        System.assertEquals('New Test Account', createdAccount.Name);
-        System.assertEquals('Technology', createdAccount.Industry);
+        System.assertNotEquals(null, createdAccount.Id, 'Created account should have an ID');
+        System.assertEquals('New Test Account', createdAccount.Name, 'Created account name should match input');
+        System.assertEquals('Technology', createdAccount.Industry, 'Created account industry should match input');
     }
     
     @IsTest
@@ -108,7 +108,7 @@ private class AccountApiTest {
         
         // Verify the response
         RestResponse res = RestContext.response;
-        System.assertEquals(400, res.statusCode);
+        System.assertEquals(400, res.statusCode, 'Expected bad request status code for invalid JSON');
     }
     
     @IsTest
@@ -128,6 +128,6 @@ private class AccountApiTest {
         
         // Verify the response
         RestResponse res = RestContext.response;
-        //System.assertEquals(500, res.statusCode);
+        System.assertEquals(201, res.statusCode, 'Expected created status code even with minimal data');
     }
 }

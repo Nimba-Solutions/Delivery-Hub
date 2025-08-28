@@ -1,7 +1,12 @@
+/**
+ * @description Test class for AttachmentSyncService functionality
+ */
 @isTest
 private class AttachmentSyncServiceTest {
 
-    // Mock implementation of JiraCallout
+    /**
+     * @description Mock implementation of JiraCallout for testing HTTP callouts
+     */
     class MockJiraCallout implements HttpCalloutMock {
         public HTTPResponse respond(HTTPRequest req) {
             HttpResponse res = new HttpResponse();
@@ -13,8 +18,11 @@ private class AttachmentSyncServiceTest {
         
     }
 
+    /**
+     * @description Test method to verify successful file synchronization to Jira
+     */
     @isTest
-    static void testSyncFilesToJira_success() {
+    static void testSyncFilesToJiraSuccess() {
         // Register the mock
         Test.setMock(HttpCalloutMock.class, new MockJiraCallout());
 
@@ -54,6 +62,8 @@ private class AttachmentSyncServiceTest {
             FROM Attachment_Sync_Log__c
             WHERE Ticket__c = :ticket.Id
         ];
+        System.assertEquals(1, logs.size(), 'Expected one sync log to be created');
+        System.assertEquals('Success', logs[0].Sync_Status__c, 'Expected sync status to be Success');
 
         //System.assertEquals(1, logs.size(), 'One sync log should be created');
         //System.assertEquals('Success', logs[0].Sync_Status__c);

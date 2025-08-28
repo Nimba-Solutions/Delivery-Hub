@@ -1,9 +1,19 @@
+/**
+ * @description Service class for synchronizing attachments between Salesforce and Jira
+ * @author Delivery Hub Team
+ * @date 2025
+ */
 public with sharing class AttachmentSyncService {
 
+    /**
+     * @description Synchronizes files from Salesforce to Jira asynchronously
+     * @param ticketId The ID of the ticket to sync attachments for
+     * @param contentDocumentIds List of ContentDocument IDs to sync to Jira
+     */
     @future(callout=true)
     public static void syncFilesToJira(Id ticketId, List<Id> contentDocumentIds) {
         // 1. Get the Jira Key from the ticket
-        List<Ticket__c> tickets = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
+        List<Ticket__c> tickets = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c WHERE Id = :ticketId WITH SECURITY_ENFORCED LIMIT 1];
         if (tickets.isEmpty() || String.isBlank(tickets[0].JiraTicketKeyTxt__c)) {
             // Cannot sync without a Jira Key. Log this appropriately.
             return;
@@ -14,6 +24,7 @@ public with sharing class AttachmentSyncService {
         List<ContentVersion> versions = [
             SELECT Id, Title, VersionData, ContentDocumentId
             FROM ContentVersion WHERE ContentDocumentId IN :contentDocumentIds AND IsLatest = true
+            WITH SECURITY_ENFORCED
         ];
 
         List<Attachment_Sync_Log__c> logsToInsert = new List<Attachment_Sync_Log__c>();
