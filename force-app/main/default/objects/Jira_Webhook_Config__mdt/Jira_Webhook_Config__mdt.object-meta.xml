@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Configuration settings for Jira webhook processing. Allows administrators to control which webhook events are processed, configure field mappings, and set retry behavior without code changes.</description>
+    <label>Jira Webhook Configuration</label>
+    <pluralLabel>Jira Webhook Configurations</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

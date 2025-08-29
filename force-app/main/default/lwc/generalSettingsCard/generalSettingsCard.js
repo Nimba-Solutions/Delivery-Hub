@@ -57,8 +57,8 @@
 
 import { LightningElement, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.getSettings';
-import saveGeneralSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.saveGeneralSettings';
+import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
+import saveGeneralSettings from '@salesforce/apex/DeliveryHubSettingsController.saveGeneralSettings';
 
 export default class GeneralSettingsCard extends LightningElement {
     @track notifications = false;

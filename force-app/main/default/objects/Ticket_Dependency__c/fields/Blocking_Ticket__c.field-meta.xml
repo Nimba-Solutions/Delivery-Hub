@@ -4,7 +4,7 @@
     <deleteConstraint>Restrict</deleteConstraint>
     <externalId>false</externalId>
     <label>Blocking Ticket</label>
-    <referenceTo>DH_Ticket__c</referenceTo>
+    <referenceTo>Ticket__c</referenceTo>
     <relationshipLabel>Ticket Dependency</relationshipLabel>
     <relationshipName>Ticket_Dependency</relationshipName>
     <required>true</required>

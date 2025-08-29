@@ -281,7 +281,7 @@
                     <!-- Record Edit Form -->
                     <template if:false={isAiProcessing}>
                         <template if:false={showSpinner}>
-                            <lightning-record-edit-form object-api-name="DH_Ticket__c" density="compact"
+                            <lightning-record-edit-form object-api-name="Ticket__c" density="compact"
                                 default-field-values={createDefaults} onsuccess={handleCreateSuccess}
                                 oncancel={handleCreateCancel}>
 
@@ -410,7 +410,7 @@
             <!-- Modal Content -->
             <div class="slds-modal__content slds-p-around_medium">
                 <lightning-record-edit-form
-                    object-api-name="DH_Ticket__c"
+                    object-api-name="Ticket__c"
                     record-id={transitionTicketId}
                     onsuccess={handleTransitionSuccess}
                     onerror={handleTransitionError}>

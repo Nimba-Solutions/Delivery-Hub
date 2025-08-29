@@ -11,11 +11,16 @@
 * 1.0 | July 6, 2025 |   | Initial Version
 **/
 
+/**
+ * @description Utility class for converting HTML content to Atlassian Document Format (ADF)
+ */
 public class HtmlToAdfConverter {
     /**
-     * Converts basic HTML (from Salesforce Rich Text) to Jira ADF JSON Map.
+     * @description Converts basic HTML (from Salesforce Rich Text) to Jira ADF JSON Map.
      * Only handles very common tags: <b>, <strong>, <i>, <em>, <u>, <ul>, <ol>, <li>, <p>, <br>
      * Everything else is stripped.
+     * @param html The HTML string to convert
+     * @return Map<String, Object> The ADF JSON structure as a Map
      */
     public static Map<String, Object> convert(String html) {
         if (String.isBlank(html)) {
@@ -40,7 +45,9 @@ public class HtmlToAdfConverter {
         List<String> paras = html.split('(?i)<p>|<br ?/?>');
         for (String para : paras) {
             String cleanPara = stripTags(para).trim();
-            if (cleanPara == '') continue;
+            if (cleanPara == '') {
+                continue;
+            }
             docContent.add(buildParagraph(cleanPara));
         }
 
@@ -101,15 +108,21 @@ public class HtmlToAdfConverter {
 			if (token == '<b>') {
 				marks.add('strong');
 			} else if (token == '</b>') {
-				if (!marks.isEmpty()) marks.remove(marks.size()-1);
+				if (!marks.isEmpty()) {
+					marks.remove(marks.size()-1);
+				}
 			} else if (token == '<i>') {
 				marks.add('em');
 			} else if (token == '</i>') {
-				if (!marks.isEmpty()) marks.remove(marks.size()-1);
+				if (!marks.isEmpty()) {
+					marks.remove(marks.size()-1);
+				}
 			} else if (token == '<u>') {
 				marks.add('underline');
 			} else if (token == '</u>') {
-				if (!marks.isEmpty()) marks.remove(marks.size()-1);
+				if (!marks.isEmpty()) {
+					marks.remove(marks.size()-1);
+				}
 			} else if (!String.isBlank(token)) {
 				Map<String, Object> node = new Map<String, Object>{
 					'type' => 'text',

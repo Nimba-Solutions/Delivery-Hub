@@ -1,10 +1,20 @@
+/**
+ * @description Controller class for drag and drop functionality in Lightning Web Components
+ * @author Delivery Hub Team
+ * @date 2025
+ */
 public with sharing class DragAndDropLwcController {
    
 
+    /**
+     * @description Updates the stage of a ticket
+     * @param ticketId The ID of the ticket to update
+     * @param newStage The new stage name for the ticket
+     */
     @AuraEnabled
     public static void updateTicketStage(Id ticketId, String newStage) {
         try {
-            DH_Ticket__c ticket = [SELECT Id, StageNamePk__c FROM DH_Ticket__c WHERE Id = :ticketId LIMIT 1];
+            Ticket__c ticket = [SELECT Id, StageNamePk__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
             ticket.StageNamePk__c = newStage;
             update ticket;
         } catch (Exception e) {
@@ -12,10 +22,15 @@ public with sharing class DragAndDropLwcController {
         }
     }
 
+    /**
+     * @description Updates the sort order of a ticket
+     * @param ticketId The ID of the ticket to update
+     * @param newSortOrder The new sort order number
+     */
     @AuraEnabled
     public static void updateTicketSortOrder(Id ticketId, Decimal newSortOrder) {
         try {
-            DH_Ticket__c ticket = new DH_Ticket__c(
+            Ticket__c ticket = new Ticket__c(
                 Id = ticketId,
                 SortOrderNumber__c = newSortOrder
             );
@@ -25,6 +40,12 @@ public with sharing class DragAndDropLwcController {
         }
     }
     
+    /**
+     * @description Creates a dependency relationship between two tickets
+     * @param blockedTicketId The ID of the ticket that is blocked
+     * @param blockingTicketId The ID of the ticket that is blocking
+     * @return Ticket_Dependency__c The created dependency record
+     */
     @AuraEnabled
     public static Ticket_Dependency__c createDependency(Id blockedTicketId, Id blockingTicketId) {
         // Prevent self-dependency
@@ -43,6 +64,10 @@ public with sharing class DragAndDropLwcController {
         return newDependency;
     }
 
+    /**
+     * @description Removes a ticket dependency
+     * @param dependencyId The ID of the dependency to remove
+     */
     @AuraEnabled
     public static void removeDependency(Id dependencyId) {
         try {
@@ -53,8 +78,15 @@ public with sharing class DragAndDropLwcController {
         }
     }
     
+    /**
+     * @description Searches for potential blocking tickets based on search term
+     * @param searchTerm The search term to match against ticket names and descriptions
+     * @param currentTicketId The current ticket ID to exclude from results
+     * @param existingDependencyIds List of existing dependency IDs to exclude
+     * @return List<Ticket__c> List of potential blocking tickets
+     */
    @AuraEnabled(cacheable=true)
-    public static List<DH_Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds) { // <-- CORRECTED
+    public static List<Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds) { // <-- CORRECTED
         String queryTerm = '%' + searchTerm + '%';
         
         // Create a Set for efficient "NOT IN" filtering in the SOQL query.
@@ -67,7 +99,7 @@ public with sharing class DragAndDropLwcController {
     
         return [
             SELECT Id, Name, StageNamePk__c
-            FROM DH_Ticket__c
+            FROM Ticket__c
             WHERE (Name LIKE :queryTerm OR BriefDescriptionTxt__c LIKE :queryTerm)
             AND Id NOT IN :exclusionIds
             AND StageNamePk__c != 'Done'
