@@ -40,7 +40,7 @@ public with sharing class JiraAttachmentSyncBatch implements Database.Batchable<
         for (Ticket__c ticket : scope) {
             System.debug('JiraAttachmentSyncBatch: Processing ticket: ' + ticket.Id + ' with Jira key: ' + ticket.JiraTicketKeyTxt__c);
             try {
-                String endpoint = 'issue/' + ticket.JiraTicketKeyTxt__c + '?fields=attachment';
+                String endpoint = 'rest/api/3/issue/' + ticket.JiraTicketKeyTxt__c + '?fields=attachment';
                 System.debug('JiraAttachmentSyncBatch: Making request to endpoint: ' + endpoint);
                 HttpResponse res = JiraCallout.httpHelper(endpoint, 'GET', null);
                 System.debug('JiraAttachmentSyncBatch: Response status code: ' + res.getStatusCode());

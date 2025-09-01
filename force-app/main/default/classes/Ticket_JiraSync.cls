@@ -28,7 +28,7 @@ public class Ticket_JiraSync {
             });
 
             try {
-                HttpResponse res = JiraCallout.httpHelper('issue', 'POST', body);
+                HttpResponse res = JiraCallout.httpHelper('rest/api/3/issue', 'POST', body);
                 if (res.getStatusCode() == 201) {
                     Map<String, Object> parsed = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
                     updateRec.JiraTicketKeyTxt__c = (String) parsed.get('key');
@@ -73,7 +73,7 @@ public class Ticket_JiraSync {
             });
 
             try {
-                HttpResponse res = JiraCallout.httpHelper('issue/' + t.JiraTicketKeyTxt__c, 'PUT', body);
+                HttpResponse res = JiraCallout.httpHelper('rest/api/3/issue/' + t.JiraTicketKeyTxt__c, 'PUT', body);
                 System.debug('Jira update response: ' + res.getBody());
             } catch (Exception e) {
                 System.debug('Jira update exception: ' + e.getMessage());

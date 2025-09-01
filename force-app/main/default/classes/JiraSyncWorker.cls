@@ -20,60 +20,88 @@ public with sharing class JiraSyncWorker
     }
 
     private static void createJiraIssues(Set<Id> ids) {
-        System.debug('entering createJiraIssues');
-        if (ids.isEmpty()) return;
+    if (ids.isEmpty()) return;
 
-        List<Ticket__c> tickets = [
-            SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c
-            FROM   Ticket__c WHERE Id IN :ids
-        ];
+    // 1. Add StatusPk__c to the query to know the target status
+    List<Ticket__c> tickets = [
+        SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, Jira_TicketId__c, StatusPk__c ,StageNamePk__c
+        FROM Ticket__c WHERE Id IN :ids
+    ];
 
-        List<Ticket__c> updates = new List<Ticket__c>();
+    List<Ticket__c> updates = new List<Ticket__c>();
 
-        for (Ticket__c t : tickets) {
-            String summary     = String.isBlank(t.BriefDescriptionTxt__c)
-                               ? 'No summary provided' : t.BriefDescriptionTxt__c;
-            String description = String.isBlank(t.DetailsTxt__c)
-                               ? 'No description provided' : t.DetailsTxt__c;
+    for (Ticket__c t : tickets) {
+        String summary = String.isBlank(t.BriefDescriptionTxt__c) ? 'No summary provided' : t.BriefDescriptionTxt__c;
+        String description = String.isBlank(t.DetailsTxt__c) ? 'No description provided' : t.DetailsTxt__c;
+        Map<String,Object> adf = HtmlToAdfConverter.convert(description);
 
-            Map<String,Object> adf = HtmlToAdfConverter.convert(description);
-
-            String body = JSON.serialize(new Map<String,Object>{
-                'fields' => new Map<String,Object>{
-                    'project'     => new Map<String,String>{ 'key' => 'DHS' },
-                    'summary'     => summary,
-                    'description' => adf,
-                    'issuetype'   => new Map<String,String>{ 'name' => 'Task' }
-                }
-            });
-
-            System.debug('body');
-            Ticket__c upd = new Ticket__c(Id = t.Id);
-
-            try {
-                HttpResponse res = JiraCallout.httpHelper('issue', 'POST', body);
-                if (res.getStatusCode() == 201) {
-                    Map<String,Object> parsed =
-                        (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
-                    upd.JiraTicketKeyTxt__c = String.valueOf(parsed.get('key'));
-                    upd.JiraSyncStatusTxt__c = 'Created';
-                    System.debug('created');
-                } else {
-                    String statusMsg = 'Create failed: ' + res.getStatus() + ' | ' + res.getBody();
-                    upd.JiraSyncStatusTxt__c = left255(statusMsg);
-                    upd.JiraLastResponseTxt__c = res.getBody();
-                    System.debug('kuch to gadbad h');
-                }
-            } catch (Exception e) {
-                String errMsg = 'Create EX: ' + e.getMessage();
-                upd.JiraSyncStatusTxt__c = left255(errMsg);
-                upd.JiraLastResponseTxt__c = e.getMessage();
-                System.debug('entered catfch');
+        String body = JSON.serialize(new Map<String,Object>{
+            'fields' => new Map<String,Object>{
+                'project'     => new Map<String,String>{ 'key' => 'DHS' },
+                'summary'     => summary,
+                'description' => adf,
+                'issuetype'   => new Map<String,String>{ 'name' => 'Task' }
             }
-            updates.add(upd);
+        });
+
+        Ticket__c upd = new Ticket__c(Id = t.Id);
+        try {
+            // STEP 1: CREATE THE ISSUE
+            HttpResponse res = JiraCallout.httpHelper('rest/api/3/issue', 'POST', body);
+            
+            if (res.getStatusCode() == 201) {
+                Map<String,Object> parsed = (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
+                String newIssueKey = String.valueOf(parsed.get('key'));
+                
+                upd.JiraTicketKeyTxt__c = newIssueKey;
+                upd.Jira_TicketId__c = String.valueOf(parsed.get('id'));
+                upd.JiraSyncStatusTxt__c = 'Created';
+                    System.debug(' t.StageNamePk__c '+ t.StageNamePk__c != 'Backlog');
+                    System.debug('String.isNotBlank(t.StageNamePk__c)'+String.isNotBlank(t.StageNamePk__c));
+                // STEP 2: TRANSITION THE ISSUE TO THE CORRECT STATUS
+                if (String.isNotBlank(t.StageNamePk__c) && t.StageNamePk__c != 'Backlog') { // Assumes 'New' maps to Jira's default
+                System.debug('entered t.StageNamePk__c'+t.StageNamePk__c);
+                    transitionIssueToStatus(newIssueKey, t.StageNamePk__c);
+                }
+            } else {
+                String statusMsg = 'Create failed: ' + res.getStatus() + ' | ' + res.getBody();
+                upd.JiraSyncStatusTxt__c = left255(statusMsg);
+                upd.JiraLastResponseTxt__c = res.getBody();
+            }
+        } catch (Exception e) {
+            String errMsg = 'Create EX: ' + e.getMessage();
+            upd.JiraSyncStatusTxt__c = left255(errMsg);
+            upd.JiraLastResponseTxt__c = e.getMessage();
         }
-        if (!updates.isEmpty()) update updates;
+        updates.add(upd);
     }
+    if (!updates.isEmpty()) update updates;
+}
+
+    private static void transitionIssueToStatus(String issueKey, String targetStatusName) {
+    try {
+        HttpResponse resTransitions = JiraCallout.getTransitions(issueKey);
+        if (resTransitions.getStatusCode() == 200) {
+            Map<String, Object> parsedTransitions = (Map<String, Object>)JSON.deserializeUntyped(resTransitions.getBody());
+            List<Object> transitions = (List<Object>)parsedTransitions.get('transitions');
+            
+            String transitionId = null;
+            for (Object t : transitions) {
+                Map<String, Object> transitionMap = (Map<String, Object>) t;
+                if (targetStatusName.equalsIgnoreCase(String.valueOf(transitionMap.get('name')))) {
+                    transitionId = String.valueOf(transitionMap.get('id'));
+                    break;
+                }
+            }
+
+            if (transitionId != null) {
+                JiraCallout.transitionIssue(issueKey, transitionId);
+            }
+        }
+    } catch (Exception e) {
+        System.debug('Failed to transition issue ' + issueKey + '. Error: ' + e.getMessage());
+    }
+}
 
     private static void updateJiraIssues(Set<Id> ids) {
         if (ids.isEmpty()) return;
@@ -107,7 +135,7 @@ public with sharing class JiraSyncWorker
             });
 
             try {
-                JiraCallout.httpHelper('issue/' + t.JiraTicketKeyTxt__c, 'PUT', updBody);
+                JiraCallout.httpHelper('rest/api/3/issue/' + t.JiraTicketKeyTxt__c, 'PUT', updBody);
                 // Optionally: upd.JiraSyncStatusTxt__c = 'Updated';
             } catch(Exception e) {
                 String msg = 'Update EX: ' + e.getMessage();
@@ -122,7 +150,7 @@ public with sharing class JiraSyncWorker
 
                 // fetch valid transitions so we can pick the right ID
                 HttpResponse trnResp = JiraCallout.httpHelper(
-                    'issue/' + t.JiraTicketKeyTxt__c + '/transitions',
+                    'rest/api/3/issue/' + t.JiraTicketKeyTxt__c + '/transitions',
                     'GET', null
                 );
 
@@ -145,7 +173,7 @@ public with sharing class JiraSyncWorker
                         'transition' => new Map<String,String>{ 'id' => desiredTransitionId }
                     });
                     JiraCallout.httpHelper(
-                        'issue/' + t.JiraTicketKeyTxt__c + '/transitions',
+                        'rest/api/3/issue/' + t.JiraTicketKeyTxt__c + '/transitions',
                         'POST', transBody
                     );
                     // Optionally: upd.JiraSyncStatusTxt__c = 'Transitioned to ' + targetStatus;
