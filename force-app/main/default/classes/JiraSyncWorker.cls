@@ -21,7 +21,7 @@ public with sharing class JiraSyncWorker
 
     private static void createJiraIssues(Set<Id> ids) {
     if (ids.isEmpty()) return;
-
+        Set<Id> successfullyCreatedTicketIds = new Set<Id>();
     // 1. Add StatusPk__c to the query to know the target status
     List<Ticket__c> tickets = [
         SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, Jira_TicketId__c, StatusPk__c ,StageNamePk__c
@@ -56,6 +56,7 @@ public with sharing class JiraSyncWorker
                 upd.JiraTicketKeyTxt__c = newIssueKey;
                 upd.Jira_TicketId__c = String.valueOf(parsed.get('id'));
                 upd.JiraSyncStatusTxt__c = 'Created';
+                successfullyCreatedTicketIds.add(t.Id);
                     System.debug(' t.StageNamePk__c '+ t.StageNamePk__c != 'Backlog');
                     System.debug('String.isNotBlank(t.StageNamePk__c)'+String.isNotBlank(t.StageNamePk__c));
                 // STEP 2: TRANSITION THE ISSUE TO THE CORRECT STATUS
@@ -76,6 +77,10 @@ public with sharing class JiraSyncWorker
         updates.add(upd);
     }
     if (!updates.isEmpty()) update updates;
+    if (!successfullyCreatedTicketIds.isEmpty()) {
+        System.debug('Enqueuing attachment sync job for ' + successfullyCreatedTicketIds.size() + ' tickets.');
+        System.enqueueJob(new AttachmentSyncWorker(successfullyCreatedTicketIds));
+    }
 }
 
     private static void transitionIssueToStatus(String issueKey, String targetStatusName) {
