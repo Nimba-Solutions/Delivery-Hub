@@ -128,7 +128,7 @@ global without sharing class JiraWebhookReceiver {
     //             if (attachmentMap != null && attachmentMap.containsKey('id')) {
     //                 // **NOTE:** Adjust the field API name 'JiraAttachmentId__c' if needed
     //                 String jiraAttachmentId = String.valueOf(attachmentMap.get('id'));
-    //                 return [SELECT COUNT() FROM Attachment_Sync_Log__c WHERE Jira_Attachment_ID__c = :jiraAttachmentId] > 0;
+    //                 return [SELECT COUNT() FROM Attachment_Sync_Log__c WHERE JiraAttachmentIdTxt__c = :jiraAttachmentId] > 0;
     //             }
     //         }
     //     } catch (Exception e) {
@@ -333,7 +333,7 @@ global without sharing class JiraWebhookReceiver {
                 Map<String, Object> attachmentMap = (Map<String, Object>)payload.get('attachment');
                 if (attachmentMap != null && attachmentMap.containsKey('id')) {
                     String jiraAttachmentId = String.valueOf(attachmentMap.get('id'));
-                    return [SELECT COUNT() FROM Attachment_Sync_Log__c WHERE Jira_Attachment_ID__c = :jiraAttachmentId] > 0;
+                    return [SELECT COUNT() FROM Attachment_Sync_Log__c WHERE JiraAttachmentIdTxt__c = :jiraAttachmentId] > 0;
                 }
             }
         } catch (Exception e) {

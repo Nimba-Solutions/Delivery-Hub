@@ -22,7 +22,7 @@ private class TicketControllerTest {
         // Optional: create Metadata for AI key test
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             Name = 'Default',
-            OpenAI_API_Key__c = 'test-api-key',
+            OpenAIApiKeyTxt__c = 'test-api-key',
             Open_Ai_Api_tested__c = true
         );
         insert settings;

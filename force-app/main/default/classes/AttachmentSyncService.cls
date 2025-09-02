@@ -56,9 +56,9 @@ public with sharing class AttachmentSyncService {
             // 4. Create a log entry for the attempt
             logsToInsert.add(new Attachment_Sync_Log__c(
                 Ticket__c = ticketId,
-                Jira_Attachment_ID__c = jiraAttachmentId, // Will be null on failure
-                Salesforce_ContentDocumentId__c = cv.ContentDocumentId,
-                Filename__c = cv.Title,
+                JiraAttachmentIdTxt__c = jiraAttachmentId, // Will be null on failure
+                SalesforceContentDocumentIdTxt__c = cv.ContentDocumentId,
+                FilenameTxt__c = cv.Title,
                 SyncDirectionPk__c = 'Salesforce to Jira',
                  SyncStatusPk__c = status,
                 ErrorDetailsTxt__c = errorDetails

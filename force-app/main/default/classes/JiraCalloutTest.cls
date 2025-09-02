@@ -10,8 +10,8 @@ private class JiraCalloutTest {
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             Name = 'Default', // Use a name if it's a list custom setting
             JIRAInstanceUrl__c = 'https://mock-jira.test.com',
-            JIRA_Username__c = 'test@user.com',
-            JIRA_API_Token__c = 'mock_api_token'
+            JIRAUsernameTxt__c = 'test@user.com',
+            JIRAApiTokenTxt__c = 'mock_api_token'
         );
         insert settings;
     }

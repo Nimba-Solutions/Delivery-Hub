@@ -152,8 +152,8 @@ public without sharing class JiraAttachmentHandler {
     
             if (settings != null) {
                 // Safely assign values, defaulting to empty strings if null.
-                jiraUsername = String.isNotBlank(settings.JIRA_Username__c) ? settings.JIRA_Username__c : '';
-                apiToken = String.isNotBlank(settings.JIRA_API_Token__c) ? settings.JIRA_API_Token__c : '';
+                jiraUsername = String.isNotBlank(settings.JIRAUsernameTxt__c) ? settings.JIRAUsernameTxt__c : '';
+                apiToken = String.isNotBlank(settings.JIRAApiTokenTxt__c) ? settings.JIRAApiTokenTxt__c : '';
             }
     
             // Check if credentials were successfully retrieved.
@@ -286,10 +286,10 @@ public without sharing class JiraAttachmentHandler {
             
             // Find existing sync log to get ContentDocument ID
             List<Attachment_Sync_Log__c> existingLogs = [
-                SELECT Id, Salesforce_ContentDocumentId__c, SyncStatusPk__c
+                SELECT Id, SalesforceContentDocumentIdTxt__c, SyncStatusPk__c
                 FROM Attachment_Sync_Log__c
                 WHERE Ticket__c = :ticket.Id 
-                AND Jira_Attachment_ID__c = :attachmentId
+                AND JiraAttachmentIdTxt__c = :attachmentId
                 AND SyncStatusPk__c = 'Success'
                 ORDER BY CreatedDate DESC
                 LIMIT 1
@@ -302,7 +302,7 @@ public without sharing class JiraAttachmentHandler {
                 return false;
             }
             
-            String contentDocumentId = existingLogs[0].Salesforce_ContentDocumentId__c;
+            String contentDocumentId = existingLogs[0].SalesforceContentDocumentIdTxt__c;
             if (String.isBlank(contentDocumentId)) {
                 System.debug(LoggingLevel.WARN, 'No ContentDocument ID found in sync log for attachment: ' + attachmentId);
                 createSyncLog(ticket.Id, attachmentId, filename, 'Jira to SF', 'Failed', 
@@ -607,12 +607,12 @@ public without sharing class JiraAttachmentHandler {
         try {
             Attachment_Sync_Log__c syncLog = new Attachment_Sync_Log__c();
             syncLog.Ticket__c = ticketId;
-            syncLog.Jira_Attachment_ID__c = jiraAttachmentId;
-            syncLog.Filename__c = filename;
+            syncLog.JiraAttachmentIdTxt__c = jiraAttachmentId;
+            syncLog.FilenameTxt__c = filename;
             syncLog.SyncDirectionPk__c = syncDirection;
              syncLog.SyncStatusPk__c = syncStatus;
                             syncLog.ErrorDetailsTxt__c = errorDetails;
-            syncLog.Salesforce_ContentDocumentId__c = contentDocumentId;
+            syncLog.SalesforceContentDocumentIdTxt__c = contentDocumentId;
             
             // Use Security.stripInaccessible for FLS compliance
             List<Attachment_Sync_Log__c> logList = new List<Attachment_Sync_Log__c>{ syncLog };

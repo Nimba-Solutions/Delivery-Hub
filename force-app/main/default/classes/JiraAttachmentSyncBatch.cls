@@ -23,12 +23,12 @@ public with sharing class JiraAttachmentSyncBatch implements Database.Batchable<
         // 1. Get all attachments already synced for these tickets to prevent duplicates
         Set<String> existingJiraAttachmentIds = new Set<String>();
         List<Attachment_Sync_Log__c> existingLogs = [
-            SELECT Jira_Attachment_ID__c FROM Attachment_Sync_Log__c
-            WHERE Ticket__c IN :ticketIds AND Jira_Attachment_ID__c != NULL
+            SELECT JiraAttachmentIdTxt__c FROM Attachment_Sync_Log__c
+        WHERE Ticket__c IN :ticketIds AND JiraAttachmentIdTxt__c != NULL
         ];
         System.debug('JiraAttachmentSyncBatch: Found ' + existingLogs.size() + ' existing sync logs');
         for (Attachment_Sync_Log__c log : existingLogs) {
-            existingJiraAttachmentIds.add(log.Jira_Attachment_ID__c);
+            existingJiraAttachmentIds.add(log.JiraAttachmentIdTxt__c);
         }
         System.debug('JiraAttachmentSyncBatch: Existing Jira attachment IDs: ' + existingJiraAttachmentIds);
 
@@ -107,8 +107,8 @@ public with sharing class JiraAttachmentSyncBatch implements Database.Batchable<
                         // Prepare log record
                         logsToInsert.add(new Attachment_Sync_Log__c(
                             Ticket__c = ticket.Id,
-                            Jira_Attachment_ID__c = jiraAttId,
-                            Filename__c = cv.Title,
+                            JiraAttachmentIdTxt__c = jiraAttId,
+                            FilenameTxt__c = cv.Title,
                             SyncDirectionPk__c = 'Jira to SF',
                              SyncStatusPk__c = 'Success'
                         ));
@@ -157,7 +157,7 @@ public with sharing class JiraAttachmentSyncBatch implements Database.Batchable<
                     Attachment_Sync_Log__c log = logsToInsert[i];
 
                     Id docId = versionIdToDocId.get(cv.Id);
-                    log.Salesforce_ContentDocumentId__c = docId; // Update log with SF ID
+                    log.SalesforceContentDocumentIdTxt__c = docId; // Update log with SF ID
                     System.debug('JiraAttachmentSyncBatch: Creating link for document ' + docId + ' to ticket ' + log.Ticket__c);
 
                     linksToInsert.add(new ContentDocumentLink(

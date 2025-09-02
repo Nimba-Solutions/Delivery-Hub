@@ -34,8 +34,8 @@ private class JiraAttachmentSyncBatchTest {
         Ticket__c ticketToLog = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = 'JIRA-1' LIMIT 1];
         insert new Attachment_Sync_Log__c(
             Ticket__c = ticketToLog.Id,
-            Jira_Attachment_ID__c = '10001',
-            Filename__c = 'existing_file.txt',
+            JiraAttachmentIdTxt__c = '10001',
+            FilenameTxt__c = 'existing_file.txt',
             SyncDirectionPk__c = 'Jira to SF',
             SyncStatusPk__c = 'Success'
         );
@@ -70,7 +70,7 @@ private class JiraAttachmentSyncBatchTest {
         //System.assertEquals(1, versions.size(), 'Only one new file should have been created.');
         //System.assertEquals('new_file.pdf', versions[0].Title, 'The new file has the wrong title.');
 
-        List<Attachment_Sync_Log__c> logs = [SELECT Jira_Attachment_ID__c FROM Attachment_Sync_Log__c];
+        List<Attachment_Sync_Log__c> logs = [SELECT JiraAttachmentIdTxt__c FROM Attachment_Sync_Log__c];
         //System.assertEquals(2, logs.size(), 'Total sync logs should be 2.');
         
         Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = 'JIRA-1' LIMIT 1];

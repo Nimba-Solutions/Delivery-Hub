@@ -12,8 +12,8 @@ public class JiraAttachmentHandlerTest {
         // Create custom settings for Jira credentials
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             Name = 'Default',
-            JIRA_Username__c = 'test@example.com',
-            JIRA_API_Token__c = 'fake-token'
+            JIRAUsernameTxt__c = 'test@example.com',
+            JIRAApiTokenTxt__c = 'fake-token'
         );
         insert settings;
 
@@ -83,8 +83,8 @@ public class JiraAttachmentHandlerTest {
     static void testDownloadAttachment_MissingCredentials() {
         // ARRANGE: Update settings to be blank
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
-        settings.JIRA_Username__c = '';
-        settings.JIRA_API_Token__c = '';
+        settings.JIRAUsernameTxt__c = '';
+        settings.JIRAApiTokenTxt__c = '';
         update settings;
 
         String mediaUrl = 'https://api.media.atlassian.com/file/12345/binary';
@@ -128,10 +128,10 @@ public class JiraAttachmentHandlerTest {
         // Create a sync log with a null ContentDocumentId
         Attachment_Sync_Log__c log = new Attachment_Sync_Log__c(
             Ticket__c = ticket.Id,
-            Jira_Attachment_ID__c = '67890',
-            Filename__c = 'file.txt',
+            JiraAttachmentIdTxt__c = '67890',
+            FilenameTxt__c = 'file.txt',
             SyncStatusPk__c = 'Success',
-            Salesforce_ContentDocumentId__c = null // The critical condition
+            SalesforceContentDocumentIdTxt__c = null // The critical condition
         );
         insert log;
         Map<String, Object> payload = createMockAttachmentRemovalPayload('67890', 'file.txt', 'TEST-123');
@@ -167,10 +167,10 @@ public class JiraAttachmentHandlerTest {
         // Create a sync log pointing to the now-deleted ContentDocument
         Attachment_Sync_Log__c log = new Attachment_Sync_Log__c(
             Ticket__c = ticket.Id,
-            Jira_Attachment_ID__c = '11223',
-            Filename__c = 'ghost-file.txt',
+            JiraAttachmentIdTxt__c = '11223',
+            FilenameTxt__c = 'ghost-file.txt',
             SyncStatusPk__c = 'Success',
-            Salesforce_ContentDocumentId__c = validContentDocumentId // Valid format but deleted
+            SalesforceContentDocumentIdTxt__c = validContentDocumentId // Valid format but deleted
         );
         insert log;
         Map<String, Object> payload = createMockAttachmentRemovalPayload('11223', 'ghost-file.txt', 'TEST-123');

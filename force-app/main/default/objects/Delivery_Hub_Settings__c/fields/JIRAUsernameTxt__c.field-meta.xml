@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>JIRA_Project_Key__c</fullName>
-    <description>Project Key for JIRA integration</description>
+    <fullName>JIRAUsernameTxt__c</fullName>
+    <description>Username for JIRA authentication</description>
     <externalId>false</externalId>
-    <inlineHelpText>Enter your JIRA Project Key</inlineHelpText>
-    <label>JIRA Project Key</label>
-    <length>20</length>
+    <inlineHelpText>Enter your JIRA username</inlineHelpText>
+    <label>JIRA Username</label>
+    <length>255</length>
     <required>false</required>
     <trackTrending>false</trackTrending>
     <type>Text</type>

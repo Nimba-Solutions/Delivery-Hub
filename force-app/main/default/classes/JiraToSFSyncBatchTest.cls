@@ -23,8 +23,8 @@ public class JiraToSFSyncBatchTest {
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             Name = 'Default', // Or whatever your default record is named
             JIRAInstanceUrl__c = 'https://your-jira-instance.atlassian.net',
-            JIRA_Username__c = 'testuser@example.com',
-            JIRA_API_Token__c = 'mock_token'
+            JIRAUsernameTxt__c = 'testuser@example.com',
+            JIRAApiTokenTxt__c = 'mock_token'
         );
         insert settings;
 

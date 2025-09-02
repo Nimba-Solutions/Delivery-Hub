@@ -403,9 +403,9 @@ public with sharing class TicketController {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         
         // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
-        if (settings != null && settings.Open_Ai_Api_tested__c == true && String.isNotBlank(settings.OpenAI_API_Key__c)) {
+        if (settings != null && settings.Open_Ai_Api_tested__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
             System.debug('Giving custom setttngs api key');
-            return settings.OpenAI_API_Key__c;
+            return settings.OpenAIApiKeyTxt__c;
         }
 
         List<OpenAI_Configuration__mdt> configs = [

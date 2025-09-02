@@ -61,7 +61,7 @@ public with sharing class JiraCallout {
         
         // Validate that the custom settings are properly configured.
         if (settings == null || String.isBlank(settings.JIRAInstanceUrl__c) || 
-            String.isBlank(settings.JIRA_Username__c) || String.isBlank(settings.JIRA_API_Token__c)) {
+            String.isBlank(settings.JIRAUsernameTxt__c) || String.isBlank(settings.JIRAApiTokenTxt__c)) {
                 
                 System.debug(LoggingLevel.ERROR, 'Jira configuration is missing in Delivery_Hub_Settings__c.');
                 throw new CalloutException('Jira instance URL, username, or API token not configured in Custom Settings.');
@@ -99,8 +99,8 @@ public with sharing class JiraCallout {
             
             // --- CHANGE: Set Authorization Header from Custom Settings ---
             // Manually create the Basic Authentication header.
-            String jiraUsername = settings.JIRA_Username__c;
-            String apiToken = settings.JIRA_API_Token__c;
+            String jiraUsername = settings.JIRAUsernameTxt__c;
+            String apiToken = settings.JIRAApiTokenTxt__c;
             String basicAuth = jiraUsername + ':' + apiToken;
             req.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(basicAuth)));
             
