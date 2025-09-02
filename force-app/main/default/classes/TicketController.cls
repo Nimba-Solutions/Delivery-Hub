@@ -159,7 +159,7 @@ public with sharing class TicketController {
         List<Kanban_Stage_Field_Requirement__mdt> requirements = [
             SELECT RequiredFieldsTxt__c
             FROM Kanban_Stage_Field_Requirement__mdt
-            WHERE Is_Active__c = true AND Target_Stage__c = :targetStage
+            WHERE IsActiveBool__c = true AND TargetStageTxt__c = :targetStage
             LIMIT 1
         ];
 
@@ -403,7 +403,7 @@ public with sharing class TicketController {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         
         // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
-        if (settings != null && settings.Open_Ai_Api_tested__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
+        if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
             System.debug('Giving custom setttngs api key');
             return settings.OpenAIApiKeyTxt__c;
         }

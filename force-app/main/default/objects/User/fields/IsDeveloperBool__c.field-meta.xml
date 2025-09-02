@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>is_Developer__c</fullName>
+    <fullName>IsDeveloperBool__c</fullName>
     <defaultValue>false</defaultValue>
     <description>A flag to identify users who are developers and should be included in the resource pool for ETA calculations.</description>
     <externalId>false</externalId>

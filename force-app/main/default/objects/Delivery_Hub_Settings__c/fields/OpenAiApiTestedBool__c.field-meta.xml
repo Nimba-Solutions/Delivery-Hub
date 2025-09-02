@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>JIRA_Enabled__c</fullName>
+    <fullName>OpenAiApiTestedBool__c</fullName>
+    <description>Flag indicating whether the OpenAI API key has been tested and verified</description>
     <defaultValue>false</defaultValue>
-    <description>Controls whether JIRA integration is enabled</description>
     <externalId>false</externalId>
-    <inlineHelpText>Enable or disable JIRA integration</inlineHelpText>
-    <label>JIRA Enabled</label>
+    <label>Open Ai Api tested</label>
     <trackTrending>false</trackTrending>
     <type>Checkbox</type>
 </CustomField>

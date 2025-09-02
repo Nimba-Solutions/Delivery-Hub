@@ -34,7 +34,7 @@ public with sharing class KanbanSettingsController {
         wrapper.aiEstimationEnabled = settings.AIEstimationEnabledBool__c;
         wrapper.openaiApiKey = settings.OpenAIApiKeyTxt__c;
         wrapper.openaiModel = settings.OpenAIModelTxt__c;
-        wrapper.jiraEnabled = settings.JIRA_Enabled__c;
+        wrapper.jiraEnabled = settings.JIRAEnabledBool__c;
         wrapper.jiraUrl = settings.JIRAInstanceUrl__c;
         wrapper.jiraUsername = settings.JIRAUsernameTxt__c;
         wrapper.jiraApiToken = settings.JIRAApiTokenTxt__c;
@@ -62,7 +62,7 @@ public with sharing class KanbanSettingsController {
         settings.AIEstimationEnabledBool__c = wrapper.aiEstimationEnabled;
         settings.OpenAIApiKeyTxt__c = wrapper.openaiApiKey;
         settings.OpenAIModelTxt__c = wrapper.openaiModel;
-        settings.JIRA_Enabled__c = wrapper.jiraEnabled;
+        settings.JIRAEnabledBool__c = wrapper.jiraEnabled;
         settings.JIRAInstanceUrl__c = wrapper.jiraUrl;
         settings.JIRAUsernameTxt__c = wrapper.jiraUsername;
         settings.JIRAApiTokenTxt__c = wrapper.jiraApiToken;

@@ -12,13 +12,13 @@ private class DeliveryHubSettingsControllerTest {
             AIEstimationEnabledBool__c = true,
             OpenAIApiKeyTxt__c = 'test-key',
             OpenAIModelTxt__c = 'gpt-4o',
-            JIRA_Enabled__c = true,
+            JIRAEnabledBool__c = true,
             JIRAInstanceUrl__c = 'https://example.atlassian.net',
             JIRAUsernameTxt__c = 'jirauser@example.com',
             JIRAApiTokenTxt__c = 'test-token',
             JIRAProjectKeyTxt__c = 'ABC',
-            Jira_Api_tested__c = true,
-            Open_Ai_Api_tested__c = true
+            JIraApiTestedBool__c = true,
+            OpenAiApiTestedBool__c = true
         );
         insert settings;
     }
@@ -53,7 +53,7 @@ private class DeliveryHubSettingsControllerTest {
         Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
         System.assertEquals('new-key', s.OpenAIApiKeyTxt__c, 'OpenAI API Key should be updated');
         System.assertEquals('gpt-4o-mini', s.OpenAIModelTxt__c, 'OpenAI Model should be updated');
-        System.assertEquals(true, s.Open_Ai_Api_tested__c, 'OpenAI API should be marked as tested');
+        System.assertEquals(true, s.OpenAiApiTestedBool__c, 'OpenAI API should be marked as tested');
     }
 
     @isTest
@@ -70,14 +70,14 @@ private class DeliveryHubSettingsControllerTest {
         System.assertEquals('user@jira.com', s.JIRAUsernameTxt__c, 'JIRA Username should be updated');
         System.assertEquals('new-token', s.JIRAApiTokenTxt__c, 'JIRA API Token should be updated');
         System.assertEquals('XYZ', s.JIRAProjectKeyTxt__c, 'JIRA Project Key should be updated');
-        System.assertEquals(true, s.Jira_Api_tested__c, 'JIRA API should be marked as tested');
+        System.assertEquals(true, s.JIraApiTestedBool__c, 'JIRA API should be marked as tested');
     }
 
     @isTest
     static void testSaveJiraEnabledState() {
         DeliveryHubSettingsController.saveJiraEnabledState(false);
         Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
-        System.assertEquals(false, s.JIRA_Enabled__c, 'JIRA should be disabled');
+        System.assertEquals(false, s.JIRAEnabledBool__c, 'JIRA should be disabled');
     }
 
     @isTest

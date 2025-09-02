@@ -3,11 +3,11 @@
     <label>QA Entry Requirements</label>
     <protected>false</protected>
     <values>
-        <field>Description__c</field>
+        <field>DescriptionTxt__c</field>
         <value xsi:type="xsd:string">Ensures every ticket entering QA has an assigned engineer and a documented test plan.</value>
     </values>
     <values>
-        <field>Is_Active__c</field>
+        <field>IsActiveBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
@@ -15,7 +15,7 @@
         <value xsi:type="xsd:string">QA_Engineer__c, ClientIntentionPk__c</value>
     </values>
     <values>
-        <field>Target_Stage__c</field>
+        <field>TargetStageTxt__c</field>
         <value xsi:type="xsd:string">Ready for Scratch Org Test</value>
     </values>
 </CustomMetadata>

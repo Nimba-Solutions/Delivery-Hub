@@ -306,7 +306,7 @@ public with sharing class TicketETAService {
         private Map<Id, User> loadResources() {
             System.debug('Loading developer resources...');
             List<User> developers = [
-                SELECT Id, Name FROM User WHERE IsActive = TRUE AND is_Developer__c = TRUE
+                SELECT Id, Name FROM User WHERE IsActive = TRUE AND IsDeveloperBool__c = TRUE
             ];
             System.debug('Found ' + developers.size() + ' active developers');
             for(User dev : developers) {

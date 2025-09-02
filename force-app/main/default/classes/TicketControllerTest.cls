@@ -23,7 +23,7 @@ private class TicketControllerTest {
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             Name = 'Default',
             OpenAIApiKeyTxt__c = 'test-api-key',
-            Open_Ai_Api_tested__c = true
+            OpenAiApiTestedBool__c = true
         );
         insert settings;
 

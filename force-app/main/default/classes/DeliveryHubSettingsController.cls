@@ -28,7 +28,7 @@ public with sharing class DeliveryHubSettingsController {
         wrapper.aiEstimationEnabled = settings.AIEstimationEnabledBool__c;
         wrapper.openaiApiKey = settings.OpenAIApiKeyTxt__c;
         wrapper.openaiModel = settings.OpenAIModelTxt__c;
-        wrapper.jiraEnabled = settings.JIRA_Enabled__c;
+        wrapper.jiraEnabled = settings.JIRAEnabledBool__c;
         wrapper.jiraUrl = settings.JIRAInstanceUrl__c;
         wrapper.jiraUsername = settings.JIRAUsernameTxt__c;
         wrapper.jiraApiToken = settings.JIRAApiTokenTxt__c;
@@ -56,7 +56,7 @@ public with sharing class DeliveryHubSettingsController {
         settings.AIEstimationEnabledBool__c = wrapper.aiEstimationEnabled;
         settings.OpenAIApiKeyTxt__c = wrapper.openaiApiKey;
         settings.OpenAIModelTxt__c = wrapper.openaiModel;
-        settings.JIRA_Enabled__c = wrapper.jiraEnabled;
+        settings.JIRAEnabledBool__c = wrapper.jiraEnabled;
         settings.JIRAInstanceUrl__c = wrapper.jiraUrl;
         settings.JIRAUsernameTxt__c = wrapper.jiraUsername;
         settings.JIRAApiTokenTxt__c = wrapper.jiraApiToken;
@@ -101,7 +101,7 @@ public with sharing class DeliveryHubSettingsController {
             settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
         }
         
-        settings.JIRA_Enabled__c = enabled;
+        settings.JIRAEnabledBool__c = enabled;
         settings.JIRAInstanceUrl__c = jiraUrl;
         settings.JIRAUsernameTxt__c = username;
         settings.JIRAApiTokenTxt__c = apiToken;
@@ -235,13 +235,13 @@ public with sharing class DeliveryHubSettingsController {
             dto.aiEstimationEnabled = settings.AIEstimationEnabledBool__c;
             dto.openaiApiKey = settings.OpenAIApiKeyTxt__c;
             dto.openaiModel = settings.OpenAIModelTxt__c;
-            dto.jiraEnabled = settings.JIRA_Enabled__c;
+            dto.jiraEnabled = settings.JIRAEnabledBool__c;
             dto.jiraInstanceUrl = settings.JIRAInstanceUrl__c;
             dto.jiraUsername = settings.JIRAUsernameTxt__c;
             dto.jiraApiToken = settings.JIRAApiTokenTxt__c;
             dto.jiraProjectKey = settings.JIRAProjectKeyTxt__c;
-            dto.jiraApiTested = settings.JIra_Api_tested__c;
-            dto.openAiApiTested = settings.Open_Ai_Api_tested__c;
+            dto.jiraApiTested = settings.JIraApiTestedBool__c;
+            dto.openAiApiTested = settings.OpenAiApiTestedBool__c;
         }
         return dto;
     }
@@ -304,7 +304,7 @@ public with sharing class DeliveryHubSettingsController {
         Delivery_Hub_Settings__c settings = getOrCreateSettings();
         settings.OpenAIApiKeyTxt__c = apiKey;
         settings.OpenAIModelTxt__c = model;
-        settings.Open_Ai_Api_tested__c = tested;
+        settings.OpenAiApiTestedBool__c = tested;
         // Check FLS permissions before upsert
         SObjectAccessDecision decision = Security.stripInaccessible(
             AccessType.UPSERTABLE, new List<Delivery_Hub_Settings__c>{settings});
@@ -314,12 +314,12 @@ public with sharing class DeliveryHubSettingsController {
     @AuraEnabled
     public static void saveJiraSettings( String url, String username, String token, String projectKey, Boolean isVerified) {
         Delivery_Hub_Settings__c settings = getOrCreateSettings();
-        // settings.JIRA_Enabled__c = enabled;
+        // settings.JIRAEnabledBool__c = enabled;
         settings.JIRAInstanceUrl__c = url;
         settings.JIRAUsernameTxt__c = username;
         settings.JIRAApiTokenTxt__c = token;
         settings.JIRAProjectKeyTxt__c = projectKey;
-    settings.Jira_Api_tested__c = isVerified;
+    settings.JIraApiTestedBool__c = isVerified;
         upsert settings;
     }
 
@@ -330,7 +330,7 @@ public with sharing class DeliveryHubSettingsController {
     @AuraEnabled
     public static void saveJiraEnabledState(Boolean enabled) {
         Delivery_Hub_Settings__c settings = getOrCreateSettings();
-        settings.JIRA_Enabled__c = enabled;
+        settings.JIRAEnabledBool__c = enabled;
         // Can't Check FLS permissions before upsert for Custom setting
         upsert settings;
     }

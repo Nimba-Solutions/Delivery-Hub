@@ -24,7 +24,7 @@ private class TicketETAServiceTest {
                 EmailEncodingKey = 'UTF-8',
                 LanguageLocaleKey = 'en_US',
                 LocaleSidKey = 'en_US',
-                is_Developer__c = true
+                IsDeveloperBool__c = true
             ));
         }
         insert devs;
@@ -135,7 +135,7 @@ private class TicketETAServiceTest {
 
     @isTest
     static void testNoDevelopersAvailable() {
-        List<User> devs = [SELECT Id, IsActive FROM User WHERE is_Developer__c = true];
+        List<User> devs = [SELECT Id, IsActive FROM User WHERE IsDeveloperBool__c = true];
         for(User u : devs){ u.IsActive = false; }
         update devs;
 
