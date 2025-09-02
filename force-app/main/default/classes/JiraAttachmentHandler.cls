@@ -12,6 +12,10 @@
  */
 public without sharing class JiraAttachmentHandler {
     
+     @TestVisible
+    private static Boolean isTest = false; // Controls test mode
+    @TestVisible
+    private static Boolean testResult = false; // Defines the mock result
     // Salesforce file size limits (in bytes)
     private static final Integer MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB for ContentVersion
     private static final Integer MAX_HEAP_SIZE = 6 * 1024 * 1024;  // 6MB heap limit consideration
@@ -191,6 +195,7 @@ public without sharing class JiraAttachmentHandler {
         }
     }
     
+    @TestVisible
     private static String getRelativePathFromUrl(String contentUrl) {
         if (String.isBlank(contentUrl)) return null;
         try {

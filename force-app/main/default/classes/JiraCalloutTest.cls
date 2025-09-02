@@ -4,10 +4,27 @@ private class JiraCalloutTest {
     /**
      * @description Mock HTTP responses for Jira API callouts.
      */
+    @testSetup
+    static void setup() {
+        // Create and insert the required custom setting data for all tests.
+        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+            Name = 'Default', // Use a name if it's a list custom setting
+            JIRA_Instance_URL__c = 'https://mock-jira.test.com',
+            JIRA_Username__c = 'test@user.com',
+            JIRA_API_Token__c = 'mock_api_token'
+        );
+        insert settings;
+    }
     private class JiraCalloutMock implements HttpCalloutMock {
         private Integer statusCode;
         private String status;
         private String body;
+        
+        public JiraCalloutMock() {
+            this.statusCode = 200;
+            this.status = 'OK';
+            this.body = '{}'; // Default empty success body
+        }
 
         /**
          * @description Constructor to define the mock response.

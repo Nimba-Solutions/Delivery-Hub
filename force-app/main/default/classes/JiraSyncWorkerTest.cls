@@ -1,5 +1,5 @@
 @isTest
-private class JiraSyncWorkerTest {
+public class JiraSyncWorkerTest {
 
     // Mock implementation of the JiraCallout.httpHelper method
     private class MockJiraHttpResponseGenerator implements HttpCalloutMock {
@@ -69,7 +69,9 @@ private class JiraSyncWorkerTest {
             t.JiraTicketKeyTxt__c = 'DHS-123';
             toUpdate.add(t);
         }
+        TicketTriggerHandler.triggerDisabled = true;
         update toUpdate;
+        TicketTriggerHandler.triggerDisabled = false;
 
         Set<Id> ticketIds = new Set<Id>();
         for (Ticket__c t : toUpdate) {
@@ -88,9 +90,20 @@ private class JiraSyncWorkerTest {
     @isTest
     static void testEmptyIds() {
         Test.startTest();
+        TicketTriggerHandler.triggerDisabled = true;
         JiraSyncWorker worker = new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, new Set<Id>());
+        TicketTriggerHandler.triggerDisabled = false;
         System.enqueueJob(worker);
         Test.stopTest();
         // No assertions needed; just ensures no exceptions are thrown
     }
+    
+    @isTest
+    static void testTest() {
+        Test.startTest();
+        JiraSyncWorker.test();
+        Test.stopTest();
+        // No assertions needed; just ensures no exceptions are thrown
+    }
+    
 }

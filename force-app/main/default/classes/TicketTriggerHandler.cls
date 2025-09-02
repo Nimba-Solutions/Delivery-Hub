@@ -3,7 +3,8 @@
  * then enqueues **one** worker job for each operation type.
  */
 public without sharing class TicketTriggerHandler {
-
+	
+    public static boolean triggerDisabled = false;
     /* Public entry used by the trigger ----------------------------------- */
     public static void handleAfter(
         List<Ticket__c> newRows,
@@ -11,6 +12,10 @@ public without sharing class TicketTriggerHandler {
         Boolean isInsert,
         Boolean isUpdate
     ){
+        
+        if (!TriggerControl.runAfterLogic) {
+            return;
+        }
         /* Collect the two ID sets we care about */
         Set<Id> toCreate = new Set<Id>();
         Set<Id> toUpdate = new Set<Id>();
@@ -49,14 +54,24 @@ public without sharing class TicketTriggerHandler {
 
         /* -------- Enqueue worker jobs -------- */
         if (!toCreate.isEmpty()){
-            System.enqueueJob(
-                new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, toCreate)
-            );
+            if (Test.isRunningTest()) {
+                // Use synchronous methods during tests to avoid async job limits
+                Ticket_JiraSync.createJiraIssuesSync(toCreate);
+            } else {
+                System.enqueueJob(
+                    new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, toCreate)
+                );
+            }
         }
         if (!toUpdate.isEmpty()){
-            System.enqueueJob(
-                new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA, toUpdate)
-            );
+            if (Test.isRunningTest()) {
+                // Use synchronous methods during tests to avoid async job limits
+                Ticket_JiraSync.updateJiraIssuesSync(toUpdate);
+            } else {
+                System.enqueueJob(
+                    new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA, toUpdate)
+                );
+            }
         }
     }
 

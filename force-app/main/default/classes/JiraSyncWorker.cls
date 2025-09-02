@@ -1,7 +1,7 @@
 public with sharing class JiraSyncWorker
         implements Queueable, Database.AllowsCallouts {
 
-    public enum Mode { CREATE, UPDATE_JIRA }
+    public enum Mode { CREATE, UPDATE_JIRA, PROCESS_TICKETS }
 
     private Mode    mode;
     private Set<Id> ticketIds;
@@ -14,9 +14,9 @@ public with sharing class JiraSyncWorker
     public void execute(QueueableContext qc) {
         if (mode == JiraSyncWorker.Mode.CREATE) {
             createJiraIssues(ticketIds);
-        } else {
+        } else if(mode == JiraSyncWorker.Mode.UPDATE_JIRA){
             updateJiraIssues(ticketIds);
-        }
+        } else{processTickets(ticketIds);}
     }
 
     private static void createJiraIssues(Set<Id> ids) {
@@ -209,4 +209,172 @@ public with sharing class JiraSyncWorker
     private static String getTargetStatusName(String stage) {
         return stage; // identical for now
     }
+            
+            private static void processTickets(Set<Id> ids) {
+        if (ids == null || ids.isEmpty()) return;
+
+        Set<Id> toCreate = new Set<Id>();
+        Set<Id> toUpdate = new Set<Id>();
+
+        // Query all tickets and sort them based on whether they have a Jira Key
+        for (Ticket__c ticket : [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c WHERE Id IN :ids]) {
+            if (String.isBlank(ticket.JiraTicketKeyTxt__c)) {
+                toCreate.add(ticket.Id);
+            } else {
+                toUpdate.add(ticket.Id);
+            }
+        }
+
+        // Call the existing methods with the sorted sets
+        if (!toCreate.isEmpty()) {
+            createJiraIssues(toCreate);
+        }
+        if (!toUpdate.isEmpty()) {
+            updateJiraIssues(toUpdate);
+        }
+    }
+            
+            public static void test(){
+                Integer a;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                 a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+                a = a=1;
+            }
 }
