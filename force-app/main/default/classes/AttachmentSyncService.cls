@@ -59,8 +59,8 @@ public with sharing class AttachmentSyncService {
                 Jira_Attachment_ID__c = jiraAttachmentId, // Will be null on failure
                 Salesforce_ContentDocumentId__c = cv.ContentDocumentId,
                 Filename__c = cv.Title,
-                Sync_Direction__c = 'Salesforce to Jira',
-                Sync_Status__c = status,
+                SyncDirectionPk__c = 'Salesforce to Jira',
+                 SyncStatusPk__c = status,
                 ErrorDetailsTxt__c = errorDetails
             ));
         }

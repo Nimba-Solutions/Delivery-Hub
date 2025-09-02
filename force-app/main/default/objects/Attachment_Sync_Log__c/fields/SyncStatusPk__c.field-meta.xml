@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Type__c</fullName>
-    <description>Type of dependency relationship between tickets</description>
+    <fullName>SyncStatusPk__c</fullName>
+    <description>Current status of the attachment synchronization process</description>
     <externalId>false</externalId>
-    <label>Type</label>
+    <label>Sync Status</label>
     <required>false</required>
-    <trackHistory>false</trackHistory>
     <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
@@ -13,19 +12,14 @@
         <valueSetDefinition>
             <sorted>false</sorted>
             <value>
-                <fullName>Blocks</fullName>
-                <default>true</default>
-                <label>Blocks</label>
+                <fullName>Success</fullName>
+                <default>false</default>
+                <label>Success</label>
             </value>
             <value>
-                <fullName>Relates To</fullName>
+                <fullName>Failed</fullName>
                 <default>false</default>
-                <label>Relates To</label>
-            </value>
-            <value>
-                <fullName>Clones</fullName>
-                <default>false</default>
-                <label>Clones</label>
+                <label>Failed</label>
             </value>
         </valueSetDefinition>
     </valueSet>

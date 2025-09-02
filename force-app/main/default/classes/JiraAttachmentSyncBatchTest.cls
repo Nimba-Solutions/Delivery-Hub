@@ -36,8 +36,8 @@ private class JiraAttachmentSyncBatchTest {
             Ticket__c = ticketToLog.Id,
             Jira_Attachment_ID__c = '10001',
             Filename__c = 'existing_file.txt',
-            Sync_Direction__c = 'Jira to SF',
-            Sync_Status__c = 'Success'
+            SyncDirectionPk__c = 'Jira to SF',
+            SyncStatusPk__c = 'Success'
         );
     }
 

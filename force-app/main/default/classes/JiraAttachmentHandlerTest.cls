@@ -130,7 +130,7 @@ public class JiraAttachmentHandlerTest {
             Ticket__c = ticket.Id,
             Jira_Attachment_ID__c = '67890',
             Filename__c = 'file.txt',
-            Sync_Status__c = 'Success',
+            SyncStatusPk__c = 'Success',
             Salesforce_ContentDocumentId__c = null // The critical condition
         );
         insert log;
@@ -169,7 +169,7 @@ public class JiraAttachmentHandlerTest {
             Ticket__c = ticket.Id,
             Jira_Attachment_ID__c = '11223',
             Filename__c = 'ghost-file.txt',
-            Sync_Status__c = 'Success',
+            SyncStatusPk__c = 'Success',
             Salesforce_ContentDocumentId__c = validContentDocumentId // Valid format but deleted
         );
         insert log;

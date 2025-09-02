@@ -29,7 +29,7 @@ public with sharing class DeliveryHubSettingsController {
         wrapper.openaiApiKey = settings.OpenAI_API_Key__c;
         wrapper.openaiModel = settings.OpenAI_Model__c;
         wrapper.jiraEnabled = settings.JIRA_Enabled__c;
-        wrapper.jiraUrl = settings.JIRA_Instance_URL__c;
+        wrapper.jiraUrl = settings.JIRAInstanceUrl__c;
         wrapper.jiraUsername = settings.JIRA_Username__c;
         wrapper.jiraApiToken = settings.JIRA_API_Token__c;
         wrapper.jiraProjectKey = settings.JIRA_Project_Key__c;
@@ -57,7 +57,7 @@ public with sharing class DeliveryHubSettingsController {
         settings.OpenAI_API_Key__c = wrapper.openaiApiKey;
         settings.OpenAI_Model__c = wrapper.openaiModel;
         settings.JIRA_Enabled__c = wrapper.jiraEnabled;
-        settings.JIRA_Instance_URL__c = wrapper.jiraUrl;
+        settings.JIRAInstanceUrl__c = wrapper.jiraUrl;
         settings.JIRA_Username__c = wrapper.jiraUsername;
         settings.JIRA_API_Token__c = wrapper.jiraApiToken;
         settings.JIRA_Project_Key__c = wrapper.jiraProjectKey;
@@ -102,7 +102,7 @@ public with sharing class DeliveryHubSettingsController {
         }
         
         settings.JIRA_Enabled__c = enabled;
-        settings.JIRA_Instance_URL__c = jiraUrl;
+        settings.JIRAInstanceUrl__c = jiraUrl;
         settings.JIRA_Username__c = username;
         settings.JIRA_API_Token__c = apiToken;
         settings.JIRA_Project_Key__c = projectKey;
@@ -236,7 +236,7 @@ public with sharing class DeliveryHubSettingsController {
             dto.openaiApiKey = settings.OpenAI_API_Key__c;
             dto.openaiModel = settings.OpenAI_Model__c;
             dto.jiraEnabled = settings.JIRA_Enabled__c;
-            dto.jiraInstanceUrl = settings.JIRA_Instance_URL__c;
+            dto.jiraInstanceUrl = settings.JIRAInstanceUrl__c;
             dto.jiraUsername = settings.JIRA_Username__c;
             dto.jiraApiToken = settings.JIRA_API_Token__c;
             dto.jiraProjectKey = settings.JIRA_Project_Key__c;
@@ -315,7 +315,7 @@ public with sharing class DeliveryHubSettingsController {
     public static void saveJiraSettings( String url, String username, String token, String projectKey, Boolean isVerified) {
         Delivery_Hub_Settings__c settings = getOrCreateSettings();
         // settings.JIRA_Enabled__c = enabled;
-        settings.JIRA_Instance_URL__c = url;
+        settings.JIRAInstanceUrl__c = url;
         settings.JIRA_Username__c = username;
         settings.JIRA_API_Token__c = token;
         settings.JIRA_Project_Key__c = projectKey;

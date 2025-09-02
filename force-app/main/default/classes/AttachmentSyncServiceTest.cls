@@ -58,15 +58,15 @@ private class AttachmentSyncServiceTest {
 
         // Step 5: Assert a sync log was created
         List<Attachment_Sync_Log__c> logs = [
-            SELECT Id, Sync_Status__c, Jira_Attachment_ID__c
+            SELECT Id, SyncStatusPk__c, Jira_Attachment_ID__c
             FROM Attachment_Sync_Log__c
             WHERE Ticket__c = :ticket.Id
         ];
         System.assertEquals(1, logs.size(), 'Expected one sync log to be created');
-        System.assertEquals('Success', logs[0].Sync_Status__c, 'Expected sync status to be Success');
+        System.assertEquals('Success', logs[0].SyncStatusPk__c, 'Expected sync status to be Success');
 
         //System.assertEquals(1, logs.size(), 'One sync log should be created');
-        //System.assertEquals('Success', logs[0].Sync_Status__c);
+        //System.assertEquals('Success', logs[0].SyncStatusPk__c);
         //System.assertEquals('jira-attachment-id-123', logs[0].Jira_Attachment_ID__c);
     }
 }

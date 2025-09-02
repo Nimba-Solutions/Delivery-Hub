@@ -21,7 +21,7 @@ public class TicketTriggerHandlerTest {
         insert new Ticket_Dependency__c(
             Blocked_Ticket__c = blocked.Id,
             Blocking_Ticket__c = blocker.Id,
-            Type__c = 'Blocks'
+            TypePk__c = 'Blocks'
         );
         
         // (Good practice) Re-enable the trigger logic after setup is complete

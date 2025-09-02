@@ -60,7 +60,7 @@ public with sharing class JiraCallout {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         
         // Validate that the custom settings are properly configured.
-        if (settings == null || String.isBlank(settings.JIRA_Instance_URL__c) || 
+        if (settings == null || String.isBlank(settings.JIRAInstanceUrl__c) || 
             String.isBlank(settings.JIRA_Username__c) || String.isBlank(settings.JIRA_API_Token__c)) {
                 
                 System.debug(LoggingLevel.ERROR, 'Jira configuration is missing in Delivery_Hub_Settings__c.');
@@ -93,7 +93,7 @@ public with sharing class JiraCallout {
             
             // --- CHANGE: Dynamically construct the full endpoint URL ---
             // This replaces the hardcoded 'callout:Jira/' from Named Credentials.
-            String fullEndpoint = settings.JIRA_Instance_URL__c.removeEnd('/') + '/' + endpoint.removeStart('/');
+            String fullEndpoint = settings.JIRAInstanceUrl__c.removeEnd('/') + '/' + endpoint.removeStart('/');
             req.setEndpoint(fullEndpoint);
             System.debug(LoggingLevel.DEBUG, 'Making callout to endpoint: ' + fullEndpoint);
             

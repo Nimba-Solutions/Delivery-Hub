@@ -32,7 +32,7 @@ public class DragAndDropLwcControllerTest {
         insert new Ticket_Dependency__c(
             Blocked_Ticket__c = blocked.Id,
             Blocking_Ticket__c = blocking.Id,
-            Type__c = 'Blocks'
+            TypePk__c = 'Blocks'
         );
 
         // --- (Optional but good practice) Turn the trigger logic back on ---

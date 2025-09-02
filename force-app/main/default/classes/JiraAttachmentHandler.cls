@@ -286,11 +286,11 @@ public without sharing class JiraAttachmentHandler {
             
             // Find existing sync log to get ContentDocument ID
             List<Attachment_Sync_Log__c> existingLogs = [
-                SELECT Id, Salesforce_ContentDocumentId__c, Sync_Status__c
+                SELECT Id, Salesforce_ContentDocumentId__c, SyncStatusPk__c
                 FROM Attachment_Sync_Log__c
                 WHERE Ticket__c = :ticket.Id 
                 AND Jira_Attachment_ID__c = :attachmentId
-                AND Sync_Status__c = 'Success'
+                AND SyncStatusPk__c = 'Success'
                 ORDER BY CreatedDate DESC
                 LIMIT 1
             ];
@@ -609,8 +609,8 @@ public without sharing class JiraAttachmentHandler {
             syncLog.Ticket__c = ticketId;
             syncLog.Jira_Attachment_ID__c = jiraAttachmentId;
             syncLog.Filename__c = filename;
-            syncLog.Sync_Direction__c = syncDirection;
-            syncLog.Sync_Status__c = syncStatus;
+            syncLog.SyncDirectionPk__c = syncDirection;
+             syncLog.SyncStatusPk__c = syncStatus;
                             syncLog.ErrorDetailsTxt__c = errorDetails;
             syncLog.Salesforce_ContentDocumentId__c = contentDocumentId;
             

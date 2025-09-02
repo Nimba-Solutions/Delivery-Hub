@@ -109,8 +109,8 @@ public with sharing class JiraAttachmentSyncBatch implements Database.Batchable<
                             Ticket__c = ticket.Id,
                             Jira_Attachment_ID__c = jiraAttId,
                             Filename__c = cv.Title,
-                            Sync_Direction__c = 'Jira to SF',
-                            Sync_Status__c = 'Success'
+                            SyncDirectionPk__c = 'Jira to SF',
+                             SyncStatusPk__c = 'Success'
                         ));
                         System.debug('JiraAttachmentSyncBatch: Prepared sync log for attachment: ' + jiraAttId);
                     } else {

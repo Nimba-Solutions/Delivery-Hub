@@ -13,7 +13,7 @@ private class DeliveryHubSettingsControllerTest {
             OpenAI_API_Key__c = 'test-key',
             OpenAI_Model__c = 'gpt-4o',
             JIRA_Enabled__c = true,
-            JIRA_Instance_URL__c = 'https://example.atlassian.net',
+            JIRAInstanceUrl__c = 'https://example.atlassian.net',
             JIRA_Username__c = 'jirauser@example.com',
             JIRA_API_Token__c = 'test-token',
             JIRA_Project_Key__c = 'ABC',
@@ -66,7 +66,7 @@ private class DeliveryHubSettingsControllerTest {
             true
         );
         Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
-        System.assertEquals('https://myjira.com', s.JIRA_Instance_URL__c, 'JIRA URL should be updated');
+        System.assertEquals('https://myjira.com', s.JIRAInstanceUrl__c, 'JIRA URL should be updated');
         System.assertEquals('user@jira.com', s.JIRA_Username__c, 'JIRA Username should be updated');
         System.assertEquals('new-token', s.JIRA_API_Token__c, 'JIRA API Token should be updated');
         System.assertEquals('XYZ', s.JIRA_Project_Key__c, 'JIRA Project Key should be updated');
