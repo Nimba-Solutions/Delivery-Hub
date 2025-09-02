@@ -24,7 +24,7 @@ public with sharing class JiraSyncWorker
         Set<Id> successfullyCreatedTicketIds = new Set<Id>();
     // 1. Add StatusPk__c to the query to know the target status
     List<Ticket__c> tickets = [
-        SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, Jira_TicketId__c, StatusPk__c ,StageNamePk__c
+        SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, JiraTicketId__c, StatusPk__c ,StageNamePk__c
         FROM Ticket__c WHERE Id IN :ids
     ];
 
@@ -54,7 +54,7 @@ public with sharing class JiraSyncWorker
                 String newIssueKey = String.valueOf(parsed.get('key'));
                 
                 upd.JiraTicketKeyTxt__c = newIssueKey;
-                upd.Jira_TicketId__c = String.valueOf(parsed.get('id'));
+                upd.JiraTicketId__c = String.valueOf(parsed.get('id'));
                 upd.JiraSyncStatusTxt__c = 'Created';
                 successfullyCreatedTicketIds.add(t.Id);
                     System.debug(' t.StageNamePk__c '+ t.StageNamePk__c != 'Backlog');

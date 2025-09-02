@@ -77,7 +77,7 @@ public with sharing class JiraCallout {
                 if (setting.SalesforceToJiraBool__c != true) {
                     setting.SalesforceToJiraBool__c = true;
                     upsert setting;
-                    System.debug('Salesforce-to-Jira sync flag set to TRUE.');
+                    System.debug(LoggingLevel.DEBUG, 'Salesforce-to-Jira sync flag set to TRUE.');
                 }
             } catch (Exception e) {
                 System.debug(LoggingLevel.ERROR, 'Failed to set sync flag to true: ' + e.getMessage());
@@ -95,7 +95,7 @@ public with sharing class JiraCallout {
             // This replaces the hardcoded 'callout:Jira/' from Named Credentials.
             String fullEndpoint = settings.JIRA_Instance_URL__c.removeEnd('/') + '/' + endpoint.removeStart('/');
             req.setEndpoint(fullEndpoint);
-            System.debug('Making callout to endpoint: ' + fullEndpoint);
+            System.debug(LoggingLevel.DEBUG, 'Making callout to endpoint: ' + fullEndpoint);
             
             // --- CHANGE: Set Authorization Header from Custom Settings ---
             // Manually create the Basic Authentication header.
@@ -113,14 +113,14 @@ public with sharing class JiraCallout {
             
             // Make the actual callout.
             HttpResponse res = h.send(req);
-            System.debug('Jira response received: ' + res.getStatusCode());
+            System.debug(LoggingLevel.DEBUG, 'Jira response received: ' + res.getStatusCode());
             return res;
             
         } finally {
             // Enqueue a job to set the sync flag back to FALSE in a separate transaction.
             if (!Test.isRunningTest() && !System.isQueueable() && !System.isBatch()) {
                 System.enqueueJob(new UnsetSyncFlagQueueable());
-                System.debug('Enqueued job to unset sync flag.');
+                System.debug(LoggingLevel.DEBUG, 'Enqueued job to unset sync flag.');
             }
         }
     }
@@ -129,7 +129,7 @@ public with sharing class JiraCallout {
     
     public static HttpResponse getProject(String key) {
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             
             // Return a dummy "Forbidden" response to prevent a NullPointerException in the calling code.
             HttpResponse res = new HttpResponse();
@@ -143,7 +143,7 @@ public with sharing class JiraCallout {
     
     public static HttpResponse createProject(String body) {
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             
             // Return a dummy "Forbidden" response to prevent a NullPointerException in the calling code.
             HttpResponse res = new HttpResponse();
@@ -157,7 +157,7 @@ public with sharing class JiraCallout {
     
     public static HttpResponse updateProject(String projectId, String body) {
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             
             // Return a dummy "Forbidden" response to prevent a NullPointerException in the calling code.
             HttpResponse res = new HttpResponse();
@@ -171,7 +171,7 @@ public with sharing class JiraCallout {
     
     public static HttpResponse getUser(String email) {
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             
             // Return a dummy "Forbidden" response to prevent a NullPointerException in the calling code.
             HttpResponse res = new HttpResponse();
@@ -185,7 +185,7 @@ public with sharing class JiraCallout {
     
     public static HttpResponse createVersion(String version) {
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             
             // Return a dummy "Forbidden" response to prevent a NullPointerException in the calling code.
             HttpResponse res = new HttpResponse();
@@ -200,7 +200,7 @@ public with sharing class JiraCallout {
     public static HttpResponse getIssues(Map<String, String> params) {
         
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             
             // Return a dummy "Forbidden" response to prevent a NullPointerException in the calling code.
             HttpResponse res = new HttpResponse();
@@ -240,7 +240,7 @@ public with sharing class JiraCallout {
     public static HttpResponse addComment(String jiraKey, String adfJsonBody) {
         
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             
             // Return a dummy "Forbidden" response to prevent a NullPointerException in the calling code.
             HttpResponse res = new HttpResponse();
@@ -256,9 +256,16 @@ public with sharing class JiraCallout {
         return httpHelper(relativeEndpoint, 'POST', fullRequestBody);
     }
     
+    /**
+     * @description Updates an existing comment in Jira with new content
+     * @param jiraKey The Jira issue key (e.g., 'DHS-123')
+     * @param jiraCommentId The unique identifier of the comment to update
+     * @param adfJsonBody The comment content in Atlassian Document Format (ADF) JSON
+     * @return HttpResponse The response from the Jira API
+     */
     public static HttpResponse updateComment(String jiraKey, String jiraCommentId, String adfJsonBody) {
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.WARN, 'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             HttpResponse res = new HttpResponse();
             res.setStatusCode(403);
             res.setStatus('Forbidden');
@@ -333,6 +340,11 @@ public with sharing class JiraCallout {
                                         return JSON.serialize(root);
     }
     
+    /**
+     * @description Retrieves available transitions for a Jira issue
+     * @param issueKey The Jira issue key (e.g., 'DHS-123')
+     * @return HttpResponse The response containing available transitions from the Jira API
+     */
     public static HttpResponse getTransitions(String issueKey) {
         String relativeEndpoint = 'rest/api/3/issue/' + issueKey + '/transitions';
         return httpHelper(relativeEndpoint, 'GET', null);

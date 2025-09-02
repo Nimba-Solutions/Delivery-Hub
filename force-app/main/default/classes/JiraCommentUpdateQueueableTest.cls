@@ -34,7 +34,7 @@ private class JiraCommentUpdateQueueableTest {
         Ticket_Comment__c comment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,
             BodyTxt__c = '<p>This is the original comment body.</p>',
-            Jira_Comment_Id__c = '98765', // A Jira ID is required for an update
+            JiraCommentIdTxt__c = '98765', // A Jira ID is required for an update
             JiraSyncStatusTxt__c = null
         );
         insert comment;

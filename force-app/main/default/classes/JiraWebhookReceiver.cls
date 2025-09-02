@@ -114,14 +114,14 @@ global without sharing class JiraWebhookReceiver {
     //             if (issueMap != null && issueMap.containsKey('id')) {
     //                 // **NOTE:** Adjust the field API name 'JiraTicketIdTxt__c' if needed
     //                 String jiraIssueId = String.valueOf(issueMap.get('id'));
-    //                 return [SELECT COUNT() FROM Ticket__c WHERE Jira_TicketId__c = :jiraIssueId] > 0;
+    //                 return [SELECT COUNT() FROM Ticket__c WHERE JiraTicketId__c = :jiraIssueId] > 0;
     //             }
     //         } else if (isCommentEvent(eventType)) {
     //             Map<String, Object> commentMap = (Map<String, Object>)payload.get('comment');
     //             if (commentMap != null && commentMap.containsKey('id')) {
-    //                 // **NOTE:** Adjust the field API name 'JiraCommentId__c' if needed
+    //                 // **NOTE:** Adjust the field API name 'JiraCommentIdTxt__c' if needed
     //                 String jiraCommentId = String.valueOf(commentMap.get('id'));
-    //                 return [SELECT COUNT() FROM Ticket_Comment__c WHERE Jira_Comment_Id__c = :jiraCommentId] > 0;
+    //                 return [SELECT COUNT() FROM Ticket_Comment__c WHERE JiraCommentIdTxt__c = :jiraCommentId] > 0;
     //             }
     //         } else if (isAttachmentEvent(eventType)) {
     //             Map<String, Object> attachmentMap = (Map<String, Object>)payload.get('attachment');
@@ -220,24 +220,47 @@ global without sharing class JiraWebhookReceiver {
         Ticket__c inMemoryTicket = new Ticket__c();
         JiraFieldMappingUtil.mapJiraIssueToTicket(issueMap, inMemoryTicket);
 
+        // Use helper method to reduce cyclomatic complexity
+        return hasTicketFieldsChanged(existingTicket, inMemoryTicket, jiraIssueId);
+    }
+    
+    /**
+     * @description Helper method to compare ticket fields and reduce cyclomatic complexity
+     * @param existingTicket The current ticket record from database
+     * @param inMemoryTicket The ticket populated from Jira payload
+     * @param jiraIssueId The Jira issue ID for logging
+     * @return Boolean indicating if any fields have changed
+     */
+    private static Boolean hasTicketFieldsChanged(Ticket__c existingTicket, Ticket__c inMemoryTicket, String jiraIssueId) {
         // Compare the fields. If any field is different, the content has changed.
-        if (existingTicket.BriefDescriptionTxt__c != inMemoryTicket.BriefDescriptionTxt__c) return true;
-        if (existingTicket.WorkItemNameTxt__c != inMemoryTicket.WorkItemNameTxt__c) return true;
-        if (existingTicket.DetailsTxt__c != inMemoryTicket.DetailsTxt__c) return true;
-        if (existingTicket.WorkItemTypeTxt__c != inMemoryTicket.WorkItemTypeTxt__c) return true;
-        System.debug('StatusPk__c changed from ' + existingTicket.StatusPk__c + ' to ' + inMemoryTicket.StatusPk__c);
-        if (existingTicket.StatusPk__c != inMemoryTicket.StatusPk__c) {
-            System.debug('StatusPk__c changed from ' + existingTicket.StatusPk__c + ' to ' + inMemoryTicket.StatusPk__c);
+        if (existingTicket.BriefDescriptionTxt__c != inMemoryTicket.BriefDescriptionTxt__c) {
             return true;
         }
-        System.debug('StatusPk__c changed from ' + existingTicket.StageNamePk__c + ' to ' + inMemoryTicket.StageNamePk__c);
-        if (existingTicket.StageNamePk__c != inMemoryTicket.StageNamePk__c) return true;
-        if (existingTicket.Developer__c != inMemoryTicket.Developer__c) return true;
-        if (existingTicket.PriorityPk__c != inMemoryTicket.PriorityPk__c) return true;
-        //if (existingTicket.DeveloperDaysSizeNumber__c != inMemoryTicket.DeveloperDaysSizeNumber__c) return true;
+        if (existingTicket.WorkItemNameTxt__c != inMemoryTicket.WorkItemNameTxt__c) {
+            return true;
+        }
+        if (existingTicket.DetailsTxt__c != inMemoryTicket.DetailsTxt__c) {
+            return true;
+        }
+        if (existingTicket.WorkItemTypeTxt__c != inMemoryTicket.WorkItemTypeTxt__c) {
+            return true;
+        }
+        if (existingTicket.StatusPk__c != inMemoryTicket.StatusPk__c) {
+            System.debug(LoggingLevel.DEBUG, 'StatusPk__c changed from ' + existingTicket.StatusPk__c + ' to ' + inMemoryTicket.StatusPk__c);
+            return true;
+        }
+        if (existingTicket.StageNamePk__c != inMemoryTicket.StageNamePk__c) {
+            return true;
+        }
+        if (existingTicket.Developer__c != inMemoryTicket.Developer__c) {
+            return true;
+        }
+        if (existingTicket.PriorityPk__c != inMemoryTicket.PriorityPk__c) {
+            return true;
+        }
         
         // If we get here, no relevant fields have changed.
-        System.debug('Content check for issue ' + jiraIssueId + ' found no changes. Ignoring update.');
+        System.debug(LoggingLevel.DEBUG, 'Content check for issue ' + jiraIssueId + ' found no changes. Ignoring update.');
         return false;
     }
 
@@ -253,7 +276,7 @@ global without sharing class JiraWebhookReceiver {
     List<Ticket_Comment__c> existingComments = [
         SELECT Id, AuthorTxt__c, BodyTxt__c 
         FROM Ticket_Comment__c 
-        WHERE Jira_Comment_Id__c = :jiraCommentId
+        WHERE JiraCommentIdTxt__c = :jiraCommentId
         LIMIT 1
     ];
 
@@ -298,13 +321,13 @@ global without sharing class JiraWebhookReceiver {
                 Map<String, Object> issueMap = (Map<String, Object>)payload.get('issue');
                 if (issueMap != null && issueMap.containsKey('id')) {
                     String jiraIssueId = String.valueOf(issueMap.get('id'));
-                    return [SELECT COUNT() FROM Ticket__c WHERE Jira_TicketId__c = :jiraIssueId] > 0;
+                    return [SELECT COUNT() FROM Ticket__c WHERE JiraTicketId__c = :jiraIssueId] > 0;
                 }
             } else if (isCommentEvent(eventType)) {
                 Map<String, Object> commentMap = (Map<String, Object>)payload.get('comment');
                 if (commentMap != null && commentMap.containsKey('id')) {
                     String jiraCommentId = String.valueOf(commentMap.get('id'));
-                    return [SELECT COUNT() FROM Ticket_Comment__c WHERE Jira_Comment_Id__c = :jiraCommentId] > 0;
+                    return [SELECT COUNT() FROM Ticket_Comment__c WHERE JiraCommentIdTxt__c = :jiraCommentId] > 0;
                 }
             } else if (isAttachmentEvent(eventType)) {
                 Map<String, Object> attachmentMap = (Map<String, Object>)payload.get('attachment');

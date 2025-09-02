@@ -30,7 +30,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Readonly</behavior>
-                <field>Jira_Comment_Id__c</field>
+                <field>JiraCommentIdTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Readonly</behavior>

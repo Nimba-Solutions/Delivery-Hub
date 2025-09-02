@@ -38,7 +38,7 @@ public with sharing class JiraCommentSyncHelper {
         public void execute(QueueableContext context) {
             List<Ticket_Comment__c> comments = [
                 SELECT Id, BodyTxt__c, TicketId__c, JiraSyncStatusTxt__c,
-                       TicketId__r.JiraTicketKeyTxt__c,Jira_Comment_Id__c
+                       TicketId__r.JiraTicketKeyTxt__c,JiraCommentIdTxt__c
                 FROM Ticket_Comment__c
                 WHERE Id IN :commentIds
             ];
@@ -67,7 +67,7 @@ public with sharing class JiraCommentSyncHelper {
             
                         if (res != null && (res.getStatusCode() == 201 || res.getStatusCode() == 200)) {
                             status = 'Success';
-                            comment.Jira_Comment_Id__c = (String)parsed.get('id');
+                            comment.JiraCommentIdTxt__c = (String)parsed.get('id');
                         } else {
                             status = 'Error: ' + (res == null ? 'No response' : res.getStatusCode() + ' ' + res.getBody());
                         }
@@ -363,6 +363,12 @@ public with sharing class JiraCommentSyncHelper {
     }
     
     
+    /**
+     * @description Handles after update trigger events for Ticket_Comment__c records
+     * Identifies comments that have been modified and need to be synchronized back to Jira
+     * @param newCommentMap Map of updated comment records with new values
+     * @param oldCommentMap Map of comment records with previous values
+     */
     public static void handleAfterUpdate(Map<Id, Ticket_Comment__c> newCommentMap, Map<Id, Ticket_Comment__c> oldCommentMap) {
         Set<Id> ticketIds = new Set<Id>();
         for (Ticket_Comment__c comment : newCommentMap.values()) {
@@ -382,7 +388,7 @@ public with sharing class JiraCommentSyncHelper {
             // Sync only if the body has changed, it's not from Jira, and it has a Jira Comment ID
             if (newComment.BodyTxt__c != oldComment.BodyTxt__c &&
                 newComment.SourcePk__c != 'Jira' &&
-                !String.isBlank(newComment.Jira_Comment_Id__c) && // Must have a Jira ID to update
+                !String.isBlank(newComment.JiraCommentIdTxt__c) && // Must have a Jira ID to update
                 ticket != null &&
                 !String.isBlank(ticket.JiraTicketKeyTxt__c)) 
             {
@@ -395,7 +401,10 @@ public with sharing class JiraCommentSyncHelper {
         }
     }
 
-    // --- NEW QUEUEABLE CLASS for comment updates ---
+    /**
+     * @description Queueable class for updating existing comments in Jira when Salesforce comments are modified
+     * This class handles the asynchronous processing of comment updates to Jira via API callouts
+     */
     public class JiraCommentUpdateQueueable implements Queueable, Database.AllowsCallouts {
         private List<Id> commentIds;
 
@@ -405,7 +414,7 @@ public with sharing class JiraCommentSyncHelper {
 
         public void execute(QueueableContext context) {
             List<Ticket_Comment__c> commentsToProcess = [
-                SELECT Id, BodyTxt__c, Jira_Comment_Id__c, TicketId__r.JiraTicketKeyTxt__c
+                SELECT Id, BodyTxt__c, JiraCommentIdTxt__c, TicketId__r.JiraTicketKeyTxt__c
                 FROM Ticket_Comment__c
                 WHERE Id IN :this.commentIds
             ];
@@ -415,7 +424,7 @@ public with sharing class JiraCommentSyncHelper {
                 String status;
                 try {
                     String jiraKey = comment.TicketId__r.JiraTicketKeyTxt__c;
-                    String jiraCommentId = comment.Jira_Comment_Id__c;
+                    String jiraCommentId = comment.JiraCommentIdTxt__c;
                     String adfJsonBody = JiraCommentSyncHelper.convertHtmlToAdf(comment.BodyTxt__c);
 
                     // Make the callout to UPDATE the comment in Jira
