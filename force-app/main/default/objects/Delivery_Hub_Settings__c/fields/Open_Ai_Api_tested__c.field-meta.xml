@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Open_Ai_Api_tested__c</fullName>
+    <description>Flag indicating whether the OpenAI API key has been tested and verified</description>
     <defaultValue>false</defaultValue>
     <externalId>false</externalId>
     <label>Open Ai Api tested</label>

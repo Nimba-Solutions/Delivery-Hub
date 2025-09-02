@@ -3,5 +3,6 @@
     <customSettingsType>Hierarchy</customSettingsType>
     <enableFeeds>false</enableFeeds>
     <label>Sync In Progress</label>
+    <description>Hierarchy custom settings for tracking synchronization progress between Salesforce and Jira</description>
     <visibility>Public</visibility>
 </CustomObject>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Enable_Notifications__c</fullName>
+    <description>Enable or disable notification features in the Delivery Hub application</description>
     <defaultValue>false</defaultValue>
     <externalId>false</externalId>
     <label>Enable Notifications</label>

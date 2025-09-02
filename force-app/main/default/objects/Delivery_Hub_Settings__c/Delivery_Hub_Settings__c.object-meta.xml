@@ -3,5 +3,6 @@
     <customSettingsType>Hierarchy</customSettingsType>
     <enableFeeds>false</enableFeeds>
     <label>Delivery Hub Settings</label>
+    <description>Hierarchy custom settings for Delivery Hub application configuration and preferences</description>
     <visibility>Public</visibility>
 </CustomObject>
