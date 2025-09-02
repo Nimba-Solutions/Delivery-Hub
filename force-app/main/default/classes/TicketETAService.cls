@@ -47,7 +47,7 @@ public with sharing class TicketETAService {
             // After execution, the records in the database are updated.
             // Query the fresh data to return to the LWC.
             List<Ticket__c> queriedTickets = [
-                SELECT Id, Projected_UAT_Ready_Date__c
+                SELECT Id, ProjectedUATReadyDate__c
                 FROM Ticket__c
                 WHERE Id IN :processedIds
             ];
@@ -56,10 +56,10 @@ public with sharing class TicketETAService {
             System.debug('Queried tickets: ' + queriedTickets);
             
             for(Ticket__c ticket : queriedTickets) {
-                System.debug('Processing ticket: ' + ticket.Id + ', ETA: ' + ticket.Projected_UAT_Ready_Date__c);
+                System.debug('Processing ticket: ' + ticket.Id + ', ETA: ' + ticket.ProjectedUATReadyDate__c);
                 TicketETADTO dto = new TicketETADTO();
                 dto.ticketId = ticket.Id;
-                dto.calculatedETA = ticket.Projected_UAT_Ready_Date__c;
+                dto.calculatedETA = ticket.ProjectedUATReadyDate__c;
                 result.tickets.add(dto);
                 System.debug('Added DTO to result: ' + dto);
             }
@@ -208,14 +208,14 @@ public with sharing class TicketETAService {
                 // b. Find Start Date (cannot be in the past)
                 Date devAvailableDate = devNextAvailableDate.get(assignedDevId);
                 Date startDate = (Date.today() > devAvailableDate) ? Date.today() : devAvailableDate;
-                wrapper.ticket.Estimated_Dev_Start_Date__c = startDate;
+                wrapper.ticket.EstimatedDevStartDate__c = startDate;
                 System.debug('Calculated start date: ' + startDate + ' for developer: ' + assignedDevId);
 
                 // c. Calculate Work Duration
                 Decimal effort = wrapper.ticket.DeveloperDaysSizeNumber__c == null ? 0 : wrapper.ticket.DeveloperDaysSizeNumber__c;
                 System.debug('Effort in days: ' + effort);
                 Date completionDate = addBusinessDays(startDate, Integer.valueOf(effort));
-                wrapper.ticket.Estimated_Dev_Completion_Date__c = completionDate;
+                wrapper.ticket.EstimatedDevCompletionDate__c = completionDate;
                 System.debug('Calculated completion date: ' + completionDate);
 
                 // d. Update Developer's Schedule for the next ticket
@@ -226,8 +226,8 @@ public with sharing class TicketETAService {
                 // e. Calculate Final ETA with UAT Buffer
                 Decimal buffer = config.UAT_Buffer_Days__c == null ? 0 : config.UAT_Buffer_Days__c;
                 System.debug('UAT buffer days: ' + buffer);
-                wrapper.ticket.Projected_UAT_Ready_Date__c = addBusinessDays(completionDate, Integer.valueOf(buffer));
-                System.debug('Final projected UAT ready date: ' + wrapper.ticket.Projected_UAT_Ready_Date__c);
+                wrapper.ticket.ProjectedUATReadyDate__c = addBusinessDays(completionDate, Integer.valueOf(buffer));
+                System.debug('Final projected UAT ready date: ' + wrapper.ticket.ProjectedUATReadyDate__c);
 
                 // f. Add to list for final DML update
                 ticketsToUpdate.add(wrapper.ticket);
@@ -245,9 +245,9 @@ public with sharing class TicketETAService {
                 if (!this.processedTicketIds.contains(ticket.Id)) {
                     ticketsToUpdate.add(new Ticket__c(
                         Id = ticket.Id,
-                        Estimated_Dev_Start_Date__c = null,
-                        Estimated_Dev_Completion_Date__c = null,
-                        Projected_UAT_Ready_Date__c = null
+                        EstimatedDevStartDate__c = null,
+                        EstimatedDevCompletionDate__c = null,
+                        ProjectedUATReadyDate__c = null
                     ));
                     nulledCount++;
                 }

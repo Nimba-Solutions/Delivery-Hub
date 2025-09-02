@@ -143,7 +143,7 @@ private class TicketETAServiceTest {
         TicketETAService.getTicketETAsWithPriority(0, new List<Id>());
         Test.stopTest();
 
-        List<Ticket__c> processed = [SELECT Id FROM Ticket__c WHERE Projected_UAT_Ready_Date__c != null];
+        List<Ticket__c> processed = [SELECT Id FROM Ticket__c WHERE ProjectedUATReadyDate__c != null];
        // System.assertEquals(0, processed.size(), 'No tickets should be processed if there are no active developers.');
     }
 }
