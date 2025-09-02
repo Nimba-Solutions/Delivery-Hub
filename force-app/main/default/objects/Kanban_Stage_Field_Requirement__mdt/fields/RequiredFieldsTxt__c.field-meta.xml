@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Pre_Development_Stages__c</fullName>
-    <description>A comma-separated list of StageNamePk__c values that are considered "before development".</description>
+    <fullName>RequiredFieldsTxt__c</fullName>
+    <description>Comma-separated list of fields that are required at this Kanban stage</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
-    <label>Pre Development Stages</label>
+    <label>Required Fields</label>
     <length>32768</length>
     <type>LongTextArea</type>
     <visibleLines>3</visibleLines>

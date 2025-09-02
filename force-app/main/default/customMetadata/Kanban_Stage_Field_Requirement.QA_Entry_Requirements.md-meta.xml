@@ -11,7 +11,7 @@
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>Required_Fields__c</field>
+        <field>RequiredFieldsTxt__c</field>
         <value xsi:type="xsd:string">QA_Engineer__c, ClientIntentionPk__c</value>
     </values>
     <values>

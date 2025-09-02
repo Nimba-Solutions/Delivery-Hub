@@ -224,7 +224,7 @@ public with sharing class TicketETAService {
                 System.debug('Updated developer ' + assignedDevId + ' next available date to: ' + nextAvailable);
 
                 // e. Calculate Final ETA with UAT Buffer
-                Decimal buffer = config.UAT_Buffer_Days__c == null ? 0 : config.UAT_Buffer_Days__c;
+                Decimal buffer = config.UATBufferDaysNumber__c == null ? 0 : config.UATBufferDaysNumber__c;
                 System.debug('UAT buffer days: ' + buffer);
                 wrapper.ticket.ProjectedUATReadyDate__c = addBusinessDays(completionDate, Integer.valueOf(buffer));
                 System.debug('Final projected UAT ready date: ' + wrapper.ticket.ProjectedUATReadyDate__c);
@@ -282,8 +282,8 @@ public with sharing class TicketETAService {
         private boolean loadConfiguration() {
             System.debug('Loading Kanban configuration...');
             List<Kanban_Configuration__mdt> configs = [
-                SELECT Pre_Development_Stages__c, Active_Development_Stages__c, Blocked_Stages__c,
-                       Post_Development_Stages__c, Priority_Weights__c, UAT_Buffer_Days__c
+                SELECT PreDevelopmentStagesTxt__c, ActiveDevelopmentStagesTxt__c, BlockedStagesTxt__c,
+                       PostDevelopmentStagesTxt__c, PriorityWeightsTxt__c, UATBufferDaysNumber__c
                 FROM Kanban_Configuration__mdt LIMIT 1
             ];
             System.debug('Found ' + configs.size() + ' configuration records');
@@ -294,12 +294,12 @@ public with sharing class TicketETAService {
             }
             this.config = configs[0];
             System.debug('Loaded configuration: ' + this.config);
-            System.debug('Pre_Development_Stages__c: ' + this.config.Pre_Development_Stages__c);
-            System.debug('Active_Development_Stages__c: ' + this.config.Active_Development_Stages__c);
-            System.debug('Blocked_Stages__c: ' + this.config.Blocked_Stages__c);
-            System.debug('Post_Development_Stages__c: ' + this.config.Post_Development_Stages__c);
-            System.debug('Priority_Weights__c: ' + this.config.Priority_Weights__c);
-            System.debug('UAT_Buffer_Days__c: ' + this.config.UAT_Buffer_Days__c);
+            System.debug('PreDevelopmentStagesTxt__c: ' + this.config.PreDevelopmentStagesTxt__c);
+            System.debug('ActiveDevelopmentStagesTxt__c: ' + this.config.ActiveDevelopmentStagesTxt__c);
+            System.debug('BlockedStagesTxt__c: ' + this.config.BlockedStagesTxt__c);
+            System.debug('PostDevelopmentStagesTxt__c: ' + this.config.PostDevelopmentStagesTxt__c);
+            System.debug('PriorityWeightsTxt__c: ' + this.config.PriorityWeightsTxt__c);
+            System.debug('UATBufferDaysNumber__c: ' + this.config.UATBufferDaysNumber__c);
             return true;
         }
 
@@ -345,31 +345,31 @@ public with sharing class TicketETAService {
                 allBlockedTicketIds.add(dep.Blocked_Ticket__c);
             }
             
-            if(config.Pre_Development_Stages__c == null) {
-                System.debug('WARNING: Pre_Development_Stages__c is null');
+            if(config.PreDevelopmentStagesTxt__c == null) {
+                System.debug('WARNING: PreDevelopmentStagesTxt__c is null');
             }
-            if(config.Active_Development_Stages__c == null) {
-                System.debug('WARNING: Active_Development_Stages__c is null');
+            if(config.ActiveDevelopmentStagesTxt__c == null) {
+                System.debug('WARNING: ActiveDevelopmentStagesTxt__c is null');
             }
             
             Set<String> preDev = new Set<String>();
-            if(config.Pre_Development_Stages__c != null) {
-                preDev = new Set<String>(config.Pre_Development_Stages__c.toLowerCase().split(','));
+            if(config.PreDevelopmentStagesTxt__c != null) {
+                preDev = new Set<String>(config.PreDevelopmentStagesTxt__c.toLowerCase().split(','));
             }
             System.debug('Pre-development stages: ' + preDev);
             
             Set<String> activeDev = new Set<String>();
-            if(config.Active_Development_Stages__c != null) {
-                activeDev = new Set<String>(config.Active_Development_Stages__c.toLowerCase().split(','));
+            if(config.ActiveDevelopmentStagesTxt__c != null) {
+                activeDev = new Set<String>(config.ActiveDevelopmentStagesTxt__c.toLowerCase().split(','));
             }
             System.debug('Active development stages: ' + activeDev);
             
             Map<String, Decimal> priorityWeights = new Map<String, Decimal>();
-            if(config.Priority_Weights__c != null) {
+            if(config.PriorityWeightsTxt__c != null) {
                 try {
-                    priorityWeights = (Map<String, Decimal>)JSON.deserialize(config.Priority_Weights__c, Map<String, Decimal>.class);
+                    priorityWeights = (Map<String, Decimal>)JSON.deserialize(config.PriorityWeightsTxt__c, Map<String, Decimal>.class);
                 } catch(Exception e) {
-                    System.debug('ERROR parsing Priority_Weights__c JSON: ' + e.getMessage());
+                    System.debug('ERROR parsing PriorityWeightsTxt__c JSON: ' + e.getMessage());
                 }
             }
             System.debug('Priority weights: ' + priorityWeights);
@@ -471,8 +471,8 @@ public with sharing class TicketETAService {
             System.debug('Is prioritized by LWC: ' + this.isPrioritizedByLWC);
 
             Set<String> activeDev = new Set<String>();
-            if(config.Active_Development_Stages__c != null) {
-                activeDev = new Set<String>(config.Active_Development_Stages__c.toLowerCase().split(','));
+            if(config.ActiveDevelopmentStagesTxt__c != null) {
+                activeDev = new Set<String>(config.ActiveDevelopmentStagesTxt__c.toLowerCase().split(','));
             }
             String stage = t.StageNamePk__c == null ? '' : t.StageNamePk__c.toLowerCase().trim();
             this.stageCategory = activeDev.contains(stage) ? 1 : 2;

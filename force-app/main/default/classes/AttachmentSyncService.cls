@@ -61,7 +61,7 @@ public with sharing class AttachmentSyncService {
                 Filename__c = cv.Title,
                 Sync_Direction__c = 'Salesforce to Jira',
                 Sync_Status__c = status,
-                Error_Details__c = errorDetails
+                ErrorDetailsTxt__c = errorDetails
             ));
         }
 

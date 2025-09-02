@@ -20,7 +20,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Required_Fields__c</field>
+                <field>RequiredFieldsTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

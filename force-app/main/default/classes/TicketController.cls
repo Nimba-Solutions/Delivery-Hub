@@ -157,16 +157,16 @@ public with sharing class TicketController {
     public static List<String> getRequiredFieldsForStage(String targetStage) {
         // Query the active Kanban Stage Field Requirement metadata record for the target stage.
         List<Kanban_Stage_Field_Requirement__mdt> requirements = [
-            SELECT Required_Fields__c
+            SELECT RequiredFieldsTxt__c
             FROM Kanban_Stage_Field_Requirement__mdt
             WHERE Is_Active__c = true AND Target_Stage__c = :targetStage
             LIMIT 1
         ];
 
-        if (!requirements.isEmpty() && String.isNotBlank(requirements[0].Required_Fields__c)) {
+        if (!requirements.isEmpty() && String.isNotBlank(requirements[0].RequiredFieldsTxt__c)) {
             // Split the comma-separated string into a list and trim whitespace from each entry.
             List<String> fieldList = new List<String>();
-            for(String field : requirements[0].Required_Fields__c.split(',')) {
+            for(String field : requirements[0].RequiredFieldsTxt__c.split(',')) {
                 fieldList.add(field.trim());
             }
             return fieldList;

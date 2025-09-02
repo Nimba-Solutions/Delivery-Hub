@@ -611,7 +611,7 @@ public without sharing class JiraAttachmentHandler {
             syncLog.Filename__c = filename;
             syncLog.Sync_Direction__c = syncDirection;
             syncLog.Sync_Status__c = syncStatus;
-            syncLog.Error_Details__c = errorDetails;
+                            syncLog.ErrorDetailsTxt__c = errorDetails;
             syncLog.Salesforce_ContentDocumentId__c = contentDocumentId;
             
             // Use Security.stripInaccessible for FLS compliance
