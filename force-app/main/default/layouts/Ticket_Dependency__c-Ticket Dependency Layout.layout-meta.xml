@@ -20,11 +20,11 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Type__c</field>
+                <field>TypePk__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>External_ID__c</field>
+                <field>ExternalIdTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

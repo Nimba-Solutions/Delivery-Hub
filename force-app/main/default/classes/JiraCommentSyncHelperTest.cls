@@ -72,7 +72,9 @@ private class JiraCommentSyncHelperTest {
     @isTest
     static void testHandleAfterInsertWithInvalidConditions() {
         Ticket__c ticket = new Ticket__c( JiraTicketKeyTxt__c = null);
+        TicketTriggerHandler.triggerDisabled = true;
         insert ticket;
+        TicketTriggerHandler.triggerDisabled = false;
 
         Ticket_Comment__c comment = new Ticket_Comment__c(
             TicketId__c = ticket.Id,

@@ -38,7 +38,7 @@ public with sharing class JiraCommentSyncHelper {
         public void execute(QueueableContext context) {
             List<Ticket_Comment__c> comments = [
                 SELECT Id, BodyTxt__c, TicketId__c, JiraSyncStatusTxt__c,
-                       TicketId__r.JiraTicketKeyTxt__c
+                       TicketId__r.JiraTicketKeyTxt__c,JiraCommentIdTxt__c
                 FROM Ticket_Comment__c
                 WHERE Id IN :commentIds
             ];
@@ -61,9 +61,13 @@ public with sharing class JiraCommentSyncHelper {
 
                         // Use JiraCallout to send the ADF JSON
                         HttpResponse res = JiraCallout.addComment(jiraKey, adfJsonBody); 
+                         Map<String,Object> parsed =
+                        (Map<String,Object>)JSON.deserializeUntyped(res.getBody());
+                        System.debug('parsed'+parsed);
             
                         if (res != null && (res.getStatusCode() == 201 || res.getStatusCode() == 200)) {
                             status = 'Success';
+                            comment.JiraCommentIdTxt__c = (String)parsed.get('id');
                         } else {
                             status = 'Error: ' + (res == null ? 'No response' : res.getStatusCode() + ' ' + res.getBody());
                         }
@@ -356,5 +360,92 @@ public with sharing class JiraCommentSyncHelper {
         // Remove all HTML tags
         String cleanedString = htmlString.replaceAll('<[^>]*>', '');
         return cleanedString.trim();
+    }
+    
+    
+    /**
+     * @description Handles after update trigger events for Ticket_Comment__c records
+     * Identifies comments that have been modified and need to be synchronized back to Jira
+     * @param newCommentMap Map of updated comment records with new values
+     * @param oldCommentMap Map of comment records with previous values
+     */
+    public static void handleAfterUpdate(Map<Id, Ticket_Comment__c> newCommentMap, Map<Id, Ticket_Comment__c> oldCommentMap) {
+        Set<Id> ticketIds = new Set<Id>();
+        for (Ticket_Comment__c comment : newCommentMap.values()) {
+            ticketIds.add(comment.TicketId__c);
+        }
+
+        Map<Id, Ticket__c> ticketMap = new Map<Id, Ticket__c>(
+            [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c WHERE Id IN :ticketIds]
+        );
+
+        List<Id> commentIdsToUpdate = new List<Id>();
+        for (Id commentId : newCommentMap.keySet()) {
+            Ticket_Comment__c newComment = newCommentMap.get(commentId);
+            Ticket_Comment__c oldComment = oldCommentMap.get(commentId);
+            Ticket__c ticket = ticketMap.get(newComment.TicketId__c);
+
+            // Sync only if the body has changed, it's not from Jira, and it has a Jira Comment ID
+            if (newComment.BodyTxt__c != oldComment.BodyTxt__c &&
+                newComment.SourcePk__c != 'Jira' &&
+                !String.isBlank(newComment.JiraCommentIdTxt__c) && // Must have a Jira ID to update
+                ticket != null &&
+                !String.isBlank(ticket.JiraTicketKeyTxt__c)) 
+            {
+                commentIdsToUpdate.add(newComment.Id);
+            }
+        }
+
+        if (!commentIdsToUpdate.isEmpty()) {
+            System.enqueueJob(new JiraCommentUpdateQueueable(commentIdsToUpdate));
+        }
+    }
+
+    /**
+     * @description Queueable class for updating existing comments in Jira when Salesforce comments are modified
+     * This class handles the asynchronous processing of comment updates to Jira via API callouts
+     */
+    public class JiraCommentUpdateQueueable implements Queueable, Database.AllowsCallouts {
+        private List<Id> commentIds;
+
+        public JiraCommentUpdateQueueable(List<Id> commentIds) {
+            this.commentIds = commentIds;
+        }
+
+        public void execute(QueueableContext context) {
+            List<Ticket_Comment__c> commentsToProcess = [
+                SELECT Id, BodyTxt__c, JiraCommentIdTxt__c, TicketId__r.JiraTicketKeyTxt__c
+                FROM Ticket_Comment__c
+                WHERE Id IN :this.commentIds
+            ];
+
+            List<Ticket_Comment__c> commentsToUpdateStatus = new List<Ticket_Comment__c>();
+            for (Ticket_Comment__c comment : commentsToProcess) {
+                String status;
+                try {
+                    String jiraKey = comment.TicketId__r.JiraTicketKeyTxt__c;
+                    String jiraCommentId = comment.JiraCommentIdTxt__c;
+                    String adfJsonBody = JiraCommentSyncHelper.convertHtmlToAdf(comment.BodyTxt__c);
+
+                    // Make the callout to UPDATE the comment in Jira
+                    HttpResponse res = JiraCallout.updateComment(jiraKey, jiraCommentId, adfJsonBody);
+
+                    if (res != null && res.getStatusCode() == 200) {
+                        status = 'Success';
+                    } else {
+                        status = 'Error: ' + (res == null ? 'No response' : res.getStatusCode() + ' ' + res.getBody());
+                    }
+                } catch (Exception e) {
+                    status = 'Exception: ' + e.getMessage();
+                }
+                
+                comment.JiraSyncStatusTxt__c = status;
+                commentsToUpdateStatus.add(comment);
+            }
+            
+            if (!commentsToUpdateStatus.isEmpty()) {
+                update commentsToUpdateStatus;
+            }
+        }
     }
 }

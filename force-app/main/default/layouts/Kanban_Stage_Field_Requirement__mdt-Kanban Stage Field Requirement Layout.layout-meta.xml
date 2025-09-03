@@ -16,19 +16,19 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Target_Stage__c</field>
+                <field>TargetStageTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Required_Fields__c</field>
+                <field>RequiredFieldsTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Is_Active__c</field>
+                <field>IsActiveBool__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Description__c</field>
+                <field>DescriptionTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
