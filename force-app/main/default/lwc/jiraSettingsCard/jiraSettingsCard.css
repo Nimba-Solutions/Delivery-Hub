@@ -1,0 +1,389 @@
+/* CSS Custom Properties - Inherits from parent settingsContainer */
+:host {
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    display: block;
+}
+
+/* Card Structure Override */
+.slds-card {
+    background-color: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: cardSlideIn 0.9s ease-out;
+}
+
+.slds-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+    border-color: var(--brand-primary);
+}
+
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Header Styling */
+.slds-card__header {
+    background-color: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.slds-card__header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.05), transparent);
+    transition: left 0.6s ease;
+}
+
+.slds-card:hover .slds-card__header::before {
+    left: 100%;
+}
+
+.slds-card__header-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.slds-card__header-subtitle {
+    color: var(--gray-500);
+    font-size: var(--font-size-sm);
+    margin-top: 0.25rem;
+}
+
+.slds-media__figure lightning-icon {
+    color: var(--brand-primary);
+    transition: all 0.3s ease;
+}
+
+.slds-card:hover .slds-media__figure lightning-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* Card Body */
+.slds-card__body {
+    padding: 1.5rem;
+}
+
+/* Form Element Styling */
+.slds-form-element {
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.slds-form-element:hover {
+    background-color: var(--gray-50);
+    transform: translateX(2px);
+}
+
+.slds-form-element:last-child {
+    margin-bottom: 0;
+}
+
+/* Form label styling is now inherited from settingsContainer */
+
+/* Toggle Group Layout */
+.slds-grid_align-spread {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    margin: 0.5rem 0;
+}
+
+.slds-grid_align-spread:hover {
+    background-color: var(--gray-100);
+    transform: translateX(4px);
+}
+
+.slds-grid_vertical-align-center {
+    align-items: center;
+}
+
+.slds-col {
+    flex: 1;
+}
+
+.slds-no-flex {
+    flex: none;
+}
+
+/* Form control styling is now inherited from settingsContainer */
+
+/* Form Grid Layout */
+.slds-grid.slds-gutters_medium {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.slds-grid.slds-grid_align-end {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+.slds-grow {
+    flex: 1;
+}
+
+/* Input icon styling is now inherited from settingsContainer */
+
+/* Button styling is now inherited from settingsContainer */
+
+/* Section Dividers */
+.slds-border_top {
+    border-top: 1px solid var(--gray-200);
+    margin: 1.5rem 0;
+}
+
+/* ===== ALERT STYLING INHERITANCE ===== */
+/* Alert styles are inherited from settingsContainer */
+
+/* Component-specific alert adjustments for JIRA integration */
+.slds-notify.slds-alert_success,
+.slds-notify.slds-alert_error {
+    /* Enhanced styling for JIRA connection test results */
+    margin-bottom: 1rem;
+}
+
+.slds-notify.slds-alert_success .slds-media__body p {
+    font-weight: 600;
+}
+
+.slds-notify.slds-alert_error .slds-media__body p {
+    font-weight: 600;
+}
+
+.slds-media_center {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.slds-media__figure {
+    flex-shrink: 0;
+}
+
+.slds-media__body {
+    flex: 1;
+}
+
+.slds-media__body p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+/* Info Sections */
+.info-section {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.info-section:hover {
+    background: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--gray-50) 100%);
+    border-color: var(--brand-primary);
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+}
+
+.info-section:last-child {
+    margin-bottom: 0;
+}
+
+/* Setup Guide Styling */
+.slds-text-heading_small {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 1rem;
+}
+
+.info-section ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.info-section ul li {
+    font-size: var(--font-size-sm);
+    color: var(--gray-700);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+    position: relative;
+    padding: 0.5rem 0 0.5rem 1.75rem; /* Adjusted padding for alignment */
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.info-section ul li:hover {
+    background-color: rgba(79, 70, 229, 0.05);
+    transform: translateX(4px);
+    color: var(--gray-800);
+}
+
+.toggle-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+/* Apply the checkmark to all list items */
+.info-section ul li::before {
+    content: "✓";
+    position: absolute;
+    left: 0.5rem; /* Position checkmark */
+    top: 0.8rem; /* Align checkmark vertically */
+    color: var(--success-500);
+    font-weight: bold;
+    font-size: var(--font-size-base); /* Larger checkmark */
+    line-height: 1;
+}
+
+.info-section li strong {
+    color: var(--gray-900);
+    font-weight: 600;
+}
+
+/* Nested list specific adjustments */
+.info-section .setup-list ul {
+    margin: 0.5rem 0 0 0;
+}
+
+.info-section .setup-list ul li {
+    font-size: var(--font-size-xs);
+    color: var(--gray-600);
+    margin-bottom: 0.25rem;
+    padding-left: 1.5rem; /* Indent nested items */
+}
+
+/* Adjust checkmark position for nested list items */
+.info-section .setup-list ul li::before {
+    left: 0.25rem;
+    top: 0.5rem;
+    font-size: var(--font-size-sm);
+}
+
+/* Button in Info Section */
+.info-section lightning-button {
+    margin-top: 1rem;
+}
+
+/* Component-specific button styling */
+.info-section lightning-button[variant="outline-brand"] {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+/* Text Color Utilities Override */
+.slds-text-color_weak {
+    color: var(--gray-600);
+}
+
+.slds-text-body_small {
+    font-size: var(--font-size-sm);
+}
+
+/* Spacing Utilities Override */
+.slds-m-bottom_large {
+    margin-bottom: 1.5rem;
+}
+
+.slds-m-bottom_medium {
+    margin-bottom: 1rem;
+}
+
+.slds-m-bottom_small {
+    margin-bottom: 0.75rem;
+}
+
+.slds-m-bottom_x-small {
+    margin-bottom: 0.5rem;
+}
+
+.slds-m-bottom_xx-small {
+    margin-bottom: 0.25rem;
+}
+
+.slds-m-vertical_medium {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.slds-m-top_small {
+    margin-top: 0.75rem;
+}
+
+.slds-m-top_xx-small {
+    margin-top: 0.25rem;
+}
+
+.slds-m-left_medium {
+    margin-left: 1rem;
+}
+
+.slds-p-around_medium {
+    padding: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .slds-grid.slds-gutters_medium {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .slds-grid.slds-grid_align-end {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .slds-grid_align-spread {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .slds-card__header,
+    .slds-card__body {
+        padding: 1rem;
+    }
+    
+    .info-section {
+        padding: 1rem;
+    }
+}
