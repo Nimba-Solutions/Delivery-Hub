@@ -307,9 +307,7 @@ public class JiraAttachmentHandlerTest {
     private static Map<String, Object> createMockAttachmentPayload(String attachmentId, String filename, 
                                                                   String issueKey, Integer fileSize, String contentUrl) {
                                                                      
-        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
-
-        System.runAs(testUser) {
+      
         return new Map<String, Object>{
             'attachment' => new Map<String, Object>{
                 'id' => attachmentId,
@@ -321,14 +319,12 @@ public class JiraAttachmentHandlerTest {
                 'key' => issueKey
             }
         };
-    }
+    
     }
 
     private static Map<String, Object> createMockAttachmentRemovalPayload(String attachmentId, String filename, String issueKey) {
          
-        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
-
-        System.runAs(testUser) {
+    
         return new Map<String, Object>{
             'attachment' => new Map<String, Object>{
                 'id' => attachmentId,
@@ -338,7 +334,7 @@ public class JiraAttachmentHandlerTest {
                 'key' => issueKey
             }
         };
-    }
+    
     }
 
     // Original Mock
