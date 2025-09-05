@@ -23,11 +23,11 @@ private class AttachmentSyncServiceTest {
 
         // 2. Find the specified permission set by its API Name
         //PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin' LIMIT 1];
-        PermissionSetGroup ps = [SELECT Id FROM PermissionSetGroup WHERE DeveloperName = 'DeliveryHubAdmin' LIMIT 1];
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
         // 3. Assign the permission set to the test user
         PermissionSetAssignment psa = new PermissionSetAssignment(
             AssigneeId = testUser.Id,
-            PermissionSetGroupId = ps.Id
+            PermissionSetId = ps.Id
         );
         insert psa;
     }
