@@ -58,7 +58,7 @@ public with sharing class DragAndDropLwcController {
         Ticket_Dependency__c newDependency = new Ticket_Dependency__c(
             Blocked_Ticket__c = blockedTicketId,
             Blocking_Ticket__c = blockingTicketId,
-            Type__c = 'Blocks'
+            TypePk__c = 'Blocks'
         );
         insert newDependency;
         return newDependency;

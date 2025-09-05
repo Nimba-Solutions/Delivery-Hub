@@ -2,8 +2,9 @@
  * Aggregates Ticket rows that need a Jira *create* or *update*,
  * then enqueues **one** worker job for each operation type.
  */
-public with sharing class TicketTriggerHandler {
-
+public without sharing class TicketTriggerHandler {
+	
+    public static boolean triggerDisabled = false;
     /* Public entry used by the trigger ----------------------------------- */
     public static void handleAfter(
         List<Ticket__c> newRows,
@@ -11,19 +12,19 @@ public with sharing class TicketTriggerHandler {
         Boolean isInsert,
         Boolean isUpdate
     ){
+        
+        if (!TriggerControl.runAfterLogic) {
+            return;
+        }
         /* Collect the two ID sets we care about */
         Set<Id> toCreate = new Set<Id>();
         Set<Id> toUpdate = new Set<Id>();
 
         /* -------- INSERT -------- */
         if (isInsert){
-            System.debug('entering insert');
-           
             for (Ticket__c row : newRows){
-                System.debug('isEligible'+isEligible(row));
-                System.debug('isEligible'+row.JiraTicketKeyTxt__c);
-                System.debug('is Blank'+String.isBlank(row.JiraTicketKeyTxt__c));
-                if (isEligible(row) && String.isBlank(row.JiraTicketKeyTxt__c)){
+                // Any new ticket is eligible for creation in Jira.
+                if (String.isBlank(row.JiraTicketKeyTxt__c)){
                     toCreate.add(row.Id);
                 }
             }
@@ -31,49 +32,53 @@ public with sharing class TicketTriggerHandler {
 
         /* -------- UPDATE -------- */
         if (isUpdate){
-            System.debug('entering update');
             for (Ticket__c row : newRows){
                 Ticket__c oldRow = oldMap.get(row.Id);
-                if (!isEligible(row))              continue;     // still not “In Progress”
                 
-                /* Need a Jira issue but none yet –> CREATE */
-                if (String.isBlank(row.JiraTicketKeyTxt__c)){
-                    System.debug('jira key is not available');
+                // If the ticket is updated but still doesn't have a Jira Key, it needs to be CREATED.
+                if (String.isBlank(row.JiraTicketKeyTxt__c)) {
                     toCreate.add(row.Id);
-                    System.debug('tocreate '+toCreate);
-                    continue;
+                    continue; // Skip to the next record, as it can't be updated yet.
                 }
 
-                /* Has a Jira key – did any sync-relevant field change?       */
-				if (
-					row.BriefDescriptionTxt__c != oldRow.BriefDescriptionTxt__c ||
-					row.DetailsTxt__c          != oldRow.DetailsTxt__c ||
-					row.StageNamePk__c         != oldRow.StageNamePk__c
-				){
-					toUpdate.add(row.Id);
-				}
+                // If it has a Jira Key, check if relevant fields have changed for an UPDATE.
+                if (
+                    row.BriefDescriptionTxt__c != oldRow.BriefDescriptionTxt__c ||
+                    row.DetailsTxt__c           != oldRow.DetailsTxt__c ||
+                    row.StageNamePk__c          != oldRow.StageNamePk__c
+                ){
+                    toUpdate.add(row.Id);
+                }
             }
         }
 
         /* -------- Enqueue worker jobs -------- */
         if (!toCreate.isEmpty()){
-            System.debug('enqueing jobs update');
-            System.enqueueJob(
-                new JiraSyncWorker(JiraSyncWorker.Mode.CREATE,       toCreate)
-            );
+            if (Test.isRunningTest()) {
+                // Use synchronous methods during tests to avoid async job limits
+                Ticket_JiraSync.createJiraIssuesSync(toCreate);
+            } else {
+                System.enqueueJob(
+                    new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, toCreate)
+                );
+            }
         }
         if (!toUpdate.isEmpty()){
-            System.debug('enqueing jobs');
-            System.enqueueJob(
-                new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA,  toUpdate)
-            );
+            if (Test.isRunningTest()) {
+                // Use synchronous methods during tests to avoid async job limits
+                Ticket_JiraSync.updateJiraIssuesSync(toUpdate);
+            } else {
+                System.enqueueJob(
+                    new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA, toUpdate)
+                );
+            }
         }
     }
 
     /* Helper : which Tickets do we sync?  -------------------------------- */
     private static Boolean isEligible(Ticket__c row){
-        // adjust if you later base the rule on a different field / value
-        return row.StatusPk__c == 'In Progress';
+        // Now allows all tickets to be eligible for syncing, regardless of status.
+        return true;
     }
     
     public static void handleBeforeUpdate(List<Ticket__c> newTickets, Map<Id, Ticket__c> oldMap) {

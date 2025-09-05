@@ -14,8 +14,13 @@
  */
 public without sharing class JiraCommentHandler {
     
+     @TestVisible
+    private static Boolean isTest = false; // Controls test mode
+    @TestVisible
+    private static Boolean testResult = false; // Defines the mock result
     // Constants for comment processing
     private static final String SOURCE_JIRA = 'Jira';
+    @TestVisible
     private static final Integer MAX_COMMENT_LENGTH = 130768; // Based on BodyTxt__c field length
     private static final String DEFAULT_AUTHOR = 'Unknown Jira User';
     
@@ -460,6 +465,7 @@ public without sharing class JiraCommentHandler {
      * @param contentObj The ADF content object
      * @return String The extracted plain text
      */
+    @TestVisible
     private static String extractTextFromAdfContent(Object contentObj) {
         try {
             if (contentObj instanceof String) {

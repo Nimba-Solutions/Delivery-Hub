@@ -30,7 +30,7 @@ export default class JiraSettingCard extends LightningElement {
             this.jiraUsername = data.jiraUsername;
             this.jiraApiToken = data.jiraApiToken;
             this.jiraProjectKey = data.jiraProjectKey;
-            this.isConnectionVerified = data.Jira_Api_tested__c || false;
+            this.isConnectionVerified = data.JIraApiTestedBool__c || false;
         } else if (error) {
             this.showToast('Error Loading JIRA Settings', error.body?.message || error.message, 'error');
         }
@@ -154,7 +154,7 @@ export default class JiraSettingCard extends LightningElement {
                     this.jiraUsername = savedData.jiraUsername;
                     this.jiraApiToken = savedData.jiraApiToken;
                     this.jiraProjectKey = savedData.jiraProjectKey;
-                    this.isConnectionVerified = savedData.Jira_Api_tested__c || false;
+                    this.isConnectionVerified = savedData.JIraApiTestedBool__c || false;
                 }
                 
                 // Clear any transient UI state like test alerts

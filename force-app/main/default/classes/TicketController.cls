@@ -157,16 +157,16 @@ public with sharing class TicketController {
     public static List<String> getRequiredFieldsForStage(String targetStage) {
         // Query the active Kanban Stage Field Requirement metadata record for the target stage.
         List<Kanban_Stage_Field_Requirement__mdt> requirements = [
-            SELECT Required_Fields__c
+            SELECT RequiredFieldsTxt__c
             FROM Kanban_Stage_Field_Requirement__mdt
-            WHERE Is_Active__c = true AND Target_Stage__c = :targetStage
+            WHERE IsActiveBool__c = true AND TargetStageTxt__c = :targetStage
             LIMIT 1
         ];
 
-        if (!requirements.isEmpty() && String.isNotBlank(requirements[0].Required_Fields__c)) {
+        if (!requirements.isEmpty() && String.isNotBlank(requirements[0].RequiredFieldsTxt__c)) {
             // Split the comma-separated string into a list and trim whitespace from each entry.
             List<String> fieldList = new List<String>();
-            for(String field : requirements[0].Required_Fields__c.split(',')) {
+            for(String field : requirements[0].RequiredFieldsTxt__c.split(',')) {
                 fieldList.add(field.trim());
             }
             return fieldList;
@@ -403,9 +403,9 @@ public with sharing class TicketController {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         
         // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
-        if (settings != null && settings.Open_Ai_Api_tested__c == true && String.isNotBlank(settings.OpenAI_API_Key__c)) {
+        if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
             System.debug('Giving custom setttngs api key');
-            return settings.OpenAI_API_Key__c;
+            return settings.OpenAIApiKeyTxt__c;
         }
 
         List<OpenAI_Configuration__mdt> configs = [

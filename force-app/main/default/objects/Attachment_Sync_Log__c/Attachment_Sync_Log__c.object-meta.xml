@@ -154,6 +154,7 @@
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>ControlledByParent</externalSharingModel>
     <label>Attachment Sync Log</label>
+    <description>Custom object for tracking attachment synchronization between Salesforce and Jira systems</description>
     <nameField>
         <displayFormat>ASL-{0000000}</displayFormat>
         <label>Attachment Sync Log Name</label>

@@ -23,7 +23,7 @@ public without sharing class JiraAttachmentProcessor implements Queueable, Datab
             if (fileBody != null) {
                 /*File_Creation_Request__e event = new File_Creation_Request__e(
                     Parent_ID__c = this.ticketId,
-                    Filename__c = this.filename,
+                    FilenameTxt__c = this.filename,
                     File_Body_Base64__c = EncodingUtil.base64Encode(fileBody)
                 );
                 

@@ -3,6 +3,34 @@
  */
 @isTest
 private class AttachmentSyncServiceTest {
+    
+    @testSetup
+    static void setup() {
+        // 1. Create a standard user for testing
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            Alias = 'testu',
+            Email = 'testuser.sync@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'Testing',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+        );
+        insert testUser;
+
+        // 2. Find the specified permission set by its API Name
+        //PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin' LIMIT 1];
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        // 3. Assign the permission set to the test user
+        PermissionSetAssignment psa = new PermissionSetAssignment(
+            AssigneeId = testUser.Id,
+            PermissionSetId = ps.Id
+        );
+        insert psa;
+    }
 
     /**
      * @description Mock implementation of JiraCallout for testing HTTP callouts
@@ -23,6 +51,11 @@ private class AttachmentSyncServiceTest {
      */
     @isTest
     static void testSyncFilesToJiraSuccess() {
+        
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        // Use System.runAs() to ensure the entire operation runs as the test user
+        System.runAs(testUser) {
         // Register the mock
         Test.setMock(HttpCalloutMock.class, new MockJiraCallout());
 
@@ -58,15 +91,16 @@ private class AttachmentSyncServiceTest {
 
         // Step 5: Assert a sync log was created
         List<Attachment_Sync_Log__c> logs = [
-            SELECT Id, Sync_Status__c, Jira_Attachment_ID__c
+            SELECT Id, SyncStatusPk__c, JiraAttachmentIdTxt__c
             FROM Attachment_Sync_Log__c
             WHERE Ticket__c = :ticket.Id
         ];
         System.assertEquals(1, logs.size(), 'Expected one sync log to be created');
-        System.assertEquals('Success', logs[0].Sync_Status__c, 'Expected sync status to be Success');
+        System.assertEquals('Success', logs[0].SyncStatusPk__c, 'Expected sync status to be Success');
 
         //System.assertEquals(1, logs.size(), 'One sync log should be created');
-        //System.assertEquals('Success', logs[0].Sync_Status__c);
-        //System.assertEquals('jira-attachment-id-123', logs[0].Jira_Attachment_ID__c);
+        //System.assertEquals('Success', logs[0].SyncStatusPk__c);
+        //System.assertEquals('jira-attachment-id-123', logs[0].JiraAttachmentIdTxt__c);
+    }
     }
 }

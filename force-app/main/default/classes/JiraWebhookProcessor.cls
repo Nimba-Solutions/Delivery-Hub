@@ -236,6 +236,7 @@ public without sharing class JiraWebhookProcessor implements Queueable,Database.
      * @description Processes comment-related webhook events
      * @return Boolean indicating if processing was successful
      */
+    @TestVisible
     private Boolean processCommentEvent() {
         System.debug('Processing comment event: ' + eventType);
         
@@ -280,6 +281,7 @@ public without sharing class JiraWebhookProcessor implements Queueable,Database.
      * @description Processes attachment-related webhook events
      * @return Boolean indicating if processing was successful
      */
+    @TestVisible
     private Boolean processAttachmentEvent() {
         System.debug('Processing attachment event: ' + eventType);
         
@@ -434,6 +436,7 @@ public without sharing class JiraWebhookProcessor implements Queueable,Database.
      * and calls the JiraAttachmentHandler.
      * @param payload The webhook payload from the issue event.
      */
+    @TestVisible
     private void processAttachmentChanges(Map<String, Object> payload) {
     Map<String, Object> changelog = (Map<String, Object>)payload.get('changelog');
     if (changelog == null || !changelog.containsKey('items')) {
@@ -493,6 +496,7 @@ public without sharing class JiraWebhookProcessor implements Queueable,Database.
      * @param attachmentId The ID of the attachment to find.
      * @return A map containing the details of the found attachment, or null.
      */
+    @TestVisible
     private Map<String, Object> findAttachmentDetailsById(Map<String, Object> issue, String attachmentId) {
         Map<String, Object> fields = (Map<String, Object>)issue.get('fields');
         if (fields != null && fields.containsKey('attachment')) {
@@ -507,7 +511,7 @@ public without sharing class JiraWebhookProcessor implements Queueable,Database.
         return null;
     }
     
-    /**
+    /*
      * @description Custom exception class for webhook processing errors
      */
     public class JiraWebhookProcessorException extends Exception {}

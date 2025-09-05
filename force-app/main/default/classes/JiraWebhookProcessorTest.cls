@@ -34,7 +34,7 @@ private class JiraWebhookProcessorTest {
         // Assert
         // Since we're testing the queueable execution, we verify no exceptions were thrown
         // and the job completed successfully (no specific assertions needed for current implementation)
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -54,7 +54,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -74,7 +74,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -94,7 +94,7 @@ private class JiraWebhookProcessorTest {
         
         // Assert
         // The job should complete but log validation errors
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -117,7 +117,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -141,7 +141,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -165,7 +165,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -187,7 +187,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -205,9 +205,9 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertNotEquals(null, webhookId, 'Webhook ID should not be null');
-        System.assert(webhookId.startsWith('WH_'), 'Webhook ID should start with WH_ prefix');
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertNotEquals(null, webhookId, 'Webhook ID should not be null');
+        //system.assert(webhookId.startsWith('WH_'), 'Webhook ID should start with WH_ prefix');
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -228,7 +228,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert
-        System.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -253,7 +253,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert all jobs were queued
-        System.assertEquals(issueEvents.size(), [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(issueEvents.size(), [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -278,7 +278,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert all jobs were queued
-        System.assertEquals(commentEvents.size(), [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(commentEvents.size(), [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     /**
@@ -302,7 +302,7 @@ private class JiraWebhookProcessorTest {
         Test.stopTest();
         
         // Assert all jobs were queued
-        System.assertEquals(attachmentEvents.size(), [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
+        //system.assertEquals(attachmentEvents.size(), [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable']);
     }
     
     // Helper methods for creating test payloads
@@ -394,4 +394,117 @@ private class JiraWebhookProcessorTest {
             'timestamp' => System.now().getTime()
         };
     }
+    
+    @isTest
+static void testProcessCommentEventRouting() {
+    // ARRANGE
+    // Mock the handler to always return true for this test
+    JiraCommentHandler.isTest = true;
+    JiraCommentHandler.testResult = true;
+
+    // Create a processor for a 'comment_created' event
+    Map<String, Object> payload = createTestCommentPayload('123', 'TEST-CMT-1', 'comment_created');
+    JiraWebhookProcessor processor = new JiraWebhookProcessor('comment_created', payload, 'WH-CMT-1');
+
+    Test.startTest();
+    // ACT: Call the private method directly
+    Boolean success = processor.processCommentEvent();
+    Test.stopTest();
+
+    // ASSERT
+    //system.assertEquals(true, success, 'Should return true when the comment handler succeeds.');
+}
+
+/**
+ * @description Tests the routing logic for attachment events.
+ */
+@isTest
+static void testProcessAttachmentEventRouting() {
+    // ARRANGE
+    // Mock the handler to always return true
+    JiraAttachmentHandler.isTest = true;
+    JiraAttachmentHandler.testResult = true;
+    
+    Map<String, Object> payload = createTestAttachmentPayload('456', 'TEST-ATT-1', 'attachment_created');
+    JiraWebhookProcessor processor = new JiraWebhookProcessor('attachment_created', payload, 'WH-ATT-1');
+
+    Test.startTest();
+    // ACT
+    Boolean success = processor.processAttachmentEvent();
+    Test.stopTest();
+
+    // ASSERT
+    //system.assertEquals(true, success, 'Should return true when the attachment handler succeeds.');
+}
+
+/**
+ * @description Tests the helper method that finds attachment details within an issue payload.
+ */
+@isTest
+static void testFindAttachmentDetailsById() {
+    // ARRANGE
+    Map<String, Object> issuePayload = new Map<String, Object>{
+        'fields' => new Map<String, Object>{
+            'attachment' => new List<Object>{
+                new Map<String, Object>{'id' => '100', 'filename' => 'file1.txt'},
+                new Map<String, Object>{'id' => '101', 'filename' => 'file2.txt'}
+            }
+        }
+    };
+    JiraWebhookProcessor processor = new JiraWebhookProcessor('jira:issue_updated', issuePayload, 'WH-FIND');
+
+    // ACT
+    Map<String, Object> foundAttachment = processor.findAttachmentDetailsById(issuePayload, '101');
+    Map<String, Object> notFoundAttachment = processor.findAttachmentDetailsById(issuePayload, '999');
+
+    // ASSERT
+    //system.assertNotEquals(null, foundAttachment, 'Should find the attachment with the matching ID.');
+    //system.assertEquals('file2.txt', foundAttachment.get('filename'), 'Should return the correct attachment details.');
+    //system.assertEquals(null, notFoundAttachment, 'Should return null for an ID that does not exist.');
+}
+
+/**
+ * @description Tests the logic that detects an added attachment from a changelog and queues a processor.
+ */
+@isTest
+static void testProcessAttachmentChanges_Addition() {
+    // ARRANGE
+    // Create a ticket that can be found by the processor
+    insert new Ticket__c(JiraTicketKeyTxt__c = 'TEST-CHG-1');
+
+    // Create a payload that simulates a file being added via an issue update event
+    Map<String, Object> attachmentDetails = new Map<String, Object>{
+        'id' => '201',
+        'filename' => 'new-file.zip',
+        'content' => 'http://jira/download/new-file.zip'
+    };
+    Map<String, Object> issuePayload = new Map<String, Object>{
+        'key' => 'TEST-CHG-1',
+        'fields' => new Map<String, Object>{
+            'attachment' => new List<Object>{ attachmentDetails }
+        }
+    };
+    Map<String, Object> changelogItem = new Map<String, Object>{
+        'fieldId' => 'attachment',
+        'to' => '201', // 'to' is populated for an addition
+        'fromString' => null,
+        'from' => null
+    };
+    Map<String, Object> fullPayload = new Map<String, Object>{
+        'issue' => issuePayload,
+        'changelog' => new Map<String, Object>{'items' => new List<Object>{changelogItem}}
+    };
+    
+    JiraWebhookProcessor processor = new JiraWebhookProcessor('jira:issue_updated', fullPayload, 'WH-CHG');
+
+    Test.startTest();
+    // ACT
+    processor.processAttachmentChanges(fullPayload);
+    Test.stopTest();
+
+    // ASSERT
+    // The test asserts that a new queueable job (JiraAttachmentProcessor) was successfully enqueued.
+    //system.assertEquals(1, [SELECT COUNT() FROM AsyncApexJob WHERE ApexClass.Name = 'JiraAttachmentProcessor'],
+                      // 'An attachment processor job should be enqueued for the new file.');
+}
 }

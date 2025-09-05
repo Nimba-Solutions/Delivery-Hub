@@ -38,18 +38,6 @@ global without sharing class JiraWebhookReceiver {
         // Set response headers
         res.addHeader('Content-Type', 'application/json');
         
-        try {
-            Sync_In_Propgress__c syncSettings = Sync_In_Propgress__c.getOrgDefaults();
-            if (syncSettings != null && syncSettings.SalesforceToJiraBool__c == true) {
-                System.debug('Jira webhook processing skipped: A Salesforce-to-Jira sync is currently marked as in progress.');
-                sendSuccessResponse(res, 'Webhook event ignored to prevent recursion.', 'IgnoredDueToSyncFlag');
-                return; 
-            }
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Could not read Sync_In_Propgress__c custom setting. Error: ' + e.getMessage());
-            sendErrorResponse(res, 500, 'Configuration Error', 'Could not verify sync status due to a configuration issue.');
-            return;
-        }
         
         try {
             // Step 1: Validate authentication
@@ -88,6 +76,13 @@ global without sharing class JiraWebhookReceiver {
             
             // Step 5: Route event to appropriate processor
             String eventType = (String)jiraPayload.get('webhookEvent');
+
+            // --- NEW STEP 6: Check for duplicate events before routing ---
+            if (isDuplicateEvent(eventType, jiraPayload)) {
+                System.debug('Duplicate event received and ignored. EventType: ' + eventType);
+                sendSuccessResponse(res, 'Duplicate event ignored', eventType);
+                return; // Stop all further processing
+            }
             Boolean routingSuccess = routeEvent(eventType, jiraPayload);
             
             if (routingSuccess) {
@@ -103,6 +98,250 @@ global without sharing class JiraWebhookReceiver {
         }
     }
     
+
+    // --- NEW METHOD to check for duplicates ---
+    /**
+     * @description Checks if the incoming event is a duplicate by querying for an existing record
+     * with the same Jira ID.
+     * @param eventType The webhook event type
+     * @param payload The webhook payload
+     * @return Boolean indicating if the event is a duplicate
+     */
+    // private static Boolean isDuplicateEvent(String eventType, Map<String, Object> payload) {
+    //     try {
+    //         if (isIssueEvent(eventType)) {
+    //             Map<String, Object> issueMap = (Map<String, Object>)payload.get('issue');
+    //             if (issueMap != null && issueMap.containsKey('id')) {
+    //                 // **NOTE:** Adjust the field API name 'JiraTicketIdTxt__c' if needed
+    //                 String jiraIssueId = String.valueOf(issueMap.get('id'));
+    //                 return [SELECT COUNT() FROM Ticket__c WHERE JiraTicketId__c = :jiraIssueId] > 0;
+    //             }
+    //         } else if (isCommentEvent(eventType)) {
+    //             Map<String, Object> commentMap = (Map<String, Object>)payload.get('comment');
+    //             if (commentMap != null && commentMap.containsKey('id')) {
+    //                 // **NOTE:** Adjust the field API name 'JiraCommentIdTxt__c' if needed
+    //                 String jiraCommentId = String.valueOf(commentMap.get('id'));
+    //                 return [SELECT COUNT() FROM Ticket_Comment__c WHERE JiraCommentIdTxt__c = :jiraCommentId] > 0;
+    //             }
+    //         } else if (isAttachmentEvent(eventType)) {
+    //             Map<String, Object> attachmentMap = (Map<String, Object>)payload.get('attachment');
+    //             if (attachmentMap != null && attachmentMap.containsKey('id')) {
+    //                 // **NOTE:** Adjust the field API name 'JiraAttachmentId__c' if needed
+    //                 String jiraAttachmentId = String.valueOf(attachmentMap.get('id'));
+    //                 return [SELECT COUNT() FROM Attachment_Sync_Log__c WHERE JiraAttachmentIdTxt__c = :jiraAttachmentId] > 0;
+    //             }
+    //         }
+    //     } catch (Exception e) {
+    //         System.debug(LoggingLevel.ERROR, 'Error during duplicate check for event ' + eventType + ': ' + e.getMessage());
+    //         // Fail open: If check fails, assume it's not a duplicate to allow processing to continue.
+    //         return false;
+    //     }
+    //     // Not a relevant event type for duplicate checking or ID was not found in payload
+    //     return false; 
+    // }
+
+    /**
+     * @description Checks if the incoming event is a duplicate. For 'update' events, it
+     * performs a deep content check. For other events, it checks for existence.
+     * @param eventType The webhook event type
+     * @param payload The webhook payload
+     * @return Boolean indicating if the event should be ignored
+     */
+    private static Boolean isDuplicateEvent(String eventType, Map<String, Object> payload) {
+        // --- NEW LOGIC: Route based on event type ---
+        if (eventType.endsWith('_deleted')) {
+        return false; // This means "it is NOT a duplicate", so the process continues.
+    }
+
+        if (eventType != null && eventType.endsWith('_updated')) {
+            // For update events, perform a deep content comparison
+            return !hasContentChanged(eventType, payload); // Note the inversion: if content HAS NOT changed, it IS a duplicate.
+        } else {
+            // For create/delete events, perform a simple existence check
+            return doesRecordExist(eventType, payload);
+        }
+    }
+
+    /**
+     * @description Determines if the content of an updated event has meaningful changes compared to the existing Salesforce record.
+     * @param eventType The webhook event type (e.g., jira:issue_updated)
+     * @param payload The webhook payload
+     * @return Boolean - true if content has changed, false if it's the same
+     */
+    private static Boolean hasContentChanged(String eventType, Map<String, Object> payload) {
+        try {
+            if (isIssueEvent(eventType)) {
+                return hasContentChangedForIssue(payload);
+            }
+            // Future enhancement: Add similar logic for comments and attachments
+            else if (isCommentEvent(eventType)) {
+                return hasContentChangedForComment(payload);
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Error during content change check for event ' + eventType + ': ' + e.getMessage());
+            // Fail open: If the check fails, assume content HAS changed to allow processing.
+            return true;
+        }
+        // If the event type is not configured for a content check, assume it has changed.
+        return true;
+    }
+
+    /**
+     * @description Performs a deep comparison for a Jira issue against a Salesforce Ticket__c.
+     * @param payload The webhook payload
+     * @return Boolean - true if content has changed, false otherwise
+     */
+    private static Boolean hasContentChangedForIssue(Map<String, Object> payload) {
+        Map<String, Object> issueMap = (Map<String, Object>)payload.get('issue');
+        if (issueMap == null || !issueMap.containsKey('id')) {
+            return true; // Not enough info to check, so let it process
+        }
+        
+        String jiraIssueId = String.valueOf(issueMap.get('id'));
+
+        // Query for the existing ticket, selecting ALL fields that the mapping utility might change.
+        // Keep this field list in sync with JiraFieldMappingUtil!
+        List<Ticket__c> existingTickets = [
+            SELECT Id, BriefDescriptionTxt__c, WorkItemNameTxt__c, DetailsTxt__c, WorkItemTypeTxt__c,
+                   StatusPk__c,StageNamePk__c, Developer__c, PriorityPk__c, DeveloperDaysSizeNumber__c
+            FROM Ticket__c 
+            WHERE JiraIssueIdTxt__c = :jiraIssueId
+            LIMIT 1
+        ];
+
+        if (existingTickets.isEmpty()) {
+            // If the ticket doesn't exist yet, it's definitely new content.
+            return true;
+        }
+        
+        Ticket__c existingTicket = existingTickets[0];
+        
+        // Create a new ticket in memory and populate it using the mapping utility
+        Ticket__c inMemoryTicket = new Ticket__c();
+        JiraFieldMappingUtil.mapJiraIssueToTicket(issueMap, inMemoryTicket);
+
+        // Use helper method to reduce cyclomatic complexity
+        return hasTicketFieldsChanged(existingTicket, inMemoryTicket, jiraIssueId);
+    }
+    
+    /**
+     * @description Helper method to compare ticket fields and reduce cyclomatic complexity
+     * @param existingTicket The current ticket record from database
+     * @param inMemoryTicket The ticket populated from Jira payload
+     * @param jiraIssueId The Jira issue ID for logging
+     * @return Boolean indicating if any fields have changed
+     */
+    private static Boolean hasTicketFieldsChanged(Ticket__c existingTicket, Ticket__c inMemoryTicket, String jiraIssueId) {
+        // Compare the fields. If any field is different, the content has changed.
+        if (existingTicket.BriefDescriptionTxt__c != inMemoryTicket.BriefDescriptionTxt__c) {
+            return true;
+        }
+        if (existingTicket.WorkItemNameTxt__c != inMemoryTicket.WorkItemNameTxt__c) {
+            return true;
+        }
+        if (existingTicket.DetailsTxt__c != inMemoryTicket.DetailsTxt__c) {
+            return true;
+        }
+        if (existingTicket.WorkItemTypeTxt__c != inMemoryTicket.WorkItemTypeTxt__c) {
+            return true;
+        }
+        if (existingTicket.StatusPk__c != inMemoryTicket.StatusPk__c) {
+            System.debug(LoggingLevel.DEBUG, 'StatusPk__c changed from ' + existingTicket.StatusPk__c + ' to ' + inMemoryTicket.StatusPk__c);
+            return true;
+        }
+        if (existingTicket.StageNamePk__c != inMemoryTicket.StageNamePk__c) {
+            return true;
+        }
+        if (existingTicket.Developer__c != inMemoryTicket.Developer__c) {
+            return true;
+        }
+        if (existingTicket.PriorityPk__c != inMemoryTicket.PriorityPk__c) {
+            return true;
+        }
+        
+        // If we get here, no relevant fields have changed.
+        System.debug(LoggingLevel.DEBUG, 'Content check for issue ' + jiraIssueId + ' found no changes. Ignoring update.');
+        return false;
+    }
+
+    private static Boolean hasContentChangedForComment(Map<String, Object> payload) {
+    Map<String, Object> commentData = (Map<String, Object>)payload.get('comment');
+    if (commentData == null || !commentData.containsKey('id')) {
+        return true; // Not enough info to check, so let it process
+    }
+
+    String jiraCommentId = String.valueOf(commentData.get('id'));
+
+    // 1. Query for the existing comment, selecting the fields we need to compare
+    List<Ticket_Comment__c> existingComments = [
+        SELECT Id, AuthorTxt__c, BodyTxt__c 
+        FROM Ticket_Comment__c 
+        WHERE JiraCommentIdTxt__c = :jiraCommentId
+        LIMIT 1
+    ];
+
+        System.debug('existing comment '+existingComments);
+    if (existingComments.isEmpty()) {
+        // If the comment doesn't exist yet, it's definitely new content.
+        return true;
+    }
+
+    Ticket_Comment__c existingComment = existingComments[0];
+
+    // 2. Use JiraCommentHandler methods to build the in-memory representation of the comment
+    // Get the author from the payload
+    Map<String, String> authorInfo = JiraCommentHandler.extractAuthorInformationFromPayload(commentData);
+    String inMemoryAuthor = authorInfo.get('displayName');
+
+    // Get and process the body from the payload
+    String rawBody = JiraCommentHandler.extractCommentBodyFromPayload(commentData);
+    String inMemoryBody = JiraCommentHandler.convertHtmlToPlainText(rawBody);
+    String existingBodyAsPlainText = JiraCommentHandler.convertHtmlToPlainText(existingComment.BodyTxt__c);
+
+     System.debug('inMemoryAuthor'+inMemoryAuthor);
+    System.debug('inMemoryBody'+inMemoryBody);
+    // 3. Compare the fields. If any field is different, the content has changed.
+    // if (existingComment.AuthorTxt__c != inMemoryAuthor) return true;
+    if (existingBodyAsPlainText != inMemoryBody) return true;
+    
+    // If we get here, no relevant fields have changed.
+    System.debug('Content check for comment ' + jiraCommentId + ' found no changes. Ignoring update.');
+    return false;
+}
+
+    /**
+     * @description Simple existence check for create/delete events.
+     * @param eventType The webhook event type
+     * @param payload The webhook payload
+     * @return Boolean indicating if a record with the given Jira ID already exists
+     */
+    private static Boolean doesRecordExist(String eventType, Map<String, Object> payload) {
+        try {
+            if (isIssueEvent(eventType)) {
+                Map<String, Object> issueMap = (Map<String, Object>)payload.get('issue');
+                if (issueMap != null && issueMap.containsKey('id')) {
+                    String jiraIssueId = String.valueOf(issueMap.get('id'));
+                    return [SELECT COUNT() FROM Ticket__c WHERE JiraTicketId__c = :jiraIssueId] > 0;
+                }
+            } else if (isCommentEvent(eventType)) {
+                Map<String, Object> commentMap = (Map<String, Object>)payload.get('comment');
+                if (commentMap != null && commentMap.containsKey('id')) {
+                    String jiraCommentId = String.valueOf(commentMap.get('id'));
+                    return [SELECT COUNT() FROM Ticket_Comment__c WHERE JiraCommentIdTxt__c = :jiraCommentId] > 0;
+                }
+            } else if (isAttachmentEvent(eventType)) {
+                Map<String, Object> attachmentMap = (Map<String, Object>)payload.get('attachment');
+                if (attachmentMap != null && attachmentMap.containsKey('id')) {
+                    String jiraAttachmentId = String.valueOf(attachmentMap.get('id'));
+                    return [SELECT COUNT() FROM Attachment_Sync_Log__c WHERE JiraAttachmentIdTxt__c = :jiraAttachmentId] > 0;
+                }
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Error during record existence check for event ' + eventType + ': ' + e.getMessage());
+            return false; // Fail open
+        }
+        return false;
+    }
     /**
      * @description Validates webhook authentication using shared secret header
      * @param req The incoming REST request

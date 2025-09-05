@@ -50,6 +50,9 @@ public class JiraFieldMappingUtil {
             // Map status with enhanced logic
             mapStatusField(fields, ticket);
             
+            // Map stage with enhanced logic
+            mapStageField(fields, ticket);
+
             // Map assignee with user lookup
             mapAssigneeField(fields, ticket);
             
@@ -127,6 +130,20 @@ public class JiraFieldMappingUtil {
         String mappedStatus = mapJiraStatusToSalesforceEnhanced(statusName, statusCategory);
         if (String.isNotBlank(mappedStatus)) {
             ticket.StatusPk__c = mappedStatus;
+        }
+    }
+
+    @TestVisible
+    private static void mapStageField(Map<String, Object> fields, Ticket__c ticket) {
+        Map<String, Object> status = (Map<String, Object>)fields.get('status');
+        if (status == null) {
+            return;
+        }
+        
+        String statusName = (String)status.get('name');
+        
+        if (String.isNotBlank(statusName)) {
+            ticket.StageNamePk__c = statusName;
         }
     }
     
