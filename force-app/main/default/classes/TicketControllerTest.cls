@@ -3,6 +3,30 @@ private class TicketControllerTest {
 
     @testSetup
     static void setupData() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            Alias = 'testu',
+            Email = 'testuser.sync@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'Testing',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+        );
+        insert testUser;
+
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSetAssignment psa = new PermissionSetAssignment(
+            AssigneeId = testUser.Id,
+            PermissionSetId = ps.Id
+        );
+        insert psa;
+
+         
+
+        System.runAs(testUser) {
         // --- FIX: Disable trigger logic during test data setup ---
         TriggerControl.disableAfterLogic();
 
@@ -30,17 +54,27 @@ private class TicketControllerTest {
         // --- (Good Practice) Re-enable logic after setup is complete ---
         TriggerControl.enableAfterLogic();
     }
+    }
 
     @isTest
     static void testGetTickets() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Test.startTest();
         List<Ticket__c> results = TicketController.getTickets();
         Test.stopTest();
        // System.assert(!results.isEmpty(), 'Tickets should be returned');
+        }
     }
 
     @isTest
     static void testCreateDummyTickets() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Test.startTest();
         
         // --- FIX: Disable trigger logic for this DML operation ---
@@ -50,10 +84,15 @@ private class TicketControllerTest {
         
         Test.stopTest();
        // System.assertEquals(4, created.size(), '4 dummy tickets should be created');
+        }
     }
 
     @isTest
     static void testUpdateTicketSortOrders() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         List<Ticket__c> tickets = [SELECT Id, SortOrderNumber__c FROM Ticket__c LIMIT 1];
 
         List<Map<String, Object>> updates = new List<Map<String, Object>>();
@@ -72,11 +111,16 @@ private class TicketControllerTest {
         Test.stopTest();
 
         Ticket__c updated = [SELECT SortOrderNumber__c FROM Ticket__c WHERE Id = :tickets[0].Id];
-       // System.assertEquals(5, updated.SortOrderNumber__c.intValue());
+       // System.assertEquals(5, updated.SortOrderNumber__c.intValue());\
+    }
     }
 
     @isTest
     static void testLinkFilesToTicket() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         ContentVersion cv = new ContentVersion(
             Title = 'TestFile',
             PathOnClient = 'TestFile.txt',
@@ -92,11 +136,16 @@ private class TicketControllerTest {
         Test.stopTest();
 
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :ticketId];
+        }
        // System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
     }
     
     @isTest
     static void testlinkFilesAndSync() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         ContentVersion cv = new ContentVersion(
             Title = 'TestFile',
             PathOnClient = 'TestFile.txt',
@@ -117,12 +166,17 @@ private class TicketControllerTest {
         Test.stopTest();
 
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :ticketId];
+        }
        // System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
     }
 
     
     @isTest
     static void testGetAiEnhancedTicketDetails_withFallback() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // Simulate missing API key to force fallback
         Test.startTest();
         TicketController.AISuggestionWrapper result = TicketController.getAiEnhancedTicketDetails('Login bug', 'User cannot log in');
@@ -132,6 +186,7 @@ private class TicketControllerTest {
        // System.assertNotEquals(null, result.title);
        // System.assertNotEquals(null, result.description);
        // System.assert(result.estimatedDays > 0);
+        }
     }
 
     // @isTest
@@ -154,17 +209,24 @@ private class TicketControllerTest {
     
     @isTest
     static void testgetRequiredFieldsForStage() {
-        
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
 
         Test.startTest();
         TicketController.getRequiredFieldsForStage('In QA');
         Test.stopTest();
-
+        }
     }
  
 
     @isTest
     static void testParseOpenAIResponse_ValidJson() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         String mockResponse = JSON.serialize(new Map<String, Object>{
             'choices' => new List<Object>{
                 new Map<String, Object>{
@@ -183,21 +245,30 @@ private class TicketControllerTest {
        // System.assertEquals('Improved login with MFA', result.description);
        // System.assertEquals(4, result.estimatedDays);
     }
+    }
 
     @isTest
     static void testExtractJsonFromContent_Valid() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         String wrappedText = 'Some intro text\n{\n"title": "Test", "description": "Test desc", "estimatedDays": 2\n}\nMore trailing text';
         
         Test.startTest();
         String jsonResult = TicketController.test_extractJsonFromContent(wrappedText);
         Test.stopTest();
-
+        }
        // System.assert(jsonResult.contains('"title": "Test"'));
        // System.assertEquals('{ "title": "Test", "description": "Test desc", "estimatedDays": 2 }'.replaceAll('\\s+', ''), jsonResult.replaceAll('\\s+', ''));
     }
 
     @isTest
     static void testParseOpenAIResponse_MissingContent() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         String badResponse = JSON.serialize(new Map<String, Object>{
             'choices' => new List<Object>{
                 new Map<String, Object>{
@@ -218,9 +289,14 @@ private class TicketControllerTest {
         	System.debug('test catch');
         }
     }
+    }
 
     @isTest
     static void testExtractJsonFromContent_Invalid() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         try {
             Test.startTest();
             TicketController.test_extractJsonFromContent('Just some text, no JSON brackets');
@@ -231,6 +307,7 @@ private class TicketControllerTest {
             System.debug('test catch');
         }
     }
+}
 
 
 }
