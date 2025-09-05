@@ -9,7 +9,30 @@ public class JiraAttachmentHandlerTest {
     // --- Test Data Setup ---
     @testSetup
     static void setupTestData() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            Alias = 'testu',
+            Email = 'testuser.sync@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'Testing',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+        );
+        insert testUser;
+
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSetAssignment psa = new PermissionSetAssignment(
+            AssigneeId = testUser.Id,
+            PermissionSetId = ps.Id
+        );
+        insert psa;
         // Create custom settings for Jira credentials
+         
+
+        System.runAs(testUser) {
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             Name = 'Default',
             JIRAUsernameTxt__c = 'test@example.com',
@@ -24,6 +47,7 @@ public class JiraAttachmentHandlerTest {
             StatusPk__c = 'Open'
         );
         insert testTicket;
+        }
     }
 
     // --- Mocks for Simulating HTTP Responses ---
@@ -45,6 +69,10 @@ public class JiraAttachmentHandlerTest {
 
     @isTest
     static void testHandleAttachmentAddedSuccessWithRedirect() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE
         Ticket__c testTicket = [SELECT Id FROM Ticket__c LIMIT 1];
         String initialUrl = 'callout:Jira/rest/api/2/attachment/content/12345';
@@ -76,11 +104,15 @@ public class JiraAttachmentHandlerTest {
 
         // ASSERT
         System.assertEquals(true, true, 'Handler should succeed after following redirect.');
-        
+    }
     }
     
     @isTest
     static void testDownloadAttachment_MissingCredentials() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE: Update settings to be blank
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         settings.JIRAUsernameTxt__c = '';
@@ -97,10 +129,15 @@ public class JiraAttachmentHandlerTest {
 
         // ASSERT
         System.assertEquals(true, true, 'true');
+        }
     }
 
     @isTest
     static void testGetRelativePathFromUrl_ErrorHandling() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE: An invalid URL that will cause a new URL() to fail
         String malformedUrl = 'this-is-not-a-valid-url';
         
@@ -116,6 +153,7 @@ public class JiraAttachmentHandlerTest {
         
         // ASSERT
         System.assertEquals(true, true, 'true');
+        }
     }
 
 
@@ -123,6 +161,10 @@ public class JiraAttachmentHandlerTest {
 
     @isTest
     static void testHandleAttachmentRemoved_MissingContentDocumentIdInLog() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE
         Ticket__c ticket = [SELECT Id FROM Ticket__c LIMIT 1];
         // Create a sync log with a null ContentDocumentId
@@ -143,10 +185,15 @@ public class JiraAttachmentHandlerTest {
         
         // ASSERT
         System.assertEquals(true, true, 'true');
+        }
     }
 
     @isTest
     static void testHandleAttachmentRemovedLinkAlreadyDeleted() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE
         Ticket__c ticket = [SELECT Id FROM Ticket__c LIMIT 1];
         
@@ -182,12 +229,17 @@ public class JiraAttachmentHandlerTest {
         
         // ASSERT
         System.assertEquals(true, true, 'true');
+        }
     }
 
     // --- Test for Deprecated Method ---
 
     @isTest
     static void testCreateSalesforceFile_Deprecated() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE
         Ticket__c ticket = [SELECT Id, OwnerId FROM Ticket__c LIMIT 1];
         
@@ -199,6 +251,7 @@ public class JiraAttachmentHandlerTest {
         // ASSERT
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :ticket.Id];
         System.assertEquals(true, true, 'true');
+        }
     }
     
     // --- Existing test methods from the original file ---
@@ -206,6 +259,10 @@ public class JiraAttachmentHandlerTest {
     
     @isTest
     static void testHandleAttachmentAdded_Success() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // Setup test data
         Ticket__c testTicket = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c LIMIT 1];
         
@@ -224,10 +281,15 @@ public class JiraAttachmentHandlerTest {
         // Verify ContentVersion was created
         List<ContentVersion> contentVersions = [SELECT Id, Title, Description FROM ContentVersion WHERE Title = 'test-file.pdf'];
         System.assertEquals(true, true, 'true');
+        }
     }
     
     @isTest
     static void testHandleAttachmentAdded_TicketNotFound() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Map<String, Object> payload = createMockAttachmentPayload('12345', 'test-file.pdf', 'NONEXISTENT-123', 1024, 'http://dummy.url');
         
         Test.startTest();
@@ -235,6 +297,7 @@ public class JiraAttachmentHandlerTest {
         Test.stopTest();
         
         System.assertEquals(true, true, 'true');
+        }
     }
 
     // ... (include all other original test methods: testHandleAttachmentAdded_FileSizeTooLarge, 
@@ -243,6 +306,10 @@ public class JiraAttachmentHandlerTest {
     // --- Helper Methods ---
     private static Map<String, Object> createMockAttachmentPayload(String attachmentId, String filename, 
                                                                   String issueKey, Integer fileSize, String contentUrl) {
+                                                                     
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         return new Map<String, Object>{
             'attachment' => new Map<String, Object>{
                 'id' => attachmentId,
@@ -255,8 +322,13 @@ public class JiraAttachmentHandlerTest {
             }
         };
     }
+    }
 
     private static Map<String, Object> createMockAttachmentRemovalPayload(String attachmentId, String filename, String issueKey) {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         return new Map<String, Object>{
             'attachment' => new Map<String, Object>{
                 'id' => attachmentId,
@@ -266,6 +338,7 @@ public class JiraAttachmentHandlerTest {
                 'key' => issueKey
             }
         };
+    }
     }
 
     // Original Mock
