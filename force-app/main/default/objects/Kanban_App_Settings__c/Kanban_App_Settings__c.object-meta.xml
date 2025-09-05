@@ -3,5 +3,6 @@
     <customSettingsType>Hierarchy</customSettingsType>
     <enableFeeds>false</enableFeeds>
     <label>Kanban App Settings</label>
+    <description>Hierarchy custom settings for Kanban application configuration and preferences</description>
     <visibility>Public</visibility>
 </CustomObject>
