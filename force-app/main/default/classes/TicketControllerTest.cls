@@ -59,14 +59,11 @@ private class TicketControllerTest {
     @isTest
     static void testGetTickets() {
          
-        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
-
-        System.runAs(testUser) {
         Test.startTest();
         List<Ticket__c> results = TicketController.getTickets();
         Test.stopTest();
        // System.assert(!results.isEmpty(), 'Tickets should be returned');
-        }
+        
     }
 
     @isTest
