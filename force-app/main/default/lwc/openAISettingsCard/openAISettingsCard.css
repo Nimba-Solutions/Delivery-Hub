@@ -1,0 +1,235 @@
+/* CSS Custom Properties - Inherits from parent settingsContainer */
+:host {
+    display: block;
+}
+
+/* Card Structure Override */
+.slds-card {
+    background-color: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+    transition: all 0.3s ease;
+    animation: cardSlideIn 0.8s ease-out;
+}
+
+.slds-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+    border-color: var(--brand-primary);
+}
+
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slds-card__header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    background-color: var(--white);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.slds-card__header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.05), transparent);
+    transition: left 0.6s ease;
+}
+
+.slds-card:hover .slds-card__header::before {
+    left: 100%;
+}
+
+.slds-card__header-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.slds-card__header-subtitle {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.slds-card__body {
+    padding: 1.5rem;
+}
+
+/* Icon Styling */
+.slds-media__figure lightning-icon {
+    color: var(--brand-primary);
+    transition: all 0.3s ease;
+}
+
+.slds-card:hover .slds-media__figure lightning-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* Form control styling is now inherited from settingsContainer */
+
+/* Input icon styling is now inherited from settingsContainer */
+
+/* Button styling is now inherited from settingsContainer */
+
+/* ===== ALERT STYLING INHERITANCE ===== */
+/* Alert styles are inherited from settingsContainer */
+
+/* Component-specific alert adjustments for API testing */
+.slds-notify.slds-alert_success,
+.slds-notify.slds-alert_error {
+    /* Enhanced styling for connection test results */
+    font-weight: 500;
+}
+
+.slds-notify.slds-alert_success .slds-media__body p {
+    font-weight: 600;
+}
+
+.slds-notify.slds-alert_error .slds-media__body p {
+    font-weight: 600;
+}
+
+/* Section Dividers */
+.slds-border_top {
+    border-top: 1px solid var(--gray-200);
+    margin: 1.5rem 0;
+}
+
+/* Info Section Styling */
+.info-section {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+    transition: all 0.3s ease;
+}
+
+.info-section:hover {
+    background: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--gray-50) 100%);
+    border-color: var(--brand-primary);
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+}
+
+.info-section h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0 0 0.75rem 0;
+}
+
+/* Setup List Styling */
+.setup-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.setup-list li {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0 0.5rem 1rem;
+    position: relative;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.setup-list li:before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--brand-primary);
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.setup-list li:hover {
+    background-color: rgba(79, 70, 229, 0.05);
+    transform: translateX(4px);
+    color: var(--gray-800);
+}
+
+.setup-list li:hover:before {
+    color: var(--brand-primary-dark);
+    transform: scale(1.2);
+}
+
+.setup-list li:last-child {
+    margin-bottom: 0;
+}
+
+/* External Link Button - Component-specific styling */
+.info-section lightning-button[variant="outline-brand"] {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Grid Layout Improvements */
+.slds-grid.slds-grid_align-end {
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+.slds-grid.slds-grid_align-spread {
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .slds-card__header,
+    .slds-card__body {
+        padding: 1rem;
+    }
+    
+    .slds-grid.slds-grid_align-end {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .slds-col.slds-no-flex {
+        flex: none;
+        width: 100%;
+    }
+    
+    .info-section {
+        padding: 1rem;
+    }
+}
+
+/* Form field hover effects */
+.slds-form-element {
+    transition: all 0.2s ease;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    margin: 0.5rem 0;
+}
+
+.slds-form-element:hover {
+    background-color: var(--gray-50);
+    transform: translateX(2px);
+}
+
+.toggle-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-800);
+}
