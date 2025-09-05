@@ -1,0 +1,235 @@
+/* CSS Custom Properties */
+:host {
+    --brand-primary: #4f46e5;
+    --brand-primary-light: #eef2ff;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-800: #1f2937;
+    --gray-900: #11182c;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --radius: 0.75rem;
+    display: block;
+}
+
+/* Card Structure */
+.settings-card {
+    background-color: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: cardSlideIn 0.6s ease-out;
+    border: 1px solid transparent;
+}
+
+.settings-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+    border-color: var(--brand-primary);
+}
+
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.05), transparent);
+    transition: left 0.6s ease;
+}
+
+.settings-card:hover .card-header::before {
+    left: 100%;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-icon {
+    color: var(--brand-primary);
+    transition: all 0.3s ease;
+}
+
+.settings-card:hover .header-icon {
+    transform: scale(1.1) rotate(5deg);
+    color: var(--brand-primary);
+}
+
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 0.25rem 0;
+}
+
+.card-subtitle {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin: 0;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-divider {
+    height: 1px;
+    background-color: var(--gray-200);
+    margin: 1.5rem 0;
+}
+
+/* Form Groups */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-label {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-600);
+}
+
+.form-help {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+    line-height: 1.4;
+}
+
+/* Custom Select - Updated to match standardized styling */
+.select-wrapper {
+    position: relative;
+}
+
+/* Custom select styling is now inherited from settingsContainer */
+
+/* Toggle Groups */
+.toggle-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    margin: 0.5rem 0;
+}
+
+.toggle-group:hover {
+    background-color: var(--gray-100);
+    transform: translateX(4px);
+}
+
+.toggle-content {
+    flex: 1;
+}
+
+.toggle-label-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.toggle-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+.toggle-help {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+    line-height: 1.4;
+}
+
+/* Custom toggle styling is now inherited from settingsContainer */
+
+/* Info Section */
+.info-section {
+    background-color: var(--gray-100);
+    border-radius: var(--radius);
+    padding: 1rem;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.info-section:hover {
+    background-color: var(--brand-primary-light);
+    border-color: var(--brand-primary);
+    transform: scale(1.02);
+}
+
+.info-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0 0 0.75rem 0;
+}
+
+.info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+.info-value {
+    font-size: 0.75rem;
+    color: var(--gray-800);
+}
