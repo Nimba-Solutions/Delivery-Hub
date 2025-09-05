@@ -23,6 +23,28 @@ private class JiraAttachmentSyncBatchTest {
     // == Test Data Setup ==
     @testSetup
     static void setupData() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            Alias = 'testu',
+            Email = 'testuser.sync@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'Testing',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+        );
+        insert testUser;
+
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSetAssignment psa = new PermissionSetAssignment(
+            AssigneeId = testUser.Id,
+            PermissionSetId = ps.Id
+        );
+        insert psa;
+
+        System.runAs(testUser) {
         List<Ticket__c> tickets = new List<Ticket__c>{
             new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-1'),
             new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-2'),
@@ -40,10 +62,15 @@ private class JiraAttachmentSyncBatchTest {
             SyncStatusPk__c = 'Success'
         );
     }
+    }
 
     // == Test Case 1: Success path and duplicate skipping ==
     @isTest
     static void testSuccessAndSkipDuplicate() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
         
         HttpResponse issueRes = new HttpResponse();
@@ -83,11 +110,16 @@ private class JiraAttachmentSyncBatchTest {
 
         //System.assertEquals(1, links.size(), 'A ContentDocumentLink should have been created for the ticket.');
         //System.assertEquals(ticket.Id, links[0].LinkedEntityId, 'File was not linked to the correct ticket.');
+        }
     }
 
     // == Test Case 2: Handles API failure when fetching issue details ==
     @isTest
     static void testIssueApiFailure() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
         HttpResponse errorRes = new HttpResponse();
         errorRes.setStatusCode(500);
@@ -101,11 +133,16 @@ private class JiraAttachmentSyncBatchTest {
         
         //System.assertEquals(0, [SELECT COUNT() FROM ContentVersion], 'No files should be created on API failure.');
         //System.assertEquals(1, [SELECT COUNT() FROM Attachment_Sync_Log__c], 'No new logs should be created on API failure.');
+        }
     }
 
     // == Test Case 3: Handles failure during file content download ==
     @isTest
     static void testFileDownloadFailure() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
         
         HttpResponse issueRes = new HttpResponse();
@@ -122,6 +159,7 @@ private class JiraAttachmentSyncBatchTest {
         Test.setMock(HttpCalloutMock.class, new MultiResponseMock(responseMap));
         Database.executeBatch(new JiraAttachmentSyncBatch());
         Test.stopTest();
+        }
         
         //System.assertEquals(0, [SELECT COUNT() FROM ContentVersion], 'No files should be created on download failure.');
         //System.assertEquals(1, [SELECT COUNT() FROM Attachment_Sync_Log__c], 'No new logs should be created on download failure.');
@@ -130,6 +168,10 @@ private class JiraAttachmentSyncBatchTest {
     // == Test Case 4: Handles case where there are no attachments to sync ==
     @isTest
     static void testNoAttachmentsInResponse() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
         HttpResponse noAttachmentRes = new HttpResponse();
         noAttachmentRes.setStatusCode(200);
@@ -143,11 +185,16 @@ private class JiraAttachmentSyncBatchTest {
 
         //System.assertEquals(0, [SELECT COUNT() FROM ContentVersion], 'No files should be created for empty attachment list.');
         //System.assertEquals(1, [SELECT COUNT() FROM Attachment_Sync_Log__c], 'No new logs should be created.');
+        }
     }
 
     // == Test Case 5: Verifies the Schedulable interface implementation ==
     @isTest
     static void testSchedulableInterface() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Test.startTest();
         (new JiraAttachmentSyncBatch()).execute(null);
         Test.stopTest();
@@ -155,4 +202,5 @@ private class JiraAttachmentSyncBatchTest {
         List<AsyncApexJob> jobs = [SELECT Id FROM AsyncApexJob WHERE JobType = 'BatchApex' AND ApexClass.Name = 'JiraAttachmentSyncBatch'];
         //System.assertEquals(1, jobs.size(), 'Schedulable execute method should have enqueued one batch job.');
     }
+}
 }

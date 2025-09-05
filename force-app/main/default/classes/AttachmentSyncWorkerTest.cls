@@ -15,14 +15,41 @@ private class AttachmentSyncWorkerTest {
     // Use @testSetup to create common data for all test methods.
     @testSetup
     static void setup() {
-        // Create a test ticket record.
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            Alias = 'testu',
+            Email = 'testuser.sync@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'Testing',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+        );
+        insert testUser;
+
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSetAssignment psa = new PermissionSetAssignment(
+            AssigneeId = testUser.Id,
+            PermissionSetId = ps.Id
+        );
+        insert psa;
+        
+
+        System.runAs(testUser) {
         TicketTriggerHandler.triggerDisabled = true;
         insert new Ticket__c(BriefDescriptionTxt__c = 'Test Ticket for Attachments');
         TicketTriggerHandler.triggerDisabled = false;
+        }
     }
 
     @isTest
     static void testSync_TicketWithAttachments() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE: Find the test ticket and attach a file to it.
         Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Test Ticket for Attachments' LIMIT 1];
 
@@ -51,13 +78,17 @@ private class AttachmentSyncWorkerTest {
         // ACT: Enqueue the job with the ticket's ID.
         System.enqueueJob(new AttachmentSyncWorker(new Set<Id>{ ticket.Id }));
         Test.stopTest();
-
+        }
         // ASSERT: Verify that a callout was attempted. This confirms the sync service was called.
         //System.assertEquals(1, Limits.getCallouts(), 'A callout should be made to sync the attachment.');
     }
 
     @isTest
     static void testSync_TicketWithoutAttachments() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         // ARRANGE: Find the test ticket (it has no attachments by default).
         Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Test Ticket for Attachments' LIMIT 1];
 
@@ -67,7 +98,7 @@ private class AttachmentSyncWorkerTest {
         // ACT: Enqueue the job.
         System.enqueueJob(new AttachmentSyncWorker(new Set<Id>{ ticket.Id }));
         Test.stopTest();
-
+        }
         // ASSERT: Verify that NO callout was made, since there were no files to sync.
        // System.assertEquals(0, Limits.getCallouts(), 'No callout should be made for a ticket with no attachments.');
     }

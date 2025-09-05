@@ -18,6 +18,7 @@
     <testClassName>JiraCommentUpdateQueueableTest</testClassName>
     <testClassName>JiraFieldMappingUtilTest</testClassName>
     <testClassName>JiraIssueHandlerTest</testClassName>
+    <testClassName>JiraSyncWorkerTest</testClassName>
     <testClassName>JiraToSFSyncBatchTest</testClassName>
     <testClassName>JiraWebhookApiTest</testClassName>
     <testClassName>JiraWebhookConfigServiceTest</testClassName>
@@ -27,6 +28,7 @@
     <testClassName>MyProfilePageControllerTest</testClassName>
     <testClassName>SiteLoginControllerTest</testClassName>
     <testClassName>SiteRegisterControllerTest</testClassName>
+    <testClassName>Ticket_JiraSyncTest</testClassName>
     <testClassName>TicketControllerTest</testClassName>
     <testClassName>TicketETAServiceTest</testClassName>
     <testClassName>TicketTriggerHandlerTest</testClassName>
