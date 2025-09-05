@@ -1,8 +1,8 @@
 import { LightningElement, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getSettings from '@salesforce/apex/DH_DeliveryHubSettingsController.getSettings';
-import saveOpenAISettings from '@salesforce/apex/DH_DeliveryHubSettingsController.saveOpenAISettings';
-import testOpenAIConnection from '@salesforce/apex/DH_DeliveryHubSettingsController.testOpenAIConnection';
+import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
+import saveOpenAISettings from '@salesforce/apex/DeliveryHubSettingsController.saveOpenAISettings';
+import testOpenAIConnection from '@salesforce/apex/DeliveryHubSettingsController.testOpenAIConnection';
 
 export default class OpenAISettingCard extends LightningElement {
     @track openaiApiKey = '';

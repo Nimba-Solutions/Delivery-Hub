@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Hub - Resources</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .resource-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            transition: transform 0.2s ease;
+        }
+        .resource-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .resource-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .resource-description {
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-secondary {
+            background: #95a5a6;
+        }
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Delivery Hub - Resources</h1>
+        <p>Welcome to the Delivery Hub resource center. Here you'll find helpful tools and documentation for Salesforce administration and development.</p>
+        
+        <h2>📚 Study Materials</h2>
+        
+        <div class="resource-card">
+            <div class="resource-title">Salesforce Admin "Nova" Cheat Sheet</div>
+            <div class="resource-description">
+                Comprehensive exam preparation guide covering all key Salesforce Administration topics including security, automation, data management, and more. Perfect for certification prep or quick reference.
+            </div>
+            <a href="sf_admin_cheat_sheet.html" class="btn">View Cheat Sheet</a>
+        </div>
+        
+        <h2>🔧 Development Tools</h2>
+        
+        <div class="resource-card">
+            <div class="resource-title">Release Diff Report</div>
+            <div class="resource-description">
+                Latest release comparison report showing changes between versions. Useful for tracking deployment progress and understanding what's new.
+            </div>
+            <a href="test_report.html" class="btn btn-secondary">View Report</a>
+        </div>
+        
+        <h2>📖 Documentation</h2>
+        
+        <div class="resource-card">
+            <div class="resource-title">Project README</div>
+            <div class="resource-description">
+                Main project documentation with setup instructions, development guidelines, and project overview.
+            </div>
+            <a href="https://github.com/Nimba-Solutions/Delivery-Hub" class="btn btn-secondary">View on GitHub</a>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 Nimba Solutions - Delivery Hub Project</p>
+            <p>Last updated: <span id="lastUpdated"></span></p>
+        </div>
+    </div>
+    
+    <script>
+        // Set last updated date
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
+    </script>
+</body>
+</html>

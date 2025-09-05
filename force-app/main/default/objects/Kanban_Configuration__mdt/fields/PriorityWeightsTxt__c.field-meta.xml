@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PriorityWeightsTxt__c</fullName>
+    <description>A JSON string mapping PriorityPk__c values to a numerical weight (lower is better). Example: {"High": 1, "Medium": 2, "Low": 3}</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Priority Weights</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
