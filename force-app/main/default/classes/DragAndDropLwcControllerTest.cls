@@ -168,4 +168,12 @@ public class DragAndDropLwcControllerTest {
        // System.assertEquals(ticketToFind.Id, results[0].Id, 'The correct ticket should be found.');
         }
     }
+    
+    @isTest
+    static void testTest() {
+        Test.startTest();
+        DragAndDropLwcController.test();
+        Test.stopTest();
+        // No assertions needed; just ensures no exceptions are thrown
+    }
 }
