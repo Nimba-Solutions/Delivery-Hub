@@ -1,0 +1,42 @@
+<template>
+    <div class="settings-container">
+        <!-- Header -->
+        <div class="slds-page-header slds-page-header_joined">
+            <div class="slds-page-header__row">
+                <div class="slds-page-header__col-title">
+                    <div class="slds-media">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="utility:settings" size="large"></lightning-icon>
+                        </div>
+                        <div class="slds-media__body">
+                            <h1 class="slds-page-header__title slds-p-right_x-small">Application Settings</h1>
+                            <p class="slds-text-body_small">Configure general settings, AI features, and integrations.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <lightning-card>
+            <lightning-tabset variant="scoped">
+                <!-- <lightning-tab label="General">
+                    <c-kanban-general-settings settings={currentSettings} onsettingschange={handleSettingsChange}></c-kanban-general-settings>
+                </lightning-tab>
+                <lightning-tab label="AI Features">
+                    <c-kanban-ai-features-settings settings={currentSettings} onsettingschange={handleSettingsChange}></c-kanban-ai-features-settings>
+                </lightning-tab> -->
+                <lightning-tab label="OpenAI">
+                    <c-kanban-open-ai-settings settings={currentSettings} onsettingschange={handleSettingsChange}></c-kanban-open-ai-settings>
+                </lightning-tab>
+                <!-- <lightning-tab label="JIRA">
+                    <c-kanban-jira-settings settings={currentSettings} onsettingschange={handleSettingsChange}></c-kanban-jira-settings>
+                </lightning-tab> -->
+            </lightning-tabset>
+
+            <div slot="footer" class="slds-text-align_right">
+                <lightning-button label="Save All Settings" variant="brand" onclick={handleSave}></lightning-button>
+            </div>
+        </lightning-card>
+    </div>
+</template>
