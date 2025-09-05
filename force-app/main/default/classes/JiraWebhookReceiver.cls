@@ -231,6 +231,7 @@ global without sharing class JiraWebhookReceiver {
      * @param jiraIssueId The Jira issue ID for logging
      * @return Boolean indicating if any fields have changed
      */
+    @testVisible
     private static Boolean hasTicketFieldsChanged(Ticket__c existingTicket, Ticket__c inMemoryTicket, String jiraIssueId) {
         // Compare the fields. If any field is different, the content has changed.
         if (existingTicket.BriefDescriptionTxt__c != inMemoryTicket.BriefDescriptionTxt__c) {
@@ -263,7 +264,7 @@ global without sharing class JiraWebhookReceiver {
         System.debug(LoggingLevel.DEBUG, 'Content check for issue ' + jiraIssueId + ' found no changes. Ignoring update.');
         return false;
     }
-
+	@testVisible
     private static Boolean hasContentChangedForComment(Map<String, Object> payload) {
     Map<String, Object> commentData = (Map<String, Object>)payload.get('comment');
     if (commentData == null || !commentData.containsKey('id')) {
@@ -347,6 +348,7 @@ global without sharing class JiraWebhookReceiver {
      * @param req The incoming REST request
      * @return Boolean indicating if authentication is valid
      */
+    @testVisible
     private static Boolean validateAuthentication(RestRequest req) {
         try {
             String providedSecret = req.headers.get(AUTH_HEADER);
@@ -382,6 +384,7 @@ global without sharing class JiraWebhookReceiver {
      * @description Retrieves the webhook shared secret from configuration
      * @return String The configured webhook secret
      */
+    @testVisible
     private static String getWebhookSecret() {
         try {
             // Try to get from Delivery Hub Settings first

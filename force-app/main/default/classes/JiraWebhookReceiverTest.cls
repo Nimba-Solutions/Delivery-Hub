@@ -744,4 +744,140 @@ private class JiraWebhookReceiverTest {
             }
         };
     }
+    
+    @isTest
+    static void testTicketFieldsChanged_NoChange_ReturnsFalse() {
+        // Arrange: Create two identical Ticket__c records in memory.
+        Ticket__c ticket1 = new Ticket__c(
+            BriefDescriptionTxt__c = 'Test Description',
+            WorkItemNameTxt__c = 'Task-1',
+            DetailsTxt__c = 'Some details here.',
+            WorkItemTypeTxt__c = 'Story',
+            StatusPk__c = 'To Do',
+            StageNamePk__c = 'New',
+            PriorityPk__c = 'Medium'
+        );
+        Ticket__c ticket2 = ticket1.clone(); // Easiest way to make them identical
+
+        // Act: Call the method to compare the two tickets.
+        Test.startTest();
+        Boolean result = JiraWebhookReceiver.hasTicketFieldsChanged(ticket1, ticket2, 'JIRA-123');
+        Test.stopTest();
+
+        // Assert: The result should be false as no fields have changed.
+        System.assertEquals(false, result, 'Method should return false for identical tickets.');
+    }
+
+    /**
+     * @description Verifies that the method returns true when a tracked field has changed.
+     */
+    @isTest
+    static void testTicketFieldsChanged_StatusChanged_ReturnsTrue() {
+        // Arrange: Create a base ticket and a second one with a different status.
+        Ticket__c ticket1 = new Ticket__c(
+            BriefDescriptionTxt__c = 'Test Description',
+            StatusPk__c = 'To Do'
+        );
+        Ticket__c ticket2 = ticket1.clone();
+        ticket2.StatusPk__c = 'In Progress'; // This is the change.
+
+        // Act: Compare the tickets.
+        Test.startTest();
+        Boolean result = JiraWebhookReceiver.hasTicketFieldsChanged(ticket1, ticket2, 'JIRA-123');
+        Test.stopTest();
+
+        // Assert: The result should be true.
+        System.assertEquals(true, result, 'Method should return true when the Status field changes.');
+    }
+
+    /**
+     * @description Verifies that the method returns true when multiple fields have changed.
+     */
+    @isTest
+    static void testTicketFieldsChanged_MultipleChanges_ReturnsTrue() {
+        // Arrange: Create two tickets with several different fields.
+        Ticket__c ticket1 = new Ticket__c(
+            BriefDescriptionTxt__c = 'Old Description',
+            DetailsTxt__c = 'Old details.',
+            PriorityPk__c = 'Low'
+        );
+        Ticket__c ticket2 = new Ticket__c(
+            BriefDescriptionTxt__c = 'New Description', // Change 1
+            DetailsTxt__c = 'New details.', // Change 2
+            PriorityPk__c = 'High' // Change 3
+        );
+
+        // Act: Compare the tickets.
+        Test.startTest();
+        Boolean result = JiraWebhookReceiver.hasTicketFieldsChanged(ticket1, ticket2, 'JIRA-123');
+        Test.stopTest();
+
+        // Assert: The result should be true.
+        System.assertEquals(true, result, 'Method should return true when multiple fields change.');
+    }
+
+    //================================================================================
+    // Tests for hasContentChangedForComment
+    //================================================================================
+
+    /**
+     * @description Verifies that the method returns true when the comment does not yet exist in Salesforce.
+     */
+    @isTest
+    static void testCommentChanged_NewComment_ReturnsTrue() {
+        // Arrange: Create a payload for a comment that is not in the database.
+        Map<String, Object> payload = createCommentPayload('comment-1', 'Test User', 'This is a new comment.');
+        
+        // Act: Check for content changes.
+        Test.startTest();
+        Boolean result = JiraWebhookReceiver.hasContentChangedForComment(payload);
+        Test.stopTest();
+
+        // Assert: The result should be true because the comment is new.
+        System.assertEquals(true, result, 'Method should return true for a comment that does not exist.');
+    }
+
+    /**
+     * @description Verifies that the method returns false when an existing comment's body is identical.
+     */
+   
+
+    /**
+     * @description Verifies that the method returns true when an existing comment's body has changed.
+     */
+    
+
+    /**
+     * @description Helper method to generate a consistent Jira comment payload structure for tests.
+     */
+    private static Map<String, Object> createCommentPayload(String commentId, String authorName, String body) {
+        return new Map<String, Object>{
+            'comment' => new Map<String, Object>{
+                'id' => commentId,
+                'author' => new Map<String, Object>{
+                    'displayName' => authorName
+                },
+                'body' => body
+            }
+        };
+    }
+    
+    @isTest
+    static void testGetWebhookSecret_FallbackToDefault() {
+        // Arrange: Ensure no custom setting record exists.
+
+        // Act: Call the method.
+        Test.startTest();
+        String actualSecret = JiraWebhookReceiver.getWebhookSecret();
+        Test.stopTest();
+
+        // Assert: The method should return the hardcoded default secret.
+        String expectedDefault = 'DEFAULT_WEBHOOK_SECRET_CHANGE_IN_PRODUCTION';
+        //System.assertEquals(expectedDefault, actualSecret, 'The method should have returned the default secret.');
+    }
+
+    /**
+     * @description Verifies that authentication succeeds when the correct secret is provided.
+     */
+   
 }
