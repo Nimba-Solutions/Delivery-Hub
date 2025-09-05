@@ -28,6 +28,28 @@ public class JiraSyncWorkerTest {
 
     @testSetup
     static void setup() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            Alias = 'testu',
+            Email = 'testuser.sync@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'Testing',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+        );
+        insert testUser;
+
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSetAssignment psa = new PermissionSetAssignment(
+            AssigneeId = testUser.Id,
+            PermissionSetId = ps.Id
+        );
+        insert psa;
+         
+        System.runAs(testUser) {
         List<Ticket__c> tickets = new List<Ticket__c>();
         for (Integer i = 0; i < 2; i++) {
             tickets.add(new Ticket__c(
@@ -37,10 +59,15 @@ public class JiraSyncWorkerTest {
             ));
         }
         insert tickets;
+        }
     }
 
     @isTest
     static void testCreateJiraIssues() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Test.setMock(HttpCalloutMock.class, new MockJiraHttpResponseGenerator());
 
         List<Ticket__c> tickets = [SELECT Id FROM Ticket__c];
@@ -55,12 +82,17 @@ public class JiraSyncWorkerTest {
         Test.stopTest();
 
         List<Ticket__c> updated = [SELECT JiraTicketKeyTxt__c, JiraSyncStatusTxt__c FROM Ticket__c];
+        }
         //System.assertEquals('Created', updated[0].JiraSyncStatusTxt__c);
         //System.assertEquals(true, updated[0].JiraTicketKeyTxt__c != null);
     }
 
     @isTest
     static void testUpdateJiraIssues() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Test.setMock(HttpCalloutMock.class, new MockJiraHttpResponseGenerator());
 
         List<Ticket__c> tickets = [SELECT Id FROM Ticket__c];
@@ -84,25 +116,36 @@ public class JiraSyncWorkerTest {
         Test.stopTest();
 
         List<Ticket__c> updated = [SELECT JiraSyncStatusTxt__c FROM Ticket__c];
+        }
         //System.assertEquals(true, updated[0].JiraSyncStatusTxt__c == null || updated[0].JiraSyncStatusTxt__c.contains('Transitioned'));
     }
 
     @isTest
     static void testEmptyIds() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Test.startTest();
         TicketTriggerHandler.triggerDisabled = true;
         JiraSyncWorker worker = new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, new Set<Id>());
         TicketTriggerHandler.triggerDisabled = false;
         System.enqueueJob(worker);
         Test.stopTest();
+        }
         // No assertions needed; just ensures no exceptions are thrown
     }
     
     @isTest
     static void testTest() {
+         
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
         Test.startTest();
         JiraSyncWorker.test();
         Test.stopTest();
+        }
         // No assertions needed; just ensures no exceptions are thrown
     }
     
