@@ -14,7 +14,7 @@ on:
 jobs:
   feature-test:
     if: startsWith(github.head_ref, 'feature/')
-    uses: nimba-actions/standard-workflows/.github/workflows/feature-unlocked.yml@main
+    uses: nimba-actions/standard-workflows/.github/workflows/feature-namespaced.yml@main
     secrets:
       cci-token: ${{ secrets.CUMULUSCI_TOKEN }}
       dev-hub-auth-url: ${{ secrets.DEV_HUB_AUTH_URL }}
