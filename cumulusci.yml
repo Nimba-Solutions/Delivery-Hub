@@ -87,11 +87,27 @@ tasks:
         options:
             namespace: delivery
 
+    deploy_unmanaged_test_suite:
+        class_path: cumulusci.tasks.salesforce.Deploy
+        options:
+            path: unpackaged/config/unmanaged/testSuites
+
+    deploy_namespaced_test_suite:
+        class_path: cumulusci.tasks.salesforce.Deploy
+        options:
+            path: unpackaged/config/namespaced/testSuites
+            namespace_inject: delivery
 flows:
     config_dev:
         steps:
             3.0:
                 task: assign_permission_set_groups
+            3.1:
+                task: deploy_unmanaged_test_suite
+                when: not org_config.namespaced
+            3.2:
+                task: deploy_namespaced_test_suite
+                when: org_config.namespaced
 
     config_qa:
         steps:
