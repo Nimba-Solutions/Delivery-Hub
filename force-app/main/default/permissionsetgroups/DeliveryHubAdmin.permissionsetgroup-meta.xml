@@ -3,8 +3,8 @@
     <description>This permission set grants full administrative access to all configuration and management capabilities within the Delivery Hub package.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub Admin</label>
-    <permissionSets>DeliveryHubAdmin_App</permissionSets>
-    <permissionSets>DeliveryHubApp</permissionSets>
-    <permissionSets>Jira_Integration</permissionSets>
+    <permissionSets>%%%NAMESPACE%%%DeliveryHubAdmin_App</permissionSets>
+    <permissionSets>%%%NAMESPACE%%%DeliveryHubApp</permissionSets>
+    <permissionSets>%%%NAMESPACE%%%Jira_Integration</permissionSets>
     <status>Updated</status>
 </PermissionSetGroup>
