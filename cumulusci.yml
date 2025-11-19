@@ -86,6 +86,7 @@ tasks:
     create_package_version:
         options:
             namespace: delivery
+            skip_validation: False
 
     deploy_unmanaged_test_suite:
         class_path: cumulusci.tasks.salesforce.Deploy
