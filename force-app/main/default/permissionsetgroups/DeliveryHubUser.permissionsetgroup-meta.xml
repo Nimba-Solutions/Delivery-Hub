@@ -3,6 +3,6 @@
     <description>This permission set provides standard user-level access to all basic functionality within the Delivery Hub package.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub User</label>
-    <permissionSets>DeliveryHubApp</permissionSets>
+    <permissionSets>%%%NAMESPACED_ORG%%%DeliveryHubApp</permissionSets>
     <status>Updated</status>
 </PermissionSetGroup>
