@@ -64,6 +64,14 @@ tasks:
                       patterns:
                           - find: "%%%CURRENT_USER%%%"
                             inject_username: True
+    deploy_post:
+        options:
+            transforms:
+                - transform: find_replace
+                  options:
+                      patterns:
+                          - find: "%%%CURRENT_USER%%%"
+                            inject_username: True
 
     assign_permission_set_groups:
         class_path: tasks.permsets.AssignPermissionSetsWithFindReplace
