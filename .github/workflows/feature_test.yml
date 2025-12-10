@@ -16,8 +16,8 @@ jobs:
     if: startsWith(github.head_ref, 'feature/')
     uses: nimba-actions/standard-workflows/.github/workflows/feature-namespaced.yml@main
     secrets:
-      cci-token: ${{ secrets.CUMULUSCI_TOKEN }}
       dev-hub-auth-url: ${{ secrets.DEV_HUB_AUTH_URL }}
+      # cci-token: ${{ secrets.CUMULUSCI_TOKEN }}
     with:
       cumulusci-version: "3.90.0"
       sfdx-version: "7.209.6"
