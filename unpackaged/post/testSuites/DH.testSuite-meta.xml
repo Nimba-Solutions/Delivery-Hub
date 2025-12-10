@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApexTestSuite xmlns="http://soap.sforce.com/2006/04/metadata">
+    <testClassName>%%%NAMESPACE_DOT%%%AttachmentSyncServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%AttachmentSyncWorkerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%ChangePasswordControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSettingsControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DragAndDropLwcControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%ForgotPasswordControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%HtmlToAdfConverterTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraAttachmentHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraAttachmentProcessorTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraAttachmentSyncBatchTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraCalloutMock</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraCalloutTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraCommentHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraCommentSyncHelperTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraCommentUpdateQueueableTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraFieldMappingUtilTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraIssueHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraSyncWorkerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraToSFSyncBatchTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraWebhookApiTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraWebhookConfigServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraWebhookProcessorTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%JiraWebhookReceiverTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%KanbanSettingsControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%MyProfilePageControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%SiteLoginControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%SiteRegisterControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%Ticket_JiraSyncTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%TicketControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%TicketETAServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%TicketTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%UnsetSyncFlagQueueableTest</testClassName>
+</ApexTestSuite>
