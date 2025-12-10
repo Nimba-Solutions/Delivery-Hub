@@ -59,7 +59,7 @@ tasks:
     retrieve_changes:
         class_path: tasks.retrieve_changes.RetrieveChanges
         options:
-            preserve_tokens: "__PROJECT_NAME__,__PROJECT_LABEL__"
+            preserve_tokens: "%%%CURRENT_USER%%%"
     deploy:
         class_path: tasks.deploy.Deploy
         options:
@@ -67,48 +67,21 @@ tasks:
                 - transform: find_replace
                   options:
                       patterns:
-                          - find: "__PROJECT_NAME__"
-                            replace: $project_config.project__package__name
-                          - find: "__PROJECT_LABEL__"
-                            replace: $project_config.project__package__name_managed
+                          - find: "{{CURRENT_USER}}"
+                            inject_username: True
 
     assign_permission_set_groups:
         class_path: tasks.permsets.AssignPermissionSetsWithFindReplace
-        options:
-            api_names: __PROJECT_NAME__Admin
-            transforms:
-                - transform: find_replace
-                  options:
-                      patterns:
-                          - find: "__PROJECT_NAME__"
-                            replace: $project_config.project__package__name
 
     create_package_version:
         options:
             namespace: delivery
     #        skip_validation: False
-
-    deploy_unmanaged_test_suite:
-        class_path: cumulusci.tasks.salesforce.Deploy
-        options:
-            path: unpackaged/config/unmanaged/testSuites
-
-    deploy_namespaced_test_suite:
-        class_path: cumulusci.tasks.salesforce.Deploy
-        options:
-            path: unpackaged/config/namespaced/testSuites
-            namespace_inject: delivery
 flows:
     config_dev:
         steps:
             3.0:
                 task: assign_permission_set_groups
-            3.1:
-                task: deploy_unmanaged_test_suite
-                when: not org_config.namespaced
-            3.2:
-                task: deploy_namespaced_test_suite
-                when: org_config.namespaced
 
     config_qa:
         steps:
