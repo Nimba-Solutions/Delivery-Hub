@@ -82,9 +82,9 @@ public class JiraFieldMappingUtil {
         // Map summary to BriefDescriptionTxt__c with length validation
         String summary = (String)fields.get('summary');
         if (String.isNotBlank(summary)) {
-            ticket.BriefDescriptionTxt__c = truncateToFieldLength(summary, 'BriefDescriptionTxt__c');
+            ticket.BriefDescriptionTxt__c = truncateToFieldLength(summary, '%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c');
             // Also map summary to WorkItemNameTxt__c (truncated to fit)
-            ticket.WorkItemNameTxt__c = truncateToFieldLength(summary, 'WorkItemNameTxt__c');
+            ticket.WorkItemNameTxt__c = truncateToFieldLength(summary, '%%%NAMESPACED_ORG%%%WorkItemNameTxt__c');
         }
         
         // Map description to DetailsTxt__c with HTML conversion
@@ -92,7 +92,7 @@ public class JiraFieldMappingUtil {
         if (descriptionObj != null) {
             String description = convertJiraDescriptionToHtml(descriptionObj);
             if (String.isNotBlank(description)) {
-                ticket.DetailsTxt__c = truncateToFieldLength(description, 'DetailsTxt__c');
+                ticket.DetailsTxt__c = truncateToFieldLength(description, '%%%NAMESPACED_ORG%%%DetailsTxt__c');
             }
         }
         
@@ -101,7 +101,7 @@ public class JiraFieldMappingUtil {
         if (issueType != null) {
             String typeName = (String)issueType.get('name');
             if (String.isNotBlank(typeName)) {
-                ticket.WorkItemTypeTxt__c = truncateToFieldLength(typeName, 'WorkItemTypeTxt__c');
+                ticket.WorkItemTypeTxt__c = truncateToFieldLength(typeName, '%%%NAMESPACED_ORG%%%WorkItemTypeTxt__c');
             }
         }
     }

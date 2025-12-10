@@ -4,14 +4,11 @@ project:
     package:
         name: DeliveryHub
         name_managed: Delivery Hub
+        namespace: delivery
         api_version: "61.0"
-    dependencies:
+    # dependencies:
     #    - github: https://github.com/Nimba-Solutions/Work-Item-Composer
     #      unmanaged: true
-    #    - version_id: 04tQl0000008iGnIAI
-    #    - version_id: 04tQl0000008iIPIAY # https://github.com/jawills/jira-sf-integration/tree/master
-    #     - version_id: 04t5G000004fz7mQAA # FlowScreenComponentsBasePack Version: 3.3.4
-    #     - version_id: 04t5G0000043xu3QAA # https://unofficialsf.com/from-josh-dayment-improved-file-upload-in-flow-screens/
     git:
         default_branch: "main"
         prefix_feature: "feature/"
@@ -19,6 +16,15 @@ project:
         prefix_release: "release/"
     source_format: sfdx
 
+orgs:
+    # This is provided for convenience.
+    # The majority of development should be done in a NON-namespaced scratch org.
+    # Use this sparingly - if at all.
+    scratch:
+        dev_namespaced:
+            config_file: orgs/dev.json
+            days: 30
+            namespaced: "true"
 tasks:
     robot:
         options:
@@ -31,8 +37,12 @@ tasks:
             path: robot/Standard-Unlocked/tests
             output: robot/Standard-Unlocked/doc/Standard-Unlocked_tests.html
 
+    # Use run_test_suite instead of the standard 'run_tests' task to prevent running 3rd party tests,
+    # even if they share the default namespace with us (*cough* NebulaLogger *cough*)
     run_tests:
+        class_path: cumulusci.tasks.apex.testrunner.RunApexTests
         options:
+            test_suite_names: DH # only running the apex tests included in this test suite
             required_org_code_coverage_percent: 75
 
     # CumulusCI ships with both `retrieve_changes`, `permsets` and `deploy` tasks out of the box, '
@@ -45,7 +55,7 @@ tasks:
     retrieve_changes:
         class_path: tasks.retrieve_changes.RetrieveChanges
         options:
-            preserve_tokens: "__PROJECT_NAME__,__PROJECT_LABEL__"
+            preserve_tokens: "%%%CURRENT_USER%%%"
     deploy:
         class_path: tasks.deploy.Deploy
         options:
@@ -53,22 +63,16 @@ tasks:
                 - transform: find_replace
                   options:
                       patterns:
-                          - find: "__PROJECT_NAME__"
-                            replace: $project_config.project__package__name
-                          - find: "__PROJECT_LABEL__"
-                            replace: $project_config.project__package__name_managed
+                          - find: "%%%CURRENT_USER%%%"
+                            inject_username: True
 
     assign_permission_set_groups:
         class_path: tasks.permsets.AssignPermissionSetsWithFindReplace
-        options:
-            api_names: __PROJECT_NAME__Admin
-            transforms:
-                - transform: find_replace
-                  options:
-                      patterns:
-                          - find: "__PROJECT_NAME__"
-                            replace: $project_config.project__package__name
 
+    create_package_version:
+        options:
+            namespace: delivery
+    #        skip_validation: False
 flows:
     config_dev:
         steps:
