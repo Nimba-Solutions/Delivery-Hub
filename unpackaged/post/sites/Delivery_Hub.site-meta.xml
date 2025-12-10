@@ -17,14 +17,14 @@
     <enableAuraRequests>true</enableAuraRequests>
     <fileNotFoundPage>FileNotFound</fileNotFoundPage>
     <genericErrorPage>Exception</genericErrorPage>
-    <inMaintenancePage>InMaintenance</inMaintenancePage>
-    <inactiveIndexPage>InMaintenance</inactiveIndexPage>
-    <indexPage>InMaintenance</indexPage>
+    <inMaintenancePage>%%%NAMESPACED_ORG%%%InMaintenance</inMaintenancePage>
+    <inactiveIndexPage>%%%NAMESPACED_ORG%%%InMaintenance</inactiveIndexPage>
+    <indexPage>%%%NAMESPACED_ORG%%%InMaintenance</indexPage>
     <masterLabel>Delivery Hub</masterLabel>
     <redirectToCustomDomain>true</redirectToCustomDomain>
     <referrerPolicyOriginWhenCrossOrigin>true</referrerPolicyOriginWhenCrossOrigin>
-    <siteAdmin>test-mfs3zwgke2cy@example.com</siteAdmin>
-    <siteGuestRecordDefaultOwner>test-mfs3zwgke2cy@example.com</siteGuestRecordDefaultOwner>
+    <siteAdmin>%%%CURRENT_USER%%%</siteAdmin>
+    <siteGuestRecordDefaultOwner>%%%CURRENT_USER%%%</siteGuestRecordDefaultOwner>
     <siteTemplate>SiteTemplate</siteTemplate>
     <siteType>Visualforce</siteType>
 </CustomSite>
