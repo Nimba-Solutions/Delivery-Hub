@@ -67,7 +67,7 @@ tasks:
                 - transform: find_replace
                   options:
                       patterns:
-                          - find: "{{CURRENT_USER}}"
+                          - find: "%%%CURRENT_USER%%%"
                             inject_username: True
 
     assign_permission_set_groups:
