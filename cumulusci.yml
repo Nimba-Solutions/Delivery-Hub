@@ -74,7 +74,10 @@ tasks:
                             inject_username: True
 
     assign_permission_set_groups:
-        class_path: tasks.permsets.AssignPermissionSetsWithFindReplace
+        description: Assign Delivery Hub Admin permission set group to the current user
+        class_path: cumulusci.tasks.salesforce.users.permsets.AssignPermissionSetGroups
+        options:
+            api_names: DeliveryHubAdmin
 
     create_package_version:
         options:
@@ -90,3 +93,21 @@ flows:
         steps:
             3.0:
                 task: assign_permission_set_groups
+
+plans:
+    install:
+        tier: primary
+        title: Install
+        slug: install
+        is_listed: True
+        preflight_message: "This will install and configure Delivery Hub in your org."
+        allowed_org_providers:
+            - devhub
+            - user
+        steps:
+            1:
+                flow: install_prod
+            2:
+                task: assign_permission_set_groups
+                ui_options:
+                    name: Assign the "DeliveryHubAdmin" Permission Set Group to the current user.
