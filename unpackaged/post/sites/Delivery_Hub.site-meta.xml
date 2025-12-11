@@ -17,9 +17,9 @@
     <enableAuraRequests>true</enableAuraRequests>
     <fileNotFoundPage>FileNotFound</fileNotFoundPage>
     <genericErrorPage>Exception</genericErrorPage>
-    <inMaintenancePage>%%%NAMESPACED_ORG%%%InMaintenance</inMaintenancePage>
-    <inactiveIndexPage>%%%NAMESPACED_ORG%%%InMaintenance</inactiveIndexPage>
-    <indexPage>%%%NAMESPACED_ORG%%%InMaintenance</indexPage>
+    <inMaintenancePage>%%%NAMESPACE%%%InMaintenance</inMaintenancePage>
+    <inactiveIndexPage>%%%NAMESPACE%%%InMaintenance</inactiveIndexPage>
+    <indexPage>%%%NAMESPACE%%%InMaintenance</indexPage>
     <masterLabel>Delivery Hub</masterLabel>
     <redirectToCustomDomain>true</redirectToCustomDomain>
     <referrerPolicyOriginWhenCrossOrigin>true</referrerPolicyOriginWhenCrossOrigin>
