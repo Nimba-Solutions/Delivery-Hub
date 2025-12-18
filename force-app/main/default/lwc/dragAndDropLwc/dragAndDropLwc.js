@@ -2,18 +2,18 @@ import { LightningElement, track, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import { NavigationMixin } from "lightning/navigation";
 import { updateRecord } from "lightning/uiRecordApi";
-import getTickets from "@salesforce/apex/TicketController.getTickets";
-import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
-import getAiEnhancedTicketDetails from "@salesforce/apex/TicketController.getAiEnhancedTicketDetails";
+import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getTickets";
+import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
+import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getAiEnhancedTicketDetails";
 import STAGE_FIELD from "@salesforce/schema/Ticket__c.StageNamePk__c";
 import ID_FIELD from "@salesforce/schema/Ticket__c.Id";
-import getTicketETAsWithPriority from "@salesforce/apex/TicketETAService.getTicketETAsWithPriority";
-import updateTicketStage from "@salesforce/apex/DragAndDropLwcController.updateTicketStage";
-import updateTicketSortOrder from "@salesforce/apex/DragAndDropLwcController.updateTicketSortOrder";
-import getRequiredFieldsForStage from '@salesforce/apex/TicketController.getRequiredFieldsForStage';
-import searchForPotentialBlockers from '@salesforce/apex/DragAndDropLwcController.searchForPotentialBlockers';
-import createDependency from '@salesforce/apex/DragAndDropLwcController.createDependency';
-import removeDependency from '@salesforce/apex/DragAndDropLwcController.removeDependency';
+import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketETAService.getTicketETAsWithPriority";
+import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketStage";
+import updateTicketSortOrder from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketSortOrder";
+import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getRequiredFieldsForStage';
+import searchForPotentialBlockers from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.searchForPotentialBlockers';
+import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.createDependency';
+import removeDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.removeDependency';
 import { ShowToastEvent } from "lightning/platformShowToastEvent";import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
@@ -2000,4 +2000,5 @@ handleTransitionError(event) {
             // Handle error with a toast message
         }
     }
+
 }
