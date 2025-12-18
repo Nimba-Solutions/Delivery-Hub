@@ -79,7 +79,7 @@ public with sharing class JiraSyncWorker
     if (!updates.isEmpty()) update updates;
     if (!successfullyCreatedTicketIds.isEmpty()) {
         System.debug('Enqueuing attachment sync job for ' + successfullyCreatedTicketIds.size() + ' tickets.');
-        System.enqueueJob(new AttachmentSyncWorker(successfullyCreatedTicketIds));
+        //System.enqueueJob(new AttachmentSyncWorker(successfullyCreatedTicketIds));
     }
 }
 
