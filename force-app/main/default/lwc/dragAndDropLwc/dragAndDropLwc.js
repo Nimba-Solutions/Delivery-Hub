@@ -5,8 +5,8 @@ import { updateRecord } from "lightning/uiRecordApi";
 import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getTickets";
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
 import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getAiEnhancedTicketDetails";
-import STAGE_FIELD from "@salesforce/schema/Ticket__c.StageNamePk__c";
-import ID_FIELD from "@salesforce/schema/Ticket__c.Id";
+import STAGE_FIELD from "@salesforce/schema/%%%NAMESPACE%%%Ticket__c.%%%NAMESPACE%%%StageNamePk__c";
+import ID_FIELD from "@salesforce/schema/%%%NAMESPACE%%%Ticket__c.Id";
 import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketETAService.getTicketETAsWithPriority";
 import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketStage";
 import updateTicketSortOrder from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketSortOrder";
@@ -720,7 +720,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   openCreateModal() {
     // find current max SortOrderNumber__c and add 1
     const nums = (this.realRecords || [])
-      .map((r) => r.SortOrderNumber__c)
+      .map((r) => r.%%%NAMESPACE%%%SortOrderNumber__c)
       .filter((n) => n !== null && n !== undefined);
     this.nextSortOrder = nums.length ? Math.max(...nums) + 1 : 1;
 
@@ -730,10 +730,10 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   /* ---------- defaults for the create form ---------- */
   get createDefaults() {
     return {
-      StageNamePk__c: "Backlog",
-      SortOrderNumber__c: this.nextSortOrder,
-      PriorityPk__c: "Medium",
-      IsActiveBool__c: true,
+      %%%NAMESPACE%%%StageNamePk__c: "Backlog",
+      %%%NAMESPACE%%%SortOrderNumber__c: this.nextSortOrder,
+      %%%NAMESPACE%%%PriorityPk__c: "Medium",
+      %%%NAMESPACE%%%IsActiveBool__c: true,
     };
   }
 
@@ -861,7 +861,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
       // Step 2: Filter and map the tickets.
       const columnTickets = enriched
-        .filter((t) => (statusMap[colName] || []).includes(t.StageNamePk__c))
+        .filter((t) => (statusMap[colName] || []).includes(t.%%%NAMESPACE%%%StageNamePk__c))
         .filter((t) => {
           if (this.intentionFilter === "all") return true;
           return (
@@ -966,7 +966,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   get advanceOptions() {
     if (!this.selectedRecord) return [];
 
-    const currStage = this.selectedRecord.StageNamePk__c;
+    const currStage = this.selectedRecord.%%%NAMESPACE%%%StageNamePk__c;
     const persona = this.persona;
     const nextStages = this.transitionMap[currStage] || [];
 
@@ -1002,7 +1002,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   get backtrackOptions() {
     if (!this.selectedRecord) return [];
 
-    const currStage = this.selectedRecord.StageNamePk__c;
+    const currStage = this.selectedRecord.%%%NAMESPACE%%%StageNamePk__c;
     const persona = this.persona;
     let targets = [];
 
@@ -1143,7 +1143,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         type: "standard__recordPage",
         attributes: {
           recordId: id,
-          objectApiName: "Ticket__c",
+          objectApiName: "%%%NAMESPACE%%%Ticket__c",
           actionName: "view",
         },
       });
@@ -1273,7 +1273,7 @@ async handleAdvanceOption(e) {
       updateRecord({ fields })
         .then(() => {
           this.realRecords = this.realRecords.map((r) =>
-            r.Id === rec.Id ? { ...r, StageNamePk__c: newStage } : r
+            r.Id === rec.Id ? { ...r, %%%NAMESPACE%%%StageNamePk__c: newStage } : r
           );
         })
         .catch((error) => {
@@ -1565,11 +1565,11 @@ handleTransitionError(event) {
       ? columnTickets.find((t) => t.Id === nextSibling.dataset.id)
       : null;
 
-    const sortBefore = prevTicket ? prevTicket.SortOrderNumber__c : 0;
+    const sortBefore = prevTicket ? prevTicket.%%%NAMESPACE%%%SortOrderNumber__c : 0;
 
     if (nextTicket) {
       // Dropped between two cards
-      return (sortBefore + nextTicket.SortOrderNumber__c) / 2.0;
+      return (sortBefore + nextTicket.%%%NAMESPACE%%%SortOrderNumber__c) / 2.0;
     } else {
       // Dropped at the end of the list
       return sortBefore + 1; // Or a larger number like 1000 to be safe
@@ -1634,15 +1634,15 @@ handleTransitionError(event) {
 
       // Method 1: Try to get from tracked form field values
       titleValue = this.formFieldValues["BriefDescriptionTxt__c"] || "";
-      descriptionValue = this.formFieldValues["DetailsTxt__c"] || "";
+      descriptionValue = this.formFieldValues["%%%NAMESPACE%%%DetailsTxt__c"] || "";
 
       // Method 2: Try to get directly from input elements if Method 1 fails
       if (!titleValue || !descriptionValue) {
         const titleField = this.template.querySelector(
-          'lightning-input-field[field-name="BriefDescriptionTxt__c"]'
+          'lightning-input-field[field-name="%%%NAMESPACE%%%BriefDescriptionTxt__c"]'
         );
         const descriptionField = this.template.querySelector(
-          'lightning-input-field[field-name="DetailsTxt__c"]'
+          'lightning-input-field[field-name="%%%NAMESPACE%%%DetailsTxt__c"]'
         );
 
         if (titleField && !titleValue) {
@@ -2002,3 +2002,4 @@ handleTransitionError(event) {
     }
 
 }
+
