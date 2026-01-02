@@ -1438,6 +1438,7 @@ handleTransitionSuccess(event) {
     // The form automatically saved the record, now we just close the modal and refresh
     this.closeTransitionModal();
     this.refreshTickets();
+    console.log(event);
 }
 
 handleTransitionError(event) {
