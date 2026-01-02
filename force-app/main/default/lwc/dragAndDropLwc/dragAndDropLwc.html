@@ -89,9 +89,8 @@
                         <div class={col.bodyClasses}>
                             <template if:true={col.tickets.length}>
                                 <template for:each={col.tickets} for:item="ticket">
-                                    <!-- New Ticket Card -->
                                     <div key={ticket.Id} class={ticket.cardClasses} draggable="true" style={ticket.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={ticket.Id}>
-    
+                                        
                                         <template if:true={ticket.isHighPriority}>
                                             <div class="priority-indicator">
                                                 <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
@@ -129,10 +128,11 @@
                                             </template>
 
                                             <button class="ticket-action-button" title="Move Ticket" data-id={ticket.Id} onclick={handleCardClick}>
-                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small"></lightning-icon>
+                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
                                             </button>
+
                                             <button class="ticket-block-button" title="Manage Dependencies" data-id={ticket.Id} onclick={handleManageDependenciesClick}>
-                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small"></lightning-icon>
+                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Dependencies"></lightning-icon>
                                             </button>
 
                                             <template if:true={ticket.OwnerName}>
@@ -141,14 +141,15 @@
                                                     <span>{ticket.OwnerName}</span>
                                                 </div>
                                             </template>
+
                                             <template if:true={ticket.isCurrentlyBlocked}>
                                                 <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This ticket is blocked."></lightning-icon>
                                             </template>
                                         </div>
                                     </div>
-                                    
                                 </template>
                             </template>
+
                             <template if:false={col.tickets.length}>
                                 <div class="empty-column-placeholder">
                                     <div class="placeholder-icon"></div>
@@ -287,8 +288,8 @@
             <div class="modal-body" role="dialog">
                 <!-- Modal Header -->
                 <header class="modal-header">
-                    <h3>Move Side Quest: {selectedRecord.BriefDescriptionTxt__c}</h3>
-                    <p>Current Status: <strong>{selectedRecord.StageNamePk__c}</strong></p>
+                    <h3>Move Side Quest: {selectedRecord.%%%NAMESPACE%%%BriefDescriptionTxt__c}</h3>
+                    <p>Current Status: <strong>{selectedRecord.%%%NAMESPACE%%%StageNamePk__c}</strong></p>
                 </header>
 
                 <!-- Modal Content -->
@@ -351,7 +352,7 @@
             <!-- Modal Content -->
             <div class="slds-modal__content slds-p-around_medium">
                 <lightning-record-edit-form
-                    object-api-name="Ticket__c"
+                    object-api-name="%%%NAMESPACE%%%Ticket__c"
                     record-id={transitionTicketId}
                     onsuccess={handleTransitionSuccess}
                     onerror={handleTransitionError}>
@@ -363,7 +364,7 @@
 
                     <!-- Hidden Fields for Submission -->
                      <div class="slds-hide">
-                         <lightning-input-field field-name="StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
+                         <lightning-input-field field-name="%%%NAMESPACE%%%StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
                      </div>
 
                     <!-- Footer with Action Buttons -->

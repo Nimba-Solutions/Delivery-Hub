@@ -880,55 +880,36 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     const enriched = this.enrichedTickets || [];
 
     if (!this.showAllColumns) {
-      colNames = colNames.filter((col) => this.columnOwner(col) === persona);
+        colNames = colNames.filter((col) => this.columnOwner(col) === persona);
     }
 
     let columns = colNames.map((colName) => {
-      // Get the style config for the column header
-      const columnStyleConfig = this.columnHeaderStyleMap[colName] || {
-        bg: "#ffffff",
-        color: "#11182c",
-      };
-      const headerStyle = `background:${columnStyleConfig.bg};color:${columnStyleConfig.color};`;
+        const config = this.columnHeaderStyleMap[colName] || { bg: "#ffffff", color: "#11182c" };
+        const headerStyle = `background:${config.bg};color:${config.color};`;
 
-      // Filter and map the tickets using namespaced field keys from our bridge
-      const columnTickets = enriched
-        .filter((t) => {
-            // Namespace logic: Access current stage via FIELDS bridge
-            const isMatch = (statusMap[colName] || []).includes(t[FIELDS.STAGE]);
-            return isMatch;
-        })
-        .filter((t) => {
-          if (this.intentionFilter === "all") return true;
-          // Namespace logic: Access Client Intention via FIELDS bridge
-          const intention = (t[FIELDS.INTENTION] || "").trim().toLowerCase();
-          return intention === this.intentionFilter.toLowerCase();
-        })
-        .map((ticket) => {
-          // Set card border to match column header color
-          return {
-            ...ticket,
-            cardStyle: `border-left-color: ${columnStyleConfig.bg} !important;`,
-          };
-        });
+        // Namespace logic: Filter tickets using the FIELDS bridge
+        const columnTickets = enriched
+            .filter((t) => (statusMap[colName] || []).includes(t[FIELDS.STAGE]))
+            .filter((t) => {
+                if (this.intentionFilter === "all") return true;
+                const intention = (t[FIELDS.INTENTION] || "").trim().toLowerCase();
+                return intention === this.intentionFilter.toLowerCase();
+            })
+            .map((ticket) => ({
+                ...ticket,
+                cardStyle: `border-left-color: ${config.bg} !important;`,
+            }));
 
-      const bodyClasses = `kanban-column-body ${
-        columnTickets.length > 0 ? "has-tickets" : "is-empty"
-      }`;
-
-      return {
-        stage: colName,
-        displayName: this.columnDisplayNames[colName] || colName,
-        headerStyle,
-        tickets: columnTickets,
-        bodyClasses: bodyClasses,
-      };
+        return {
+            stage: colName,
+            displayName: this.columnDisplayNames[colName] || colName,
+            headerStyle,
+            tickets: columnTickets,
+            bodyClasses: `kanban-column-body ${columnTickets.length > 0 ? "has-tickets" : "is-empty"}`,
+        };
     });
 
-    if (this.showMode === "active") {
-      return columns.filter((col) => col.tickets.length > 0);
-    }
-    return columns;
+    return this.showMode === "active" ? columns.filter((col) => col.tickets.length > 0) : columns;
   }
 
   getColumnDisplayName(colKey) {
@@ -998,7 +979,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   get advanceOptions() {
     if (!this.selectedRecord) return [];
 
-    const currStage = this.selectedRecord.StageNamePk__c;
+    // NAMESPACE FIX: Use bridge to get the current stage from the record
+    const currStage = this.selectedRecord[FIELDS.STAGE]; 
     const persona = this.persona;
     const nextStages = this.transitionMap[currStage] || [];
 
@@ -1008,7 +990,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         const override =
           this.personaAdvanceOverrides?.[persona]?.[currStage]?.[tgt] || {};
 
-        // 🔥 Use columnHeaderStyleMap for the target status
         let style = "";
         if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
           const { bg, color } = this.columnHeaderStyleMap[tgt];
@@ -1034,7 +1015,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   get backtrackOptions() {
     if (!this.selectedRecord) return [];
 
-    const currStage = this.selectedRecord.StageNamePk__c;
+    // NAMESPACE FIX: Use bridge to get the current stage from the record
+    const currStage = this.selectedRecord[FIELDS.STAGE];
     const persona = this.persona;
     let targets = [];
 
@@ -1042,7 +1024,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       const custom = this.personaBacktrackOverrides[persona][currStage];
       targets = Object.keys(custom).map((tgt) => {
         const override = custom[tgt];
-        // 🔥 Use columnHeaderStyleMap for the target status
         let style = "";
         if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
           const { bg, color } = this.columnHeaderStyleMap[tgt];
@@ -1060,7 +1041,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     } else {
       const prevStages = this.backtrackMap[currStage] || [];
       targets = prevStages.map((tgt) => {
-        // 🔥 Use columnHeaderStyleMap for the target status
         let style = "";
         if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
           const { bg, color } = this.columnHeaderStyleMap[tgt];
@@ -1296,29 +1276,30 @@ async handleAdvanceOption(e) {
   handleCommentChange(e) {
     this.moveComment = e.detail ? e.detail.value : e.target.value;
   }
-  /* ---------- handleSaveTransition (Refactored Phase 4) ---------- */
-  handleSaveTransition() {
-    const rec = this.selectedRecord;
-    const newStage = this.selectedStage;
-    if (rec && newStage) {
-      // Namespace logic: Use computed property names for the update object
-      const fields = {
-          [FIELDS.ID]: rec.Id,
-          [FIELDS.STAGE]: newStage
-      };
+  /* ---------- handleSaveTransition (Refactored) ---------- */
+handleSaveTransition() {
+      const rec = this.selectedRecord;
+      const newStage = this.selectedStage;
+      if (rec && newStage) {
+          // Namespace logic: Use computed property names from the bridge
+          const fields = {
+              [FIELDS.ID]: rec.Id,
+              [FIELDS.STAGE]: newStage
+          };
 
-      updateRecord({ fields })
-        .then(() => {
-          this.showToast("Success", "Ticket updated.", "success");
-          this.refreshTickets(); // Refresh wire to show changes
-        })
-        .catch((error) => {
-          console.error("Error updating ticket stage:", error);
-          this.showToast("Error", "Failed to update ticket.", "error");
-        });
-    }
-    this.closeModal();
+          updateRecord({ fields })
+              .then(() => {
+                  this.showToast("Success", "Ticket updated.", "success");
+                  this.refreshTickets(); 
+              })
+              .catch((error) => {
+                  console.error("Error updating ticket stage:", error);
+                  this.showToast("Error", "Failed to update ticket.", "error");
+              });
+      }
+      this.closeModal();
   }
+
   handleCancelTransition() {
     this.closeModal();
   }
@@ -1433,70 +1414,6 @@ async handleAdvanceOption(e) {
       { offset: Number.NEGATIVE_INFINITY }
     ).element;
   }
-
-  
-
-  // async handleDrop(event) {
-  //   event.preventDefault();
-
-  //   const ticketId = this.draggedItem.Id;
-  //   const sourceColumnStage = this.stageColumns.find((col) =>
-  //     col.tickets.some((t) => t.Id === ticketId)
-  //   ).stage;
-
-  //   const dropColumnEl = event.target.closest(".kanban-column");
-  //   if (!dropColumnEl) {
-  //     this.handleDragEnd(); // Abort if dropped outside a valid column
-  //     return;
-  //   }
-  //   const targetColumnStage = dropColumnEl.dataset.stage;
-
-  //   // SCENARIO 1: INTRA-COLUMN DROP (Reordering)
-  //   if (sourceColumnStage === targetColumnStage) {
-  //     const columnTickets = this.stageColumns.find(
-  //       (c) => c.stage === targetColumnStage
-  //     ).tickets;
-  //     const newSortOrder = this.calculateNewSortOrder(
-  //       this.placeholder,
-  //       columnTickets
-  //     );
-
-  //     try {
-  //       await updateTicketSortOrder({
-  //         ticketId: ticketId,
-  //         newSortOrder: newSortOrder,
-  //       });
-  //       this.showToast("Success", "Ticket reordered.", "success");
-  //     } catch (error) {
-  //       this.showToast("Error", "Failed to reorder ticket.", "error");
-  //       console.error(error);
-  //     }
-  //   }
-  //   // SCENARIO 2: INTER-COLUMN DROP (Status Change)
-  //   else {
-  //     const statuses =
-  //       this.personaColumnStatusMap[this.persona][targetColumnStage] || [];
-  //     const newInternalStage = statuses[0];
-
-  //     if (newInternalStage) {
-  //       try {
-  //         // When moving to a new column, you might want to set a default sort order,
-  //         // e.g., place it at the top. Here we don't pass a sort order and let Apex handle it.
-  //         await updateTicketStage({
-  //           ticketId: ticketId,
-  //           newStage: newInternalStage,
-  //         });
-  //         this.showToast("Success", "Ticket moved.", "success");
-  //       } catch (error) {
-  //         this.showToast("Error", "Failed to move ticket.", "error");
-  //         console.error(error);
-  //       }
-  //     }
-  //   }
-
-  //   this.refreshTickets();
-  //   // DragEnd will handle final cleanup
-  // }
 
   /* ---------- handleDrop (Refactored Phase 4) ---------- */
   async handleDrop(event) {
