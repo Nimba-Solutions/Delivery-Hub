@@ -691,26 +691,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     this.showCreateModal = true;
   }
 
-  /* Called when the record-edit form saves successfully */
-  handleCreateSuccess(event) {
-    this.showCreateModal = false;
-    const newTicketId = event.detail.id;
-
-    // If files were uploaded, link them to the ticket and sync to Jira
-    if (this.uploadedFileIds.length > 0) {
-      linkFilesAndSync({
-        ticketId: newTicketId,
-        contentDocumentIds: this.uploadedFileIds,
-      }).catch((error) => {
-        console.error("Error linking files and syncing to Jira:", error);
-      });
-      this.uploadedFileIds = []; // Clear the array for the next modal
-    }
-
-    // Re-query tickets so the new card appears:
-    this.refreshTickets();
-  }
-
   /* Called when files are uploaded */
   handleFileUpload(event) {
     const uploadedFiles = event.detail.files;
