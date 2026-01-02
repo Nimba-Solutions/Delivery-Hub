@@ -17,10 +17,6 @@ import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwc
 import removeDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.removeDependency';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
 
-// --- Namespaced Schema Imports ---
-import STAGE_FIELD from "@salesforce/schema/%%%NAMESPACE%%%Ticket__c.%%%NAMESPACE%%%StageNamePk__c";
-import ID_FIELD from "@salesforce/schema/%%%NAMESPACE%%%Ticket__c.Id";
-
 // --- NAMESPACE BRIDGE ---
 // Use these constants throughout the JS logic to avoid "%%%NAMESPACE%%%" parsing errors.
 const NS = '%%%NAMESPACE%%%';
@@ -822,19 +818,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
           }));
 
           // --- KEEPING YOUR ORIGINAL HELPERS ---
-
-          // Helper to convert status to a CSS-friendly class name
-          const getStatusClass = (status) => {
-              if (!status) return "border-default";
-              return (
-                  "border-" +
-                  status
-                      .toLowerCase()
-                      .replace(/\s+/g, "-")
-                      .replace(/[^a-z0-9-]/g, "")
-              );
-          };
-
           // Helper to create an array from a tag string
           const getTagsArray = (tagsString) => {
               if (!tagsString || typeof tagsString !== "string") return [];
