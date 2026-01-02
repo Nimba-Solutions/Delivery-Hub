@@ -91,37 +91,30 @@
                                 <template for:each={col.tickets} for:item="ticket">
                                     <!-- New Ticket Card -->
                                     <div key={ticket.Id} class={ticket.cardClasses} draggable="true" style={ticket.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={ticket.Id}>
-                                        <!-- Priority Indicator -->
+    
                                         <template if:true={ticket.isHighPriority}>
                                             <div class="priority-indicator">
-                                                <lightning-icon icon-name="utility:warning" variant="error"
-                                                    size="x-small"></lightning-icon>
+                                                <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
                                             </div>
                                         </template>
 
-                                        <!-- Title -->
                                         <h3 class="ticket-title-text" data-id={ticket.Id} onclick={handleTitleClick}>
-                                            {ticket.BriefDescriptionTxt__c}
+                                            {ticket.%%%NAMESPACE%%%BriefDescriptionTxt__c}
                                         </h3>
 
-                                        <!-- Description -->
-                                        <p class="ticket-description">{ticket.DetailsTxt__c}</p>
+                                        <p class="ticket-description">{ticket.%%%NAMESPACE%%%DetailsTxt__c}</p>
 
-                                        <!-- Metadata Row -->
                                         <div class="ticket-metadata">
                                             <div class="meta-item">
-                                                <lightning-icon icon-name="utility:hashtag"
-                                                    size="xx-small"></lightning-icon>
-                                                <span>Size: {ticket.DeveloperDaysSizeNumber__c}</span>
+                                                <lightning-icon icon-name="utility:hashtag" size="xx-small"></lightning-icon>
+                                                <span>Size: {ticket.%%%NAMESPACE%%%DeveloperDaysSizeNumber__c}</span>
                                             </div>
                                             <div class="meta-item">
-                                                <lightning-icon icon-name="utility:event"
-                                                    size="xx-small"></lightning-icon>
+                                                <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
                                                 <span>{ticket.calculatedETA}</span>
                                             </div>
                                         </div>
 
-                                        <!-- Tags -->
                                         <template if:true={ticket.tags.length}>
                                             <div class="ticket-tags">
                                                 <template for:each={ticket.tags} for:item="tag">
@@ -130,31 +123,26 @@
                                             </div>
                                         </template>
 
-                                        <!-- Footer -->
                                         <div class="ticket-footer">
-                                            <template if:true={ticket.PriorityPk__c}>
-                                                <span class={ticket.priorityClasses}>{ticket.PriorityPk__c}</span>
+                                            <template if:true={ticket.%%%NAMESPACE%%%PriorityPk__c}>
+                                                <span class={ticket.priorityClasses}>{ticket.%%%NAMESPACE%%%PriorityPk__c}</span>
                                             </template>
-                                            <!-- Action Button - ONLY this button should open the modal -->
-                                            <button class="ticket-action-button" title="Move Ticket" data-id={ticket.Id}
-                                                onclick={handleCardClick}>
-                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
+
+                                            <button class="ticket-action-button" title="Move Ticket" data-id={ticket.Id} onclick={handleCardClick}>
+                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small"></lightning-icon>
                                             </button>
-                                            <button class="ticket-block-button" title="Move Ticket" data-id={ticket.Id}
-                                                onclick={handleManageDependenciesClick}>
-                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Change Status"></lightning-icon>
+                                            <button class="ticket-block-button" title="Manage Dependencies" data-id={ticket.Id} onclick={handleManageDependenciesClick}>
+                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small"></lightning-icon>
                                             </button>
 
                                             <template if:true={ticket.OwnerName}>
                                                 <div class="assignee">
-                                                    <lightning-icon icon-name="utility:user"
-                                                        size="xx-small"></lightning-icon>
+                                                    <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
                                                     <span>{ticket.OwnerName}</span>
                                                 </div>
                                             </template>
                                             <template if:true={ticket.isCurrentlyBlocked}>
-                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small"
-                                                            title="This ticket is blocked."></lightning-icon>
+                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This ticket is blocked."></lightning-icon>
                                             </template>
                                         </div>
                                     </div>
@@ -177,151 +165,104 @@
 
 
     <template if:true={showCreateModal}>
-        <section class="slds-modal slds-fade-in-open custom-modal" tabindex="0" onkeydown={handleModalKeydown}>
+        <section class="slds-modal slds-fade-in-open custom-modal" tabindex="0">
             <div class="slds-modal__container">
 
-                <!-- Modal Header -->
-                <header class="slds-modal__header"
-                    style="border-bottom:1px solid #f0f0f0; padding-bottom:1em; border-top-left-radius:1rem; border-top-right-radius:1rem;">
+                <header class="slds-modal__header">
                     <div class="slds-media slds-media_center">
                         <div class="slds-media__figure">
-                            <lightning-icon icon-name="utility:new_window" alternative-text="New" size="small"></lightning-icon>
+                            <lightning-icon icon-name="utility:new_window" size="small"></lightning-icon>
                         </div>
                         <div class="slds-media__body">
                             <h2 class="slds-text-heading_medium">Create New Ticket
-                                  <template if:true={AiEnhancementEnabled}>
-                                <span class="slds-badge slds-m-left_small ai-badge">
-                                    <lightning-icon icon-name="utility:sparkle" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
-                                    AI Enhanced
-                                </span>
+                                <template if:true={AiEnhancementEnabled}>
+                                    <span class="slds-badge slds-m-left_small ai-badge">
+                                        <lightning-icon icon-name="utility:sparkle" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        AI Enhanced
+                                    </span>
                                 </template>
                             </h2>
                         </div>
                     </div>
-                    <button class="slds-modal__close" onclick={handleCreateCancel} title="Close"
-                        style="border-radius:0.5rem; padding-right:30px;">
-                        <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
+                    <button class="slds-modal__close" onclick={handleCreateCancel} title="Close">
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
                     </button>
                 </header>
 
-                <!-- Modal Content -->
-                <div class="slds-modal__content slds-p-around_medium"
-                    style="background:#fafcff;  border-bottom-left-radius:1rem; border-bottom-right-radius:1rem;">
+                <div class="slds-modal__content slds-p-around_medium" style="background:#fafcff;">
                     
-                    <!-- AI Enhancement Section -->
-                     <template if:true={AiEnhancementEnabled}>
-                    <div class="ai-enhancement-box slds-p-around_medium slds-m-bottom_medium">
-                        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
-                            <div class="slds-col">
+                    <template if:true={AiEnhancementEnabled}>
+                        <div class="ai-enhancement-box slds-p-around_medium slds-m-bottom_medium">
+                            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
                                 <h3 class="slds-text-heading_small">
                                     <lightning-icon icon-name="utility:wand" size="small" class="slds-m-right_x-small"></lightning-icon>
                                     AI Enhancement
                                 </h3>
-                            </div>
-                            <div class="slds-col slds-text-align_right">
-                                <lightning-button
-                                    label="Enhance with AI"
-                                    title="Enhance with AI"
-                                    icon-name="utility:sparkle"
-                                    variant="brand"
-                                    onclick={handleAiEnhance}
-                                    disabled={isAiProcessing}>
-                                </lightning-button>
+                                <lightning-button label="Enhance with AI" icon-name="utility:sparkle" variant="brand" 
+                                    onclick={handleAiEnhance} disabled={isAiProcessing}></lightning-button>
                             </div>
                         </div>
-                        <p class="slds-text-body_small slds-m-top_small" style="color:#666;">
-                            Let AI help you create a comprehensive ticket with an enhanced title, detailed description, and estimated development time.
-                        </p>
-                    </div>
                     </template>
 
-                    <!-- AI Processing Spinner -->
                     <template if:true={isAiProcessing}>
-                        <div class="slds-m-vertical_large exampleHolder slds-text-align_center slds-grid slds-grid_align-center">
+                        <div class="slds-m-vertical_large slds-text-align_center">
                             <lightning-spinner alternative-text="AI is processing..." size="medium"></lightning-spinner>
                         </div>
                     </template>
 
-                    <!-- AI Suggestions Section -->
                     <template if:true={aiSuggestions}>
                         <div class="ai-suggestions-box slds-box slds-theme_shade slds-m-bottom_medium">
-                            <div class="slds-grid slds-grid_align-spread slds-m-bottom_medium">
-                                <div class="slds-col">
-                                    <h4 class="slds-text-heading_small">
-                                        <lightning-icon icon-name="utility:sparkle" size="small" class="slds-m-right_x-small"></lightning-icon>
-                                        AI Suggestions
-                                    </h4>
-                                </div>
-                                <div class="slds-col slds-text-align_right">
-                                    <span class="slds-badge eta-badge">
-                                        <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
-                                        Est. {aiSuggestions.estimatedDays} days
-                                    </span>
-                                </div>
+                            <div class="slds-grid slds-grid_align-spread slds-m-bottom_small">
+                                <h4 class="slds-text-heading_small">AI Suggestions</h4>
+                                <span class="slds-badge eta-badge">Est. {aiSuggestions.estimatedDays} days</span>
                             </div>
                             <div class="slds-form-element slds-m-bottom_small">
                                 <label class="slds-form-element__label">Enhanced Title</label>
-                                <div class="slds-form-element__control slds-box slds-box_x-small slds-theme_default">
-                                    {aiSuggestions.title}
-                                </div>
+                                <div class="slds-box slds-box_x-small slds-theme_default">{aiSuggestions.title}</div>
                             </div>
-                            <div class="slds-form-element slds-m-bottom_medium">
+                            <div class="slds-form-element slds-m-bottom_small">
                                 <label class="slds-form-element__label">Enhanced Description</label>
-                                <div class="slds-form-element__control slds-box slds-box_x-small slds-theme_default">
+                                <div class="slds-box slds-box_x-small slds-theme_default">
                                     <lightning-formatted-rich-text value={aiSuggestions.description}></lightning-formatted-rich-text>
                                 </div>
                             </div>
-                            <div class="slds-text-align_left">
-                                <lightning-button label="Apply Suggestions" variant="brand" onclick={applyAiSuggestions}></lightning-button>
-                                <lightning-button label="Dismiss" variant="neutral" class="slds-m-left_x-small" onclick={dismissAiSuggestions}></lightning-button>
-                            </div>
+                            <lightning-button label="Apply Suggestions" variant="brand" onclick={applyAiSuggestions}></lightning-button>
+                            <lightning-button label="Dismiss" variant="neutral" class="slds-m-left_x-small" onclick={dismissAiSuggestions}></lightning-button>
                         </div>
                     </template>
 
-                    <!-- Record Edit Form -->
                     <template if:false={isAiProcessing}>
-                        <template if:false={showSpinner}>
-                            <lightning-record-edit-form object-api-name="Ticket__c" density="compact"
-                                default-field-values={createDefaults} onsuccess={handleCreateSuccess}
-                                oncancel={handleCreateCancel}>
+                        <lightning-record-edit-form object-api-name="%%%NAMESPACE%%%Ticket__c" 
+                            default-field-values={createDefaults} onsuccess={handleCreateSuccess}>
 
-                                <!-- Key Fields -->
-                                <lightning-input-field field-name="BriefDescriptionTxt__c" required onchange={handleFieldChange} value={createTicketTitle}></lightning-input-field>
-                                <lightning-input-field field-name="DetailsTxt__c" onchange={handleFieldChange} value={createTicketDescription}></lightning-input-field>
-                                <lightning-input-field field-name="StageNamePk__c"></lightning-input-field>
-                                <lightning-input-field field-name="DeveloperDaysSizeNumber__c" value={estimatedDaysValue}></lightning-input-field>
-                                <lightning-input-field field-name="PriorityPk__c"></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACE%%%BriefDescriptionTxt__c" required 
+                                onchange={handleFieldChange} value={createTicketTitle}></lightning-input-field>
+                            
+                            <lightning-input-field field-name="%%%NAMESPACE%%%DetailsTxt__c" 
+                                onchange={handleFieldChange} value={createTicketDescription}></lightning-input-field>
+                            
+                            <lightning-input-field field-name="%%%NAMESPACE%%%StageNamePk__c"></lightning-input-field>
+                            
+                            <lightning-input-field field-name="%%%NAMESPACE%%%DeveloperDaysSizeNumber__c" 
+                                value={estimatedDaysValue}></lightning-input-field>
+                            
+                            <lightning-input-field field-name="%%%NAMESPACE%%%PriorityPk__c"></lightning-input-field>
+                            
+                            <lightning-file-upload label="Attach files" onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
 
-                                <!-- Attachments -->
-                                <div style="margin: 1.2em 0 1.5em 0;">
-                                    <lightning-file-upload label="Attach files" name="ticketFiles" record-id={dummyRecordId}
-                                        onuploadfinished={handleFileUpload} multiple><!-- accept={acceptedFormats} -->
-                                    </lightning-file-upload>
-                                </div>
+                            <details class="slds-m-top_small">
+                                <summary style="cursor:pointer;color:#005fb2;">Advanced fields</summary>
+                                <lightning-input-field field-name="%%%NAMESPACE%%%Tags__c"></lightning-input-field>
+                                <lightning-input-field field-name="%%%NAMESPACE%%%Epic__c"></lightning-input-field>
+                                <lightning-input-field field-name="%%%NAMESPACE%%%SortOrderNumber__c" 
+                                    value={nextSortOrder}></lightning-input-field>
+                            </details>
 
-                                <!-- Advanced Section (collapsible) -->
-                                <details style="margin-bottom:1.1em;">
-                                    <summary style="cursor:pointer;color:#005fb2;">Advanced fields</summary>
-                                    <lightning-input-field field-name="Tags__c"></lightning-input-field>
-                                    <lightning-input-field field-name="Epic__c"></lightning-input-field>
-                                    <lightning-input-field field-name="SortOrderNumber__c"
-                                        value={nextSortOrder}></lightning-input-field>
-                                    <lightning-input-field field-name="IsActiveBool__c"
-                                        value={createDefaults.IsActiveBool__c}></lightning-input-field>
-                                    <!-- Uncomment if needed:
-                  <lightning-input-field field-name="Client_Intention__c"></lightning-input-field>
-                  -->
-                                </details>
-
-                                <!-- Action Buttons -->
-                                <div class="slds-m-top_medium" style="text-align:right;">
-                                    <lightning-button variant="neutral" label="Cancel"
-                                        onclick={handleCreateCancel}></lightning-button>
-                                    <lightning-button variant="brand" type="submit" label="Create"
-                                        class="slds-m-left_small"></lightning-button>
-                                </div>
-                            </lightning-record-edit-form>
-                        </template>
+                            <div class="slds-m-top_medium slds-text-align_right">
+                                <lightning-button variant="neutral" label="Cancel" onclick={handleCreateCancel}></lightning-button>
+                                <lightning-button variant="brand" type="submit" label="Create" class="slds-m-left_small"></lightning-button>
+                            </div>
+                        </lightning-record-edit-form>
                     </template>
                 </div>
             </div>
@@ -439,18 +380,17 @@
 <template if:true={isModalOpen}>
         <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
             <div class="slds-modal__container">
-                <!-- Modal Header -->
                 <header class="slds-modal__header">
                     <h2 class="slds-modal__title slds-hyphenate">Manage Dependencies for {selectedTicket.Name}</h2>
                 </header>
 
-                <!-- Modal Content -->
                 <div class="slds-modal__content slds-p-around_medium">
-                    <!-- Display Existing Dependencies -->
                     <h3 class="slds-text-heading_small slds-m-bottom_small">Blocked By:</h3>
+                    
                     <template if:false={selectedTicket.isBlockedBy.length}>
                         <p>This ticket is not blocked by any other tickets.</p>
                     </template>
+                    
                     <template for:each={selectedTicket.isBlockedBy} for:item="dep">
                         <lightning-pill key={dep.dependencyId} label={dep.name} onremove={handleRemoveDependency} data-dependency-id={dep.dependencyId}>
                         </lightning-pill>
@@ -458,13 +398,12 @@
 
                     <hr class="slds-m-vertical_medium" />
 
-                    <!-- Add New Dependency Section -->
                     <h3 class="slds-text-heading_small slds-m-bottom_small">Add a Blocker</h3>
-                    <div class="slds-grid slds-gutters">
+                    <div class="slds-grid slds-gutters slds-grid_vertical-align-center">
                         <div class="slds-col slds-size_2-of-3">
                             <lightning-input
                                 type="search"
-                                label="Search for a ticket to block this one"
+                                label="Search tickets"
                                 variant="label-hidden"
                                 placeholder="Search by name or description..."
                                 onchange={handleSearchTermChange}
@@ -481,20 +420,21 @@
                         </div>
                     </div>
 
-                    <!-- Search Results -->
                     <div class="slds-m-top_medium">
                         <template if:true={isSearching}>
                             <lightning-spinner alternative-text="Searching..." size="small"></lightning-spinner>
                         </template>
+
                         <template for:each={searchResults} for:item="result">
-                            <div key={result.Id} class="slds-box slds-box_x-small slds-m-bottom_x-small slds-grid">
+                            <div key={result.Id} class="slds-box slds-box_x-small slds-m-bottom_x-small slds-grid slds-grid_align-spread">
                                 <div class="slds-col">
                                     <strong>{result.Name}</strong>
-                                    <p class="slds-text-body_small">{result.StageNamePk__c}</p>
+                                    <p class="slds-text-body_small">{result.%%%NAMESPACE%%%StageNamePk__c}</p>
                                 </div>
                                 <div class="slds-col slds-no-flex">
                                     <lightning-button
                                         label="Select"
+                                        variant="neutral"
                                         data-blocking-id={result.Id}
                                         onclick={handleSelectBlockingTicket}>
                                     </lightning-button>
@@ -504,7 +444,6 @@
                     </div>
                 </div>
 
-                <!-- Modal Footer -->
                 <footer class="slds-modal__footer">
                     <lightning-button label="Close" onclick={closeModal}></lightning-button>
                 </footer>

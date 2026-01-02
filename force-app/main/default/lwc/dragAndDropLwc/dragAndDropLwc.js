@@ -2,62 +2,92 @@ import { LightningElement, track, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import { NavigationMixin } from "lightning/navigation";
 import { updateRecord } from "lightning/uiRecordApi";
-import getTickets from "@salesforce/apex/TicketController.getTickets";
-import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
-import getAiEnhancedTicketDetails from "@salesforce/apex/TicketController.getAiEnhancedTicketDetails";
-import STAGE_FIELD from "@salesforce/schema/Ticket__c.StageNamePk__c";
-import ID_FIELD from "@salesforce/schema/Ticket__c.Id";
-import getTicketETAsWithPriority from "@salesforce/apex/TicketETAService.getTicketETAsWithPriority";
-import updateTicketStage from "@salesforce/apex/DragAndDropLwcController.updateTicketStage";
-import updateTicketSortOrder from "@salesforce/apex/DragAndDropLwcController.updateTicketSortOrder";
-import getRequiredFieldsForStage from '@salesforce/apex/TicketController.getRequiredFieldsForStage';
-import searchForPotentialBlockers from '@salesforce/apex/DragAndDropLwcController.searchForPotentialBlockers';
-import createDependency from '@salesforce/apex/DragAndDropLwcController.createDependency';
-import removeDependency from '@salesforce/apex/DragAndDropLwcController.removeDependency';
-import { ShowToastEvent } from "lightning/platformShowToastEvent";import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
+import { ShowToastEvent } from "lightning/platformShowToastEvent";
+
+// --- Namespaced Apex Imports ---
+import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getTickets";
+import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
+import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getAiEnhancedTicketDetails";
+import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketETAService.getTicketETAsWithPriority";
+import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketStage";
+import updateTicketSortOrder from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketSortOrder";
+import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getRequiredFieldsForStage';
+import searchForPotentialBlockers from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.searchForPotentialBlockers';
+import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.createDependency';
+import removeDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.removeDependency';
+import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
+
+// --- Namespaced Schema Imports ---
+import STAGE_FIELD from "@salesforce/schema/%%%NAMESPACE%%%Ticket__c.%%%NAMESPACE%%%StageNamePk__c";
+import ID_FIELD from "@salesforce/schema/%%%NAMESPACE%%%Ticket__c.Id";
+
+// --- NAMESPACE BRIDGE ---
+// Use these constants throughout the JS logic to avoid "%%%NAMESPACE%%%" parsing errors.
+const NS = '%%%NAMESPACE%%%';
+const FIELDS = {
+    ID: 'Id',
+    NAME: 'Name',
+    BRIEF_DESC: `${NS}BriefDescriptionTxt__c`,
+    DETAILS: `${NS}DetailsTxt__c`,
+    STAGE: `${NS}StageNamePk__c`,
+    PRIORITY: `${NS}PriorityPk__c`,
+    SORT_ORDER: `${NS}SortOrderNumber__c`,
+    IS_ACTIVE: `${NS}IsActiveBool__c`,
+    TAGS: `${NS}Tags__c`,
+    EPIC: `${NS}Epic__c`,
+    INTENTION: `${NS}ClientIntentionPk__c`,
+    DEV_DAYS_SIZE: `${NS}DeveloperDaysSizeNumber__c`,
+    CALCULATED_ETA: `${NS}CalculatedETADate__c`,
+    PROJECTED_UAT_READY: `${NS}ProjectedUATReadyDate__c`,
+    DEVELOPER: `${NS}Developer__c`,
+    // Relationships
+    DEP_REL_BLOCKED_BY: `${NS}Ticket_Dependency1__r`,
+    DEP_REL_BLOCKING: `${NS}Ticket_Dependency__r`,
+    BLOCKING_TICKET: `${NS}Blocking_Ticket__c`,
+    BLOCKED_TICKET: `${NS}Blocked_Ticket__c`
+};
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
-  @track persona = "Client";
-  @track sizeMode = "equalSized";
-  @track displayMode = "kanban";
-  @track showModal = false;
-  @track selectedRecord = null;
-  @track selectedStage = null;
-  @track realRecords = [];
-  @track moveComment = "";
-  @track recentComments = [];
-  @track numDevs = 2; // Default to 2 devs, or whatever you want
-  @track etaResults = [];
-  @track showAllColumns = true;
-  @track showCreateModal = false;
-  @track nextSortOrder = 1;
-  @track overallFilter = "all";
-  @track intentionFilter = "all";
-  @track uploadedFileIds = [];
-  @track showMode = "overall";
-  @track draggedItem = {};
-  @track isDragging = false;
-  @track placeholder = null;
-  @track AiEnhancementEnabled = true;
-  @track AiEstimation = true;
-  // AI Enhancement properties
-  @track isAiProcessing = false;
-  @track aiSuggestions = null;
-  @track createTicketTitle = "";
-  @track createTicketDescription = "";
-  @track estimatedDaysValue = null;
-  @track formFieldValues = {};
-  @track showTransitionModal = false;
-  @track transitionTicketId = null;
-  @track transitionTargetStage = null;
-  @track transitionRequiredFields = [];
-  ticketsWire;
-
-  @track isModalOpen = false;
+    @track persona = "Client";
+    @track sizeMode = "equalSized";
+    @track displayMode = "kanban";
+    @track showModal = false;
+    @track selectedRecord = null;
+    @track selectedStage = null;
+    @track realRecords = [];
+    @track moveComment = "";
+    @track recentComments = [];
+    @track numDevs = 2;
+    @track etaResults = [];
+    @track showAllColumns = true;
+    @track showCreateModal = false;
+    @track nextSortOrder = 1;
+    @track overallFilter = "all";
+    @track intentionFilter = "all";
+    @track uploadedFileIds = [];
+    @track showMode = "overall";
+    @track draggedItem = {};
+    @track isDragging = false;
+    @track placeholder = null;
+    @track AiEnhancementEnabled = true;
+    @track AiEstimation = true;
+    @track isAiProcessing = false;
+    @track aiSuggestions = null;
+    @track createTicketTitle = "";
+    @track createTicketDescription = "";
+    @track estimatedDaysValue = null;
+    @track formFieldValues = {};
+    @track showTransitionModal = false;
+    @track transitionTicketId = null;
+    @track transitionTargetStage = null;
+    @track transitionRequiredFields = [];
+    @track isModalOpen = false;
     @track selectedTicket = {};
     @track searchTerm = '';
     @track searchResults = [];
     @track isSearching = false;
+
+    ticketsWire;
 
   statusColorMap = {
     Backlog: "#FAFAFA",
@@ -717,23 +747,25 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       .catch((err) => console.error("Ticket reload error", err));
   }
 
+  /** * Refactored Create Modal Logic */
   openCreateModal() {
-    // find current max SortOrderNumber__c and add 1
+    // Namespace logic: Use bridge to find max sort order number
     const nums = (this.realRecords || [])
-      .map((r) => r.SortOrderNumber__c)
+      .map((r) => r[FIELDS.SORT_ORDER])
       .filter((n) => n !== null && n !== undefined);
+    
     this.nextSortOrder = nums.length ? Math.max(...nums) + 1 : 1;
-
     this.showCreateModal = true;
   }
 
   /* ---------- defaults for the create form ---------- */
   get createDefaults() {
+    // Namespace logic: Use computed property names [FIELDS.X]
     return {
-      StageNamePk__c: "Backlog",
-      SortOrderNumber__c: this.nextSortOrder,
-      PriorityPk__c: "Medium",
-      IsActiveBool__c: true,
+      [FIELDS.STAGE]: "Backlog",
+      [FIELDS.SORT_ORDER]: this.nextSortOrder,
+      [FIELDS.PRIORITY]: "Medium",
+      [FIELDS.IS_ACTIVE]: true,
     };
   }
 
@@ -769,77 +801,77 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   }
 
   get enrichedTickets() {
-    const norm = (id) => (id || "").substring(0, 15);
+      const norm = (id) => (id || "").substring(0, 15);
 
-    const etaMap = new Map(
-      (this.etaResults || [])
-        .filter((dto) => !!dto.ticketId)
-        .map((dto) => [norm(dto.ticketId), dto])
-    );
+      const etaMap = new Map(
+          (this.etaResults || [])
+              .filter((dto) => !!dto.ticketId)
+              .map((dto) => [norm(dto.ticketId), dto])
+      );
 
-    return (this.realRecords || []).map((rec) => {
-      const etaDto = etaMap.get(norm(rec.Id));
+      return (this.realRecords || []).map((rec) => {
+          const etaDto = etaMap.get(norm(rec.Id));
 
-      const isBlockedBy = (rec.Ticket_Dependency1__r || []).map(dep => ({
-            id: dep.Blocking_Ticket__c,
-            name: dep.Blocking_Ticket__r.Name,
-            dependencyId: dep.Id
-        }));
+          // Refactored Relationships: Accessing arrays and fields via bracket notation
+          const isBlockedBy = (rec[FIELDS.DEP_REL_BLOCKED_BY] || []).map(dep => ({
+              id: dep[FIELDS.BLOCKING_TICKET],
+              // Dynamically building the __r name for the parent Name field
+              name: dep[FIELDS.BLOCKING_TICKET.replace('__c', '__r')]?.Name,
+              dependencyId: dep.Id
+          }));
 
-        const isBlocking = (rec.Ticket_Dependency__r || []).map(dep => ({
-            id: dep.Blocked_Ticket__c,
-            name: dep.Blocked_Ticket__r.Name,
-            dependencyId: dep.Id
-        }));
-      // --- START OF NEW ADDITIONS ---
+          const isBlocking = (rec[FIELDS.DEP_REL_BLOCKING] || []).map(dep => ({
+              id: dep[FIELDS.BLOCKED_TICKET],
+              name: dep[FIELDS.BLOCKED_TICKET.replace('__c', '__r')]?.Name,
+              dependencyId: dep.Id
+          }));
 
-      // Helper to convert status to a CSS-friendly class name
-      const getStatusClass = (status) => {
-        if (!status) return "border-default";
-        // Example: 'Ready for QA' -> 'border-ready-for-qa'
-        return (
-          "border-" +
-          status
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "")
-        );
-      };
+          // --- KEEPING YOUR ORIGINAL HELPERS ---
 
-      // Helper to create an array from a tag string
-      const getTagsArray = (tagsString) => {
-        if (!tagsString || typeof tagsString !== "string") return [];
-        return tagsString
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag);
-      };
+          // Helper to convert status to a CSS-friendly class name
+          const getStatusClass = (status) => {
+              if (!status) return "border-default";
+              return (
+                  "border-" +
+                  status
+                      .toLowerCase()
+                      .replace(/\s+/g, "-")
+                      .replace(/[^a-z0-9-]/g, "")
+              );
+          };
 
-      // --- END OF NEW ADDITIONS ---
+          // Helper to create an array from a tag string
+          const getTagsArray = (tagsString) => {
+              if (!tagsString || typeof tagsString !== "string") return [];
+              return tagsString
+                  .split(",")
+                  .map((tag) => tag.trim())
+                  .filter((tag) => tag);
+          };
 
-      
+          return {
+              ...rec,
+              calculatedETA:
+                  etaDto && etaDto.calculatedETA
+                      ? new Date(etaDto.calculatedETA).toLocaleDateString()
+                      : "—",
 
-      return {
-        ...rec,
-        calculatedETA:
-          etaDto && etaDto.calculatedETA
-            ? new Date(etaDto.calculatedETA).toLocaleDateString()
-            : "—",
-
-        // --- NEW DYNAMIC PROPERTIES FOR THE TEMPLATE ---
-        isBlockedBy: isBlockedBy,
-        isBlocking: isBlocking,
-        isCurrentlyBlocked: isBlockedBy.length > 0,
-        OwnerName: rec.Owner?.Name, // Assuming Owner relationship is queried
-        isHighPriority: rec.PriorityPk__c?.toLowerCase() === "high",
-        tags: getTagsArray(rec.Tags__c),
-        cardClasses: `ticket-card`,
-        priorityClasses: `priority-badge priority-${rec.PriorityPk__c?.toLowerCase()}`,
-      };
-    });
+              // Mapping logic using your original dynamic properties
+              isBlockedBy: isBlockedBy,
+              isBlocking: isBlocking,
+              isCurrentlyBlocked: isBlockedBy.length > 0,
+              OwnerName: rec.Owner?.Name, 
+              
+              // NAMESPACE FIX: Use FIELDS map instead of dot notation
+              isHighPriority: rec[FIELDS.PRIORITY]?.toLowerCase() === "high",
+              tags: getTagsArray(rec[FIELDS.TAGS]),
+              cardClasses: `ticket-card`,
+              priorityClasses: `priority-badge priority-${rec[FIELDS.PRIORITY]?.toLowerCase()}`,
+          };
+      });
   }
 
-  /* ---------- stageColumns ---------- */
+  /* ---------- stageColumns (Refactored Phase 3) ---------- */
   get stageColumns() {
     const persona = this.persona;
     const boardViews = this.personaBoardViews?.[persona] || {};
@@ -851,33 +883,33 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       colNames = colNames.filter((col) => this.columnOwner(col) === persona);
     }
 
-    let columns = (colNames || []).map((colName) => {
-      // Step 1: Get the style config for the column just once.
+    let columns = colNames.map((colName) => {
+      // Get the style config for the column header
       const columnStyleConfig = this.columnHeaderStyleMap[colName] || {
         bg: "#ffffff",
         color: "#11182c",
       };
       const headerStyle = `background:${columnStyleConfig.bg};color:${columnStyleConfig.color};`;
 
-      // Step 2: Filter and map the tickets.
+      // Filter and map the tickets using namespaced field keys from our bridge
       const columnTickets = enriched
-        .filter((t) => (statusMap[colName] || []).includes(t.StageNamePk__c))
+        .filter((t) => {
+            // Namespace logic: Access current stage via FIELDS bridge
+            const isMatch = (statusMap[colName] || []).includes(t[FIELDS.STAGE]);
+            return isMatch;
+        })
         .filter((t) => {
           if (this.intentionFilter === "all") return true;
-          return (
-            (t.Client_Intention__c || "").trim().toLowerCase() ===
-            this.intentionFilter.toLowerCase()
-          );
+          // Namespace logic: Access Client Intention via FIELDS bridge
+          const intention = (t[FIELDS.INTENTION] || "").trim().toLowerCase();
+          return intention === this.intentionFilter.toLowerCase();
         })
         .map((ticket) => {
-          // --- START OF THE FIX ---
-          // For each ticket, create a style string that sets the BORDER color
-          // to match the column header's main text color for a clean look.
+          // Set card border to match column header color
           return {
             ...ticket,
             cardStyle: `border-left-color: ${columnStyleConfig.bg} !important;`,
           };
-          // --- END OF THE FIX ---
         });
 
       const bodyClasses = `kanban-column-body ${
@@ -1076,12 +1108,13 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     this.showAllColumns = e.target.checked;
   }
 
-  columnOwner(colName) {
-    // Take first status mapped to that column and look it up
-    const statuses = this.personaColumnStatusMap[this.persona]?.[colName] || [];
-    const first = statuses[0];
-    return this.statusOwnerMap[first] || "Default";
-  }
+  /** * Refactored Helper to find column owner safely */
+    columnOwner(colName) {
+      const personaMap = this.personaColumnStatusMap[this.persona] || {};
+      const statuses = personaMap[colName] || [];
+      const firstStatus = statuses[0];
+      return this.statusOwnerMap[firstStatus] || "Default";
+    }
 
   handleNumDevsChange(e) {
     this.numDevs = parseInt(e.target.value, 10) || 1;
@@ -1263,21 +1296,25 @@ async handleAdvanceOption(e) {
   handleCommentChange(e) {
     this.moveComment = e.detail ? e.detail.value : e.target.value;
   }
+  /* ---------- handleSaveTransition (Refactored Phase 4) ---------- */
   handleSaveTransition() {
     const rec = this.selectedRecord;
     const newStage = this.selectedStage;
     if (rec && newStage) {
-      const fields = {};
-      fields[ID_FIELD.fieldApiName] = rec.Id;
-      fields[STAGE_FIELD.fieldApiName] = newStage;
+      // Namespace logic: Use computed property names for the update object
+      const fields = {
+          [FIELDS.ID]: rec.Id,
+          [FIELDS.STAGE]: newStage
+      };
+
       updateRecord({ fields })
         .then(() => {
-          this.realRecords = this.realRecords.map((r) =>
-            r.Id === rec.Id ? { ...r, StageNamePk__c: newStage } : r
-          );
+          this.showToast("Success", "Ticket updated.", "success");
+          this.refreshTickets(); // Refresh wire to show changes
         })
         .catch((error) => {
           console.error("Error updating ticket stage:", error);
+          this.showToast("Error", "Failed to update ticket.", "error");
         });
     }
     this.closeModal();
@@ -1461,22 +1498,22 @@ async handleAdvanceOption(e) {
   //   // DragEnd will handle final cleanup
   // }
 
+  /* ---------- handleDrop (Refactored Phase 4) ---------- */
   async handleDrop(event) {
     event.preventDefault();
     const ticketId = this.draggedItem.Id;
     const dropColumnEl = event.target.closest('.kanban-column');
     if (!dropColumnEl) {
-        this.handleDragEnd(); // Abort if dropped outside a valid column
+        this.handleDragEnd(); 
         return;
     }
 
     const targetColumnStage = dropColumnEl.dataset.stage;
     const sourceColumnStage = this.stageColumns.find(col => col.tickets.some(t => t.Id === ticketId)).stage;
     
-    // Always clean up drag styles
     this.handleDragEnd();
 
-    // SCENARIO 1: INTRA-COLUMN DROP (Reordering - no status change)
+    // SCENARIO 1: INTRA-COLUMN DROP (Reordering)
     if (sourceColumnStage === targetColumnStage) {
         const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets;
         const newSortOrder = this.calculateNewSortOrder(this.placeholder, columnTickets);
@@ -1486,9 +1523,8 @@ async handleAdvanceOption(e) {
             this.refreshTickets();
         } catch (error) {
             this.showToast('Error', 'Failed to reorder ticket.', 'error');
-            console.error(error);
         }
-        return; // Stop execution here
+        return; 
     }
 
     // SCENARIO 2: INTER-COLUMN DROP (Status Change)
@@ -1496,39 +1532,24 @@ async handleAdvanceOption(e) {
 
     if (newInternalStage) {
         try {
-            // Check if this transition requires extra fields
-            console.log('stage '+newInternalStage);
             const requiredFields = await getRequiredFieldsForStage({ targetStage: newInternalStage });
-            console.log('requiredfields '+requiredFields);
             if (requiredFields && requiredFields.length > 0) {
-                // --- FIELDS ARE REQUIRED: Show the modal ---
-                console.log('enter required fields if');
                 this.transitionTicketId = ticketId;
                 this.transitionTargetStage = newInternalStage;
                 this.transitionRequiredFields = requiredFields;
                 this.showTransitionModal = true;
             } else {
-                // --- NO FIELDS REQUIRED: Perform the original direct update ---
-                await updateTicketStage({ ticketId: ticketId, newStage: newInternalStage })
-                    .then(() => {
-                        this.showToast('Success', 'Ticket moved.', 'success');
-                        this.refreshTickets();
-                    })
-                    .catch(error => {
-                        // This will now catch the error from your trigger!
-                        const errorMessage = error.body.message || 'An unknown error occurred.';
-                        this.showToast('Move Failed', errorMessage, 'error');
-                        // No need to refresh data, as the move was prevented
-                    });
-                // this.showToast('Success', 'Ticket moved successfully.', 'success');
+                // Namespace logic: Update stage via Apex
+                await updateTicketStage({ ticketId: ticketId, newStage: newInternalStage });
+                this.showToast('Success', 'Ticket moved.', 'success');
                 this.refreshTickets();
             }
         } catch (error) {
-            this.showToast('Error Moving Ticket', error.body ? error.body.message : error.message, 'error');
-            console.error('Error on drop:', error);
+            const errorMessage = error.body?.message || 'An unknown error occurred.';
+            this.showToast('Move Failed', errorMessage, 'error');
         }
     }
-}
+  }
 
 closeTransitionModal() {
     this.showTransitionModal = false;
@@ -1791,53 +1812,53 @@ handleTransitionError(event) {
 
   applyAiSuggestions() {
     try {
-      if (!this.aiSuggestions) {
-        this.showToast("Error", "No AI suggestions available to apply.", "error");
-        return;
-      }
+        if (!this.aiSuggestions) {
+            this.showToast("Error", "No AI suggestions available to apply.", "error");
+            return;
+        }
 
-      console.log("Applying AI suggestions:", this.aiSuggestions);
+        console.log("Applying AI suggestions:", this.aiSuggestions);
 
-      let appliedFields = [];
+        let appliedFields = [];
 
-      // Update reactive properties - this should automatically update the form fields
-      if (this.aiSuggestions.title) {
-        this.createTicketTitle = this.aiSuggestions.title;
-        this.formFieldValues["BriefDescriptionTxt__c"] = this.aiSuggestions.title;
-        appliedFields.push("title");
-      }
+        // NAMESPACE FIX: Use FIELDS map for the formFieldValues keys
+        if (this.aiSuggestions.title) {
+            this.createTicketTitle = this.aiSuggestions.title;
+            this.formFieldValues[FIELDS.BRIEF_DESC] = this.aiSuggestions.title;
+            appliedFields.push("title");
+        }
 
-      if (this.aiSuggestions.description) {
-        this.createTicketDescription = this.aiSuggestions.description;
-        this.formFieldValues["DetailsTxt__c"] = this.aiSuggestions.description;
-        appliedFields.push("description");
-      }
+        if (this.aiSuggestions.description) {
+            this.createTicketDescription = this.aiSuggestions.description;
+            this.formFieldValues[FIELDS.DETAILS] = this.aiSuggestions.description;
+            appliedFields.push("description");
+        }
 
-      if (this.aiSuggestions.estimatedDays && this.AiEstimation) {
-        this.estimatedDaysValue = this.aiSuggestions.estimatedDays;
-        this.formFieldValues["DeveloperDaysSizeNumber__c"] = this.aiSuggestions.estimatedDays;
-        appliedFields.push("estimated days");
-      }
+        if (this.aiSuggestions.estimatedDays && this.AiEstimation) {
+            this.estimatedDaysValue = this.aiSuggestions.estimatedDays;
+            this.formFieldValues[FIELDS.DEV_DAYS_SIZE] = this.aiSuggestions.estimatedDays;
+            appliedFields.push("estimated days");
+        }
 
-      // Force a re-render by updating the template
-      setTimeout(() => {
-        // Trigger change events to ensure form validation works
-        this.template.querySelectorAll("lightning-input-field").forEach((field) => {
-          field.dispatchEvent(new CustomEvent("change", { bubbles: true }));
-        });
-      }, 100);
+        // Force a re-render and trigger standard LWC form validation
+        setTimeout(() => {
+            this.template.querySelectorAll("lightning-input-field").forEach((field) => {
+                field.dispatchEvent(new CustomEvent("change", { bubbles: true }));
+            });
+        }, 100);
 
-      if (appliedFields.length === 0) {
-        this.showToast("Warning", "No valid suggestions found to apply.", "warning");
-        return;
-      }
+        if (appliedFields.length === 0) {
+            this.showToast("Warning", "No valid suggestions found to apply.", "warning");
+            return;
+        }
 
-      // Clear the suggestions
-      this.aiSuggestions = null;
-      this.showToast("Success", `AI suggestions applied: ${appliedFields.join(", ")}.`, "success");
+        // Clear suggestions and notify success
+        this.aiSuggestions = null;
+        this.showToast("Success", `AI suggestions applied: ${appliedFields.join(", ")}.`, "success");
+        
     } catch (error) {
-      console.error("Error applying AI suggestions:", error);
-      this.showToast("Error", "Failed to apply AI suggestions. Please try manually copying the values.", "error");
+        console.error("Error applying AI suggestions:", error);
+        this.showToast("Error", "Failed to apply AI suggestions. Please try manually copying the values.", "error");
     }
   }
 
