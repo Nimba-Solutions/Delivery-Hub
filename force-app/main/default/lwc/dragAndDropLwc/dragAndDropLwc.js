@@ -1514,21 +1514,6 @@ handleTransitionError(event) {
     }
   }
 
-  // 4. ADD a handler to open the modal (you may have this already)
-  handleCardClick(e) {
-    const id = e.currentTarget.dataset.id;
-    this.selectedRecord = (this.realRecords || []).find((r) => r.Id === id);
-    this.showModal = true;
-    this.moveComment = "";
-  }
-
-  // handleCardClick(e) {
-  //   const id = e.currentTarget.dataset.id;
-  //   this.selectedRecord = (this.realRecords || []).find((r) => r.Id === id);
-  //   this.showModal = true;
-  //   this.moveComment = "";
-  // }
-
   handleManageDependenciesClick(event) {
         const ticketId = event.currentTarget.dataset.id;
         console.log('ticketId '+ticketId);
