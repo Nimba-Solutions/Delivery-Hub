@@ -248,6 +248,11 @@
                                 value={estimatedDaysValue}></lightning-input-field>
                             
                             <lightning-input-field field-name="%%%NAMESPACE%%%PriorityPk__c"></lightning-input-field>
+
+                            <div class="slds-hide">
+                                <lightning-input-field field-name="%%%NAMESPACE%%%IsActiveBool__c" 
+                                    value={createDefaults.IsActiveBool__c}></lightning-input-field>
+                            </div>
                             
                             <lightning-file-upload label="Attach files" onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
 
