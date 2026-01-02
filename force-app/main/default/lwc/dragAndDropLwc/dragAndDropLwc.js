@@ -695,11 +695,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     this.showCreateModal = true;
   }
 
-  /* “Cancel” in form */
-  handleCreateCancel() {
-    this.showCreateModal = false;
-  }
-
   /* Called when the record-edit form saves successfully */
   handleCreateSuccess(event) {
     this.showCreateModal = false;
