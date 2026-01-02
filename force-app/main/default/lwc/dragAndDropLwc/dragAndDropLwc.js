@@ -1641,6 +1641,7 @@ handleTransitionError(event) {
       );
     } catch (error) {
       // Enhanced error handling with specific messages
+      console.log(event);
       let errorMessage = "Could not retrieve AI suggestions. Please try again.";
 
       if (error.message === "Request timeout") {
