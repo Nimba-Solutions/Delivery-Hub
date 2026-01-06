@@ -5,42 +5,40 @@ import { updateRecord } from "lightning/uiRecordApi";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
 // --- Namespaced Apex Imports ---
-import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getTickets";
-import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
-import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getAiEnhancedTicketDetails";
-import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketETAService.getTicketETAsWithPriority";
-import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketStage";
-import updateTicketSortOrder from "@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.updateTicketSortOrder";
-import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getRequiredFieldsForStage';
-import searchForPotentialBlockers from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.searchForPotentialBlockers';
-import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.createDependency';
-import removeDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DragAndDropLwcController.removeDependency';
-import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
+import getTickets from "@salesforce/apex/TicketController.getTickets";
+import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
+import getAiEnhancedTicketDetails from "@salesforce/apex/TicketController.getAiEnhancedTicketDetails";
+import getTicketETAsWithPriority from "@salesforce/apex/TicketETAService.getTicketETAsWithPriority";
+import updateTicketStage from "@salesforce/apex/DragAndDropLwcController.updateTicketStage";
+import updateTicketSortOrder from "@salesforce/apex/DragAndDropLwcController.updateTicketSortOrder";
+import getRequiredFieldsForStage from '@salesforce/apex/TicketController.getRequiredFieldsForStage';
+import searchForPotentialBlockers from '@salesforce/apex/DragAndDropLwcController.searchForPotentialBlockers';
+import createDependency from '@salesforce/apex/DragAndDropLwcController.createDependency';
+import removeDependency from '@salesforce/apex/DragAndDropLwcController.removeDependency';
+import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 
 // --- NAMESPACE BRIDGE ---
-// Use these constants throughout the JS logic to avoid "%%%NAMESPACE%%%" parsing errors.
-const NS = '%%%NAMESPACE%%%';
 const FIELDS = {
     ID: 'Id',
     NAME: 'Name',
-    BRIEF_DESC: `${NS}BriefDescriptionTxt__c`,
-    DETAILS: `${NS}DetailsTxt__c`,
-    STAGE: `${NS}StageNamePk__c`,
-    PRIORITY: `${NS}PriorityPk__c`,
-    SORT_ORDER: `${NS}SortOrderNumber__c`,
-    IS_ACTIVE: `${NS}IsActiveBool__c`,
-    TAGS: `${NS}Tags__c`,
-    EPIC: `${NS}Epic__c`,
-    INTENTION: `${NS}ClientIntentionPk__c`,
-    DEV_DAYS_SIZE: `${NS}DeveloperDaysSizeNumber__c`,
-    CALCULATED_ETA: `${NS}CalculatedETADate__c`,
-    PROJECTED_UAT_READY: `${NS}ProjectedUATReadyDate__c`,
-    DEVELOPER: `${NS}Developer__c`,
+    BRIEF_DESC: `%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c`,
+    DETAILS: `%%%NAMESPACED_ORG%%%DetailsTxt__c`,
+    STAGE: `%%%NAMESPACED_ORG%%%StageNamePk__c`,
+    PRIORITY: `%%%NAMESPACED_ORG%%%PriorityPk__c`,
+    SORT_ORDER: `%%%NAMESPACED_ORG%%%SortOrderNumber__c`,
+    IS_ACTIVE: `%%%NAMESPACED_ORG%%%IsActiveBool__c`,
+    TAGS: `%%%NAMESPACED_ORG%%%Tags__c`,
+    EPIC: `%%%NAMESPACED_ORG%%%Epic__c`,
+    INTENTION: `%%%NAMESPACED_ORG%%%ClientIntentionPk__c`,
+    DEV_DAYS_SIZE: `%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c`,
+    CALCULATED_ETA: `%%%NAMESPACED_ORG%%%CalculatedETADate__c`,
+    PROJECTED_UAT_READY: `%%%NAMESPACED_ORG%%%ProjectedUATReadyDate__c`,
+    DEVELOPER: `%%%NAMESPACED_ORG%%%Developer__c`,
     // Relationships
-    DEP_REL_BLOCKED_BY: `${NS}Ticket_Dependency1__r`,
-    DEP_REL_BLOCKING: `${NS}Ticket_Dependency__r`,
-    BLOCKING_TICKET: `${NS}Blocking_Ticket__c`,
-    BLOCKED_TICKET: `${NS}Blocked_Ticket__c`
+    DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%Ticket_Dependency1__r`,
+    DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%Ticket_Dependency__r`,
+    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%Blocking_Ticket__c`,
+    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_Ticket__c`
 };
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {

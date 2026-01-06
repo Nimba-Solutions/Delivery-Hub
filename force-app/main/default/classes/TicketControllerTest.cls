@@ -95,7 +95,7 @@ private class TicketControllerTest {
         List<Map<String, Object>> updates = new List<Map<String, Object>>();
         updates.add(new Map<String, Object>{
             'Id' => tickets[0].Id,
-            '%%%NAMESPACE%%%SortOrderNumber__c' => 5
+            '%%%NAMESPACED_ORG%%%SortOrderNumber__c' => 5
         });
 
         Test.startTest();
