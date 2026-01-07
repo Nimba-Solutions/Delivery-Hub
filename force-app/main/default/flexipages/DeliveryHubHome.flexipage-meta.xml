@@ -15,24 +15,18 @@
                 <identifier>flexipage_richText</identifier>
             </componentInstance>
         </itemInstances>
-        <name>top</name>
-        <type>Region</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <name>bottomLeft</name>
-        <type>Region</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <name>bottomRight</name>
-        <type>Region</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <name>sidebar</name>
+        <itemInstances>
+            <componentInstance>
+                <componentName>dragAndDropLwc</componentName>
+                <identifier>c_dragAndDropLwc</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
     <masterLabel>Home</masterLabel>
     <template>
-        <name>home:desktopTemplate</name>
+        <name>industries_common:homeTemplateOneRegion</name>
     </template>
     <type>HomePage</type>
 </FlexiPage>
