@@ -246,6 +246,102 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     // ... (add other columns if you want custom labels)
   };
 
+  /**
+   * Complete persona visibility configuration based on spreadsheet.
+   * For each persona, defines:
+   * - statuses: ACTUAL Salesforce picklist values that map to this column
+   * - primaryView: whether column shows when "Show Extended Pipeline" is UNCHECKED
+   * - extendedView: whether column shows when "Show Extended Pipeline" is CHECKED
+   * - displayName: the column header title for this persona
+   */
+  personaVisibilityConfig = {
+    Client: {
+      "Backlog": { statuses: ["Backlog"], primaryView: true, extendedView: true, displayName: "Backlog" },
+      "Active Scoping": { statuses: ["Active Scoping"], primaryView: true, extendedView: true, displayName: "Active Scoping" },
+      "Clarification (Pre-Dev)": { statuses: ["Client Clarification (Pre-Dev)"], primaryView: true, extendedView: true, displayName: "Clarification (Pre-Dev)" },
+      "Quick Estimate": { statuses: ["Needs Dev Feedback (T-Shirt Sizing)"], primaryView: false, extendedView: true, displayName: "Quick Estimate" },
+      "Pending Prioritization": { statuses: ["Pending Client Prioritization"], primaryView: true, extendedView: true, displayName: "Pending Prioritization" },
+      "Proposal Needed": { statuses: ["Needs Dev Feedback (Proposal)"], primaryView: false, extendedView: true, displayName: "Proposal Needed" },
+      "Pending Dev Approval": { statuses: ["Pending Development Approval"], primaryView: false, extendedView: true, displayName: "Pending Dev Approval" },
+      "Pending Client Approval": { statuses: ["Pending Client Approval"], primaryView: true, extendedView: true, displayName: "Pending Client Approval" },
+      "Clarification (In-Dev)": { statuses: ["Client Clarification (In-Dev)"], primaryView: true, extendedView: true, displayName: "Clarification (In-Dev)" },
+      "Ready for Dev": { statuses: ["Ready for Development"], primaryView: false, extendedView: true, displayName: "Ready for Dev" },
+      "In Dev": { statuses: ["Back For Development", "In Development", "Dev Blocked", "Dev Complete"], primaryView: false, extendedView: true, displayName: "In Dev" },
+      "In Review": { statuses: ["Ready for Scratch Org Test", "Ready for QA", "In QA"], primaryView: false, extendedView: true, displayName: "In Review" },
+      "In UAT": { statuses: ["In UAT"], primaryView: false, extendedView: true, displayName: "In UAT" },
+      "Ready for UAT (Cons.)": { statuses: ["Ready for UAT (Consultant)"], primaryView: false, extendedView: true, displayName: "Ready for UAT (Cons.)" },
+      "Ready for UAT (Client)": { statuses: ["Ready for UAT (Client)"], primaryView: true, extendedView: true, displayName: "Ready for UAT (Client)" },
+      "Ready UAT Approval": { statuses: ["Ready for UAT Approval"], primaryView: true, extendedView: true, displayName: "Ready UAT Approval" },
+      "Ready Feature Merge": { statuses: ["Ready for Feature Merge"], primaryView: true, extendedView: true, displayName: "Ready Feature Merge" },
+      "Ready Deployment": { statuses: ["Ready for Deployment"], primaryView: true, extendedView: true, displayName: "Ready Deployment" },
+      "Deployed to Prod": { statuses: ["Deployed to Prod"], primaryView: true, extendedView: true, displayName: "Deployed to Prod" },
+      "Done": { statuses: ["Done"], primaryView: true, extendedView: true, displayName: "Done" },
+      "Cancelled": { statuses: ["Cancelled"], primaryView: true, extendedView: true, displayName: "Cancelled" }
+    },
+    Consultant: {
+      // Primary view: Key workflow columns for Consultant
+      // Extended view: All columns visible
+      "Intake": { statuses: ["Backlog"], primaryView: false, extendedView: true, displayName: "Intake" },
+      "Active Scoping": { statuses: ["Active Scoping"], primaryView: false, extendedView: true, displayName: "Active Scoping" },
+      "Clarification (Pre-Dev)": { statuses: ["Client Clarification (Pre-Dev)"], primaryView: false, extendedView: true, displayName: "Clarification (Pre-Dev)" },
+      "Needs Feedback (Sizing)": { statuses: ["Needs Dev Feedback (T-Shirt Sizing)"], primaryView: false, extendedView: true, displayName: "Needs Feedback (Sizing)" },
+      "Pending Prioritization": { statuses: ["Pending Client Prioritization"], primaryView: true, extendedView: true, displayName: "Pending Prioritization" },
+      "Needs Feedback (Proposal)": { statuses: ["Needs Dev Feedback (Proposal)"], primaryView: false, extendedView: true, displayName: "Needs Feedback (Proposal)" },
+      "Pending Dev Approval": { statuses: ["Pending Development Approval"], primaryView: true, extendedView: true, displayName: "Pending Dev Approval" },
+      "Pending Client Approval": { statuses: ["Pending Client Approval"], primaryView: false, extendedView: true, displayName: "Pending Client Approval" },
+      "Clarification (In-Dev)": { statuses: ["Client Clarification (In-Dev)"], primaryView: false, extendedView: true, displayName: "Clarification (In-Dev)" },
+      "Ready for Development": { statuses: ["Ready for Development"], primaryView: true, extendedView: true, displayName: "Ready for Development" },
+      "Back For Development": { statuses: ["Back For Development"], primaryView: false, extendedView: true, displayName: "Back For Development" },
+      "In Development": { statuses: ["In Development"], primaryView: true, extendedView: true, displayName: "In Development" },
+      "Dev Blocked": { statuses: ["Dev Blocked"], primaryView: false, extendedView: true, displayName: "Dev Blocked" },
+      "Dev Complete": { statuses: ["Dev Complete"], primaryView: true, extendedView: true, displayName: "Dev Complete" },
+      "Scratch Org Test": { statuses: ["Ready for Scratch Org Test"], primaryView: true, extendedView: true, displayName: "Scratch Org Test" },
+      "Ready for QA": { statuses: ["Ready for QA"], primaryView: true, extendedView: true, displayName: "Ready for QA" },
+      "In QA": { statuses: ["In QA"], primaryView: true, extendedView: true, displayName: "In QA" },
+      "In UAT": { statuses: ["In UAT"], primaryView: true, extendedView: true, displayName: "In UAT" },
+      "Ready for UAT (Cons.)": { statuses: ["Ready for UAT (Consultant)"], primaryView: true, extendedView: true, displayName: "Ready for UAT (Cons.)" },
+      "Ready for UAT (Client)": { statuses: ["Ready for UAT (Client)"], primaryView: true, extendedView: true, displayName: "Ready for UAT (Client)" },
+      "Ready UAT Approval": { statuses: ["Ready for UAT Approval"], primaryView: false, extendedView: true, displayName: "Ready UAT Approval" },
+      "Ready Feature Merge": { statuses: ["Ready for Feature Merge"], primaryView: true, extendedView: true, displayName: "Ready Feature Merge" },
+      "Ready Deployment": { statuses: ["Ready for Deployment"], primaryView: true, extendedView: true, displayName: "Ready Deployment" },
+      "Deployed to Prod": { statuses: ["Deployed to Prod"], primaryView: true, extendedView: true, displayName: "Deployed to Prod" },
+      "Done": { statuses: ["Done"], primaryView: true, extendedView: true, displayName: "Done" },
+      "Cancelled": { statuses: ["Cancelled"], primaryView: false, extendedView: true, displayName: "Cancelled" }
+    },
+    Developer: {
+      "Backlog": { statuses: ["Backlog"], primaryView: false, extendedView: true, displayName: "Backlog" },
+      "Scoping": { statuses: ["Active Scoping", "Client Clarification (Pre-Dev)"], primaryView: false, extendedView: true, displayName: "Scoping" },
+      "Needs Feedback (Sizing)": { statuses: ["Needs Dev Feedback (T-Shirt Sizing)"], primaryView: true, extendedView: true, displayName: "Needs Feedback (Sizing)" },
+      "Pending Prioritization": { statuses: ["Pending Client Prioritization"], primaryView: true, extendedView: true, displayName: "Pending Prioritization" },
+      "Needs Feedback (Proposal)": { statuses: ["Needs Dev Feedback (Proposal)"], primaryView: true, extendedView: true, displayName: "Needs Feedback (Proposal)" },
+      "Pending Dev Approval": { statuses: ["Pending Development Approval"], primaryView: true, extendedView: true, displayName: "Pending Dev Approval" },
+      "Ready For Dev": { statuses: ["Pending Client Approval", "Ready for Development"], primaryView: true, extendedView: true, displayName: "Ready For Dev" },
+      "In Dev": { statuses: ["Back For Development", "In Development", "Dev Blocked"], primaryView: true, extendedView: true, displayName: "In Dev" },
+      "Ready for QA": { statuses: ["Dev Complete", "Ready for Scratch Org Test", "Ready for QA"], primaryView: true, extendedView: true, displayName: "Ready for QA" },
+      "In QA": { statuses: ["In QA"], primaryView: true, extendedView: true, displayName: "In QA" },
+      "UAT": { statuses: ["In UAT", "Ready for UAT (Consultant)", "Ready for UAT (Client)", "Ready for UAT Approval"], primaryView: false, extendedView: true, displayName: "UAT" },
+      "Merge": { statuses: ["Ready for Feature Merge"], primaryView: false, extendedView: true, displayName: "Merge" },
+      "Deploy": { statuses: ["Ready for Deployment"], primaryView: false, extendedView: true, displayName: "Deploy" },
+      "Deployed": { statuses: ["Deployed to Prod"], primaryView: false, extendedView: true, displayName: "Deployed" },
+      "Done": { statuses: ["Done"], primaryView: false, extendedView: true, displayName: "Done" },
+      "Cancelled": { statuses: ["Cancelled"], primaryView: false, extendedView: true, displayName: "Cancelled" }
+    },
+    QA: {
+      "Backlog": { statuses: ["Backlog"], primaryView: false, extendedView: true, displayName: "Backlog" },
+      "Scoping": { statuses: ["Active Scoping", "Client Clarification (Pre-Dev)", "Needs Dev Feedback (T-Shirt Sizing)", "Pending Client Prioritization", "Needs Dev Feedback (Proposal)", "Pending Development Approval", "Pending Client Approval", "Client Clarification (In-Dev)"], primaryView: false, extendedView: true, displayName: "Scoping" },
+      "In Dev": { statuses: ["Ready for Development", "Back For Development", "In Development", "Dev Blocked"], primaryView: false, extendedView: true, displayName: "In Dev" },
+      "Ready for QA": { statuses: ["Dev Complete", "Ready for Scratch Org Test", "Ready for QA"], primaryView: true, extendedView: true, displayName: "Ready for QA" },
+      "In QA": { statuses: ["In QA"], primaryView: true, extendedView: true, displayName: "In QA" },
+      "UAT": { statuses: ["In UAT", "Ready for UAT (Consultant)", "Ready for UAT (Client)", "Ready for UAT Approval"], primaryView: true, extendedView: true, displayName: "UAT" },
+      "Merge": { statuses: ["Ready for Feature Merge"], primaryView: true, extendedView: true, displayName: "Merge" },
+      "Deploy": { statuses: ["Ready for Deployment"], primaryView: true, extendedView: true, displayName: "Deploy" },
+      "Deployed": { statuses: ["Deployed to Prod"], primaryView: true, extendedView: true, displayName: "Deployed" },
+      "Done": { statuses: ["Done"], primaryView: false, extendedView: true, displayName: "Done" },
+      "Cancelled": { statuses: ["Cancelled"], primaryView: false, extendedView: true, displayName: "Cancelled" }
+    }
+  };
+
+
   personaColumnStatusMap = {
     Client: {
       Backlog: ["Backlog"],
@@ -357,105 +453,175 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       all: [
         "Backlog",
         "Active Scoping",
+        "Clarification (Pre-Dev)",
         "Quick Estimate",
-        "Pending Client Prioritization",
+        "Pending Prioritization",
         "Proposal Needed",
+        "Pending Dev Approval",
         "Pending Client Approval",
-        "Ready for Development",
-        "Client Clarification (In-Dev)",
-        "In Development",
+        "Clarification (In-Dev)",
+        "Ready for Dev",
+        "In Dev",
         "In Review",
+        "In UAT",
+        "Ready for UAT (Cons.)",
         "Ready for UAT (Client)",
+        "Ready UAT Approval",
+        "Ready Feature Merge",
+        "Ready Deployment",
         "Deployed to Prod",
         "Done",
+        "Cancelled"
       ],
       predev: [
         "Backlog",
         "Active Scoping",
+        "Clarification (Pre-Dev)",
         "Quick Estimate",
-        "Pending Client Prioritization",
+        "Pending Prioritization",
         "Proposal Needed",
-        "Pending Client Approval",
-        "Ready for Development",
+        "Pending Dev Approval",
+        "Pending Client Approval"
       ],
       indev: [
-        "Client Clarification (In-Dev)",
-        "In Development",
+        "Clarification (In-Dev)",
+        "Ready for Dev",
+        "In Dev",
         "In Review",
+        "In UAT",
+        "Ready for UAT (Cons.)",
         "Ready for UAT (Client)",
+        "Ready UAT Approval",
+        "Ready Feature Merge",
+        "Ready Deployment"
       ],
-      deployed: ["Deployed to Prod", "Done"],
+      deployed: ["Deployed to Prod", "Done", "Cancelled"]
     },
     Consultant: {
       all: [
         "Intake",
-        "Quick Estimate",
-        "Proposal Needed",
-        "Dev Approval",
-        "Pre-Dev Complete",
+        "Active Scoping",
+        "Clarification (Pre-Dev)",
+        "Needs Feedback (Sizing)",
+        "Pending Prioritization",
+        "Needs Feedback (Proposal)",
+        "Pending Dev Approval",
+        "Pending Client Approval",
+        "Clarification (In-Dev)",
+        "Ready for Development",
+        "Back For Development",
         "In Development",
-        "Review & UAT",
-        "Feature Merge & Deploy",
+        "Dev Blocked",
+        "Dev Complete",
+        "Scratch Org Test",
+        "Ready for QA",
+        "In QA",
+        "In UAT",
+        "Ready for UAT (Cons.)",
+        "Ready for UAT (Client)",
+        "Ready UAT Approval",
+        "Ready Feature Merge",
+        "Ready Deployment",
         "Deployed to Prod",
         "Done",
+        "Cancelled"
       ],
       predev: [
         "Intake",
-        "Quick Estimate",
-        "Proposal Needed",
-        "Dev Approval",
-        "Pre-Dev Complete",
+        "Active Scoping",
+        "Clarification (Pre-Dev)",
+        "Needs Feedback (Sizing)",
+        "Pending Prioritization",
+        "Needs Feedback (Proposal)",
+        "Pending Dev Approval",
+        "Pending Client Approval",
+        "Ready for Development"
       ],
-      indev: ["In Development", "Review & UAT", "Feature Merge & Deploy"],
-      deployed: ["Deployed to Prod", "Done"],
+      indev: [
+        "Back For Development",
+        "In Development",
+        "Dev Blocked",
+        "Dev Complete",
+        "Scratch Org Test",
+        "Ready for QA",
+        "In QA",
+        "In UAT",
+        "Ready for UAT (Cons.)",
+        "Ready for UAT (Client)",
+        "Ready UAT Approval",
+        "Ready Feature Merge",
+        "Ready Deployment"
+      ],
+      deployed: ["Deployed to Prod", "Done", "Cancelled"]
     },
     Developer: {
       all: [
-        "Pending Work",
-        "Dev In Progress",
-        "Dev Blocked",
-        "Dev Complete",
-        "Review & Fixes",
-        "QA & UAT",
-        "Ready for Deploy",
-        "Deployed to Prod",
+        "Backlog",
+        "Scoping",
+        "Needs Feedback (Sizing)",
+        "Pending Prioritization",
+        "Needs Feedback (Proposal)",
+        "Pending Dev Approval",
+        "Ready For Dev",
+        "In Dev",
+        "Ready for QA",
+        "In QA",
+        "UAT",
+        "Merge",
+        "Deploy",
+        "Deployed",
         "Done",
+        "Cancelled"
       ],
-      predev: ["Pending Work"],
+      predev: [
+        "Backlog",
+        "Scoping",
+        "Needs Feedback (Sizing)",
+        "Pending Prioritization",
+        "Needs Feedback (Proposal)",
+        "Pending Dev Approval",
+        "Ready For Dev"
+      ],
       indev: [
-        "Dev In Progress",
-        "Dev Blocked",
-        "Dev Complete",
-        "Review & Fixes",
-        "QA & UAT",
-        "Ready for Deploy",
+        "In Dev",
+        "Ready for QA",
+        "In QA",
+        "UAT",
+        "Merge",
+        "Deploy"
       ],
-      deployed: ["Deployed to Prod", "Done"],
+      deployed: ["Deployed", "Done", "Cancelled"]
     },
     QA: {
       all: [
+        "Backlog",
+        "Scoping",
+        "In Dev",
         "Ready for QA",
         "In QA",
-        "In Dev",
-        "Scratch Org Test",
         "UAT",
-        "Ready for Merge",
-        "Ready for Deploy",
-        "Deployed to Prod",
+        "Merge",
+        "Deploy",
+        "Deployed",
         "Done",
+        "Cancelled"
       ],
-      predev: ["In Dev"],
+      predev: [
+        "Backlog",
+        "Scoping",
+        "In Dev"
+      ],
       indev: [
         "Ready for QA",
         "In QA",
-        "Scratch Org Test",
         "UAT",
-        "Ready for Merge",
-        "Ready for Deploy",
+        "Merge",
+        "Deploy"
       ],
-      deployed: ["Deployed to Prod", "Done"],
-    },
+      deployed: ["Deployed", "Done", "Cancelled"]
+    }
   };
+
 
   transitionMap = {
     Backlog: [
@@ -830,35 +996,54 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   /* ---------- stageColumns (Refactored Phase 3) ---------- */
   get stageColumns() {
     const persona = this.persona;
-    const boardViews = this.personaBoardViews?.[persona] || {};
-    let colNames = boardViews?.[this.overallFilter] || [];
-    const statusMap = this.personaColumnStatusMap?.[persona] || {};
     const enriched = this.enrichedTickets || [];
-
-    if (!this.showAllColumns) {
-        colNames = colNames.filter((col) => this.columnOwner(col) === persona);
+    
+    // NEW: Use personaVisibilityConfig for visibility control
+    const visibilityConfig = this.personaVisibilityConfig?.[persona] || {};
+    const viewMode = this.showAllColumns ? 'extendedView' : 'primaryView';
+    
+    // Get columns visible for current view mode
+    let colNames = Object.keys(visibilityConfig).filter(
+      (colName) => visibilityConfig[colName]?.[viewMode] === true
+    );
+    
+    // Apply board view filter (all/predev/indev/deployed) for backward compatibility
+    const boardViews = this.personaBoardViews?.[persona] || {};
+    const boardViewCols = boardViews?.[this.overallFilter] || [];
+    if (this.overallFilter !== 'all' && boardViewCols.length > 0) {
+      colNames = colNames.filter((col) => boardViewCols.includes(col));
     }
 
     let columns = colNames.map((colName) => {
-        const config = this.columnHeaderStyleMap[colName] || { bg: "#ffffff", color: "#11182c" };
-        const headerStyle = `background:${config.bg};color:${config.color};`;
+        const colConfig = visibilityConfig[colName] || {};
+        const headerConfig = this.columnHeaderStyleMap[colName] || { bg: "#ffffff", color: "#11182c" };
+        const headerStyle = `background:${headerConfig.bg};color:${headerConfig.color};`;
 
-        // Namespace logic: Filter tickets using the FIELDS bridge
+        // Use statuses from visibility config, fallback to legacy personaColumnStatusMap
+        const statusMap = this.personaColumnStatusMap?.[persona] || {};
+        const statusesToMatch = colConfig.statuses || statusMap[colName] || [];
+        
+        // Filter tickets by matching statuses
+        // Handle both namespaced and non-namespaced field access
         const columnTickets = enriched
-            .filter((t) => (statusMap[colName] || []).includes(t[FIELDS.STAGE]))
+            .filter((t) => {
+                const ticketStage = t[FIELDS.STAGE] || t.StageNamePk__c;
+                return statusesToMatch.includes(ticketStage);
+            })
             .filter((t) => {
                 if (this.intentionFilter === "all") return true;
-                const intention = (t[FIELDS.INTENTION] || "").trim().toLowerCase();
+                const intention = (t[FIELDS.INTENTION] || t.ClientIntentionPk__c || "").trim().toLowerCase();
                 return intention === this.intentionFilter.toLowerCase();
             })
             .map((ticket) => ({
                 ...ticket,
-                cardStyle: `border-left-color: ${config.bg} !important;`,
+                cardStyle: `border-left-color: ${headerConfig.bg} !important;`,
             }));
 
         return {
             stage: colName,
-            displayName: this.columnDisplayNames[colName] || colName,
+            // Use persona-specific display name from visibility config
+            displayName: colConfig.displayName || this.columnDisplayNames[colName] || colName,
             headerStyle,
             tickets: columnTickets,
             bodyClasses: `kanban-column-body ${columnTickets.length > 0 ? "has-tickets" : "is-empty"}`,
@@ -867,6 +1052,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
     return this.showMode === "active" ? columns.filter((col) => col.tickets.length > 0) : columns;
   }
+
 
   getColumnDisplayName(colKey) {
     return this.columnDisplayNames?.[colKey] || colKey;
