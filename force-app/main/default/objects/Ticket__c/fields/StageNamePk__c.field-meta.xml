@@ -2,7 +2,6 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StageNamePk__c</fullName>
     <description>Picklist of allowed ticket stages used by the drag-and-drop board</description>
-    <externalId>false</externalId>
     <label>Stage Name</label>
     <required>false</required>
     <trackTrending>false</trackTrending>
@@ -51,9 +50,19 @@
                 <label>Pending Client Approval</label>
             </value>
             <value>
+                <fullName>Client Clarification (In-Dev)</fullName>
+                <default>false</default>
+                <label>Client Clarification (In-Dev)</label>
+            </value>
+            <value>
                 <fullName>Ready for Development</fullName>
                 <default>false</default>
                 <label>Ready for Development</label>
+            </value>
+            <value>
+                <fullName>Back For Development</fullName>
+                <default>false</default>
+                <label>Back For Development</label>
             </value>
             <value>
                 <fullName>In Development</fullName>
@@ -64,16 +73,6 @@
                 <fullName>Dev Blocked</fullName>
                 <default>false</default>
                 <label>Dev Blocked</label>
-            </value>
-            <value>
-                <fullName>Client Clarification (In-Dev)</fullName>
-                <default>false</default>
-                <label>Client Clarification (In-Dev)</label>
-            </value>
-            <value>
-                <fullName>Back For Development</fullName>
-                <default>false</default>
-                <label>Back For Development</label>
             </value>
             <value>
                 <fullName>Dev Complete</fullName>
