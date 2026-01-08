@@ -58,9 +58,9 @@ public without sharing class TicketTriggerHandler {
                 // Use synchronous methods during tests to avoid async job limits
                 Ticket_JiraSync.createJiraIssuesSync(toCreate);
             } else {
-                System.enqueueJob(
-                    new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, toCreate)
-                );
+                //System.enqueueJob(
+                //    new JiraSyncWorker(JiraSyncWorker.Mode.CREATE, toCreate)
+                //);
             }
         }
         if (!toUpdate.isEmpty()){
@@ -68,9 +68,9 @@ public without sharing class TicketTriggerHandler {
                 // Use synchronous methods during tests to avoid async job limits
                 Ticket_JiraSync.updateJiraIssuesSync(toUpdate);
             } else {
-                System.enqueueJob(
-                    new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA, toUpdate)
-                );
+                //System.enqueueJob(
+                //    new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA, toUpdate)
+                //);
             }
         }
     }
