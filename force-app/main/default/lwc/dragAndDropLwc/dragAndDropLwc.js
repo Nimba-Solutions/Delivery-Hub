@@ -86,15 +86,15 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   statusColorMap = {
     Backlog: "#FAFAFA",
     "Active Scoping": "#FFE082",
-    "Quick Estimate": "#FFD54F", // not a status but a column, see below!
-    "Pending Client Prioritization": "#FFD54F", // YELLOW
+    "Quick Estimate": "#FFD54F", // not a status but a column
+    "Pending Client Prioritization": "#FFD54F", 
     "Client Clarification (Pre-Dev)": "#FFD54F",
     "Pending Client Approval": "#FFE0B2",
     "Needs Dev Feedback (T-Shirt Sizing)": "#FFD180",
     "Needs Dev Feedback (Proposal)": "#FFD180",
-    "Pending Development Approval": "#FFD54F", // now yellow, not blue
+    "Pending Development Approval": "#FFD54F",
     "Ready for Development": "#FFD54F",
-    "In Development": "#FF9100", // Orange
+    "In Development": "#FF9100", 
     "Dev Blocked": "#FF5252",
     "Back For Development": "#FFD180",
     "Dev Complete": "#A5D6A7",
@@ -112,77 +112,53 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
   // Custom header color logic for Client persona
   columnHeaderStyleMap = {
-    // --- Client Action Columns (Blue Scheme) ---
-    Backlog: { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
+    // --- Client Columns ---
+    "Backlog": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
     "Active Scoping": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
-    "Pending Client Prioritization": {
-      bg: "rgba(59, 130, 246, 0.3)",
-      color: "#2563EB",
-    },
-    "Pending Client Approval": {
-      bg: "rgba(59, 130, 246, 0.3)",
-      color: "#2563EB",
-    },
-    "Client Clarification (Pre-Dev)": {
-      bg: "rgba(59, 130, 246, 0.3)",
-      color: "#2563EB",
-    },
-    "Client Clarification (In-Dev)": {
-      bg: "rgba(59, 130, 246, 0.3)",
-      color: "#2563EB",
-    },
-    "Ready for UAT (Client)": {
-      bg: "rgba(59, 130, 246, 0.3)",
-      color: "#2563EB",
-    },
+    "Clarification (Pre-Dev)": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
+    "Quick Estimate": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" }, // Amber
+    "Pending Prioritization": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
+    "Proposal Needed": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" }, // Amber
+    "Pending Approval": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" }, // Client Action
+    "Clarification (In-Dev)": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
+    "Ready for Dev": { bg: "rgba(34, 197, 94, 0.3)", color: "#16A34A" }, // Green
+    "In Development": { bg: "rgba(34, 197, 94, 0.3)", color: "#16A34A" }, // Green
+    "In Review": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" }, // Teal
+    "Ready for UAT": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" }, // Client Action
+    "Ready For Prod": { bg: "rgba(139, 92, 246, 0.3)", color: "#7C3AED" }, // Purple
+    "Deployed": { bg: "rgba(99, 102, 241, 0.3)", color: "#4F46E5" },
+    "Done": { bg: "rgba(100, 116, 139, 0.3)", color: "#475569" },
 
-    // --- Pre-Dev & Sizing Columns (Amber/Yellow Scheme) ---
-    "Quick Estimate": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" },
-    "Needs Dev Feedback (T-Shirt Sizing)": {
-      bg: "rgba(245, 158, 11, 0.3)",
-      color: "#D97706",
-    },
-    "Needs Dev Feedback (Proposal)": {
-      bg: "rgba(245, 158, 11, 0.3)",
-      color: "#D97706",
-    },
-    "Proposal Needed": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" },
-    "Pending Development Approval": {
-      bg: "rgba(245, 158, 11, 0.3)",
-      color: "#D97706",
-    },
-
-    // --- Development Columns (Green Scheme) ---
+    // --- Consultant / Developer Specific ---
+    "Intake": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
+    "Needs Feedback (Sizing)": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" },
+    "Needs Feedback (Proposal)": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" },
+    "Pending Dev Approval": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" },
+    "Pending Client Approval": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
     "Ready for Development": { bg: "rgba(34, 197, 94, 0.3)", color: "#16A34A" },
-    "In Development": { bg: "rgba(34, 197, 94, 0.3)", color: "#16A34A" },
+    "Back For Development": { bg: "rgba(239, 68, 68, 0.3)", color: "#DC2626" }, // Red/Warning
+    "Dev Blocked": { bg: "rgba(239, 68, 68, 0.3)", color: "#DC2626" },
     "Dev Complete": { bg: "rgba(34, 197, 94, 0.3)", color: "#16A34A" },
-    "Back For Development": { bg: "rgba(34, 197, 94, 0.3)", color: "#16A34A" },
-
-    // --- QA & Review Columns (Teal/Cyan Scheme) ---
-    "In Review": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
-    "Ready for Scratch Org Test": {
-      bg: "rgba(20, 184, 166, 0.3)",
-      color: "#0D9488",
-    },
+    "Scratch Org Test": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
     "Ready for QA": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
     "In QA": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
-    "Ready for UAT (Consultant)": {
-      bg: "rgba(20, 184, 166, 0.3)",
-      color: "#0D9488",
-    },
-
-    // --- Deployment Columns (Indigo/Purple Scheme) ---
-    "Ready for Feature Merge": {
-      bg: "rgba(139, 92, 246, 0.3)",
-      color: "#7C3AED",
-    },
-    "Ready for Deployment": { bg: "rgba(139, 92, 246, 0.3)", color: "#7C3AED" },
+    "In UAT": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
+    "Ready for UAT (Cons.)": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
+    "Ready for UAT (Client)": { bg: "rgba(59, 130, 246, 0.3)", color: "#2563EB" },
+    "Ready UAT Approval": { bg: "rgba(139, 92, 246, 0.3)", color: "#7C3AED" },
+    "Ready Feature Merge": { bg: "rgba(139, 92, 246, 0.3)", color: "#7C3AED" },
+    "Ready Deployment": { bg: "rgba(139, 92, 246, 0.3)", color: "#7C3AED" },
     "Deployed to Prod": { bg: "rgba(99, 102, 241, 0.3)", color: "#4F46E5" },
+    "Cancelled": { bg: "rgba(156, 163, 175, 0.3)", color: "#6B7280" },
 
-    // --- Final State Columns (Neutral/Special Schemes) ---
-    Done: { bg: "rgba(100, 116, 139, 0.3)", color: "#475569" }, // Slate Grey
-    "Dev Blocked": { bg: "rgba(239, 68, 68, 0.3)", color: "#DC2626" }, // Red
-    Cancelled: { bg: "rgba(156, 163, 175, 0.3)", color: "#6B7280" }, // Light Grey
+    // --- QA Specific ---
+    "Scoping": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" },
+    "Ready For Dev": { bg: "rgba(245, 158, 11, 0.3)", color: "#D97706" },
+    "In Dev": { bg: "rgba(34, 197, 94, 0.3)", color: "#16A34A" },
+    "Ready for Scratch Org Test": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
+    "UAT": { bg: "rgba(20, 184, 166, 0.3)", color: "#0D9488" },
+    "Ready for Feature Merge": { bg: "rgba(139, 92, 246, 0.3)", color: "#7C3AED" },
+    "Ready for Deployment": { bg: "rgba(139, 92, 246, 0.3)", color: "#7C3AED" },
   };
 
   /** Who owns each status next **/
@@ -204,6 +180,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     "Ready for UAT (Consultant)": "Consultant",
     "Ready for Feature Merge": "Consultant",
     "Ready for Deployment": "Consultant",
+    "Ready for UAT Approval": "Consultant",
 
     // ── Developer ──────────────────────
     "Needs Dev Feedback (T-Shirt Sizing)": "Developer",
@@ -218,6 +195,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     "Ready for Scratch Org Test": "QA",
     "Ready for QA": "QA",
     "In QA": "QA",
+    "In UAT": "QA"
   };
 
   /** Color palette per persona **/
@@ -230,126 +208,258 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   };
 
   columnDisplayNames = {
-    Backlog: "Backlog",
+    // Client
+    "Backlog": "Backlog",
     "Active Scoping": "Active Scoping",
-    "Quick Estimate": "Ready for Estimate",
-    "Pending Client Prioritization": "Client Prioritization / Feedback", // <-- NEW LABEL!
-    "Proposal Needed": "Approved for Analysis",
-    "Pending Client Approval": "Pending Client Approval",
-    "Ready for Development": "Approved for Development",
-    "Client Clarification (In-Dev)": "Client Clarification (In-Dev)",
+    "Clarification (Pre-Dev)": "Clarification (Pre-Dev)",
+    "Quick Estimate": "Quick Estimate",
+    "Pending Prioritization": "Pending Prioritization",
+    "Proposal Needed": "Proposal Needed",
+    "Pending Approval": "Pending Approval",
+    "Clarification (In-Dev)": "Clarification (In-Dev)",
+    "Ready for Dev": "Ready for Dev",
     "In Development": "In Development",
     "In Review": "In Review",
+    "Ready for UAT": "Ready for UAT",
+    "Ready For Prod": "Ready For Prod",
+    "Deployed": "Deployed",
+    "Done": "Done",
+    
+    // Consultant/Dev Specific
+    "Intake": "Intake",
+    "Needs Feedback (Sizing)": "Needs Feedback (Sizing)",
+    "Needs Feedback (Proposal)": "Needs Feedback (Proposal)",
+    "Pending Dev Approval": "Pending Dev Approval",
+    "Pending Client Approval": "Pending Client Approval",
+    "Ready for Development": "Ready for Development",
+    "Back For Development": "Back For Development",
+    "Dev Blocked": "Dev Blocked",
+    "Dev Complete": "Dev Complete",
+    "Scratch Org Test": "Scratch Org Test",
+    "Ready for QA": "Ready for QA",
+    "In QA": "In QA",
+    "In UAT": "In UAT",
+    "Ready for UAT (Cons.)": "Ready for UAT (Cons.)",
     "Ready for UAT (Client)": "Ready for UAT (Client)",
+    "Ready UAT Approval": "Ready UAT Approval",
+    "Ready Feature Merge": "Ready Feature Merge",
+    "Ready Deployment": "Ready Deployment",
     "Deployed to Prod": "Deployed to Prod",
-    Done: "Done",
-    // ... (add other columns if you want custom labels)
+    "Cancelled": "Cancelled",
+
+    // QA Specific
+    "Scoping": "Scoping",
+    "Ready For Dev": "Ready For Dev",
+    "In Dev": "In Dev",
+    "Ready for Scratch Org Test": "Ready for Scratch Org Test",
+    "UAT": "UAT",
+    "Ready for Feature Merge": "Ready for Feature Merge",
+    "Ready for Deployment": "Ready for Deployment"
   };
 
+  // Maps which columns contain which statuses for each Persona
   personaColumnStatusMap = {
     Client: {
-      Backlog: ["Backlog"],
+      "Backlog": ["Backlog"],
       "Active Scoping": ["Active Scoping"],
+      "Clarification (Pre-Dev)": ["Client Clarification (Pre-Dev)"],
       "Quick Estimate": ["Needs Dev Feedback (T-Shirt Sizing)"],
-      "Pending Client Prioritization": [
-        "Client Clarification (Pre-Dev)", // <-- Add here!
-        "Pending Client Prioritization",
-      ],
-      "Proposal Needed": [
-        "Needs Dev Feedback (Proposal)",
-        "Pending Development Approval",
-      ],
-      "Pending Client Approval": ["Pending Client Approval"],
-      "Ready for Development": ["Ready for Development"],
-      "Client Clarification (In-Dev)": ["Client Clarification (In-Dev)"],
-      "In Development": [
-        "In Development",
-        "Dev Blocked",
-        "Back For Development",
-        "Dev Complete",
-      ],
-      "In Review": [
-        "Ready for Scratch Org Test",
-        "Ready for QA",
-        "In QA",
-        "Ready for UAT (Consultant)",
-        "Ready for UAT Approval",
-        "Ready for Feature Merge",
-        "Ready for Deployment",
-      ],
-      "Ready for UAT (Client)": ["Ready for UAT (Client)"],
-      "Deployed to Prod": ["Deployed to Prod"],
-      Done: ["Done"],
+      "Pending Prioritization": ["Pending Client Prioritization"],
+      "Proposal Needed": ["Needs Dev Feedback (Proposal)", "Pending Development Approval"],
+      "Pending Approval": ["Pending Client Approval"],
+      "Clarification (In-Dev)": ["Client Clarification (In-Dev)"],
+      "Ready for Dev": ["Ready for Development"],
+      "In Development": ["In Development", "Back For Development", "Dev Blocked", "Dev Complete"],
+      "In Review": ["Ready for Scratch Org Test", "Ready for QA", "In QA", "In UAT", "Ready for UAT (Consultant)"],
+      "Ready for UAT": ["Ready for UAT (Client)"],
+      "Ready For Prod": ["Ready for UAT Approval", "Ready for Feature Merge", "Ready for Deployment"],
+      "Deployed": ["Deployed to Prod"],
+      "Done": ["Done", "Cancelled"]
     },
     Consultant: {
-      Intake: [
-        "Active Scoping",
-        "Client Clarification (Pre-Dev)",
-        "Pending Client Approval",
-      ],
-      "Quick Estimate": ["Needs Dev Feedback (T-Shirt Sizing)"],
-      "Proposal Needed": ["Needs Dev Feedback (Proposal)"],
-      "Dev Approval": ["Pending Development Approval"],
-      "Pre-Dev Complete": ["Ready for Development"],
-      "In Development": [
-        "In Development",
-        "Dev Blocked",
-        "Back For Development",
-        "Dev Complete",
-      ],
-      "Review & UAT": [
-        "Ready for Scratch Org Test",
-        "Ready for QA",
-        "In QA",
-        "Ready for UAT (Consultant)",
-        "Ready for UAT Approval",
-      ],
-      "Feature Merge & Deploy": [
-        "Ready for Feature Merge",
-        "Ready for Deployment",
-      ],
-      "Deployed to Prod": ["Deployed to Prod"],
-      Done: ["Done"],
-    },
-
-    Developer: {
-      "Pending Work": [
-        "Pending Client Approval",
-        "Pending Development Approval",
-        "Ready for Development",
-      ],
-      "Dev In Progress": ["In Development"],
+      "Intake": ["Backlog"],
+      "Active Scoping": ["Active Scoping"],
+      "Clarification (Pre-Dev)": ["Client Clarification (Pre-Dev)"],
+      "Needs Feedback (Sizing)": ["Needs Dev Feedback (T-Shirt Sizing)"],
+      "Pending Prioritization": ["Pending Client Prioritization"],
+      "Needs Feedback (Proposal)": ["Needs Dev Feedback (Proposal)"],
+      "Pending Dev Approval": ["Pending Development Approval"],
+      "Pending Client Approval": ["Pending Client Approval"],
+      "Clarification (In-Dev)": ["Client Clarification (In-Dev)"],
+      "Ready for Development": ["Ready for Development"],
+      "Back For Development": ["Back For Development"],
+      "In Development": ["In Development"],
       "Dev Blocked": ["Dev Blocked"],
       "Dev Complete": ["Dev Complete"],
-      "Review & Fixes": ["Back For Development"],
-      "QA & UAT": [
-        "Ready for Scratch Org Test",
-        "Ready for QA",
-        "In QA",
-        "Ready for UAT (Consultant)",
-        "Ready for UAT (Client)",
-      ],
-      "Ready for Deploy": ["Ready for Feature Merge", "Ready for Deployment"],
-      "Deployed to Prod": ["Deployed to Prod"],
-      Done: ["Done"],
-    },
-
-    QA: {
+      "Scratch Org Test": ["Ready for Scratch Org Test"],
       "Ready for QA": ["Ready for QA"],
       "In QA": ["In QA"],
-      "In Dev": [
-        "In Development",
-        "Dev Blocked",
-        "Back For Development",
-        "Dev Complete",
-      ],
-      "Scratch Org Test": ["Ready for Scratch Org Test"],
-      UAT: ["Ready for UAT (Consultant)", "Ready for UAT (Client)"],
-      "Ready for Merge": ["Ready for Feature Merge"],
-      "Ready for Deploy": ["Ready for Deployment"],
+      "In UAT": ["In UAT"],
+      "Ready for UAT (Cons.)": ["Ready for UAT (Consultant)"],
+      "Ready for UAT (Client)": ["Ready for UAT (Client)"],
+      "Ready UAT Approval": ["Ready for UAT Approval"],
+      "Ready Feature Merge": ["Ready for Feature Merge"],
+      "Ready Deployment": ["Ready for Deployment"],
       "Deployed to Prod": ["Deployed to Prod"],
-      Done: ["Done"],
+      "Done": ["Done"],
+      "Cancelled": ["Cancelled"]
     },
+    Developer: {
+      "Backlog": ["Backlog"],
+      "Active Scoping": ["Active Scoping"],
+      "Clarification (Pre-Dev)": ["Client Clarification (Pre-Dev)"],
+      "Needs Feedback (Sizing)": ["Needs Dev Feedback (T-Shirt Sizing)"],
+      "Pending Prioritization": ["Pending Client Prioritization"],
+      "Needs Feedback (Proposal)": ["Needs Dev Feedback (Proposal)"],
+      "Pending Dev Approval": ["Pending Development Approval"],
+      "Pending Client Approval": ["Pending Client Approval"],
+      "Clarification (In-Dev)": ["Client Clarification (In-Dev)"],
+      "Ready for Development": ["Ready for Development"],
+      "Back For Development": ["Back For Development"],
+      "In Development": ["In Development"],
+      "Dev Blocked": ["Dev Blocked"],
+      "Dev Complete": ["Dev Complete"],
+      "Scratch Org Test": ["Ready for Scratch Org Test"],
+      "Ready for QA": ["Ready for QA"],
+      "In QA": ["In QA"],
+      "In UAT": ["In UAT"],
+      "Ready for UAT (Cons.)": ["Ready for UAT (Consultant)"],
+      "Ready for UAT (Client)": ["Ready for UAT (Client)"],
+      "Ready UAT Approval": ["Ready for UAT Approval"],
+      "Ready Feature Merge": ["Ready for Feature Merge"],
+      "Ready Deployment": ["Ready for Deployment"],
+      "Deployed to Prod": ["Deployed to Prod"],
+      "Done": ["Done"],
+      "Cancelled": ["Cancelled"]
+    },
+    QA: {
+      "Backlog": ["Backlog"],
+      "Scoping": [
+        "Active Scoping",
+        "Client Clarification (Pre-Dev)",
+          "Needs Dev Feedback (T-Shirt Sizing)", 
+          "Pending Client Prioritization", 
+          "Needs Dev Feedback (Proposal)"
+      ],
+      "Ready For Dev": ["Pending Development Approval", "Pending Client Approval"],
+      "In Dev": [
+          "Client Clarification (In-Dev)", 
+        "Ready for Development",
+          "Back For Development"
+      ],
+      "In Development": ["In Development"],
+      "Dev Blocked": ["Dev Blocked"],
+      "Dev Complete": ["Dev Complete"],
+      "Ready for Scratch Org Test": ["Ready for Scratch Org Test"],
+      "Ready for QA": ["Ready for QA"],
+      "In QA": ["In QA"],
+      "In UAT": ["In UAT"],
+      "UAT": ["Ready for UAT (Consultant)", "Ready for UAT (Client)", "Ready for UAT Approval"],
+      "Ready for Feature Merge": ["Ready for Feature Merge"],
+      "Ready for Deployment": ["Ready for Deployment"],
+      "Deployed": ["Deployed to Prod"],
+      "Done": ["Done"],
+      "Cancelled": ["Cancelled"]
+    },
+  };
+
+  // Map defining if a column is "Extended/Internal" (true) or Core (false) for a persona
+  // Based on "Ext?" columns in the JSON.
+  // false = Core (Always show), true = Extended (Show only if showAllColumns is true)
+  personaColumnExtensionMap = {
+    Client: {
+      "Backlog": false,
+      "Active Scoping": false,
+      "Clarification (Pre-Dev)": false,
+      "Quick Estimate": true,
+      "Pending Prioritization": false,
+      "Proposal Needed": true,
+      "Pending Approval": false,
+      "Clarification (In-Dev)": false,
+      "Ready for Dev": true,
+      "In Development": true,
+      "In Review": true,
+      "Ready for UAT": false,
+      "Ready For Prod": true,
+      "Deployed": false,
+      "Done": true, // JSON says Done Client Ext? Yes
+      "Cancelled": true // JSON says Cancelled Client Ext? Yes
+    },
+    Consultant: {
+      "Intake": false,
+      "Active Scoping": false,
+      "Clarification (Pre-Dev)": false,
+      "Needs Feedback (Sizing)": false,
+      "Pending Prioritization": true,
+      "Needs Feedback (Proposal)": false,
+      "Pending Dev Approval": false,
+      "Pending Client Approval": true,
+      "Clarification (In-Dev)": false,
+      "Ready for Development": true,
+      "Back For Development": true,
+      "In Development": true,
+      "Dev Blocked": false,
+      "Dev Complete": true,
+      "Scratch Org Test": true,
+      "Ready for QA": true,
+      "In QA": true,
+      "In UAT": true,
+      "Ready for UAT (Cons.)": true,
+      "Ready for UAT (Client)": true,
+      "Ready UAT Approval": false,
+      "Ready Feature Merge": false,
+      "Ready Deployment": false,
+      "Deployed to Prod": true,
+      "Done": false,
+      "Cancelled": false
+    },
+    Developer: {
+      "Backlog": true,
+      "Active Scoping": true,
+      "Clarification (Pre-Dev)": true,
+      "Needs Feedback (Sizing)": false,
+      "Pending Prioritization": true,
+      "Needs Feedback (Proposal)": false,
+      "Pending Dev Approval": false,
+      "Pending Client Approval": true,
+      "Clarification (In-Dev)": true,
+      "Ready for Development": false,
+      "Back For Development": false,
+      "In Development": false,
+      "Dev Blocked": false,
+      "Dev Complete": false,
+      "Scratch Org Test": true,
+      "Ready for QA": true,
+      "In QA": true,
+      "In UAT": true,
+      "Ready for UAT (Cons.)": true,
+      "Ready for UAT (Client)": true,
+      "Ready UAT Approval": false,
+      "Ready Feature Merge": false,
+      "Ready Deployment": false,
+      "Deployed to Prod": true,
+      "Done": false,
+      "Cancelled": false
+    },
+    QA: {
+      "Backlog": true,
+      "Scoping": true,
+      "Ready For Dev": true,
+      "In Dev": true,
+      "In Development": false,
+      "Dev Blocked": true,
+      "Dev Complete": false,
+      "Ready for Scratch Org Test": false,
+      "Ready for QA": false,
+      "In QA": false,
+      "In UAT": false,
+      "UAT": true,
+      "Ready for Feature Merge": false,
+      "Ready for Deployment": false,
+      "Deployed": true,
+      "Done": false,
+      "Cancelled": false
+    }
   };
 
   personaBoardViews = {
@@ -357,103 +467,114 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       all: [
         "Backlog",
         "Active Scoping",
+        "Clarification (Pre-Dev)",
         "Quick Estimate",
-        "Pending Client Prioritization",
+        "Pending Prioritization",
         "Proposal Needed",
-        "Pending Client Approval",
-        "Ready for Development",
-        "Client Clarification (In-Dev)",
+        "Pending Approval",
+        "Clarification (In-Dev)",
+        "Ready for Dev",
         "In Development",
         "In Review",
-        "Ready for UAT (Client)",
-        "Deployed to Prod",
-        "Done",
+        "Ready for UAT",
+        "Ready For Prod",
+        "Deployed",
+        "Done"
       ],
-      predev: [
-        "Backlog",
-        "Active Scoping",
-        "Quick Estimate",
-        "Pending Client Prioritization",
-        "Proposal Needed",
-        "Pending Client Approval",
-        "Ready for Development",
-      ],
-      indev: [
-        "Client Clarification (In-Dev)",
-        "In Development",
-        "In Review",
-        "Ready for UAT (Client)",
-      ],
-      deployed: ["Deployed to Prod", "Done"],
+      // Sub-filters
+      predev: ["Backlog", "Active Scoping", "Clarification (Pre-Dev)", "Quick Estimate", "Pending Prioritization", "Proposal Needed"],
+      indev: ["Pending Approval", "Clarification (In-Dev)", "Ready for Dev", "In Development", "In Review"],
+      deployed: ["Ready for UAT", "Ready For Prod", "Deployed", "Done"]
     },
     Consultant: {
       all: [
         "Intake",
-        "Quick Estimate",
-        "Proposal Needed",
-        "Dev Approval",
-        "Pre-Dev Complete",
+        "Active Scoping",
+        "Clarification (Pre-Dev)",
+        "Needs Feedback (Sizing)",
+        "Pending Prioritization",
+        "Needs Feedback (Proposal)",
+        "Pending Dev Approval",
+        "Pending Client Approval",
+        "Clarification (In-Dev)",
+        "Ready for Development",
+        "Back For Development",
         "In Development",
-        "Review & UAT",
-        "Feature Merge & Deploy",
+        "Dev Blocked",
+        "Dev Complete",
+        "Scratch Org Test",
+        "Ready for QA",
+        "In QA",
+        "In UAT",
+        "Ready for UAT (Cons.)",
+        "Ready for UAT (Client)",
+        "Ready UAT Approval",
+        "Ready Feature Merge",
+        "Ready Deployment",
         "Deployed to Prod",
         "Done",
+        "Cancelled"
       ],
-      predev: [
-        "Intake",
-        "Quick Estimate",
-        "Proposal Needed",
-        "Dev Approval",
-        "Pre-Dev Complete",
-      ],
-      indev: ["In Development", "Review & UAT", "Feature Merge & Deploy"],
-      deployed: ["Deployed to Prod", "Done"],
+      predev: ["Intake", "Active Scoping", "Clarification (Pre-Dev)", "Needs Feedback (Sizing)", "Pending Prioritization", "Needs Feedback (Proposal)"],
+      indev: ["Pending Dev Approval", "Pending Client Approval", "Ready for Development", "In Development", "Dev Complete"],
+      deployed: ["Ready Feature Merge", "Ready Deployment", "Deployed to Prod", "Done"]
     },
     Developer: {
       all: [
-        "Pending Work",
-        "Dev In Progress",
+        "Backlog",
+        "Active Scoping",
+        "Clarification (Pre-Dev)",
+        "Needs Feedback (Sizing)",
+        "Pending Prioritization",
+        "Needs Feedback (Proposal)",
+        "Pending Dev Approval",
+        "Pending Client Approval",
+        "Clarification (In-Dev)",
+        "Ready for Development",
+        "Back For Development",
+        "In Development",
         "Dev Blocked",
         "Dev Complete",
-        "Review & Fixes",
-        "QA & UAT",
-        "Ready for Deploy",
+        "Scratch Org Test",
+        "Ready for QA",
+        "In QA",
+        "In UAT",
+        "Ready for UAT (Cons.)",
+        "Ready for UAT (Client)",
+        "Ready UAT Approval",
+        "Ready Feature Merge",
+        "Ready Deployment",
         "Deployed to Prod",
         "Done",
+        "Cancelled"
       ],
-      predev: ["Pending Work"],
-      indev: [
-        "Dev In Progress",
-        "Dev Blocked",
-        "Dev Complete",
-        "Review & Fixes",
-        "QA & UAT",
-        "Ready for Deploy",
-      ],
-      deployed: ["Deployed to Prod", "Done"],
+      predev: ["Backlog", "Active Scoping", "Clarification (Pre-Dev)", "Needs Feedback (Sizing)", "Pending Prioritization"],
+      indev: ["Ready for Development", "In Development", "Dev Blocked", "Dev Complete", "Back For Development"],
+      deployed: ["Ready Feature Merge", "Ready Deployment", "Deployed to Prod", "Done"]
     },
     QA: {
       all: [
-        "Ready for QA",
-        "In QA",
+        "Backlog",
+        "Scoping",
+        "Ready For Dev",
         "In Dev",
-        "Scratch Org Test",
-        "UAT",
-        "Ready for Merge",
-        "Ready for Deploy",
-        "Deployed to Prod",
-        "Done",
-      ],
-      predev: ["In Dev"],
-      indev: [
+        "In Development",
+        "Dev Blocked",
+        "Dev Complete",
+        "Ready for Scratch Org Test",
         "Ready for QA",
         "In QA",
-        "Scratch Org Test",
+        "In UAT",
         "UAT",
-        "Ready for Merge",
-        "Ready for Deploy",
+        "Ready for Feature Merge",
+        "Ready for Deployment",
+        "Deployed",
+        "Done",
+        "Cancelled"
       ],
-      deployed: ["Deployed to Prod", "Done"],
+      predev: ["Backlog", "Scoping", "Ready For Dev"],
+      indev: ["In Dev", "In Development", "Dev Blocked", "Dev Complete", "Ready for Scratch Org Test", "Ready for QA", "In QA"],
+      deployed: ["UAT", "Ready for Feature Merge", "Ready for Deployment", "Deployed", "Done", "Cancelled"]
     },
   };
 
@@ -608,53 +729,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
   personaAdvanceOverrides = {};
   personaBacktrackOverrides = {};
-  /*
-    // ----------- ADVANCE/BACKTRACK BUTTON OVERRIDES -------------
-    personaAdvanceOverrides = {
-        Client: {
-            'Backlog': {
-                'Active Scoping': { icon: '🚀', label: 'Active Scoping', style: 'background:#38c172;color:#fff;' }
-            },
-            'Active Scoping': {
-                'Client Clarification (Pre-Dev)': { icon: '💬', label: 'Clarification (Pre-Dev)', style: 'background:#fbcb43;color:#2d2d2d;' },
-                'Needs Dev Feedback (T-Shirt Sizing)': { icon: '📝', label: 'Dev Feedback (Sizing)', style: 'background:#ffe082;color:#005fb2;' },
-                'Needs Dev Feedback (Proposal)': { icon: '📝', label: 'Dev Feedback (Proposal)', style: 'background:#ffe082;color:#005fb2;' },
-                'Pending Development Approval': { icon: '🛠️', label: 'Pending Dev Approval', style: 'background:#b2dfdb;color:#005fb2;' }
-            }
-            // ...Add more as needed...
-        },
-        Consultant: {
-            'Needs Dev Feedback (T-Shirt Sizing)': {
-                'Client Clarification (Pre-Dev)': { icon: '🗨️', label: 'Client Clarification (Pre-Dev)', style: 'background:#ffd54f;' },
-                'Pending Client Approval': { icon: '✅', label: 'Pending Client Approval', style: 'background:#38c172;color:#fff;' }
-            }
-            // ...etc.
-        }
-        // ...Add for other personas as needed...
-    };
-
-    personaBacktrackOverrides = {
-        Client: {
-            'Backlog': {
-                'Cancelled': { icon: '🛑', label: 'Cancelled', style: 'background:#ef4444;color:#fff;' }
-            },
-            'Active Scoping': {
-                'Backlog': { icon: '↩️', label: 'Backlog', style: 'background:#ffa726;color:#222;' },
-                'Cancelled': { icon: '🛑', label: 'Cancelled', style: 'background:#ef4444;color:#fff;' }
-            }
-            // ...Add more as needed...
-        },
-        Consultant: {
-            'Needs Dev Feedback (T-Shirt Sizing)': {
-                'Cancelled': { icon: '🛑', label: 'Cancelled', style: 'background:#ef4444;color:#fff;' },
-                'Backlog': { icon: '↩️', label: 'Backlog', style: 'background:#ffa726;color:#222;' },
-                'Active Scoping': { icon: '🔙', label: 'Active Scoping', style: 'background:#ffe082;color:#333;' }
-            }
-            // ...etc.
-        }
-        // ...Add for other personas as needed...
-    };
-    */
+ 
   /** keep a reference so we can refresh it later */
   @wire(getTickets)
   wiredTickets(result) {
@@ -834,9 +909,17 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     let colNames = boardViews?.[this.overallFilter] || [];
     const statusMap = this.personaColumnStatusMap?.[persona] || {};
     const enriched = this.enrichedTickets || [];
+    const extMap = this.personaColumnExtensionMap?.[persona] || {};
 
+    // Filter columns based on the Extension Map:
+    // If showAllColumns is FALSE, we hide any column where isExtended (value in map) is TRUE.
     if (!this.showAllColumns) {
-        colNames = colNames.filter((col) => this.columnOwner(col) === persona);
+        colNames = colNames.filter((col) => {
+            const isExtended = extMap[col]; 
+            // If isExtended is true, we hide it when 'Show Internal' is unchecked.
+            // So we return true (keep it) only if isExtended is falsy.
+            return !isExtended; 
+        });
     }
 
     let columns = colNames.map((colName) => {
@@ -1042,6 +1125,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
   handleToggleColumns(e) {
     this.showAllColumns = e.target.checked;
+    this.logBoardState();
   }
 
   /** * Refactored Helper to find column owner safely */
@@ -1096,7 +1180,30 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
   handlePersonaChange(e) {
     this.persona = e.detail ? e.detail.value : e.target.value;
+    this.logBoardState();
   }
+
+  logBoardState() {
+    // Timeout ensures we log after the state update has settled in the JS event loop
+    setTimeout(() => {
+        try {
+            const columns = this.stageColumns;
+            console.log(`%c[Board Debug] Persona: ${this.persona} | Show Internal: ${this.showAllColumns}`, "color:orange;font-weight:bold;");
+            
+            const debugData = columns.map(col => ({
+                "Display Name": col.displayName,
+                "Stage (API Name)": col.stage,
+                "Is Extended?": this.personaColumnExtensionMap[this.persona][col.stage],
+                "Ticket Count": col.tickets.length
+            }));
+
+            console.log(JSON.stringify(debugData, null, 2));
+        } catch (error) {
+            console.error('Error logging board state:', error);
+        }
+    }, 100);
+  }
+
   handleSizeModeChange(e) {
     this.sizeMode = e.detail ? e.detail.value : e.target.value;
   }
@@ -1127,9 +1234,9 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     this.moveComment = "";
   }
   // handleAdvanceOption(e) {
-  //   const newStage = e.target.dataset.value;
-  //   this.selectedStage = newStage;
-  //   this.handleSaveTransition();
+  //  const newStage = e.target.dataset.value;
+  //  this.selectedStage = newStage;
+  //  this.handleSaveTransition();
   // }
 
 //   async handleAdvanceOption(e) {
@@ -1817,9 +1924,9 @@ handleTransitionError(event) {
 
 
     // closeModal() {
-    //     this.isModalOpen = false;
-    //     this.searchResults = [];
-    //     this.searchTerm = '';
+    //      this.isModalOpen = false;
+    //      this.searchResults = [];
+    //      this.searchTerm = '';
     // }
 
     handleSearchTermChange(event) {
