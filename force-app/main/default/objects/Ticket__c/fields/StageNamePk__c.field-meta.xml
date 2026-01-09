@@ -11,7 +11,7 @@
             <sorted>false</sorted>
             <value>
                 <fullName>Backlog</fullName>
-                <default>false</default>
+                <default>true</default>
                 <label>Backlog</label>
             </value>
             <value>
@@ -20,29 +20,39 @@
                 <label>Active Scoping</label>
             </value>
             <value>
-                <fullName>Client Clarification (Pre-Dev)</fullName>
+                <fullName>Clarification (Pre-Dev)</fullName>
                 <default>false</default>
-                <label>Client Clarification (Pre-Dev)</label>
+                <label>Clarification (Pre-Dev)</label>
             </value>
             <value>
-                <fullName>Needs Dev Feedback (T-Shirt Sizing)</fullName>
+                <fullName>Ready for Sizing</fullName>
                 <default>false</default>
-                <label>Needs Dev Feedback (T-Shirt Sizing)</label>
+                <label>Ready for Sizing</label>
             </value>
             <value>
-                <fullName>Pending Client Prioritization</fullName>
+                <fullName>Sizing Underway</fullName>
                 <default>false</default>
-                <label>Pending Client Prioritization</label>
+                <label>Sizing Underway</label>
             </value>
             <value>
-                <fullName>Needs Dev Feedback (Proposal)</fullName>
+                <fullName>Pending Prioritization</fullName>
                 <default>false</default>
-                <label>Needs Dev Feedback (Proposal)</label>
+                <label>Pending Prioritization</label>
             </value>
             <value>
-                <fullName>Pending Development Approval</fullName>
+                <fullName>Proposal Needed</fullName>
                 <default>false</default>
-                <label>Pending Development Approval</label>
+                <label>Proposal Needed</label>
+            </value>
+            <value>
+                <fullName>Drafting Proposal</fullName>
+                <default>false</default>
+                <label>Drafting Proposal</label>
+            </value>
+            <value>
+                <fullName>Pending Tech Approval</fullName>
+                <default>false</default>
+                <label>Pending Tech Approval</label>
             </value>
             <value>
                 <fullName>Pending Client Approval</fullName>
@@ -50,24 +60,24 @@
                 <label>Pending Client Approval</label>
             </value>
             <value>
-                <fullName>Client Clarification (In-Dev)</fullName>
-                <default>false</default>
-                <label>Client Clarification (In-Dev)</label>
-            </value>
-            <value>
                 <fullName>Ready for Development</fullName>
                 <default>false</default>
                 <label>Ready for Development</label>
             </value>
             <value>
-                <fullName>Back For Development</fullName>
-                <default>false</default>
-                <label>Back For Development</label>
-            </value>
-            <value>
                 <fullName>In Development</fullName>
                 <default>false</default>
                 <label>In Development</label>
+            </value>
+            <value>
+                <fullName>Clarification (In-Dev)</fullName>
+                <default>false</default>
+                <label>Clarification (In-Dev)</label>
+            </value>
+            <value>
+                <fullName>Back For Development</fullName>
+                <default>false</default>
+                <label>Back For Development</label>
             </value>
             <value>
                 <fullName>Dev Blocked</fullName>
@@ -80,9 +90,14 @@
                 <label>Dev Complete</label>
             </value>
             <value>
-                <fullName>Ready for Scratch Org Test</fullName>
+                <fullName>Ready for Scratch Test</fullName>
                 <default>false</default>
-                <label>Ready for Scratch Org Test</label>
+                <label>Ready for Scratch Test</label>
+            </value>
+            <value>
+                <fullName>Scratch Testing</fullName>
+                <default>false</default>
+                <label>Scratch Testing</label>
             </value>
             <value>
                 <fullName>Ready for QA</fullName>
@@ -95,29 +110,34 @@
                 <label>In QA</label>
             </value>
             <value>
-                <fullName>In UAT</fullName>
+                <fullName>Ready for Internal UAT</fullName>
                 <default>false</default>
-                <label>In UAT</label>
+                <label>Ready for Internal UAT</label>
             </value>
             <value>
-                <fullName>Ready for UAT (Consultant)</fullName>
+                <fullName>Internal UAT</fullName>
                 <default>false</default>
-                <label>Ready for UAT (Consultant)</label>
+                <label>Internal UAT</label>
             </value>
             <value>
-                <fullName>Ready for UAT (Client)</fullName>
+                <fullName>Ready for Client UAT</fullName>
                 <default>false</default>
-                <label>Ready for UAT (Client)</label>
+                <label>Ready for Client UAT</label>
             </value>
             <value>
-                <fullName>Ready for UAT Approval</fullName>
+                <fullName>In Client UAT</fullName>
                 <default>false</default>
-                <label>Ready for UAT Approval</label>
+                <label>In Client UAT</label>
             </value>
             <value>
-                <fullName>Ready for Feature Merge</fullName>
+                <fullName>Pending UAT Sign-off</fullName>
                 <default>false</default>
-                <label>Ready for Feature Merge</label>
+                <label>Pending UAT Sign-off</label>
+            </value>
+            <value>
+                <fullName>Ready for Merge</fullName>
+                <default>false</default>
+                <label>Ready for Merge</label>
             </value>
             <value>
                 <fullName>Ready for Deployment</fullName>
