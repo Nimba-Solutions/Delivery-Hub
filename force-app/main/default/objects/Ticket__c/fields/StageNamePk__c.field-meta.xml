@@ -15,14 +15,19 @@
                 <label>Backlog</label>
             </value>
             <value>
-                <fullName>Active Scoping</fullName>
+                <fullName>Scoping In Progress</fullName>
                 <default>false</default>
-                <label>Active Scoping</label>
+                <label>Scoping In Progress</label>
             </value>
             <value>
-                <fullName>Clarification (Pre-Dev)</fullName>
+                <fullName>Clarification Requested (Pre-Dev)</fullName>
                 <default>false</default>
-                <label>Clarification (Pre-Dev)</label>
+                <label>Clarification Requested (Pre-Dev)</label>
+            </value>
+            <value>
+                <fullName>Providing Clarification</fullName>
+                <default>false</default>
+                <label>Providing Clarification</label>
             </value>
             <value>
                 <fullName>Ready for Sizing</fullName>
@@ -35,14 +40,19 @@
                 <label>Sizing Underway</label>
             </value>
             <value>
-                <fullName>Pending Prioritization</fullName>
+                <fullName>Ready for Prioritization</fullName>
                 <default>false</default>
-                <label>Pending Prioritization</label>
+                <label>Ready for Prioritization</label>
             </value>
             <value>
-                <fullName>Proposal Needed</fullName>
+                <fullName>Prioritizing</fullName>
                 <default>false</default>
-                <label>Proposal Needed</label>
+                <label>Prioritizing</label>
+            </value>
+            <value>
+                <fullName>Proposal Requested</fullName>
+                <default>false</default>
+                <label>Proposal Requested</label>
             </value>
             <value>
                 <fullName>Drafting Proposal</fullName>
@@ -50,14 +60,24 @@
                 <label>Drafting Proposal</label>
             </value>
             <value>
-                <fullName>Pending Tech Approval</fullName>
+                <fullName>Ready for Tech Review</fullName>
                 <default>false</default>
-                <label>Pending Tech Approval</label>
+                <label>Ready for Tech Review</label>
             </value>
             <value>
-                <fullName>Pending Client Approval</fullName>
+                <fullName>Tech Reviewing</fullName>
                 <default>false</default>
-                <label>Pending Client Approval</label>
+                <label>Tech Reviewing</label>
+            </value>
+            <value>
+                <fullName>Ready for Final Approval</fullName>
+                <default>false</default>
+                <label>Ready for Final Approval</label>
+            </value>
+            <value>
+                <fullName>Final Approving</fullName>
+                <default>false</default>
+                <label>Final Approving</label>
             </value>
             <value>
                 <fullName>Ready for Development</fullName>
@@ -70,9 +90,14 @@
                 <label>In Development</label>
             </value>
             <value>
-                <fullName>Clarification (In-Dev)</fullName>
+                <fullName>Dev Clarification Requested</fullName>
                 <default>false</default>
-                <label>Clarification (In-Dev)</label>
+                <label>Dev Clarification Requested</label>
+            </value>
+            <value>
+                <fullName>Providing Dev Clarification</fullName>
+                <default>false</default>
+                <label>Providing Dev Clarification</label>
             </value>
             <value>
                 <fullName>Back For Development</fullName>
@@ -83,11 +108,6 @@
                 <fullName>Dev Blocked</fullName>
                 <default>false</default>
                 <label>Dev Blocked</label>
-            </value>
-            <value>
-                <fullName>Dev Complete</fullName>
-                <default>false</default>
-                <label>Dev Complete</label>
             </value>
             <value>
                 <fullName>Ready for Scratch Test</fullName>
@@ -105,9 +125,9 @@
                 <label>Ready for QA</label>
             </value>
             <value>
-                <fullName>In QA</fullName>
+                <fullName>QA In Progress</fullName>
                 <default>false</default>
-                <label>In QA</label>
+                <label>QA In Progress</label>
             </value>
             <value>
                 <fullName>Ready for Internal UAT</fullName>
@@ -130,9 +150,14 @@
                 <label>In Client UAT</label>
             </value>
             <value>
-                <fullName>Pending UAT Sign-off</fullName>
+                <fullName>Ready for UAT Sign-off</fullName>
                 <default>false</default>
-                <label>Pending UAT Sign-off</label>
+                <label>Ready for UAT Sign-off</label>
+            </value>
+            <value>
+                <fullName>Processing Sign-off</fullName>
+                <default>false</default>
+                <label>Processing Sign-off</label>
             </value>
             <value>
                 <fullName>Ready for Merge</fullName>
@@ -140,9 +165,19 @@
                 <label>Ready for Merge</label>
             </value>
             <value>
+                <fullName>Merging</fullName>
+                <default>false</default>
+                <label>Merging</label>
+            </value>
+            <value>
                 <fullName>Ready for Deployment</fullName>
                 <default>false</default>
                 <label>Ready for Deployment</label>
+            </value>
+            <value>
+                <fullName>Deploying</fullName>
+                <default>false</default>
+                <label>Deploying</label>
             </value>
             <value>
                 <fullName>Deployed to Prod</fullName>
