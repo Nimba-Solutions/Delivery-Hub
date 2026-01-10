@@ -53,7 +53,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track recentComments = [];
     @track numDevs = 2;
     @track etaResults = [];
-    @track showAllColumns = true;
+    @track showAllColumns = false;
     @track showCreateModal = false;
     @track nextSortOrder = 1;
     @track overallFilter = "all";
@@ -83,44 +83,55 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
     ticketsWire;
 
-  // Visual Rules: Queues (Light), Work (Active Colors), Gates (Amber/Red)
+  // Visual Rules: Queues (Light), Work (Active Colors), Hold (Red)
   statusColorMap = {
-    // Phase 1: Intake & Definition
-    "Backlog": "#F3F4F6", // Light Grey
-    "Active Scoping": "#FEF3C7", // Amber (Work)
-    "Clarification (Pre-Dev)": "#FEE2E2", // Red (Gate)
+    // 1. Intake
+    "Backlog": "#F3F4F6", // Light Grey (Queue)
+    "Scoping In Progress": "#FEF3C7", // Amber (Work)
+    
+    // 2. Definition & Sizing
+    "Clarification Requested (Pre-Dev)": "#E0F2FE", // Light Blue (Queue)
+    "Providing Clarification": "#DBEAFE", // Blue (Work)
     "Ready for Sizing": "#E0F2FE", // Light Blue (Queue)
     "Sizing Underway": "#FFEDD5", // Orange (Work)
-    "Pending Prioritization": "#FEF3C7", // Amber (Gate)
-    "Proposal Needed": "#E0F2FE", // Light Blue (Queue)
+    "Ready for Prioritization": "#E0F2FE", // Light Blue (Queue)
+    "Prioritizing": "#DBEAFE", // Blue (Work)
+    "Proposal Requested": "#E0F2FE", // Light Blue (Queue)
     "Drafting Proposal": "#FFEDD5", // Orange (Work)
     
-    // Phase 2: Approvals
-    "Pending Tech Approval": "#FEF3C7", // Amber (Gate) - Tech Side
-    "Pending Client Approval": "#FEF3C7", // Amber (Gate) - Client Side
+    // 3. Approval
+    "Ready for Tech Review": "#E0F2FE", // Light Blue (Queue)
+    "Tech Reviewing": "#FEF3C7", // Amber (Work)
+    "Ready for Client Approval": "#E0F2FE", // Light Blue (Queue)
+    "In Client Approval": "#DBEAFE", // Blue (Work)
     
-    // Phase 3: Development
+    // 4. Development
     "Ready for Development": "#DCFCE7", // Light Green (Queue)
     "In Development": "#FF9100", // Strong Orange (Work)
-    "Clarification (In-Dev)": "#FEE2E2", // Red (Gate)
-    "Back For Development": "#EF4444", // Strong Red (Action Required)
-    "Dev Blocked": "#EF4444", // Strong Red (Blocked)
-    "Dev Complete": "#A5D6A7", // Green (Milestone Queue)
+    "Dev Clarification Requested": "#FEE2E2", // Red (Queue - Issue)
+    "Providing Dev Clarification": "#DBEAFE", // Blue (Work)
+    "Back For Development": "#DCFCE7", // Light Green (Queue - Rework)
+    "Dev Blocked": "#EF4444", // Strong Red (Hold)
     
-    // Phase 4: Testing & Review
+    // 5. Testing (QA)
     "Ready for Scratch Test": "#E0F2FE", // Light Blue (Queue)
     "Scratch Testing": "#22C55E", // Green (Work)
     "Ready for QA": "#E0F2FE", // Light Blue (Queue)
-    "In QA": "#1D4ED8", // Blue (Work)
+    "QA In Progress": "#22C55E", // Green (Work)
     "Ready for Internal UAT": "#E0F2FE", // Light Blue (Queue)
-    "Internal UAT": "#1D4ED8", // Blue (Work)
+    "Internal UAT": "#1D4ED8", // Strong Blue (Work)
     
-    // Phase 5: Client UAT & Deployment
+    // 6. Client UAT
     "Ready for Client UAT": "#E0F2FE", // Light Blue (Queue)
     "In Client UAT": "#2563EB", // Strong Blue (Work)
-    "Pending UAT Sign-off": "#FEF3C7", // Amber (Gate)
-    "Ready for Merge": "#7C3AED", // Purple (Queue)
-    "Ready for Deployment": "#7C3AED", // Purple (Queue)
+    "Ready for UAT Sign-off": "#E0F2FE", // Light Blue (Queue)
+    "Processing Sign-off": "#DBEAFE", // Blue (Work)
+    
+    // 7. Deployment
+    "Ready for Merge": "#F3E8FF", // Light Purple (Queue)
+    "Merging": "#7C3AED", // Purple (Work)
+    "Ready for Deployment": "#F3E8FF", // Light Purple (Queue)
+    "Deploying": "#7C3AED", // Purple (Work)
     "Deployed to Prod": "#059669", // Dark Green (End)
     
     // End States
@@ -132,130 +143,115 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   columnHeaderStyleMap = {
     // --- Client Columns ---
     "Backlog": { bg: "rgba(243, 244, 246, 0.8)", color: "#1F2937" },
-    "Active Scoping": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, // Amber
-    "Clarification (Pre-Dev)": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" }, // Red
-    "Quick Estimate": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, // Blue
-    "Pending Prioritization": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-    "Proposal Needed": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
-    // Split Approval Columns for Client
-    "Pending Tech Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-    "Pending Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
+    "Scoping": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, // Amber
+    
+    // Split Clarification
+    "Clarification Requested (Pre-Dev)": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" }, // Red/Clarification
+    "Providing Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
+
+    // Split Estimation
+    "Ready for Sizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, // Blue
+    "Sizing Underway": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Orange
+    
+    // Split Prioritization
+    "Ready for Prioritization": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, 
+    "Prioritizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, 
+
+    // Split Proposal
+    "Proposal Requested": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
+    "Drafting Proposal": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
+    
+    // Split Approvals
+    "Ready for Tech Review": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
+    "Tech Reviewing": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
+    "Ready for Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
+    "In Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
     
     "Clarification (In-Dev)": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
+    // Split Dev Clarification
+    "Dev Clarification Requested": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
+    "Providing Dev Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
+
     "Ready for Dev": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" }, // Green
-    "In Development": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" }, // Orange
+    "In Development": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" }, // Strong Orange
     "In Review": { bg: "rgba(219, 234, 254, 0.5)", color: "#1D4ED8" }, // Blue
     "Ready for UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Stronger Blue
+    // Split Client UAT
+    "Ready for Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
+    "In Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
+
     "Ready For Prod": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" }, // Purple
     "Deployed": { bg: "rgba(209, 250, 229, 0.5)", color: "#059669" }, // Emerald
     "Done": { bg: "rgba(229, 231, 235, 0.5)", color: "#374151" },
-
-    // --- Consultant / Developer Extended Columns ---
-    "Intake": { bg: "rgba(243, 244, 246, 0.8)", color: "#1F2937" },
-    
-    // Split Sizing
-    "Ready for Sizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, // Light Blue
-    "Sizing Underway": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Orange
-    
-    // Split Proposal
-    "Drafting Proposal": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Orange
-    // "Proposal Needed" reused from client above
-
-    "Needs Feedback (Sizing)": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Orange
-    "Needs Feedback (Proposal)": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
-    // "Pending Dev Approval" - Replaced by explicit Tech/Client Approval keys above if needed, or mapped below
-    
-    "Ready for Development": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" },
-    "Back For Development": { bg: "rgba(254, 202, 202, 0.6)", color: "#991B1B" }, // Red
-    "Dev Blocked": { bg: "rgba(254, 202, 202, 0.6)", color: "#991B1B" },
-    "Dev Complete": { bg: "rgba(187, 247, 208, 0.5)", color: "#166534" },
-    "Scratch Org Test": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-    "Ready for QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-    "In QA": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
-    "In UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
-    "Ready for UAT (Cons.)": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
-    "Ready UAT Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-    "Ready Feature Merge": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    "Ready Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" },
 
-    // --- QA Columns ---
-    "Scoping": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-    "Ready For Dev": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" },
-    "In Dev": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" },
-    "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" }
+    // --- Consultant / Developer / QA Granular Columns ---
+    // Reusing keys or adding specific ones if board views split them further
+    "Intake": { bg: "rgba(243, 244, 246, 0.8)", color: "#1F2937" },
+    "Scoping In Progress": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
+    "Dev Queue": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" },
+    "Dev Work": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" },
+    "QA Queue": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
+    "QA Work": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
+    "Merge & Deploy": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
+    
+    // Explicit keys for internal views to match Client splits if needed
+    "Pending Tech Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, 
+    "Pending Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }
   };
 
   /** Who owns each status - Source of Truth **/
   statusOwnerMap = {
-    // Queue | Owner: Consultant
+    // 1. Intake
     "Backlog": "Consultant",
-    // Work | Owner: Consultant
-    "Active Scoping": "Consultant",
-    // Gate | Owner: Client
-    "Clarification (Pre-Dev)": "Client",
+    "Scoping In Progress": "Consultant",
     
-    // Queue | Owner: Developer
+    // 2. Definition & Sizing
+    "Clarification Requested (Pre-Dev)": "Client",
+    "Providing Clarification": "Client",
     "Ready for Sizing": "Developer",
-    // Work | Owner: Developer
     "Sizing Underway": "Developer",
-    
-    // Gate | Owner: Client
-    "Pending Prioritization": "Client",
-    
-    // Queue | Owner: Developer
-    "Proposal Needed": "Developer",
-    // Work | Owner: Developer
+    "Ready for Prioritization": "Client",
+    "Prioritizing": "Client",
+    "Proposal Requested": "Developer",
     "Drafting Proposal": "Developer",
-
-    // Gate | Owner: Consultant
-    "Pending Tech Approval": "Consultant",
-    // Gate | Owner: Client
-    "Pending Client Approval": "Client",
-
-    // Queue | Owner: Developer
+    
+    // 3. Approval
+    "Ready for Tech Review": "Consultant",
+    "Tech Reviewing": "Consultant",
+    "Ready for Client Approval": "Client",
+    "In Client Approval": "Client",
+    
+    // 4. Development
     "Ready for Development": "Developer",
-    // Work | Owner: Developer
     "In Development": "Developer",
-    
-    // Gate | Owner: Client
-    "Clarification (In-Dev)": "Client",
-    // Queue | Owner: Developer (Rejection target)
+    "Dev Clarification Requested": "Client",
+    "Providing Dev Clarification": "Client",
     "Back For Development": "Developer",
-    // Hold | Owner: Developer
     "Dev Blocked": "Developer",
-    // Queue | Owner: System
-    "Dev Complete": "System",
-
-    // Queue | Owner: QA
-    "Ready for Scratch Test": "QA",
-    // Work | Owner: QA
-    "Scratch Testing": "QA",
-    // Queue | Owner: QA
-    "Ready for QA": "QA",
-    // Work | Owner: QA
-    "In QA": "QA",
     
-    // Queue | Owner: Consultant
+    // 5. Testing
+    "Ready for Scratch Test": "QA",
+    "Scratch Testing": "QA",
+    "Ready for QA": "QA",
+    "QA In Progress": "QA",
     "Ready for Internal UAT": "Consultant",
-    // Work | Owner: Consultant
     "Internal UAT": "Consultant",
     
-    // Queue | Owner: Client
+    // 6. UAT
     "Ready for Client UAT": "Client",
-    // Work | Owner: Client
     "In Client UAT": "Client",
-    // Gate | Owner: Client
-    "Pending UAT Sign-off": "Client",
+    "Ready for UAT Sign-off": "Client",
+    "Processing Sign-off": "Client",
     
-    // Queue | Owner: Consultant
+    // 7. Deployment
     "Ready for Merge": "Consultant",
-    // Queue | Owner: Consultant
+    "Merging": "Consultant",
     "Ready for Deployment": "Consultant",
+    "Deploying": "Consultant",
     
-    // End | Owner: System
+    // End
     "Deployed to Prod": "System",
-    // End | Owner: All
     "Done": "All",
     "Cancelled": "All"
   };
@@ -271,212 +267,221 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   };
 
   columnDisplayNames = {
-    // Client Keys (Legacy names mapped to Pull System)
+    // Aggregated Columns
     "Backlog": "Backlog",
-    "Active Scoping": "Active Scoping",
-    "Clarification (Pre-Dev)": "Clarification (Pre-Dev)",
-    "Quick Estimate": "Sizing",
-    "Pending Prioritization": "Client Prioritization",
-    "Proposal Needed": "Proposal",
-    // Separated Approvals
-    "Pending Tech Approval": "Tech Approval",
-    "Pending Client Approval": "Client Approval",
+    "Scoping": "Scoping",
+    "Clarification Requested (Pre-Dev)": "Clarification Requested",
+    "Providing Clarification": "Providing Clarification",
     
-    "Clarification (In-Dev)": "Clarification (In-Dev)",
-    "Ready for Dev": "Ready for Dev",
-    "In Development": "In Development",
-    "In Review": "Testing & Review", // Aggregates QA steps
-    "Ready for UAT": "Client UAT",
-    "Ready For Prod": "Ready For Prod",
-    "Deployed": "Deployed",
-    "Done": "Done",
-    
-    // Consultant/Dev Keys
-    "Intake": "Intake",
     "Ready for Sizing": "Ready for Sizing",
-    "Sizing Underway": "In Sizing",
+    "Sizing Underway": "Sizing Underway",
+    "Ready for Prioritization": "Ready for Prioritization",
+    "Prioritizing": "Prioritizing",
+    "Proposal Requested": "Proposal Requested",
     "Drafting Proposal": "Drafting Proposal",
     
-    "Needs Feedback (Sizing)": "Sizing",
-    "Needs Feedback (Proposal)": "Proposal",
-    // "Pending Dev Approval" replaced by explicit keys in views
+    // Split Approvals
+    "Ready for Tech Review": "Ready for Tech Review",
+    "Tech Reviewing": "Tech Reviewing",
+    "Ready for Client Approval": "Ready for Client Approval",
+    "In Client Approval": "In Client Approval",
     
-    "Ready for Development": "Ready for Dev",
-    "Back For Development": "Back For Dev",
-    "Dev Blocked": "Blocked",
-    "Dev Complete": "Dev Complete",
-    "Scratch Org Test": "Scratch Test",
-    "Ready for QA": "Ready for QA",
-    "In QA": "In QA",
-    "In UAT": "Internal UAT",
-    "Ready for UAT (Cons.)": "Ready for Internal UAT",
-    "Ready for UAT (Client)": "Ready for Client UAT",
-    "Ready UAT Approval": "Sign-off",
-    "Ready Feature Merge": "Ready for Merge",
-    "Ready Deployment": "Ready for Deploy",
-    "Deployed to Prod": "Deployed",
-    "Cancelled": "Cancelled",
+    "Ready for Dev": "Ready for Dev",
+    "In Development": "In Development",
+    "Clarification (In-Dev)": "Dev Clarification",
+    
+    // Split Dev Clarification
+    "Dev Clarification Requested": "Dev Clarification Requested",
+    "Providing Dev Clarification": "Providing Dev Clarification",
 
-    // QA Specific
-    "Scoping": "Scoping",
-    "Ready For Dev": "Ready For Dev",
-    "In Dev": "In Dev",
-    "Ready for Scratch Org Test": "Ready for Scratch",
-    "UAT": "UAT",
-    "Ready for Feature Merge": "Merge",
-    "Ready for Deployment": "Deploy"
+    "In Review": "QA & Review",
+    "Ready for UAT": "Client UAT",
+    
+    // Split Client UAT
+    "Ready for Client UAT": "Ready for UAT",
+    "In Client UAT": "In UAT",
+
+    "Ready For Prod": "Deployment Prep",
+    "Deployed": "Deployed",
+    "Done": "Done",
+    "Cancelled": "Cancelled",
+    
+    // Granular View Keys (if needed for Consultant/Dev)
+    "Intake": "Intake Queue",
+    "Scoping In Progress": "Active Scoping",
+    "Ready for Development": "Dev Queue",
+    "Back For Development": "Rework",
+    "Dev Blocked": "Blocked",
+    "Ready for Scratch Test": "To Scratch Test",
+    "Scratch Testing": "Scratch Testing",
+    "Ready for QA": "To QA",
+    "QA In Progress": "QA",
+    "Ready for Internal UAT": "To Internal UAT",
+    "Internal UAT": "Internal UAT",
+    "Ready for Merge": "To Merge",
+    "Merging": "Merging",
+    "Ready for Deployment": "To Deploy",
+    "Deploying": "Deploying",
+    
+    // Explicit keys matching personaColumnStatusMap
+    "Pending Tech Approval": "Tech Approval",
+    "Pending Client Approval": "Client Approval"
   };
 
-  // Maps New 30 Stages into Existing Column Keys
+  // Maps New 36 Stages into Existing Column Keys (Aggregation)
   personaColumnStatusMap = {
     Client: {
       "Backlog": ["Backlog"],
-      "Active Scoping": ["Active Scoping"],
-      "Clarification (Pre-Dev)": ["Clarification (Pre-Dev)"],
-      "Quick Estimate": ["Ready for Sizing", "Sizing Underway"], // Combined for Client
-      "Pending Prioritization": ["Pending Prioritization"],
-      "Proposal Needed": ["Proposal Needed", "Drafting Proposal"], // Combined for Client
-      // Split Approvals
-      "Pending Tech Approval": ["Pending Tech Approval"], 
-      "Pending Client Approval": ["Pending Client Approval"], 
+      "Scoping": ["Scoping In Progress"],
+      "Clarification Requested (Pre-Dev)": ["Clarification Requested (Pre-Dev)"],
+      "Providing Clarification": ["Providing Clarification"],
+      "Ready for Sizing": ["Ready for Sizing"],
+      "Sizing Underway": ["Sizing Underway"],
+      "Ready for Prioritization": ["Ready for Prioritization"],
+      "Prioritizing": ["Prioritizing"],
+      "Proposal Requested": ["Proposal Requested"],
+      "Drafting Proposal": ["Drafting Proposal"],
       
-      "Clarification (In-Dev)": ["Clarification (In-Dev)"],
+      // Split Approvals for Client
+      "Ready for Tech Review": ["Ready for Tech Review"],
+      "Tech Reviewing": ["Tech Reviewing"],
+      "Ready for Client Approval": ["Ready for Client Approval"],
+      "In Client Approval": ["In Client Approval"],
+      
       "Ready for Dev": ["Ready for Development"],
-      "In Development": ["In Development", "Back For Development", "Dev Blocked", "Dev Complete"],
+      "In Development": ["In Development", "Back For Development", "Dev Blocked"],
+      
+      // Split Dev Clarification
+      "Dev Clarification Requested": ["Dev Clarification Requested"],
+      "Providing Dev Clarification": ["Providing Dev Clarification"],
+      
       "In Review": [
           "Ready for Scratch Test", "Scratch Testing", 
-          "Ready for QA", "In QA", 
+          "Ready for QA", "QA In Progress", 
           "Ready for Internal UAT", "Internal UAT"
-      ], 
-      "Ready for UAT": ["Ready for Client UAT", "In Client UAT"],
-      "Ready For Prod": ["Pending UAT Sign-off", "Ready for Merge", "Ready for Deployment"],
+      ],
+      
+      // Split Client UAT
+      "Ready for Client UAT": ["Ready for Client UAT"],
+      "In Client UAT": ["In Client UAT"],
+      
+      "Ready For Prod": ["Ready for UAT Sign-off", "Processing Sign-off", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying"],
       "Deployed": ["Deployed to Prod"],
       "Done": ["Done", "Cancelled"]
     },
+    // Consultant sees granular queues
     Consultant: {
       "Intake": ["Backlog"],
-      "Active Scoping": ["Active Scoping"],
-      "Clarification (Pre-Dev)": ["Clarification (Pre-Dev)"],
-      
-      // Split Queue vs Work
+      "Scoping In Progress": ["Scoping In Progress"],
+      "Clarification Requested (Pre-Dev)": ["Clarification Requested (Pre-Dev)"],
+      "Providing Clarification": ["Providing Clarification"],
       "Ready for Sizing": ["Ready for Sizing"],
       "Sizing Underway": ["Sizing Underway"],
-      
-      "Pending Prioritization": ["Pending Prioritization"],
-      
-      // Split Queue vs Work
-      "Proposal Needed": ["Proposal Needed"],
+      "Ready for Prioritization": ["Ready for Prioritization"],
+      "Prioritizing": ["Prioritizing"],
+      "Proposal Requested": ["Proposal Requested"],
       "Drafting Proposal": ["Drafting Proposal"],
       
-      // Separate Approvals
-      "Pending Tech Approval": ["Pending Tech Approval"],
-      "Pending Client Approval": ["Pending Client Approval"],
+      // Split Approvals for Consultant
+      "Ready for Tech Review": ["Ready for Tech Review"],
+      "Tech Reviewing": ["Tech Reviewing"],
+      "Ready for Client Approval": ["Ready for Client Approval"],
+      "In Client Approval": ["In Client Approval"],
       
-      "Clarification (In-Dev)": ["Clarification (In-Dev)"],
       "Ready for Development": ["Ready for Development"],
-      "Back For Development": ["Back For Development"],
-      "In Development": ["In Development"],
-      "Dev Blocked": ["Dev Blocked"],
-      "Dev Complete": ["Dev Complete"],
-      "Scratch Org Test": ["Ready for Scratch Test", "Scratch Testing"],
+      "In Development": ["In Development", "Back For Development", "Dev Blocked"],
+      "Clarification (In-Dev)": ["Dev Clarification Requested", "Providing Dev Clarification"],
+      "Ready for Scratch Test": ["Ready for Scratch Test"],
+      "Scratch Testing": ["Scratch Testing"],
       "Ready for QA": ["Ready for QA"],
-      "In QA": ["In QA"],
-      "In UAT": ["Ready for Internal UAT", "Internal UAT"],
-      "Ready for UAT (Cons.)": ["Ready for Internal UAT"], 
-      "Ready for UAT (Client)": ["Ready for Client UAT", "In Client UAT"],
-      "Ready UAT Approval": ["Pending UAT Sign-off"],
-      "Ready Feature Merge": ["Ready for Merge"],
-      "Ready Deployment": ["Ready for Deployment"],
-      "Deployed to Prod": ["Deployed to Prod"],
-      "Done": ["Done"],
-      "Cancelled": ["Cancelled"]
-    },
-    Developer: {
-      "Backlog": ["Backlog"],
-      "Active Scoping": ["Active Scoping"],
-      "Clarification (Pre-Dev)": ["Clarification (Pre-Dev)"],
-      
-      // Split Queue vs Work
-      "Ready for Sizing": ["Ready for Sizing"],
-      "Sizing Underway": ["Sizing Underway"],
-      
-      "Pending Prioritization": ["Pending Prioritization"],
-      
-      // Split Queue vs Work
-      "Proposal Needed": ["Proposal Needed"],
-      "Drafting Proposal": ["Drafting Proposal"],
-      
-      // Separate Approvals
-      "Pending Tech Approval": ["Pending Tech Approval"],
-      "Pending Client Approval": ["Pending Client Approval"],
-      
-      "Clarification (In-Dev)": ["Clarification (In-Dev)"],
-      "Ready for Development": ["Ready for Development"],
-      "Back For Development": ["Back For Development"],
-      "In Development": ["In Development"],
-      "Dev Blocked": ["Dev Blocked"],
-      "Dev Complete": ["Dev Complete"],
-      "Scratch Org Test": ["Ready for Scratch Test", "Scratch Testing"],
-      "Ready for QA": ["Ready for QA"],
-      "In QA": ["In QA"],
-      "In UAT": ["Ready for Internal UAT", "Internal UAT"],
-      "Ready for UAT (Cons.)": ["Ready for Internal UAT"],
-      "Ready for UAT (Client)": ["Ready for Client UAT", "In Client UAT"],
-      "Ready UAT Approval": ["Pending UAT Sign-off"],
-      "Ready Feature Merge": ["Ready for Merge"],
-      "Ready Deployment": ["Ready for Deployment"],
-      "Deployed to Prod": ["Deployed to Prod"],
-      "Done": ["Done"],
-      "Cancelled": ["Cancelled"]
-    },
-    QA: {
-      "Backlog": ["Backlog"],
-      "Scoping": [
-        "Active Scoping",
-          "Clarification (Pre-Dev)", 
-          "Ready for Sizing", "Sizing Underway", 
-          "Pending Prioritization", 
-          "Proposal Needed", "Drafting Proposal"
-      ],
-      "Ready For Dev": ["Pending Tech Approval", "Pending Client Approval"],
-      "In Dev": [
-          "Clarification (In-Dev)", 
-        "Ready for Development",
-          "Back For Development"
-      ],
-      "In Development": ["In Development"],
-      "Dev Blocked": ["Dev Blocked"],
-      "Dev Complete": ["Dev Complete"],
-      "Ready for Scratch Org Test": ["Ready for Scratch Test"],
-      "Scratch Org Test": ["Scratch Testing"], 
-      "Ready for QA": ["Ready for QA"],
-      "In QA": ["In QA"],
-      "In UAT": ["Ready for Internal UAT", "Internal UAT"],
-      "UAT": ["Ready for Client UAT", "In Client UAT", "Pending UAT Sign-off"],
-      "Ready for Feature Merge": ["Ready for Merge"],
+      "QA In Progress": ["QA In Progress"],
+      "Ready for Internal UAT": ["Ready for Internal UAT"],
+      "Internal UAT": ["Internal UAT"],
+      "Ready for UAT": ["Ready for Client UAT", "In Client UAT"],
+      "Ready For Prod": ["Ready for UAT Sign-off", "Processing Sign-off"],
+      "Ready for Merge": ["Ready for Merge"],
+      "Merging": ["Merging"],
       "Ready for Deployment": ["Ready for Deployment"],
+      "Deploying": ["Deploying"],
       "Deployed": ["Deployed to Prod"],
-      "Done": ["Done"],
-      "Cancelled": ["Cancelled"]
+      "Done": ["Done", "Cancelled"]
+    },
+    // Developer sees granular Dev Queues
+    Developer: {
+      "Backlog": ["Backlog", "Scoping In Progress"],
+      "Clarification Requested (Pre-Dev)": ["Clarification Requested (Pre-Dev)"],
+      "Providing Clarification": ["Providing Clarification"],
+      "Ready for Sizing": ["Ready for Sizing"],
+      "Sizing Underway": ["Sizing Underway"],
+      "Ready for Prioritization": ["Ready for Prioritization"],
+      "Prioritizing": ["Prioritizing"],
+      "Proposal Requested": ["Proposal Requested"],
+      "Drafting Proposal": ["Drafting Proposal"],
+      
+      // Split Approvals for Developer
+      "Ready for Tech Review": ["Ready for Tech Review"],
+      "Tech Reviewing": ["Tech Reviewing"],
+      "Ready for Client Approval": ["Ready for Client Approval"],
+      "In Client Approval": ["In Client Approval"],
+      
+      "Ready for Development": ["Ready for Development"],
+      "In Development": ["In Development"],
+      "Back For Development": ["Back For Development"],
+      "Dev Blocked": ["Dev Blocked"],
+      "Clarification (In-Dev)": ["Dev Clarification Requested", "Providing Dev Clarification"],
+      "In Review": ["Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT", "Ready for Client UAT", "In Client UAT"],
+      "Ready For Prod": ["Ready for UAT Sign-off", "Processing Sign-off", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying"],
+      "Deployed": ["Deployed to Prod"],
+      "Done": ["Done", "Cancelled"]
+    },
+    // QA sees granular QA queues
+    QA: {
+      "Backlog": ["Backlog", "Scoping In Progress", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Ready for Sizing", "Sizing Underway", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal", "Ready for Tech Review", "Tech Reviewing", "Ready for Client Approval", "In Client Approval"],
+      "Ready for Dev": ["Ready for Development"],
+      "In Development": ["In Development", "Back For Development", "Dev Blocked", "Dev Clarification Requested", "Providing Dev Clarification"],
+      "Ready for Scratch Test": ["Ready for Scratch Test"],
+      "Scratch Testing": ["Scratch Testing"],
+      "Ready for QA": ["Ready for QA"],
+      "QA In Progress": ["QA In Progress"],
+      "Ready for Internal UAT": ["Ready for Internal UAT"],
+      "Internal UAT": ["Internal UAT"],
+      "UAT": ["Ready for Client UAT", "In Client UAT", "Ready for UAT Sign-off", "Processing Sign-off"],
+      "Ready For Prod": ["Ready for Merge", "Merging", "Ready for Deployment", "Deploying"],
+      "Deployed": ["Deployed to Prod"],
+      "Done": ["Done", "Cancelled"]
     },
   };
 
-  // Same Logic: false = Core (Always show), true = Extended (Show only if showAllColumns is true)
+  // false = Core (Always show), true = Extended (Show only if showAllColumns is true)
   personaColumnExtensionMap = {
     Client: {
       "Backlog": false,
-      "Active Scoping": false,
-      "Clarification (Pre-Dev)": false,
-      "Quick Estimate": true,
-      "Pending Prioritization": false,
-      "Proposal Needed": true,
-      "Pending Tech Approval": false, // Separate
-      "Pending Client Approval": false, // Separate
-      "Clarification (In-Dev)": false,
+      "Scoping": false,
+      "Clarification Requested (Pre-Dev)": false,
+      "Providing Clarification": false,
+      "Ready for Sizing": true,
+      "Sizing Underway": true,
+      "Ready for Prioritization": false,
+      "Prioritizing": false,
+      "Proposal Requested": true,
+      "Drafting Proposal": true,
+      
+      // Split Approvals visibility
+      "Ready for Tech Review": true, // Extended pipeline (internal facing)
+      "Tech Reviewing": true,
+      "Ready for Client Approval": false, // Core (client facing)
+      "In Client Approval": false,
+      
+      "Dev Clarification Requested": false, // Split & Core
+      "Providing Dev Clarification": false, // Split & Core
+
       "Ready for Dev": true,
       "In Development": true,
       "In Review": true,
-      "Ready for UAT": false,
+
+      "Ready for Client UAT": false, // Split & Core
+      "In Client UAT": false, // Split & Core
+
       "Ready For Prod": true,
       "Deployed": false,
       "Done": true, 
@@ -484,292 +489,247 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     },
     Consultant: {
       "Intake": false,
-      "Active Scoping": false,
-      "Clarification (Pre-Dev)": false,
-      "Ready for Sizing": false, 
-      "Sizing Underway": false, 
-      "Pending Prioritization": true,
-      "Proposal Needed": false, 
-      "Drafting Proposal": false, 
-      "Pending Tech Approval": false, // Separate
-      "Pending Client Approval": true, // Separate
-      "Clarification (In-Dev)": false,
-      "Ready for Development": true,
-      "Back For Development": true,
+      "Scoping In Progress": false,
+      "Clarification Requested (Pre-Dev)": false,
+      "Providing Clarification": false,
+      "Ready for Sizing": false,
+      "Sizing Underway": false,
+      "Ready for Prioritization": false,
+      "Prioritizing": false,
+      "Proposal Requested": false,
+      "Drafting Proposal": false,
+      "Ready for Tech Review": false, // Separate
+      "Tech Reviewing": false,
+      "Ready for Client Approval": true, // Separate
+      "In Client Approval": true,
+      "Ready for Development": false,
       "In Development": true,
-      "Dev Blocked": false,
-      "Dev Complete": true,
-      "Scratch Org Test": true,
+      "Clarification (In-Dev)": false,
+      "Ready for Scratch Test": true,
+      "Scratch Testing": true,
       "Ready for QA": true,
-      "In QA": true,
-      "In UAT": true,
-      "Ready for UAT (Cons.)": true,
-      "Ready for UAT (Client)": true,
-      "Ready UAT Approval": false,
-      "Ready Feature Merge": false,
-      "Ready Deployment": false,
-      "Deployed to Prod": true,
-      "Done": false,
-      "Cancelled": false
+      "QA In Progress": true,
+      "Ready for Internal UAT": true,
+      "Internal UAT": true,
+      "Ready for UAT": true,
+      "Ready For Prod": false,
+      "Ready for Merge": true,
+      "Merging": true,
+      "Ready for Deployment": true,
+      "Deploying": true,
+      "Deployed": false,
+      "Done": false
     },
     Developer: {
       "Backlog": true,
-      "Active Scoping": true,
-      "Clarification (Pre-Dev)": true,
-      "Ready for Sizing": false, 
-      "Sizing Underway": false, 
-      "Pending Prioritization": true,
-      "Proposal Needed": false, 
-      "Drafting Proposal": false, 
-      "Pending Tech Approval": false, // Separate
-      "Pending Client Approval": true, // Separate
-      "Clarification (In-Dev)": true,
+      "Clarification Requested (Pre-Dev)": true,
+      "Providing Clarification": true,
+      "Ready for Sizing": false,
+      "Sizing Underway": false,
+      "Ready for Prioritization": true,
+      "Prioritizing": true,
+      "Proposal Requested": false,
+      "Drafting Proposal": false,
+      "Ready for Tech Review": false, // Separate
+      "Tech Reviewing": false,
+      "Ready for Client Approval": true, // Separate
+      "In Client Approval": true,
       "Ready for Development": false,
-      "Back For Development": false,
       "In Development": false,
+      "Back For Development": false,
       "Dev Blocked": false,
-      "Dev Complete": false,
-      "Scratch Org Test": true,
-      "Ready for QA": true,
-      "In QA": true,
-      "In UAT": true,
-      "Ready for UAT (Cons.)": true,
-      "Ready for UAT (Client)": true,
-      "Ready UAT Approval": false,
-      "Ready Feature Merge": false,
-      "Ready Deployment": false,
-      "Deployed to Prod": true,
-      "Done": false,
-      "Cancelled": false
+      "Clarification (In-Dev)": false,
+      "In Review": true,
+      "Ready For Prod": true,
+      "Deployed": true,
+      "Done": true
     },
     QA: {
       "Backlog": true,
-      "Scoping": true,
-      "Ready For Dev": true,
-      "In Dev": true,
-      "In Development": false,
-      "Dev Blocked": true,
-      "Dev Complete": false,
-      "Ready for Scratch Org Test": false,
-      "Scratch Org Test": false,
+      "Ready for Dev": true,
+      "In Development": true,
+      "Ready for Scratch Test": false,
+      "Scratch Testing": false,
       "Ready for QA": false,
-      "In QA": false,
-      "In UAT": false,
+      "QA In Progress": false,
+      "Ready for Internal UAT": false,
+      "Internal UAT": false,
       "UAT": true,
-      "Ready for Feature Merge": false,
-      "Ready for Deployment": false,
+      "Ready For Prod": true,
       "Deployed": true,
-      "Done": false,
-      "Cancelled": false
+      "Done": true
     }
   };
 
   personaBoardViews = {
     Client: {
       all: [
-        "Backlog",
-        "Active Scoping",
-        "Clarification (Pre-Dev)",
-        "Quick Estimate",
-        "Pending Prioritization",
-        "Proposal Needed",
-        "Pending Tech Approval", // Separate
-        "Pending Client Approval", // Separate
-        "Clarification (In-Dev)",
+        "Backlog", "Scoping", 
+        "Clarification Requested (Pre-Dev)", "Providing Clarification",
+        "Ready for Sizing", "Sizing Underway",
+        "Ready for Prioritization", "Prioritizing",
+        "Proposal Requested", "Drafting Proposal", 
+        "Ready for Tech Review", "Tech Reviewing", // New Split
+        "Ready for Client Approval", "In Client Approval", // New Split
+        
+        "Dev Clarification Requested", "Providing Dev Clarification", // New Split Dev Clarification
+
         "Ready for Dev",
-        "In Development",
-        "In Review",
-        "Ready for UAT",
-        "Ready For Prod",
-        "Deployed",
-        "Done"
+        "In Development", "In Review", 
+
+        "Ready for Client UAT", "In Client UAT", // New Split UAT
+
+        "Ready For Prod", "Deployed", "Done"
       ],
-      predev: ["Backlog", "Active Scoping", "Clarification (Pre-Dev)", "Quick Estimate", "Pending Prioritization", "Proposal Needed"],
-      indev: ["Pending Tech Approval", "Pending Client Approval", "Clarification (In-Dev)", "Ready for Dev", "In Development", "In Review"],
-      deployed: ["Ready for UAT", "Ready For Prod", "Deployed", "Done"]
+      predev: ["Backlog", "Scoping", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Ready for Sizing", "Sizing Underway", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
+      indev: ["Ready for Tech Review", "Tech Reviewing", "Ready for Client Approval", "In Client Approval", "Dev Clarification Requested", "Providing Dev Clarification", "Ready for Dev", "In Development", "In Review"],
+      deployed: ["Ready for Client UAT", "In Client UAT", "Ready For Prod", "Deployed", "Done"]
     },
     Consultant: {
       all: [
-        "Intake",
-        "Active Scoping",
-        "Clarification (Pre-Dev)",
+        "Intake", "Scoping In Progress", 
+        "Clarification Requested (Pre-Dev)", "Providing Clarification",
         "Ready for Sizing", "Sizing Underway",
-        "Pending Prioritization",
-        "Proposal Needed", "Drafting Proposal",
-        "Pending Tech Approval", // Separate
-        "Pending Client Approval", // Separate
-        "Clarification (In-Dev)",
-        "Ready for Development",
-        "Back For Development",
-        "In Development",
-        "Dev Blocked",
-        "Dev Complete",
-        "Scratch Org Test",
-        "Ready for QA",
-        "In QA",
-        "In UAT",
-        "Ready for UAT (Cons.)",
-        "Ready for UAT (Client)",
-        "Ready UAT Approval",
-        "Ready Feature Merge",
-        "Ready Deployment",
-        "Deployed to Prod",
-        "Done",
-        "Cancelled"
+        "Ready for Prioritization", "Prioritizing",
+        "Proposal Requested", "Drafting Proposal", 
+        "Ready for Tech Review", "Tech Reviewing", // Separate
+        "Ready for Client Approval", "In Client Approval", // Separate
+        "Ready for Development", "In Development", "Clarification (In-Dev)",
+        "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT",
+        "Ready for UAT", "Ready For Prod", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying", "Deployed", "Done"
       ],
-      predev: ["Intake", "Active Scoping", "Clarification (Pre-Dev)", "Ready for Sizing", "Sizing Underway", "Pending Prioritization", "Proposal Needed", "Drafting Proposal"],
-      indev: ["Pending Tech Approval", "Pending Client Approval", "Ready for Development", "In Development", "Dev Complete"],
-      deployed: ["Ready Feature Merge", "Ready Deployment", "Deployed to Prod", "Done"]
+      predev: ["Intake", "Scoping In Progress", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Ready for Sizing", "Sizing Underway", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
+      indev: ["Ready for Tech Review", "Tech Reviewing", "Ready for Client Approval", "In Client Approval", "Ready for Development", "In Development", "Clarification (In-Dev)", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress"],
+      deployed: ["Ready for Internal UAT", "Internal UAT", "Ready for UAT", "Ready For Prod", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying", "Deployed", "Done"]
     },
     Developer: {
       all: [
-        "Backlog",
-        "Active Scoping",
-        "Clarification (Pre-Dev)",
+        "Backlog", 
+        "Clarification Requested (Pre-Dev)", "Providing Clarification",
         "Ready for Sizing", "Sizing Underway",
-        "Pending Prioritization",
-        "Proposal Needed", "Drafting Proposal",
-        "Pending Tech Approval", // Separate
-        "Pending Client Approval", // Separate
-        "Clarification (In-Dev)",
+        "Ready for Prioritization", "Prioritizing",
+        "Proposal Requested", "Drafting Proposal", 
+        "Ready for Tech Review", "Tech Reviewing", // Separate
+        "Ready for Client Approval", "In Client Approval", // Separate
         "Ready for Development",
-        "Back For Development",
-        "In Development",
-        "Dev Blocked",
-        "Dev Complete",
-        "Scratch Org Test",
-        "Ready for QA",
-        "In QA",
-        "In UAT",
-        "Ready for UAT (Cons.)",
-        "Ready for UAT (Client)",
-        "Ready UAT Approval",
-        "Ready Feature Merge",
-        "Ready Deployment",
-        "Deployed to Prod",
-        "Done",
-        "Cancelled"
+        "In Development", "Back For Development", "Dev Blocked", "Clarification (In-Dev)",
+        "In Review", "Ready For Prod", "Deployed", "Done"
       ],
-      predev: ["Backlog", "Active Scoping", "Clarification (Pre-Dev)", "Ready for Sizing", "Sizing Underway", "Pending Prioritization"],
-      indev: ["Ready for Development", "In Development", "Dev Blocked", "Dev Complete", "Back For Development"],
-      deployed: ["Ready Feature Merge", "Ready Deployment", "Deployed to Prod", "Done"]
+      predev: ["Backlog", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Ready for Sizing", "Sizing Underway", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
+      indev: ["Ready for Tech Review", "Tech Reviewing", "Ready for Client Approval", "In Client Approval", "Ready for Development", "In Development", "Back For Development", "Dev Blocked", "Clarification (In-Dev)"],
+      deployed: ["In Review", "Ready For Prod", "Deployed", "Done"]
     },
     QA: {
       all: [
-        "Backlog",
-        "Scoping",
-        "Ready For Dev",
-        "In Dev",
-        "In Development",
-        "Dev Blocked",
-        "Dev Complete",
-        "Ready for Scratch Org Test",
-        "Scratch Org Test",
-        "Ready for QA",
-        "In QA",
-        "In UAT",
-        "UAT",
-        "Ready for Feature Merge",
-        "Ready for Deployment",
-        "Deployed",
-        "Done",
-        "Cancelled"
+        "Backlog", "Ready for Dev", "In Development", "Ready for Scratch Test", "Scratch Testing",
+        "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT",
+        "UAT", "Ready For Prod", "Deployed", "Done"
       ],
-      predev: ["Backlog", "Scoping", "Ready For Dev"],
-      indev: ["In Dev", "In Development", "Dev Blocked", "Dev Complete", "Ready for Scratch Org Test", "Ready for QA", "In QA"],
-      deployed: ["UAT", "Ready for Feature Merge", "Ready for Deployment", "Deployed", "Done", "Cancelled"]
+      predev: ["Backlog", "Ready for Dev"],
+      indev: ["In Development", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress"],
+      deployed: ["Ready for Internal UAT", "Internal UAT", "UAT", "Ready For Prod", "Deployed", "Done"]
     },
   };
 
-  // Strict Linear Pull System Flow (1 -> 2 -> 3)
+  // Logic: 
+  // 1. Advance: Can move to Next Step OR Jump to a future QUEUE (Waiting) state.
+  // 2. Backtrack: Can move to Previous Step OR Jump back to a previous QUEUE (Waiting) state.
   transitionMap = {
     // 1. Intake
-    "Backlog": ["Active Scoping"], 
-    "Active Scoping": ["Clarification (Pre-Dev)", "Ready for Sizing", "Pending Tech Approval", "Proposal Needed"], 
-    "Clarification (Pre-Dev)": ["Ready for Sizing", "Pending Tech Approval", "Proposal Needed"], 
+    "Backlog": ["Scoping In Progress", "Ready for Sizing", "Ready for Prioritization"], // Jump to Queue
+    "Scoping In Progress": ["Clarification Requested (Pre-Dev)", "Ready for Sizing", "Ready for Prioritization"], // Next or Jump Queue
     
     // 2. Definition
+    "Clarification Requested (Pre-Dev)": ["Providing Clarification", "Ready for Sizing", "Ready for Tech Review"], // Added skip to Tech Review
+    "Providing Clarification": ["Ready for Sizing", "Ready for Prioritization", "Ready for Tech Review"], // Jump Queue
     "Ready for Sizing": ["Sizing Underway"],
-    "Sizing Underway": ["Pending Prioritization"],
-    "Pending Prioritization": ["Proposal Needed", "Ready for Development", "Pending Tech Approval"], // Updated advance logic
-    "Proposal Needed": ["Drafting Proposal", "Pending Prioritization"],
-    "Drafting Proposal": ["Pending Tech Approval"],
+    "Sizing Underway": ["Ready for Prioritization", "Proposal Requested"], // Jump Queue
+    "Ready for Prioritization": ["Prioritizing", "Ready for Development", "Ready for Tech Review"], // Added skip to Dev and Tech Review
+    "Prioritizing": ["Proposal Requested", "Ready for Tech Review"], // Jump Queue
+    "Proposal Requested": ["Drafting Proposal"],
+    "Drafting Proposal": ["Ready for Tech Review"],
     
     // 3. Approval
-    "Pending Tech Approval": ["Pending Client Approval"], 
-    "Pending Client Approval": ["Ready for Development"],
+    "Ready for Tech Review": ["Tech Reviewing"],
+    "Tech Reviewing": ["Ready for Client Approval", "Ready for Development"], // Jump Queue (Fast track)
+    "Ready for Client Approval": ["In Client Approval", "Ready for Development"], // Added skip option to Ready for Dev
+    "In Client Approval": ["Ready for Development"],
     
     // 4. Development
     "Ready for Development": ["In Development"],
-    "In Development": ["Clarification (In-Dev)", "Dev Blocked", "Dev Complete", "Back For Development"], 
-    "Clarification (In-Dev)": ["Back For Development"], 
+    "In Development": ["Dev Clarification Requested", "Dev Blocked", "Ready for Scratch Test", "Ready for QA", "Ready for Deployment"], // Jump Queues
+    "Dev Clarification Requested": ["Providing Dev Clarification"],
+    "Providing Dev Clarification": ["Back For Development"], 
     "Back For Development": ["In Development"],
-    "Dev Blocked": ["In Development"], 
-    "Dev Complete": ["Ready for Scratch Test", "Ready for Deployment"], 
+    "Dev Blocked": ["In Development"],
     
-    // 5. Testing (QA)
-    "Ready for Scratch Test": ["Scratch Testing", "Ready for Deployment"], 
-    "Scratch Testing": ["Ready for QA", "Back For Development"], 
-    "Ready for QA": ["In QA", "Ready for Deployment"], 
-    "In QA": ["Ready for Internal UAT", "Back For Development"], 
+    // 5. Testing
+    "Ready for Scratch Test": ["Scratch Testing"],
+    "Scratch Testing": ["Ready for QA", "Back For Development"],
+    "Ready for QA": ["QA In Progress"],
+    "QA In Progress": ["Ready for Internal UAT", "Ready for Client UAT", "Ready for Deployment", "Back For Development"], // Jump Queues
+    "Ready for Internal UAT": ["Internal UAT"],
+    "Internal UAT": ["Ready for Client UAT", "Back For Development"],
     
     // 6. UAT
-    "Ready for Internal UAT": ["Internal UAT"], 
-    "Internal UAT": ["Ready for Client UAT", "Back For Development"], 
-    "Ready for Client UAT": ["In Client UAT"], 
-    "In Client UAT": ["Pending UAT Sign-off", "Back For Development"], 
-    "Pending UAT Sign-off": ["Ready for Merge"], 
+    "Ready for Client UAT": ["In Client UAT"],
+    "In Client UAT": ["Ready for UAT Sign-off", "Back For Development"],
+    "Ready for UAT Sign-off": ["Processing Sign-off"],
+    "Processing Sign-off": ["Ready for Merge", "Back For Development"],
     
     // 7. Deployment
-    "Ready for Merge": ["Ready for Deployment"], 
-    "Ready for Deployment": ["Deployed to Prod"],
+    "Ready for Merge": ["Merging"],
+    "Merging": ["Ready for Deployment"],
+    "Ready for Deployment": ["Deploying"],
+    "Deploying": ["Deployed to Prod"],
     "Deployed to Prod": ["Done"],
     "Done": [],
-    "Cancelled": []
+    "Cancelled": ["Backlog", "Ready for Sizing"] // Restart options (Queues)
   };
 
-  // Reverse Mapping
+  // Logic: Backtrack only to Queues (safe parking spots) or Cancelled
   backtrackMap = {
-    "Active Scoping": ["Backlog", "Cancelled"],
-    "Clarification (Pre-Dev)": ["Active Scoping", "Backlog", "Cancelled"],
+    "Scoping In Progress": ["Backlog", "Cancelled"],
+    "Clarification Requested (Pre-Dev)": ["Backlog", "Cancelled"],
+    "Providing Clarification": ["Clarification Requested (Pre-Dev)", "Backlog", "Cancelled"],
+    "Ready for Sizing": ["Clarification Requested (Pre-Dev)", "Backlog", "Cancelled"],
+    "Sizing Underway": ["Ready for Sizing", "Backlog", "Cancelled"],
+    "Ready for Prioritization": ["Ready for Sizing", "Backlog", "Cancelled"],
+    "Prioritizing": ["Ready for Prioritization", "Cancelled"],
+    "Proposal Requested": ["Ready for Prioritization", "Ready for Sizing", "Cancelled"],
+    "Drafting Proposal": ["Proposal Requested", "Cancelled"],
+    "Ready for Tech Review": ["Proposal Requested", "Ready for Prioritization", "Cancelled"],
+    "Tech Reviewing": ["Ready for Tech Review", "Cancelled"],
+    "Ready for Client Approval": ["Ready for Tech Review", "Cancelled"],
+    "In Client Approval": ["Ready for Client Approval", "Cancelled"],
     
-    "Ready for Sizing": ["Active Scoping", "Clarification (Pre-Dev)", "Backlog", "Cancelled"],
-    "Sizing Underway": ["Ready for Sizing", "Active Scoping", "Backlog", "Cancelled"],
+    "Ready for Development": ["In Client Approval", "Ready for Client Approval", "Ready for Tech Review", "Cancelled"],
+    "In Development": ["Ready for Development", "Cancelled"],
+    "Dev Clarification Requested": ["In Development", "Cancelled"], // Exception: Issue raised from work
+    "Providing Dev Clarification": ["Dev Clarification Requested", "Cancelled"],
+    "Back For Development": ["Dev Clarification Requested", "Ready for Development", "Cancelled"],
+    "Dev Blocked": ["In Development", "Cancelled"],
     
-    "Pending Prioritization": ["Ready for Sizing", "Backlog", "Cancelled"], // Removed Sizing Underway
+    "Ready for Scratch Test": ["In Development", "Cancelled"],
+    "Scratch Testing": ["Ready for Scratch Test", "Ready for Development", "Cancelled"],
+    "Ready for QA": ["Ready for Scratch Test", "Cancelled"],
+    "QA In Progress": ["Ready for QA", "Ready for Scratch Test", "Cancelled"],
+    "Ready for Internal UAT": ["Ready for QA", "Cancelled"],
+    "Internal UAT": ["Ready for Internal UAT", "Cancelled"],
     
-    "Proposal Needed": ["Pending Prioritization", "Active Scoping", "Clarification (Pre-Dev)", "Backlog", "Cancelled"],
-    "Drafting Proposal": ["Proposal Needed", "Pending Prioritization", "Backlog", "Cancelled"],
+    "Ready for Client UAT": ["Ready for Internal UAT", "Cancelled"],
+    "In Client UAT": ["Ready for Client UAT", "Cancelled"],
+    "Ready for UAT Sign-off": ["In Client UAT", "Cancelled"],
+    "Processing Sign-off": ["Ready for UAT Sign-off", "Cancelled"],
     
-    "Pending Tech Approval": ["Drafting Proposal", "Proposal Needed", "Active Scoping", "Clarification (Pre-Dev)", "Backlog", "Cancelled"],
-    "Pending Client Approval": ["Pending Tech Approval", "Drafting Proposal", "Backlog", "Cancelled"],
-    
-    "Ready for Development": ["Pending Client Approval", "Pending Tech Approval", "Backlog", "Cancelled"],
-    "In Development": ["Ready for Development", "Backlog", "Cancelled"],
-    
-    "Clarification (In-Dev)": ["In Development", "Ready for Development", "Cancelled"],
-    "Back For Development": ["In Development", "Clarification (In-Dev)", "Scratch Testing", "In QA", "Internal UAT", "In Client UAT", "Cancelled"],
-    "Dev Blocked": ["In Development", "Back For Development", "Cancelled"],
-    "Dev Complete": ["In Development", "Back For Development", "Dev Blocked", "Cancelled"],
-    
-    "Ready for Scratch Test": ["Dev Complete", "In Development", "Cancelled"],
-    "Scratch Testing": ["Ready for Scratch Test", "Dev Complete", "Cancelled"],
-    "Ready for QA": ["Scratch Testing", "Ready for Scratch Test", "Cancelled"],
-    "In QA": ["Ready for QA", "Scratch Testing", "Cancelled"],
-    
-    "Ready for Internal UAT": ["In QA", "Ready for QA", "Cancelled"],
-    "Internal UAT": ["Ready for Internal UAT", "In QA", "Cancelled"],
-    
-    "Ready for Client UAT": ["Internal UAT", "Ready for Internal UAT", "Cancelled"],
-    "In Client UAT": ["Ready for Client UAT", "Internal UAT", "Cancelled"],
-    "Pending UAT Sign-off": ["In Client UAT", "Ready for Client UAT", "Cancelled"],
-    
-    "Ready for Merge": ["Pending UAT Sign-off", "In Client UAT", "Cancelled"],
-    "Ready for Deployment": ["Ready for Merge", "Pending UAT Sign-off", "Ready for Scratch Test", "Ready for QA", "Dev Complete", "Cancelled"],
-    "Deployed to Prod": ["Ready for Deployment", "Ready for Merge", "Cancelled"],
-    "Done": ["Deployed to Prod", "Ready for Deployment", "Cancelled"],
+    "Ready for Merge": ["Processing Sign-off", "Cancelled"],
+    "Merging": ["Ready for Merge", "Cancelled"],
+    "Ready for Deployment": ["Ready for Merge", "Cancelled"],
+    "Deploying": ["Ready for Deployment", "Cancelled"],
+    "Deployed to Prod": ["Ready for Deployment", "Cancelled"],
+    "Done": ["Deployed to Prod", "Cancelled"],
     "Backlog": ["Cancelled"],
-    "Cancelled": ["Backlog", "Active Scoping", "Ready for Sizing"] 
+    "Cancelled": ["Backlog", "Ready for Sizing", "Ready for Development"] 
   };
 
   intentionColor = {
@@ -797,7 +757,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
   @wire(getSettings)
       wiredSettings({ error, data }) {
-      
+       
           if (data) {
               this.AiEnhancementEnabled = data.aiSuggestionsEnabled || false;
               this.AiEstimation = data.aiEstimationEnabled || false;
@@ -807,7 +767,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
               this.showToast('Error Loading AI Settings', error.body.message, 'error');
           }
       }
-  
+   
 
   /* Toolbar button */
   openCreateModal() {
@@ -1035,34 +995,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     if (this.persona !== "Client") {
       return this.statusColorMap[status] || "#eee";
     }
-    const predev = [
-      "Backlog",
-      "Active Scoping",
-      "Quick Estimate",
-      "Proposal Needed",
-      "Pending Development Approval",
-      "Pending Client Approval",
-      "Ready for Development",
-    ];
-    const indev = [
-      "In Development",
-      "Dev Blocked",
-      "Back For Development",
-      "Dev Complete",
-      "Ready for Scratch Org Test",
-      "Ready for QA",
-      "In QA",
-      "Ready for UAT (Consultant)",
-      "Ready for UAT Approval",
-      "Ready for UAT (Client)",
-      "Ready for Feature Merge",
-      "Ready for Deployment",
-    ];
-    if (predev.includes(status)) return "#FFE082"; // yellow
-    if (indev.includes(status)) return "#FF9100"; // orange
-    if (["Deployed to Prod", "Done", "Cancelled"].includes(status))
-      return "#90caf9"; // blue/grey
-    return "#eee";
+    // Mapping removed for brevity, relying on statusColorMap for new statuses
+    return this.statusColorMap[status] || "#eee";
   }
 
   get advanceOptions() {
