@@ -86,7 +86,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
   // Visual Rules: Queues (Light), Work (Active Colors), Hold (Red)
   statusColorMap = {
     // 1. Intake
-    "Backlog": "#F3F4F6", // Light Grey (Queue)
+    "Backlog": "#F3F4F6", // Light Grey
     "Scoping In Progress": "#FEF3C7", // Amber (Work)
     
     // 2. Definition & Sizing
@@ -108,12 +108,12 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     // 4. Development
     "Ready for Development": "#DCFCE7", // Light Green (Queue)
     "In Development": "#FF9100", // Strong Orange (Work)
-    "Dev Clarification Requested": "#FEE2E2", // Red (Queue - Issue)
+    "Dev Clarification Requested": "#FEE2E2", // Red (Queue)
     "Providing Dev Clarification": "#DBEAFE", // Blue (Work)
-    "Back For Development": "#EF4444", // Strong Red (Action Required)
-    "Dev Blocked": "#EF4444", // Strong Red (Blocked)
+    "Back For Development": "#EF4444", // Red (Action Required)
+    "Dev Blocked": "#EF4444", // Red (Hold)
     
-    // 5. Testing (QA)
+    // 5. Testing
     "Ready for Scratch Test": "#E0F2FE", // Light Blue (Queue)
     "Scratch Testing": "#22C55E", // Green (Work)
     "Ready for QA": "#E0F2FE", // Light Blue (Queue)
@@ -139,92 +139,86 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     "Cancelled": "#9CA3AF" // Grey
   };
 
-  // Maps Column Keys to Visual Styles (Backgrounds match status groups)
+  // Maps Column Keys to Visual Styles
   columnHeaderStyleMap = {
-    // --- Client Columns ---
+    // --- Client / Consultant / Dev / QA Shared & Specific Styles ---
     "Backlog": { bg: "rgba(243, 244, 246, 0.8)", color: "#1F2937" },
-    "Scoping": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, // Amber
+    "Scoping": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
     
-    // Split Clarification
-    "Clarification Requested (Pre-Dev)": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" }, // Red/Clarification
+    // Clarification
+    "Clarification Requested": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
     "Providing Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
     "Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" }, // Merged
 
-    // Split Estimation
-    "Ready for Sizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, // Blue
-    "Sizing Underway": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Orange
+    // Sizing
+    "Ready for Sizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
+    "Sizing Underway": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
     "Estimation": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Merged
-    "Sizing": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Merged
 
-    // Split Prioritization
-    "Ready for Prioritization": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, 
-    "Prioritizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, 
+    // Prioritization
+    "Ready for Prioritization": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
+    "Prioritizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
     "Prioritization": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" }, // Merged
 
-    // Split Proposal
+    // Proposal
     "Proposal Requested": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
     "Drafting Proposal": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
     "Proposal": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" }, // Merged
     
-    // Split Approvals
-    "Ready for Tech Review": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-    "Tech Reviewing": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
+    // Tech Approval
+    "Ready for Dev Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
+    "Dev Approving": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
     "Dev Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, // Merged
+
+    // Client Approval
     "Ready for Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
     "In Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
     "Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, // Merged
     "Approvals": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, // Merged both
+
+    // Development
+    "Ready for Dev": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" },
+    "In Development": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" }, // Client Merged
+    "Dev Queue": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" }, // Granular
+    "Dev Work": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" }, // Granular
+    "Rework": { bg: "rgba(254, 202, 202, 0.6)", color: "#991B1B" }, // Red
+    "Blocked": { bg: "rgba(254, 202, 202, 0.6)", color: "#991B1B" }, // Red
     
-    "Clarification (In-Dev)": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
-    // Split Dev Clarification
+    // Dev Clarification
     "Dev Clarification Requested": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
     "Providing Dev Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
+    "Dev Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" }, // Granular
 
-    "Ready for Dev": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" }, // Green
-    "In Development": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" }, // Strong Orange
-    "In Review": { bg: "rgba(219, 234, 254, 0.5)", color: "#1D4ED8" }, // Blue
-    "Ready for UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Stronger Blue
-    
-    // Split Client UAT
-    "Ready for Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-    "In Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-    "Ready for UAT Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
-    "Processing Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
-    "Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
-    "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
-
-    "Ready For Prod": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" }, // Purple
-    "Deployed": { bg: "rgba(209, 250, 229, 0.5)", color: "#059669" }, // Emerald
-    "Done": { bg: "rgba(229, 231, 235, 0.5)", color: "#374151" },
-    "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" },
-
-    // --- Consultant / Developer / QA Granular Columns ---
-    "Intake": { bg: "rgba(243, 244, 246, 0.8)", color: "#1F2937" },
-    "Scoping In Progress": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-    "Dev Queue": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" },
-    "Dev Work": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" },
-    "QA Queue": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-    "QA Work": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
-    "Merge & Deploy": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    "Ready for Merge": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    "Merging": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    "Ready for Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    "Deploying": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    
-    "QA & Review": { bg: "rgba(219, 234, 254, 0.5)", color: "#1D4ED8" }, // Merged
-    "QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" }, // Merged
+    // Testing / QA
     "Ready for Scratch Test": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
     "Scratch Testing": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
     "Ready for QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
     "QA In Progress": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
     "Ready for Internal UAT": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
     "Internal UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
+    "QA & Review": { bg: "rgba(219, 234, 254, 0.5)", color: "#1D4ED8" }, // Merged
+    "QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" }, // Merged
+
+    // Client UAT
+    "Ready for Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
+    "In Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
+    "Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
+    "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
+
+    // Deployment
+    "Ready for UAT Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
+    "Processing Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
+    "Ready for Merge": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
+    "Merging": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
+    "Ready for Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
+    "Deploying": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Deployment Prep": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" }, // Merged
     "Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" }, // Merged
 
-    // Explicit keys for internal views to match Client splits if needed
-    "Pending Tech Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }, 
-    "Pending Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" }
+    // Ends
+    "Deployed": { bg: "rgba(209, 250, 229, 0.5)", color: "#059669" },
+    "Done": { bg: "rgba(229, 231, 235, 0.5)", color: "#374151" },
+    "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" }
   };
 
   /** Who owns each status - Source of Truth **/
@@ -323,15 +317,18 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     "Approvals": "Approvals", // Merged
     
     // Dev
-    "In Development": "In Development", // Merged
-    "Dev Queue": "Dev Queue", // Split
-    "Dev Work": "Dev Work", // Split
-    "Ready for Development": "Ready for Dev",
+    "In Development": "In Development", // Merged Client
+    "Dev Queue": "Dev Queue", // Granular
+    "Dev Work": "Active Dev", // Granular
+    "Rework": "Rework", // Granular
+    "Blocked": "⛔ Blocked", // Granular
+    "Ready for Dev": "Ready for Dev",
     
     // Dev Clarification
     "Dev Clarification Requested": "Dev Clarification Requested",
     "Providing Dev Clarification": "Providing Dev Clarification",
     "Clarification (In-Dev)": "Dev Clarification",
+    "Dev Clarification": "Dev Clarification", // Granular
 
     // Testing
     "QA & Review": "QA & Review", // Merged
@@ -383,9 +380,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     // Explicit keys matching personaColumnStatusMap
     "Pending Tech Approval": "Tech Approval",
     "Pending Client Approval": "Client Approval",
-    "QA & Review": "QA & Review",
-    "Dev Queue": "Dev Queue",
-    "Dev Work": "Dev Work"
+    "QA & Review": "QA & Review"
   };
 
   // Maps New 36 Stages into Existing Column Keys (Aggregation Strategy from Table 1)
@@ -406,9 +401,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       // Split Prioritization (Core)
       "Ready for Prioritization": ["Ready for Prioritization"],
       "Prioritizing": ["Prioritizing"],
-      // Proposal is part of Prioritization in Table 1, but user JSON separated it.
-      "Proposal Requested": ["Proposal Requested"],
-      "Drafting Proposal": ["Drafting Proposal"],
+      // Merged Proposal (Extended)
+      "Proposal": ["Proposal Requested", "Drafting Proposal"],
       
       // Merged Dev Approval (Extended)
       "Dev Approval": ["Ready for Tech Review", "Tech Reviewing"],
@@ -465,9 +459,12 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       // Consultant table says Client Approval is Ext/Merge.
       "Client Approval": ["Ready for Client Approval", "In Client Approval"],
       
-      // Split Development
+      // Split Development into 5 Granular Columns
       "Dev Queue": ["Ready for Development"],
-      "Dev Work": ["In Development", "Back For Development", "Dev Blocked", "Dev Clarification Requested", "Providing Dev Clarification"],
+      "Dev Work": ["In Development"],
+      "Rework": ["Back For Development"],
+      "Blocked": ["Dev Blocked"],
+      "Dev Clarification": ["Dev Clarification Requested", "Providing Dev Clarification"],
       
       // Split QA
       "Ready for Scratch Test": ["Ready for Scratch Test"],
@@ -501,7 +498,9 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       "Ready for Sizing": ["Ready for Sizing"],
       "Sizing Underway": ["Sizing Underway"],
       
-      "Prioritization": ["Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"], // Ext/Merge
+      "Prioritization": ["Ready for Prioritization", "Prioritizing"], // Ext/Merge
+      "Proposal Requested": ["Proposal Requested"], // Split
+      "Drafting Proposal": ["Drafting Proposal"], // Split
       
       // Split Dev Approval (Core/Split)
       "Ready for Tech Review": ["Ready for Tech Review"],
@@ -509,9 +508,12 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
       "Client Approval": ["Ready for Client Approval", "In Client Approval"], // Ext/Merge
       
-      // Split Development (Core/Split)
+      // Split Development into 5 Granular Columns
       "Dev Queue": ["Ready for Development"],
-      "Dev Work": ["In Development", "Back For Development", "Dev Blocked", "Dev Clarification Requested", "Providing Dev Clarification"],
+      "Dev Work": ["In Development"],
+      "Rework": ["Back For Development"],
+      "Blocked": ["Dev Blocked"],
+      "Dev Clarification": ["Dev Clarification Requested", "Providing Dev Clarification"],
       
       // Merged QA, UAT, Deployment (Ext/Merge)
       "QA": ["Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT"],
@@ -564,8 +566,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       "Estimation": true, // Ext/Merge
       "Ready for Prioritization": false,
       "Prioritizing": false,
-      "Proposal Requested": false,
-      "Drafting Proposal": false,
+      "Proposal": true, // Ext/Merge
       "Dev Approval": true, // Ext/Merge
       "Ready for Client Approval": false, 
       "In Client Approval": false,
@@ -592,8 +593,14 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       "Ready for Tech Review": false, // Core/Split
       "Tech Reviewing": false, // Core/Split
       "Client Approval": true, // Ext/Merge
+      
+      // New granular Dev columns (Core)
       "Dev Queue": false,
       "Dev Work": false,
+      "Rework": false,
+      "Blocked": false,
+      "Dev Clarification": false,
+      
       "Ready for Scratch Test": false, // Table says Core/Split for QA
       "Scratch Testing": false,
       "Ready for QA": false,
@@ -616,11 +623,19 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
       "Ready for Sizing": false, // Core/Split
       "Sizing Underway": false,
       "Prioritization": true, // Ext/Merge
+      "Proposal Requested": false, // Split
+      "Drafting Proposal": false, // Split
       "Ready for Tech Review": false, // Core/Split
       "Tech Reviewing": false,
       "Client Approval": true, // Ext/Merge
+      
+      // New granular Dev columns (Core)
       "Dev Queue": false,
       "Dev Work": false,
+      "Rework": false,
+      "Blocked": false,
+      "Dev Clarification": false,
+      
       "QA": true, // Ext/Merge
       "UAT": true, // Ext/Merge
       "Deployment": true, // Ext/Merge
@@ -655,7 +670,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         "Backlog", "Scoping", 
         "Clarification Requested (Pre-Dev)", "Providing Clarification",
         "Estimation", // Merged
-        "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal",
+        "Ready for Prioritization", "Prioritizing", "Proposal", // Merged
         "Dev Approval", // Merged
         "Ready for Client Approval", "In Client Approval", 
         "In Development", // Merged
@@ -664,7 +679,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         "Deployment Prep", // Merged
         "Deployed", "Done"
       ],
-      predev: ["Backlog", "Scoping", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Estimation", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
+      predev: ["Backlog", "Scoping", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Estimation", "Ready for Prioritization", "Prioritizing", "Proposal"],
       indev: ["Dev Approval", "Ready for Client Approval", "In Client Approval", "In Development", "QA & Review"],
       deployed: ["Ready for Client UAT", "In Client UAT", "Deployment Prep", "Deployed", "Done"]
     },
@@ -676,7 +691,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal", 
         "Ready for Tech Review", "Tech Reviewing",
         "Client Approval", // Merged
-        "Dev Queue", "Dev Work", 
+        "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification",
         "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT",
         "Client UAT", // Merged
         "Ready for UAT Sign-off", "Processing Sign-off", 
@@ -684,7 +699,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         "Deployed", "Done"
       ],
       predev: ["Backlog", "Scoping In Progress", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Ready for Sizing", "Sizing Underway", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
-      indev: ["Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress"],
+      indev: ["Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress"],
       deployed: ["Ready for Internal UAT", "Internal UAT", "Client UAT", "Ready for UAT Sign-off", "Processing Sign-off", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying", "Deployed", "Done"]
     },
     Developer: {
@@ -693,16 +708,17 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
         "Clarification", // Merged
         "Ready for Sizing", "Sizing Underway", 
         "Prioritization", // Merged
+        "Proposal Requested", "Drafting Proposal", 
         "Ready for Tech Review", "Tech Reviewing",
         "Client Approval", // Merged
-        "Dev Queue", "Dev Work", 
+        "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification",
         "QA", // Merged
         "UAT", // Merged
         "Deployment", // Merged
         "Deployed", "Done"
       ],
-      predev: ["Backlog", "Clarification", "Ready for Sizing", "Sizing Underway", "Prioritization"],
-      indev: ["Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work"],
+      predev: ["Backlog", "Clarification", "Ready for Sizing", "Sizing Underway", "Prioritization", "Proposal Requested", "Drafting Proposal"],
+      indev: ["Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification"],
       deployed: ["QA", "UAT", "Deployment", "Deployed", "Done"]
     },
     QA: {
@@ -848,7 +864,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     "Will Do": "#2196F3",
     "Sizing Only": "#FFD54F",
   };
-
   personaAdvanceOverrides = {};
   personaBacktrackOverrides = {};
  
