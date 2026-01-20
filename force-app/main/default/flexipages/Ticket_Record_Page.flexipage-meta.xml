@@ -213,6 +213,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>sendToPartnerButton</componentName>
+                <identifier>c_sendToPartnerButton</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentInstanceProperties>
                     <name>relatedListComponentOverride</name>
                     <value>NONE</value>
