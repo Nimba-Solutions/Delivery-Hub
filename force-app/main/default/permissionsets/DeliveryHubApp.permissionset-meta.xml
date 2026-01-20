@@ -72,16 +72,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.EstimatedEndDevDate__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Ticket__c.EstimatedStartDevDate__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Ticket__c.EstimatedDevCompletionDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -92,7 +82,27 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Ticket__c.EstimatedEndDevDate__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.EstimatedStartDevDate__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Ticket__c.EventReceivedOnDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.ExternalRequesterEmailTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.ExternalSourceOrgTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -117,6 +127,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Ticket__c.JiraTicketId__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Ticket__c.JiraTicketKeyTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -133,6 +148,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.ProjectedUATReadyDate__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.RequestTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

@@ -40,6 +40,7 @@
     <label>Delivery Hub</label>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
+    <tabs>Ticket__c</tabs>
     <tabs>draganddroplwc</tabs>
     <tabs>Delivery_Hub_Settings</tabs>
     <uiType>Lightning</uiType>

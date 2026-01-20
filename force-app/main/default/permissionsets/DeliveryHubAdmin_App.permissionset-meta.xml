@@ -132,6 +132,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Ticket__c.ExternalRequesterEmailTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.ExternalSourceOrgTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Ticket__c.IsActiveBool__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -173,6 +183,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.ProjectedUATReadyDate__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.RequestTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
