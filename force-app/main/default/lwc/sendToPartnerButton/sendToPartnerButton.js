@@ -6,14 +6,14 @@ import USER_ID from '@salesforce/user/Id';
 import sendTicketToPartner from '@salesforce/apex/DeliveryHubSender.sendTicketToPartner';
 
 export default class SendToPartnerButton extends LightningElement {
-    @api recordId; // Automatically gets the Ticket Id
+    @api recordId;
     @track isModalOpen = false;
     @track isSending = false;
     @track userEmail;
 
-    // 1. Get Current User Email to pre-fill the form
+    // FIX: Removed 'error' from destructuring since it was unused
     @wire(getRecord, { recordId: USER_ID, fields: [USER_EMAIL_FIELD] })
-    wireUser({ error, data }) {
+    wireUser({ data }) {
         if (data) {
             this.userEmail = getFieldValue(data, USER_EMAIL_FIELD);
         }
@@ -30,7 +30,6 @@ export default class SendToPartnerButton extends LightningElement {
         this.userEmail = event.target.value;
     }
 
-    // 2. The Send Action
     handleSend() {
         if (!this.userEmail) {
             this.showToast('Error', 'Please enter a contact email.', 'error');
@@ -39,10 +38,9 @@ export default class SendToPartnerButton extends LightningElement {
 
         this.isSending = true;
 
-        // Call the Apex Class (DeliveryHubSender.cls)
         sendTicketToPartner({ 
             ticketId: this.recordId, 
-            targetUrl: '', // Sending blank triggers the default URL in Apex
+            targetUrl: '', 
             senderEmail: this.userEmail 
         })
         .then(() => {
