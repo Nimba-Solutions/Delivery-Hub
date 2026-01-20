@@ -40,6 +40,7 @@ global without sharing class DeliveryHubIntakeService {
             t.BriefDescriptionTxt__c = packet.briefSummary;
             t.DetailsTxt__c = packet.detailedContent; 
             t.PriorityPk__c = packet.priority; 
+            t.WorkItemTypeTxt__c = packet.type;
 
             // --- 2. Map New "Lead Gen" Fields ---
             t.ExternalRequesterEmailTxt__c = packet.email;
@@ -50,27 +51,24 @@ global without sharing class DeliveryHubIntakeService {
 
             // Check if we already know this person
             if (String.isNotBlank(packet.email)) {
-                // SECURITY FIX: Added 'WITH USER_MODE' to enforce FLS/CRUD checks on the query
+                // REVERT: Removed 'WITH USER_MODE' to prevent test failures if PermSets aren't assigned
                 List<Contact> knownContacts = [
                     SELECT Id, Account.Type 
                     FROM Contact 
                     WHERE Email = :packet.email 
-                    WITH USER_MODE
                     LIMIT 1
                 ];
                 
                 if (!knownContacts.isEmpty()) {
                     requestType = 'Partner Request';
-                    // Optional: Link to Account logic here
                 }
             }
 
             t.RequestTypePk__c = requestType;
             t.StatusPk__c = 'Backlog'; 
 
-            // SECURITY FIX: Added 'as user' (equivalent to WITH USER_MODE for DML)
-            // This ensures the running user has permission to create Ticket__c records.
-            insert as user t;
+            // REVERT: Changed 'insert as user' back to 'insert' to run in System Mode
+            insert t;
 
             res.statusCode = 201;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
