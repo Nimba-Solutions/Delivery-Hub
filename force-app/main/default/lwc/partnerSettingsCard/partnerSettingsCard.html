@@ -1,0 +1,80 @@
+<template>
+    <div class="slds-p-around_medium">
+        
+        <div class="slds-media slds-media_center slds-m-bottom_large">
+            <div class="slds-media__figure">
+                <lightning-icon icon-name="utility:connected_apps" size="medium" class="header-icon"></lightning-icon>
+            </div>
+            <div class="slds-media__body">
+                <h3 class="slds-text-heading_small slds-text-title_bold">Partner Network</h3>
+                <p class="slds-text-body_small slds-text-color_weak">Connect with Cloud Nimbus or other Delivery Hub partners to exchange work.</p>
+            </div>
+        </div>
+
+        <div class="slds-form-element slds-m-bottom_medium">
+            <lightning-input 
+                type="toggle" 
+                label="Enable Partner Network" 
+                message-toggle-active="Active" 
+                message-toggle-inactive="Inactive"
+                checked={isEnabled}
+                onchange={handleToggle}>
+            </lightning-input>
+        </div>
+
+        <template if:true={isEnabled}>
+            <div class="slds-box slds-theme_shade slds-m-bottom_medium">
+                
+                <lightning-combobox
+                    label="Destination Partner"
+                    value={selectedPartner}
+                    placeholder="Select a partner"
+                    options={partnerOptions}
+                    onchange={handlePartnerChange}
+                    class="slds-m-bottom_medium">
+                </lightning-combobox>
+
+                <template if:true={isCustomPartner}>
+                    <lightning-input 
+                        type="url" 
+                        label="Partner API Endpoint" 
+                        placeholder="https://partner-site.force.com/services/apexrest/..." 
+                        value={customUrl}
+                        onchange={handleUrlChange}
+                        class="slds-m-bottom_medium">
+                    </lightning-input>
+                </template>
+
+                <template if:false={isCustomPartner}>
+                    <div class="slds-alert slds-alert_info slds-m-bottom_medium">
+                        <lightning-icon icon-name="utility:info" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        Tickets will be sent to the Cloud Nimbus Fulfillment Team.
+                    </div>
+                </template>
+            </div>
+
+            <div class="slds-section slds-is-open">
+                <h3 class="slds-section__title">
+                    <span class="slds-truncate" title="Inbound Configuration">Inbound Configuration</span>
+                </h3>
+                <div class="slds-section__content">
+                    <p class="slds-text-body_small slds-m-bottom_small">
+                        To receive tickets from partners, provide them with this URL (Requires Site Setup):
+                    </p>
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_right">
+                        <lightning-input 
+                            type="text" 
+                            variant="label-hidden" 
+                            value={myInboundUrl} 
+                            readonly>
+                        </lightning-input>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <div class="slds-m-top_large">
+            <lightning-button variant="brand" label="Save Settings" onclick={handleSave}></lightning-button>
+        </div>
+    </div>
+</template>
