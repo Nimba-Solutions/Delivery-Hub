@@ -16,7 +16,6 @@ private class DeliveryHubIntakeServiceTest {
 
     @TestSetup
     static void makeData() {
-        // Create a "Known Partner" contact for the segmentation test
         Account a = new Account(Name = 'Partner Corp', Type = 'Partner');
         insert a;
         
@@ -25,7 +24,7 @@ private class DeliveryHubIntakeServiceTest {
     }
 
     @IsTest
-    static void testCreateTicket_PublicLead() {
+    static void testCreateTicketPublicLead() {
         // 1. Prepare Request
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/intake/';
@@ -51,8 +50,8 @@ private class DeliveryHubIntakeServiceTest {
     }
 
     @IsTest
-    static void testCreateTicket_PartnerRequest() {
-        // 1. Prepare Request with KNOWN email (from @TestSetup)
+    static void testCreateTicketPartnerRequest() {
+        // 1. Prepare Request with KNOWN email
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/intake/';
         req.httpMethod = 'POST';
@@ -73,7 +72,7 @@ private class DeliveryHubIntakeServiceTest {
     }
 
     @IsTest
-    static void testCreateTicket_MalformedJson_HandlesError() {
+    static void testCreateTicketMalformedJsonHandlesError() {
         // 1. Prepare Request with BAD JSON
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/intake/';
