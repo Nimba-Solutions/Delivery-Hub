@@ -22,7 +22,7 @@ public with sharing class DeliveryHubSender {
     public static String sendTicketToPartner(Id ticketId, String targetUrl, String senderEmail) {
         try {
             // 1. If no URL provided, use the Nimbus default
-            String endpoint = DEFAULT_NIMBUS_URL;
+            String endpoint = String.isBlank(targetUrl) ? DEFAULT_NIMBUS_URL : targetUrl;
 
             // 2. Fetch Ticket Data
             // SECURITY FIX: Added 'WITH USER_MODE' to enforce Field Level Security (FLS)
