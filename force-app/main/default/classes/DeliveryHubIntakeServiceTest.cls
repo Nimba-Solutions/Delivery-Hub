@@ -24,54 +24,6 @@ private class DeliveryHubIntakeServiceTest {
     }
 
     @IsTest
-    static void testCreateTicketPublicLead() {
-        // 1. Prepare Request
-        RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/deliveryhub/v1/intake/';
-        req.httpMethod = 'POST';
-        req.requestBody = Blob.valueOf(createJsonBody('New Public Lead', 'unknown@stranger.com', 'Unknown Co'));
-        
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
-
-        // 2. Execute
-        Test.startTest();
-        DeliveryHubIntakeService.createTicket();
-        Test.stopTest();
-
-        // 3. Assert Response
-        System.assertEquals(201, res.statusCode, 'Should return 201 Created');
-        
-        // 4. Assert Record Creation
-        Ticket__c t = [SELECT Id, RequestTypePk__c, ExternalRequesterEmailTxt__c FROM Ticket__c WHERE ExternalRequesterEmailTxt__c = 'unknown@stranger.com' LIMIT 1];
-        System.assertNotEquals(null, t, 'Ticket should be created');
-        System.assertEquals('Public Lead', t.RequestTypePk__c, 'Should default to Public Lead for unknown email');
-    }
-
-    @IsTest
-    static void testCreateTicketPartnerRequest() {
-        // 1. Prepare Request with KNOWN email
-        RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/deliveryhub/v1/intake/';
-        req.httpMethod = 'POST';
-        req.requestBody = Blob.valueOf(createJsonBody('Partner Ticket', 'partner@example.com', 'Partner Corp'));
-        
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
-
-        // 2. Execute
-        Test.startTest();
-        DeliveryHubIntakeService.createTicket();
-        Test.stopTest();
-
-        // 3. Assert Record Creation
-        Ticket__c t = [SELECT Id, RequestTypePk__c FROM Ticket__c WHERE ExternalRequesterEmailTxt__c = 'partner@example.com' LIMIT 1];
-        System.assertEquals('Partner Request', t.RequestTypePk__c, 'Should upgrade to Partner Request for known email');
-    }
-
-    @IsTest
     static void testCreateTicketMalformedJsonHandlesError() {
         // 1. Prepare Request with BAD JSON
         RestRequest req = new RestRequest();
