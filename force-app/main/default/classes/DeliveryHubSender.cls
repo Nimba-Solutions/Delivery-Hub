@@ -37,11 +37,11 @@ public with sharing class DeliveryHubSender {
 
             // 3. Construct Payload
             Map<String, Object> payload = new Map<String, Object>{
-                'title' => t.WorkItemNameTxt__c,
-                'briefSummary' => t.BriefDescriptionTxt__c,
-                'detailedContent' => t.DetailsTxt__c,
-                'priority' => t.PriorityPk__c,
-                'type' => t.WorkItemTypeTxt__c,
+                'title' => t.%%%NAMESPACED_ORG%%%WorkItemNameTxt__c,
+                'briefSummary' => t.%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c,
+                'detailedContent' => t.%%%NAMESPACED_ORG%%%DetailsTxt__c,
+                'priority' => t.%%%NAMESPACED_ORG%%%PriorityPk__c,
+                'type' => t.%%%NAMESPACED_ORG%%%WorkItemTypeTxt__c,
                 'email' => senderEmail,
                 'companyName' => UserInfo.getOrganizationName(),
                 'orgId' => UserInfo.getOrganizationId()
