@@ -8,7 +8,7 @@ public with sharing class DeliveryHubSender {
 
     // NOTE: In a production environment, it is best practice to move this URL 
     // to a Named Credential to avoid hardcoding.
-    private static final String DEFAULT_NIMBUS_URL = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1/intake';
+    private static final String DEFAULT_NIMBUS_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1/intake';
 
     /**
      * @description Fetches a ticket and POSTs its data to the specified target URL.
@@ -22,7 +22,7 @@ public with sharing class DeliveryHubSender {
     public static String sendTicketToPartner(Id ticketId, String targetUrl, String senderEmail) {
         try {
             // 1. If no URL provided, use the Nimbus default
-            String endpoint = String.isBlank(targetUrl) ? DEFAULT_NIMBUS_URL : targetUrl;
+            String endpoint = DEFAULT_NIMBUS_URL;
 
             // 2. Fetch Ticket Data
             // SECURITY FIX: Added 'WITH USER_MODE' to enforce Field Level Security (FLS)
