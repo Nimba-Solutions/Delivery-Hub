@@ -13,6 +13,7 @@
         <field>Ticket__c.TotalLoggedHoursNumber__c</field>
     </columns>
     <columns>
+        <aggregateTypes>Sum</aggregateTypes>
         <field>Ticket__c.BudgetVarianceNumber__c</field>
     </columns>
     <description>Ticket Hour Watch</description>

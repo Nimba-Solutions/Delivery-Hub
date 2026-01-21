@@ -3,5 +3,5 @@
     <description>Delivery Hub Mothership</description>
     <disableProtocolSecurity>false</disableProtocolSecurity>
     <isActive>true</isActive>
-    <url>https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com</url>
+    <url>https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com</url>
 </RemoteSiteSetting>

@@ -47,7 +47,7 @@ global without sharing class DeliveryHubIntakeService {
 
             // --- 3. Smart Segmentation Logic ---
             String requestType = 'Public Lead';
-
+            /*
             // Check if we already know this person
             if (String.isNotBlank(packet.email)) {
                 // SECURITY FIX: Added 'WITH USER_MODE' to enforce FLS/CRUD checks on the query
@@ -64,6 +64,7 @@ global without sharing class DeliveryHubIntakeService {
                     // Optional: Link to Account logic here
                 }
             }
+            */
 
             t.RequestTypePk__c = requestType;
             t.StatusPk__c = 'Backlog'; 
