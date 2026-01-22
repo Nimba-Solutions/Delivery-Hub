@@ -39,6 +39,11 @@
                 <default>false</default>
                 <label>Completed</label>
             </value>
+            <value>
+                <fullName>Budget Hold</fullName>
+                <default>false</default>
+                <label>Budget Hold</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
