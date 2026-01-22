@@ -6,6 +6,11 @@ private class DeliveryHubSenderTest {
         private Integer statusCode;
         private String body;
 
+        /**
+         * @description Constructor for the mock response
+         * @param statusCode HTTP Status Code
+         * @param body Response body string
+         */
         public MockHttpResponse(Integer statusCode, String body) {
             this.statusCode = statusCode;
             this.body = body;

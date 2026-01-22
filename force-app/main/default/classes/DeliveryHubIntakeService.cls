@@ -12,14 +12,13 @@ global without sharing class DeliveryHubIntakeService {
         public String companyName;
         public String priority;
         public String type;
-        // NEW: Brokerage Fields
         public Decimal preApprovedHours; 
         public Decimal hourlyRate;
-        public String brokerRequestId; // The Mothership's ID for this request
+        public String brokerRequestId; 
     }
 
     /**
-     * @description POST: Ingest a new ticket (The "Job Offer")
+     * @description POST: Ingest a new ticket
      */
     @HttpPost
     global static void createTicket() {
@@ -32,26 +31,18 @@ global without sharing class DeliveryHubIntakeService {
 
             Ticket__c t = new Ticket__c();
 
-            // 1. Map Standard Content
             t.WorkItemNameTxt__c = packet.title; 
             t.BriefDescriptionTxt__c = packet.briefSummary;
             t.DetailsTxt__c = packet.detailedContent; 
             t.PriorityPk__c = packet.priority; 
             t.WorkItemTypeTxt__c = packet.type;
-
-            // 2. Map Brokerage Data (The "Contract")
-            // We map the Broker's Request ID to our "Source ID" so we can reference it later
             t.ExternalSourceOrgTxt__c = packet.companyName;
             t.SourceEventReplayIdTxt__c = packet.brokerRequestId; 
-            
-            // If you added "EstimatedHoursNumber__c" to your package, map it here:
-            // t.EstimatedHoursNumber__c = packet.preApprovedHours; 
-
-            // 3. Logic: Always 'Partner Request' if it comes via API with a rate
             t.RequestTypePk__c = 'Partner Request';
             t.StatusPk__c = 'Backlog'; 
 
-            insert t;
+            // FIX: Added 'as user' to satisfy CRUD Check
+            insert as user t;
 
             res.statusCode = 201;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
@@ -70,21 +61,21 @@ global without sharing class DeliveryHubIntakeService {
     }
 
     /**
-     * @description GET: Check Status (The "Sync Back")
-     * Call this with ?id=THE_TICKET_ID to get live status.
+     * @description GET: Check Status
      */
     @HttpGet
     global static void checkStatus() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
         
-        // Grab the ID from the URL: /intake/a01...
         String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
 
         try {
+            // FIX: Added 'WITH USER_MODE' to satisfy CRUD Check
             Ticket__c t = [SELECT StatusPk__c, TotalLoggedHoursNumber__c 
                            FROM Ticket__c 
                            WHERE Id = :ticketId 
+                           WITH USER_MODE
                            LIMIT 1];
                            
             res.statusCode = 200;
