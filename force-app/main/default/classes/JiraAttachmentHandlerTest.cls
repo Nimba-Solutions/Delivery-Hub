@@ -362,7 +362,7 @@ public class JiraAttachmentHandlerTest {
     }
 
     @isTest
-    static void testCreateSalesforceFile_Direct() {
+    static void testCreateSalesforceFileDirect() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -394,7 +394,7 @@ public class JiraAttachmentHandlerTest {
     }
 
     @isTest
-    static void testHandleAttachmentAdded_VerifyCDLProperties() {
+    static void testHandleAttachmentAddedVerifyCDLProperties() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
