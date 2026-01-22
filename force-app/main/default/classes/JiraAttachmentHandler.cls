@@ -221,12 +221,12 @@ public without sharing class JiraAttachmentHandler {
             }
             System.debug('ticket owner name'+ticket.OwnerId);
             
-            // Create the ContentVersion and explicitly set the OwnerId
+            // Create the ContentVersion 
+            // FIX: Removed "FirstPublishLocationId = ticket.Id" to prevent duplicate link error
             ContentVersion cv = new ContentVersion(
                 VersionData = body,
                 Title = filename,
-                PathOnClient = filename,
-                FirstPublishLocationId = ticket.Id
+                PathOnClient = filename
             );
             insert cv;
 

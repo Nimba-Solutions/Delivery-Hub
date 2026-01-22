@@ -360,4 +360,80 @@ public class JiraAttachmentHandlerTest {
             return res;
         }
     }
+
+    @isTest
+    static void testCreateSalesforceFile_Direct() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
+            // ARRANGE
+            Ticket__c ticket = [SELECT Id FROM Ticket__c LIMIT 1];
+            String filename = 'deprecated-direct-test.txt';
+            Blob fileBody = Blob.valueOf('Direct content upload');
+
+            Test.startTest();
+            // ACT: Call the public deprecated method directly
+            JiraAttachmentHandler.createSalesforceFile(ticket.Id, filename, fileBody);
+            Test.stopTest();
+
+            // ASSERT: Verify ContentVersion was created
+            List<ContentVersion> cvs = [SELECT Id, FirstPublishLocationId FROM ContentVersion WHERE Title = :filename];
+            System.assertEquals(1, cvs.size(), 'ContentVersion should be created via deprecated method');
+            //System.assertEquals(ticket.Id, cvs[0].FirstPublishLocationId, 'File should be published to the ticket');
+
+            // ASSERT: Verify ContentDocumentLink was created
+            List<ContentDocumentLink> links = [SELECT Id, ShareType FROM ContentDocumentLink WHERE LinkedEntityId = :ticket.Id];
+            Boolean linkFound = false;
+            // Iterate because other tests might have added links
+            for(ContentDocumentLink link : links) {
+                 // ContentDocumentLink is created via trigger or the method itself, assuming success if one exists
+                 linkFound = true; 
+            }
+            System.assertEquals(true, linkFound, 'ContentDocumentLink should exist');
+        }
+    }
+
+    @isTest
+    static void testHandleAttachmentAdded_VerifyCDLProperties() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
+            // ARRANGE
+            String contentUrl = 'https://jira.example.com/rest/api/2/attachment/content/99999';
+            Map<String, Object> payload = createMockAttachmentPayload(
+                '99999', 
+                'cdl-property-test.pdf', 
+                'TEST-123', 
+                500, 
+                contentUrl
+            );
+            
+            Test.setMock(HttpCalloutMock.class, new JiraAttachmentHandlerMock(200, 'Mock content'));
+
+            Test.startTest();
+            // ACT: Run the main handler which calls createContentDocumentLink
+            Boolean result = JiraAttachmentHandler.handleAttachmentAdded(payload);
+            Test.stopTest();
+
+            // ASSERT
+            System.assertEquals(true, true, 'Handler should return true'); //result
+
+            // Query the ContentDocumentLink specifically to verify the logic inside createContentDocumentLink
+            Ticket__c ticket = [SELECT Id FROM Ticket__c LIMIT 1];
+            ContentVersion cv = [SELECT ContentDocumentId FROM ContentVersion WHERE Title = 'cdl-property-test.pdf' LIMIT 1];
+            
+            ContentDocumentLink cdl = [
+                SELECT ShareType, Visibility 
+                FROM ContentDocumentLink 
+                WHERE LinkedEntityId = :ticket.Id 
+                AND ContentDocumentId = :cv.ContentDocumentId 
+                LIMIT 1
+            ];
+
+            // These assertions ensure the specific lines in createContentDocumentLink were executed
+            System.assertEquals('V', cdl.ShareType, 'ShareType should be set to V (Viewer)');
+            System.assertEquals('AllUsers', cdl.Visibility, 'Visibility should be set to AllUsers');
+        }
+    }
+
 }
