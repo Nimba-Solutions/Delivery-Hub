@@ -74,7 +74,11 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Readonly</behavior>
-                <field>BudgetVarianceNumber__c</field>
+                <field>HoursVarianceNumber__c</field>
+            </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>BillableRateNumber__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
