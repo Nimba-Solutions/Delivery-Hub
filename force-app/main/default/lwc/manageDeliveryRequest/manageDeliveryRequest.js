@@ -38,7 +38,8 @@ export default class ManageDeliveryRequest extends LightningElement {
     handleSend() {
         this.isLoading = true;
         sendRequestToVendor({ requestId: this.recordId })
-            .then(result => {
+            // FIX: Removed unused 'result' parameter and used empty parenthesis ()
+            .then(() => {
                 this.showToast('Success', 'Offer sent successfully!', 'success');
                 // Refresh data (handled automatically by wire in most cases, or use notifyRecordUpdate)
             })
