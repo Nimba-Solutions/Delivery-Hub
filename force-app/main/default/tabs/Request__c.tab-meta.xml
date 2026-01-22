@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customObject>true</customObject>
+    <description>Role: The specific &quot;Offer&quot; or &quot;Contract.&quot; This connects a Ticket to a Vendor with a specific Price (The Cost side).</description>
+    <motif>Custom93: Shopping Cart</motif>
+</CustomTab>

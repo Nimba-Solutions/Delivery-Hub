@@ -7,7 +7,7 @@
     <columns>StageNamePk__c</columns>
     <columns>EstimatedHoursNumber__c</columns>
     <columns>TotalLoggedHoursNumber__c</columns>
-    <columns>BudgetVarianceNumber__c</columns>
+    <columns>HoursVarianceNumber__c</columns>
     <filterScope>Everything</filterScope>
     <filters>
         <field>IsActiveBool__c</field>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StatusPk__c</fullName>
+    <description>Draft, Open for Bids, Offer Sent, Accepted, In Progress, Completed</description>
+    <label>Status</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Draft</fullName>
+                <default>false</default>
+                <label>Draft</label>
+            </value>
+            <value>
+                <fullName>Open for Bids</fullName>
+                <default>false</default>
+                <label>Open for Bids</label>
+            </value>
+            <value>
+                <fullName>Offer Sent</fullName>
+                <default>false</default>
+                <label>Offer Sent</label>
+            </value>
+            <value>
+                <fullName>Accepted</fullName>
+                <default>false</default>
+                <label>Accepted</label>
+            </value>
+            <value>
+                <fullName>In Progress</fullName>
+                <default>false</default>
+                <label>In Progress</label>
+            </value>
+            <value>
+                <fullName>Completed</fullName>
+                <default>false</default>
+                <label>Completed</label>
+            </value>
+            <value>
+                <fullName>Budget Hold</fullName>
+                <default>false</default>
+                <label>Budget Hold</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,32 @@
+<template>
+    <lightning-card title="Vendor Management" icon-name="standard:partner_fund_request">
+        <div class="slds-p-around_medium">
+            
+            <div class="slds-box slds-theme_shade slds-m-bottom_medium">
+                <p><strong>Current Status:</strong> {requestStatus}</p>
+                <p><strong>Remote ID:</strong> {remoteId}</p>
+            </div>
+
+            <div class="slds-align_absolute-center">
+                <lightning-button 
+                    label="Send Offer to Vendor" 
+                    variant="brand" 
+                    onclick={handleSend} 
+                    disabled={isLinked}
+                    class="slds-m-right_small">
+                </lightning-button>
+
+                <lightning-button 
+                    label="Check Vendor Status" 
+                    onclick={handleCheckStatus} 
+                    disabled={isNotLinked}>
+                </lightning-button>
+            </div>
+
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading"></lightning-spinner>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

@@ -1,9 +1,3 @@
-/**
- * @description Service endpoint for external systems to submit delivery tickets.
- * Exposed via REST at /services/apexrest/deliveryhub/v1/intake/
- * @author DeliveryHub Team
- * @date 2026-01-20
- */
 @RestResource(urlMapping='/deliveryhub/v1/intake/*')
 global without sharing class DeliveryHubIntakeService {
 
@@ -18,11 +12,13 @@ global without sharing class DeliveryHubIntakeService {
         public String companyName;
         public String priority;
         public String type;
+        public Decimal preApprovedHours; 
+        public Decimal hourlyRate;
+        public String brokerRequestId; 
     }
 
     /**
-     * @description POST method to ingest a new ticket.
-     * Maps external data to Ticket__c and attempts to match existing Contacts.
+     * @description POST: Ingest a new ticket
      */
     @HttpPost
     global static void createTicket() {
@@ -35,49 +31,24 @@ global without sharing class DeliveryHubIntakeService {
 
             Ticket__c t = new Ticket__c();
 
-            // --- 1. Map Standard Fields ---
             t.WorkItemNameTxt__c = packet.title; 
             t.BriefDescriptionTxt__c = packet.briefSummary;
             t.DetailsTxt__c = packet.detailedContent; 
             t.PriorityPk__c = packet.priority; 
-
-            // --- 2. Map New "Lead Gen" Fields ---
-            t.ExternalRequesterEmailTxt__c = packet.email;
+            t.WorkItemTypeTxt__c = packet.type;
             t.ExternalSourceOrgTxt__c = packet.companyName;
-
-            // --- 3. Smart Segmentation Logic ---
-            String requestType = 'Public Lead';
-            /*
-            // Check if we already know this person
-            if (String.isNotBlank(packet.email)) {
-                // SECURITY FIX: Added 'WITH USER_MODE' to enforce FLS/CRUD checks on the query
-                List<Contact> knownContacts = [
-                    SELECT Id, Account.Type 
-                    FROM Contact 
-                    WHERE Email = :packet.email 
-                    WITH USER_MODE
-                    LIMIT 1
-                ];
-                
-                if (!knownContacts.isEmpty()) {
-                    requestType = 'Partner Request';
-                    // Optional: Link to Account logic here
-                }
-            }
-            */
-
-            t.RequestTypePk__c = requestType;
+            t.SourceEventReplayIdTxt__c = packet.brokerRequestId; 
+            t.RequestTypePk__c = 'Partner Request';
             t.StatusPk__c = 'Backlog'; 
 
-            // SECURITY FIX: Added 'as user' (equivalent to WITH USER_MODE for DML)
-            // This ensures the running user has permission to create Ticket__c records.
+            // FIX: Added 'as user' to satisfy CRUD Check
             insert as user t;
 
             res.statusCode = 201;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'success' => true,
                 'ticketId' => t.Id,
-                'status' => requestType
+                'status' => t.StatusPk__c
             }));
 
         } catch (Exception e) {
@@ -86,6 +57,34 @@ global without sharing class DeliveryHubIntakeService {
                 'success' => false,
                 'error' => e.getMessage()
             }));
+        }
+    }
+
+    /**
+     * @description GET: Check Status
+     */
+    @HttpGet
+    global static void checkStatus() {
+        RestRequest req = RestContext.request;
+        RestResponse res = RestContext.response;
+        
+        String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
+
+        try {
+            // FIX: Added 'WITH USER_MODE' to satisfy CRUD Check
+            Ticket__c t = [SELECT StatusPk__c, TotalLoggedHoursNumber__c 
+                           FROM Ticket__c 
+                           WHERE Id = :ticketId 
+                           WITH USER_MODE
+                           LIMIT 1];
+                           
+            res.statusCode = 200;
+            res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                'status' => t.StatusPk__c,
+                'hoursLogged' => t.TotalLoggedHoursNumber__c
+            }));
+        } catch (Exception e) {
+            res.statusCode = 404;
         }
     }
 }

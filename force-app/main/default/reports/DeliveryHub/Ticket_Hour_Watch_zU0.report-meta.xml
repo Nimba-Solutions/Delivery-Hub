@@ -14,7 +14,7 @@
     </columns>
     <columns>
         <aggregateTypes>Sum</aggregateTypes>
-        <field>Ticket__c.BudgetVarianceNumber__c</field>
+        <field>Ticket__c.HoursVarianceNumber__c</field>
     </columns>
     <description>Ticket Hour Watch</description>
     <filter>

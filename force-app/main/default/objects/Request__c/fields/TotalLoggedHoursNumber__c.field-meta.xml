@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TotalLoggedHoursNumber__c</fullName>
+    <description>IF(PreApprovedHoursNumber__c &gt; 0, 
+   TotalLoggedHoursNumber__c / PreApprovedHoursNumber__c, 
+   0)</description>
+    <label>Total Logged Hours Number</label>
+    <summarizedField>WorkLog__c.HoursLoggedNumber__c</summarizedField>
+    <summaryForeignKey>WorkLog__c.RequestId__c</summaryForeignKey>
+    <summaryOperation>sum</summaryOperation>
+    <trackTrending>false</trackTrending>
+    <type>Summary</type>
+</CustomField>

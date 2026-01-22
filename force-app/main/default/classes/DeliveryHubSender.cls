@@ -1,74 +1,116 @@
-/**
- * @description Outbound service controller to send Ticket__c data to external partners.
- * Designed to be called from LWC or Aura components.
- * @author DeliveryHub Team
- * @date 2026-01-20
- */
 public with sharing class DeliveryHubSender {
 
-    // NOTE: In a production environment, it is best practice to move this URL 
-    // to a Named Credential to avoid hardcoding.
-    private static final String DEFAULT_NIMBUS_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1/intake';
+    private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1/intake/';
 
-    /**
-     * @description Fetches a ticket and POSTs its data to the specified target URL.
-     * @param ticketId The Salesforce ID of the Ticket__c record to send.
-     * @param targetUrl (Optional) The endpoint URL. Defaults to DEFAULT_NIMBUS_URL if blank.
-     * @param senderEmail The email address of the sender to be included in the payload.
-     * @return String Returns 'Success' if the callout completes with 200/201.
-     * @throws AuraHandledException if the callout fails or permissions are invalid.
-     */
     @AuraEnabled
-    public static String sendTicketToPartner(Id ticketId, String targetUrl, String senderEmail) {
+    public static String sendRequestToVendor(Id requestId) {
         try {
-            // 1. If no URL provided, use the Nimbus default
-            String endpoint = String.isBlank(targetUrl) ? DEFAULT_NIMBUS_URL : targetUrl;
-
-            // 2. Fetch Ticket Data
-            // SECURITY FIX: Added 'WITH USER_MODE' to enforce Field Level Security (FLS)
-            Ticket__c t = [
-                SELECT WorkItemNameTxt__c, BriefDescriptionTxt__c, DetailsTxt__c, 
-                       PriorityPk__c, WorkItemTypeTxt__c 
-                FROM Ticket__c 
-                WHERE Id = :ticketId 
+            // Keep WITH USER_MODE for the query (Safe)
+            Request__c reqRec = [
+                SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
+                       TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
+                       TicketId__r.DetailsTxt__c, TicketId__r.PriorityPk__c, TicketId__r.WorkItemTypeTxt__c,
+                       DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name
+                FROM Request__c 
+                WHERE Id = :requestId 
+                WITH USER_MODE
                 LIMIT 1
             ];
 
-            // 3. Construct Payload
+            String endpoint = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
+            
+            if (String.isBlank(endpoint)) {
+                System.debug(LoggingLevel.INFO, 'Vendor endpoint missing. Defaulting to Mothership.');
+                endpoint = DEFAULT_MOTHERSHIP_URL;
+            }
+
             Map<String, Object> payload = new Map<String, Object>{
-                'title' => t.WorkItemNameTxt__c,
-                'briefSummary' => t.BriefDescriptionTxt__c,
-                'detailedContent' => t.DetailsTxt__c,
-                'priority' => t.PriorityPk__c,
-                'type' => t.WorkItemTypeTxt__c,
-                'email' => senderEmail,
+                'title' => reqRec.TicketId__r.WorkItemNameTxt__c,
+                'briefSummary' => reqRec.TicketId__r.BriefDescriptionTxt__c,
+                'detailedContent' => reqRec.TicketId__r.DetailsTxt__c,
+                'priority' => reqRec.TicketId__r.PriorityPk__c,
+                'type' => reqRec.TicketId__r.WorkItemTypeTxt__c,
                 'companyName' => UserInfo.getOrganizationName(),
-                'orgId' => UserInfo.getOrganizationId()
+                'preApprovedHours' => reqRec.PreApprovedHoursNumber__c,
+                'hourlyRate' => reqRec.HourlyRateCurrency__c,
+                'brokerRequestId' => reqRec.Id 
             };
 
-            // 4. Send Request
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint(endpoint);
-            req.setMethod('POST');
-            req.setHeader('Content-Type', 'application/json');
-            req.setBody(JSON.serialize(payload));
+            HttpRequest httpReq = new HttpRequest();
+            httpReq.setEndpoint(endpoint);
+            httpReq.setMethod('POST');
+            httpReq.setHeader('Content-Type', 'application/json');
+            httpReq.setBody(JSON.serialize(payload));
             
             Http http = new Http();
-            HttpResponse res = http.send(req);
+            HttpResponse res = http.send(httpReq);
             
-            if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+            if (res.getStatusCode() == 201) {
+                Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+                String remoteId = (String) responseMap.get('ticketId');
+                
+                reqRec.RemoteTicketIdTxt__c = remoteId;
+                reqRec.StatusPk__c = 'Offer Sent'; 
+                
+                // FIX: 'as user' satisfies the CRUD scanner
+                // Ensure your Profile/PermSet has Edit access to Request__c
+                update as user reqRec;
+                
                 return 'Success';
             } else {
-                // Pass the error message back to the LWC
-                throw new CalloutException('Partner returned error: ' + res.getBody());
+                throw new CalloutException('Network Error (' + res.getStatusCode() + '): ' + res.getBody());
             }
 
         } catch (Exception e) {
-            // Ensure the error message is visible in the LWC/UI
-            String msg = 'Integration Error: ' + e.getMessage();
-            AuraHandledException auraEx = new AuraHandledException(msg);
-            auraEx.setMessage(msg); // Required to expose message to UI in some contexts
-            throw auraEx;
+            System.debug(LoggingLevel.ERROR, 'Brokerage Error Details: ' + e.getMessage());
+            throw new AuraHandledException('Brokerage Error: ' + e.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static String checkRequestStatus(Id requestId) {
+        try {
+            Request__c reqRec = [
+                SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
+                FROM Request__c 
+                WHERE Id = :requestId 
+                WITH USER_MODE
+                LIMIT 1
+            ];
+
+            if (String.isBlank(reqRec.RemoteTicketIdTxt__c)) {
+                return 'No Remote ID linked. Have you sent this request yet?';
+            }
+
+            String endpoint = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
+            
+            if (String.isBlank(endpoint)) {
+                endpoint = DEFAULT_MOTHERSHIP_URL;
+            }
+
+            if (!endpoint.endsWith('/')) {
+                endpoint += '/';
+            }
+            endpoint += reqRec.RemoteTicketIdTxt__c;
+
+            HttpRequest httpReq = new HttpRequest();
+            httpReq.setEndpoint(endpoint);
+            httpReq.setMethod('GET');
+            
+            Http http = new Http();
+            HttpResponse res = http.send(httpReq);
+
+            if (res.getStatusCode() == 200) {
+                Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+                String remoteStatus = (String) responseMap.get('status');
+                return 'Remote Status: ' + remoteStatus;
+            } else {
+                return 'Check Failed: ' + res.getStatusCode();
+            }
+
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Status Check Error: ' + e.getMessage());
+            throw new AuraHandledException(e.getMessage());
         }
     }
 }
