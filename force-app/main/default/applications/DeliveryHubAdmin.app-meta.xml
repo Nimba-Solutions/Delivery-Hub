@@ -19,6 +19,24 @@
         <pageOrSobjectType>Ticket__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
+        <actionName>View</actionName>
+        <comment>Action override created by Lightning App Builder during activation.</comment>
+        <content>Request_Record_Page</content>
+        <formFactor>Large</formFactor>
+        <skipRecordTypeSelect>false</skipRecordTypeSelect>
+        <type>Flexipage</type>
+        <pageOrSobjectType>Request__c</pageOrSobjectType>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <comment>Action override created by Lightning App Builder during activation.</comment>
+        <content>Request_Record_Page</content>
+        <formFactor>Small</formFactor>
+        <skipRecordTypeSelect>false</skipRecordTypeSelect>
+        <type>Flexipage</type>
+        <pageOrSobjectType>Request__c</pageOrSobjectType>
+    </actionOverrides>
+    <actionOverrides>
         <actionName>Tab</actionName>
         <content>DeliveryHubAdminHome</content>
         <formFactor>Large</formFactor>
@@ -40,6 +58,8 @@
     <label>Delivery Hub Admin</label>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
+    <tabs>Network_Entity__c</tabs>
+    <tabs>Request__c</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubAdmin_UtilityBar</utilityBar>
 </CustomApplication>

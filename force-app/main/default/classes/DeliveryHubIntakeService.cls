@@ -1,9 +1,3 @@
-/**
- * @description Service endpoint for external systems to submit delivery tickets.
- * Exposed via REST at /services/apexrest/deliveryhub/v1/intake/
- * @author DeliveryHub Team
- * @date 2026-01-20
- */
 @RestResource(urlMapping='/deliveryhub/v1/intake/*')
 global without sharing class DeliveryHubIntakeService {
 
@@ -18,11 +12,14 @@ global without sharing class DeliveryHubIntakeService {
         public String companyName;
         public String priority;
         public String type;
+        // NEW: Brokerage Fields
+        public Decimal preApprovedHours; 
+        public Decimal hourlyRate;
+        public String brokerRequestId; // The Mothership's ID for this request
     }
 
     /**
-     * @description POST method to ingest a new ticket.
-     * Maps external data to Ticket__c and attempts to match existing Contacts.
+     * @description POST: Ingest a new ticket (The "Job Offer")
      */
     @HttpPost
     global static void createTicket() {
@@ -35,49 +32,32 @@ global without sharing class DeliveryHubIntakeService {
 
             Ticket__c t = new Ticket__c();
 
-            // --- 1. Map Standard Fields ---
+            // 1. Map Standard Content
             t.WorkItemNameTxt__c = packet.title; 
             t.BriefDescriptionTxt__c = packet.briefSummary;
             t.DetailsTxt__c = packet.detailedContent; 
             t.PriorityPk__c = packet.priority; 
+            t.WorkItemTypeTxt__c = packet.type;
 
-            // --- 2. Map New "Lead Gen" Fields ---
-            t.ExternalRequesterEmailTxt__c = packet.email;
+            // 2. Map Brokerage Data (The "Contract")
+            // We map the Broker's Request ID to our "Source ID" so we can reference it later
             t.ExternalSourceOrgTxt__c = packet.companyName;
+            t.SourceEventReplayIdTxt__c = packet.brokerRequestId; 
+            
+            // If you added "EstimatedHoursNumber__c" to your package, map it here:
+            // t.EstimatedHoursNumber__c = packet.preApprovedHours; 
 
-            // --- 3. Smart Segmentation Logic ---
-            String requestType = 'Public Lead';
-            /*
-            // Check if we already know this person
-            if (String.isNotBlank(packet.email)) {
-                // SECURITY FIX: Added 'WITH USER_MODE' to enforce FLS/CRUD checks on the query
-                List<Contact> knownContacts = [
-                    SELECT Id, Account.Type 
-                    FROM Contact 
-                    WHERE Email = :packet.email 
-                    WITH USER_MODE
-                    LIMIT 1
-                ];
-                
-                if (!knownContacts.isEmpty()) {
-                    requestType = 'Partner Request';
-                    // Optional: Link to Account logic here
-                }
-            }
-            */
-
-            t.RequestTypePk__c = requestType;
+            // 3. Logic: Always 'Partner Request' if it comes via API with a rate
+            t.RequestTypePk__c = 'Partner Request';
             t.StatusPk__c = 'Backlog'; 
 
-            // SECURITY FIX: Added 'as user' (equivalent to WITH USER_MODE for DML)
-            // This ensures the running user has permission to create Ticket__c records.
-            insert as user t;
+            insert t;
 
             res.statusCode = 201;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'success' => true,
                 'ticketId' => t.Id,
-                'status' => requestType
+                'status' => t.StatusPk__c
             }));
 
         } catch (Exception e) {
@@ -86,6 +66,34 @@ global without sharing class DeliveryHubIntakeService {
                 'success' => false,
                 'error' => e.getMessage()
             }));
+        }
+    }
+
+    /**
+     * @description GET: Check Status (The "Sync Back")
+     * Call this with ?id=THE_TICKET_ID to get live status.
+     */
+    @HttpGet
+    global static void checkStatus() {
+        RestRequest req = RestContext.request;
+        RestResponse res = RestContext.response;
+        
+        // Grab the ID from the URL: /intake/a01...
+        String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
+
+        try {
+            Ticket__c t = [SELECT StatusPk__c, TotalLoggedHoursNumber__c 
+                           FROM Ticket__c 
+                           WHERE Id = :ticketId 
+                           LIMIT 1];
+                           
+            res.statusCode = 200;
+            res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                'status' => t.StatusPk__c,
+                'hoursLogged' => t.TotalLoggedHoursNumber__c
+            }));
+        } catch (Exception e) {
+            res.statusCode = 404;
         }
     }
 }
