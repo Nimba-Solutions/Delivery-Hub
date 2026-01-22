@@ -1,6 +1,6 @@
 public with sharing class DeliveryHubSender {
 
-    private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1/intake/';
+    private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1/intake/';
 
     @AuraEnabled
     public static String sendRequestToVendor(Id requestId) {
@@ -52,9 +52,9 @@ public with sharing class DeliveryHubSender {
                 reqRec.RemoteTicketIdTxt__c = remoteId;
                 reqRec.StatusPk__c = 'Offer Sent'; 
                 
-                // FIX: Removed 'as user' to bypass strict FLS check during testing
-                // If you want to use 'as user' in Prod, ensure a Permission Set is assigned.
-                update reqRec;
+                // FIX: 'as user' satisfies the CRUD scanner
+                // Ensure your Profile/PermSet has Edit access to Request__c
+                update as user reqRec;
                 
                 return 'Success';
             } else {
@@ -62,7 +62,6 @@ public with sharing class DeliveryHubSender {
             }
 
         } catch (Exception e) {
-            // Add Debug so you can see the REAL error in logs if it fails again
             System.debug(LoggingLevel.ERROR, 'Brokerage Error Details: ' + e.getMessage());
             throw new AuraHandledException('Brokerage Error: ' + e.getMessage());
         }

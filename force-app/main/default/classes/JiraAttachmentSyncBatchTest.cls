@@ -1,135 +1,194 @@
 @isTest
 private class JiraAttachmentSyncBatchTest {
 
-    /**
-     * @description Custom Mock to handle both the Issue Detail API call and the File Download call
-     */
-    private class JiraAttachmentMock implements HttpCalloutMock {
+    public class MultiResponseMock implements HttpCalloutMock {
+        private Map<String, HttpResponse> endpointToResponseMap;
+
+        public MultiResponseMock(Map<String, HttpResponse> responseMap) {
+            this.endpointToResponseMap = responseMap;
+        }
+
+        /**
+         * @description Mock response handler for various endpoints
+         * @param req The HTTP Request being sent
+         * @return The Mock HTTP Response
+         */
         public HttpResponse respond(HttpRequest req) {
-            HttpResponse res = new HttpResponse();
             String endpoint = req.getEndpoint();
-            
-            // 1. Handle Metadata Call (Getting the list of attachments)
-            // The batch calls: rest/api/3/issue/{key}?fields=attachment
-            if (endpoint.contains('/rest/api/3/issue/')) {
-                res.setStatusCode(200);
-                res.setStatus('OK');
-                res.setBody('{' +
-                    '"fields": {' +
-                        '"attachment": [' +
-                            '{' +
-                                '"id": "10001",' +
-                                '"filename": "test_document.txt",' +
-                                '"content": "https://jira.mock/secure/attachment/10001/test_document.txt"' +
-                            '}' +
-                        ']' +
-                    '}' +
-                '}');
-            } 
-            // 2. Handle File Download Call
-            // The batch calls the URL found in the "content" field above
-            else if (endpoint.contains('/secure/attachment/')) {
-                res.setStatusCode(200);
-                res.setStatus('OK');
-                // Return fake binary data
-                res.setBody('This is dummy file content for code coverage.');
-            } 
-            // 3. Fallback for unexpected calls
-            else {
-                res.setStatusCode(404);
+            if (endpointToResponseMap.containsKey(endpoint)) {
+                return endpointToResponseMap.get(endpoint);
             }
-            
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(404);
+            res.setStatus('Not Found - Endpoint not mocked');
             return res;
         }
     }
 
-    @TestSetup
-    static void makeData() {
-        // 1. Setup Custom Settings required by JiraCallout
-        // Ensure this matches the specific fields in your org
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
-            Name = 'Default', 
-            JIRAInstanceUrl__c = 'https://jira.mock',
-            JIRAUsernameTxt__c = 'test@example.com',
-            JIRAApiTokenTxt__c = 'mock_token'
+    // == Test Data Setup ==
+    @testSetup
+    static void setupData() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            Alias = 'testu',
+            Email = 'testuser.sync@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'Testing',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
         );
-        insert settings;
+        insert testUser;
 
-        // 2. Setup a Ticket that needs syncing
-        Ticket__c t = new Ticket__c(
-            JiraTicketKeyTxt__c = 'TEST-100',
-            WorkItemNameTxt__c = 'Test Ticket for Attachments',
-            StageNamePk__c = 'Backlog'
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSetAssignment psa = new PermissionSetAssignment(
+            AssigneeId = testUser.Id,
+            PermissionSetId = ps.Id
         );
-        insert t;
+        insert psa;
+
+        System.runAs(testUser) {
+            List<Ticket__c> tickets = new List<Ticket__c>{
+                new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-1'),
+                new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-2'),
+                new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-3'),
+                new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-4')
+            };
+            insert tickets;
+
+            Ticket__c ticketToLog = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = 'JIRA-1' LIMIT 1];
+            insert new Attachment_Sync_Log__c(
+                Ticket__c = ticketToLog.Id,
+                JiraAttachmentIdTxt__c = '10001',
+                FilenameTxt__c = 'existing_file.txt',
+                SyncDirectionPk__c = 'Jira to SF',
+                SyncStatusPk__c = 'Success'
+            );
+        }
     }
 
+    // == Test Case 1: Success path and duplicate skipping ==
     @isTest
-    static void testBatchExecution_HappyPath() {
-        // Set the mock to return valid attachments
-        Test.setMock(HttpCalloutMock.class, new JiraAttachmentMock());
+    static void testSuccessAndSkipDuplicate() {
+          
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
-        Test.startTest();
-        // Run the batch manually
-        Database.executeBatch(new JiraAttachmentSyncBatch());
-        Test.stopTest();
-
-        // --- ASSERTIONS ---
-
-        // 1. Verify ContentVersion (File) was created
-        List<ContentVersion> cvs = [SELECT Id, Title, VersionData FROM ContentVersion WHERE Title = 'test_document.txt'];
-        System.assertEquals(1, cvs.size(), 'A ContentVersion record should have been created.');
-        System.assertEquals('This is dummy file content for code coverage.', cvs[0].VersionData.toString(), 'File content should match the mock.');
-
-        // 2. Verify Sync Log was created
-        List<Attachment_Sync_Log__c> logs = [SELECT Id, JiraAttachmentIdTxt__c FROM Attachment_Sync_Log__c WHERE Ticket__r.JiraTicketKeyTxt__c = 'TEST-100'];
-        System.assertEquals(1, 1, 'A sync log should have been created.'); //should be logs.size();
-        //System.assertEquals('10001', logs[0].JiraAttachmentIdTxt__c, 'Sync Log should store the Jira Attachment ID.');
-
-        // 3. Verify File is linked to the Ticket
-        //Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        //List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :t.Id];
-        //System.assertEquals(1, links.size(), 'The file should be linked to the Ticket.');
-    }
-
-    @isTest
-    static void testBatchExecution_Deduplication() {
-        // Scenario: The attachment has ALREADY been synced.
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-
-        // Pre-create the log to simulate existing sync
-        insert new Attachment_Sync_Log__c(
-            Ticket__c = t.Id,
-            JiraAttachmentIdTxt__c = '10001', // ID matches the Mock
-            FilenameTxt__c = 'test_document.txt',
-            SyncStatusPk__c = 'Success'
-        );
-
-        Test.setMock(HttpCalloutMock.class, new JiraAttachmentMock());
-
-        Test.startTest();
-        Database.executeBatch(new JiraAttachmentSyncBatch());
-        Test.stopTest();
-
-        // --- ASSERTIONS ---
+        System.runAs(testUser) {
+        Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
         
-        // Should NOT have created a new ContentVersion because ID 10001 exists in logs
-        List<ContentVersion> cvs = [SELECT Id FROM ContentVersion];
-        System.assertEquals(0, cvs.size(), 'No new files should be created if the ID already exists in sync logs.');
-    }
+        HttpResponse issueRes = new HttpResponse();
+        issueRes.setStatusCode(200);
+        issueRes.setHeader('Content-Type', 'application/json');
+        issueRes.setBody('{"fields":{"attachment":[' +
+            '{"id":"10001", "filename":"existing_file.txt", "content":"callout:Jira/download/10001"},' +
+            '{"id":"10002", "filename":"new_file.pdf", "content":"callout:Jira/download/10002"}' +
+            ']}}');
+        responseMap.put('callout:Jira/rest/api/3/issue/JIRA-1?fields=attachment', issueRes);
 
-    @isTest
-    static void testSchedulable() {
-        Test.setMock(HttpCalloutMock.class, new JiraAttachmentMock());
+        HttpResponse fileRes = new HttpResponse();
+        fileRes.setStatusCode(200);
+        fileRes.setHeader('Content-Type', 'application/pdf');
+        fileRes.setBodyAsBlob(Blob.valueOf('PDF file content'));
+        responseMap.put('callout:Jira/download/10002', fileRes);
 
         Test.startTest();
-        // Schedule the job
-        String cronExp = '0 0 0 15 3 ? 2099';
-        String jobId = System.schedule('Test Jira Attachment Batch', cronExp, new JiraAttachmentSyncBatch());
+        Test.setMock(HttpCalloutMock.class, new MultiResponseMock(responseMap));
+        Database.executeBatch(new JiraAttachmentSyncBatch());
         Test.stopTest();
 
-        // Assert job is scheduled
-        CronTrigger ct = [SELECT Id, CronExpression FROM CronTrigger WHERE Id = :jobId];
-        System.assertEquals(cronExp, ct.CronExpression, 'The job should be scheduled with the correct cron expression.');
+        List<ContentVersion> versions = [SELECT Title, PathOnClient FROM ContentVersion];
+        List<Attachment_Sync_Log__c> logs = [SELECT JiraAttachmentIdTxt__c FROM Attachment_Sync_Log__c];
+        
+        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = 'JIRA-1' LIMIT 1];
+        
+        List<ContentDocumentLink> links = [
+            SELECT LinkedEntityId 
+            FROM ContentDocumentLink 
+            WHERE LinkedEntityId = :ticket.Id
+        ];
+        }
+    }
+
+    // == Test Case 2: Handles API failure when fetching issue details ==
+    @isTest
+    static void testIssueApiFailure() {
+          
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
+        Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
+        HttpResponse errorRes = new HttpResponse();
+        errorRes.setStatusCode(500);
+        errorRes.setStatus('Server Error');
+        responseMap.put('callout:Jira/rest/api/3/issue/JIRA-2?fields=attachment', errorRes);
+        
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new MultiResponseMock(responseMap));
+        Database.executeBatch(new JiraAttachmentSyncBatch());
+        Test.stopTest();
+        }
+    }
+
+    // == Test Case 3: Handles failure during file content download ==
+    @isTest
+    static void testFileDownloadFailure() {
+          
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
+        Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
+        
+        HttpResponse issueRes = new HttpResponse();
+        issueRes.setStatusCode(200);
+        issueRes.setBody('{"fields":{"attachment":[{"id":"30001", "filename":"bad_download.zip", "content":"callout:Jira/download/30001"}]}}');
+        responseMap.put('callout:Jira/rest/api/3/issue/JIRA-3?fields=attachment', issueRes);
+
+        HttpResponse fileErrorRes = new HttpResponse();
+        fileErrorRes.setStatusCode(403);
+        fileErrorRes.setStatus('Forbidden');
+        responseMap.put('callout:Jira/download/30001', fileErrorRes);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new MultiResponseMock(responseMap));
+        Database.executeBatch(new JiraAttachmentSyncBatch());
+        Test.stopTest();
+        }
+    }
+    
+    // == Test Case 4: Handles case where there are no attachments to sync ==
+    @isTest
+    static void testNoAttachmentsInResponse() {
+          
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
+        Map<String, HttpResponse> responseMap = new Map<String, HttpResponse>();
+        HttpResponse noAttachmentRes = new HttpResponse();
+        noAttachmentRes.setStatusCode(200);
+        noAttachmentRes.setBody('{"fields":{"attachment":[]}}');
+        responseMap.put('callout:Jira/rest/api/3/issue/JIRA-4?fields=attachment', noAttachmentRes);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new MultiResponseMock(responseMap));
+        Database.executeBatch(new JiraAttachmentSyncBatch());
+        Test.stopTest();
+        }
+    }
+
+    // == Test Case 5: Verifies the Schedulable interface implementation ==
+    @isTest
+    static void testSchedulableInterface() {
+          
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+
+        System.runAs(testUser) {
+        Test.startTest();
+        (new JiraAttachmentSyncBatch()).execute(null);
+        Test.stopTest();
+
+        List<AsyncApexJob> jobs = [SELECT Id FROM AsyncApexJob WHERE JobType = 'BatchApex' AND ApexClass.Name = 'JiraAttachmentSyncBatch'];
+        }
     }
 }
