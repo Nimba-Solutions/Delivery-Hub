@@ -87,6 +87,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Request__c.RequestedBudgetIncreaseNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Request__c.StandDownReasonTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Request__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -138,6 +148,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.BriefDescriptionTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Ticket__c.BudgetVarianceNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -208,11 +223,6 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.ExternalSourceOrgTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>Ticket__c.HoursVarianceNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -308,6 +318,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>WorkLog__c.HoursLoggedNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>WorkLog__c.TicketId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
