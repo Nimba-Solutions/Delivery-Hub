@@ -1,39 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StatusPk__c</fullName>
-    <description>Partner Status of Network Entity</description>
+    <description>Draft, Open for Bids, Offer Sent, Accepted, In Progress, Completed</description>
     <label>Status</label>
     <required>false</required>
     <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
-        <restricted>true</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
             <value>
-                <fullName>Active</fullName>
+                <fullName>Draft</fullName>
                 <default>false</default>
-                <label>Active</label>
+                <label>Draft</label>
             </value>
             <value>
-                <fullName>Passive</fullName>
+                <fullName>Open for Bids</fullName>
                 <default>false</default>
-                <label>Passive</label>
+                <label>Open for Bids</label>
             </value>
             <value>
-                <fullName>Inactive</fullName>
+                <fullName>Offer Sent</fullName>
                 <default>false</default>
-                <label>Inactive</label>
+                <label>Offer Sent</label>
             </value>
             <value>
-                <fullName>Retired</fullName>
+                <fullName>Accepted</fullName>
                 <default>false</default>
-                <label>Retired</label>
+                <label>Accepted</label>
             </value>
             <value>
-                <fullName>Fired</fullName>
+                <fullName>In Progress</fullName>
                 <default>false</default>
-                <label>Fired</label>
+                <label>In Progress</label>
+            </value>
+            <value>
+                <fullName>Completed</fullName>
+                <default>false</default>
+                <label>Completed</label>
             </value>
         </valueSetDefinition>
     </valueSet>

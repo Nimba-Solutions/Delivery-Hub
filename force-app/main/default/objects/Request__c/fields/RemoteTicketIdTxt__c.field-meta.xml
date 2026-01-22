@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>IntegrationEndpointUrlTxt__c</fullName>
-    <description>Their Delivery Hub API URL (if they have one).</description>
-    <externalId>false</externalId>
-    <label>Endpoint URL</label>
+    <fullName>RemoteTicketIdTxt__c</fullName>
+    <description>The ID of the record in their Salesforce org.</description>
+    <externalId>true</externalId>
+    <label>Remote ID</label>
     <length>255</length>
     <required>false</required>
     <trackTrending>false</trackTrending>
