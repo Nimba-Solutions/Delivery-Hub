@@ -78,7 +78,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>BillableRateNumber__c</field>
+                <field>BillableRateCurrency__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
