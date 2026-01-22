@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BudgetUtilizationPercent__c</fullName>
+    <description>&quot;Burn Rate&quot; at a glance so you can spot trouble before the Vendor raises the flag.</description>
+    <formula>IF(PreApprovedHoursNumber__c &gt; 0, 
+   TotalLoggedHoursNumber__c / PreApprovedHoursNumber__c, 
+   0)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Budget Utilization %</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Percent</type>
+</CustomField>

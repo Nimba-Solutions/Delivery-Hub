@@ -60,7 +60,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Readonly</behavior>
-                <field>BudgetUtilizationPct__c</field>
+                <field>BudgetUtilizationPercent__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns/>
