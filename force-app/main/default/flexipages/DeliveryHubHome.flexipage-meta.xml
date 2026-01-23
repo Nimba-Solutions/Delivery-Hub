@@ -23,6 +23,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryBudgetSummary</componentName>
+                <identifier>c_deliveryBudgetSummary</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>dragAndDropLwc</componentName>
                 <identifier>c_dragAndDropLwc</identifier>
             </componentInstance>
