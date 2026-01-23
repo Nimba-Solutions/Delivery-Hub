@@ -160,4 +160,33 @@ private class HtmlToAdfConverterTest {
 
         System.assertEquals(JSON.serialize(expectedContent), JSON.serialize(adf.get('content')), 'ADF content should include underline and strong marks');
     }
+    
+    /**
+     * @description Explicitly tests the processFirstList method by providing 
+     * both list types (ul and ol) in a single HTML string. This ensures 
+     * the while loop and regex logic are fully exercised.
+     */
+    @isTest
+    static void testProcessFirstListCoverage() {
+        // We put text between lists to ensure the substring/removal logic works correctly
+        String html = '<ul><li>Bullet Item</li></ul>' + 
+                      '<p>Spacer</p>' + 
+                      '<ol><li>Ordered Item</li></ol>';
+
+        Test.startTest();
+        Map<String, Object> result = HtmlToAdfConverter.convert(html);
+        Test.stopTest();
+
+        // Verify the structure
+        List<Object> content = (List<Object>)result.get('content');
+        
+        // We expect 3 nodes: bulletList, paragraph, orderedList
+        System.assertEquals(3, content.size(), 'Should have parsed three content blocks');
+
+        // Check 1: Bullet List
+        Map<String, Object> node1 = (Map<String, Object>)content[0];
+        System.assertEquals('bulletList', node1.get('type'), 'First node should be bulletList');
+        List<Object> node1Content = (List<Object>)node1.get('content');
+        System.assertEquals(1, node1Content.size());
+    }
 }

@@ -1,0 +1,65 @@
+<template>
+    <lightning-card title="Discussion" icon-name="standard:post">
+        <div class="slds-p-around_medium">
+            
+            <div class="chat-container slds-scrollable_y" style="max-height: 300px;">
+                <template if:true={comments.length}>
+                    <ul class="slds-feed__list">
+                        <template for:each={comments} for:item="c">
+                            <li key={c.id} class="slds-feed__item">
+                                <article class="slds-post">
+                                    <header class="slds-post__header slds-media">
+                                        <div class="slds-media__figure">
+                                            <lightning-icon icon-name="standard:user" size="small"></lightning-icon>
+                                        </div>
+                                        <div class="slds-media__body">
+                                            <div class="slds-grid slds-grid_align-spread">
+                                                <p><strong>{c.author}</strong></p>
+                                                <p class="slds-text-color_weak slds-text-body_small">
+                                                    <lightning-formatted-date-time value={c.timestamp} hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </header>
+                                    <div class="slds-post__content slds-text-longform slds-p-left_large slds-m-left_small">
+                                        <p>{c.body}</p>
+                                    </div>
+                                </article>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
+                <template if:false={comments.length}>
+                    <div class="slds-text-align_center slds-text-color_weak slds-p-vertical_large">
+                        No comments yet. Start the conversation!
+                    </div>
+                </template>
+            </div>
+
+            <div class="slds-m-top_medium slds-p-top_small slds-border_top">
+                <lightning-layout vertical-align="end">
+                    <lightning-layout-item flexibility="grow">
+                        <lightning-textarea 
+                            name="comment" 
+                            label="Reply" 
+                            placeholder="Type a message..." 
+                            variant="label-hidden"
+                            value={commentBody}
+                            onchange={handleInputChange}>
+                        </lightning-textarea>
+                    </lightning-layout-item>
+                    <lightning-layout-item class="slds-p-left_small">
+                        <lightning-button 
+                            variant="brand" 
+                            label="Send" 
+                            icon-name="utility:send" 
+                            onclick={handleSend}
+                            disabled={isSending}>
+                        </lightning-button>
+                    </lightning-layout-item>
+                </lightning-layout>
+            </div>
+
+        </div>
+    </lightning-card>
+</template>
