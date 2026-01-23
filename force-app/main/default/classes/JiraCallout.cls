@@ -28,8 +28,16 @@ public with sharing class JiraCallout {
                 }
                 if (setting.SalesforceToJiraBool__c != true) {
                     setting.SalesforceToJiraBool__c = true;
-                    upsert setting;
-                    System.debug(LoggingLevel.DEBUG, 'Salesforce-to-Jira sync flag set to TRUE.');
+                    
+                    // FIXED: Check CRUD permissions before upserting to satisfy PMD ApexCRUDViolation
+                    if (Schema.sObjectType.Sync_In_Propgress__c.isCreateable() && 
+                        Schema.sObjectType.Sync_In_Propgress__c.isUpdateable()) {
+                        
+                        upsert setting;
+                        System.debug(LoggingLevel.DEBUG, 'Salesforce-to-Jira sync flag set to TRUE.');
+                    } else {
+                        System.debug(LoggingLevel.WARN, 'Insufficient permissions to update Sync_In_Propgress__c');
+                    }
                 }
             } catch (Exception e) {
                 System.debug(LoggingLevel.ERROR, 'Failed to set sync flag to true: ' + e.getMessage());
