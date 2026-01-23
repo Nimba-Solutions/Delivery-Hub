@@ -1,24 +1,22 @@
 /**
- * @description Controller for sending files from the Client Org to the Broker (Mothership).
+ * @description Controller for sending files from the Client Org to the Broker.
  */
 public with sharing class DeliveryHubFileSender {
 
     /**
-     * @description Sends a specific file (ContentDocument) to the Broker's org linked to the Request.
-     * @param requestId The ID of the Delivery Request record.
-     * @param contentDocumentId The ID of the file to send.
-     * @return String status message.
+     * @description Sends a specific file to the Broker.
+     * @param requestId The Request ID.
+     * @param contentDocumentId The File ID.
+     * @return String Status message.
      */
     @AuraEnabled
     public static String sendFileToBroker(Id requestId, Id contentDocumentId) {
         try {
-            // 1. Get Request Info (to find the Remote Ticket ID)
-            // FIX: Added WITH USER_MODE
+            // REMOVED WITH USER_MODE
             Request__c req = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE Id = :requestId 
-                WITH USER_MODE
                 LIMIT 1
             ];
 
@@ -26,28 +24,23 @@ public with sharing class DeliveryHubFileSender {
                 throw new AuraHandledException('This request is not linked to a Ticket yet. Send the Offer first.');
             }
 
-            // 2. Get File Data
-            // FIX: Added WITH USER_MODE
+            // REMOVED WITH USER_MODE
             ContentVersion file = [
                 SELECT Title, VersionData, FileExtension 
                 FROM ContentVersion 
                 WHERE ContentDocumentId = :contentDocumentId 
                 AND IsLatest = true 
-                WITH USER_MODE
                 LIMIT 1
             ];
 
-            // 3. Prepare Endpoint
             String baseUrl = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
             String filesUrl = baseUrl.replace('/intake', '/files') + '/' + req.RemoteTicketIdTxt__c;
 
-            // 4. Prepare Payload
             Map<String, Object> payload = new Map<String, Object>{
                 'filename' => file.Title + '.' + file.FileExtension,
                 'base64Data' => EncodingUtil.base64Encode(file.VersionData)
             };
 
-            // 5. Send
             HttpRequest httpReq = new HttpRequest();
             httpReq.setEndpoint(filesUrl);
             httpReq.setMethod('POST');
