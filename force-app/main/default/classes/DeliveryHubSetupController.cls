@@ -12,17 +12,20 @@ public with sharing class DeliveryHubSetupController {
 
     /**
      * @description Checks if the org is already connected to a Mothership.
+     * @return Map<String, Object> Status map containing 'isConnected', 'entity' details, and 'requiredRemoteSite'.
      */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getSetupStatus() {
         Map<String, Object> result = new Map<String, Object>();
         
         // Check for ANY active vendor connection
+        // FIX: Added WITH USER_MODE for security compliance
         List<Network_Entity__c> entities = [
             SELECT Id, Name, IntegrationEndpointUrlTxt__c, StatusPk__c 
             FROM Network_Entity__c 
             WHERE EntityTypePk__c = 'Vendor'
             AND StatusPk__c = 'Active'
+            WITH USER_MODE
             LIMIT 1
         ];
 
@@ -34,7 +37,6 @@ public with sharing class DeliveryHubSetupController {
         }
         
         // Helper for the UI to show the user what Remote Site they need
-        // Note: We strip the path to just get the domain
         result.put('requiredRemoteSite', 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com');
         
         return result;
@@ -42,14 +44,17 @@ public with sharing class DeliveryHubSetupController {
 
     /**
      * @description One-click configuration. Creates the Network Entity pointing to Nimba.
+     * @return String The ID of the created or existing Network_Entity__c record.
      */
     @AuraEnabled
     public static String connectToDefaultMothership() {
         try {
             // 1. Duplicate Check
+            // FIX: Added WITH USER_MODE for security compliance
             List<Network_Entity__c> existing = [
                 SELECT Id FROM Network_Entity__c 
                 WHERE IntegrationEndpointUrlTxt__c = :DEFAULT_MOTHERSHIP_URL 
+                WITH USER_MODE
                 LIMIT 1
             ];
             

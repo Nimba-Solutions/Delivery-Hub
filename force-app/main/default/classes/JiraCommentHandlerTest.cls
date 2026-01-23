@@ -415,7 +415,7 @@ private class JiraCommentHandlerTest {
      * to force a TypeException (ClassCastException) inside the try block.
      */
     @isTest
-    static void testExtractAuthorFromPayload_ForceException() {
+    static void testExtractAuthorFromPayloadForceException() {
         // 1. Setup: Create payload where 'author' is a String, not a Map
         Map<String, Object> malformedPayload = new Map<String, Object>{
             'author' => 'This is a string, not a Map, so casting will fail'
@@ -435,7 +435,7 @@ private class JiraCommentHandlerTest {
      * in linkCommentToTicketEnhanced.
      */
     @isTest
-    static void testLinkCommentToTicketEnhanced_CreateNew() {
+    static void testLinkCommentToTicketEnhancedCreateNew() {
         // 1. Setup: Define a key that does NOT exist in the system
         String newIssueKey = 'NEW-TICKET-999';
         
@@ -459,7 +459,7 @@ private class JiraCommentHandlerTest {
      * REQUIRES: The Test Hook modification in the main class (see below).
      */
     @isTest
-    static void testConvertHtmlToPlainText_ForceException() {
+    static void testConvertHtmlToPlainTextForceException() {
         String htmlInput = '<p>Test <b>Bold</b></p>';
         
         // 1. Set the test hook to force the try block to fail

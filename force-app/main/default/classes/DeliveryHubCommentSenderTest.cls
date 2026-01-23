@@ -8,13 +8,23 @@ private class DeliveryHubCommentSenderTest {
     // Mock Class
     private class MockHttpResponse implements HttpCalloutMock {
         String body; 
-        Integer statusCode; // Fixed: Changed 'int' to 'Integer'
+        Integer statusCode;
 
-        public MockHttpResponse(Integer code, String body) { // Fixed: Changed 'int' to 'Integer'
+        /**
+         * @description Constructor for Mock Response
+         * @param code HTTP Status code
+         * @param body Response body
+         */
+        public MockHttpResponse(Integer code, String body) {
             this.statusCode = code; 
             this.body = body; 
         }
 
+        /**
+         * @description Respond to the HTTP Request
+         * @param req The HTTP Request
+         * @return HTTP Response
+         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse(); 
             res.setStatusCode(statusCode); 

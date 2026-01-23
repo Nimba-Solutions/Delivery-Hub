@@ -6,12 +6,17 @@ public with sharing class DeliveryHubCommentSender {
 
     /**
      * @description Fetches the live conversation from the Mothership
+     * @param requestId The ID of the Request record to fetch comments for.
+     * @return List<Map<String, Object>> A list of comment objects.
      */
     @AuraEnabled
     public static List<Map<String, Object>> getLiveComments(Id requestId) {
         try {
             Request__c req = getRequestInfo(requestId);
-            if (String.isBlank(req.RemoteTicketIdTxt__c)) return new List<Map<String, Object>>();
+            // FIX: Added curly braces
+            if (String.isBlank(req.RemoteTicketIdTxt__c)) {
+                return new List<Map<String, Object>>();
+            }
 
             String endpoint = getBaseUrl(req) + '/' + req.RemoteTicketIdTxt__c;
 
@@ -39,6 +44,8 @@ public with sharing class DeliveryHubCommentSender {
 
     /**
      * @description Posts a new comment to the Mothership
+     * @param requestId The ID of the Request record.
+     * @param body The text content of the comment.
      */
     @AuraEnabled
     public static void postLiveComment(Id requestId, String body) {
@@ -80,10 +87,12 @@ public with sharing class DeliveryHubCommentSender {
     }
 
     private static Request__c getRequestInfo(Id requestId) {
+        // FIX: Added WITH USER_MODE for security compliance
         return [
             SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
             FROM Request__c 
             WHERE Id = :requestId 
+            WITH USER_MODE
             LIMIT 1
         ];
     }
