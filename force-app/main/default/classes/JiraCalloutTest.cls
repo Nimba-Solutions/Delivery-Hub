@@ -193,4 +193,97 @@ private class JiraCalloutTest {
         System.assert(adfJson.contains('"type":"paragraph"'), 'JSON should contain the paragraph type.');
         System.assert(adfJson.contains('"text":"' + commentText + '"'), 'JSON should contain the correct comment text.');
     }
+
+    /**
+     * @description COVERS: The 'Delivery Hub Site Guest User' check in all public methods.
+     * We create a user with that exact name to force the code into the 'if' blocks.
+     */
+    @isTest
+    static void testGuestUserRestrictions() {
+        // 1. Create a user that matches the specific name check in the code
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User guestMock = new User(
+            Alias = 'guest', 
+            Email = 'guest_hub@example.com', 
+            EmailEncodingKey = 'UTF-8', 
+            FirstName = 'Delivery Hub Site', // Resulting Name: 'Delivery Hub Site Guest User'
+            LastName = 'Guest User', 
+            LanguageLocaleKey = 'en_US', 
+            LocaleSidKey = 'en_US', 
+            ProfileId = p.Id, 
+            TimeZoneSidKey = 'America/Los_Angeles', 
+            UserName = 'guest_hub' + System.currentTimeMillis() + '@testorg.com'
+        );
+        insert guestMock;
+
+        System.runAs(guestMock) {
+            Test.startTest();
+            
+            // 2. Call EVERY method that has the restriction to cover those lines
+            HttpResponse res;
+            
+            res = JiraCallout.getProject('TEST');
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in getProject');
+
+            res = JiraCallout.createProject('{}');
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in createProject');
+
+            res = JiraCallout.updateProject('1', '{}');
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in updateProject');
+
+            res = JiraCallout.getUser('email@test.com');
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in getUser');
+
+            res = JiraCallout.createVersion('{}');
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in createVersion');
+
+            res = JiraCallout.getIssues(new Map<String,String>{'jql' => 'test'});
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in getIssues');
+
+            res = JiraCallout.addComment('KEY-1', '{}');
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in addComment');
+
+            res = JiraCallout.updateComment('KEY-1', '100', '{}');
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in updateComment');
+
+            res = JiraCallout.addAttachment('KEY-1', 'file.txt', Blob.valueOf('data'));
+            System.assertEquals(403, res.getStatusCode(), 'Should return 403 for Guest User in addAttachment');
+            
+            Test.stopTest();
+        }
+    }
+
+    /**
+     * @description COVERS: The exception handling in httpHelper when Custom Settings are missing.
+     */
+    @isTest
+    static void testMissingConfiguration() {
+        // 1. Delete the settings created in @testSetup for this specific test
+        delete [SELECT Id FROM Delivery_Hub_Settings__c];
+
+        Test.startTest();
+        try {
+            // This should trigger the check at the top of httpHelper
+            JiraCallout.getProject('TEST');
+            System.assert(false, 'Should have thrown CalloutException due to missing settings');
+        } catch (CalloutException e) {
+            System.assert(e.getMessage().contains('configured'), 'Exception should mention configuration missing');
+        }
+        Test.stopTest();
+    }
+
+    /**
+     * @description COVERS: Methods that were completely missed in the original test class.
+     */
+    @isTest
+    static void testRemainingMethods() {
+        Test.setMock(HttpCalloutMock.class, new JiraCalloutMock(200, 'OK', '{}'));
+
+        Test.startTest();
+        // These methods were not called in the original test class
+        JiraCallout.updateComment('TEST-1', '1001', '{"body": "updated"}');
+        JiraCallout.getTransitions('TEST-1');
+        JiraCallout.transitionIssue('TEST-1', '21');
+        Test.stopTest();
+    }
 }
