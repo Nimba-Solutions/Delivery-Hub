@@ -1,5 +1,6 @@
 /**
  * @description Controller for the Delivery Hub Setup Wizard.
+ * Allows any org to instantly configure itself as a Client Node in the Delivery Network.
  */
 public with sharing class DeliveryHubSetupController {
 
@@ -8,13 +9,18 @@ public with sharing class DeliveryHubSetupController {
 
     /**
      * @description Checks if the org is already connected to a Mothership.
-     * @return Map<String, Object> Status map.
+     * @return Map<String, Object> Status map containing 'isConnected', 'entity' details, and 'requiredRemoteSite'.
      */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getSetupStatus() {
         Map<String, Object> result = new Map<String, Object>();
         
-        // REMOVED WITH USER_MODE to prevent package build failures
+        // Explicitly check access before query
+        if (!Schema.sObjectType.Network_Entity__c.isAccessible()) {
+            result.put('isConnected', false);
+            return result;
+        }
+
         List<Network_Entity__c> entities = [
             SELECT Id, Name, IntegrationEndpointUrlTxt__c, StatusPk__c 
             FROM Network_Entity__c 
@@ -35,13 +41,16 @@ public with sharing class DeliveryHubSetupController {
     }
 
     /**
-     * @description One-click configuration.
-     * @return String The ID of the created Network_Entity__c.
+     * @description One-click configuration. Creates the Network Entity pointing to Nimba.
+     * @return String The ID of the created or existing Network_Entity__c record.
      */
     @AuraEnabled
     public static String connectToDefaultMothership() {
         try {
-            // REMOVED WITH USER_MODE to prevent package build failures
+            if (!Schema.sObjectType.Network_Entity__c.isAccessible()) {
+                throw new AuraHandledException('Insufficient permissions to read Network Entity.');
+            }
+
             List<Network_Entity__c> existing = [
                 SELECT Id FROM Network_Entity__c 
                 WHERE IntegrationEndpointUrlTxt__c = :DEFAULT_MOTHERSHIP_URL 
@@ -59,9 +68,13 @@ public with sharing class DeliveryHubSetupController {
                 IntegrationEndpointUrlTxt__c = DEFAULT_MOTHERSHIP_URL
             );
             
-            // Explicitly allow insert in System Mode for setup
-            insert entity;
-            return entity.Id;
+            // Explicit check before insert
+            if (Schema.sObjectType.Network_Entity__c.isCreateable()) {
+                insert entity;
+                return entity.Id;
+            } else {
+                throw new AuraHandledException('Insufficient permissions to create Network Entity.');
+            }
 
         } catch (Exception e) {
             throw new AuraHandledException('Setup Failed: ' + e.getMessage());

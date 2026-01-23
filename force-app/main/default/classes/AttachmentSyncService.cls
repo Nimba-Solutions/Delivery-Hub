@@ -13,17 +13,18 @@ public with sharing class AttachmentSyncService {
     @future(callout=true)
     public static void syncFilesToJira(Id ticketId, List<Id> contentDocumentIds) {
         // 1. Get the Jira Key from the ticket
-        // FIX: Removed WITH SECURITY_ENFORCED to fix package build permission error
+        if (!Schema.sObjectType.Ticket__c.isAccessible()) { return; }
+        
         List<Ticket__c> tickets = [SELECT Id, JiraTicketKeyTxt__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
         
         if (tickets.isEmpty() || String.isBlank(tickets[0].JiraTicketKeyTxt__c)) {
-            // Cannot sync without a Jira Key. Log this appropriately.
             return;
         }
         Ticket__c ticket = tickets[0];
 
         // 2. Get the file content from ContentVersion
-        // FIX: Removed WITH SECURITY_ENFORCED
+        if (!Schema.sObjectType.ContentVersion.isAccessible()) { return; }
+
         List<ContentVersion> versions = [
             SELECT Id, Title, VersionData, ContentDocumentId
             FROM ContentVersion WHERE ContentDocumentId IN :contentDocumentIds AND IsLatest = true
@@ -58,7 +59,7 @@ public with sharing class AttachmentSyncService {
             // 4. Create a log entry for the attempt
             logsToInsert.add(new Attachment_Sync_Log__c(
                 Ticket__c = ticketId,
-                JiraAttachmentIdTxt__c = jiraAttachmentId, // Will be null on failure
+                JiraAttachmentIdTxt__c = jiraAttachmentId,
                 SalesforceContentDocumentIdTxt__c = cv.ContentDocumentId,
                 FilenameTxt__c = cv.Title,
                 SyncDirectionPk__c = 'Salesforce to Jira',
@@ -67,9 +68,7 @@ public with sharing class AttachmentSyncService {
             ));
         }
 
-        if (!logsToInsert.isEmpty()) {
-            // FIX: Removed Security.stripInaccessible logic for package build compliance
-            // We want these logs to write regardless of user context in the background
+        if (!logsToInsert.isEmpty() && Schema.sObjectType.Attachment_Sync_Log__c.isCreateable()) {
             insert logsToInsert;
         }
     }
