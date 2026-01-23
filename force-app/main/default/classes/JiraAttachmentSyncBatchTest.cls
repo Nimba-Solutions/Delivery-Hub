@@ -41,7 +41,8 @@ private class JiraAttachmentSyncBatchTest {
     // == Test Data Setup ==
     @testSetup
     static void setupData() {
-        // 1. Insert Custom Settings (CRITICAL for JiraCallout to work)
+        // 1. Insert Custom Settings (Non-Setup Object)
+        // This triggers the MIXED_DML error if followed immediately by User insertion
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             Name = 'Default',
             JIRAInstanceUrl__c = 'https://mock-jira.test.com',
@@ -50,25 +51,31 @@ private class JiraAttachmentSyncBatchTest {
         );
         insert settings;
 
-        // 2. Create User and Permissions
-        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
-        User testUser = new User(
-            Alias = 'testu',
-            Email = 'testuser.sync@example.com',
-            EmailEncodingKey = 'UTF-8',
-            LastName = 'Testing',
-            LanguageLocaleKey = 'en_US',
-            LocaleSidKey = 'en_US',
-            ProfileId = p.Id,
-            TimeZoneSidKey = 'America/Los_Angeles',
-            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
-        );
-        insert testUser;
+        // 2. Create User and Permissions (Setup Objects)
+        // FIXED: Wrapped in System.runAs to separate it from the Custom Settings DML
+        User adminUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+        System.runAs(adminUser) {
+            Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+            User testUser = new User(
+                Alias = 'testu',
+                Email = 'testuser.sync@example.com',
+                EmailEncodingKey = 'UTF-8',
+                LastName = 'Testing',
+                LanguageLocaleKey = 'en_US',
+                LocaleSidKey = 'en_US',
+                ProfileId = p.Id,
+                TimeZoneSidKey = 'America/Los_Angeles',
+                UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+            );
+            insert testUser;
 
-        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
-        insert new PermissionSetAssignment(AssigneeId = testUser.Id, PermissionSetId = ps.Id);
+            PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+            insert new PermissionSetAssignment(AssigneeId = testUser.Id, PermissionSetId = ps.Id);
+        }
 
-        // 3. Create Data
+        // 3. Create Data (Non-Setup Object)
+        // We fetch the user created above to run the ticket creation
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
         System.runAs(testUser) {
             List<Ticket__c> tickets = new List<Ticket__c>{
                 new Ticket__c(JiraTicketKeyTxt__c = 'JIRA-1'),
