@@ -1,9 +1,13 @@
+/**
+ * @description REST Endpoint for receiving files from Client Orgs and attaching them to Tickets.
+ */
 @RestResource(urlMapping='/deliveryhub/v1/files/*')
 global without sharing class DeliveryHubFileIntake {
 
     /**
      * @description POST: Upload a file to a specific Ticket
      * URL Format: /services/apexrest/deliveryhub/v1/files/{ticketId}
+     * Expects JSON body with 'filename' and 'base64Data'.
      */
     @HttpPost
     global static void uploadFile() {
@@ -15,7 +19,6 @@ global without sharing class DeliveryHubFileIntake {
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
             
             // 2. Parse JSON Body
-            // We expect: { "filename": "spec.pdf", "base64Data": "..." }
             String jsonBody = req.requestBody.toString();
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
             
@@ -34,7 +37,9 @@ global without sharing class DeliveryHubFileIntake {
             cv.PathOnClient = filename;
             cv.VersionData = EncodingUtil.base64Decode(base64Data);
             cv.FirstPublishLocationId = ticketId; // Auto-links to the Ticket
-            insert as user cv;
+            
+            // Explicitly use 'as user' to enforce security, or 'without sharing' context handles it here.
+            insert cv;
 
             res.statusCode = 201;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{

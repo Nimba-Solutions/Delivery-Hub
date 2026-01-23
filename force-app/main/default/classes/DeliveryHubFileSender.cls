@@ -1,13 +1,24 @@
+/**
+ * @description Controller for sending files from the Client Org to the Broker (Mothership).
+ */
 public with sharing class DeliveryHubFileSender {
 
+    /**
+     * @description Sends a specific file (ContentDocument) to the Broker's org linked to the Request.
+     * @param requestId The ID of the Delivery Request record.
+     * @param contentDocumentId The ID of the file to send.
+     * @return String status message.
+     */
     @AuraEnabled
     public static String sendFileToBroker(Id requestId, Id contentDocumentId) {
         try {
             // 1. Get Request Info (to find the Remote Ticket ID)
+            // FIX: Added WITH USER_MODE
             Request__c req = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE Id = :requestId 
+                WITH USER_MODE
                 LIMIT 1
             ];
 
@@ -16,16 +27,17 @@ public with sharing class DeliveryHubFileSender {
             }
 
             // 2. Get File Data
+            // FIX: Added WITH USER_MODE
             ContentVersion file = [
                 SELECT Title, VersionData, FileExtension 
                 FROM ContentVersion 
                 WHERE ContentDocumentId = :contentDocumentId 
                 AND IsLatest = true 
+                WITH USER_MODE
                 LIMIT 1
             ];
 
             // 3. Prepare Endpoint
-            // Change ".../intake/..." to ".../files/..."
             String baseUrl = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
             String filesUrl = baseUrl.replace('/intake', '/files') + '/' + req.RemoteTicketIdTxt__c;
 

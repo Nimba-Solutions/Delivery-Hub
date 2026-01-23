@@ -4,7 +4,18 @@ private class DeliveryHubFileSenderTest {
     // Mock Class for HTTP Callout
     private class MockHttpResponse implements HttpCalloutMock {
         private Integer statusCode;
+        
+        /**
+         * @description Constructor for Mock Response
+         * @param statusCode HTTP Status code to return
+         */
         public MockHttpResponse(Integer statusCode) { this.statusCode = statusCode; }
+        
+        /**
+         * @description Respond to the HTTP Request
+         * @param req The HTTP Request
+         * @return HTTP Response
+         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(statusCode);
