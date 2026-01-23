@@ -17,6 +17,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryHubSetup</componentName>
+                <identifier>c_deliveryHubSetup</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>dragAndDropLwc</componentName>
                 <identifier>c_dragAndDropLwc</identifier>
             </componentInstance>
