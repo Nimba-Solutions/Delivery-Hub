@@ -27,7 +27,9 @@ private class JiraAttachmentSyncBatchTest {
             }
 
             // Default 404 if not found
-            System.debug('Mock not found for endpoint: ' + endpoint);
+            // FIXED: Added LoggingLevel.DEBUG to satisfy PMD rule
+            System.debug(LoggingLevel.DEBUG, 'Mock not found for endpoint: ' + endpoint);
+            
             HttpResponse res = new HttpResponse();
             res.setStatusCode(404);
             res.setStatus('Not Found - Endpoint not mocked');
@@ -127,7 +129,7 @@ private class JiraAttachmentSyncBatchTest {
             // Verify ContentVersion created
             List<ContentVersion> versions = [SELECT Title FROM ContentVersion WHERE FirstPublishLocationId = :ticket.Id];
             System.assertEquals(1, versions.size(), 'Should have inserted exactly 1 new file (skipping the existing one)');
-            System.assertEquals('new_file.pdf', versions[0].Title);
+            System.assertEquals('new_file.pdf', versions[0].Title, 'The new file should be inserted');
 
             // Verify Log created
             List<Attachment_Sync_Log__c> logs = [SELECT Id FROM Attachment_Sync_Log__c WHERE JiraAttachmentIdTxt__c = '10002'];
@@ -182,8 +184,7 @@ private class JiraAttachmentSyncBatchTest {
             Database.executeBatch(new JiraAttachmentSyncBatch());
             Test.stopTest();
             
-            // Assert: Log should NOT be success (or no log created depending on logic)
-            // In your batch, logsToInsert is only added to if download succeeds (200), so no log/file expected here.
+            // Assert: Should not insert file if download fails
             List<ContentVersion> versions = [SELECT Id FROM ContentVersion];
             System.assertEquals(0, versions.size(), 'Should not insert file if download fails');
         }
@@ -198,6 +199,6 @@ private class JiraAttachmentSyncBatchTest {
         Test.stopTest();
         
         CronTrigger ct = [SELECT Id, CronExpression, TimesTriggered FROM CronTrigger WHERE Id = :jobId];
-        System.assertEquals(cronExp, ct.CronExpression);
+        System.assertEquals(cronExp, ct.CronExpression, 'Cron expression should match');
     }
 }
