@@ -20,9 +20,7 @@ private class DeliveryHubSenderTest {
 
     @TestSetup
     static void makeData() {
-        // Create data as the CURRENT USER (who likely has full admin rights)
-        // instead of creating a dummy user who might lack FLS permissions.
-        
+        // Simple data creation as System (no User creation needed)
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Test Vendor',
             EntityTypePk__c = 'Vendor',
@@ -52,7 +50,6 @@ private class DeliveryHubSenderTest {
 
     @IsTest
     static void testSendRequestSuccess() {
-        // Run as the current user (Deployment User)
         Request__c req = [SELECT Id FROM Request__c LIMIT 1];
         
         Test.setMock(HttpCalloutMock.class, new MockHttpResponse(201, '{"success":true, "ticketId":"REMOTE-123"}'));
