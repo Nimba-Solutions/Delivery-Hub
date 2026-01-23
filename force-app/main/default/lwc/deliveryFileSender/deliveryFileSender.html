@@ -1,0 +1,43 @@
+<template>
+    <lightning-card title="Send Specs & Screenshots" icon-name="doctype:image">
+        <div class="slds-p-around_medium">
+            <template if:true={files}>
+                <ul class="slds-has-dividers_bottom-space">
+                    <template for:each={files} for:item="f">
+                        <li key={f.Id} class="slds-item">
+                            <lightning-layout vertical-align="center">
+                                <lightning-layout-item flexibility="grow">
+                                    <p class="slds-text-heading_small">{f.Title}</p>
+                                </lightning-layout-item>
+                                <lightning-layout-item>
+                                    <lightning-button 
+                                        label="Send to Dev" 
+                                        icon-name="utility:upload" 
+                                        onclick={handleSend} 
+                                        data-id={f.Id}>
+                                    </lightning-button>
+                                </lightning-layout-item>
+                            </lightning-layout>
+                        </li>
+                    </template>
+                </ul>
+            </template>
+            <template if:false={files}>
+                <p class="slds-text-color_weak">No files attached to this request yet.</p>
+            </template>
+            
+            <div class="slds-m-top_medium">
+                <lightning-file-upload
+                    label="Attach New File"
+                    name="fileUploader"
+                    record-id={recordId}
+                    onuploadfinished={handleUploadFinished}>
+                </lightning-file-upload>
+            </div>
+        </div>
+        
+        <div if:true={isLoading} class="slds-is-relative">
+            <lightning-spinner alternative-text="Sending..."></lightning-spinner>
+        </div>
+    </lightning-card>
+</template>

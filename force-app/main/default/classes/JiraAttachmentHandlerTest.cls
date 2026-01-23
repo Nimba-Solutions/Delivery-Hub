@@ -436,4 +436,141 @@ public class JiraAttachmentHandlerTest {
         }
     }
 
+    /**
+     * @description COVERS: File size validation logic (validateFileSize).
+     * Tests that files larger than 25MB are rejected.
+     */
+    @isTest
+    static void testHandleAttachmentAddedFileSizeExceeded() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        
+        System.runAs(testUser) {
+            // 1. Setup: Create payload with size = 30MB (exceeds 25MB limit)
+            Map<String, Object> payload = createMockAttachmentPayload(
+                '99999', 'huge_file.zip', 'TEST-123', 
+                30 * 1024 * 1024, // 30MB
+                'https://jira.example.com/content'
+            );
+
+            Test.startTest();
+            // 2. Action
+            Boolean result = JiraAttachmentHandler.handleAttachmentAdded(payload);
+            Test.stopTest();
+
+            // 3. Assert
+            System.assertEquals(false, result, 'Should return false for oversized files');
+            
+            // Verify an error log was created
+            Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE JiraTicketKeyTxt__c = 'TEST-123' LIMIT 1];
+            List<Attachment_Sync_Log__c> logs = [SELECT ErrorDetailsTxt__c FROM Attachment_Sync_Log__c WHERE Ticket__c = :ticket.Id AND SyncStatusPk__c = 'Failed'];
+            System.assert(logs.size() > 0, 'Should create a failure log');
+            System.assert(logs[0].ErrorDetailsTxt__c.contains('exceeds Salesforce limit'), 'Log should mention size limit');
+        }
+    }
+
+    /**
+     * @description COVERS: The 'Ticket Not Found' scenario in handleAttachmentAdded.
+     */
+    @isTest
+    static void testHandleAttachmentAddedTicketMissing() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        
+        System.runAs(testUser) {
+            // 1. Setup: Payload with a key that doesn't exist in SF
+            Map<String, Object> payload = createMockAttachmentPayload(
+                '111', 'file.txt', 'MISSING-KEY-999', 100, 'http://url'
+            );
+
+            Test.startTest();
+            Boolean result = JiraAttachmentHandler.handleAttachmentAdded(payload);
+            Test.stopTest();
+
+            System.assertEquals(false, result, 'Should fail if parent ticket is not found');
+        }
+    }
+
+    /**
+     * @description COVERS: The complex 'downloadAttachment' method (Recursive redirects & Media API).
+     * This method is public but might not be called by handleAttachmentAdded in all flows, 
+     * so we call it directly to ensure coverage of the 'https://api.media.atlassian' block.
+     */
+    @isTest
+    static void testDirectDownloadAttachmentMediaApi() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        
+        System.runAs(testUser) {
+            // 1. Setup: URL that triggers the special Media API block
+            String mediaUrl = 'https://api.media.atlassian.com/file/123/binary';
+            
+            // Mock the response for this specific direct call
+            // Note: The code manually builds the request, so we mock the endpoint exactly
+            Map<String, HttpResponse> responses = new Map<String, HttpResponse>();
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(200);
+            res.setBodyAsBlob(Blob.valueOf('Media Content'));
+            responses.put(mediaUrl, res);
+            
+            Test.setMock(HttpCalloutMock.class, new MultiResponseMock(responses));
+
+            Test.startTest();
+            // 2. Action: Call the method directly
+            Blob content = JiraAttachmentHandler.downloadAttachment(mediaUrl, 0);
+            Test.stopTest();
+
+            // 3. Assert
+            System.assertNotEquals(null, content, 'Should download content from Media API');
+            System.assertEquals('Media Content', content.toString());
+        }
+    }
+
+    /**
+     * @description COVERS: Error handling in handleAttachmentRemoved (Ticket missing, Log missing).
+     */
+    @isTest
+    static void testRemoveAttachmentEdgeCases() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        
+        System.runAs(testUser) {
+            // Case A: Ticket Not Found
+            Map<String, Object> payloadNoTicket = createMockAttachmentRemovalPayload('1', 'f.txt', 'MISSING-KEY');
+            JiraAttachmentHandler.handleAttachmentRemoved(payloadNoTicket);
+            
+            // Case B: Ticket Found, but No Sync Log exists
+            Map<String, Object> payloadNoLog = createMockAttachmentRemovalPayload('999', 'ghost.txt', 'TEST-123');
+            JiraAttachmentHandler.handleAttachmentRemoved(payloadNoLog);
+            
+            // Verify logs were created for failures
+            List<Attachment_Sync_Log__c> logs = [SELECT ErrorDetailsTxt__c FROM Attachment_Sync_Log__c WHERE SyncStatusPk__c = 'Failed'];
+            System.assert(logs.size() >= 1, 'Should create failure logs for missing records');
+        }
+    }
+
+    /**
+     * @description COVERS: The download failure path (Non-200 response).
+     */
+    @isTest
+    static void testDownloadFailure404() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        
+        System.runAs(testUser) {
+            String url = 'https://jira.example.com/content/404';
+            Map<String, Object> payload = createMockAttachmentPayload('404ID', 'fail.txt', 'TEST-123', 100, url);
+            
+            // Mock a 404 error
+            Map<String, HttpResponse> responses = new Map<String, HttpResponse>();
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(404);
+            res.setBody('Not Found');
+            responses.put(url, res);
+            
+            Test.setMock(HttpCalloutMock.class, new MultiResponseMock(responses));
+
+            Test.startTest();
+            Boolean result = JiraAttachmentHandler.handleAttachmentAdded(payload);
+            Test.stopTest();
+            
+            System.assertEquals(false, result, 'Should return false on download failure');
+        }
+    }
+
 }

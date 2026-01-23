@@ -409,4 +409,70 @@ private class JiraCommentHandlerTest {
         //System.assertEquals(null, notFoundId, 'Should return null for a non-existent key.');
     }
     
+    /**
+     * @description Targeted test to cover the catch block in extractAuthorFromPayload.
+     * We intentionally pass an invalid type (String instead of Map) for the 'author' key
+     * to force a TypeException (ClassCastException) inside the try block.
+     */
+    @isTest
+    static void testExtractAuthorFromPayloadForceException() {
+        // 1. Setup: Create payload where 'author' is a String, not a Map
+        Map<String, Object> malformedPayload = new Map<String, Object>{
+            'author' => 'This is a string, not a Map, so casting will fail'
+        };
+
+        // 2. Action
+        Test.startTest();
+        String result = JiraCommentHandler.extractAuthorFromPayload(malformedPayload);
+        Test.stopTest();
+
+        // 3. Assert: Verify we hit the catch block and returned the default
+        System.assertEquals('Unknown Jira User', result, 'Should return default author when exception occurs during extraction');
+    }
+
+    /**
+     * @description Targeted test to cover the 'else if (createIfMissing)' block 
+     * in linkCommentToTicketEnhanced.
+     */
+    @isTest
+    static void testLinkCommentToTicketEnhancedCreateNew() {
+        // 1. Setup: Define a key that does NOT exist in the system
+        String newIssueKey = 'NEW-TICKET-999';
+        
+        // 2. Action: Call with createIfMissing = true
+        Test.startTest();
+        Map<String, Object> result = JiraCommentHandler.linkCommentToTicketEnhanced(newIssueKey, true);
+        Test.stopTest();
+
+        // 3. Assert
+        System.assertEquals(true, result.get('success'), 'Operation should be successful');
+        System.assertEquals(true, result.get('ticketCreated'), 'Should indicate a ticket was created');
+        
+        // Verify the ticket was actually inserted
+        List<Ticket__c> createdTickets = [SELECT Id, BriefDescriptionTxt__c FROM Ticket__c WHERE JiraTicketKeyTxt__c = :newIssueKey];
+        System.assertEquals(1, createdTickets.size(), 'Ticket should be inserted into database');
+        System.assert(createdTickets[0].BriefDescriptionTxt__c.contains('Auto-created'), 'Description should match auto-create logic');
+    }
+
+    /**
+     * @description Targeted test to cover the catch block (fallback logic) in convertHtmlToPlainText.
+     * REQUIRES: The Test Hook modification in the main class (see below).
+     */
+    @isTest
+    static void testConvertHtmlToPlainTextForceException() {
+        String htmlInput = '<p>Test <b>Bold</b></p>';
+        
+        // 1. Set the test hook to force the try block to fail
+        JiraCommentHandler.forceHtmlException = true; 
+        
+        Test.startTest();
+        String result = JiraCommentHandler.convertHtmlToPlainText(htmlInput);
+        Test.stopTest();
+        
+        // 2. Verify we fell back to the manual regex stripping in the catch block
+        // The fallback logic replaces <tags> with empty string and decodes entities
+        String expected = 'Test Bold'; 
+        System.assertEquals(expected, result, 'Should use fallback regex logic when main utility fails');
+    }
+    
 }

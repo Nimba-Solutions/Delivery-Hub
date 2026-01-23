@@ -1,0 +1,41 @@
+<template>
+    <lightning-card title="Project Overview" icon-name="standard:currency">
+        <div class="slds-p-around_medium">
+            <div class="slds-grid slds-gutters">
+                
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="slds-box slds-box_x-small slds-text-align_center slds-theme_shade">
+                        <div class="slds-text-heading_large slds-text-color_success">
+                            {metrics.activeRequests}
+                        </div>
+                        <div class="slds-text-body_small slds-text-color_weak">Active Tickets</div>
+                    </div>
+                </div>
+
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="slds-box slds-box_x-small slds-text-align_center slds-theme_shade">
+                        <div class="slds-text-heading_large">
+                            {metrics.totalHours}
+                        </div>
+                        <div class="slds-text-body_small slds-text-color_weak">Hours Booked</div>
+                    </div>
+                </div>
+
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="slds-box slds-box_x-small slds-text-align_center slds-theme_shade">
+                        <div class="slds-text-heading_large">
+                            <lightning-formatted-number 
+                                value={metrics.estimatedSpend} 
+                                format-style="currency" 
+                                currency-code="USD"
+                                maximum-fraction-digits="0">
+                            </lightning-formatted-number>
+                        </div>
+                        <div class="slds-text-body_small slds-text-color_weak">Est. Spend</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </lightning-card>
+</template>

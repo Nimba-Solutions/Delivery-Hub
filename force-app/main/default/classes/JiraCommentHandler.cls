@@ -23,7 +23,9 @@ public without sharing class JiraCommentHandler {
     @TestVisible
     private static final Integer MAX_COMMENT_LENGTH = 130768; // Based on BodyTxt__c field length
     private static final String DEFAULT_AUTHOR = 'Unknown Jira User';
-    
+    // 1. ADD THIS VARIABLE at the class level
+    @TestVisible 
+    private static Boolean forceHtmlException = false;
     /**
      * @description Handles Jira comment created events by creating new Ticket_Comment__c records
      * @param payload The webhook payload containing comment and issue data
@@ -363,6 +365,11 @@ public without sharing class JiraCommentHandler {
         }
         
         try {
+            // 2. ADD THIS CHECK inside the try block
+            // This allows the test to force the code into the 'catch' block
+            if (forceHtmlException) {
+                throw new CalloutException('Forced testing exception');
+            }
             // Use existing utility from JiraCommentSyncHelper if available
             return JiraCommentSyncHelper.stripHtmlTags(htmlContent);
             

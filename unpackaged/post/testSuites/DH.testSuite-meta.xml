@@ -3,14 +3,21 @@
     <testClassName>%%%NAMESPACE_DOT%%%AttachmentSyncServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%AttachmentSyncWorkerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%ChangePasswordControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCommentIntakeTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCommentSenderTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubDashboardControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFileIntakeTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFileSenderTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubIntakeServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSenderTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSettingsControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSetupControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DragAndDropLwcControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%ForgotPasswordControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%HtmlToAdfConverterTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%JiraAttachmentHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%JiraAttachmentProcessorTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%JiraAttachmentSyncBatchTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%JiraCalloutMock</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%JiraCalloutTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%JiraCommentHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%JiraCommentSyncHelperTest</testClassName>
