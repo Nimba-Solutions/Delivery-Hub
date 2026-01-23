@@ -319,7 +319,7 @@ private class JiraCalloutTest {
             System.assert(e.getMessage().contains('uncommitted work') || e.getMessage().contains('callout'), 
                           'Should have attempted DML before callout: ' + e.getMessage());
         } catch (Exception e) {
-             System.debug('Unexpected exception type: ' + e.getTypeName());
+             System.debug(LoggingLevel.DEBUG, 'Unexpected exception type: ' + e.getTypeName());
         }
         Test.stopTest();
     }

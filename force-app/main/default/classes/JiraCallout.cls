@@ -178,7 +178,7 @@ public with sharing class JiraCallout {
     
     public static HttpResponse addAttachment(String jiraKey, String filename, Blob fileBody) {
         if (UserInfo.getName() == 'Delivery Hub Site Guest User') {
-            System.debug('JiraCallout blocked for the "Delivery Hub Site Guest User".');
+            System.debug(LoggingLevel.DEBUG,'JiraCallout blocked for the "Delivery Hub Site Guest User".');
             return createForbiddenResponse();
         }
         
