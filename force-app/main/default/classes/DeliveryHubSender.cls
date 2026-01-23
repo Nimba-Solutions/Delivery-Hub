@@ -1,6 +1,6 @@
 public with sharing class DeliveryHubSender {
 
-    private static final String DEFAULT_MOTHERSHIP_URL = 'https://deliverymothership-dev-ed.develop.my.salesforce.com/services/apexrest/delivery/deliveryhub/v1/intake/';
+    private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1/intake/';
 
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation') // Suppress warnings for removing FLS checks
