@@ -61,6 +61,11 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
+        <editable>false</editable>
+        <field>Request__c.BudgetUtilizationPercent__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>true</editable>
         <field>Request__c.DeliveryEntityId__c</field>
         <readable>true</readable>
@@ -73,6 +78,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Request__c.PreApprovedHoursNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Request__c.ProjectedCostCurrency__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -98,6 +108,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Request__c.StatusPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Request__c.TotalLoggedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
