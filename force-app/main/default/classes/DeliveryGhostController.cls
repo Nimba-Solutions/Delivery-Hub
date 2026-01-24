@@ -4,7 +4,9 @@
  */
 public with sharing class DeliveryGhostController {
 
-    // Wrapper to pass data cleanly from LWC
+    /**
+     * @description Wrapper to pass data cleanly from LWC to Apex.
+     */
     public class ContextWrapper {
         @AuraEnabled public String url;
         @AuraEnabled public String browser;
@@ -21,25 +23,20 @@ public with sharing class DeliveryGhostController {
     @AuraEnabled
     public static void createQuickRequest(String subject, String description, ContextWrapper contextData) {
         try {
-            // Updated to use Ticket__c instead of Request__c
             Ticket__c ticket = new Ticket__c(
-                WorkItemNameTxt__c = subject, // Maps to your 'Work Item Name' field
-                StatusPk__c = 'New',          // Default status (adjust based on your picklist values)
-                PriorityPk__c = 'Medium'      // Default priority
+                WorkItemNameTxt__c = subject,
+                StatusPk__c = 'New',
+                PriorityPk__c = 'Medium'
             );
             
-            // Build the Rich Text Description
-            // Note: Since DetailsTxt__c is Rich Text, we can use <br/> for formatting
             String contextBlock = '<br/><br/><b>--- AUTO-GENERATED CONTEXT ---</b><br/>' +
                                   '<b>URL:</b> ' + contextData.url + '<br/>' +
                                   '<b>Object:</b> ' + contextData.objectName + '<br/>' +
                                   '<b>Record ID:</b> ' + contextData.recordId + '<br/>' + 
                                   '<b>Browser:</b> ' + contextData.browser;
                                   
-            // Map description + context to the Rich Text field
             ticket.DetailsTxt__c = description + contextBlock;
             
-            // Also map brief description (truncated to 100 chars just in case)
             if (subject.length() > 100) {
                 ticket.BriefDescriptionTxt__c = subject.substring(0, 100);
             } else {
@@ -52,7 +49,6 @@ public with sharing class DeliveryGhostController {
                 throw new AuraHandledException('Insufficient permissions to create Ticket.');
             }
             
-            // OPTIONAL: Log this action in your telemetry object too
             logUserActivity('Bug Report', contextData);
 
         } catch (Exception e) {
@@ -62,6 +58,8 @@ public with sharing class DeliveryGhostController {
 
     /**
      * @description Silently logs navigation events to User_Activity_Log__c
+     * @param actionType The type of action (e.g., 'Navigation', 'Bug Report')
+     * @param contextData The wrapper containing URL, Browser, Object, and Record ID info
      */
     @AuraEnabled
     public static void logUserActivity(String actionType, ContextWrapper contextData) {
@@ -78,7 +76,9 @@ public with sharing class DeliveryGhostController {
                 insert log;
             }
         } catch (Exception e) {
-            System.debug('Ghost Log Failed: ' + e.getMessage());
+            // Silently fail - never block the user for telemetry
+            // Satisfies PMD rule: DebugsShouldUseLoggingLevel
+            System.debug(LoggingLevel.ERROR, 'Ghost Log Failed: ' + e.getMessage());
         }
     }
 }
