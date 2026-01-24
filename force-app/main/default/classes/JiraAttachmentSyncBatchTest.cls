@@ -34,7 +34,7 @@ private class JiraAttachmentSyncBatchTest {
     @testSetup
     static void setupData() {
         // 1. Insert Custom Settings
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        Hub_Settings__c settings = new Hub_Settings__c(
             Name = 'Default',
             JIRAInstanceUrl__c = 'https://mock-jira.test.com',
             JIRAUsernameTxt__c = 'testuser',
@@ -59,7 +59,7 @@ private class JiraAttachmentSyncBatchTest {
             );
             insert testUser;
 
-            PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+            PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'HubAdmin_App' LIMIT 1];
             insert new PermissionSetAssignment(AssigneeId = testUser.Id, PermissionSetId = ps.Id);
         }
 

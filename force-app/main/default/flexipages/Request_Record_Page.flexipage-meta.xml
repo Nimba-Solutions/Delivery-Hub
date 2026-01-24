@@ -120,20 +120,20 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>manageDeliveryRequest</componentName>
-                <identifier>c_manageDeliveryRequest</identifier>
+                <componentName>manageRequest</componentName>
+                <identifier>c_manageRequest</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryFileSender</componentName>
-                <identifier>c_deliveryFileSender</identifier>
+                <componentName>fileSender</componentName>
+                <identifier>c_fileSender</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryCommentStream</componentName>
-                <identifier>c_deliveryCommentStream</identifier>
+                <componentName>commentStream</componentName>
+                <identifier>c_commentStream</identifier>
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>

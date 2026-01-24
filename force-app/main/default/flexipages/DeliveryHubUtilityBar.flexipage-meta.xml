@@ -41,8 +41,8 @@
                     <type>decorator</type>
                     <value>340</value>
                 </componentInstanceProperties>
-                <componentName>deliveryGhostRecorder</componentName>
-                <identifier>deliveryGhostRecorder</identifier>
+                <componentName>ghostRecorder</componentName>
+                <identifier>ghostRecorder</identifier>
             </componentInstance>
         </itemInstances>
         <name>utilityItems</name>

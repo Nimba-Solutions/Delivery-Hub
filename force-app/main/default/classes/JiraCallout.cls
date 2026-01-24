@@ -9,13 +9,13 @@ public with sharing class JiraCallout {
     public static HttpResponse httpHelper(String endpoint, String method, String body) {
         
         // Retrieve Jira URL and credentials from a centralized custom setting.
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        Hub_Settings__c settings = Hub_Settings__c.getOrgDefaults();
         
         // Validate that the custom settings are properly configured.
         if (settings == null || String.isBlank(settings.JIRAInstanceUrl__c) || 
             String.isBlank(settings.JIRAUsernameTxt__c) || String.isBlank(settings.JIRAApiTokenTxt__c)) {
                 
-            System.debug(LoggingLevel.ERROR, 'Jira configuration is missing in Delivery_Hub_Settings__c.');
+            System.debug(LoggingLevel.ERROR, 'Jira configuration is missing in Hub_Settings__c.');
             throw new CalloutException('Jira instance URL, username, or API token not configured in Custom Settings.');
         }
         

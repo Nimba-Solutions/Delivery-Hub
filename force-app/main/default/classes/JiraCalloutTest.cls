@@ -7,7 +7,7 @@ private class JiraCalloutTest {
     @testSetup
     static void setup() {
         // Create and insert the required custom setting data for all tests.
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        Hub_Settings__c settings = new Hub_Settings__c(
             Name = 'Default', // Use a name if it's a list custom setting
             JIRAInstanceUrl__c = 'https://mock-jira.test.com',
             JIRAUsernameTxt__c = 'test@user.com',
@@ -259,7 +259,7 @@ private class JiraCalloutTest {
     @isTest
     static void testMissingConfiguration() {
         // 1. Delete the settings created in @testSetup for this specific test
-        delete [SELECT Id FROM Delivery_Hub_Settings__c];
+        delete [SELECT Id FROM Hub_Settings__c];
 
         Test.startTest();
         try {

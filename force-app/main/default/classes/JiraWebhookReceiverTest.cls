@@ -14,7 +14,7 @@ private class JiraWebhookReceiverTest {
     @testSetup
     static void setupTestData() {
         // Create Delivery Hub Settings with webhook secret
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        Hub_Settings__c settings = new Hub_Settings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
             JiraWebhookSecretTxt__c = VALID_SECRET
         );
@@ -325,7 +325,7 @@ private class JiraWebhookReceiverTest {
     @isTest
     static void testWebhookSecretFallback() {
         // Setup - delete existing settings to test fallback
-        delete [SELECT Id FROM Delivery_Hub_Settings__c];
+        delete [SELECT Id FROM Hub_Settings__c];
         
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();

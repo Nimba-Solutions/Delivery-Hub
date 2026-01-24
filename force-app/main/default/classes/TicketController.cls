@@ -400,7 +400,7 @@ public with sharing class TicketController {
     private static String getOpenAIApiKey() {
     try {
 
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        Hub_Settings__c settings = Hub_Settings__c.getOrgDefaults();
         
         // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
         if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {

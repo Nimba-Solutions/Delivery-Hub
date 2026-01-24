@@ -15,7 +15,7 @@ import getRequiredFieldsForStage from '@salesforce/apex/TicketController.getRequ
 import searchForPotentialBlockers from '@salesforce/apex/DragAndDropLwcController.searchForPotentialBlockers';
 import createDependency from '@salesforce/apex/DragAndDropLwcController.createDependency';
 import removeDependency from '@salesforce/apex/DragAndDropLwcController.removeDependency';
-import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
+import getSettings from '@salesforce/apex/HubSettingsController.getSettings';
 
 // --- NAMESPACE BRIDGE ---
 const FIELDS = {

@@ -388,7 +388,7 @@ global without sharing class JiraWebhookReceiver {
     private static String getWebhookSecret() {
         try {
             // Try to get from Delivery Hub Settings first
-            String query = 'SELECT JiraWebhookSecretTxt__c FROM Delivery_Hub_Settings__c WHERE SetupOwnerId = :orgId LIMIT 1';
+            String query = 'SELECT JiraWebhookSecretTxt__c FROM Hub_Settings__c WHERE SetupOwnerId = :orgId LIMIT 1';
             List<SObject> settings = Database.query(query.replace(':orgId', '\'' + UserInfo.getOrganizationId() + '\''));
             
             if (!settings.isEmpty()) {

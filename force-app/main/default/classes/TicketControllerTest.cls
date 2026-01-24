@@ -17,7 +17,7 @@ private class TicketControllerTest {
         );
         insert testUser;
 
-        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'HubAdmin_App' LIMIT 1];
         PermissionSetAssignment psa = new PermissionSetAssignment(
             AssigneeId = testUser.Id,
             PermissionSetId = ps.Id
@@ -44,7 +44,7 @@ private class TicketControllerTest {
         insert tickets;
 
         // Optional: create Metadata for AI key test
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        Hub_Settings__c settings = new Hub_Settings__c(
             Name = 'Default',
             OpenAIApiKeyTxt__c = 'test-api-key',
             OpenAiApiTestedBool__c = true

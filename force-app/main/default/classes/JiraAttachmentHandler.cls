@@ -146,7 +146,7 @@ public without sharing class JiraAttachmentHandler {
     
             // --- CHANGE STARTS HERE ---
             // Fetch credentials securely from Custom Settings instead of hardcoding.
-            Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+            Hub_Settings__c settings = Hub_Settings__c.getOrgDefaults();
             String jiraUsername = '';
             String apiToken = '';
     
@@ -158,7 +158,7 @@ public without sharing class JiraAttachmentHandler {
     
             // Check if credentials were successfully retrieved.
             if (String.isBlank(jiraUsername) || String.isBlank(apiToken)) {
-                System.debug(LoggingLevel.ERROR, 'Jira credentials not found in Delivery_Hub_Settings__c. Cannot authenticate to media API.');
+                System.debug(LoggingLevel.ERROR, 'Jira credentials not found in Hub_Settings__c. Cannot authenticate to media API.');
                 // Return null to indicate failure, consistent with other error paths in this method.
                 return null;
             }

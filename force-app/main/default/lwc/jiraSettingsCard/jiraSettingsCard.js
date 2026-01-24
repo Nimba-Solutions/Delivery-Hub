@@ -1,9 +1,9 @@
 import { LightningElement, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
-import saveJiraSettings from '@salesforce/apex/DeliveryHubSettingsController.saveJiraSettings';
-import testJiraConnectionApex from '@salesforce/apex/DeliveryHubSettingsController.testJiraConnection';
-import saveJiraEnabledState from '@salesforce/apex/DeliveryHubSettingsController.saveJiraEnabledState';
+import getSettings from '@salesforce/apex/HubSettingsController.getSettings';
+import saveJiraSettings from '@salesforce/apex/HubSettingsController.saveJiraSettings';
+import testJiraConnectionApex from '@salesforce/apex/HubSettingsController.testJiraConnection';
+import saveJiraEnabledState from '@salesforce/apex/HubSettingsController.saveJiraEnabledState';
 
 export default class JiraSettingCard extends LightningElement {
     // --- Tracked Properties for Settings ---

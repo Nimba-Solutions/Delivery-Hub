@@ -23,7 +23,7 @@ public class JiraAttachmentHandlerTest {
         );
         insert testUser;
 
-        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'HubAdmin_App' LIMIT 1];
         PermissionSetAssignment psa = new PermissionSetAssignment(
             AssigneeId = testUser.Id,
             PermissionSetId = ps.Id
@@ -33,7 +33,7 @@ public class JiraAttachmentHandlerTest {
          
 
         System.runAs(testUser) {
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        Hub_Settings__c settings = new Hub_Settings__c(
             Name = 'Default',
             JIRAUsernameTxt__c = 'test@example.com',
             JIRAApiTokenTxt__c = 'fake-token'
@@ -114,7 +114,7 @@ public class JiraAttachmentHandlerTest {
 
         System.runAs(testUser) {
         // ARRANGE: Update settings to be blank
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        Hub_Settings__c settings = Hub_Settings__c.getOrgDefaults();
         settings.JIRAUsernameTxt__c = '';
         settings.JIRAApiTokenTxt__c = '';
         update settings;

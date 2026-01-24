@@ -29,7 +29,7 @@ private class AttachmentSyncWorkerTest {
         );
         insert testUser;
 
-        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'HubAdmin_App' LIMIT 1];
         PermissionSetAssignment psa = new PermissionSetAssignment(
             AssigneeId = testUser.Id,
             PermissionSetId = ps.Id

@@ -17,14 +17,14 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryHubSetup</componentName>
-                <identifier>c_deliveryHubSetup</identifier>
+                <componentName>hubSetup</componentName>
+                <identifier>c_hubSetup</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryBudgetSummary</componentName>
-                <identifier>c_deliveryBudgetSummary</identifier>
+                <componentName>budgetSummary</componentName>
+                <identifier>c_budgetSummary</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>

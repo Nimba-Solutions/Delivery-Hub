@@ -20,7 +20,7 @@ public class JiraToSFSyncBatchTest {
     @testSetup
     static void setupTestData() {
         // --- FIX: Create and insert the required custom setting ---
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        Hub_Settings__c settings = new Hub_Settings__c(
             Name = 'Default', // Or whatever your default record is named
             JIRAInstanceUrl__c = 'https://your-jira-instance.atlassian.net',
             JIRAUsernameTxt__c = 'testuser@example.com',
