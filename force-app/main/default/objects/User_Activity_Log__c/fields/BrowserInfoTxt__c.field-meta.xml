@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BrowserInfoTxt__c</fullName>
+    <description>Captures the User Agent string from the browser. This helps identify if an issue is specific to a browser (e.g., Chrome vs. Safari) or device (Mobile vs. Desktop).</description>
+    <inlineHelpText>Technical details about the user&apos;s browser and operating system.</inlineHelpText>
+    <label>Browser Info</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
