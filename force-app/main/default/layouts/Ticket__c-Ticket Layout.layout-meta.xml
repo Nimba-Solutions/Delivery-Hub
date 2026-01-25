@@ -79,6 +79,18 @@
                 <behavior>Edit</behavior>
                 <field>BillableRateCurrency__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>AcceptanceCriteriaTxt__c</field>
+            </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>StepsToReproduceTxt__c</field>
+            </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>ClientPreApprovedHoursNumber__c</field>
+            </layoutItems>
         </layoutColumns>
         <layoutColumns>
             <layoutItems>

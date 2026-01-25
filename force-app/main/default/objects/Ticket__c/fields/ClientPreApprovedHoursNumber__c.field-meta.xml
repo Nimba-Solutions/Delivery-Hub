@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ClientPreApprovedHoursNumber__c</fullName>
+    <description>The Client is willing to pay for 4 hours total.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enter how many hours you&apos;d be willing to pay to have this done without having to go through sizing and proposal feedback stages, aka fast track enablement.</inlineHelpText>
+    <label>Client Pre Approved Hours</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

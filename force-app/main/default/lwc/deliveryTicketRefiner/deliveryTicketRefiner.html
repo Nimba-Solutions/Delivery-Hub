@@ -1,0 +1,56 @@
+<template>
+    <lightning-card title="Refine & Assign" icon-name="standard:service_contract">
+        <div class="slds-p-around_medium">
+            
+            <template if:false={isRequestCreated}>
+                <lightning-record-edit-form 
+                    record-id={recordId} 
+                    object-api-name="Ticket__c" 
+                    onsuccess={handleTicketSave}>
+                    
+                    <div class="slds-text-title_caps slds-m-bottom_small">1. Define Success</div>
+                    <lightning-input-field field-name="AcceptanceCriteriaTxt__c"></lightning-input-field>
+                    <lightning-input-field field-name="StepsToReproduceTxt__c"></lightning-input-field>
+
+                    <div class="slds-grid slds-gutters slds-m-top_small">
+                        <div class="slds-col">
+                            <div class="slds-text-title_caps slds-m-bottom_small">2. Client Constraints</div>
+                            <lightning-input-field field-name="ClientPreApprovedHoursNumber__c"></lightning-input-field>
+                        </div>
+                        <div class="slds-col">
+                            <div class="slds-text-title_caps slds-m-bottom_small">3. Deadline</div>
+                            <lightning-input-field field-name="ProjectedUATReadyDate__c"></lightning-input-field>
+                        </div>
+                    </div>
+
+                    <div class="slds-m-top_medium slds-text-align_right">
+                        <lightning-button 
+                            variant="neutral" 
+                            type="submit" 
+                            label="Save Definition" 
+                            class="slds-m-right_small">
+                        </lightning-button>
+                        
+                        <lightning-button 
+                            variant="brand" 
+                            label="Create Vendor Request" 
+                            onclick={handleCreateRequest} 
+                            disabled={isProcessing}>
+                        </lightning-button>
+                    </div>
+                </lightning-record-edit-form>
+            </template>
+
+            <template if:true={isRequestCreated}>
+                <div class="slds-notify slds-notify_alert slds-theme_success" role="alert">
+                    <lightning-icon icon-name="utility:success" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                    <h2>Vendor Request Created!</h2>
+                </div>
+                <div class="slds-m-top_medium slds-text-align_center">
+                    <lightning-button label="Go to Request" onclick={navigateToRequest}></lightning-button>
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

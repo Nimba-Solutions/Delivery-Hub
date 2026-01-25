@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StepsToReproduceTxt__c</fullName>
+    <description>A sequential list of manual actions required to trigger the reported issue. This supplements the automated telemetry captured by the Ghost Recorder.</description>
+    <inlineHelpText>Manual steps to trigger the issue (if different from the Ghost log).</inlineHelpText>
+    <label>Steps To Reproduce</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
