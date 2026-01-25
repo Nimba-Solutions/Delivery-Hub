@@ -157,6 +157,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Ticket__c.AcceptanceCriteriaTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Ticket__c.BillableRateCurrency__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -178,6 +183,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.ClientIntentionPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.ClientPreApprovedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -238,6 +248,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.ExternalSourceOrgTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Ticket__c.HoursVarianceNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -308,6 +323,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.StatusPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.StepsToReproduceTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
