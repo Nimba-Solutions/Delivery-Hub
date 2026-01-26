@@ -1,0 +1,54 @@
+<template>
+    <lightning-card title="Ticket Discussion" icon-name="standard:post">
+        
+        <div class="slds-p-horizontal_small">
+            
+            <div class="chat-container" ref="chatList">
+                <template if:true={comments.data}>
+                    <template for:each={comments.data} for:item="msg">
+                        <div key={msg.id} class={msg.wrapperClass}>
+                            <div class={msg.metaClass}>
+                                {msg.authorName} • <lightning-formatted-date-time value={msg.timestamp} hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
+                            </div>
+                            <div class={msg.bubbleClass}>
+                                <lightning-formatted-rich-text value={msg.body}></lightning-formatted-rich-text>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+                
+                <template if:false={comments.data}>
+                    <div class="slds-align_absolute-center slds-p-top_medium">
+                        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                    </div>
+                </template>
+            </div>
+
+            <div class="footer">
+                <div class="slds-grid slds-gutters slds-v-center">
+                    <div class="slds-col slds-size_10-of-12">
+                        <lightning-textarea
+                            variant="label-hidden"
+                            placeholder="Type a message..."
+                            value={commentBody}
+                            onchange={handleInputChange}
+                            disabled={isSending}
+                            class="chat-input">
+                        </lightning-textarea>
+                    </div>
+                    <div class="slds-col slds-size_2-of-12 slds-align-bottom slds-p-bottom_small">
+                        <lightning-button-icon 
+                            icon-name="utility:send" 
+                            variant="brand" 
+                            class="slds-float_right"
+                            onclick={handleSend}
+                            disabled={isSending}
+                            alternative-text="Send">
+                        </lightning-button-icon>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </lightning-card>
+</template>
