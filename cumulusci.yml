@@ -6,7 +6,8 @@ project:
         name_managed: Delivery Hub
         namespace: delivery
         api_version: "61.0"
-    # dependencies:
+    dependencies:
+        - github: https://github.com/Nimba-Solutions/Docs-Unlocked
     #    - github: https://github.com/Nimba-Solutions/Work-Item-Composer
     #      unmanaged: true
     git:

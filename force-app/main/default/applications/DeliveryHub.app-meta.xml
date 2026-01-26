@@ -63,6 +63,7 @@
     <tabs>Delivery_Hub_Settings</tabs>
     <tabs>Network_Entity__c</tabs>
     <tabs>Request__c</tabs>
+    <tabs>Docs</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
 </CustomApplication>
