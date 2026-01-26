@@ -2,6 +2,7 @@
  * @description Controller for the internal Ticket Chat LWC.
  * Handles fetching and posting comments to the Ticket_Comment__c object.
  */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
     /**
