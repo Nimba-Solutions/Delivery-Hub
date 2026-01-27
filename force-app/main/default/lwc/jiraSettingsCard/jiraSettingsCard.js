@@ -1,4 +1,4 @@
-import { LightningElement, track, wire } from 'lwc';
+import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 import saveJiraSettings from '@salesforce/apex/DeliveryHubSettingsController.saveJiraSettings';
@@ -20,19 +20,26 @@ export default class JiraSettingCard extends LightningElement {
     @track testResult = null;
     @track isConnectionVerified = false;
 
-    // --- Wired Apex ---
-    @wire(getSettings)
-    wiredSettings({ error, data }) {
-        this.isLoading = false;
-        if (data) {
-            this.jiraEnabled = data.jiraEnabled || false;
-            this.jiraInstanceUrl = data.jiraInstanceUrl;
-            this.jiraUsername = data.jiraUsername;
-            this.jiraApiToken = data.jiraApiToken;
-            this.jiraProjectKey = data.jiraProjectKey;
-            this.isConnectionVerified = data.JIraApiTestedBool__c || false;
-        } else if (error) {
+    // --- REPLACED @wire WITH IMPERATIVE CALL ---
+    connectedCallback() {
+        this.loadSettings();
+    }
+
+    async loadSettings() {
+        try {
+            const data = await getSettings();
+            if (data) {
+                this.jiraEnabled = data.jiraEnabled || false;
+                this.jiraInstanceUrl = data.jiraInstanceUrl || '';
+                this.jiraUsername = data.jiraUsername || '';
+                this.jiraApiToken = data.jiraApiToken || '';
+                this.jiraProjectKey = data.jiraProjectKey || '';
+                this.isConnectionVerified = data.jiraApiTested || false; // Corrected casing from 'JIra' to 'jira' if DTO changed, but kept 'JIra' based on your apex
+            }
+        } catch (error) {
             this.showToast('Error Loading JIRA Settings', error.body?.message || error.message, 'error');
+        } finally {
+            this.isLoading = false;
         }
     }
 
@@ -114,8 +121,6 @@ export default class JiraSettingCard extends LightningElement {
         this.testResult = null;
         this.isConnectionVerified = false;
 
-        console.log('jirainstacnceurl '+this.jiraInstanceUrl);
-
         try {
             const result = await testJiraConnectionApex({
                 jiraUrl: this.jiraInstanceUrl,
@@ -140,7 +145,6 @@ export default class JiraSettingCard extends LightningElement {
         }
     }
 
-    // --- MODIFIED: This function now re-fetches settings from Apex ---
     async resetJiraSettings() {
         if (confirm('Are you sure you want to revert your changes to the last saved configuration?')) {
             this.isLoading = true;
@@ -154,10 +158,9 @@ export default class JiraSettingCard extends LightningElement {
                     this.jiraUsername = savedData.jiraUsername;
                     this.jiraApiToken = savedData.jiraApiToken;
                     this.jiraProjectKey = savedData.jiraProjectKey;
-                    this.isConnectionVerified = savedData.JIraApiTestedBool__c || false;
+                    this.isConnectionVerified = savedData.jiraApiTested || false; // Corrected mapping
                 }
                 
-                // Clear any transient UI state like test alerts
                 this.testResult = null;
 
                 this.showToast('Reset Complete', 'Settings have been reverted to the last saved state.', 'success');
@@ -179,7 +182,6 @@ export default class JiraSettingCard extends LightningElement {
         this.isLoading = true;
         try {
             await saveJiraSettings({
-                enabled: this.jiraEnabled, // Correctly pass the enabled state
                 url: this.jiraInstanceUrl,
                 username: this.jiraUsername,
                 token: this.jiraApiToken,

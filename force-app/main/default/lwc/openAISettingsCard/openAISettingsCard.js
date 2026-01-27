@@ -1,4 +1,4 @@
-import { LightningElement, track, wire } from 'lwc';
+import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 import saveOpenAISettings from '@salesforce/apex/DeliveryHubSettingsController.saveOpenAISettings';
@@ -7,21 +7,29 @@ import testOpenAIConnection from '@salesforce/apex/DeliveryHubSettingsController
 export default class OpenAISettingCard extends LightningElement {
     @track openaiApiKey = '';
     @track openaiModel = '';
-    isLoading = true;
+    @track isLoading = true;
     @track showApiKey = false;
     @track isTestingConnection = false;
     @track testResult = null; // Can be 'success' or 'error'
     @track apiTested = false;
 
-    @wire(getSettings)
-    wiredSettings({ error, data }) {
-        this.isLoading = false;
-        if (data) {
-            this.openaiApiKey = data.openaiApiKey;
-            this.openaiModel = data.openaiModel || 'gpt-4o-mini'; // Default value
-            this.apiTested = data.openAiApiTested;
-        } else if (error) {
-            this.showToast('Error Loading OpenAI Settings', error.body.message, 'error');
+    // --- REPLACED @wire WITH IMPERATIVE CALL ---
+    connectedCallback() {
+        this.loadSettings();
+    }
+
+    async loadSettings() {
+        try {
+            const data = await getSettings();
+            if (data) {
+                this.openaiApiKey = data.openaiApiKey || '';
+                this.openaiModel = data.openaiModel || 'gpt-4o-mini';
+                this.apiTested = data.openAiApiTested || false;
+            }
+        } catch (error) {
+            this.showToast('Error Loading OpenAI Settings', error.body?.message || error.message, 'error');
+        } finally {
+            this.isLoading = false;
         }
     }
 
@@ -45,7 +53,7 @@ export default class OpenAISettingCard extends LightningElement {
             });
             this.showToast('Success', 'OpenAI settings saved.', 'success');
         } catch (error) {
-            this.showToast('Error Saving OpenAI Settings', error.body.message, 'error');
+            this.showToast('Error Saving OpenAI Settings', error.body?.message || error.message, 'error');
         } finally {
             this.isLoading = false;
         }
@@ -76,23 +84,18 @@ export default class OpenAISettingCard extends LightningElement {
         }
     }
 
-    // --- MODIFIED: This function now re-fetches settings from Apex ---
     async resetSettings() {
         if (confirm('Are you sure you want to revert your changes to the last saved configuration?')) {
             this.isLoading = true;
             try {
-                // Imperatively call Apex to get the latest saved settings
                 const savedData = await getSettings();
-
                 if (savedData) {
                     this.openaiApiKey = savedData.openaiApiKey;
                     this.openaiModel = savedData.openaiModel || 'gpt-4o-mini';
                     this.apiTested = savedData.openAiApiTested || false;
                 }
                 
-                // Clear any transient UI state like test alerts
                 this.testResult = null;
-                
                 this.showToast('Reset Complete', 'Settings have been reverted to the last saved state.', 'success');
             } catch (error) {
                 this.showToast('Error Reverting', 'Could not fetch the saved settings. ' + (error.body?.message || error.message), 'error');
