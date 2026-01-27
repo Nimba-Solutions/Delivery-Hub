@@ -1,12 +1,12 @@
 public with sharing class DeliveryHubSender {
 
-    private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1/intake/';
+    // Default Base URL (No specific resource)
+    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1';
 
     @AuraEnabled
-    @SuppressWarnings('PMD.ApexCRUDViolation') // Suppress warnings for removing FLS checks
+    @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String sendRequestToVendor(Id requestId) {
         try {
-            // FIX: Removed 'WITH USER_MODE' to prevent FLS crashes in tests
             Request__c reqRec = [
                 SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
                        TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
@@ -17,12 +17,16 @@ public with sharing class DeliveryHubSender {
                 LIMIT 1
             ];
 
-            String endpoint = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
-            
-            if (String.isBlank(endpoint)) {
-                System.debug(LoggingLevel.INFO, 'Vendor endpoint missing. Defaulting to Mothership.');
-                endpoint = DEFAULT_MOTHERSHIP_URL;
+            String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
+            if (String.isBlank(baseUrl)) {
+                baseUrl = DEFAULT_BASE_URL;
             }
+
+            // FIX: Append the specific resource path for Tickets
+            if (!baseUrl.endsWith('/')) {
+                baseUrl += '/';
+            }
+            String fullEndpoint = baseUrl + 'intake';
 
             Map<String, Object> payload = new Map<String, Object>{
                 'title' => reqRec.TicketId__r.WorkItemNameTxt__c,
@@ -37,7 +41,7 @@ public with sharing class DeliveryHubSender {
             };
 
             HttpRequest httpReq = new HttpRequest();
-            httpReq.setEndpoint(endpoint);
+            httpReq.setEndpoint(fullEndpoint);
             httpReq.setMethod('POST');
             httpReq.setHeader('Content-Type', 'application/json');
             httpReq.setBody(JSON.serialize(payload));
@@ -45,15 +49,20 @@ public with sharing class DeliveryHubSender {
             Http http = new Http();
             HttpResponse res = http.send(httpReq);
             
-            if (res.getStatusCode() == 201) {
-                Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-                String remoteId = (String) responseMap.get('ticketId');
+            if (res.getStatusCode() == 201 || res.getStatusCode() == 200) {
+                String remoteId;
+                try {
+                    Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+                    if (responseMap.containsKey('ticketId')) remoteId = (String) responseMap.get('ticketId');
+                    else if (responseMap.containsKey('id')) remoteId = (String) responseMap.get('id');
+                    else if (responseMap.containsKey('brokerRequestId')) remoteId = (String) responseMap.get('brokerRequestId');
+                } catch(Exception e) {
+                    remoteId = res.getBody().replace('"', ''); 
+                }
                 
                 reqRec.RemoteTicketIdTxt__c = remoteId;
                 reqRec.StatusPk__c = 'Offer Sent'; 
-                
                 update reqRec;
-                
                 return 'Success';
             } else {
                 throw new CalloutException('Network Error (' + res.getStatusCode() + '): ' + res.getBody());
@@ -66,10 +75,9 @@ public with sharing class DeliveryHubSender {
     }
 
     @AuraEnabled
-    @SuppressWarnings('PMD.ApexCRUDViolation') // Suppress warnings for removing FLS checks
+    @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String checkRequestStatus(Id requestId) {
         try {
-            // FIX: Removed 'WITH USER_MODE'
             Request__c reqRec = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
@@ -81,19 +89,19 @@ public with sharing class DeliveryHubSender {
                 return 'No Remote ID linked. Have you sent this request yet?';
             }
 
-            String endpoint = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
-            
-            if (String.isBlank(endpoint)) {
-                endpoint = DEFAULT_MOTHERSHIP_URL;
+            String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
+            if (String.isBlank(baseUrl)) {
+                baseUrl = DEFAULT_BASE_URL;
             }
 
-            if (!endpoint.endsWith('/')) {
-                endpoint += '/';
+            if (!baseUrl.endsWith('/')) {
+                baseUrl += '/';
             }
-            endpoint += reqRec.RemoteTicketIdTxt__c;
+            // FIX: Construct Status URL: .../intake/REC-123
+            String fullEndpoint = baseUrl + 'intake/' + reqRec.RemoteTicketIdTxt__c;
 
             HttpRequest httpReq = new HttpRequest();
-            httpReq.setEndpoint(endpoint);
+            httpReq.setEndpoint(fullEndpoint);
             httpReq.setMethod('GET');
             
             Http http = new Http();
@@ -104,7 +112,7 @@ public with sharing class DeliveryHubSender {
                 String remoteStatus = (String) responseMap.get('status');
                 return 'Remote Status: ' + remoteStatus;
             } else {
-                return 'Check Failed: ' + res.getStatusCode();
+                return 'Check Failed: ' + res.getStatusCode() + ' ' + res.getStatus();
             }
 
         } catch (Exception e) {
