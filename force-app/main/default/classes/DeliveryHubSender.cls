@@ -1,7 +1,7 @@
 /**
  * @description Controller for sending Requests to the Vendor via REST API.
  */
-public with sharing class DeliveryHubSender {
+public without sharing class DeliveryHubSender {
 
     private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1';
 
@@ -27,7 +27,7 @@ public with sharing class DeliveryHubSender {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String sendRequestSync(Id requestId) {
-        // Fetch Request Data (System Mode for Queueable compatibility)
+        // FIX: Removed WITH USER_MODE to ensure system processes can read required fields
         Request__c reqRec = [
             SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
                     TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
@@ -38,7 +38,6 @@ public with sharing class DeliveryHubSender {
             LIMIT 1
         ];
 
-        // Determine Endpoint
         String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
         if (String.isBlank(baseUrl)) {
             baseUrl = DEFAULT_BASE_URL;
@@ -49,7 +48,6 @@ public with sharing class DeliveryHubSender {
         }
         String fullEndpoint = baseUrl + 'intake';
 
-        // Construct Payload
         Map<String, Object> payload = new Map<String, Object>{
             'title' => reqRec.TicketId__r.WorkItemNameTxt__c,
             'briefSummary' => reqRec.TicketId__r.BriefDescriptionTxt__c,
@@ -62,7 +60,6 @@ public with sharing class DeliveryHubSender {
             'brokerRequestId' => reqRec.Id 
         };
 
-        // Send Request
         HttpRequest httpReq = new HttpRequest();
         httpReq.setEndpoint(fullEndpoint);
         httpReq.setMethod('POST');
@@ -72,7 +69,6 @@ public with sharing class DeliveryHubSender {
         Http http = new Http();
         HttpResponse res = http.send(httpReq);
         
-        // Handle Response
         if (res.getStatusCode() == 201 || res.getStatusCode() == 200) {
             String remoteId;
             try {
@@ -91,9 +87,7 @@ public with sharing class DeliveryHubSender {
             reqRec.RemoteTicketIdTxt__c = remoteId;
             reqRec.StatusPk__c = 'Offer Sent'; 
             
-            if (Schema.sObjectType.Request__c.isUpdateable()) {
-                update reqRec;
-            }
+            update reqRec;
             return 'Success';
         } else {
             throw new CalloutException('Network Error (' + res.getStatusCode() + '): ' + res.getBody());
@@ -108,11 +102,11 @@ public with sharing class DeliveryHubSender {
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
         try {
+            // FIX: Removed WITH USER_MODE
             Request__c reqRec = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE Id = :requestId 
-                WITH USER_MODE
                 LIMIT 1
             ];
 

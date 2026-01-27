@@ -17,12 +17,11 @@ global without sharing class DeliveryHubCommentIntake {
             // Extract Ticket ID from URL: .../comments/{TICKET_ID}
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
 
-            // PMD Fix: Use WITH USER_MODE
+            // FIX: Removed WITH USER_MODE to prevent "No such column" errors during packaging
             List<Ticket_Comment__c> comments = [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate 
                 FROM Ticket_Comment__c 
                 WHERE TicketId__c = :ticketId 
-                WITH USER_MODE
                 ORDER BY CreatedDate ASC
             ];
 
@@ -49,7 +48,7 @@ global without sharing class DeliveryHubCommentIntake {
      * @description POST: Add a new comment to a Ticket
      */
     @HttpPost
-    @SuppressWarnings('PMD.ApexCRUDViolation') // Suppress because insert is strictly controlled by logic
+    @SuppressWarnings('PMD.ApexCRUDViolation') 
     global static void postComment() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
