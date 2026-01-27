@@ -5,7 +5,7 @@
 public with sharing class DeliveryHubSetupController {
 
     private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1/intake/';
-    private static final String ENTITY_NAME = 'Nimba Solutions (Dev Team)';
+    private static final String ENTITY_NAME = 'Cloud Nimbus LLC (Dev Team)';
 
     /**
      * @description Checks if the org is already connected to a Mothership.
