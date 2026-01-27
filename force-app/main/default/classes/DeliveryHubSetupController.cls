@@ -1,83 +1,131 @@
 /**
- * @description Controller for the Delivery Hub Setup Wizard.
- * Allows any org to instantly configure itself as a Client Node in the Delivery Network.
+ * @description Controller for the Delivery Hub Setup LWC.
+ * Handles connecting to the mothership (Cloud Nimbus LLC) and initializing app defaults.
  */
 public with sharing class DeliveryHubSetupController {
 
-    private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1/intake/';
-    private static final String ENTITY_NAME = 'Nimba Solutions (Dev Team)';
+    /**
+     * @description Data Transfer Object to pass setup status to the LWC.
+     */
+    public class SetupStatus {
+        /** @description Whether the org is currently connected to the vendor */
+        @AuraEnabled public Boolean isConnected;
+        /** @description The required remote site URL that must be whitelisted */
+        @AuraEnabled public String requiredRemoteSite;
+        /** @description The connected Network Entity record, if it exists */
+        @AuraEnabled public Network_Entity__c entity;
+    }
 
     /**
-     * @description Checks if the org is already connected to a Mothership.
-     * @return Map<String, Object> Status map containing 'isConnected', 'entity' details, and 'requiredRemoteSite'.
+     * @description Checks the current connection status.
+     * @return SetupStatus Object containing connection state and requirements.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getSetupStatus() {
-        Map<String, Object> result = new Map<String, Object>();
-        
-        // Explicitly check access before query
-        if (!Schema.sObjectType.Network_Entity__c.isAccessible()) {
-            result.put('isConnected', false);
-            return result;
-        }
+    public static SetupStatus getSetupStatus() {
+        SetupStatus status = new SetupStatus();
+        // Domain only for the Remote Site Setting instruction
+        status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
         List<Network_Entity__c> entities = [
-            SELECT Id, Name, IntegrationEndpointUrlTxt__c, StatusPk__c 
+            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c 
             FROM Network_Entity__c 
-            WHERE EntityTypePk__c = 'Vendor'
-            AND StatusPk__c = 'Active'
+            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
+            WITH USER_MODE
             LIMIT 1
         ];
 
         if (!entities.isEmpty()) {
-            result.put('isConnected', true);
-            result.put('entity', entities[0]);
+            status.isConnected = true;
+            status.entity = entities[0];
         } else {
-            result.put('isConnected', false);
+            status.isConnected = false;
         }
-        
-        result.put('requiredRemoteSite', 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com');
-        return result;
+        return status;
     }
 
     /**
-     * @description One-click configuration. Creates the Network Entity pointing to Nimba.
-     * @return String The ID of the created or existing Network_Entity__c record.
+     * @description Connects the org by creating the Vendor entity, initializing defaults, 
+     * and sending a registration ticket.
      */
     @AuraEnabled
-    public static String connectToDefaultMothership() {
-        try {
-            if (!Schema.sObjectType.Network_Entity__c.isAccessible()) {
-                throw new AuraHandledException('Insufficient permissions to read Network Entity.');
-            }
+    public static void connectToDefaultMothership() {
+        // 1. Check for existing entity
+        List<Network_Entity__c> existing = [
+            SELECT Id FROM Network_Entity__c 
+            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
+            WITH USER_MODE
+            LIMIT 1
+        ];
 
-            List<Network_Entity__c> existing = [
-                SELECT Id FROM Network_Entity__c 
-                WHERE IntegrationEndpointUrlTxt__c = :DEFAULT_MOTHERSHIP_URL 
-                LIMIT 1
-            ];
-            
-            if (!existing.isEmpty()) {
-                return existing[0].Id;
-            }
-
-            Network_Entity__c entity = new Network_Entity__c(
-                Name = ENTITY_NAME,
-                EntityTypePk__c = 'Vendor',
+        if (existing.isEmpty()) {
+            Network_Entity__c mothership = new Network_Entity__c(
+                Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
-                IntegrationEndpointUrlTxt__c = DEFAULT_MOTHERSHIP_URL
+                EntityTypePk__c = 'Vendor',
+                // FIX: Store the BASE API URL only (no /intake suffix)
+                IntegrationEndpointUrlTxt__c = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1'
             );
             
-            // Explicit check before insert
             if (Schema.sObjectType.Network_Entity__c.isCreateable()) {
-                insert entity;
-                return entity.Id;
+                insert mothership;
             } else {
                 throw new AuraHandledException('Insufficient permissions to create Network Entity.');
             }
+        }
 
-        } catch (Exception e) {
-            throw new AuraHandledException('Setup Failed: ' + e.getMessage());
+        // 2. Initialize Defaults
+        initializeDefaultSettings();
+
+        // 3. Create "Registration" Ticket
+        List<Ticket__c> existingReg = [
+            SELECT Id FROM Ticket__c 
+            WHERE WorkItemNameTxt__c = 'New Org Connection' 
+            WITH USER_MODE
+            LIMIT 1
+        ];
+        
+        if (existingReg.isEmpty()) {
+            String orgContext = 'Auto-generated registration.\n\n' +
+                                'Org Name: ' + UserInfo.getOrganizationName() + '\n' +
+                                'Org ID: ' + UserInfo.getOrganizationId() + '\n' +
+                                'Instance URL: ' + Url.getOrgDomainUrl().toExternalForm() + '\n' +
+                                'Registered By: ' + UserInfo.getName() + ' (' + UserInfo.getUserEmail() + ')';
+
+            Ticket__c regTicket = new Ticket__c(
+                WorkItemNameTxt__c = 'New Org Connection',
+                BriefDescriptionTxt__c = 'New Delivery Hub Installation: ' + UserInfo.getOrganizationName(),
+                DetailsTxt__c = orgContext,
+                StageNamePk__c = 'Backlog',
+                PriorityPk__c = 'High'
+            );
+
+            if (Schema.sObjectType.Ticket__c.isCreateable()) {
+                insert regTicket;
+            }
+        }
+    }
+
+    /**
+     * @description Initializes default custom settings if none exist.
+     */
+    private static void initializeDefaultSettings() {
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        
+        // Only run if no settings record exists yet (Fresh Install)
+        if (settings.Id == null) {
+            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
+            
+            settings.EnableNotificationsBool__c = true;
+            settings.AutoCreateRequestFromTicketBool__c = true; // NEW
+            settings.AutoSyncNetworkEntityBool__c = true;       // NEW (Maps to Auto-Send)
+            settings.AISuggestionsEnabledBool__c = true; 
+            settings.AutoGenerateDescriptionsBool__c = true;
+            settings.AIEstimationEnabledBool__c = true;
+            settings.StagesToAutoShareWithDevTeamTxt__c = 'All';
+            
+            if (Schema.sObjectType.Delivery_Hub_Settings__c.isCreateable()) {
+                insert settings;
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 import { LightningElement, track, wire, api } from 'lwc';
 import { CurrentPageReference } from 'lightning/navigation';
-import createTicket from '@salesforce/apex/DeliveryGhostController.createQuickRequest'; // Points to the same method, just aliased clearly
+import createTicket from '@salesforce/apex/DeliveryGhostController.createQuickRequest'; 
 import logActivity from '@salesforce/apex/DeliveryGhostController.logUserActivity';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
@@ -43,10 +43,10 @@ export default class DeliveryGhostRecorder extends LightningElement {
 
     handleNavigationLog() {
         const context = this.gatherContext();
-        // Fire and forget - silent logging
+        // FIX: Stringify the object before sending to Apex
         logActivity({ 
             actionType: 'Navigation',
-            contextData: context
+            contextData: JSON.stringify(context) 
         }).catch(err => console.error('Ghost log failed', err));
     }
 
@@ -67,14 +67,13 @@ export default class DeliveryGhostRecorder extends LightningElement {
         this.isSending = true;
 
         const context = this.gatherContext();
-        
-        // We auto-generate a Subject based on where they are (e.g., "Ghost Report: Opportunity")
         const subjectLine = 'Ghost Report: ' + (context.objectName || 'General');
 
+        // FIX: Stringify the object here too
         createTicket({ 
             subject: subjectLine,
             description: this.description,
-            contextData: context
+            contextData: JSON.stringify(context)
         })
         .then(() => {
             this.dispatchEvent(new ShowToastEvent({

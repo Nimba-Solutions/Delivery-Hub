@@ -80,8 +80,29 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track searchTerm = '';
     @track searchResults = [];
     @track isSearching = false;
+    @track hasValidOpenAIKey = false;
 
     ticketsWire;
+
+    // --- FIX: IMPERATIVE LOAD INSTEAD OF WIRE ---
+    // This prevents the "Error Loading AI Settings" toast on initial load
+    connectedCallback() {
+        this.loadSettings();
+    }
+
+    async loadSettings() {
+        try {
+            const data = await getSettings();
+            if (data) {
+                this.AiEnhancementEnabled = data.aiSuggestionsEnabled || false;
+                this.AiEstimation = data.aiEstimationEnabled || false;
+                this.hasValidOpenAIKey = data.openAiApiTested || false;
+            }
+        } catch (error) {
+            // Silently fail or log to console, but do NOT toast error to avoid UI clutter
+            console.error('Error loading settings in DragDropLwc:', error);
+        }
+    }
 
   // Visual Rules: Queues (Light), Work (Active Colors), Hold (Red)
   statusColorMap = {
@@ -200,22 +221,21 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     "QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" }, // Merged
 
     // Client UAT
+    "Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
+    "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
     "Ready for Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
     "In Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-    "Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
-    "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
-
-    // Deployment
     "Ready for UAT Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
     "Processing Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
+
+    // Deployment
+    "Deployment Prep": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" }, // Merged
+    "Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" }, // Merged
     "Ready for Merge": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Merging": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Ready for Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Deploying": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    "Deployment Prep": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" }, // Merged
-    "Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" }, // Merged
 
-    // Ends
     "Deployed": { bg: "rgba(209, 250, 229, 0.5)", color: "#059669" },
     "Done": { bg: "rgba(229, 231, 235, 0.5)", color: "#374151" },
     "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" }
@@ -882,20 +902,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     }
   }
 
-  @wire(getSettings)
-      wiredSettings({ error, data }) {
-       
-          if (data) {
-              this.AiEnhancementEnabled = data.aiSuggestionsEnabled || false;
-              this.AiEstimation = data.aiEstimationEnabled || false;
-              
-              this.hasValidOpenAIKey = data.openAiApiTested || false;
-          } else if (error) {
-              this.showToast('Error Loading AI Settings', error.body.message, 'error');
-          }
-      }
-   
-
   /* Toolbar button */
   openCreateModal() {
     this.showCreateModal = true;
@@ -1344,42 +1350,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     this.showModal = true;
     this.moveComment = "";
   }
-  // handleAdvanceOption(e) {
-  //  const newStage = e.target.dataset.value;
-  //  this.selectedStage = newStage;
-  //  this.handleSaveTransition();
-  // }
-
-//   async handleAdvanceOption(e) {
-//     const newStage = e.target.dataset.value;
-//     const ticketId = this.selectedRecord.Id;
-
-//     try {
-//         const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
-
-//         if (requiredFields && requiredFields.length > 0) {
-//             // Fields are required. Close the current modal and open the new one.
-//             this.closeModal(); // Close the simple move modal
-            
-//             this.transitionTicketId = ticketId;
-//             this.transitionTargetStage = newStage;
-//             this.transitionRequiredFields = requiredFields;
-//             this.showTransitionModal = true;
-//         } else {
-//             // No fields required, proceed with the original save.
-//             this.selectedStage = newStage;
-//             this.handleSaveTransition();
-//         }
-//     } catch (error) {
-//         this.showToast('Error', 'Could not check for required fields.', 'error');
-//         console.error(error);
-//     }
-// }
-//   handleBacktrackOption(e) {
-//     const newStage = e.target.dataset.value;
-//     this.selectedStage = newStage;
-//     this.handleSaveTransition();
-//   }
 
 async handleAdvanceOption(e) {
         const newStage = e.target.dataset.value;
@@ -1549,7 +1519,7 @@ handleSaveTransition() {
       column.classList.add("drag-over");
     }
 
-    // Instead of moving the card, we move the placeholder
+    // Instead of move, we move the placeholder
     const cardsContainer = column.querySelector(".kanban-column-body");
     const afterElement = this.getDragAfterElement(
       cardsContainer,
@@ -2035,9 +2005,9 @@ handleTransitionError(event) {
 
 
     // closeModal() {
-    //      this.isModalOpen = false;
-    //      this.searchResults = [];
-    //      this.searchTerm = '';
+    //       this.isModalOpen = false;
+    //       this.searchResults = [];
+    //       this.searchTerm = '';
     // }
 
     handleSearchTermChange(event) {

@@ -15,7 +15,7 @@
                 <div class="slds-text-align_center">
                     <p>You are ready to go.</p>
                     <p class="slds-m-top_small">
-                        <lightning-button label="Submit New Request" onclick={navigateToRequests} variant="neutral"></lightning-button>
+                        <lightning-button label="Go to the Ticket Board" onclick={navigateToTickets} variant="neutral"></lightning-button>
                     </p>
                 </div>
             </template>
@@ -23,9 +23,11 @@
             <template if:false={status.isConnected}>
                 <div class="slds-illustration slds-illustration_small">
                     <div class="slds-text-longform">
-                        <h3 class="slds-text-heading_medium">Connect to Dev Team</h3>
+                        <h3 class="slds-text-heading_medium">Quickstart Setup</h3>
                         <p class="slds-text-body_regular">
-                            Configure this org to send requests to Nimba Solutions.
+                            Establish a secure connection to the Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team). 
+                            This will configure your default settings and automatically register this org 
+                            so you can start sending requests immediately.
                         </p>
                     </div>
                 </div>
@@ -46,7 +48,7 @@
                 <div class="slds-align_absolute-center slds-m-top_large">
                     <lightning-button 
                         variant="brand" 
-                        label="Connect Now" 
+                        label="Quickstart Connection" 
                         icon-name="utility:link" 
                         onclick={handleConnect} 
                         class="slds-p-horizontal_large">
