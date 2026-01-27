@@ -21,24 +21,24 @@ import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSetti
 const FIELDS = {
     ID: 'Id',
     NAME: 'Name',
-    BRIEF_DESC: `BriefDescriptionTxt__c`,
-    DETAILS: `DetailsTxt__c`,
-    STAGE: `StageNamePk__c`,
-    PRIORITY: `PriorityPk__c`,
-    SORT_ORDER: `SortOrderNumber__c`,
-    IS_ACTIVE: `IsActiveBool__c`,
-    TAGS: `Tags__c`,
-    EPIC: `Epic__c`,
-    INTENTION: `ClientIntentionPk__c`,
-    DEV_DAYS_SIZE: `DeveloperDaysSizeNumber__c`,
-    CALCULATED_ETA: `CalculatedETADate__c`,
-    PROJECTED_UAT_READY: `ProjectedUATReadyDate__c`,
-    DEVELOPER: `Developer__c`,
+    BRIEF_DESC: `%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c`,
+    DETAILS: `%%%NAMESPACED_ORG%%%DetailsTxt__c`,
+    STAGE: `%%%NAMESPACED_ORG%%%StageNamePk__c`,
+    PRIORITY: `%%%NAMESPACED_ORG%%%PriorityPk__c`,
+    SORT_ORDER: `%%%NAMESPACED_ORG%%%SortOrderNumber__c`,
+    IS_ACTIVE: `%%%NAMESPACED_ORG%%%IsActiveBool__c`,
+    TAGS: `%%%NAMESPACED_ORG%%%Tags__c`,
+    EPIC: `%%%NAMESPACED_ORG%%%Epic__c`,
+    INTENTION: `%%%NAMESPACED_ORG%%%ClientIntentionPk__c`,
+    DEV_DAYS_SIZE: `%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c`,
+    CALCULATED_ETA: `%%%NAMESPACED_ORG%%%CalculatedETADate__c`,
+    PROJECTED_UAT_READY: `%%%NAMESPACED_ORG%%%ProjectedUATReadyDate__c`,
+    DEVELOPER: `%%%NAMESPACED_ORG%%%Developer__c`,
     // Relationships
-    DEP_REL_BLOCKED_BY: `Ticket_Dependency1__r`,
-    DEP_REL_BLOCKING: `Ticket_Dependency__r`,
-    BLOCKING_TICKET: `Blocking_Ticket__c`,
-    BLOCKED_TICKET: `Blocked_Ticket__c`
+    DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%Ticket_Dependency1__r`,
+    DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%Ticket_Dependency__r`,
+    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%Blocking_Ticket__c`,
+    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_Ticket__c`
 };
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
@@ -53,7 +53,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track recentComments = [];
     @track numDevs = 2;
     @track etaResults = [];
-    @track showAllColumns = false; 
+    @track showAllColumns = false; // Default set to false as requested
     @track showCreateModal = false;
     @track nextSortOrder = 1;
     @track overallFilter = "all";
@@ -84,7 +84,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
     ticketsWire;
 
-    // --- CONNECTED CALLBACK (Fix for settings error) ---
+    // --- FIX: IMPERATIVE LOAD INSTEAD OF WIRE ---
+    // This prevents the "Error Loading AI Settings" toast on initial load
     connectedCallback() {
         this.loadSettings();
     }
@@ -98,9 +99,8 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
                 this.hasValidOpenAIKey = data.openAiApiTested || false;
             }
         } catch (error) {
-            // Suppress the toast for silent failures or show it if critical
-            // this.showToast('Error Loading AI Settings', error.body ? error.body.message : error.message, 'error');
-            console.error('Error loading settings:', error);
+            // Silently fail or log to console, but do NOT toast error to avoid UI clutter
+            console.error('Error loading settings in DragDropLwc:', error);
         }
     }
 
@@ -221,25 +221,46 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     "QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" }, // Merged
 
     // Client UAT
+    "Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
+    "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
     "Ready for Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
     "In Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-    "Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
-    "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" }, // Merged
-
-    // Deployment
     "Ready for UAT Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
     "Processing Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
+
+    // Deployment
+    "Deployment Prep": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" }, // Merged
+    "Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" }, // Merged
     "Ready for Merge": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Merging": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Ready for Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
     "Deploying": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-    "Deployment Prep": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" }, // Merged
-    "Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" }, // Merged
 
-    // Ends
     "Deployed": { bg: "rgba(209, 250, 229, 0.5)", color: "#059669" },
     "Done": { bg: "rgba(229, 231, 235, 0.5)", color: "#374151" },
-    "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" }
+    "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" },
+    
+    // Granular View Keys (if needed for Consultant/Dev)
+    "Intake": "Intake Queue",
+    "Scoping In Progress": "Active Scoping",
+    "Ready for Development": "Dev Queue",
+    "Back For Development": "Rework",
+    "Dev Blocked": "Blocked",
+    "Ready for Scratch Test": "To Scratch Test",
+    "Scratch Testing": "Scratch Testing",
+    "Ready for QA": "To QA",
+    "QA In Progress": "QA",
+    "Ready for Internal UAT": "To Internal UAT",
+    "Internal UAT": "Internal UAT",
+    "Ready for Merge": "To Merge",
+    "Merging": "Merging",
+    "Ready for Deployment": "To Deploy",
+    "Deploying": "Deploying",
+    
+    // Explicit keys matching personaColumnStatusMap
+    "Pending Tech Approval": "Tech Approval",
+    "Pending Client Approval": "Client Approval",
+    "QA & Review": "QA & Review"
   };
 
   /** Who owns each status - Source of Truth **/
