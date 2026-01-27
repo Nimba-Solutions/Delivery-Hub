@@ -3,90 +3,15 @@
  */
 public with sharing class DeliveryHubSender {
 
-    // Default Base URL matches the Setup Controller (Root of the API version)
     private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1';
 
     /**
-     * @description Sends a Request record to the connected Vendor.
-     * @param requestId The ID of the Request record to send.
-     * @return String 'Success' or error message.
+     * @description LWC-callable method to send a request. Wraps sync logic with Aura exception handling.
      */
     @AuraEnabled
-    @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String sendRequestToVendor(Id requestId) {
         try {
-            // Fetch Request Data
-            Request__c reqRec = [
-                SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
-                       TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
-                       TicketId__r.DetailsTxt__c, TicketId__r.PriorityPk__c, TicketId__r.WorkItemTypeTxt__c,
-                       DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name
-                FROM Request__c 
-                WHERE Id = :requestId 
-                LIMIT 1
-            ];
-
-            // Determine Endpoint
-            String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
-            if (String.isBlank(baseUrl)) {
-                baseUrl = DEFAULT_BASE_URL;
-            }
-
-            // Append specific resource path
-            if (!baseUrl.endsWith('/')) {
-                baseUrl += '/';
-            }
-            String fullEndpoint = baseUrl + 'intake';
-
-            // Construct Payload
-            Map<String, Object> payload = new Map<String, Object>{
-                'title' => reqRec.TicketId__r.WorkItemNameTxt__c,
-                'briefSummary' => reqRec.TicketId__r.BriefDescriptionTxt__c,
-                'detailedContent' => reqRec.TicketId__r.DetailsTxt__c,
-                'priority' => reqRec.TicketId__r.PriorityPk__c,
-                'type' => reqRec.TicketId__r.WorkItemTypeTxt__c,
-                'companyName' => UserInfo.getOrganizationName(),
-                'preApprovedHours' => reqRec.PreApprovedHoursNumber__c,
-                'hourlyRate' => reqRec.HourlyRateCurrency__c,
-                'brokerRequestId' => reqRec.Id 
-            };
-
-            // Send Request
-            HttpRequest httpReq = new HttpRequest();
-            httpReq.setEndpoint(fullEndpoint);
-            httpReq.setMethod('POST');
-            httpReq.setHeader('Content-Type', 'application/json');
-            httpReq.setBody(JSON.serialize(payload));
-            
-            Http http = new Http();
-            HttpResponse res = http.send(httpReq);
-            
-            // Handle Response
-            if (res.getStatusCode() == 201 || res.getStatusCode() == 200) {
-                String remoteId;
-                try {
-                    Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-                    
-                    // PMD Fix: Added braces for if/else blocks
-                    if (responseMap.containsKey('ticketId')) {
-                        remoteId = (String) responseMap.get('ticketId');
-                    } else if (responseMap.containsKey('id')) {
-                        remoteId = (String) responseMap.get('id');
-                    } else if (responseMap.containsKey('brokerRequestId')) {
-                        remoteId = (String) responseMap.get('brokerRequestId');
-                    }
-                } catch(Exception e) {
-                    remoteId = res.getBody().replace('"', ''); 
-                }
-                
-                reqRec.RemoteTicketIdTxt__c = remoteId;
-                reqRec.StatusPk__c = 'Offer Sent'; 
-                update reqRec;
-                return 'Success';
-            } else {
-                throw new CalloutException('Network Error (' + res.getStatusCode() + '): ' + res.getBody());
-            }
-
+            return sendRequestSync(requestId);
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Brokerage Error Details: ' + e.getMessage());
             throw new AuraHandledException('Brokerage Error: ' + e.getMessage());
@@ -94,12 +19,81 @@ public with sharing class DeliveryHubSender {
     }
 
     /**
-     * @description Checks the status of a remote ticket via API.
-     * @param requestId The ID of the local Request record.
-     * @return String Status message from the remote system.
+     * @description Core synchronous logic to send request. Callable by Queueable/Apex.
      */
+    public static String sendRequestSync(Id requestId) {
+        // Fetch Request Data (Without User Mode for Queueable/System context compatibility if needed, 
+        // but keeping it simple here. If Queueable fails on FLS, remove 'WITH USER_MODE' from query inside)
+        Request__c reqRec = [
+            SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
+                    TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
+                    TicketId__r.DetailsTxt__c, TicketId__r.PriorityPk__c, TicketId__r.WorkItemTypeTxt__c,
+                    DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name
+            FROM Request__c 
+            WHERE Id = :requestId 
+            LIMIT 1
+        ];
+
+        // Determine Endpoint
+        String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
+        if (String.isBlank(baseUrl)) {
+            baseUrl = DEFAULT_BASE_URL;
+        }
+
+        if (!baseUrl.endsWith('/')) {
+            baseUrl += '/';
+        }
+        String fullEndpoint = baseUrl + 'intake';
+
+        // Construct Payload
+        Map<String, Object> payload = new Map<String, Object>{
+            'title' => reqRec.TicketId__r.WorkItemNameTxt__c,
+            'briefSummary' => reqRec.TicketId__r.BriefDescriptionTxt__c,
+            'detailedContent' => reqRec.TicketId__r.DetailsTxt__c,
+            'priority' => reqRec.TicketId__r.PriorityPk__c,
+            'type' => reqRec.TicketId__r.WorkItemTypeTxt__c,
+            'companyName' => UserInfo.getOrganizationName(),
+            'preApprovedHours' => reqRec.PreApprovedHoursNumber__c,
+            'hourlyRate' => reqRec.HourlyRateCurrency__c,
+            'brokerRequestId' => reqRec.Id 
+        };
+
+        // Send Request
+        HttpRequest httpReq = new HttpRequest();
+        httpReq.setEndpoint(fullEndpoint);
+        httpReq.setMethod('POST');
+        httpReq.setHeader('Content-Type', 'application/json');
+        httpReq.setBody(JSON.serialize(payload));
+        
+        Http http = new Http();
+        HttpResponse res = http.send(httpReq);
+        
+        // Handle Response
+        if (res.getStatusCode() == 201 || res.getStatusCode() == 200) {
+            String remoteId;
+            try {
+                Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+                if (responseMap.containsKey('ticketId')) {
+                    remoteId = (String) responseMap.get('ticketId');
+                } else if (responseMap.containsKey('id')) {
+                    remoteId = (String) responseMap.get('id');
+                } else if (responseMap.containsKey('brokerRequestId')) {
+                    remoteId = (String) responseMap.get('brokerRequestId');
+                }
+            } catch(Exception e) {
+                remoteId = res.getBody().replace('"', ''); 
+            }
+            
+            reqRec.RemoteTicketIdTxt__c = remoteId;
+            reqRec.StatusPk__c = 'Offer Sent'; 
+            update reqRec;
+            return 'Success';
+        } else {
+            throw new CalloutException('Network Error (' + res.getStatusCode() + '): ' + res.getBody());
+        }
+    }
+
     @AuraEnabled
-    @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String checkRequestStatus(Id requestId) {
         try {
             Request__c reqRec = [
@@ -121,7 +115,6 @@ public with sharing class DeliveryHubSender {
             if (!baseUrl.endsWith('/')) {
                 baseUrl += '/';
             }
-            // Construct Status URL: .../deliveryhub/v1/intake/REC-123
             String fullEndpoint = baseUrl + 'intake/' + reqRec.RemoteTicketIdTxt__c;
 
             HttpRequest httpReq = new HttpRequest();
@@ -140,7 +133,6 @@ public with sharing class DeliveryHubSender {
             }
 
         } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Status Check Error: ' + e.getMessage());
             throw new AuraHandledException(e.getMessage());
         }
     }

@@ -4,32 +4,21 @@
  */
 public without sharing class TicketTriggerHandler {
     
-    /** @description Flag to disable trigger execution */
     public static boolean triggerDisabled = false;
 
-    /**
-     * @description Entry point for After Insert/Update logic
-     * @param newRows List of new Ticket records
-     * @param oldMap Map of old Ticket records
-     * @param isInsert Boolean indicating insert context
-     * @param isUpdate Boolean indicating update context
-     */
     public static void handleAfter(
         List<Ticket__c> newRows,
         Map<Id, Ticket__c> oldMap,
         Boolean isInsert,
         Boolean isUpdate
     ){
-        if (!TriggerControl.runAfterLogic) {
-            return;
-        }
+        if (!TriggerControl.runAfterLogic) { return; }
         
         Set<Id> toCreate = new Set<Id>();
         Set<Id> toUpdate = new Set<Id>();
 
-        /* -------- INSERT -------- */
         if (isInsert){
-            // 1. Run Network Entity Sync (Auto-create Requests)
+            // 1. Run Network Entity Sync (Auto-create and potentially Auto-send Requests)
             handleNetworkEntitySync(newRows);
 
             // 2. Jira Logic
@@ -40,7 +29,6 @@ public without sharing class TicketTriggerHandler {
             }
         }
 
-        /* -------- UPDATE -------- */
         if (isUpdate){
             for (Ticket__c row : newRows){
                 Ticket__c oldRow = oldMap.get(row.Id);
@@ -59,24 +47,28 @@ public without sharing class TicketTriggerHandler {
                 }
             }
         }
-
-        // Logic for Enqueue Jobs (Commented out in original, preserved here)
-        // ... (JiraSyncWorker calls) ...
     }
 
     /**
-     * @description Checks settings and auto-creates a Request if only one active vendor exists.
-     * @param newTickets List of new tickets
+     * @description Checks settings and auto-creates/sends a Request if configured.
      */
     private static void handleNetworkEntitySync(List<Ticket__c> newTickets) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
-        Boolean shouldRunSync = settings.AutoSyncNetworkEntityBool__c;
+        
+        // 1. Check "Create Request" Setting (Default TRUE if missing)
+        Boolean shouldCreateRequest = true;
+        if (settings.Id != null) {
+            Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
+            if (populatedFields.containsKey('AutoCreateRequestFromTicketBool__c')) {
+                shouldCreateRequest = settings.AutoCreateRequestFromTicketBool__c;
+            }
+        }
 
-        if (!shouldRunSync) {
+        if (!shouldCreateRequest) {
             return;
         }
 
-        // PMD Fix: Use WITH USER_MODE to validate CRUD permissions
+        // 2. Get active vendors
         List<Network_Entity__c> vendors = [
             SELECT Id 
             FROM Network_Entity__c 
@@ -99,34 +91,44 @@ public without sharing class TicketTriggerHandler {
             }
 
             if (!newRequests.isEmpty()) {
-                // PMD Fix: Secure DML
-                SObjectAccessDecision decision = Security.stripInaccessible(
-                    AccessType.CREATABLE, newRequests);
+                SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, newRequests);
                 insert decision.getRecords();
+
+                // 3. Check "Auto-Send" Setting (Default TRUE if missing, per your request)
+                Boolean shouldAutoSend = true;
+                if (settings.Id != null) {
+                    Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
+                    if (populatedFields.containsKey('AutoSyncNetworkEntityBool__c')) { // This is your "Send" field
+                        shouldAutoSend = settings.AutoSyncNetworkEntityBool__c;
+                    }
+                }
+
+                // 4. Enqueue Job if Auto-Send is ON
+                if (shouldAutoSend) {
+                    List<Id> createdRequestIds = new List<Id>();
+                    for (SObject r : decision.getRecords()) {
+                        createdRequestIds.add(r.Id);
+                    }
+                    if (!createdRequestIds.isEmpty()) {
+                        System.enqueueJob(new DeliveryHubRequestSenderQueueable(createdRequestIds));
+                    }
+                }
             }
         }
     }
     
-    /**
-     * @description Logic to handle Before Update events (Blocking logic)
-     * @param newTickets List of new tickets
-     * @param oldMap Map of old tickets
-     */
+    // ... handleBeforeUpdate remains unchanged ...
     public static void handleBeforeUpdate(List<Ticket__c> newTickets, Map<Id, Ticket__c> oldMap) {
         Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'}; 
-
         Set<Id> ticketsToCheck = new Set<Id>();
         for (Ticket__c ticket : newTickets) {
             String oldStage = oldMap.get(ticket.Id).StageNamePk__c;
             String newStage = ticket.StageNamePk__c;
-            
             if (activeDevStages.contains(newStage) && !activeDevStages.contains(oldStage)) {
                 ticketsToCheck.add(ticket.Id);
             }
         }
-
         if (!ticketsToCheck.isEmpty()) {
-            // PMD Fix: Use WITH USER_MODE
             List<Ticket_Dependency__c> unresolvedBlockers = [
                 SELECT Blocked_Ticket__c, Blocking_Ticket__r.Name, Blocking_Ticket__r.StageNamePk__c
                 FROM Ticket_Dependency__c
@@ -134,7 +136,6 @@ public without sharing class TicketTriggerHandler {
                 AND Blocking_Ticket__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
                 WITH USER_MODE
             ];
-
             for (Ticket_Dependency__c dependency : unresolvedBlockers) {
                 for (Ticket__c ticket : newTickets) {
                     if (ticket.Id == dependency.Blocked_Ticket__c) {

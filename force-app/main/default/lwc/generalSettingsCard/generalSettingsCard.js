@@ -5,56 +5,61 @@ import saveGeneralSettings from '@salesforce/apex/DeliveryHubSettingsController.
 
 export default class GeneralSettingsCard extends LightningElement {
     @track notifications = false;
-    @track autoCreateRequest = true; 
-    @track autoSendRequest = true;
+    @track autoSyncNetworkEntity = true; // Default to true
     
     isLoading = true;
 
+    // 1. REPLACED @wire WITH IMPERATIVE CALL
+    // This runs once when the component loads and hits the server directly (bypassing cache)
     connectedCallback() {
         this.loadSettings();
     }
 
     async loadSettings() {
         try {
-            const data = await getSettings(); 
+            const data = await getSettings(); // Direct Apex Call
+            
             if (data) {
                 this.notifications = data.enableNotifications || false;
                 
-                // Safe checks for the new booleans
-                if (data.autoCreateRequest !== undefined) this.autoCreateRequest = data.autoCreateRequest;
-                if (data.autoSendRequest !== undefined) this.autoSendRequest = data.autoSendRequest;
+                // Explicit check for undefined/null to respect 'false' values
+                if (data.autoSyncNetworkEntity !== undefined && data.autoSyncNetworkEntity !== null) {
+                    this.autoSyncNetworkEntity = data.autoSyncNetworkEntity;
+                }
             }
         } catch (error) {
-            this.showToast('Error', 'Could not load settings', 'error');
+            this.showToast('Error Loading Settings', error.body ? error.body.message : error.message, 'error');
         } finally {
             this.isLoading = false;
         }
     }
 
+    // Handler for Notifications
     handleNotificationsToggle(event) {
         this.notifications = event.target.checked;
         this.saveState();
     }
 
-    handleAutoCreateToggle(event) {
-        this.autoCreateRequest = event.target.checked;
+    // Handler for Auto-Sync
+    handleAutoSyncToggle(event) {
+        this.autoSyncNetworkEntity = event.target.checked;
         this.saveState();
     }
 
-    handleAutoSendToggle(event) {
-        this.autoSendRequest = event.target.checked;
-        this.saveState();
-    }
-
+    // Centralized Save Logic
     async saveState() {
         try {
             await saveGeneralSettings({ 
                 enableNotifications: this.notifications,
-                autoCreateRequest: this.autoCreateRequest,
-                autoSendRequest: this.autoSendRequest
+                autoSyncNetworkEntity: this.autoSyncNetworkEntity
             });
+            
+            // Optional: Show a subtle success toast
+            // this.showToast('Success', 'Settings updated', 'success');
+
         } catch (error) {
-            this.showToast('Error', 'Failed to save settings', 'error');
+            this.showToast('Error Saving Settings', error.body ? error.body.message : error.message, 'error');
+            // Revert toggle on error if needed
         }
     }
 
