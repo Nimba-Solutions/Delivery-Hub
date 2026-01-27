@@ -1,83 +1,93 @@
 /**
- * @description Controller for the Delivery Hub Setup Wizard.
- * Allows any org to instantly configure itself as a Client Node in the Delivery Network.
+ * @description Controller for the Delivery Hub Setup LWC.
+ * Handles connecting to the mothership (Nimba) and initializing app defaults.
  */
 public with sharing class DeliveryHubSetupController {
 
-    private static final String DEFAULT_MOTHERSHIP_URL = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1/intake/';
-    private static final String ENTITY_NAME = 'Cloud Nimbus LLC (Dev Team)';
+    public class SetupStatus {
+        @AuraEnabled public Boolean isConnected;
+        @AuraEnabled public String requiredRemoteSite;
+        @AuraEnabled public Network_Entity__c entity;
+    }
 
-    /**
-     * @description Checks if the org is already connected to a Mothership.
-     * @return Map<String, Object> Status map containing 'isConnected', 'entity' details, and 'requiredRemoteSite'.
-     */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getSetupStatus() {
-        Map<String, Object> result = new Map<String, Object>();
+    public static SetupStatus getSetupStatus() {
+        SetupStatus status = new SetupStatus();
         
-        // Explicitly check access before query
-        if (!Schema.sObjectType.Network_Entity__c.isAccessible()) {
-            result.put('isConnected', false);
-            return result;
-        }
+        // 1. Define the Remote Site URL we need
+        status.requiredRemoteSite = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com';
 
+        // 2. Check for existing Network Entity
         List<Network_Entity__c> entities = [
-            SELECT Id, Name, IntegrationEndpointUrlTxt__c, StatusPk__c 
+            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c 
             FROM Network_Entity__c 
-            WHERE EntityTypePk__c = 'Vendor'
-            AND StatusPk__c = 'Active'
+            WHERE Name = 'Nimba Solutions (Dev Team)' 
             LIMIT 1
         ];
 
         if (!entities.isEmpty()) {
-            result.put('isConnected', true);
-            result.put('entity', entities[0]);
+            status.isConnected = true;
+            status.entity = entities[0];
         } else {
-            result.put('isConnected', false);
+            status.isConnected = false;
         }
-        
-        result.put('requiredRemoteSite', 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com');
-        return result;
+
+        return status;
     }
 
     /**
-     * @description One-click configuration. Creates the Network Entity pointing to Nimba.
-     * @return String The ID of the created or existing Network_Entity__c record.
+     * @description Creates the Network Entity and initializes Default Settings.
      */
     @AuraEnabled
-    public static String connectToDefaultMothership() {
-        try {
-            if (!Schema.sObjectType.Network_Entity__c.isAccessible()) {
-                throw new AuraHandledException('Insufficient permissions to read Network Entity.');
-            }
+    public static void connectToDefaultMothership() {
+        // 1. Create Network Entity if it doesn't exist
+        List<Network_Entity__c> existing = [
+            SELECT Id FROM Network_Entity__c 
+            WHERE Name = 'Nimba Solutions (Dev Team)' 
+            LIMIT 1
+        ];
 
-            List<Network_Entity__c> existing = [
-                SELECT Id FROM Network_Entity__c 
-                WHERE IntegrationEndpointUrlTxt__c = :DEFAULT_MOTHERSHIP_URL 
-                LIMIT 1
-            ];
-            
-            if (!existing.isEmpty()) {
-                return existing[0].Id;
-            }
-
-            Network_Entity__c entity = new Network_Entity__c(
-                Name = ENTITY_NAME,
-                EntityTypePk__c = 'Vendor',
+        if (existing.isEmpty()) {
+            Network_Entity__c mothership = new Network_Entity__c(
+                Name = 'Nimba Solutions (Dev Team)',
                 StatusPk__c = 'Active',
-                IntegrationEndpointUrlTxt__c = DEFAULT_MOTHERSHIP_URL
+                EntityTypePk__c = 'Vendor',
+                IntegrationEndpointUrlTxt__c = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/Tickets'
             );
             
-            // Explicit check before insert
+            // Check permissions
             if (Schema.sObjectType.Network_Entity__c.isCreateable()) {
-                insert entity;
-                return entity.Id;
-            } else {
-                throw new AuraHandledException('Insufficient permissions to create Network Entity.');
+                insert mothership;
             }
+        }
 
-        } catch (Exception e) {
-            throw new AuraHandledException('Setup Failed: ' + e.getMessage());
+        // 2. Initialize Delivery Hub Settings (Quickstart Configuration)
+        initializeDefaultSettings();
+    }
+
+    /**
+     * @description Ensures the Custom Setting record exists with sensible "Happy Path" defaults.
+     */
+    private static void initializeDefaultSettings() {
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+
+        // If no record exists (Id is null), we create one with defaults.
+        // If one exists, we leave it alone so we don't overwrite user choices.
+        if (settings.Id == null) {
+            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
+            
+            // --- SET YOUR "HAPPY PATH" DEFAULTS HERE ---
+            settings.AutoSyncNetworkEntityBool__c = true;
+            settings.EnableNotificationsBool__c = true;
+            settings.AISuggestionsEnabledBool__c = true; 
+            settings.AutoGenerateDescriptionsBool__c = true;
+            settings.AIEstimationEnabledBool__c = true;
+            
+            // Note: We don't default API keys or JIRA credentials as those are sensitive/specific
+            
+            if (Schema.sObjectType.Delivery_Hub_Settings__c.isCreateable()) {
+                insert settings;
+            }
         }
     }
 }
