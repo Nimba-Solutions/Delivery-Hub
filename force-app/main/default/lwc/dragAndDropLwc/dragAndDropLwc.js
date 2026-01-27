@@ -238,29 +238,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
 
     "Deployed": { bg: "rgba(209, 250, 229, 0.5)", color: "#059669" },
     "Done": { bg: "rgba(229, 231, 235, 0.5)", color: "#374151" },
-    "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" },
-    
-    // Granular View Keys (if needed for Consultant/Dev)
-    "Intake": "Intake Queue",
-    "Scoping In Progress": "Active Scoping",
-    "Ready for Development": "Dev Queue",
-    "Back For Development": "Rework",
-    "Dev Blocked": "Blocked",
-    "Ready for Scratch Test": "To Scratch Test",
-    "Scratch Testing": "Scratch Testing",
-    "Ready for QA": "To QA",
-    "QA In Progress": "QA",
-    "Ready for Internal UAT": "To Internal UAT",
-    "Internal UAT": "Internal UAT",
-    "Ready for Merge": "To Merge",
-    "Merging": "Merging",
-    "Ready for Deployment": "To Deploy",
-    "Deploying": "Deploying",
-    
-    // Explicit keys matching personaColumnStatusMap
-    "Pending Tech Approval": "Tech Approval",
-    "Pending Client Approval": "Client Approval",
-    "QA & Review": "QA & Review"
+    "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" }
   };
 
   /** Who owns each status - Source of Truth **/
