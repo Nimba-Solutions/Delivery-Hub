@@ -1,12 +1,21 @@
+/**
+ * @description Controller for sending Requests to the Vendor via REST API.
+ */
 public with sharing class DeliveryHubSender {
 
-    // Default Base URL (No specific resource)
+    // Default Base URL matches the Setup Controller (Root of the API version)
     private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1';
 
+    /**
+     * @description Sends a Request record to the connected Vendor.
+     * @param requestId The ID of the Request record to send.
+     * @return String 'Success' or error message.
+     */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String sendRequestToVendor(Id requestId) {
         try {
+            // Fetch Request Data
             Request__c reqRec = [
                 SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
                        TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
@@ -17,17 +26,19 @@ public with sharing class DeliveryHubSender {
                 LIMIT 1
             ];
 
+            // Determine Endpoint
             String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
             if (String.isBlank(baseUrl)) {
                 baseUrl = DEFAULT_BASE_URL;
             }
 
-            // FIX: Append the specific resource path for Tickets
+            // Append specific resource path
             if (!baseUrl.endsWith('/')) {
                 baseUrl += '/';
             }
             String fullEndpoint = baseUrl + 'intake';
 
+            // Construct Payload
             Map<String, Object> payload = new Map<String, Object>{
                 'title' => reqRec.TicketId__r.WorkItemNameTxt__c,
                 'briefSummary' => reqRec.TicketId__r.BriefDescriptionTxt__c,
@@ -40,6 +51,7 @@ public with sharing class DeliveryHubSender {
                 'brokerRequestId' => reqRec.Id 
             };
 
+            // Send Request
             HttpRequest httpReq = new HttpRequest();
             httpReq.setEndpoint(fullEndpoint);
             httpReq.setMethod('POST');
@@ -49,13 +61,20 @@ public with sharing class DeliveryHubSender {
             Http http = new Http();
             HttpResponse res = http.send(httpReq);
             
+            // Handle Response
             if (res.getStatusCode() == 201 || res.getStatusCode() == 200) {
                 String remoteId;
                 try {
                     Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-                    if (responseMap.containsKey('ticketId')) remoteId = (String) responseMap.get('ticketId');
-                    else if (responseMap.containsKey('id')) remoteId = (String) responseMap.get('id');
-                    else if (responseMap.containsKey('brokerRequestId')) remoteId = (String) responseMap.get('brokerRequestId');
+                    
+                    // PMD Fix: Added braces for if/else blocks
+                    if (responseMap.containsKey('ticketId')) {
+                        remoteId = (String) responseMap.get('ticketId');
+                    } else if (responseMap.containsKey('id')) {
+                        remoteId = (String) responseMap.get('id');
+                    } else if (responseMap.containsKey('brokerRequestId')) {
+                        remoteId = (String) responseMap.get('brokerRequestId');
+                    }
                 } catch(Exception e) {
                     remoteId = res.getBody().replace('"', ''); 
                 }
@@ -74,6 +93,11 @@ public with sharing class DeliveryHubSender {
         }
     }
 
+    /**
+     * @description Checks the status of a remote ticket via API.
+     * @param requestId The ID of the local Request record.
+     * @return String Status message from the remote system.
+     */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String checkRequestStatus(Id requestId) {
@@ -97,7 +121,7 @@ public with sharing class DeliveryHubSender {
             if (!baseUrl.endsWith('/')) {
                 baseUrl += '/';
             }
-            // FIX: Construct Status URL: .../intake/REC-123
+            // Construct Status URL: .../deliveryhub/v1/intake/REC-123
             String fullEndpoint = baseUrl + 'intake/' + reqRec.RemoteTicketIdTxt__c;
 
             HttpRequest httpReq = new HttpRequest();
