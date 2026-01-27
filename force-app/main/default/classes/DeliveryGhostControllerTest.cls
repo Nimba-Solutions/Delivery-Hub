@@ -3,7 +3,7 @@ private class DeliveryGhostControllerTest {
 
     @IsTest
     static void testCreateQuickRequest() {
-        // Create a dummy record to generate a real ID (Satisfies PMD AvoidHardcodingId)
+        // Create a dummy record to generate a real ID
         Account mockRecord = new Account(Name = 'Test Context Account');
         insert mockRecord;
 
@@ -12,11 +12,14 @@ private class DeliveryGhostControllerTest {
         context.url = 'https://salesforce.com/test';
         context.browser = 'Chrome Test Agent';
         context.objectName = 'Account';
-        context.recordId = mockRecord.Id; // Use real ID
+        context.recordId = mockRecord.Id; 
+
+        // FIX: Serialize to JSON String
+        String contextJson = JSON.serialize(context);
 
         Test.startTest();
-        // Call the method
-        DeliveryGhostController.createQuickRequest('Test Bug', 'Something is broken', context);
+        // Pass JSON string instead of object
+        DeliveryGhostController.createQuickRequest('Test Bug', 'Something is broken', contextJson);
         Test.stopTest();
 
         // Verify Ticket Created
@@ -36,10 +39,13 @@ private class DeliveryGhostControllerTest {
         context.url = 'https://salesforce.com/nav';
         context.browser = 'Safari';
         context.objectName = 'Opportunity';
-        context.recordId = mockRecord.Id; // Use real ID
+        context.recordId = mockRecord.Id; 
+
+        // FIX: Serialize to JSON String
+        String contextJson = JSON.serialize(context);
 
         Test.startTest();
-        DeliveryGhostController.logUserActivity('Navigation', context);
+        DeliveryGhostController.logUserActivity('Navigation', contextJson);
         Test.stopTest();
 
         User_Activity_Log__c log = [SELECT ActionTypePk__c FROM User_Activity_Log__c LIMIT 1];

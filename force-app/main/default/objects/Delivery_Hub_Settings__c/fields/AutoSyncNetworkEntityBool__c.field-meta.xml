@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AutoSyncNetworkEntityBool__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>&quot;Auto-Send&quot; functionality (triggering the API callout automatically when the Ticket matches your criteria)</description>
+    <label>Auto-Sync Network Entity</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

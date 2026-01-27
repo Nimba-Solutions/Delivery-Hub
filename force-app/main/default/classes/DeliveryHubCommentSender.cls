@@ -3,6 +3,9 @@
  */
 public with sharing class DeliveryHubCommentSender {
 
+    // Default Base URL matches the Setup Controller
+    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1';
+
     /**
      * @description Fetches the live conversation from the Mothership
      * @param requestId The ID of the Request record.
@@ -16,7 +19,9 @@ public with sharing class DeliveryHubCommentSender {
                 return new List<Map<String, Object>>();
             }
 
-            String endpoint = getBaseUrl(req) + '/' + req.RemoteTicketIdTxt__c;
+            // Construct URL: .../deliveryhub/v1/comments/{RemoteTicketId}
+            String endpoint = getBaseUrl(req) + 'comments/' + req.RemoteTicketIdTxt__c;
+            
             HttpRequest httpReq = new HttpRequest();
             httpReq.setEndpoint(endpoint);
             httpReq.setMethod('GET');
@@ -51,7 +56,9 @@ public with sharing class DeliveryHubCommentSender {
                 throw new AuraHandledException('Offer must be sent before commenting.');
             }
 
-            String endpoint = getBaseUrl(req) + '/' + req.RemoteTicketIdTxt__c;
+            // Construct URL: .../deliveryhub/v1/comments/{RemoteTicketId}
+            String endpoint = getBaseUrl(req) + 'comments/' + req.RemoteTicketIdTxt__c;
+            
             Map<String, Object> payload = new Map<String, Object>{
                 'body' => body,
                 'author' => UserInfo.getName() + ' (' + UserInfo.getOrganizationName() + ')'
@@ -74,13 +81,26 @@ public with sharing class DeliveryHubCommentSender {
         }
     }
 
+    /**
+     * @description Calculates the base URL from the Entity record or default.
+     */
     private static String getBaseUrl(Request__c req) {
         String base = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
-        return base.replace('/intake', '/comments');
+        
+        if (String.isBlank(base)) {
+            base = DEFAULT_BASE_URL;
+        }
+
+        // Ensure proper slash formatting
+        if (!base.endsWith('/')) {
+            base += '/';
+        }
+        
+        return base;
     }
 
     private static Request__c getRequestInfo(Id requestId) {
-        // REMOVED WITH USER_MODE to prevent package build failures
+        // Suppress CRUD check if necessary, or use WITH USER_MODE if your users have permissions
         return [
             SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
             FROM Request__c 
