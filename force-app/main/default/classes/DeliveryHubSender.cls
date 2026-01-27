@@ -8,7 +8,7 @@ public with sharing class DeliveryHubSender {
     /**
      * @description LWC-callable method to send a request. Wraps sync logic with Aura exception handling.
      * @param requestId The ID of the Request record to send.
-     * @return String 'Success' or an error message.
+     * @return String 'Success' on successful transmission or an error message.
      */
     @AuraEnabled
     public static String sendRequestToVendor(Id requestId) {
