@@ -46,13 +46,10 @@ export default class DeliveryHubSetup extends NavigationMixin(LightningElement) 
 
     navigateToTickets() {
         this[NavigationMixin.Navigate]({
-            type: 'standard__objectPage',
+            type: 'standard__navItemPage',
             attributes: {
-                objectApiName: '%%%NAMESPACED_ORG%%%Ticket__c',
-                actionName: 'list'
-            },
-            state: {
-                filterName: 'Recent'
+                // The API Name of the tab from your URL: /lightning/n/draganddroplwc
+                apiName: 'draganddroplwc'
             }
         });
     }
