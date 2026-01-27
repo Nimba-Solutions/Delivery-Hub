@@ -203,6 +203,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param apiKey The API key to test
      * @return String result message
      */
+    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
     @AuraEnabled
     public static String testOpenAIConnection(String apiKey) {
         HttpRequest req = new HttpRequest();
@@ -232,7 +233,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param projectKey JIRA Project Key
      * @return String result message
      */
-    @SuppressWarnings('PMD.ExcessiveParameterList')
+    @SuppressWarnings('PMD.ExcessiveParameterList, PMD.ApexSuggestUsingNamedCred')
     @AuraEnabled
     public static String testJiraConnection(String jiraUrl, String username, String apiToken, String projectKey) {
         try {
