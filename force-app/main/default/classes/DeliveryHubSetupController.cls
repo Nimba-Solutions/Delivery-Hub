@@ -60,7 +60,7 @@ public without sharing class DeliveryHubSetupController {
                 Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
                 EntityTypePk__c = 'Vendor',
-                IntegrationEndpointUrlTxt__c = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1'
+                IntegrationEndpointUrlTxt__c = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1'
             );
             
             // We use stripInaccessible for INSERT to be safe, but queries above must be open
