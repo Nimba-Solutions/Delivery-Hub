@@ -7,6 +7,8 @@ public with sharing class DeliveryHubSender {
 
     /**
      * @description LWC-callable method to send a request. Wraps sync logic with Aura exception handling.
+     * @param requestId The ID of the Request record to send.
+     * @return String 'Success' or an error message.
      */
     @AuraEnabled
     public static String sendRequestToVendor(Id requestId) {
@@ -20,10 +22,12 @@ public with sharing class DeliveryHubSender {
 
     /**
      * @description Core synchronous logic to send request. Callable by Queueable/Apex.
+     * @param requestId The ID of the Request record to send.
+     * @return String 'Success' on successful transmission.
      */
+    @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String sendRequestSync(Id requestId) {
-        // Fetch Request Data (Without User Mode for Queueable/System context compatibility if needed, 
-        // but keeping it simple here. If Queueable fails on FLS, remove 'WITH USER_MODE' from query inside)
+        // Fetch Request Data (System Mode for Queueable compatibility)
         Request__c reqRec = [
             SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
                     TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
@@ -86,13 +90,21 @@ public with sharing class DeliveryHubSender {
             
             reqRec.RemoteTicketIdTxt__c = remoteId;
             reqRec.StatusPk__c = 'Offer Sent'; 
-            update reqRec;
+            
+            if (Schema.sObjectType.Request__c.isUpdateable()) {
+                update reqRec;
+            }
             return 'Success';
         } else {
             throw new CalloutException('Network Error (' + res.getStatusCode() + '): ' + res.getBody());
         }
     }
 
+    /**
+     * @description Checks the status of a remote ticket via API.
+     * @param requestId The ID of the local Request record.
+     * @return String Status message from the remote system.
+     */
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
         try {
@@ -100,6 +112,7 @@ public with sharing class DeliveryHubSender {
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE Id = :requestId 
+                WITH USER_MODE
                 LIMIT 1
             ];
 

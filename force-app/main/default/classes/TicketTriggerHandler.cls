@@ -4,8 +4,16 @@
  */
 public without sharing class TicketTriggerHandler {
     
+    /** @description Flag to disable trigger execution */
     public static boolean triggerDisabled = false;
 
+    /**
+     * @description Entry point for After Insert/Update logic
+     * @param newRows List of new Ticket records
+     * @param oldMap Map of old Ticket records
+     * @param isInsert Boolean indicating insert context
+     * @param isUpdate Boolean indicating update context
+     */
     public static void handleAfter(
         List<Ticket__c> newRows,
         Map<Id, Ticket__c> oldMap,
@@ -51,6 +59,7 @@ public without sharing class TicketTriggerHandler {
 
     /**
      * @description Checks settings and auto-creates/sends a Request if configured.
+     * @param newTickets List of new tickets
      */
     private static void handleNetworkEntitySync(List<Ticket__c> newTickets) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
@@ -77,47 +86,55 @@ public without sharing class TicketTriggerHandler {
             LIMIT 2
         ];
 
-        if (vendors.size() == 1) {
-            Network_Entity__c vendor = vendors[0];
-            List<Request__c> newRequests = new List<Request__c>();
+        if (vendors.size() != 1) {
+            return; // Only sync if exactly one active vendor exists
+        }
 
-            for (Ticket__c t : newTickets) {
-                newRequests.add(new Request__c(
-                    TicketId__c = t.Id, 
-                    DeliveryEntityId__c = vendor.Id,
-                    StatusPk__c = 'Draft',
-                    PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
-                ));
+        Network_Entity__c vendor = vendors[0];
+        List<Request__c> newRequests = new List<Request__c>();
+
+        for (Ticket__c t : newTickets) {
+            newRequests.add(new Request__c(
+                TicketId__c = t.Id, 
+                DeliveryEntityId__c = vendor.Id,
+                StatusPk__c = 'Draft',
+                PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
+            ));
+        }
+
+        if (newRequests.isEmpty()) {
+            return;
+        }
+
+        SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, newRequests);
+        insert decision.getRecords();
+
+        // 3. Check "Auto-Send" Setting (Default TRUE if missing, per requirements)
+        Boolean shouldAutoSend = true;
+        if (settings.Id != null) {
+            Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
+            if (populatedFields.containsKey('AutoSyncNetworkEntityBool__c')) { // This is your "Send" field
+                shouldAutoSend = settings.AutoSyncNetworkEntityBool__c;
             }
+        }
 
-            if (!newRequests.isEmpty()) {
-                SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, newRequests);
-                insert decision.getRecords();
-
-                // 3. Check "Auto-Send" Setting (Default TRUE if missing, per your request)
-                Boolean shouldAutoSend = true;
-                if (settings.Id != null) {
-                    Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
-                    if (populatedFields.containsKey('AutoSyncNetworkEntityBool__c')) { // This is your "Send" field
-                        shouldAutoSend = settings.AutoSyncNetworkEntityBool__c;
-                    }
-                }
-
-                // 4. Enqueue Job if Auto-Send is ON
-                if (shouldAutoSend) {
-                    List<Id> createdRequestIds = new List<Id>();
-                    for (SObject r : decision.getRecords()) {
-                        createdRequestIds.add(r.Id);
-                    }
-                    if (!createdRequestIds.isEmpty()) {
-                        System.enqueueJob(new DeliveryHubRequestSenderQueueable(createdRequestIds));
-                    }
-                }
+        // 4. Enqueue Job if Auto-Send is ON
+        if (shouldAutoSend) {
+            List<Id> createdRequestIds = new List<Id>();
+            for (SObject r : decision.getRecords()) {
+                createdRequestIds.add(r.Id);
+            }
+            if (!createdRequestIds.isEmpty()) {
+                System.enqueueJob(new DeliveryHubRequestSenderQueueable(createdRequestIds));
             }
         }
     }
     
-    // ... handleBeforeUpdate remains unchanged ...
+    /**
+     * @description Logic to handle Before Update events (Blocking logic)
+     * @param newTickets List of new tickets
+     * @param oldMap Map of old tickets
+     */
     public static void handleBeforeUpdate(List<Ticket__c> newTickets, Map<Id, Ticket__c> oldMap) {
         Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'}; 
         Set<Id> ticketsToCheck = new Set<Id>();

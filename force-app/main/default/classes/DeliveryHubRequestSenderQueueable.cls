@@ -6,12 +6,22 @@ public class DeliveryHubRequestSenderQueueable implements Queueable, Database.Al
     
     private List<Id> requestIds;
 
+    /**
+     * @description Constructor
+     * @param requestIds List of Request IDs to process
+     */
     public DeliveryHubRequestSenderQueueable(List<Id> requestIds) {
         this.requestIds = requestIds;
     }
 
+    /**
+     * @description Executes the queueable job
+     * @param context Queueable context
+     */
     public void execute(QueueableContext context) {
-        if (requestIds == null || requestIds.isEmpty()) return;
+        if (requestIds == null || requestIds.isEmpty()) {
+            return;
+        }
 
         for (Id reqId : requestIds) {
             try {
