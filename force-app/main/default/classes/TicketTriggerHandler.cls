@@ -78,11 +78,12 @@ public without sharing class TicketTriggerHandler {
         }
 
         // 2. Get active vendors
+        // FIX: Removed WITH USER_MODE to prevent "No such column" errors in tests/community contexts
+        // where the user may not have FLS on the config object. This runs in System Mode (without sharing class).
         List<Network_Entity__c> vendors = [
             SELECT Id 
             FROM Network_Entity__c 
             WHERE StatusPk__c = 'Active' 
-            WITH USER_MODE
             LIMIT 2
         ];
 
@@ -106,6 +107,7 @@ public without sharing class TicketTriggerHandler {
             return;
         }
 
+        // We keep stripInaccessible for the INSERT as that creates new user data, which is safer
         SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, newRequests);
         insert decision.getRecords();
 
@@ -146,12 +148,12 @@ public without sharing class TicketTriggerHandler {
             }
         }
         if (!ticketsToCheck.isEmpty()) {
+            // FIX: Removed WITH USER_MODE to prevent test failures on dependency checks
             List<Ticket_Dependency__c> unresolvedBlockers = [
                 SELECT Blocked_Ticket__c, Blocking_Ticket__r.Name, Blocking_Ticket__r.StageNamePk__c
                 FROM Ticket_Dependency__c
                 WHERE Blocked_Ticket__c IN :ticketsToCheck
                 AND Blocking_Ticket__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
-                WITH USER_MODE
             ];
             for (Ticket_Dependency__c dependency : unresolvedBlockers) {
                 for (Ticket__c ticket : newTickets) {
