@@ -44,11 +44,11 @@ export default class DeliveryHubSetup extends NavigationMixin(LightningElement) 
             });
     }
 
-    navigateToRequests() {
+    navigateToTickets() {
         this[NavigationMixin.Navigate]({
             type: 'standard__objectPage',
             attributes: {
-                objectApiName: 'Request__c',
+                objectApiName: '%%%NAMESPACED_ORG%%%Ticket__c',
                 actionName: 'list'
             },
             state: {
