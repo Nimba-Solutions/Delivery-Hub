@@ -21,24 +21,24 @@ import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSetti
 const FIELDS = {
     ID: 'Id',
     NAME: 'Name',
-    BRIEF_DESC: `%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c`,
-    DETAILS: `%%%NAMESPACED_ORG%%%DetailsTxt__c`,
-    STAGE: `%%%NAMESPACED_ORG%%%StageNamePk__c`,
-    PRIORITY: `%%%NAMESPACED_ORG%%%PriorityPk__c`,
-    SORT_ORDER: `%%%NAMESPACED_ORG%%%SortOrderNumber__c`,
-    IS_ACTIVE: `%%%NAMESPACED_ORG%%%IsActiveBool__c`,
-    TAGS: `%%%NAMESPACED_ORG%%%Tags__c`,
-    EPIC: `%%%NAMESPACED_ORG%%%Epic__c`,
-    INTENTION: `%%%NAMESPACED_ORG%%%ClientIntentionPk__c`,
-    DEV_DAYS_SIZE: `%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c`,
-    CALCULATED_ETA: `%%%NAMESPACED_ORG%%%CalculatedETADate__c`,
-    PROJECTED_UAT_READY: `%%%NAMESPACED_ORG%%%ProjectedUATReadyDate__c`,
-    DEVELOPER: `%%%NAMESPACED_ORG%%%Developer__c`,
+    BRIEF_DESC: `BriefDescriptionTxt__c`,
+    DETAILS: `DetailsTxt__c`,
+    STAGE: `StageNamePk__c`,
+    PRIORITY: `PriorityPk__c`,
+    SORT_ORDER: `SortOrderNumber__c`,
+    IS_ACTIVE: `IsActiveBool__c`,
+    TAGS: `Tags__c`,
+    EPIC: `Epic__c`,
+    INTENTION: `ClientIntentionPk__c`,
+    DEV_DAYS_SIZE: `DeveloperDaysSizeNumber__c`,
+    CALCULATED_ETA: `CalculatedETADate__c`,
+    PROJECTED_UAT_READY: `ProjectedUATReadyDate__c`,
+    DEVELOPER: `Developer__c`,
     // Relationships
-    DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%Ticket_Dependency1__r`,
-    DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%Ticket_Dependency__r`,
-    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%Blocking_Ticket__c`,
-    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_Ticket__c`
+    DEP_REL_BLOCKED_BY: `Ticket_Dependency1__r`,
+    DEP_REL_BLOCKING: `Ticket_Dependency__r`,
+    BLOCKING_TICKET: `Blocking_Ticket__c`,
+    BLOCKED_TICKET: `Blocked_Ticket__c`
 };
 
 export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
@@ -53,7 +53,7 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track recentComments = [];
     @track numDevs = 2;
     @track etaResults = [];
-    @track showAllColumns = false; // Default set to false as requested
+    @track showAllColumns = false; 
     @track showCreateModal = false;
     @track nextSortOrder = 1;
     @track overallFilter = "all";
@@ -80,8 +80,29 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     @track searchTerm = '';
     @track searchResults = [];
     @track isSearching = false;
+    @track hasValidOpenAIKey = false;
 
     ticketsWire;
+
+    // --- CONNECTED CALLBACK (Fix for settings error) ---
+    connectedCallback() {
+        this.loadSettings();
+    }
+
+    async loadSettings() {
+        try {
+            const data = await getSettings();
+            if (data) {
+                this.AiEnhancementEnabled = data.aiSuggestionsEnabled || false;
+                this.AiEstimation = data.aiEstimationEnabled || false;
+                this.hasValidOpenAIKey = data.openAiApiTested || false;
+            }
+        } catch (error) {
+            // Suppress the toast for silent failures or show it if critical
+            // this.showToast('Error Loading AI Settings', error.body ? error.body.message : error.message, 'error');
+            console.error('Error loading settings:', error);
+        }
+    }
 
   // Visual Rules: Queues (Light), Work (Active Colors), Hold (Red)
   statusColorMap = {
@@ -882,20 +903,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     }
   }
 
-  @wire(getSettings)
-      wiredSettings({ error, data }) {
-       
-          if (data) {
-              this.AiEnhancementEnabled = data.aiSuggestionsEnabled || false;
-              this.AiEstimation = data.aiEstimationEnabled || false;
-              
-              this.hasValidOpenAIKey = data.openAiApiTested || false;
-          } else if (error) {
-              this.showToast('Error Loading AI Settings', error.body.message, 'error');
-          }
-      }
-   
-
   /* Toolbar button */
   openCreateModal() {
     this.showCreateModal = true;
@@ -1344,42 +1351,6 @@ export default class DragAndDropLwc extends NavigationMixin(LightningElement) {
     this.showModal = true;
     this.moveComment = "";
   }
-  // handleAdvanceOption(e) {
-  //  const newStage = e.target.dataset.value;
-  //  this.selectedStage = newStage;
-  //  this.handleSaveTransition();
-  // }
-
-//   async handleAdvanceOption(e) {
-//     const newStage = e.target.dataset.value;
-//     const ticketId = this.selectedRecord.Id;
-
-//     try {
-//         const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
-
-//         if (requiredFields && requiredFields.length > 0) {
-//             // Fields are required. Close the current modal and open the new one.
-//             this.closeModal(); // Close the simple move modal
-            
-//             this.transitionTicketId = ticketId;
-//             this.transitionTargetStage = newStage;
-//             this.transitionRequiredFields = requiredFields;
-//             this.showTransitionModal = true;
-//         } else {
-//             // No fields required, proceed with the original save.
-//             this.selectedStage = newStage;
-//             this.handleSaveTransition();
-//         }
-//     } catch (error) {
-//         this.showToast('Error', 'Could not check for required fields.', 'error');
-//         console.error(error);
-//     }
-// }
-//   handleBacktrackOption(e) {
-//     const newStage = e.target.dataset.value;
-//     this.selectedStage = newStage;
-//     this.handleSaveTransition();
-//   }
 
 async handleAdvanceOption(e) {
         const newStage = e.target.dataset.value;
@@ -1549,7 +1520,7 @@ handleSaveTransition() {
       column.classList.add("drag-over");
     }
 
-    // Instead of moving the card, we move the placeholder
+    // Instead of move, we move the placeholder
     const cardsContainer = column.querySelector(".kanban-column-body");
     const afterElement = this.getDragAfterElement(
       cardsContainer,
@@ -2035,9 +2006,9 @@ handleTransitionError(event) {
 
 
     // closeModal() {
-    //      this.isModalOpen = false;
-    //      this.searchResults = [];
-    //      this.searchTerm = '';
+    //       this.isModalOpen = false;
+    //       this.searchResults = [];
+    //       this.searchTerm = '';
     // }
 
     handleSearchTermChange(event) {
