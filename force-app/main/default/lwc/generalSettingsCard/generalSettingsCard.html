@@ -7,7 +7,7 @@
                 </div>
                 <div class="header-text">
                     <h2 class="card-title">General Settings</h2>
-                    <p class="card-subtitle">Configure general application preferences and behavior</p>
+                    <p class="card-subtitle">Configure automation and notification preferences</p>
                 </div>
             </div>
         </div>
@@ -18,21 +18,13 @@
                 <div class="toggle-group">
                     <div class="toggle-content">
                         <div class="toggle-label-wrapper">
-                            <lightning-icon icon-name="utility:notification" alternative-text="Notifications" size="x-small"></lightning-icon>
+                            <lightning-icon icon-name="utility:notification" size="x-small"></lightning-icon>
                             <label class="toggle-label">Enable Notifications</label>
                         </div>
-                        <div class="toggle-help">
-                            Receive notifications for ticket updates and system events
-                        </div>
+                        <div class="toggle-help">Receive notifications for ticket updates and system events.</div>
                     </div>
                     <div class="toggle-control">
-                        <div class="custom-toggle">
-                            <lightning-input
-                                type="toggle"
-                                checked={notifications}
-                                onchange={handleNotificationsToggle}>
-                            </lightning-input>
-                        </div>
+                        <lightning-input type="toggle" checked={notifications} onchange={handleNotificationsToggle}></lightning-input>
                     </div>
                 </div>
             </div>
@@ -43,21 +35,30 @@
                 <div class="toggle-group">
                     <div class="toggle-content">
                         <div class="toggle-label-wrapper">
-                            <lightning-icon icon-name="utility:connected_apps" alternative-text="Sync" size="x-small"></lightning-icon>
-                            <label class="toggle-label">Auto-Sync Network Entity</label>
+                            <lightning-icon icon-name="utility:add" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Auto-Create Request</label>
                         </div>
-                        <div class="toggle-help">
-                            Automatically create a Request when a Ticket is created if only one active Vendor exists.
-                        </div>
+                        <div class="toggle-help">Automatically create a draft Request when a Ticket is created.</div>
                     </div>
                     <div class="toggle-control">
-                        <div class="custom-toggle">
-                            <lightning-input
-                                type="toggle"
-                                checked={autoSyncNetworkEntity}
-                                onchange={handleAutoSyncToggle}>
-                            </lightning-input>
+                        <lightning-input type="toggle" checked={autoCreateRequest} onchange={handleAutoCreateToggle}></lightning-input>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:connected_apps" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Auto-Send to Vendor</label>
                         </div>
+                        <div class="toggle-help">Automatically send the Request to the vendor immediately after creation (requires valid connection).</div>
+                    </div>
+                    <div class="toggle-control">
+                        <lightning-input type="toggle" checked={autoSendRequest} onchange={handleAutoSendToggle}></lightning-input>
                     </div>
                 </div>
             </div>
