@@ -23,7 +23,7 @@ public with sharing class DeliveryHubSetupController {
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
-        status.requiredRemoteSite = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com';
+        status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
         // PMD Fix: Use WITH USER_MODE for security
         List<Network_Entity__c> entities = [
@@ -63,7 +63,7 @@ public with sharing class DeliveryHubSetupController {
                 Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
                 EntityTypePk__c = 'Vendor',
-                IntegrationEndpointUrlTxt__c = 'https://orgfarm-8e4cff452b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/Tickets'
+                IntegrationEndpointUrlTxt__c = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/Tickets'
             );
             
             // Check CRUD before insert
