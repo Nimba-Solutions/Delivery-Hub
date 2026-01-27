@@ -70,7 +70,18 @@ public without sharing class TicketTriggerHandler {
      */
     private static void handleNetworkEntitySync(List<Ticket__c> newTickets) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
-        Boolean shouldRunSync = (settings.AutoSyncNetworkEntityBool__c == null) ? true : settings.AutoSyncNetworkEntityBool__c;
+        
+        // FIX: Check if the ID is null. 
+        // If ID is null, no record exists -> Default to TRUE.
+        // If ID exists, respect the field value (even if false).
+        Boolean shouldRunSync;
+        if (settings == null && settings.AutoSyncNetworkEntityBool__c == null) {
+            shouldRunSync = true; // Fresh install default
+        } else {
+            // Handle existing record where field might be null (if recently added) or false
+            shouldRunSync = (settings.AutoSyncNetworkEntityBool__c == null) ? true : settings.AutoSyncNetworkEntityBool__c;
+        }
+        system.debug(shouldRunSync);
 
         if (!shouldRunSync) {
             return;
@@ -106,7 +117,7 @@ public without sharing class TicketTriggerHandler {
             }
         }
     }
-    
+
     /**
      * @description Logic to handle Before Update events (Blocking logic)
      * @param newTickets List of new tickets
