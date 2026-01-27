@@ -1,10 +1,12 @@
 /**
  * Aggregates Ticket rows that need a Jira *create* or *update*,
  * then enqueues **one** worker job for each operation type.
+ * Also handles Network Entity Sync and Dependency Blocking.
  */
 public without sharing class TicketTriggerHandler {
-	
+    
     public static boolean triggerDisabled = false;
+
     /* Public entry used by the trigger ----------------------------------- */
     public static void handleAfter(
         List<Ticket__c> newRows,
@@ -16,12 +18,16 @@ public without sharing class TicketTriggerHandler {
         if (!TriggerControl.runAfterLogic) {
             return;
         }
-        /* Collect the two ID sets we care about */
+        /* Collect the two ID sets we care about for JIRA */
         Set<Id> toCreate = new Set<Id>();
         Set<Id> toUpdate = new Set<Id>();
 
         /* -------- INSERT -------- */
         if (isInsert){
+            // 1. Run Network Entity Sync (Auto-create Requests)
+            handleNetworkEntitySync(newRows);
+
+            // 2. Jira Logic
             for (Ticket__c row : newRows){
                 // Any new ticket is eligible for creation in Jira.
                 if (String.isBlank(row.JiraTicketKeyTxt__c)){
@@ -44,8 +50,8 @@ public without sharing class TicketTriggerHandler {
                 // If it has a Jira Key, check if relevant fields have changed for an UPDATE.
                 if (
                     row.BriefDescriptionTxt__c != oldRow.BriefDescriptionTxt__c ||
-                    row.DetailsTxt__c           != oldRow.DetailsTxt__c ||
-                    row.StageNamePk__c          != oldRow.StageNamePk__c
+                    row.DetailsTxt__c          != oldRow.DetailsTxt__c ||
+                    row.StageNamePk__c         != oldRow.StageNamePk__c
                 ){
                     toUpdate.add(row.Id);
                 }
@@ -71,6 +77,50 @@ public without sharing class TicketTriggerHandler {
                 //System.enqueueJob(
                 //    new JiraSyncWorker(JiraSyncWorker.Mode.UPDATE_JIRA, toUpdate)
                 //);
+            }
+        }
+    }
+
+    /* ---------------------------------------------------------------------
+       NEW LOGIC: Auto-Create Requests for Single Active Vendor
+       --------------------------------------------------------------------- */
+    private static void handleNetworkEntitySync(List<Ticket__c> newTickets) {
+        // 1. Check the Setting (Safe Defaulting to TRUE if null)
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
+        Boolean shouldRunSync = (settings.AutoSyncNetworkEntityBool__c == null) ? true : settings.AutoSyncNetworkEntityBool__c;
+
+        if (!shouldRunSync) {
+            return;
+        }
+
+        // 2. Check for Single Active Network Entity
+        // Limit 2 to efficiently check "Is there exactly one?"
+        List<Network_Entity__c> vendors = [
+            SELECT Id 
+            FROM Network_Entity__c 
+            WHERE StatusPk__c = 'Active' 
+            LIMIT 2
+        ];
+
+        // 3. If exactly one exists, create Requests
+        if (vendors.size() == 1) {
+            Network_Entity__c vendor = vendors[0];
+            List<Request__c> newRequests = new List<Request__c>();
+
+            for (Ticket__c t : newTickets) {
+                newRequests.add(new Request__c(
+                    TicketId__c = t.Id, 
+                    DeliveryEntityId__c = vendor.Id,
+                    StatusPk__c = 'Draft',
+                    // Map the Client's budget to the Request so the vendor sees it immediately
+                    PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
+                ));
+            }
+
+            if (!newRequests.isEmpty()) {
+                if (Schema.sObjectType.Request__c.isCreateable()) {
+                    insert newRequests;
+                }
             }
         }
     }

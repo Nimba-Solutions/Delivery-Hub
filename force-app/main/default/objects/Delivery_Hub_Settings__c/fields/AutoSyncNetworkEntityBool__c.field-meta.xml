@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AutoSyncNetworkEntityBool__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>If enabled, automatically creates a Request for a new Ticket if only one active Vendor exists.</description>
+    <label>Auto-Sync Network Entity</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
