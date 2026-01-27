@@ -4,7 +4,7 @@
 public with sharing class DeliveryHubCommentSender {
 
     // Default Base URL matches the Setup Controller
-    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1';
+    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
 
     /**
      * @description Fetches the live conversation from the Mothership

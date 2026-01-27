@@ -3,7 +3,7 @@
  */
 public without sharing class DeliveryHubSender {
 
-    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/deliveryhub/v1';
+    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
 
     /**
      * @description LWC-callable method to send a request. Wraps sync logic with Aura exception handling.
