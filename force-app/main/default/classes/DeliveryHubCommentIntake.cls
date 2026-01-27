@@ -9,19 +9,20 @@ global without sharing class DeliveryHubCommentIntake {
      * @description GET: Fetch all comments for a specific Ticket
      */
     @HttpGet
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     global static void getComments() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
 
         try {
+            // Extract Ticket ID from URL: .../comments/{TICKET_ID}
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
 
-            // Fetch comments
+            // PMD Fix: Use WITH USER_MODE
             List<Ticket_Comment__c> comments = [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate 
                 FROM Ticket_Comment__c 
                 WHERE TicketId__c = :ticketId 
+                WITH USER_MODE
                 ORDER BY CreatedDate ASC
             ];
 
@@ -48,7 +49,7 @@ global without sharing class DeliveryHubCommentIntake {
      * @description POST: Add a new comment to a Ticket
      */
     @HttpPost
-    @SuppressWarnings('PMD.ApexCRUDViolation')
+    @SuppressWarnings('PMD.ApexCRUDViolation') // Suppress because insert is strictly controlled by logic
     global static void postComment() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
@@ -60,7 +61,6 @@ global without sharing class DeliveryHubCommentIntake {
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
             
             String body = (String) payload.get('body');
-            // Allow the client to specify who wrote it, or default to "Client"
             String author = (String) payload.get('author'); 
 
             if (String.isBlank(body)) {
