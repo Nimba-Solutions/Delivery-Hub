@@ -1,0 +1,162 @@
+<template>
+    <div class="kanban-container">
+        <div class="kanban-toolbar-container">
+            <div class="kanban-toolbar">
+                <div class="toolbar-left">
+                    <div class="viewing-as-wrapper">
+                        <lightning-icon icon-name="utility:user_role" size="x-small"></lightning-icon>
+                        <select class="slds-select view-as-select" value={persona} onchange={handlePersonaChange}>
+                            <template for:each={personaOptions} for:item="opt">
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+                <div class="toolbar-center">
+                    <div class="button-group">
+                        <button class="toolbar-button active" data-mode="overall" onclick={handleShowModeChange}>Overall</button>
+                        <button class="toolbar-button" data-mode="active" onclick={handleShowModeChange}>Active</button>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <div class="active-devs-wrapper">
+                        <span>Active Devs:</span>
+                        <input type="number" min="1" class="dev-count-input" value={numDevs} onchange={handleNumDevsChange} />
+                    </div>
+                    <button class="new-ticket-button" onclick={openCreateModal}>
+                        <lightning-icon icon-name="utility:add" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        New Ticket
+                    </button>
+                </div>
+            </div>
+            <div class="kanban-filter-bar">
+                <div class="filter-group">
+                    <label class="filter-label">Board View:</label>
+                    <select class="slds-select" value={overallFilter} onchange={handleOverallFilterChange}>
+                        <template for:each={overallFilterOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <lightning-input type="checkbox" label="Show Extended Pipeline" checked={showAllColumns} onchange={handleToggleColumns}></lightning-input>
+                </div>
+            </div>
+        </div>
+
+        <div class="kanban-board js-kanban-board">
+            <div class="kanban-columns-container">
+                <template for:each={stageColumns} for:item="col">
+                    <div key={col.stage} class="kanban-column" ondrop={handleDrop} ondragover={handleDragOver} ondragleave={handleDragLeave} data-stage={col.stage}>
+                        <div class="kanban-column-header" style={col.headerStyle}>
+                            <h2 class="column-title">{col.displayName}</h2>
+                            <span class="ticket-count-badge">{col.tickets.length}</span>
+                        </div>
+                        <div class={col.bodyClasses}>
+                            <template if:true={col.tickets.length}>
+                                <template for:each={col.tickets} for:item="ticket">
+                                    <div key={ticket.uiId} class={ticket.cardClasses} draggable="true" style={ticket.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={ticket.uiId}>
+                                        
+                                        <template if:true={ticket.isHighPriority}>
+                                            <div class="priority-indicator">
+                                                <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
+                                            </div>
+                                        </template>
+
+                                        <h3 class="ticket-title-text" data-id={ticket.uiId} onclick={handleTitleClick}>{ticket.uiTitle}</h3>
+                                        <p class="ticket-description">{ticket.uiDescription}</p>
+
+                                        <div class="ticket-metadata">
+                                            <div class="meta-item">
+                                                <lightning-icon icon-name="utility:hashtag" size="xx-small"></lightning-icon>
+                                                <span>Size: {ticket.uiSize}</span>
+                                            </div>
+                                            <div class="meta-item" title={ticket.dateTooltip}>
+                                                <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                                                <span>{ticket.calculatedETA}</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="ticket-footer">
+                                            <template if:true={ticket.uiPriority}>
+                                                <span class={ticket.priorityClasses}>{ticket.uiPriority}</span>
+                                            </template>
+                                            <button class="ticket-action-button" title="Move Ticket" data-id={ticket.uiId} onclick={handleCardClick}>
+                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small"></lightning-icon>
+                                            </button>
+                                            <button class="ticket-block-button" title="Manage Dependencies" data-id={ticket.uiId} onclick={handleManageDependenciesClick}>
+                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small"></lightning-icon>
+                                            </button>
+                                            <template if:true={ticket.OwnerName}>
+                                                <div class="assignee">
+                                                    <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
+                                                    <span>{ticket.OwnerName}</span>
+                                                </div>
+                                            </template>
+                                            <template if:true={ticket.isCurrentlyBlocked}>
+                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small"></lightning-icon>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                            <template if:false={col.tickets.length}>
+                                <div class="empty-column-placeholder">
+                                    <div class="placeholder-icon"></div>
+                                    <div class="placeholder-text">No tickets here</div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <template if:true={showCreateModal}>
+        <section class="slds-modal slds-fade-in-open custom-modal" tabindex="0">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-modal__close" onclick={handleCreateCancel} title="Close">
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium">Create New Ticket</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <template if:true={AiEnhancementEnabled}>
+                        <div class="ai-enhancement-box slds-p-around_medium slds-m-bottom_medium">
+                             <lightning-button label="Enhance with AI" icon-name="utility:sparkle" variant="brand" 
+                                onclick={handleAiEnhance} disabled={isAiProcessing}></lightning-button>
+                        </div>
+                    </template>
+                    
+                    <template if:false={isAiProcessing}>
+                        <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%Ticket__c" 
+                            default-field-values={createDefaults} 
+                            onsubmit={handleCreateSubmit}
+                            onsuccess={handleCreateSuccess}>
+                            
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c" required onchange={handleFieldChange} value={createTicketTitle}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DetailsTxt__c" onchange={handleFieldChange} value={createTicketDescription}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={createDefaults.%%%NAMESPACED_ORG%%%StageNamePk__c}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%PriorityPk__c" value={createDefaults.%%%NAMESPACED_ORG%%%PriorityPk__c}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c" value={estimatedDaysValue}></lightning-input-field>
+                            
+                            <div class="slds-hide">
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%IsActiveBool__c" value={createDefaults.%%%NAMESPACED_ORG%%%IsActiveBool__c}></lightning-input-field>
+                            </div>
+
+                            <lightning-file-upload label="Attach files" onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
+                            
+                            <div class="slds-m-top_medium slds-text-align_right">
+                                <lightning-button variant="neutral" label="Cancel" onclick={handleCreateCancel}></lightning-button>
+                                <lightning-button variant="brand" type="submit" label="Create" class="slds-m-left_small"></lightning-button>
+                            </div>
+                        </lightning-record-edit-form>
+                    </template>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>
