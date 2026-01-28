@@ -102,112 +102,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    // --- ENRICHED TICKETS (Namespace Agnostic & Sorted) ---
-    get enrichedTickets() {
-        const norm = (id) => (id || "").substring(0, 15);
-
-        const etaMap = new Map(
-            (this.etaResults || [])
-                .filter((dto) => !!dto.ticketId)
-                .map((dto) => [norm(dto.ticketId), dto])
-        );
-
-        // Helper to safely get field value regardless of namespace presence
-        const getValue = (record, fieldName) => {
-            if (!record) return null;
-            // 1. Try exact match (with namespace token if present)
-            if (record[fieldName] !== undefined) return record[fieldName];
-            
-            // 2. Try stripping namespace tokens
-            let localName = fieldName.replace('%%%NAMESPACED_ORG%%%', '').replace('delivery__', '');
-            if (record[localName] !== undefined) return record[localName];
-
-            // 3. Try adding generic namespace prefix
-            let nsName = 'delivery__' + localName;
-            if (record[nsName] !== undefined) return record[nsName];
-            
-            return null;
-        };
-
-        // 1. Sort Records Client-Side (Fixes Vertical Sort)
-        const sortedRecords = [...(this.realRecords || [])].sort((a, b) => {
-            const orderA = getValue(a, FIELDS.SORT_ORDER) || 0;
-            const orderB = getValue(b, FIELDS.SORT_ORDER) || 0;
-            return orderA - orderB;
-        });
-
-        return sortedRecords.map((rec) => {
-            const etaDto = etaMap.get(norm(rec.Id));
-
-            // Extract values safely
-            const briefDesc = getValue(rec, FIELDS.BRIEF_DESC);
-            const details = getValue(rec, FIELDS.DETAILS);
-            const priority = getValue(rec, FIELDS.PRIORITY);
-            const tags = getValue(rec, FIELDS.TAGS);
-            const stage = getValue(rec, FIELDS.STAGE); 
-            const intention = getValue(rec, FIELDS.INTENTION);
-            const size = getValue(rec, FIELDS.DEV_DAYS_SIZE);
-            const createdDate = getValue(rec, FIELDS.CREATED_DATE);
-
-            // Date Logic: Prefer AI ETA, fallback to Created Date
-            let displayDate = "—";
-            let dateLabel = "No Date";
-            if (etaDto && etaDto.calculatedETA) {
-                displayDate = new Date(etaDto.calculatedETA).toLocaleDateString();
-                dateLabel = "Est. Completion";
-            } else if (createdDate) {
-                displayDate = new Date(createdDate).toLocaleDateString();
-                dateLabel = "Created";
-            }
-
-            // Relationships
-            const blockedByRaw = getValue(rec, FIELDS.DEP_REL_BLOCKED_BY) || [];
-            const blockingRaw = getValue(rec, FIELDS.DEP_REL_BLOCKING) || [];
-
-            const isBlockedBy = blockedByRaw.map(dep => ({
-                id: getValue(dep, FIELDS.BLOCKING_TICKET),
-                name: dep['Blocking_Ticket__r']?.Name || dep['%%%NAMESPACED_ORG%%%Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__c'],
-                dependencyId: dep.Id
-            }));
-
-            const isBlocking = blockingRaw.map(dep => ({
-                id: getValue(dep, FIELDS.BLOCKED_TICKET),
-                name: dep['Blocked_Ticket__r']?.Name || dep['%%%NAMESPACED_ORG%%%Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__c'],
-                dependencyId: dep.Id
-            }));
-
-            const getTagsArray = (tagsString) => {
-                if (!tagsString || typeof tagsString !== "string") return [];
-                return tagsString.split(",").map((tag) => tag.trim()).filter((tag) => tag);
-            };
-
-            return {
-                ...rec,
-                uiId: rec.Id,
-                uiTitle: briefDesc, 
-                uiDescription: details,
-                uiSize: size || "--",
-                uiStage: stage, 
-                uiIntention: intention, 
-                uiPriority: priority,
-                
-                calculatedETA: displayDate,
-                dateTooltip: dateLabel,
-
-                isBlockedBy: isBlockedBy,
-                isBlocking: isBlocking,
-                isCurrentlyBlocked: isBlockedBy.length > 0,
-                OwnerName: rec.Owner?.Name, 
-                
-                isHighPriority: priority?.toLowerCase() === "high",
-                tags: getTagsArray(tags),
-                cardClasses: `ticket-card`,
-                priorityClasses: `priority-badge priority-${priority?.toLowerCase()}`,
-            };
-        });
-    }
-
-    // --- CONFIGURATION MAPS (Pasted from your provided code) ---
+    // --- CONFIGURATION MAPS ---
     statusColorMap = {
         "Backlog": "#F3F4F6", "Scoping In Progress": "#FEF3C7", 
         "Clarification Requested (Pre-Dev)": "#E0F2FE", "Providing Clarification": "#DBEAFE", 
@@ -587,13 +482,118 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         };
     }
 
-    // [Getter options - same as before]
+    // [Getter options]
     get personaOptions() { return Object.keys(this.personaColumnStatusMap).map((p) => ({ label: p, value: p })); }
     get sizeModeOptions() { return [{ label: "Equal Sized", value: "equalSized" }, { label: "Ticket Sized", value: "ticketSize" }]; }
     get hasRecentComments() { return (this.recentComments || []).length > 0; }
     get displayModeOptions() { return [{ label: "Kanban", value: "kanban" }, { label: "Compact", value: "compact" }, { label: "Table", value: "table" }]; }
     get mainBoardClass() { if (this.displayMode === "table") return "table-board"; if (this.displayMode === "compact") return "stage-columns compact"; return "stage-columns"; }
     get isTableMode() { return this.displayMode === "table"; }
+
+    // --- ENRICHED TICKETS (Namespace Agnostic & Sorted) ---
+    get enrichedTickets() {
+        const norm = (id) => (id || "").substring(0, 15);
+
+        const etaMap = new Map(
+            (this.etaResults || [])
+                .filter((dto) => !!dto.ticketId)
+                .map((dto) => [norm(dto.ticketId), dto])
+        );
+
+        // Helper to safely get field value regardless of namespace presence
+        const getValue = (record, fieldName) => {
+            if (!record) return null;
+            // 1. Try exact match (with namespace token if present)
+            if (record[fieldName] !== undefined) return record[fieldName];
+            
+            // 2. Try stripping namespace tokens
+            let localName = fieldName.replace('%%%NAMESPACED_ORG%%%', '').replace('delivery__', '');
+            if (record[localName] !== undefined) return record[localName];
+
+            // 3. Try adding generic namespace prefix
+            let nsName = 'delivery__' + localName;
+            if (record[nsName] !== undefined) return record[nsName];
+            
+            return null;
+        };
+
+        // 1. Sort Records Client-Side (Fixes Vertical Sort)
+        const sortedRecords = [...(this.realRecords || [])].sort((a, b) => {
+            const orderA = getValue(a, FIELDS.SORT_ORDER) || 0;
+            const orderB = getValue(b, FIELDS.SORT_ORDER) || 0;
+            return orderA - orderB;
+        });
+
+        return sortedRecords.map((rec) => {
+            const etaDto = etaMap.get(norm(rec.Id));
+
+            // Extract values safely
+            const briefDesc = getValue(rec, FIELDS.BRIEF_DESC);
+            const details = getValue(rec, FIELDS.DETAILS);
+            const priority = getValue(rec, FIELDS.PRIORITY);
+            const tags = getValue(rec, FIELDS.TAGS);
+            const stage = getValue(rec, FIELDS.STAGE); 
+            const intention = getValue(rec, FIELDS.INTENTION);
+            const size = getValue(rec, FIELDS.DEV_DAYS_SIZE);
+            const createdDate = getValue(rec, FIELDS.CREATED_DATE);
+
+            // Date Logic: Prefer AI ETA, fallback to Created Date
+            let displayDate = "—";
+            let dateLabel = "No Date";
+            if (etaDto && etaDto.calculatedETA) {
+                displayDate = new Date(etaDto.calculatedETA).toLocaleDateString();
+                dateLabel = "Est. Completion";
+            } else if (createdDate) {
+                displayDate = new Date(createdDate).toLocaleDateString();
+                dateLabel = "Created";
+            }
+
+            // Relationships
+            const blockedByRaw = getValue(rec, FIELDS.DEP_REL_BLOCKED_BY) || [];
+            const blockingRaw = getValue(rec, FIELDS.DEP_REL_BLOCKING) || [];
+
+            const isBlockedBy = blockedByRaw.map(dep => ({
+                id: getValue(dep, FIELDS.BLOCKING_TICKET),
+                name: dep['Blocking_Ticket__r']?.Name || dep['%%%NAMESPACED_ORG%%%Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__c'],
+                dependencyId: dep.Id
+            }));
+
+            const isBlocking = blockingRaw.map(dep => ({
+                id: getValue(dep, FIELDS.BLOCKED_TICKET),
+                name: dep['Blocked_Ticket__r']?.Name || dep['%%%NAMESPACED_ORG%%%Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__c'],
+                dependencyId: dep.Id
+            }));
+
+            const getTagsArray = (tagsString) => {
+                if (!tagsString || typeof tagsString !== "string") return [];
+                return tagsString.split(",").map((tag) => tag.trim()).filter((tag) => tag);
+            };
+
+            return {
+                ...rec,
+                uiId: rec.Id,
+                uiTitle: briefDesc, 
+                uiDescription: details,
+                uiSize: size || "--",
+                uiStage: stage, 
+                uiIntention: intention, 
+                uiPriority: priority,
+                
+                calculatedETA: displayDate,
+                dateTooltip: dateLabel,
+
+                isBlockedBy: isBlockedBy,
+                isBlocking: isBlocking,
+                isCurrentlyBlocked: isBlockedBy.length > 0,
+                OwnerName: rec.Owner?.Name, 
+                
+                isHighPriority: priority?.toLowerCase() === "high",
+                tags: getTagsArray(tags),
+                cardClasses: `ticket-card`,
+                priorityClasses: `priority-badge priority-${priority?.toLowerCase()}`,
+            };
+        });
+    }
 
     get stageColumns() {
         const persona = this.persona;
@@ -641,7 +641,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     getColumnDisplayName(colKey) { return this.columnDisplayNames?.[colKey] || colKey; }
     
-    // [Client Header Colors and Card Colors - kept same]
+    // [Client Header Colors and Card Colors]
     getClientColumnHeaderColor(colName) {
         const yellowCols = ["Quick Estimate", "Proposal Needed", "Pending Development Approval", "Ready for Development"];
         const orangeCols = ["In Development", "In Review", "Ready for UAT (Client)"];
@@ -710,7 +710,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         return targets;
     }
 
-    // [Filter Options - kept same]
+    // [Filter Options]
     get overallFilterOptions() { return [{ label: "All", value: "all" }, { label: "Pre-Dev", value: "predev" }, { label: "In-Dev & Review", value: "indev" }, { label: "Deployed/Done", value: "deployed" }]; }
     get intentionFilterOptions() { return [{ label: "All", value: "all" }, { label: "Will Do", value: "Will Do" }, { label: "Sizing Only", value: "Sizing Only" }]; }
 
@@ -718,10 +718,48 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleOverallFilterChange(e) { this.overallFilter = e.detail ? e.detail.value : e.target.value; }
     handleToggleColumns(e) { this.showAllColumns = e.target.checked; this.logBoardState(); }
     columnOwner(colName) { const personaMap = this.personaColumnStatusMap[this.persona] || {}; const statuses = personaMap[colName] || []; const firstStatus = statuses[0]; return this.statusOwnerMap[firstStatus] || "Default"; }
+    
+    // --- LOAD ETAS ---
     handleNumDevsChange(e) { this.numDevs = parseInt(e.target.value, 10) || 1; this.loadETAs(); }
     
-    // [loadETAs, getTicketETA, handlePersonaChange, logBoardState, handleSizeModeChange, handleDisplayModeChange, handleTitleClick, handleCardClick - kept same]
-    // ... (Code omitted for brevity) ...
+    loadETAs() {
+        getTicketETAsWithPriority({
+            numberOfDevs: this.numDevs,
+            prioritizedTicketIds: null,
+        })
+        .then((result) => {
+            this.etaResults = result && result.tickets ? [...result.tickets] : [];
+        })
+        .catch((err) => {
+            this.etaResults = [];
+            console.error("ETA error:", err);
+        });
+    }
+
+    getTicketETA(ticketId) {
+        return (this.etaResults || []).find((e) => e.ticketId === ticketId) || {};
+    }
+
+    handlePersonaChange(e) {
+        this.persona = e.detail ? e.detail.value : e.target.value;
+        this.logBoardState();
+    }
+
+    logBoardState() {
+        setTimeout(() => {
+            try {
+                const columns = this.stageColumns;
+                const debugData = columns.map(col => ({
+                    "Display Name": col.displayName,
+                    "Stage (API Name)": col.stage,
+                    "Is Extended?": this.personaColumnExtensionMap[this.persona][col.stage],
+                    "Ticket Count": col.tickets.length
+                }));
+            } catch (error) {
+                console.error('Error logging board state:', error);
+            }
+        }, 100);
+    }
 
     handleSizeModeChange(e) { this.sizeMode = e.detail ? e.detail.value : e.target.value; }
     handleDisplayModeChange(e) { this.displayMode = e.detail ? e.detail.value : e.target.value; }
@@ -812,13 +850,93 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.searchTerm = '';
     }
 
-    // [Drag Handlers - kept same]
-    // ... (handleDragStart, handleDragEnd, handleDragOver, handleDragLeave, getDragAfterElement) ...
-    // Note: Ensure handleDragStart uses this.enrichedTickets (which it does in your code)
+    // [Drag Handlers]
+    handleDragStart(event) {
+        this.isDragging = true;
+        const ticketId = event.target.dataset.id;
+        event.dataTransfer.setData("text/plain", ticketId);
+        event.dataTransfer.effectAllowed = "move";
+        // Enriched tickets is sorted, use it to find the drag item
+        this.draggedItem = this.enrichedTickets.find((t) => t.uiId === ticketId);
+
+        this.placeholder = document.createElement("div");
+        this.placeholder.className = "drag-placeholder";
+        this.placeholder.style.height = `${event.target.offsetHeight}px`;
+
+        const board = this.template.querySelector(".js-kanban-board");
+        if (board) {
+            board.classList.add("drag-is-active");
+        }
+        setTimeout(() => {
+            event.target.classList.add("is-dragging");
+        }, 0);
+    }
+
+    handleDragEnd() {
+        this.isDragging = false;
+        const draggingCard = this.template.querySelector(".is-dragging");
+        if (draggingCard) {
+            draggingCard.classList.remove("is-dragging");
+        }
+        if (this.placeholder && this.placeholder.parentNode) {
+            this.placeholder.parentNode.removeChild(this.placeholder);
+        }
+        this.placeholder = null;
+
+        this.template.querySelectorAll(".kanban-column.drag-over").forEach((col) => {
+            col.classList.remove("drag-over");
+        });
+
+        const board = this.template.querySelector(".js-kanban-board");
+        if (board) {
+            board.classList.remove("drag-is-active");
+        }
+    }
+
+    handleDragOver(event) {
+        event.preventDefault();
+        const column = event.currentTarget.closest(".kanban-column");
+        if (!column) return;
+
+        if (!column.classList.contains("drag-over")) {
+            this.template.querySelectorAll(".kanban-column.drag-over").forEach((col) => col.classList.remove("drag-over"));
+            column.classList.add("drag-over");
+        }
+
+        const cardsContainer = column.querySelector(".kanban-column-body");
+        const afterElement = this.getDragAfterElement(cardsContainer, event.clientY);
+
+        if (afterElement == null) {
+            cardsContainer.appendChild(this.placeholder);
+        } else {
+            cardsContainer.insertBefore(this.placeholder, afterElement);
+        }
+    }
+
+    handleDragLeave(event) {
+        const column = event.currentTarget.closest(".kanban-column");
+        if (column) {
+            column.classList.remove("drag-over");
+        }
+    }
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll(".ticket-card:not(.is-dragging)")];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
 
     async handleDrop(event) {
         event.preventDefault();
-        const ticketId = this.draggedItem.Id;
+        // Use uiId from enriched
+        const ticketId = this.draggedItem.uiId; 
         const dropColumnEl = event.target.closest('.kanban-column');
         if (!dropColumnEl) {
             this.handleDragEnd(); 
@@ -826,7 +944,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         const targetColumnStage = dropColumnEl.dataset.stage;
-        const sourceColumnStage = this.stageColumns.find(col => col.tickets.some(t => t.Id === ticketId)).stage;
+        const sourceColumnStage = this.stageColumns.find(col => col.tickets.some(t => t.uiId === ticketId)).stage;
         
         this.handleDragEnd();
 
@@ -865,19 +983,32 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    // [Modal & Transition Handlers - kept same]
-    // ... (closeTransitionModal, handleTransitionSuccess, handleTransitionError) ...
+    // [Modal & Transition Handlers]
+    closeTransitionModal() {
+        this.showTransitionModal = false;
+        this.transitionTicketId = null;
+        this.transitionTargetStage = null;
+        this.transitionRequiredFields = [];
+    }
+
+    handleTransitionSuccess(event) {
+        this.showToast('Success', 'Ticket has been successfully updated and moved.', 'success');
+        this.closeTransitionModal();
+        this.refreshTickets();
+    }
+
+    handleTransitionError(event) {
+        this.showToast('Error Saving Ticket', 'Please review the fields and try again.', 'error');
+        console.error('Error on transition save:', JSON.stringify(event.detail));
+    }
 
     calculateNewSortOrder(placeholder, columnTickets) {
         const prevSibling = placeholder.previousElementSibling;
         const nextSibling = placeholder.nextElementSibling;
-        const prevTicket = prevSibling ? columnTickets.find((t) => t.Id === prevSibling.dataset.id) : null;
-        const nextTicket = nextSibling ? columnTickets.find((t) => t.Id === nextSibling.dataset.id) : null;
+        const prevTicket = prevSibling ? columnTickets.find((t) => t.uiId === prevSibling.dataset.id) : null;
+        const nextTicket = nextSibling ? columnTickets.find((t) => t.uiId === nextSibling.dataset.id) : null;
         
         // FIX: Handle namespace for SortOrder here too using our new safe patterns or direct access
-        // Since columnTickets come from enrichedTickets, we can read raw fields if we saved them, 
-        // OR we should save uiSortOrder in enrichedTickets.
-        // For now, let's try reading both:
         const getSort = (t) => t[FIELDS.SORT_ORDER] || t['delivery__SortOrderNumber__c'] || t['SortOrderNumber__c'] || 0;
 
         const sortBefore = prevTicket ? getSort(prevTicket) : 0;
@@ -889,10 +1020,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    // [Dependency Management & Search - kept same]
+    // [Dependency Management & Search]
     handleManageDependenciesClick(event) {
         const ticketId = event.currentTarget.dataset.id;
-        this.selectedTicket = this.enrichedTickets.find(t => t.Id === ticketId);
+        this.selectedTicket = this.enrichedTickets.find(t => t.uiId === ticketId);
         if (this.selectedTicket) {
             this.isModalOpen = true;
         }
@@ -945,7 +1076,6 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
     
     // ... [Search Handlers & AI Handlers (handleFieldChange, handleAiEnhance, applyAiSuggestions, setFieldValue, dismissAiSuggestions)] ...
-    // These should use the FIELDS constants for field names to ensure namespacing works.
     
     handleFieldChange(event) {
         const fieldName = event.target.fieldName;
