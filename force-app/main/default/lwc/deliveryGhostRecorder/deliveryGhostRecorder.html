@@ -2,12 +2,48 @@
     <template if:true={isCardMode}>
         <lightning-card title="Report Issue" icon-name="utility:bug">
             <div class="slds-p-horizontal_medium">
-                <c-delivery-ghost-form 
-                    description={description}
-                    onchange={handleInputChange}
-                    onsubmit={handleSubmit}
-                    issending={isSending}
-                ></c-delivery-ghost-form>
+                <div class="slds-grid slds-gutters slds-m-bottom_small">
+                    <div class="slds-col slds-size_2-of-3">
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_large">
+                            Context: {currentPageRef.attributes.objectApiName}
+                        </p>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-combobox
+                            label="Priority"
+                            value={priority}
+                            options={priorityOptions}
+                            onchange={handlePriorityChange}>
+                        </lightning-combobox>
+                    </div>
+                </div>
+
+                <lightning-textarea 
+                    label="What's happening?" 
+                    placeholder="Describe the bug or feature idea..." 
+                    value={description}
+                    onchange={handleInputChange}>
+                </lightning-textarea>
+
+                <div class="slds-m-vertical_small">
+                    <lightning-file-upload
+                        label="Attach Screenshots"
+                        name="fileUploader"
+                        record-id={currentUserId}
+                        onuploadfinished={handleUploadFinished}
+                        multiple>
+                    </lightning-file-upload>
+                    <template if:true={uploadedFileCount}>
+                        <div class="slds-text-color_success slds-m-top_xx-small">
+                            <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon> 
+                            {uploadedFileCount} file(s) attached
+                        </div>
+                    </template>
+                </div>
+
+                <div class="slds-m-top_small slds-text-align_right">
+                    <lightning-button label="Send Ticket" variant="brand" onclick={handleSubmit} disabled={isSending}></lightning-button>
+                </div>
             </div>
         </lightning-card>
     </template>
@@ -44,8 +80,7 @@
                         </div>
 
                         <lightning-textarea 
-                            label="What's happening?" 
-                            placeholder="Describe the bug or feature idea..." 
+                            label="Details" 
                             value={description}
                             onchange={handleInputChange}
                             rows="5">
@@ -53,7 +88,7 @@
 
                         <div class="slds-m-top_small slds-p-around_x-small slds-theme_shade">
                             <lightning-file-upload
-                                label="Attach Screenshots/Logs"
+                                label="Attach Files"
                                 name="fileUploader"
                                 record-id={currentUserId}
                                 onuploadfinished={handleUploadFinished}
@@ -62,11 +97,10 @@
                             <template if:true={uploadedFileCount}>
                                 <p class="slds-text-color_success slds-m-top_xx-small">
                                     <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon> 
-                                    {uploadedFileCount} file(s) attached
+                                    {uploadedFileCount} file(s) queued
                                 </p>
                             </template>
                         </div>
-
                     </div>
                     <footer class="slds-modal__footer">
                         <lightning-button label="Cancel" onclick={togglePanel} class="slds-m-right_small"></lightning-button>
