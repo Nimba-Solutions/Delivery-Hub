@@ -98,19 +98,19 @@
                                         </template>
 
                                         <h3 class="ticket-title-text" data-id={ticket.Id} onclick={handleTitleClick}>
-                                            {ticket.BriefDescriptionTxt__c}
+                                            {ticket.%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c}
                                         </h3>
 
-                                        <p class="ticket-description">{ticket.DetailsTxt__c}</p>
+                                        <p class="ticket-description">{ticket.%%%NAMESPACED_ORG%%%DetailsTxt__c}</p>
 
                                         <div class="ticket-metadata">
                                             <div class="meta-item">
                                                 <lightning-icon icon-name="utility:hashtag" size="xx-small"></lightning-icon>
-                                                <span>Size: {ticket.DeveloperDaysSizeNumber__c}</span>
+                                                <span>Size: {ticket.%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c}</span>
                                             </div>
                                             <div class="meta-item">
                                                 <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
-                                                <span>{ticket.calculatedETA}</span>
+                                                <span>{ticket.%%%NAMESPACED_ORG%%%calculatedETA}</span>
                                             </div>
                                         </div>
 
@@ -123,8 +123,8 @@
                                         </template>
 
                                         <div class="ticket-footer">
-                                            <template if:true={ticket.PriorityPk__c}>
-                                                <span class={ticket.priorityClasses}>{ticket.PriorityPk__c}</span>
+                                            <template if:true={ticket.%%%NAMESPACED_ORG%%%PriorityPk__c}>
+                                                <span class={ticket.priorityClasses}>{ticket.%%%NAMESPACED_ORG%%%PriorityPk__c}</span>
                                             </template>
 
                                             <button class="ticket-action-button" title="Move Ticket" data-id={ticket.Id} onclick={handleCardClick}>
@@ -233,21 +233,21 @@
                     </template>
 
                     <template if:false={isAiProcessing}>
-                        <lightning-record-edit-form object-api-name="Ticket__c" 
+                        <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%Ticket__c" 
                             default-field-values={createDefaults} onsuccess={handleCreateSuccess}>
 
-                            <lightning-input-field field-name="BriefDescriptionTxt__c" required 
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c" required 
                                 onchange={handleFieldChange} value={createTicketTitle}></lightning-input-field>
                             
-                            <lightning-input-field field-name="DetailsTxt__c" 
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DetailsTxt__c" 
                                 onchange={handleFieldChange} value={createTicketDescription}></lightning-input-field>
                             
-                            <lightning-input-field field-name="StageNamePk__c" value={createDefaults.StageNamePk__c}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={createDefaults.%%%NAMESPACED_ORG%%%StageNamePk__c}></lightning-input-field>
                             
                             <lightning-input-field field-name="DeveloperDaysSizeNumber__c" 
                                 value={estimatedDaysValue}></lightning-input-field>
                             
-                            <lightning-input-field field-name="PriorityPk__c" value={createDefaults.PriorityPk__c}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%PriorityPk__c" value={createDefaults.%%%NAMESPACED_ORG%%%PriorityPk__c}></lightning-input-field>
 
                             <div class="slds-hide">
                                 <lightning-input-field field-name="IsActiveBool__c" 
@@ -258,9 +258,9 @@
 
                             <details class="slds-m-top_small">
                                 <summary style="cursor:pointer;color:#005fb2;">Advanced fields</summary>
-                                <lightning-input-field field-name="Tags__c"></lightning-input-field>
-                                <lightning-input-field field-name="Epic__c"></lightning-input-field>
-                                <lightning-input-field field-name="SortOrderNumber__c" 
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Tags__c"></lightning-input-field>
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Epic__c"></lightning-input-field>
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%SortOrderNumber__c" 
                                     value={nextSortOrder}></lightning-input-field>
                             </details>
 
@@ -293,8 +293,8 @@
             <div class="modal-body" role="dialog">
                 <!-- Modal Header -->
                 <header class="modal-header">
-                    <h3>Move Side Quest: {selectedRecord.BriefDescriptionTxt__c}</h3>
-                    <p>Current Status: <strong>{selectedRecord.StageNamePk__c}</strong></p>
+                    <h3>Move Side Quest: {selectedRecord.%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c}</h3>
+                    <p>Current Status: <strong>{selectedRecord.%%%NAMESPACED_ORG%%%StageNamePk__c}</strong></p>
                 </header>
 
                 <!-- Modal Content -->
@@ -369,7 +369,7 @@
 
                     <!-- Hidden Fields for Submission -->
                      <div class="slds-hide">
-                         <lightning-input-field field-name="StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
+                         <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
                      </div>
 
                     <!-- Footer with Action Buttons -->
@@ -435,7 +435,7 @@
                             <div key={result.Id} class="slds-box slds-box_x-small slds-m-bottom_x-small slds-grid slds-grid_align-spread">
                                 <div class="slds-col">
                                     <strong>{result.Name}</strong>
-                                    <p class="slds-text-body_small">{result.StageNamePk__c}</p>
+                                    <p class="slds-text-body_small">{result.%%%NAMESPACED_ORG%%%StageNamePk__c}</p>
                                 </div>
                                 <div class="slds-col slds-no-flex">
                                     <lightning-button
