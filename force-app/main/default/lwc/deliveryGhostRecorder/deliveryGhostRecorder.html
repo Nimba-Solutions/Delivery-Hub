@@ -2,15 +2,45 @@
     <template if:true={isCardMode}>
         <lightning-card title="Report Issue" icon-name="utility:bug">
             <div class="slds-p-horizontal_medium">
-                <p class="slds-text-body_small slds-m-bottom_x-small slds-text-color_weak">
-                    We will automatically attach the current page context.
-                </p>
+                
+                <div class="slds-grid slds-grid_align-end slds-m-bottom_small">
+                    <div class="slds-col slds-grow-none">
+                        <lightning-combobox
+                            label="Priority"
+                            value={priority}
+                            options={priorityOptions}
+                            onchange={handlePriorityChange}
+                            variant="label-inline"
+                            class="priority-select">
+                        </lightning-combobox>
+                    </div>
+                </div>
+
                 <lightning-textarea 
                     label="What's happening?" 
                     placeholder="Describe the bug or feature idea..." 
                     value={description}
-                    onchange={handleInputChange}>
+                    onchange={handleInputChange}
+                    class="description-input">
                 </lightning-textarea>
+
+                <div class="slds-m-vertical_small">
+                    <lightning-file-upload
+                        label="Attach Screenshots"
+                        name="fileUploader"
+                        record-id={currentUserId}
+                        onuploadfinished={handleUploadFinished}
+                        multiple>
+                    </lightning-file-upload>
+                    
+                    <template if:true={uploadedFileCount}>
+                        <div class="slds-text-color_success slds-m-top_xx-small slds-text-body_small">
+                            <lightning-icon icon-name="utility:check" size="xx-small" class="slds-m-right_xx-small"></lightning-icon> 
+                            {uploadedFileCount} file(s) attached
+                        </div>
+                    </template>
+                </div>
+
                 <div class="slds-m-top_small slds-text-align_right">
                     <lightning-button label="Send Ticket" variant="brand" onclick={handleSubmit} disabled={isSending}></lightning-button>
                 </div>
@@ -33,15 +63,40 @@
                         <h2 class="slds-text-heading_medium">Report Issue</h2>
                     </header>
                     <div class="slds-modal__content slds-p-around_medium">
-                        <p class="slds-text-body_small slds-m-bottom_small">
-                            <strong>Capturing Context:</strong> {currentPageRef.attributes.objectApiName}
-                        </p>
+                        
+                        <div class="slds-m-bottom_medium slds-text-align_right">
+                             <lightning-combobox
+                                label="Priority"
+                                value={priority}
+                                options={priorityOptions}
+                                onchange={handlePriorityChange}
+                                variant="label-inline">
+                            </lightning-combobox>
+                        </div>
+
                         <lightning-textarea 
                             label="Details" 
                             value={description}
                             onchange={handleInputChange}
-                            rows="5">
+                            rows="5"
+                            placeholder="Describe the issue...">
                         </lightning-textarea>
+
+                        <div class="slds-m-top_medium slds-p-around_small slds-theme_shade slds-is-relative">
+                            <lightning-file-upload
+                                label="Attach Files"
+                                name="fileUploader"
+                                record-id={currentUserId}
+                                onuploadfinished={handleUploadFinished}
+                                multiple>
+                            </lightning-file-upload>
+                            <template if:true={uploadedFileCount}>
+                                <p class="slds-text-color_success slds-m-top_xx-small">
+                                    <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon> 
+                                    {uploadedFileCount} file(s) queued
+                                </p>
+                            </template>
+                        </div>
                     </div>
                     <footer class="slds-modal__footer">
                         <lightning-button label="Cancel" onclick={togglePanel} class="slds-m-right_small"></lightning-button>

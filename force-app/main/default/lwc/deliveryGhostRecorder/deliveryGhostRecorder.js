@@ -1,8 +1,13 @@
 import { LightningElement, track, wire, api } from 'lwc';
 import { CurrentPageReference } from 'lightning/navigation';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import userId from '@salesforce/user/Id';
+
+// Apex Controllers
+// Note: We use the namespaced paths for compilation
 import createTicket from '@salesforce/apex/DeliveryGhostController.createQuickRequest'; 
 import logActivity from '@salesforce/apex/DeliveryGhostController.logUserActivity';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
 
 export default class DeliveryGhostRecorder extends LightningElement {
     @api enableShortcut = false; 
@@ -10,16 +15,34 @@ export default class DeliveryGhostRecorder extends LightningElement {
     
     @track isOpen = false;
     @track description = '';
+    @track priority = 'Medium';
     @track isSending = false;
+    @track uploadedFileIds = [];
     
     currentPageRef;
+    currentUserId = userId; // Used as temporary parent for file uploads
+
+    get isCardMode() { return this.displayMode === 'Card'; }
+    get isFloatingMode() { return this.displayMode === 'Floating Button'; }
     
-    // 1. FLIGHT RECORDER LOGIC
+    get priorityOptions() {
+        return [
+            { label: 'Low', value: 'Low' },
+            { label: 'Medium', value: 'Medium' },
+            { label: 'High', value: 'High' },
+            { label: 'Critical', value: 'Critical' },
+        ];
+    }
+
+    get uploadedFileCount() {
+        return this.uploadedFileIds.length;
+    }
+    
+    // 1. FLIGHT RECORDER LOGIC (Silent Context Capture)
     @wire(CurrentPageReference)
     getStateParameters(currentPageReference) {
         if (currentPageReference) {
             this.currentPageRef = currentPageReference;
-            // Silent Log: User moved to a new page
             this.handleNavigationLog();
         }
     }
@@ -35,7 +58,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     handleShortcut = (event) => {
-        // Alt + B (for Bug) or Option + B
+        // Alt + B shortcut
         if (event.altKey && (event.code === 'KeyB' || event.key === 'b')) {
             this.togglePanel();
         }
@@ -43,7 +66,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
 
     handleNavigationLog() {
         const context = this.gatherContext();
-        // FIX: Stringify the object before sending to Apex
+        // Silent log to backend
         logActivity({ 
             actionType: 'Navigation',
             contextData: JSON.stringify(context) 
@@ -51,9 +74,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     // 2. UI HANDLERS
-    get isCardMode() { return this.displayMode === 'Card'; }
-    get isFloatingMode() { return this.displayMode === 'Floating Button'; }
-
     togglePanel() {
         this.isOpen = !this.isOpen;
     }
@@ -62,26 +82,48 @@ export default class DeliveryGhostRecorder extends LightningElement {
         this.description = event.target.value;
     }
 
+    handlePriorityChange(event) {
+        this.priority = event.detail.value;
+    }
+
+    handleUploadFinished(event) {
+        const files = event.detail.files;
+        this.uploadedFileIds.push(...files.map(f => f.documentId));
+    }
+
     handleSubmit() {
         if (!this.description) return;
         this.isSending = true;
 
         const context = this.gatherContext();
-        const subjectLine = 'Ghost Report: ' + (context.objectName || 'General');
+        // Auto-generate a Subject based on context
+        const subjectLine = 'Issue on ' + (context.objectName || 'Home Page');
 
-        // FIX: Stringify the object here too
         createTicket({ 
             subject: subjectLine,
             description: this.description,
+            priority: this.priority,
             contextData: JSON.stringify(context)
         })
-        .then(() => {
+        .then(ticketId => {
+            // Link files if any
+            if (this.uploadedFileIds.length > 0) {
+                linkFilesAndSync({
+                    ticketId: ticketId,
+                    contentDocumentIds: this.uploadedFileIds
+                }).catch(error => console.error("Error linking files:", error));
+            }
+
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Ticket Created',
-                message: 'Support has been notified. Context captured.',
+                message: 'Support has been notified.',
                 variant: 'success'
             }));
+            
+            // Reset Form
             this.description = '';
+            this.priority = 'Medium';
+            this.uploadedFileIds = [];
             this.isOpen = false;
         })
         .catch(error => {
@@ -100,7 +142,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
         let objName = this.currentPageRef?.attributes?.objectApiName;
         let recId = this.currentPageRef?.attributes?.recordId;
         
-        // Handle special pages (Home, App Pages) that don't have objectApiName
         if (!objName && this.currentPageRef?.attributes?.name) {
             objName = this.currentPageRef.attributes.name;
         }
