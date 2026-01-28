@@ -4,7 +4,7 @@ import { NavigationMixin } from "lightning/navigation";
 import { updateRecord } from "lightning/uiRecordApi";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
-// --- Apex Imports (Renamed Controller) ---
+// --- Apex Imports ---
 import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getTickets";
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
 import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getAiEnhancedTicketDetails";
@@ -257,7 +257,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             "Deployed": ["Deployed to Prod"], "Done": ["Done", "Cancelled"]
         },
         Developer: {
-            "Backlog": ["Backlog", "Scoping In Progress"], "Clarification": ["Clarification Requested (Pre-Dev)", "Providing Clarification"],
+            "Backlog": ["Backlog", "Scoping In Progress"], "Clarification": ["Clarification Requested (Pre-Dev)"], "Providing Clarification": ["Providing Clarification"],
             "Ready for Sizing": ["Ready for Sizing"], "Sizing Underway": ["Sizing Underway"],
             "Prioritization": ["Ready for Prioritization", "Prioritizing"], "Proposal Requested": ["Proposal Requested"], "Drafting Proposal": ["Drafting Proposal"],
             "Ready for Tech Review": ["Ready for Tech Review"], "Tech Reviewing": ["Tech Reviewing"],
@@ -745,16 +745,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.logBoardState();
     }
 
+    // FIX: Removed debugData which was causing lint error
     logBoardState() {
         setTimeout(() => {
             try {
-                const columns = this.stageColumns;
-                const debugData = columns.map(col => ({
-                    "Display Name": col.displayName,
-                    "Stage (API Name)": col.stage,
-                    "Is Extended?": this.personaColumnExtensionMap[this.persona][col.stage],
-                    "Ticket Count": col.tickets.length
-                }));
+                // Logic kept simple or removed to satisfy linter
+                // const columns = this.stageColumns;
+                // console.log('Board State Updated');
             } catch (error) {
                 console.error('Error logging board state:', error);
             }
@@ -832,7 +829,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                     this.showToast("Success", "Ticket updated.", "success");
                     this.refreshTickets(); 
                 })
-                .catch((error) => {
+                .catch(() => {
                     this.showToast("Error", "Failed to update ticket.", "error");
                 });
         }
@@ -991,7 +988,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.transitionRequiredFields = [];
     }
 
-    handleTransitionSuccess(event) {
+    handleTransitionSuccess() {
         this.showToast('Success', 'Ticket has been successfully updated and moved.', 'success');
         this.closeTransitionModal();
         this.refreshTickets();
@@ -1008,7 +1005,6 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         const prevTicket = prevSibling ? columnTickets.find((t) => t.uiId === prevSibling.dataset.id) : null;
         const nextTicket = nextSibling ? columnTickets.find((t) => t.uiId === nextSibling.dataset.id) : null;
         
-        // FIX: Handle namespace for SortOrder here too using our new safe patterns or direct access
         const getSort = (t) => t[FIELDS.SORT_ORDER] || t['delivery__SortOrderNumber__c'] || t['SortOrderNumber__c'] || 0;
 
         const sortBefore = prevTicket ? getSort(prevTicket) : 0;
@@ -1090,7 +1086,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    async handleAiEnhance(event) {
+    async handleAiEnhance() {
         try {
             let titleValue = "";
             let descriptionValue = "";
@@ -1216,7 +1212,11 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 currentTicketId: this.selectedTicket.Id,
                 existingDependencyIds: existingDependencyIds
             });
-        } catch (error) { } finally { this.isSearching = false; }
+        } catch (error) { 
+            console.error('Search error:', error);
+        } finally { 
+            this.isSearching = false; 
+        }
     }
     async handleSelectBlockingTicket(event) {
         const blockingTicketId = event.currentTarget.dataset.blockingId;
@@ -1224,7 +1224,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             await createDependency({ blockedTicketId: this.selectedTicket.Id, blockingTicketId: blockingTicketId });
             this.closeModal();
             this.refreshTickets();
-        } catch (error) { }
+        } catch (error) { 
+            console.error('Dependency create error:', error);
+        }
     }
     async handleRemoveDependency(event) {
         const dependencyId = event.currentTarget.dataset.dependencyId;
@@ -1232,6 +1234,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             await removeDependency({ dependencyId: dependencyId });
             this.closeModal();
             this.refreshTickets();
-        } catch (error) { }
+        } catch (error) { 
+            console.error('Dependency remove error:', error);
+        }
+    }
+
+    showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
     }
 }
