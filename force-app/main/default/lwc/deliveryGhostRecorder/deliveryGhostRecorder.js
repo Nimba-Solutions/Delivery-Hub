@@ -2,6 +2,8 @@ import { LightningElement, track, wire, api } from 'lwc';
 import { CurrentPageReference } from 'lightning/navigation';
 import createTicket from '@salesforce/apex/DeliveryGhostController.createQuickRequest'; 
 import logActivity from '@salesforce/apex/DeliveryGhostController.logUserActivity';
+import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
+import userId from '@salesforce/user/Id'; // Get Current User ID for temp uploads
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DeliveryGhostRecorder extends LightningElement {
@@ -10,16 +12,31 @@ export default class DeliveryGhostRecorder extends LightningElement {
     
     @track isOpen = false;
     @track description = '';
+    @track priority = 'Medium';
     @track isSending = false;
+    @track uploadedFileIds = [];
     
     currentPageRef;
+    currentUserId = userId; // For file upload context
+
+    get priorityOptions() {
+        return [
+            { label: 'Low', value: 'Low' },
+            { label: 'Medium', value: 'Medium' },
+            { label: 'High', value: 'High' },
+            { label: 'Critical', value: 'Critical' },
+        ];
+    }
+
+    get uploadedFileCount() {
+        return this.uploadedFileIds.length;
+    }
     
     // 1. FLIGHT RECORDER LOGIC
     @wire(CurrentPageReference)
     getStateParameters(currentPageReference) {
         if (currentPageReference) {
             this.currentPageRef = currentPageReference;
-            // Silent Log: User moved to a new page
             this.handleNavigationLog();
         }
     }
@@ -35,7 +52,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     handleShortcut = (event) => {
-        // Alt + B (for Bug) or Option + B
         if (event.altKey && (event.code === 'KeyB' || event.key === 'b')) {
             this.togglePanel();
         }
@@ -43,7 +59,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
 
     handleNavigationLog() {
         const context = this.gatherContext();
-        // FIX: Stringify the object before sending to Apex
         logActivity({ 
             actionType: 'Navigation',
             contextData: JSON.stringify(context) 
@@ -62,6 +77,15 @@ export default class DeliveryGhostRecorder extends LightningElement {
         this.description = event.target.value;
     }
 
+    handlePriorityChange(event) {
+        this.priority = event.detail.value;
+    }
+
+    handleUploadFinished(event) {
+        const files = event.detail.files;
+        this.uploadedFileIds.push(...files.map(f => f.documentId));
+    }
+
     handleSubmit() {
         if (!this.description) return;
         this.isSending = true;
@@ -69,19 +93,31 @@ export default class DeliveryGhostRecorder extends LightningElement {
         const context = this.gatherContext();
         const subjectLine = 'Ghost Report: ' + (context.objectName || 'General');
 
-        // FIX: Stringify the object here too
         createTicket({ 
             subject: subjectLine,
             description: this.description,
+            priority: this.priority,
             contextData: JSON.stringify(context)
         })
-        .then(() => {
+        .then(ticketId => {
+            // 1. Link Files if any were uploaded
+            if (this.uploadedFileIds.length > 0) {
+                linkFilesAndSync({
+                    ticketId: ticketId,
+                    contentDocumentIds: this.uploadedFileIds
+                }).catch(error => console.error("Error linking files:", error));
+            }
+
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Ticket Created',
                 message: 'Support has been notified. Context captured.',
                 variant: 'success'
             }));
+            
+            // Reset Form
             this.description = '';
+            this.priority = 'Medium';
+            this.uploadedFileIds = [];
             this.isOpen = false;
         })
         .catch(error => {
@@ -100,7 +136,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
         let objName = this.currentPageRef?.attributes?.objectApiName;
         let recId = this.currentPageRef?.attributes?.recordId;
         
-        // Handle special pages (Home, App Pages) that don't have objectApiName
         if (!objName && this.currentPageRef?.attributes?.name) {
             objName = this.currentPageRef.attributes.name;
         }
