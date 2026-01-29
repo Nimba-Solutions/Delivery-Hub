@@ -1,7 +1,14 @@
 import { LightningElement, track, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import { NavigationMixin } from "lightning/navigation";
-import { updateRecord } from "lightning/uiRecordApi";
+
+// Update this line to include createRecord, getRecord, and getFieldValue
+import { updateRecord, createRecord, getRecord, getFieldValue } from "lightning/uiRecordApi";
+
+// Add these new imports for the current user
+import USER_ID from "@salesforce/user/Id";
+import USER_NAME_FIELD from "@salesforce/schema/User.Name";
+
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
 // --- Apex Imports ---
@@ -91,6 +98,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     ticketsWire;
 
+    @wire(getRecord, { recordId: USER_ID, fields: [USER_NAME_FIELD] })
+    currentUser;
+
+    get currentUserName() {
+        return getFieldValue(this.currentUser.data, USER_NAME_FIELD) || '';
+    }
+
     connectedCallback() {
         this.loadSettings();
     }
@@ -105,6 +119,34 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             }
         } catch (error) {
             console.error('Error loading settings:', error);
+        }
+    }
+
+    async createStatusComment(ticketId) {
+        if (!this.moveComment || this.moveComment.trim() === "") {
+            console.log('[createStatusComment] → Skipping empty comment');
+            return; 
+        }
+
+        const fields = {
+            %%%NAMESPACED_ORG%%%TicketId__c: ticketId,
+            %%%NAMESPACED_ORG%%%BodyTxt__c: this.moveComment,
+            %%%NAMESPACED_ORG%%%SourcePk__c: 'Salesforce',
+            %%%NAMESPACED_ORG%%%AuthorTxt__c: this.currentUserName // <--- Populates with the logged-in user's name
+        };
+
+        const recordInput = { 
+            apiName: '%%%NAMESPACED_ORG%%%Ticket_Comment__c', 
+            fields 
+        };
+
+        try {
+            // Ensure createRecord is imported at the top!
+            const result = await createRecord(recordInput);
+            console.log('Comment created → ID:', result.id);
+        } catch (error) {
+            console.error('Failed to create Ticket_Comment__c:', error);
+            throw error;
         }
     }
 
@@ -460,6 +502,20 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.uploadedFileIds.push(...uploadedFiles.map((file) => file.documentId));
     }
 
+    handleCancelTransition() {
+        this.closeModal();
+    }
+
+    closeModal() {
+        this.showModal = false;
+        this.selectedRecord = null;
+        this.selectedStage = null;
+        this.moveComment = "";
+        this.isModalOpen = false;
+        this.searchResults = [];
+        this.searchTerm = '';
+    }
+
     handleShowModeChange(event) {
         const selectedMode = event.currentTarget.dataset.mode;
         this.showMode = selectedMode;
@@ -509,21 +565,35 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         // Helper to safely get field value regardless of namespace presence
         const getValue = (record, fieldName) => {
             if (!record) return null;
-            // 1. Try exact match (with namespace token if present)
             if (record[fieldName] !== undefined) return record[fieldName];
-            
-            // 2. Try stripping namespace tokens
-            let localName = fieldName.replace('%%%NAMESPACED_ORG%%%', '').replace('delivery__', '');
+            let localName = fieldName.replace('', '').replace('delivery__', '');
             if (record[localName] !== undefined) return record[localName];
-
-            // 3. Try adding generic namespace prefix
             let nsName = 'delivery__' + localName;
             if (record[nsName] !== undefined) return record[nsName];
-            
             return null;
         };
 
-        // 1. Sort Records Client-Side (Fixes Vertical Sort)
+        // Helper to calculate day difference
+        const getDayDiffString = (targetDateStr) => {
+            if (!targetDateStr) return "";
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to midnight
+            
+            const target = new Date(targetDateStr);
+            target.setHours(0, 0, 0, 0); // Normalize to midnight
+            
+            // Calculate difference in milliseconds
+            const diffTime = target - today;
+            // Convert to days
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+            if (diffDays > 0) return ` (+${diffDays}d)`;
+            if (diffDays < 0) return ` (${diffDays}d)`; // Negative sign is automatic
+            return " (Today)";
+        };
+
+        // 1. Sort Records Client-Side
         const sortedRecords = [...(this.realRecords || [])].sort((a, b) => {
             const orderA = getValue(a, FIELDS.SORT_ORDER) || 0;
             const orderB = getValue(b, FIELDS.SORT_ORDER) || 0;
@@ -542,30 +612,46 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             const intention = getValue(rec, FIELDS.INTENTION);
             const size = getValue(rec, FIELDS.DEV_DAYS_SIZE);
             
-            // New Fields
             const actualHours = getValue(rec, FIELDS.TOTAL_LOGGED_HOURS) || 0;
             const estimatedHours = getValue(rec, FIELDS.ESTIMATED_HOURS) || 0;
             const uatDate = getValue(rec, FIELDS.PROJECTED_UAT_READY);
             const createdDate = getValue(rec, FIELDS.CREATED_DATE);
+            const recordStoredETA = getValue(rec, FIELDS.CALCULATED_ETA);
 
-            // Display Logic
+            // --- DATE DISPLAY LOGIC ---
             let displayDate = "—";
             let dateLabel = "No Date";
+            let rawDateForDiff = null; // Store the raw date to calculate the diff
+            
             if (etaDto && etaDto.calculatedETA) {
-                displayDate = new Date(etaDto.calculatedETA).toLocaleDateString();
+                // 1. Live Calculation
+                rawDateForDiff = etaDto.calculatedETA;
+                displayDate = new Date(rawDateForDiff).toLocaleDateString();
+                dateLabel = "Est. Completion (Live)";
+            } else if (recordStoredETA) {
+                // 2. Stored Value (Fallback)
+                rawDateForDiff = recordStoredETA;
+                // Parse date manually to avoid timezone shifts on simple YYYY-MM-DD strings
+                displayDate = new Date(rawDateForDiff).toLocaleDateString(undefined, { timeZone: 'UTC' });
                 dateLabel = "Est. Completion";
             } else if (createdDate) {
+                // 3. Created Date
                 displayDate = new Date(createdDate).toLocaleDateString();
                 dateLabel = "Created";
+                // We typically don't show (+5d) for created date, so we leave rawDateForDiff null
+            }
+
+            // Append day difference if we have a valid ETA date
+            if (rawDateForDiff) {
+                displayDate += getDayDiffString(rawDateForDiff);
             }
 
             // UAT Date Display
             let displayUAT = null;
             if (uatDate) {
-                displayUAT = new Date(uatDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                displayUAT = new Date(uatDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
             }
 
-            // Hours Display
             const hoursDisplay = `${actualHours} / ${estimatedHours}h`;
 
             const blockedByRaw = getValue(rec, FIELDS.DEP_REL_BLOCKED_BY) || [];
@@ -573,13 +659,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
             const isBlockedBy = blockedByRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKING_TICKET),
-                name: dep['Blocking_Ticket__r']?.Name || dep['%%%NAMESPACED_ORG%%%Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__c'],
+                name: dep['Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__c'],
                 dependencyId: dep.Id
             }));
 
             const isBlocking = blockingRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKED_TICKET),
-                name: dep['Blocked_Ticket__r']?.Name || dep['%%%NAMESPACED_ORG%%%Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__c'],
+                name: dep['Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__c'],
                 dependencyId: dep.Id
             }));
 
@@ -594,12 +680,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 uiTitle: briefDesc, 
                 uiDescription: details,
                 uiSize: size || "--",
-                uiHours: hoursDisplay, // Use this in HTML
-                uiUat: displayUAT,     // Use this in HTML
+                uiHours: hoursDisplay, 
+                uiUat: displayUAT,      
                 uiStage: stage, 
                 uiIntention: intention, 
                 uiPriority: priority,
-                calculatedETA: displayDate,
+                calculatedETA: displayDate, // Now includes "Jan 21, 2026 (-8d)"
                 dateTooltip: dateLabel,
                 isBlockedBy: isBlockedBy,
                 isBlocking: isBlocking,
@@ -797,7 +883,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     async handleAdvanceOption(e) {
-        const newStage = e.target.dataset.value;
+        const newStage = e.currentTarget.dataset.value; // Use currentTarget
         const ticketId = this.selectedRecord.Id;
         try {
             const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
@@ -812,6 +898,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 this.handleSaveTransition();
             }
         } catch (error) {
+            console.error('Stage Check Error:', error);
             this.showToast('Error', 'Could not check for stage requirements.', 'error');
         }
     }
@@ -838,28 +925,74 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     handleStageChange(e) { this.selectedStage = e.detail ? e.detail.value : e.target.value; }
     handleCommentChange(e) { this.moveComment = e.detail ? e.detail.value : e.target.value; }
-
+    
     handleSaveTransition() {
         const rec = this.selectedRecord;
         const newStage = this.selectedStage;
-        if (rec && newStage) {
-            const fields = { [FIELDS.ID]: rec.Id, [FIELDS.STAGE]: newStage };
-            updateRecord({ fields })
-                .then(() => {
-                    this.showToast("Success", "Ticket updated.", "success");
-                    this.refreshTickets(); 
-                })
-                // FIX: Removed unused error param
-                .catch(() => {
-                    this.showToast("Error", "Failed to update ticket.", "error");
-                });
+        
+        if (!rec || !newStage) {
+            this.closeModal();
+            return;
         }
-        this.closeModal();
+
+        const fields = { 
+            Id: rec.Id, 
+            %%%NAMESPACED_ORG%%%StageNamePk__c: newStage 
+        };
+
+        updateRecord({ fields })
+            .then(async () => {
+                let commentCreated = false;
+
+                // this.moveComment is still valid here because we haven't closed the modal yet
+                if (this.moveComment && this.moveComment.trim() !== "") {
+                    try {
+                        await this.createStatusComment(rec.Id);
+                        commentCreated = true;
+                    } catch (commentErr) {
+                        console.warn('Comment creation failed but ticket was updated', commentErr);
+                    }
+                }
+
+                if (commentCreated) {
+                    this.showToast("Success", "Ticket moved and comment added.", "success");
+                } else {
+                    this.showToast("Success", "Ticket moved to " + newStage + ".", "success");
+                }
+
+                this.refreshTickets(); 
+                this.closeModal(); // MOVED HERE
+            })
+            .catch((error) => {
+                console.error("Update Error:", error);
+                this.showToast("Error", "Failed to update ticket.", "error");
+                this.closeModal(); // MOVED HERE
+            });
+            
+        // REMOVED from here
     }
 
     // FIX: Removed unused event param
-    handleTransitionSuccess() {
-        this.showToast('Success', 'Ticket has been successfully updated and moved.', 'success');
+    async handleTransitionSuccess(event) {
+        const ticketId = event.detail.id;
+        let commentCreated = false;
+
+        if (this.moveComment && this.moveComment.trim() !== "") {
+            try {
+                await this.createStatusComment(ticketId);
+                commentCreated = true;
+            } catch (err) {
+                console.warn('Comment failed but stage transition succeeded', err);
+                // Optionally: this.showToast('Warning', 'Comment could not be saved', 'warning');
+            }
+        }
+
+        if (commentCreated) {
+            this.showToast('Success', 'Ticket updated and comment saved.', 'success');
+        } else {
+            this.showToast('Success', 'Ticket moved successfully.', 'success');
+        }
+
         this.closeTransitionModal();
         this.refreshTickets();
     }
@@ -955,47 +1088,49 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     // --- UPDATED DROP HANDLER ---
     async handleDrop(event) {
         event.preventDefault();
-        const ticketId = this.draggedItem.uiId; 
+        const ticketId = this.draggedItem.uiId;
         const dropColumnEl = event.target.closest('.kanban-column');
+        
         if (!dropColumnEl) {
-            this.handleDragEnd(); 
+            this.handleDragEnd();
             return;
         }
 
         const targetColumnStage = dropColumnEl.dataset.stage;
-        this.handleDragEnd();
 
         // 1. Get the internal Salesforce Picklist value for this column
         const newInternalStage = (this.personaColumnStatusMap[this.persona][targetColumnStage] || [])[0];
         if (!newInternalStage) {
+            this.handleDragEnd();
             this.showToast('Error', 'Invalid target stage.', 'error');
             return;
         }
 
         // 2. Calculate the INTEGER Index where the user dropped the card
-        const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets;
-        let dropIndex = 0;
-        
-        // Find the index of the placeholder in the DOM to determine visual position
+        const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets || [];
+        let dropIndex = columnTickets.length; // Default to end
+
+        // FIX: Calculate position BEFORE calling handleDragEnd (which destroys the placeholder)
         if (this.placeholder && this.placeholder.parentNode) {
-            //const siblings = Array.from(this.placeholder.parentNode.children);
-            // Filter out the placeholder itself to get clean indices of cards
-            //const cardSiblings = siblings.filter(el => el.classList.contains('ticket-card') && !el.classList.contains('is-dragging'));
-            // Note: This simple calculation assumes the placeholder is already inserted in correct order by dragOver
-            // A more robust way: find the element *after* the placeholder
             const nextSibling = this.placeholder.nextElementSibling;
             if (nextSibling) {
                 const nextId = nextSibling.dataset.id;
                 // Find index of that ticket in the data array
                 const indexInData = columnTickets.findIndex(t => t.uiId === nextId);
-                dropIndex = indexInData === -1 ? columnTickets.length : indexInData;
+                // If we found the neighbor, put our ticket at that index. 
+                if (indexInData !== -1) {
+                    dropIndex = indexInData;
+                }
             } else {
-                // Dropped at the end
+                // No next sibling means we dropped at the very bottom
                 dropIndex = columnTickets.length;
             }
         }
 
-        // 3. Call Apex to Reorder (Insert at Index & Shift)
+        // 3. NOW it is safe to cleanup the drag visuals
+        this.handleDragEnd();
+
+        // 4. Call Apex to Reorder
         try {
             await reorderTicket({ 
                 ticketId: ticketId, 

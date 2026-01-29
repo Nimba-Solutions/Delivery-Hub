@@ -3,34 +3,36 @@
         <lightning-card title="Report Issue" icon-name="utility:bug">
             <div class="slds-p-horizontal_medium">
                 
-                <div class="slds-grid slds-grid_align-end slds-m-bottom_x-small">
-                    <div class="slds-col slds-grow-none">
+                <div class="slds-grid slds-gutters slds-m-bottom_x-small">
+                    <div class="slds-col slds-size_3-of-4">
+                        <lightning-input 
+                            label="Summary" 
+                            placeholder="Brief headline (e.g., Sort not working)" 
+                            value={subject}
+                            onchange={handleSubjectChange}>
+                        </lightning-input>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-4">
                         <lightning-combobox
                             label="Priority"
                             value={priority}
                             options={priorityOptions}
                             onchange={handlePriorityChange}
-                            variant="label-inline">
+                            dropdown-alignment="right">
                         </lightning-combobox>
                     </div>
                 </div>
-
-                <lightning-input 
-                    label="Summary" 
-                    placeholder="Brief headline (e.g., Sort not working)" 
-                    value={subject}
-                    onchange={handleSubjectChange}
-                    class="slds-m-bottom_x-small">
-                </lightning-input>
 
                 <lightning-textarea 
                     label="Details" 
                     placeholder="Steps to reproduce, expected behavior..." 
                     value={description}
-                    onchange={handleInputChange}>
+                    onchange={handleInputChange}
+                    class="slds-m-bottom_small">
                 </lightning-textarea>
 
-                <div class="slds-m-vertical_small">
+                <div class="slds-m-vertical_small upload-container slds-p-around_small">
                     <lightning-file-upload
                         label="Attach Screenshots"
                         name="fileUploader"
@@ -57,7 +59,6 @@
         <div class="floating-fab" onclick={togglePanel} title="Report Issue">
             <lightning-icon icon-name="utility:bug" variant="inverse" size="small"></lightning-icon>
         </div>
-
         <template if:true={isOpen}>
             <section role="dialog" class="slds-modal slds-fade-in-open">
                 <div class="slds-modal__container">

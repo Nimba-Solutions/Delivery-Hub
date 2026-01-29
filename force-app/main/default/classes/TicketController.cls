@@ -14,15 +14,18 @@ public with sharing class TicketController {
         }
         return [
             SELECT Id,
-                   BriefDescriptionTxt__c,
-                   CalculatedETADate__c,
-                   DeveloperDaysSizeNumber__c,
-                   StageNamePk__c,
-                   ClientIntentionPk__c,
-                   SortOrderNumber__c,
-                   Epic__c,
-                   Tags__c,(SELECT Id, Blocking_Ticket__c, Blocking_Ticket__r.Name FROM Ticket_Dependency1__r), // 'Blocked_By__r' is the child relationship name for Blocked_Ticket__c
-           (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r) 
+                BriefDescriptionTxt__c,
+                CalculatedETADate__c,
+                DeveloperDaysSizeNumber__c,
+                StageNamePk__c,
+                ClientIntentionPk__c,
+                SortOrderNumber__c,
+                Epic__c,
+                Tags__c,
+                TotalLoggedHoursNumber__c, // <--- ADDED
+                EstimatedHoursNumber__c,   // <--- ADDED
+                (SELECT Id, Blocking_Ticket__c, Blocking_Ticket__r.Name FROM Ticket_Dependency1__r),
+                (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r) 
             FROM Ticket__c
             WHERE IsActiveBool__c = true
             ORDER BY SortOrderNumber__c
