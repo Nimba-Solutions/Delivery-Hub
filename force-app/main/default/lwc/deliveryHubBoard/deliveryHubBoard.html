@@ -29,11 +29,28 @@
                     </button>
                 </div>
             </div>
+            
             <div class="kanban-filter-bar">
                 <div class="filter-group">
                     <label class="filter-label">Board View:</label>
                     <select class="slds-select" value={overallFilter} onchange={handleOverallFilterChange}>
                         <template for:each={overallFilterOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Intention:</label>
+                    <select class="slds-select" value={intentionFilter} onchange={handleIntentionFilterChange}>
+                        <template for:each={intentionFilterOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Display Mode:</label>
+                    <select class="slds-select" value={displayMode} onchange={handleDisplayModeChange}>
+                        <template for:each={displayModeOptions} for:item="opt">
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         </template>
                     </select>
@@ -48,10 +65,12 @@
             <div class="kanban-columns-container">
                 <template for:each={stageColumns} for:item="col">
                     <div key={col.stage} class="kanban-column" ondrop={handleDrop} ondragover={handleDragOver} ondragleave={handleDragLeave} data-stage={col.stage}>
+                        
                         <div class="kanban-column-header" style={col.headerStyle}>
                             <h2 class="column-title">{col.displayName}</h2>
                             <span class="ticket-count-badge">{col.tickets.length}</span>
                         </div>
+
                         <div class={col.bodyClasses}>
                             <template if:true={col.tickets.length}>
                                 <template for:each={col.tickets} for:item="ticket">
@@ -63,7 +82,10 @@
                                             </div>
                                         </template>
 
-                                        <h3 class="ticket-title-text" data-id={ticket.uiId} onclick={handleTitleClick}>{ticket.uiTitle}</h3>
+                                        <h3 class="ticket-title-text" data-id={ticket.uiId} onclick={handleTitleClick}>
+                                            {ticket.uiTitle}
+                                        </h3>
+
                                         <p class="ticket-description">{ticket.uiDescription}</p>
 
                                         <div class="ticket-metadata">
@@ -77,33 +99,47 @@
                                             </div>
                                         </div>
 
+                                        <template if:true={ticket.tags.length}>
+                                            <div class="ticket-tags">
+                                                <template for:each={ticket.tags} for:item="tag">
+                                                    <span key={tag} class="tag-badge">{tag}</span>
+                                                </template>
+                                            </div>
+                                        </template>
+
                                         <div class="ticket-footer">
                                             <template if:true={ticket.uiPriority}>
                                                 <span class={ticket.priorityClasses}>{ticket.uiPriority}</span>
                                             </template>
+
                                             <button class="ticket-action-button" title="Move Ticket" data-id={ticket.uiId} onclick={handleCardClick}>
-                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small"></lightning-icon>
+                                                <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
                                             </button>
+
                                             <button class="ticket-block-button" title="Manage Dependencies" data-id={ticket.uiId} onclick={handleManageDependenciesClick}>
-                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small"></lightning-icon>
+                                                <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Dependencies"></lightning-icon>
                                             </button>
+
                                             <template if:true={ticket.OwnerName}>
                                                 <div class="assignee">
                                                     <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
                                                     <span>{ticket.OwnerName}</span>
                                                 </div>
                                             </template>
+
                                             <template if:true={ticket.isCurrentlyBlocked}>
-                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small"></lightning-icon>
+                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This ticket is blocked."></lightning-icon>
                                             </template>
                                         </div>
                                     </div>
                                 </template>
                             </template>
+
                             <template if:false={col.tickets.length}>
                                 <div class="empty-column-placeholder">
                                     <div class="placeholder-icon"></div>
                                     <div class="placeholder-text">No tickets here</div>
+                                    <div class="placeholder-subtext">Drag tickets to this column</div>
                                 </div>
                             </template>
                         </div>
@@ -122,7 +158,8 @@
                     </button>
                     <h2 class="slds-text-heading_medium">Create New Ticket</h2>
                 </header>
-                <div class="slds-modal__content slds-p-around_medium">
+
+                <div class="slds-modal__content slds-p-around_medium" style="background:#fafcff;">
                     <template if:true={AiEnhancementEnabled}>
                         <div class="ai-enhancement-box slds-p-around_medium slds-m-bottom_medium">
                              <lightning-button label="Enhance with AI" icon-name="utility:sparkle" variant="brand" 
@@ -148,6 +185,13 @@
 
                             <lightning-file-upload label="Attach files" onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
                             
+                            <details class="slds-m-top_small">
+                                <summary style="cursor:pointer;color:#005fb2;">Advanced fields</summary>
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Tags__c"></lightning-input-field>
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Epic__c"></lightning-input-field>
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%SortOrderNumber__c" value={nextSortOrder}></lightning-input-field>
+                            </details>
+
                             <div class="slds-m-top_medium slds-text-align_right">
                                 <lightning-button variant="neutral" label="Cancel" onclick={handleCreateCancel}></lightning-button>
                                 <lightning-button variant="brand" type="submit" label="Create" class="slds-m-left_small"></lightning-button>
@@ -159,4 +203,128 @@
         </section>
         <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
+    
+    <template if:true={showModal}>
+        <section class="modal-backdrop" tabindex="0">
+            <div class="modal-body" role="dialog">
+                <header class="modal-header">
+                    <h3>Move Side Quest: {selectedRecord.uiTitle}</h3>
+                    <p>Current Status: <strong>{selectedRecord.uiStage}</strong></p>
+                </header>
+                <div class="modal-content">
+                    <template if:true={advanceOptions.length}>
+                        <div class="modal-section">
+                            <h4 class="section-title-advance">Advance</h4>
+                            <div class="button-container">
+                                <template for:each={advanceOptions} for:item="opt">
+                                    <button key={opt.value} class="move-btn" style={opt.style} data-value={opt.value} onclick={handleAdvanceOption}>
+                                        <span class="persona-icon">{opt.icon}</span> {opt.label}
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <template if:true={backtrackOptions.length}>
+                        <div class="modal-section">
+                            <h4 class="section-title-backtrack">Backtrack</h4>
+                            <div class="button-container">
+                                <template for:each={backtrackOptions} for:item="opt">
+                                    <button key={opt.value} class="move-btn" style={opt.style} data-value={opt.value} onclick={handleBacktrackOption}>
+                                        <span class="persona-icon">{opt.icon}</span> {opt.label}
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <div class="modal-section">
+                        <label for="comment" class="comment-label">Comment (optional):</label>
+                        <textarea id="comment" class="comment-box" value={moveComment} onchange={handleCommentChange}></textarea>
+                    </div>
+                </div>
+                <footer class="modal-footer">
+                    <button class="cancel-btn" onclick={handleCancelTransition}>Cancel</button>
+                </footer>
+            </div>
+        </section>
+    </template>
+
+    <template if:true={showTransitionModal}>
+    <section class="slds-modal slds-fade-in-open" tabindex="-1">
+        <div class="slds-modal__container">
+            <header class="slds-modal__header">
+                <h2 class.bind="slds-text-heading_medium slds-hyphenate">Additional Information Required</h2>
+                <p class="slds-m-top_x-small">Please provide the following details to move the ticket to <strong>{transitionTargetStage}</strong>.</p>
+            </header>
+            <div class="slds-modal__content slds-p-around_medium">
+                <lightning-record-edit-form
+                    object-api-name="Ticket__c"
+                    record-id={transitionTicketId}
+                    onsuccess={handleTransitionSuccess}
+                    onerror={handleTransitionError}>
+                    <template for:each={transitionRequiredFields} for:item="fieldName">
+                        <lightning-input-field key={fieldName} field-name={fieldName} variant="label-stacked"></lightning-input-field>
+                    </template>
+                    <div class="slds-hide">
+                        <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
+                    </div>
+                    <footer class="slds-modal__footer slds-m-top_medium">
+                        <lightning-button variant="neutral" label="Cancel" onclick={closeTransitionModal}></lightning-button>
+                        <lightning-button variant="brand" type="submit" label="Save & Move Ticket" class="slds-m-left_x-small"></lightning-button>
+                    </footer>
+                </lightning-record-edit-form>
+            </div>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+    
+    <template if:true={isModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 class="slds-modal__title slds-hyphenate">Manage Dependencies for {selectedTicket.Name}</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Blocked By:</h3>
+                    <template if:false={selectedTicket.isBlockedBy.length}>
+                        <p>This ticket is not blocked by any other tickets.</p>
+                    </template>
+                    <template for:each={selectedTicket.isBlockedBy} for:item="dep">
+                        <lightning-pill key={dep.dependencyId} label={dep.name} onremove={handleRemoveDependency} data-dependency-id={dep.dependencyId}></lightning-pill>
+                    </template>
+                    <hr class="slds-m-vertical_medium" />
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Add a Blocker</h3>
+                    <div class="slds-grid slds-gutters slds-grid_vertical-align-center">
+                        <div class="slds-col slds-size_2-of-3">
+                            <lightning-input type="search" label="Search tickets" variant="label-hidden" placeholder="Search by name or description..." onchange={handleSearchTermChange} value={searchTerm}></lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3">
+                            <lightning-button label="Search" variant="brand" onclick={handleSearch} disabled={isSearching}></lightning-button>
+                        </div>
+                    </div>
+                    <div class="slds-m-top_medium">
+                        <template if:true={isSearching}>
+                            <lightning-spinner alternative-text="Searching..." size="small"></lightning-spinner>
+                        </template>
+                        <template for:each={searchResults} for:item="result">
+                            <div key={result.Id} class="slds-box slds-box_x-small slds-m-bottom_x-small slds-grid slds-grid_align-spread">
+                                <div class="slds-col">
+                                    <strong>{result.Name}</strong>
+                                    <p class="slds-text-body_small">{result.%%%NAMESPACED_ORG%%%StageNamePk__c}</p>
+                                </div>
+                                <div class="slds-col slds-no-flex">
+                                    <lightning-button label="Select" variant="neutral" data-blocking-id={result.Id} onclick={handleSelectBlockingTicket}></lightning-button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={closeModal}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
 </template>
