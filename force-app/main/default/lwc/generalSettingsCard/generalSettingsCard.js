@@ -1,87 +1,65 @@
-// import { LightningElement, track } from 'lwc';
-
-// export default class GeneralSettingsCard extends LightningElement {
-//     @track theme = 'light';
-//     @track notifications = true;
-//     @track autoSave = true;
-
-//     get themeOptions() {
-//         return [
-//             { label: 'Light', value: 'light' },
-//             { label: 'Dark', value: 'dark' },
-//             { label: 'System', value: 'system' }
-//         ];
-//     }
-
-//     get currentDate() {
-//         return new Date().toLocaleDateString();
-//     }
-
-//     handleThemeChange(event) {
-//         this.theme = event.detail.value;
-//         // Here you would typically save to custom settings or custom metadata
-//         this.saveSettings();
-//     }
-
-//     handleNotificationsChange(event) {
-//         this.notifications = event.target.checked;
-//         this.saveSettings();
-//     }
-
-//     handleAutoSaveChange(event) {
-//         this.autoSave = event.target.checked;
-//         this.saveSettings();
-//     }
-
-//     saveSettings() {
-//         // Implementation to save settings to Salesforce
-//         // This could use custom settings, custom metadata, or custom objects
-//         console.log('Saving general settings:', {
-//             theme: this.theme,
-//             notifications: this.notifications,
-//             autoSave: this.autoSave
-//         });
-//     }
-
-//     connectedCallback() {
-//         // Load existing settings when component initializes
-//         this.loadSettings();
-//     }
-
-//     loadSettings() {
-//         // Implementation to load settings from Salesforce
-//         // This would typically call an Apex method
-//         console.log('Loading general settings...');
-//     }
-// }
-
-import { LightningElement, track, wire } from 'lwc';
+import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 import saveGeneralSettings from '@salesforce/apex/DeliveryHubSettingsController.saveGeneralSettings';
 
 export default class GeneralSettingsCard extends LightningElement {
     @track notifications = false;
+    @track autoSyncNetworkEntity = true; // Default to true
+    
     isLoading = true;
 
-    @wire(getSettings)
-    wiredSettings({ error, data }) {
-        this.isLoading = false;
-        if (data) {
-            this.notifications = data.enableNotifications || false;
-        } else if (error) {
-            this.showToast('Error Loading Settings', error.body.message, 'error');
+    // 1. REPLACED @wire WITH IMPERATIVE CALL
+    // This runs once when the component loads and hits the server directly (bypassing cache)
+    connectedCallback() {
+        this.loadSettings();
+    }
+
+    async loadSettings() {
+        try {
+            const data = await getSettings(); // Direct Apex Call
+            
+            if (data) {
+                this.notifications = data.enableNotifications || false;
+                
+                // Explicit check for undefined/null to respect 'false' values
+                if (data.autoSyncNetworkEntity !== undefined && data.autoSyncNetworkEntity !== null) {
+                    this.autoSyncNetworkEntity = data.autoSyncNetworkEntity;
+                }
+            }
+        } catch (error) {
+            this.showToast('Error Loading Settings', error.body ? error.body.message : error.message, 'error');
+        } finally {
+            this.isLoading = false;
         }
     }
 
-    async handleNotificationsToggle(event) {
+    // Handler for Notifications
+    handleNotificationsToggle(event) {
         this.notifications = event.target.checked;
+        this.saveState();
+    }
+
+    // Handler for Auto-Sync
+    handleAutoSyncToggle(event) {
+        this.autoSyncNetworkEntity = event.target.checked;
+        this.saveState();
+    }
+
+    // Centralized Save Logic
+    async saveState() {
         try {
-            await saveGeneralSettings({ enableNotifications: this.notifications });
+            await saveGeneralSettings({ 
+                enableNotifications: this.notifications,
+                autoSyncNetworkEntity: this.autoSyncNetworkEntity
+            });
+            
+            // Optional: Show a subtle success toast
+            // this.showToast('Success', 'Settings updated', 'success');
+
         } catch (error) {
-            this.showToast('Error Saving Settings', error.body.message, 'error');
-            // Revert the toggle on error
-            this.notifications = !this.notifications;
+            this.showToast('Error Saving Settings', error.body ? error.body.message : error.message, 'error');
+            // Revert toggle on error if needed
         }
     }
 
