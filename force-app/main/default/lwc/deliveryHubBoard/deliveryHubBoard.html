@@ -88,25 +88,25 @@
 
                                         <p class="ticket-description">{ticket.uiDescription}</p>
 
-                                        <div class="ticket-metadata-grid" style="display:flex; flex-direction:column; gap:4px; margin-bottom:0.5rem; background-color:#f9fafb; padding:4px; border-radius:4px;">
-                                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                                <div style="display:flex; align-items:center; gap:4px; font-size:11px; color:#6b7280;" title="Billed / Estimated Hours">
+                                        <div class="ticket-metadata-grid">
+                                            <div class="meta-row">
+                                                <div class="meta-item" title="Billed / Estimated Hours">
                                                     <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-icon-text-light"></lightning-icon>
                                                     <span>{ticket.uiHours}</span>
                                                 </div>
                                                 <div title="Size in Days">
-                                                    <span class="slds-badge" style="padding:0 4px; font-size:10px; line-height:1.2;">{ticket.uiSize}d</span>
+                                                    <span class="slds-badge meta-badge">{ticket.uiSize}d</span>
                                                 </div>
                                             </div>
 
-                                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                                <div style="display:flex; align-items:center; gap:4px; font-size:11px; color:#6b7280;" title={ticket.dateTooltip}>
+                                            <div class="meta-row">
+                                                <div class="meta-item" title={ticket.dateTooltip}>
                                                     <lightning-icon icon-name="utility:event" size="xx-small" class="slds-icon-text-light"></lightning-icon>
                                                     <span>ETA: {ticket.calculatedETA}</span>
                                                 </div>
                                                 
                                                 <template if:true={ticket.uiUat}>
-                                                    <div style="display:flex; align-items:center; gap:2px; font-size:10px; color:#b45309; font-weight:600;" title="Target UAT Date">
+                                                    <div class="meta-item uat-date" title="Target UAT Date">
                                                         <span>UAT: {ticket.uiUat}</span>
                                                     </div>
                                                 </template>
