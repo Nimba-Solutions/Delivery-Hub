@@ -6,115 +6,62 @@
  */
 public with sharing class DeliveryHubBoardController {
 
-    /**
-     * @description Updates the stage of a ticket.
-     * @param ticketId The ID of the ticket to update.
-     * @param newStage The new stage name for the ticket.
-     */
     @AuraEnabled
     public static void updateTicketStage(Id ticketId, String newStage) {
         try {
-            // Validate access
-            if (!Schema.sObjectType.Ticket__c.isUpdateable() || 
-                !Schema.sObjectType.Ticket__c.fields.StageNamePk__c.isUpdateable()) {
-                throw new AuraHandledException('Insufficient permissions to update ticket stage.');
-            }
-
-            Ticket__c ticket = new Ticket__c(
-                Id = ticketId,
-                StageNamePk__c = newStage
-            );
+            Ticket__c ticket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
             update ticket;
         } catch (Exception e) {
-            throw new AuraHandledException('Error updating ticket stage: ' + e.getMessage());
+            throw createAuraException('Error updating ticket stage: ' + e.getMessage());
         }
     }
 
-    /**
-     * @description Updates the sort order of a ticket.
-     * @param ticketId The ID of the ticket to update.
-     * @param newSortOrder The new sort order number.
-     */
     @AuraEnabled
     public static void updateTicketSortOrder(Id ticketId, Decimal newSortOrder) {
         try {
-            if (!Schema.sObjectType.Ticket__c.isUpdateable() || 
-                !Schema.sObjectType.Ticket__c.fields.SortOrderNumber__c.isUpdateable()) {
-                throw new AuraHandledException('Insufficient permissions to update sort order.');
-            }
-
-            Ticket__c ticket = new Ticket__c(
-                Id = ticketId,
-                SortOrderNumber__c = newSortOrder
-            );
+            Ticket__c ticket = new Ticket__c(Id = ticketId, SortOrderNumber__c = newSortOrder);
             update ticket;
         } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage());
+            throw createAuraException(e.getMessage());
         }
     }
     
-    /**
-     * @description Creates a dependency relationship between two tickets.
-     * @param blockedTicketId The ID of the ticket that is blocked.
-     * @param blockingTicketId The ID of the ticket that is blocking.
-     * @return Ticket_Dependency__c The created dependency record.
-     */
     @AuraEnabled
     public static Ticket_Dependency__c createDependency(Id blockedTicketId, Id blockingTicketId) {
-        // Prevent self-dependency
         if (blockedTicketId == blockingTicketId) {
-            throw new AuraHandledException('A ticket cannot block itself.');
+            throw createAuraException('A ticket cannot block itself.');
         }
 
-        if (!Schema.sObjectType.Ticket_Dependency__c.isCreateable()) {
-            throw new AuraHandledException('Insufficient permissions to create dependencies.');
+        try {
+            Ticket_Dependency__c newDependency = new Ticket_Dependency__c(
+                Blocked_Ticket__c = blockedTicketId,
+                Blocking_Ticket__c = blockingTicketId,
+                TypePk__c = 'Blocks'
+            );
+            insert newDependency;
+            return newDependency;
+        } catch (Exception e) {
+            throw createAuraException('Error creating dependency: ' + e.getMessage());
         }
-
-        Ticket_Dependency__c newDependency = new Ticket_Dependency__c(
-            Blocked_Ticket__c = blockedTicketId,
-            Blocking_Ticket__c = blockingTicketId,
-            TypePk__c = 'Blocks'
-        );
-        insert newDependency;
-        return newDependency;
     }
 
-    /**
-     * @description Removes a ticket dependency.
-     * @param dependencyId The ID of the dependency to remove.
-     */
     @AuraEnabled
     public static void removeDependency(Id dependencyId) {
         try {
-            if (!Schema.sObjectType.Ticket_Dependency__c.isDeletable()) {
-                throw new AuraHandledException('Insufficient permissions to delete dependencies.');
-            }
-
             Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c WHERE Id = :dependencyId LIMIT 1];
             delete dep;
         } catch (Exception e) {
-            throw new AuraHandledException('Error removing dependency: ' + e.getMessage());
+            throw createAuraException('Error removing dependency: ' + e.getMessage());
         }
     }
     
-    /**
-     * @description Searches for potential blocking tickets based on search term.
-     * @param searchTerm The search term to match against ticket names and descriptions.
-     * @param currentTicketId The current ticket ID to exclude from results.
-     * @param existingDependencyIds List of existing dependency IDs to exclude.
-     * @return List<Ticket__c> List of potential blocking tickets.
-     */
     @AuraEnabled(cacheable=true)
     public static List<Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds) {
         String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';
         
         Set<Id> exclusionIds = new Set<Id>();
-        if (currentTicketId != null) {
-            exclusionIds.add(currentTicketId);
-        }
-        if (existingDependencyIds != null) {
-            exclusionIds.addAll(existingDependencyIds);
-        }
+        if (currentTicketId != null) exclusionIds.add(currentTicketId);
+        if (existingDependencyIds != null) exclusionIds.addAll(existingDependencyIds);
     
         return [
             SELECT Id, Name, StageNamePk__c, BriefDescriptionTxt__c
@@ -126,5 +73,12 @@ public with sharing class DeliveryHubBoardController {
             ORDER BY LastModifiedDate DESC
             LIMIT 10
         ];
+    }
+
+    // Helper to ensure Exception messages are visible in LWC and Tests
+    private static AuraHandledException createAuraException(String message) {
+        AuraHandledException e = new AuraHandledException(message);
+        e.setMessage(message); // This makes the message accessible in tests
+        return e;
     }
 }
