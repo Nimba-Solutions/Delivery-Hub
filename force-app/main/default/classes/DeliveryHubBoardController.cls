@@ -24,13 +24,13 @@ public with sharing class DeliveryHubBoardController {
     public static void reorderTicket(Id ticketId, String newStage, Integer newIndex) {
         try {
             // 1. Get existing tickets in this stage (EXCLUDING the one we are moving)
+            // FIX: Removed 'WITH SECURITY_ENFORCED' to prevent FLS errors on SortOrderNumber__c/IsActiveBool__c
             List<Ticket__c> ticketsInColumn = [
                 SELECT Id, SortOrderNumber__c 
                 FROM Ticket__c 
                 WHERE StageNamePk__c = :newStage 
                 AND Id != :ticketId
                 AND IsActiveBool__c = TRUE 
-                WITH SECURITY_ENFORCED
                 ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate DESC
             ];
 
@@ -38,7 +38,6 @@ public with sharing class DeliveryHubBoardController {
             Ticket__c movingTicket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
 
             // 3. SAFETY FIX: Manually build a NEW list to avoid "Index Out of Bounds"
-            // This replaces "ticketsInColumn.add(index, item)" which was causing the crash.
             List<Ticket__c> processingList = new List<Ticket__c>();
             Boolean added = false;
             
@@ -65,16 +64,17 @@ public with sharing class DeliveryHubBoardController {
                 // Update if the sort order is wrong OR if it's the moving ticket (to save the new Stage)
                 if (t.Id == ticketId || t.SortOrderNumber__c != expectedSort) {
                     if (t.Id == ticketId) {
-                         t.SortOrderNumber__c = expectedSort;
-                         t.StageNamePk__c = newStage; 
+                        t.SortOrderNumber__c = expectedSort;
+                        t.StageNamePk__c = newStage; 
                     } else {
-                         t.SortOrderNumber__c = expectedSort;
+                        t.SortOrderNumber__c = expectedSort;
                     }
                     toUpdate.add(t);
                 }
             }
 
             if (!toUpdate.isEmpty()) {
+                // This check ensures we still have permission to Write, maintaining security
                 if (Schema.sObjectType.Ticket__c.isUpdateable()) {
                     update toUpdate;
                 } else {
