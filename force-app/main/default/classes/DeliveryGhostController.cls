@@ -4,9 +4,6 @@
  */
 public with sharing class DeliveryGhostController {
 
-    /**
-     * @description Wrapper to pass data cleanly from LWC to Apex.
-     */
     public class ContextWrapper {
         @AuraEnabled public String url;
         @AuraEnabled public String browser;
@@ -16,11 +13,6 @@ public with sharing class DeliveryGhostController {
 
     /**
      * @description Creates a TICKET (Work Item) from the Ghost Recorder
-     * @param subject The title of the ticket
-     * @param description The user's input
-     * @param priority The priority selected by the user
-     * @param contextData JSON String of the flight recorder data
-     * @return Id The ID of the created ticket
      */
     @AuraEnabled
     public static Id createQuickRequest(String subject, String description, String priority, String contextData) {
@@ -35,7 +27,6 @@ public with sharing class DeliveryGhostController {
                 PriorityPk__c = String.isBlank(priority) ? 'Medium' : priority
             );
             
-            // Build the HTML block for the Details field
             String contextBlock = '<br/><br/><b>--- AUTO-GENERATED CONTEXT ---</b><br/>' +
                                   '<b>URL:</b> ' + (context.url != null ? context.url : 'N/A') + '<br/>' +
                                   '<b>Object:</b> ' + (context.objectName != null ? context.objectName : 'N/A') + '<br/>' +
@@ -44,9 +35,9 @@ public with sharing class DeliveryGhostController {
                                   
             ticket.DetailsTxt__c = description + contextBlock;
             
-            // Truncate Subject if needed
-            if (subject.length() > 100) {
-                ticket.BriefDescriptionTxt__c = subject.substring(0, 100);
+            // Truncate Subject if needed (Double check for Apex length limits)
+            if (subject.length() > 80) {
+                ticket.BriefDescriptionTxt__c = subject.substring(0, 80);
             } else {
                 ticket.BriefDescriptionTxt__c = subject;
             }
@@ -67,9 +58,6 @@ public with sharing class DeliveryGhostController {
         }
     }
 
-    /**
-     * @description Silently logs navigation events
-     */
     @AuraEnabled
     public static void logUserActivity(String actionType, String contextData) {
         try {

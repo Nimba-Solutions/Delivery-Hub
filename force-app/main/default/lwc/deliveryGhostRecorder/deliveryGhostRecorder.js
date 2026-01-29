@@ -13,6 +13,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
     @api displayMode = 'Card';   
     
     @track isOpen = false;
+    @track subject = '';      // New Field
     @track description = '';
     @track priority = 'Medium';
     @track isSending = false;
@@ -43,9 +44,8 @@ export default class DeliveryGhostRecorder extends LightningElement {
         
         const attrs = this.currentPageRef.attributes;
         if (attrs.objectApiName) return attrs.objectApiName;
-        if (attrs.name) return attrs.name; // e.g., 'Home'
+        if (attrs.name) return attrs.name; 
         
-        // Check page type
         if (this.currentPageRef.type === 'standard__namedPage') {
             return 'Page: ' + attrs.pageName;
         }
@@ -89,6 +89,10 @@ export default class DeliveryGhostRecorder extends LightningElement {
         this.isOpen = !this.isOpen;
     }
 
+    handleSubjectChange(event) {
+        this.subject = event.target.value;
+    }
+
     handleInputChange(event) {
         this.description = event.target.value;
     }
@@ -103,14 +107,32 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     handleSubmit() {
-        if (!this.description) return;
+        // Validation: Must have at least a description OR a subject
+        if (!this.description && !this.subject) return;
+        
         this.isSending = true;
 
         const context = this.gatherContext();
-        const subjectLine = 'Issue on ' + (context.objectName || 'Home Page');
+        
+        // --- SMART SUBJECT LOGIC ---
+        let finalSubject = this.subject;
+
+        // If Subject is empty, auto-generate from Description
+        if (!finalSubject && this.description) {
+            if (this.description.length > 95) {
+                finalSubject = this.description.substring(0, 95) + '...';
+            } else {
+                finalSubject = this.description;
+            }
+        }
+        
+        // Fallback if somehow both are essentially empty
+        if (!finalSubject) {
+            finalSubject = 'Issue on ' + (context.objectName || 'Home Page');
+        }
 
         createTicket({ 
-            subject: subjectLine,
+            subject: finalSubject,
             description: this.description,
             priority: this.priority,
             contextData: JSON.stringify(context)
@@ -130,6 +152,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
             }));
             
             // Reset
+            this.subject = '';
             this.description = '';
             this.priority = 'Medium';
             this.uploadedFileIds = [];
