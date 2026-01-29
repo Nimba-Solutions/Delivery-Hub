@@ -22,38 +22,40 @@ public class DeliveryHubBoardControllerTest {
         insert testUser;
 
         // 2. Assign Permission Set
-        // Note: Ensure your Permission Set actually has Create/Edit on Ticket__c and Ticket_Dependency__c
         PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
         insert new PermissionSetAssignment(
             AssigneeId = testUser.Id,
             PermissionSetId = ps.Id
         );
         
-        // 3. Create Data as System (to avoid FLS errors during setup)
-        // Disable trigger logic to speed up setup
-        TriggerControl.disableAfterLogic();
+        // 3. Create Data AS THE TEST USER
+        // This fixes the "DML operation INSERT not allowed" error because this user
+        // definitely has the Permission Set assigned.
+        System.runAs(testUser) {
+            TriggerControl.disableAfterLogic();
 
-        List<Ticket__c> tickets = new List<Ticket__c>{
-            new Ticket__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
-            new Ticket__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
-            new Ticket__c(BriefDescriptionTxt__c = 'Blocked Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
-            new Ticket__c(BriefDescriptionTxt__c = 'Blocking Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
-            new Ticket__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1)
-        };
-        insert tickets;
-        
-        // Create a dependency to test removal
-        Ticket__c t1 = tickets[2]; // Blocked
-        Ticket__c t2 = tickets[3]; // Blocking
-        
-        Ticket_Dependency__c dep = new Ticket_Dependency__c(
-            Blocked_Ticket__c = t1.Id,
-            Blocking_Ticket__c = t2.Id,
-            TypePk__c = 'Blocks'
-        );
-        insert dep;
+            List<Ticket__c> tickets = new List<Ticket__c>{
+                new Ticket__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
+                new Ticket__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
+                new Ticket__c(BriefDescriptionTxt__c = 'Blocked Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
+                new Ticket__c(BriefDescriptionTxt__c = 'Blocking Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
+                new Ticket__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1)
+            };
+            insert tickets;
+            
+            // Create a dependency to test removal
+            Ticket__c t1 = tickets[2]; // Blocked
+            Ticket__c t2 = tickets[3]; // Blocking
+            
+            Ticket_Dependency__c dep = new Ticket_Dependency__c(
+                Blocked_Ticket__c = t1.Id,
+                Blocking_Ticket__c = t2.Id,
+                TypePk__c = 'Blocks'
+            );
+            insert dep;
 
-        TriggerControl.enableAfterLogic();
+            TriggerControl.enableAfterLogic();
+        }
     }
 
     @isTest
@@ -115,7 +117,6 @@ public class DeliveryHubBoardControllerTest {
                 Test.stopTest();
                 System.assert(false, 'Expected AuraHandledException not thrown');
             } catch (AuraHandledException e) {
-                // Modified assertion to match the actual error message format
                 System.assert(e.getMessage().contains('block itself'), 'Wrong error message: ' + e.getMessage());
             }
         }
@@ -124,16 +125,16 @@ public class DeliveryHubBoardControllerTest {
     @isTest
     static void testRemoveDependency() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
-        Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c LIMIT 1];
         
         System.runAs(testUser) {
+            Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c LIMIT 1];
             Test.startTest();
             DeliveryHubBoardController.removeDependency(dep.Id);
             Test.stopTest();
+            
+            Integer count = [SELECT count() FROM Ticket_Dependency__c WHERE Id = :dep.Id];
+            System.assertEquals(0, count, 'Dependency should be deleted');
         }
-        
-        Integer count = [SELECT count() FROM Ticket_Dependency__c WHERE Id = :dep.Id];
-        System.assertEquals(0, count, 'Dependency should be deleted');
     }
     
     @isTest
