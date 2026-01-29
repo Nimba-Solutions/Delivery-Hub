@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>All_Tickets_By_Created_Date_Descending</fullName>
+    <columns>NAME</columns>
+    <columns>BriefDescriptionTxt__c</columns>
+    <columns>IsActiveBool__c</columns>
+    <columns>RequestTypePk__c</columns>
+    <columns>StageNamePk__c</columns>
+    <columns>TotalLoggedHoursNumber__c</columns>
+    <columns>AcceptanceCriteriaTxt__c</columns>
+    <columns>ClientIntentionPk__c</columns>
+    <columns>ClientPreApprovedHoursNumber__c</columns>
+    <filterScope>Everything</filterScope>
+    <label>All Tickets By Created Date Descending</label>
+</ListView>
