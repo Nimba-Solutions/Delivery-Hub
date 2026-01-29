@@ -22,76 +22,77 @@ public class DeliveryHubBoardControllerTest {
         insert testUser;
 
         // 2. Assign Permission Set
+        // Note: Ensure your Permission Set actually has Create/Edit on Ticket__c and Ticket_Dependency__c
         PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
         insert new PermissionSetAssignment(
             AssigneeId = testUser.Id,
             PermissionSetId = ps.Id
         );
         
-        System.runAs(testUser) {
-            // Disable trigger logic to speed up setup
-            TriggerControl.disableAfterLogic();
+        // 3. Create Data as System (to avoid FLS errors during setup)
+        // Disable trigger logic to speed up setup
+        TriggerControl.disableAfterLogic();
 
-            List<Ticket__c> tickets = new List<Ticket__c>{
-                new Ticket__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
-                new Ticket__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
-                new Ticket__c(BriefDescriptionTxt__c = 'Blocked Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
-                new Ticket__c(BriefDescriptionTxt__c = 'Blocking Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
-                new Ticket__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1)
-            };
-            insert tickets;
-            
-            // Create a dependency to test removal
-            Ticket__c t1 = tickets[2]; // Blocked
-            Ticket__c t2 = tickets[3]; // Blocking
-            insert new Ticket_Dependency__c(
-                Blocked_Ticket__c = t1.Id,
-                Blocking_Ticket__c = t2.Id,
-                TypePk__c = 'Blocks'
-            );
+        List<Ticket__c> tickets = new List<Ticket__c>{
+            new Ticket__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
+            new Ticket__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
+            new Ticket__c(BriefDescriptionTxt__c = 'Blocked Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 1),
+            new Ticket__c(BriefDescriptionTxt__c = 'Blocking Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 2),
+            new Ticket__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1)
+        };
+        insert tickets;
+        
+        // Create a dependency to test removal
+        Ticket__c t1 = tickets[2]; // Blocked
+        Ticket__c t2 = tickets[3]; // Blocking
+        
+        Ticket_Dependency__c dep = new Ticket_Dependency__c(
+            Blocked_Ticket__c = t1.Id,
+            Blocking_Ticket__c = t2.Id,
+            TypePk__c = 'Blocks'
+        );
+        insert dep;
 
-            TriggerControl.enableAfterLogic();
-        }
+        TriggerControl.enableAfterLogic();
     }
 
     @isTest
     static void testUpdateTicketStage() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test' LIMIT 1];
+        
         System.runAs(testUser) {
-            Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test' LIMIT 1];
-            
             Test.startTest();
             DeliveryHubBoardController.updateTicketStage(ticket.Id, 'In Progress');
             Test.stopTest();
-            
-            Ticket__c updated = [SELECT StageNamePk__c FROM Ticket__c WHERE Id = :ticket.Id];
-            System.assertEquals('In Progress', updated.StageNamePk__c, 'Stage should be updated');
         }
+        
+        Ticket__c updated = [SELECT StageNamePk__c FROM Ticket__c WHERE Id = :ticket.Id];
+        System.assertEquals('In Progress', updated.StageNamePk__c, 'Stage should be updated');
     }
     
     @isTest
     static void testUpdateTicketSortOrder() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
-        System.runAs(testUser) {
-            Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Sort Test' LIMIT 1];
+        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Sort Test' LIMIT 1];
 
+        System.runAs(testUser) {
             Test.startTest();
             DeliveryHubBoardController.updateTicketSortOrder(ticket.Id, 5);
             Test.stopTest();
-            
-            Ticket__c updated = [SELECT SortOrderNumber__c FROM Ticket__c WHERE Id = :ticket.Id];
-            System.assertEquals(5, updated.SortOrderNumber__c, 'Sort order should be updated');
         }
+        
+        Ticket__c updated = [SELECT SortOrderNumber__c FROM Ticket__c WHERE Id = :ticket.Id];
+        System.assertEquals(5, updated.SortOrderNumber__c, 'Sort order should be updated');
     }
     
     @isTest
     static void testCreateDependency() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        Ticket__c blocked = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
+        Ticket__c blocking = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Sort Test'];
+        
         System.runAs(testUser) {
-            // Use the first two tickets which don't have a dependency yet
-            Ticket__c blocked = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
-            Ticket__c blocking = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Sort Test'];
-            
             Test.startTest();
             Ticket_Dependency__c dep = DeliveryHubBoardController.createDependency(blocked.Id, blocking.Id);
             Test.stopTest();
@@ -105,9 +106,9 @@ public class DeliveryHubBoardControllerTest {
     @isTest
     static void testCreateDependencySelfBlock() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Blocked Ticket'];
+        
         System.runAs(testUser) {
-            Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Blocked Ticket'];
-            
             try {
                 Test.startTest();
                 DeliveryHubBoardController.createDependency(ticket.Id, ticket.Id);
@@ -122,24 +123,24 @@ public class DeliveryHubBoardControllerTest {
     @isTest
     static void testRemoveDependency() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c LIMIT 1];
+        
         System.runAs(testUser) {
-            Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c LIMIT 1];
-            
             Test.startTest();
             DeliveryHubBoardController.removeDependency(dep.Id);
             Test.stopTest();
-            
-            Integer count = [SELECT count() FROM Ticket_Dependency__c WHERE Id = :dep.Id];
-            System.assertEquals(0, count, 'Dependency should be deleted');
         }
+        
+        Integer count = [SELECT count() FROM Ticket_Dependency__c WHERE Id = :dep.Id];
+        System.assertEquals(0, count, 'Dependency should be deleted');
     }
     
     @isTest
     static void testSearchForPotentialBlockers() {
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
+        Ticket__c currentTicket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
+        
         System.runAs(testUser) {
-            Ticket__c currentTicket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
-            
             Test.startTest();
             List<Ticket__c> results = DeliveryHubBoardController.searchForPotentialBlockers(
                 'Search Target', 
