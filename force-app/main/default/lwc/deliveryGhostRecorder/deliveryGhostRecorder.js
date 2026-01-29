@@ -4,7 +4,6 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import userId from '@salesforce/user/Id';
 
 // Apex Controllers
-// Note: We use the namespaced paths for compilation
 import createTicket from '@salesforce/apex/DeliveryGhostController.createQuickRequest'; 
 import logActivity from '@salesforce/apex/DeliveryGhostController.logUserActivity';
 import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
@@ -20,7 +19,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
     @track uploadedFileIds = [];
     
     currentPageRef;
-    currentUserId = userId; // Used as temporary parent for file uploads
+    currentUserId = userId; 
 
     get isCardMode() { return this.displayMode === 'Card'; }
     get isFloatingMode() { return this.displayMode === 'Floating Button'; }
@@ -37,8 +36,23 @@ export default class DeliveryGhostRecorder extends LightningElement {
     get uploadedFileCount() {
         return this.uploadedFileIds.length;
     }
+
+    // CLEAN DISPLAY NAME FOR UI
+    get contextDisplayName() {
+        if (!this.currentPageRef) return 'General';
+        
+        const attrs = this.currentPageRef.attributes;
+        if (attrs.objectApiName) return attrs.objectApiName;
+        if (attrs.name) return attrs.name; // e.g., 'Home'
+        
+        // Check page type
+        if (this.currentPageRef.type === 'standard__namedPage') {
+            return 'Page: ' + attrs.pageName;
+        }
+        
+        return 'General Context';
+    }
     
-    // 1. FLIGHT RECORDER LOGIC (Silent Context Capture)
     @wire(CurrentPageReference)
     getStateParameters(currentPageReference) {
         if (currentPageReference) {
@@ -58,7 +72,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     handleShortcut = (event) => {
-        // Alt + B shortcut
         if (event.altKey && (event.code === 'KeyB' || event.key === 'b')) {
             this.togglePanel();
         }
@@ -66,14 +79,12 @@ export default class DeliveryGhostRecorder extends LightningElement {
 
     handleNavigationLog() {
         const context = this.gatherContext();
-        // Silent log to backend
         logActivity({ 
             actionType: 'Navigation',
             contextData: JSON.stringify(context) 
         }).catch(err => console.error('Ghost log failed', err));
     }
 
-    // 2. UI HANDLERS
     togglePanel() {
         this.isOpen = !this.isOpen;
     }
@@ -96,7 +107,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
         this.isSending = true;
 
         const context = this.gatherContext();
-        // Auto-generate a Subject based on context
         const subjectLine = 'Issue on ' + (context.objectName || 'Home Page');
 
         createTicket({ 
@@ -106,7 +116,6 @@ export default class DeliveryGhostRecorder extends LightningElement {
             contextData: JSON.stringify(context)
         })
         .then(ticketId => {
-            // Link files if any
             if (this.uploadedFileIds.length > 0) {
                 linkFilesAndSync({
                     ticketId: ticketId,
@@ -120,7 +129,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
                 variant: 'success'
             }));
             
-            // Reset Form
+            // Reset
             this.description = '';
             this.priority = 'Medium';
             this.uploadedFileIds = [];

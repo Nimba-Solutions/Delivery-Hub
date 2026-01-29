@@ -3,16 +3,26 @@
         <lightning-card title="Report Issue" icon-name="utility:bug">
             <div class="slds-p-horizontal_medium">
                 
-                <div class="slds-grid slds-grid_align-end slds-m-bottom_small">
+                <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small">
+                    <div class="slds-col">
+                        <div class="slds-badge slds-theme_success">
+                            <lightning-icon icon-name="utility:location" size="xx-small" class="slds-m-right_xx-small" variant="inverse"></lightning-icon>
+                            {contextDisplayName}
+                        </div>
+                    </div>
+
                     <div class="slds-col slds-grow-none">
-                        <lightning-combobox
-                            label="Priority"
-                            value={priority}
-                            options={priorityOptions}
-                            onchange={handlePriorityChange}
-                            variant="label-inline"
-                            class="priority-select">
-                        </lightning-combobox>
+                        <div style="width: 130px;">
+                            <lightning-combobox
+                                name="priority"
+                                label="Priority"
+                                value={priority}
+                                options={priorityOptions}
+                                onchange={handlePriorityChange}
+                                variant="label-hidden"
+                                class="priority-dropdown">
+                            </lightning-combobox>
+                        </div>
                     </div>
                 </div>
 
@@ -21,10 +31,10 @@
                     placeholder="Describe the bug or feature idea..." 
                     value={description}
                     onchange={handleInputChange}
-                    class="description-input">
+                    class="description-input slds-m-bottom_small">
                 </lightning-textarea>
 
-                <div class="slds-m-vertical_small">
+                <div class="upload-container slds-p-around_x-small slds-m-bottom_small">
                     <lightning-file-upload
                         label="Attach Screenshots"
                         name="fileUploader"
@@ -36,13 +46,13 @@
                     <template if:true={uploadedFileCount}>
                         <div class="slds-text-color_success slds-m-top_xx-small slds-text-body_small">
                             <lightning-icon icon-name="utility:check" size="xx-small" class="slds-m-right_xx-small"></lightning-icon> 
-                            {uploadedFileCount} file(s) attached
+                            <strong>{uploadedFileCount}</strong> file(s) attached
                         </div>
                     </template>
                 </div>
 
-                <div class="slds-m-top_small slds-text-align_right">
-                    <lightning-button label="Send Ticket" variant="brand" onclick={handleSubmit} disabled={isSending}></lightning-button>
+                <div class="slds-text-align_right">
+                    <lightning-button label="Send Ticket" variant="brand" onclick={handleSubmit} disabled={isSending} icon-name="utility:send" icon-position="right"></lightning-button>
                 </div>
             </div>
         </lightning-card>
@@ -64,14 +74,20 @@
                     </header>
                     <div class="slds-modal__content slds-p-around_medium">
                         
-                        <div class="slds-m-bottom_medium slds-text-align_right">
-                             <lightning-combobox
-                                label="Priority"
-                                value={priority}
-                                options={priorityOptions}
-                                onchange={handlePriorityChange}
-                                variant="label-inline">
-                            </lightning-combobox>
+                        <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                            <div class="slds-col">
+                                <span class="slds-text-heading_small">Context: <strong>{contextDisplayName}</strong></span>
+                            </div>
+                            <div class="slds-col slds-grow-none">
+                                <div style="width: 150px;">
+                                    <lightning-combobox
+                                        label="Priority"
+                                        value={priority}
+                                        options={priorityOptions}
+                                        onchange={handlePriorityChange}>
+                                    </lightning-combobox>
+                                </div>
+                            </div>
                         </div>
 
                         <lightning-textarea 
