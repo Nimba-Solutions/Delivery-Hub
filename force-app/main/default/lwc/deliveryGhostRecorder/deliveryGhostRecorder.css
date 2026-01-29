@@ -1,16 +1,17 @@
 /* Card Layout Polish */
 .upload-container {
     background-color: #f3f4f6; /* Gray-100 */
-    border-radius: 0.5rem;
+    border-radius: 0.25rem;
     border: 1px dashed #d1d5db; /* Gray-300 */
 }
 
-.priority-dropdown {
-    /* Ensures the dropdown triggers don't get cut off */
-    position: relative;
+/* Ensure the priority dropdown can spill over the card boundaries if needed */
+lightning-card {
+    overflow: visible; 
+    display: block;
 }
 
-/* Floating Action Button (FAB) */
+/* Floating Action Button (FAB) - Kept largely the same */
 .floating-fab {
     position: fixed;
     bottom: 20px;
