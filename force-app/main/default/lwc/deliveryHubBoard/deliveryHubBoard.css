@@ -1,0 +1,707 @@
+/* General Setup & Variables */
+:host {
+    --brand-primary: #4f46e5;
+    --brand-primary-light: #eef2ff;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-800: #1f2937;
+    --gray-900: #11182c;
+    --red-500: #ef4444;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --radius: 0.75rem;
+    display: block;
+}
+
+/* Main Layout */
+.kanban-container {
+    background-color: var(--gray-100);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-board {
+    flex-grow: 1;
+    overflow-x: auto;
+    padding: 1.5rem;
+}
+
+.kanban-columns-container {
+    display: flex;
+    gap: 1.5rem;
+    min-width: max-content;
+}
+
+/* Toolbar */
+.kanban-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.viewing-as-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--gray-200);
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--radius);
+}
+
+.view-as-select {
+    border: none;
+    background: transparent;
+    font-weight: 500;
+    font-size: 14px;
+}
+.view-as-select:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.button-group .toolbar-button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--gray-200);
+    background-color: var(--white);
+    font-size: 14px;
+    cursor: pointer;
+}
+.button-group .toolbar-button:first-child {
+    border-top-left-radius: var(--radius);
+    border-bottom-left-radius: var(--radius);
+}
+.button-group .toolbar-button:last-child {
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    border-left: none;
+}
+.button-group .toolbar-button.active {
+    background-color: var(--gray-100);
+    font-weight: 600;
+}
+
+.active-devs-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 14px;
+}
+.dev-count-input {
+    width: 50px;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    padding: 0.25rem;
+}
+
+.new-ticket-button {
+    background-color: var(--brand-primary);
+    color: var(--white);
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+.new-ticket-button:hover {
+    background-color: #4338ca;
+}
+.new-ticket-button .slds-icon {
+    --sds-c-icon-color-foreground-default: white;
+}
+
+/* Kanban Column */
+.kanban-column {
+    width: 300px;
+    flex-shrink: 0;
+    background-color: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.column-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.ticket-count-badge {
+    font-size: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+}
+
+.kanban-column-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+}
+
+.empty-column-placeholder {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--gray-400);
+}
+.placeholder-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.placeholder-subtext {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+/* Ticket Card */
+.ticket-card {
+    background-color: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+    border-left-width: 4px;
+    box-shadow: var(--shadow-sm);
+    padding: 0.75rem;
+    cursor: grab;
+    transition: box-shadow 0.2s, transform 0.2s;
+    position: relative;
+}
+.ticket-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+.ticket-card:active {
+    cursor: grabbing;
+}
+
+/* Card border colors */
+.border-requirements,
+.border-design {
+    border-left-color: #60a5fa;
+}
+.border-development,
+.border-testing {
+    border-left-color: #4ade80;
+}
+.border-ready-for-qa,
+.border-qa-in-progress {
+    border-left-color: #facc15;
+}
+.border-ready-for-prod,
+.border-deployed {
+    border-left-color: #a78bfa;
+}
+.border-done {
+    border-left-color: #22c55e;
+}
+.border-default {
+    border-left-color: var(--gray-400);
+}
+
+.priority-indicator {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+.priority-indicator .slds-icon {
+    --sds-c-icon-color-foreground-default: var(--red-500);
+}
+
+.ticket-title-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 0.5rem 0;
+    padding-right: 1.5rem; /* Space for indicator */
+    cursor: pointer;
+}
+
+.ticket-description {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* UPDATED METADATA STYLES */
+.ticket-metadata-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 0.75rem;
+    background-color: #f9fafb;
+    padding: 6px;
+    border-radius: 4px;
+}
+
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--gray-500);
+}
+
+.meta-item lightning-icon {
+    --sds-c-icon-color-foreground-default: #9ca3af;
+}
+
+.meta-badge {
+    padding: 0 4px; 
+    font-size: 10px; 
+    line-height: 1.2;
+}
+
+.uat-date {
+    gap: 2px;
+    font-size: 10px; 
+    color: #b45309; 
+    font-weight: 600;
+}
+
+.ticket-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+.tag-badge {
+    background-color: var(--gray-100);
+    color: var(--gray-800);
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+}
+
+.ticket-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.priority-badge {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.6rem;
+    border: 1px solid;
+    border-radius: 9999px;
+    text-transform: capitalize;
+}
+.priority-high {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+.priority-medium {
+    background-color: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+}
+.priority-low {
+    background-color: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+.assignee {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.kanban-toolbar-container {
+    background-color: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+}
+
+.kanban-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.5rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+    background-color: #f9fafb; /* A slightly different background */
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+.kanban-filter-bar .slds-select {
+    min-width: 150px;
+    font-size: 14px;
+}
+
+/* --- Ticket Card Action Button --- */
+.ticket-action-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto; /* Pushes button to the right before assignee */
+    margin-right: 8px;
+    opacity: 0.2;
+    transition: opacity 0.2s;
+}
+
+.ticket-block-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* margin-left: auto; Pushes button to the right before assignee */
+    margin-right: 8px;
+    opacity: 0.2;
+    transition: opacity 0.2s;
+}
+
+.ticket-card:hover .ticket-block-button {
+    opacity: 1;
+}
+.ticket-block-button:hover {
+    background-color: var(--gray-200);
+}
+.ticket-card:hover .ticket-action-button {
+    opacity: 1;
+}
+.ticket-action-button:hover {
+    background-color: var(--gray-200);
+}
+
+/* --- New Modal Styles --- */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-body {
+    width: 90%;
+    max-width: 520px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+.modal-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+.modal-header p {
+    margin: 0;
+    color: var(--gray-500);
+}
+
+.modal-content {
+    padding: 1rem 1.5rem;
+    flex-grow: 1;
+}
+
+.modal-section {
+    margin-bottom: 1.25rem;
+}
+
+.section-title-advance,
+.section-title-backtrack {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.section-title-advance {
+    color: #2563eb;
+}
+.section-title-backtrack {
+    color: var(--gray-800);
+}
+
+.button-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.move-btn {
+    border: 1px solid var(--gray-400);
+    background-color: var(--white);
+    color: var(--gray-900);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+}
+.move-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.comment-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--gray-800);
+}
+
+.comment-box {
+    width: 100%;
+    min-height: 60px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    padding: 0.5rem;
+}
+.comment-box:focus {
+    outline: 2px solid var(--brand-primary);
+    border-color: transparent;
+}
+
+.modal-footer {
+    padding: 0.75rem 1.5rem;
+    text-align: right;
+    border-top: 1px solid var(--gray-200);
+    background-color: #f9fafb;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.cancel-btn {
+    border: 1px solid var(--gray-400);
+    background-color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* Style for the column being hovered over */
+.kanban-column.drag-over {
+    background-color: rgba(59, 130, 246, 0.05); /* Light blue tint */
+    border: 2px dashed rgba(59, 130, 246, 0.4);
+}
+
+/* Style for the ticket being dragged */
+.ticket-card.is-dragging {
+    opacity: 0.4;
+    transform: scale(1.05) rotate(3deg);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Enhanced Empty Column Placeholder --- */
+.empty-column-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--gray-400);
+    min-height: 150px; /* Give it some height */
+}
+
+.placeholder-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--gray-200);
+    margin-bottom: 1rem;
+}
+
+.placeholder-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+.placeholder-subtext {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+/* Add this to your existing ticket card styles */
+.ticket-card {
+    transition: box-shadow 0.2s, transform 0.2s, opacity 0.2s; /* Add opacity to transition */
+}
+
+.ticket-action-button {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* This is key: it pushes the button left of the assignee */
+    margin-left: auto;
+    margin-right: 8px;
+
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.2s, background-color 0.2s;
+}
+
+/* Show the button when hovering over the card */
+.ticket-card:hover .ticket-action-button {
+    opacity: 0.6;
+}
+
+.ticket-action-button:hover {
+    opacity: 1;
+    background-color: var(--gray-200);
+}
+
+.kanban-column.drag-over .empty-column-placeholder {
+    display: none;
+}
+
+
+/* The placeholder that shows where the card will land */
+.drag-placeholder {
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 2px dashed rgba(59, 130, 246, 0.5);
+    border-radius: var(--radius);
+    margin: 0.5rem 0; /* Match card margin */
+    transition: all 0.2s;
+}
+
+/* The original card being dragged ("ghost") */
+.ticket-card.is-dragging {
+    opacity: 0; /* Make it invisible, browser provides its own ghost image */
+    /* If you dislike the browser ghost, you can use: opacity: 0.5; transform: rotate(3deg); */
+    /* but opacity: 0 is usually smoother */
+}
+
+/* --- Revised Empty State Logic --- */
+
+/* The empty placeholder is visible by default... */
+.empty-column-placeholder {
+    display: flex;
+    pointer-events: none;
+}
+
+
+/* ...but if the column has tickets, the placeholder is hidden. */
+.kanban-column-body.has-tickets .empty-column-placeholder {
+    display: none;
+}
+
+.kanban-board.drag-is-active .empty-column-placeholder {
+    display: none;
+}
+
+/* --- AI Enhancement Styles --- */
+.ai-badge {
+    background-color: #f3e8ff; /* Light purple */
+    color: #6b21a8; /* Dark purple */
+    font-weight: 500;
+    --sds-c-icon-color-foreground: #6b21a8;
+}
+
+.ai-enhancement-box {
+    background: linear-gradient(to right, #f5f3ff, #eef2ff); /* from-purple-50 to-blue-50 */
+    border-radius: 0.75rem;
+    border: 1px solid #ddd6fe; /* purple-200 */
+}
+
+.ai-suggestions-box {
+    border: 2px solid #c4b5fd; /* purple-300 */
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05);
+}
+
+.eta-badge {
+    background-color: #fef3c7; /* amber-100 */
+    color: #92400e; /* amber-800 */
+    font-weight: 500;
+    --sds-c-icon-color-foreground: #b45309; /* amber-700 */
+}
+
+.slds-form-element__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #4b5563; /* gray-600 */
+    margin-bottom: 0.25rem;
+}
+
+.exampleHolder{
+    position: relative;
+    display: inline-block;
+    width: 80px;
+    height: 80px;
+}

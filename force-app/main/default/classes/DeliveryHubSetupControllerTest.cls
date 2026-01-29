@@ -8,11 +8,13 @@ private class DeliveryHubSetupControllerTest {
         
         System.runAs(testUser) {
             Test.startTest();
-            Map<String, Object> result = DeliveryHubSetupController.getSetupStatus();
+            // FIX: Assign to the actual inner class type, not Map
+            DeliveryHubSetupController.SetupStatus result = DeliveryHubSetupController.getSetupStatus();
             Test.stopTest();
 
-            System.assertEquals(false, result.get('isConnected'));
-            System.assert(result.containsKey('requiredRemoteSite'));
+            // FIX: Access fields directly via dot notation
+            System.assertEquals(false, result.isConnected, 'Should not be connected initially');
+            System.assertNotEquals(null, result.requiredRemoteSite, 'Remote site URL should be returned');
         }
     }
 
@@ -22,18 +24,19 @@ private class DeliveryHubSetupControllerTest {
         
         System.runAs(testUser) {
             Test.startTest();
-            String entityId = DeliveryHubSetupController.connectToDefaultMothership();
+            // FIX: Method returns void, so just call it. Do not assign to String.
+            DeliveryHubSetupController.connectToDefaultMothership();
             
             // Check status again
-            Map<String, Object> result = DeliveryHubSetupController.getSetupStatus();
+            DeliveryHubSetupController.SetupStatus result = DeliveryHubSetupController.getSetupStatus();
             Test.stopTest();
 
-            System.assertNotEquals(null, entityId);
-            System.assertEquals(true, result.get('isConnected'));
+            System.assertEquals(true, result.isConnected, 'Should be connected after setup');
+            System.assertNotEquals(null, result.entity, 'Entity object should be returned');
             
-            // Validate the Entity
-            Network_Entity__c created = [SELECT Name FROM Network_Entity__c WHERE Id = :entityId];
-            System.assert(created.Name.contains('Nimba'));
+            // Validate the Entity exists in DB
+            Network_Entity__c created = [SELECT Id, Name FROM Network_Entity__c WHERE Id = :result.entity.Id];
+            System.assert(created.Name.contains('Cloud Nimbus'), 'Name should match new branding');
         }
     }
 
@@ -46,11 +49,11 @@ private class DeliveryHubSetupControllerTest {
             DeliveryHubSetupController.connectToDefaultMothership();
 
             Test.startTest();
-            // Create it again (Should return existing ID)
-            String entityId = DeliveryHubSetupController.connectToDefaultMothership();
+            // Create it again (Should handle duplicates gracefully)
+            DeliveryHubSetupController.connectToDefaultMothership();
             Test.stopTest();
 
-            Integer count = [SELECT COUNT() FROM Network_Entity__c];
+            Integer count = [SELECT COUNT() FROM Network_Entity__c WHERE Name LIKE 'Cloud Nimbus%'];
             System.assertEquals(1, count, 'Should not duplicate entities');
         }
     }
