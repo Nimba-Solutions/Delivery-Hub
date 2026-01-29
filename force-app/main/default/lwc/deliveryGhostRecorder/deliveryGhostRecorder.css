@@ -1,21 +1,35 @@
+/* Card Layout Polish */
+.upload-container {
+    background-color: #f3f4f6; /* Gray-100 */
+    border-radius: 0.5rem;
+    border: 1px dashed #d1d5db; /* Gray-300 */
+}
+
+.priority-dropdown {
+    /* Ensures the dropdown triggers don't get cut off */
+    position: relative;
+}
+
+/* Floating Action Button (FAB) */
 .floating-fab {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 50px;
-    height: 50px;
+    width: 56px;
+    height: 56px;
     background-color: #0176d3; /* Salesforce Blue */
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
     cursor: pointer;
     z-index: 9999;
-    transition: transform 0.2s ease-in-out;
+    transition: transform 0.2s ease-in-out, background-color 0.2s;
 }
 
 .floating-fab:hover {
-    transform: scale(1.1);
-    background-color: #014486; /* Darker Blue on Hover */
+    transform: scale(1.05);
+    background-color: #014486;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
 }

@@ -829,7 +829,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                     this.showToast("Success", "Ticket updated.", "success");
                     this.refreshTickets(); 
                 })
-                .catch(() => {
+                .catch(() => { // Removed unused 'error' parameter here
                     this.showToast("Error", "Failed to update ticket.", "error");
                 });
         }
@@ -977,42 +977,6 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 const errorMessage = error.body?.message || 'An unknown error occurred.';
                 this.showToast('Move Failed', errorMessage, 'error');
             }
-        }
-    }
-
-    // [Modal & Transition Handlers]
-    closeTransitionModal() {
-        this.showTransitionModal = false;
-        this.transitionTicketId = null;
-        this.transitionTargetStage = null;
-        this.transitionRequiredFields = [];
-    }
-
-    handleTransitionSuccess() {
-        this.showToast('Success', 'Ticket has been successfully updated and moved.', 'success');
-        this.closeTransitionModal();
-        this.refreshTickets();
-    }
-
-    handleTransitionError(event) {
-        this.showToast('Error Saving Ticket', 'Please review the fields and try again.', 'error');
-        console.error('Error on transition save:', JSON.stringify(event.detail));
-    }
-
-    calculateNewSortOrder(placeholder, columnTickets) {
-        const prevSibling = placeholder.previousElementSibling;
-        const nextSibling = placeholder.nextElementSibling;
-        const prevTicket = prevSibling ? columnTickets.find((t) => t.uiId === prevSibling.dataset.id) : null;
-        const nextTicket = nextSibling ? columnTickets.find((t) => t.uiId === nextSibling.dataset.id) : null;
-        
-        const getSort = (t) => t[FIELDS.SORT_ORDER] || t['delivery__SortOrderNumber__c'] || t['SortOrderNumber__c'] || 0;
-
-        const sortBefore = prevTicket ? getSort(prevTicket) : 0;
-
-        if (nextTicket) {
-            return (sortBefore + getSort(nextTicket)) / 2.0;
-        } else {
-            return sortBefore + 1; 
         }
     }
 
