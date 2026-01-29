@@ -978,7 +978,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         
         // Find the index of the placeholder in the DOM to determine visual position
         if (this.placeholder && this.placeholder.parentNode) {
-            const siblings = Array.from(this.placeholder.parentNode.children);
+            //const siblings = Array.from(this.placeholder.parentNode.children);
             // Filter out the placeholder itself to get clean indices of cards
             //const cardSiblings = siblings.filter(el => el.classList.contains('ticket-card') && !el.classList.contains('is-dragging'));
             // Note: This simple calculation assumes the placeholder is already inserted in correct order by dragOver
