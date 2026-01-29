@@ -939,7 +939,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
         const fields = { 
             Id: rec.Id, 
-            %%%NAMESPACED_ORG%%%StageNamePk__c: newStage 
+            '%%%NAMESPACED_ORG%%%StageNamePk__c': newStage 
         };
 
         updateRecord({ fields })
