@@ -829,7 +829,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                     this.showToast("Success", "Ticket updated.", "success");
                     this.refreshTickets(); 
                 })
-                .catch((error) => {
+                .catch(() => { // Removed unused 'error' parameter here
                     this.showToast("Error", "Failed to update ticket.", "error");
                 });
         }
