@@ -82,7 +82,7 @@ public with sharing class DeliveryHubBoardController {
                 }
             }
         } catch (Exception e) {
-            System.debug('Error in reorderTicket: ' + e.getMessage());
+            System.debug(LoggingLevel.ERROR, 'Error in reorderTicket: ' + e.getMessage());
             throw createAuraException(e.getMessage());
         }
     }

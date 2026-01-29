@@ -129,13 +129,15 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         const fields = {
-            %%%NAMESPACED_ORG%%%TicketId__c: ticketId,
-            %%%NAMESPACED_ORG%%%BodyTxt__c: this.moveComment,
-            %%%NAMESPACED_ORG%%%SourcePk__c: 'Salesforce',
-            %%%NAMESPACED_ORG%%%AuthorTxt__c: this.currentUserName // <--- Populates with the logged-in user's name
+            '%%%NAMESPACED_ORG%%%TicketId__c': ticketId,
+            '%%%NAMESPACED_ORG%%%BodyTxt__c': this.moveComment,
+            '%%%NAMESPACED_ORG%%%SourcePk__c': 'Salesforce',
+            '%%%NAMESPACED_ORG%%%AuthorTxt__c': this.currentUserName 
         };
 
         const recordInput = { 
+            // Note: apiName is a string value, so it was already fine, 
+            // but the keys inside 'fields' MUST be quoted.
             apiName: '%%%NAMESPACED_ORG%%%Ticket_Comment__c', 
             fields 
         };
