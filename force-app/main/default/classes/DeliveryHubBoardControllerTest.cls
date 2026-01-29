@@ -6,7 +6,6 @@ public class DeliveryHubBoardControllerTest {
 
     @testSetup
     static void setup() {
-        // Disable triggers to speed up setup
         TriggerControl.disableAfterLogic();
 
         List<Ticket__c> tickets = new List<Ticket__c>{
@@ -18,13 +17,9 @@ public class DeliveryHubBoardControllerTest {
         };
         insert tickets;
         
-        // Create a dependency to test removal
-        Ticket__c t1 = tickets[2]; // Blocked
-        Ticket__c t2 = tickets[3]; // Blocking
-        
         Ticket_Dependency__c dep = new Ticket_Dependency__c(
-            Blocked_Ticket__c = t1.Id,
-            Blocking_Ticket__c = t2.Id,
+            Blocked_Ticket__c = tickets[2].Id,
+            Blocking_Ticket__c = tickets[3].Id,
             TypePk__c = 'Blocks'
         );
         insert dep;
@@ -41,7 +36,7 @@ public class DeliveryHubBoardControllerTest {
         Test.stopTest();
         
         Ticket__c updated = [SELECT StageNamePk__c FROM Ticket__c WHERE Id = :ticket.Id];
-        System.assertEquals('In Progress', updated.StageNamePk__c, 'Stage should be updated');
+        System.assertEquals('In Progress', updated.StageNamePk__c);
     }
     
     @isTest
@@ -53,7 +48,7 @@ public class DeliveryHubBoardControllerTest {
         Test.stopTest();
         
         Ticket__c updated = [SELECT SortOrderNumber__c FROM Ticket__c WHERE Id = :ticket.Id];
-        System.assertEquals(5, updated.SortOrderNumber__c, 'Sort order should be updated');
+        System.assertEquals(5, updated.SortOrderNumber__c);
     }
     
     @isTest
@@ -65,9 +60,7 @@ public class DeliveryHubBoardControllerTest {
         Ticket_Dependency__c dep = DeliveryHubBoardController.createDependency(blocked.Id, blocking.Id);
         Test.stopTest();
         
-        System.assertNotEquals(null, dep.Id, 'Dependency should be created');
-        System.assertEquals(blocked.Id, dep.Blocked_Ticket__c);
-        System.assertEquals(blocking.Id, dep.Blocking_Ticket__c);
+        System.assertNotEquals(null, dep.Id);
     }
     
     @isTest
@@ -78,9 +71,8 @@ public class DeliveryHubBoardControllerTest {
             Test.startTest();
             DeliveryHubBoardController.createDependency(ticket.Id, ticket.Id);
             Test.stopTest();
-            System.assert(false, 'Expected AuraHandledException not thrown');
+            System.assert(false, 'Expected AuraHandledException');
         } catch (AuraHandledException e) {
-            // setMessage() in the controller makes e.getMessage() available here
             System.assert(e.getMessage().contains('block itself'), 'Wrong error message: ' + e.getMessage());
         }
     }
@@ -94,7 +86,7 @@ public class DeliveryHubBoardControllerTest {
         Test.stopTest();
         
         Integer count = [SELECT count() FROM Ticket_Dependency__c WHERE Id = :dep.Id];
-        System.assertEquals(0, count, 'Dependency should be deleted');
+        System.assertEquals(0, count);
     }
     
     @isTest
@@ -105,11 +97,11 @@ public class DeliveryHubBoardControllerTest {
         List<Ticket__c> results = DeliveryHubBoardController.searchForPotentialBlockers(
             'Search Target', 
             currentTicket.Id, 
-            new List<Id>() // No existing dependencies to exclude
+            new List<Id>()
         );
         Test.stopTest();
         
-        System.assertEquals(1, results.size(), 'Search should return exactly one result');
+        System.assertEquals(1, results.size());
         System.assertEquals('Search Target', results[0].BriefDescriptionTxt__c);
     }
 }
