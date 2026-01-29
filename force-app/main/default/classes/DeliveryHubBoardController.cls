@@ -23,7 +23,7 @@ public with sharing class DeliveryHubBoardController {
     @AuraEnabled
     public static void reorderTicket(Id ticketId, String newStage, Integer newIndex) {
         try {
-            // 1. Get existing tickets in this stage to determine order
+            // 1. Get existing tickets in this stage (EXCLUDING the one we are moving)
             List<Ticket__c> ticketsInColumn = [
                 SELECT Id, SortOrderNumber__c 
                 FROM Ticket__c 
@@ -34,26 +34,42 @@ public with sharing class DeliveryHubBoardController {
                 ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate DESC
             ];
 
-            // 2. Insert moving ticket at correct index
+            // 2. Prepare the moving ticket object
             Ticket__c movingTicket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
-            
-            if (newIndex < 0) {
-                newIndex = 0;
-            }
-            if (newIndex > ticketsInColumn.size()) {
-                newIndex = ticketsInColumn.size();
-            }
-            
-            ticketsInColumn.add(newIndex, movingTicket);
 
-            // 3. Re-index entire list (1, 2, 3...)
-            List<Ticket__c> toUpdate = new List<Ticket__c>();
+            // 3. SAFETY FIX: Manually build a NEW list to avoid "Index Out of Bounds"
+            // This replaces "ticketsInColumn.add(index, item)" which was causing the crash.
+            List<Ticket__c> processingList = new List<Ticket__c>();
+            Boolean added = false;
+            
+            // Loop through existing tickets and insert ours at the right spot
             for (Integer i = 0; i < ticketsInColumn.size(); i++) {
-                Ticket__c t = ticketsInColumn[i];
+                if (i == newIndex) {
+                    processingList.add(movingTicket);
+                    added = true;
+                }
+                processingList.add(ticketsInColumn[i]);
+            }
+            
+            // If we reached the end and haven't added it yet (e.g. dropped at bottom), add it now
+            if (!added) {
+                processingList.add(movingTicket);
+            }
+
+            // 4. Re-index the new clean list (1, 2, 3...)
+            List<Ticket__c> toUpdate = new List<Ticket__c>();
+            for (Integer i = 0; i < processingList.size(); i++) {
+                Ticket__c t = processingList[i];
                 Decimal expectedSort = i + 1; 
                 
+                // Update if the sort order is wrong OR if it's the moving ticket (to save the new Stage)
                 if (t.Id == ticketId || t.SortOrderNumber__c != expectedSort) {
-                    t.SortOrderNumber__c = expectedSort;
+                    if (t.Id == ticketId) {
+                         t.SortOrderNumber__c = expectedSort;
+                         t.StageNamePk__c = newStage; 
+                    } else {
+                         t.SortOrderNumber__c = expectedSort;
+                    }
                     toUpdate.add(t);
                 }
             }
@@ -66,6 +82,7 @@ public with sharing class DeliveryHubBoardController {
                 }
             }
         } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Error in reorderTicket: ' + e.getMessage());
             throw createAuraException(e.getMessage());
         }
     }
