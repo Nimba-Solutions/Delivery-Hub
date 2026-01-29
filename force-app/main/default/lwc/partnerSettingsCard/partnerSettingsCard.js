@@ -7,7 +7,7 @@ export default class PartnerSettingsCard extends LightningElement {
     @track customUrl = '';
     
     // In a real scenario, you'd fetch the User's actual Site URL here via Apex
-    @track myInboundUrl = 'https://[Your-Site-Domain].force.com/services/apexrest/deliveryhub/v1/intake';
+    @track myInboundUrl = 'https://[Your-Site-Domain].force.com/services/apexrest/delivery/deliveryhub/v1/intake';
 
     get partnerOptions() {
         return [
