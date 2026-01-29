@@ -4,9 +4,9 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import userId from '@salesforce/user/Id';
 
 // Apex Controllers
-import createTicket from '@salesforce/apex/DeliveryGhostController.createQuickRequest'; 
-import logActivity from '@salesforce/apex/DeliveryGhostController.logUserActivity';
-import linkFilesAndSync from "@salesforce/apex/TicketController.linkFilesAndSync";
+import createTicket from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest'; 
+import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
+import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
 
 export default class DeliveryGhostRecorder extends LightningElement {
     @api enableShortcut = false; 

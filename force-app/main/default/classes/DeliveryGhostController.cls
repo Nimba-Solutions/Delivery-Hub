@@ -30,6 +30,8 @@ public with sharing class DeliveryGhostController {
             Ticket__c ticket = new Ticket__c(
                 WorkItemNameTxt__c = subject,
                 StatusPk__c = 'New',
+                StageNamePk__c = 'Backlog',
+                IsActiveBool__c = TRUE,
                 PriorityPk__c = String.isBlank(priority) ? 'Medium' : priority
             );
             
