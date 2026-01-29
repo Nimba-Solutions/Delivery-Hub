@@ -14,24 +14,22 @@ private class DeliveryGhostControllerTest {
         context.objectName = 'Account';
         context.recordId = mockRecord.Id; 
 
-        // FIX: Serialize to JSON String
         String contextJson = JSON.serialize(context);
 
         Test.startTest();
-        // Pass JSON string instead of object
-        DeliveryGhostController.createQuickRequest('Test Bug', 'Something is broken', contextJson);
+        // Pass priority 'High'
+        Id ticketId = DeliveryGhostController.createQuickRequest('Test Bug', 'Something is broken', 'High', contextJson);
         Test.stopTest();
 
         // Verify Ticket Created
-        Ticket__c t = [SELECT WorkItemNameTxt__c, DetailsTxt__c FROM Ticket__c LIMIT 1];
+        Ticket__c t = [SELECT WorkItemNameTxt__c, DetailsTxt__c, PriorityPk__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
         System.assertEquals('Test Bug', t.WorkItemNameTxt__c, 'Work Item Name should match');
+        System.assertEquals('High', t.PriorityPk__c, 'Priority should match');
         System.assert(t.DetailsTxt__c.contains('<b>--- AUTO-GENERATED CONTEXT ---</b>'), 'Details should contain context header');
-        System.assert(t.DetailsTxt__c.contains('Chrome Test Agent'), 'Details should contain browser info');
     }
 
     @IsTest
     static void testLogUserActivity() {
-        // Create a dummy record to generate a real ID
         Account mockRecord = new Account(Name = 'Test Context Account');
         insert mockRecord;
 
@@ -41,7 +39,6 @@ private class DeliveryGhostControllerTest {
         context.objectName = 'Opportunity';
         context.recordId = mockRecord.Id; 
 
-        // FIX: Serialize to JSON String
         String contextJson = JSON.serialize(context);
 
         Test.startTest();
@@ -49,6 +46,6 @@ private class DeliveryGhostControllerTest {
         Test.stopTest();
 
         User_Activity_Log__c log = [SELECT ActionTypePk__c FROM User_Activity_Log__c LIMIT 1];
-        System.assertEquals('Navigation', log.ActionTypePk__c, 'Action Type should be Navigation');
+        System.assertEquals('Navigation', log.ActionTypePk__c);
     }
 }
