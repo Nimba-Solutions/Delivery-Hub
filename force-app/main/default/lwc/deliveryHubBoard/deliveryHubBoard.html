@@ -88,14 +88,28 @@
 
                                         <p class="ticket-description">{ticket.uiDescription}</p>
 
-                                        <div class="ticket-metadata">
-                                            <div class="meta-item">
-                                                <lightning-icon icon-name="utility:hashtag" size="xx-small"></lightning-icon>
-                                                <span>Size: {ticket.uiSize}</span>
+                                        <div class="ticket-metadata-grid">
+                                            <div class="meta-row">
+                                                <div class="meta-item" title="Billed / Estimated Hours">
+                                                    <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-icon-text-light"></lightning-icon>
+                                                    <span>{ticket.uiHours}</span>
+                                                </div>
+                                                <div title="Size in Days">
+                                                    <span class="slds-badge meta-badge">{ticket.uiSize}d</span>
+                                                </div>
                                             </div>
-                                            <div class="meta-item" title={ticket.dateTooltip}>
-                                                <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
-                                                <span>{ticket.calculatedETA}</span>
+
+                                            <div class="meta-row">
+                                                <div class="meta-item" title={ticket.dateTooltip}>
+                                                    <lightning-icon icon-name="utility:event" size="xx-small" class="slds-icon-text-light"></lightning-icon>
+                                                    <span>ETA: {ticket.calculatedETA}</span>
+                                                </div>
+                                                
+                                                <template if:true={ticket.uiUat}>
+                                                    <div class="meta-item uat-date" title="Target UAT Date">
+                                                        <span>UAT: {ticket.uiUat}</span>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </div>
 
@@ -249,33 +263,33 @@
     </template>
 
     <template if:true={showTransitionModal}>
-    <section class="slds-modal slds-fade-in-open" tabindex="-1">
-        <div class="slds-modal__container">
-            <header class="slds-modal__header">
-                <h2 class.bind="slds-text-heading_medium slds-hyphenate">Additional Information Required</h2>
-                <p class="slds-m-top_x-small">Please provide the following details to move the ticket to <strong>{transitionTargetStage}</strong>.</p>
-            </header>
-            <div class="slds-modal__content slds-p-around_medium">
-                <lightning-record-edit-form
-                    object-api-name="Ticket__c"
-                    record-id={transitionTicketId}
-                    onsuccess={handleTransitionSuccess}
-                    onerror={handleTransitionError}>
-                    <template for:each={transitionRequiredFields} for:item="fieldName">
-                        <lightning-input-field key={fieldName} field-name={fieldName} variant="label-stacked"></lightning-input-field>
-                    </template>
-                    <div class="slds-hide">
-                        <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
-                    </div>
-                    <footer class="slds-modal__footer slds-m-top_medium">
-                        <lightning-button variant="neutral" label="Cancel" onclick={closeTransitionModal}></lightning-button>
-                        <lightning-button variant="brand" type="submit" label="Save & Move Ticket" class="slds-m-left_x-small"></lightning-button>
-                    </footer>
-                </lightning-record-edit-form>
+        <section class="slds-modal slds-fade-in-open" tabindex="-1">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Additional Information Required</h2>
+                    <p class="slds-m-top_x-small">Please provide the following details to move the ticket to <strong>{transitionTargetStage}</strong>.</p>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <lightning-record-edit-form
+                        object-api-name="Ticket__c"
+                        record-id={transitionTicketId}
+                        onsuccess={handleTransitionSuccess}
+                        onerror={handleTransitionError}>
+                        <template for:each={transitionRequiredFields} for:item="fieldName">
+                            <lightning-input-field key={fieldName} field-name={fieldName} variant="label-stacked"></lightning-input-field>
+                        </template>
+                        <div class="slds-hide">
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={transitionTargetStage}></lightning-input-field>
+                        </div>
+                        <footer class="slds-modal__footer slds-m-top_medium">
+                            <lightning-button variant="neutral" label="Cancel" onclick={closeTransitionModal}></lightning-button>
+                            <lightning-button variant="brand" type="submit" label="Save & Move Ticket" class="slds-m-left_x-small"></lightning-button>
+                        </footer>
+                    </lightning-record-edit-form>
+                </div>
             </div>
-        </div>
-    </section>
-    <div class="slds-backdrop slds-backdrop_open"></div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
     
     <template if:true={isModalOpen}>
@@ -326,5 +340,4 @@
         </section>
         <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
-
 </template>
