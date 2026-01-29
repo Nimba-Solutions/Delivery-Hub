@@ -12,7 +12,6 @@ import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%Ticke
 import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateTicketStage";
 // UPDATED: Using new reorder method instead of updateTicketSortOrder
 import reorderTicket from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.reorderTicket";
-import updateTicketSortOrder from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateTicketSortOrder"; 
 import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.createDependency";
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
@@ -981,7 +980,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         if (this.placeholder && this.placeholder.parentNode) {
             const siblings = Array.from(this.placeholder.parentNode.children);
             // Filter out the placeholder itself to get clean indices of cards
-            const cardSiblings = siblings.filter(el => el.classList.contains('ticket-card') && !el.classList.contains('is-dragging'));
+            //const cardSiblings = siblings.filter(el => el.classList.contains('ticket-card') && !el.classList.contains('is-dragging'));
             // Note: This simple calculation assumes the placeholder is already inserted in correct order by dragOver
             // A more robust way: find the element *after* the placeholder
             const nextSibling = this.placeholder.nextElementSibling;
