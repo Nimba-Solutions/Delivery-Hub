@@ -9,6 +9,7 @@ public with sharing class DeliveryHubBoardController {
     @AuraEnabled
     public static void updateTicketStage(Id ticketId, String newStage) {
         try {
+            // Just update the stage; sort order remains as is (or handled by reorderTicket if called)
             Ticket__c ticket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
             update ticket;
         } catch (Exception e) {
@@ -16,11 +17,55 @@ public with sharing class DeliveryHubBoardController {
         }
     }
 
+    /**
+     * @description Reorders a ticket within a stage (or moves it to a new stage and orders it).
+     * Maintains a dense 1-based integer sequence (1, 2, 3...) for the column.
+     * @param ticketId The ID of the ticket being moved.
+     * @param newStage The target stage name (e.g., 'In Progress').
+     * @param newIndex The 0-based index where the ticket was dropped.
+     */
     @AuraEnabled
-    public static void updateTicketSortOrder(Id ticketId, Decimal newSortOrder) {
+    public static void reorderTicket(Id ticketId, String newStage, Integer newIndex) {
         try {
-            Ticket__c ticket = new Ticket__c(Id = ticketId, SortOrderNumber__c = newSortOrder);
-            update ticket;
+            // 1. Fetch all other tickets in the target stage, ordered by their current position
+            // We lock rows or just query to get the current state
+            List<Ticket__c> ticketsInColumn = [
+                SELECT Id, SortOrderNumber__c 
+                FROM Ticket__c 
+                WHERE StageNamePk__c = :newStage 
+                AND Id != :ticketId
+                AND IsActiveBool__c = TRUE 
+                WITH SECURITY_ENFORCED
+                ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate DESC
+            ];
+
+            // 2. Insert our moving ticket into the list at the desired index
+            Ticket__c movingTicket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
+            
+            // Safety bounds check
+            if (newIndex < 0) newIndex = 0;
+            if (newIndex > ticketsInColumn.size()) newIndex = ticketsInColumn.size();
+            
+            ticketsInColumn.add(newIndex, movingTicket);
+
+            // 3. Re-index the entire list to ensure sequential integers (1, 2, 3...)
+            List<Ticket__c> toUpdate = new List<Ticket__c>();
+            
+            for (Integer i = 0; i < ticketsInColumn.size(); i++) {
+                Ticket__c t = ticketsInColumn[i];
+                Decimal expectedSort = i + 1; // 1-based priority
+                
+                // We assume we need to update if it's the moving ticket OR if the number is wrong
+                if (t.Id == ticketId || t.SortOrderNumber__c != expectedSort) {
+                    t.SortOrderNumber__c = expectedSort;
+                    toUpdate.add(t);
+                }
+            }
+
+            if (!toUpdate.isEmpty()) {
+                update toUpdate;
+            }
+
         } catch (Exception e) {
             throw createAuraException(e.getMessage());
         }
@@ -63,7 +108,7 @@ public with sharing class DeliveryHubBoardController {
         if (currentTicketId != null) exclusionIds.add(currentTicketId);
         if (existingDependencyIds != null) exclusionIds.addAll(existingDependencyIds);
     
-        // FIX: Removed WITH SECURITY_ENFORCED to prevent build failures on FLS checks
+        // Using generic query logic; ensure User has permissions
         return [
             SELECT Id, Name, StageNamePk__c, BriefDescriptionTxt__c
             FROM Ticket__c
