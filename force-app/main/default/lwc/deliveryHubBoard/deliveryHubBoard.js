@@ -10,7 +10,8 @@ import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketControll
 import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getAiEnhancedTicketDetails";
 import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketETAService.getTicketETAsWithPriority";
 import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateTicketStage";
-import updateTicketSortOrder from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateTicketSortOrder";
+// UPDATED: Using new reorder method instead of updateTicketSortOrder
+import reorderTicket from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.reorderTicket";
 import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.createDependency";
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
@@ -32,8 +33,13 @@ const FIELDS = {
     INTENTION: `%%%NAMESPACED_ORG%%%ClientIntentionPk__c`,
     DEV_DAYS_SIZE: `%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c`,
     CALCULATED_ETA: `%%%NAMESPACED_ORG%%%CalculatedETADate__c`,
-    CREATED_DATE: 'CreatedDate',
+    
+    // NEW FIELDS FOR CARD UI
+    TOTAL_LOGGED_HOURS: `%%%NAMESPACED_ORG%%%TotalLoggedHoursNumber__c`,
+    ESTIMATED_HOURS: `%%%NAMESPACED_ORG%%%EstimatedHoursNumber__c`,
     PROJECTED_UAT_READY: `%%%NAMESPACED_ORG%%%ProjectedUATReadyDate__c`,
+    
+    CREATED_DATE: 'CreatedDate',
     DEVELOPER: `%%%NAMESPACED_ORG%%%Developer__c`,
     // Relationships
     DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%Ticket_Dependency1__r`,
@@ -535,9 +541,14 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             const stage = getValue(rec, FIELDS.STAGE); 
             const intention = getValue(rec, FIELDS.INTENTION);
             const size = getValue(rec, FIELDS.DEV_DAYS_SIZE);
+            
+            // New Fields
+            const actualHours = getValue(rec, FIELDS.TOTAL_LOGGED_HOURS) || 0;
+            const estimatedHours = getValue(rec, FIELDS.ESTIMATED_HOURS) || 0;
+            const uatDate = getValue(rec, FIELDS.PROJECTED_UAT_READY);
             const createdDate = getValue(rec, FIELDS.CREATED_DATE);
 
-            // Date Logic: Prefer AI ETA, fallback to Created Date
+            // Display Logic
             let displayDate = "—";
             let dateLabel = "No Date";
             if (etaDto && etaDto.calculatedETA) {
@@ -548,7 +559,15 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 dateLabel = "Created";
             }
 
-            // Relationships
+            // UAT Date Display
+            let displayUAT = null;
+            if (uatDate) {
+                displayUAT = new Date(uatDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            }
+
+            // Hours Display
+            const hoursDisplay = `${actualHours} / ${estimatedHours}h`;
+
             const blockedByRaw = getValue(rec, FIELDS.DEP_REL_BLOCKED_BY) || [];
             const blockingRaw = getValue(rec, FIELDS.DEP_REL_BLOCKING) || [];
 
@@ -575,18 +594,17 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 uiTitle: briefDesc, 
                 uiDescription: details,
                 uiSize: size || "--",
+                uiHours: hoursDisplay, // Use this in HTML
+                uiUat: displayUAT,     // Use this in HTML
                 uiStage: stage, 
                 uiIntention: intention, 
                 uiPriority: priority,
-                
                 calculatedETA: displayDate,
                 dateTooltip: dateLabel,
-
                 isBlockedBy: isBlockedBy,
                 isBlocking: isBlocking,
                 isCurrentlyBlocked: isBlockedBy.length > 0,
                 OwnerName: rec.Owner?.Name, 
-                
                 isHighPriority: priority?.toLowerCase() === "high",
                 tags: getTagsArray(tags),
                 cardClasses: `ticket-card`,
@@ -595,7 +613,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         });
     }
 
+    // ... [Getters for columns and other options remain unchanged] ...
+    // Paste stageColumns, getClientColumnHeaderColor, etc. here
     get stageColumns() {
+        // (Use the version I gave you previously, it works fine)
         const persona = this.persona;
         const boardViews = this.personaBoardViews?.[persona] || {};
         let colNames = boardViews?.[this.overallFilter] || [];
@@ -614,7 +635,6 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             const config = this.columnHeaderStyleMap[colName] || { bg: "#ffffff", color: "#11182c" };
             const headerStyle = `background:${config.bg};color:${config.color};`;
 
-            // FIX: Filter using the CLEAN properties (uiStage, uiIntention)
             const columnTickets = enriched
                 .filter((t) => (statusMap[colName] || []).includes(t.uiStage)) 
                 .filter((t) => {
@@ -638,7 +658,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
         return this.showMode === "active" ? columns.filter((col) => col.tickets.length > 0) : columns;
     }
-
+    
     getColumnDisplayName(colKey) { return this.columnDisplayNames?.[colKey] || colKey; }
     
     // [Client Header Colors and Card Colors]
@@ -829,22 +849,24 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                     this.showToast("Success", "Ticket updated.", "success");
                     this.refreshTickets(); 
                 })
-                .catch(() => { // Removed unused 'error' parameter here
+                // FIX: Removed unused error param
+                .catch(() => {
                     this.showToast("Error", "Failed to update ticket.", "error");
                 });
         }
         this.closeModal();
     }
 
-    handleCancelTransition() { this.closeModal(); }
-    closeModal() {
-        this.showModal = false;
-        this.selectedRecord = null;
-        this.selectedStage = null;
-        this.moveComment = "";
-        this.isModalOpen = false;
-        this.searchResults = [];
-        this.searchTerm = '';
+    // FIX: Removed unused event param
+    handleTransitionSuccess() {
+        this.showToast('Success', 'Ticket has been successfully updated and moved.', 'success');
+        this.closeTransitionModal();
+        this.refreshTickets();
+    }
+
+    handleTransitionError(event) {
+        this.showToast('Error Saving Ticket', 'Please review the fields and try again.', 'error');
+        console.error('Error on transition save:', JSON.stringify(event.detail));
     }
 
     // [Drag Handlers]
@@ -930,9 +952,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
+    // --- UPDATED DROP HANDLER ---
     async handleDrop(event) {
         event.preventDefault();
-        // Use uiId from enriched
         const ticketId = this.draggedItem.uiId; 
         const dropColumnEl = event.target.closest('.kanban-column');
         if (!dropColumnEl) {
@@ -941,51 +963,75 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         const targetColumnStage = dropColumnEl.dataset.stage;
-        const sourceColumnStage = this.stageColumns.find(col => col.tickets.some(t => t.uiId === ticketId)).stage;
-        
         this.handleDragEnd();
 
-        if (sourceColumnStage === targetColumnStage) {
-            const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets;
-            const newSortOrder = this.calculateNewSortOrder(this.placeholder, columnTickets);
-            try {
-                await updateTicketSortOrder({ ticketId: ticketId, newSortOrder: newSortOrder });
-                this.showToast('Success', 'Ticket reordered.', 'success');
-                this.refreshTickets();
-            } catch (error) {
-                this.showToast('Error', 'Failed to reorder ticket.', 'error');
-            }
-            return; 
+        // 1. Get the internal Salesforce Picklist value for this column
+        const newInternalStage = (this.personaColumnStatusMap[this.persona][targetColumnStage] || [])[0];
+        if (!newInternalStage) {
+            this.showToast('Error', 'Invalid target stage.', 'error');
+            return;
         }
 
-        const newInternalStage = (this.personaColumnStatusMap[this.persona][targetColumnStage] || [])[0];
-
-        if (newInternalStage) {
-            try {
-                const requiredFields = await getRequiredFieldsForStage({ targetStage: newInternalStage });
-                if (requiredFields && requiredFields.length > 0) {
-                    this.transitionTicketId = ticketId;
-                    this.transitionTargetStage = newInternalStage;
-                    this.transitionRequiredFields = requiredFields;
-                    this.showTransitionModal = true;
-                } else {
-                    await updateTicketStage({ ticketId: ticketId, newStage: newInternalStage });
-                    this.showToast('Success', 'Ticket moved.', 'success');
-                    this.refreshTickets();
-                }
-            } catch (error) {
-                const errorMessage = error.body?.message || 'An unknown error occurred.';
-                this.showToast('Move Failed', errorMessage, 'error');
+        // 2. Calculate the INTEGER Index where the user dropped the card
+        const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets;
+        let dropIndex = 0;
+        
+        // Find the index of the placeholder in the DOM to determine visual position
+        if (this.placeholder && this.placeholder.parentNode) {
+            //const siblings = Array.from(this.placeholder.parentNode.children);
+            // Filter out the placeholder itself to get clean indices of cards
+            //const cardSiblings = siblings.filter(el => el.classList.contains('ticket-card') && !el.classList.contains('is-dragging'));
+            // Note: This simple calculation assumes the placeholder is already inserted in correct order by dragOver
+            // A more robust way: find the element *after* the placeholder
+            const nextSibling = this.placeholder.nextElementSibling;
+            if (nextSibling) {
+                const nextId = nextSibling.dataset.id;
+                // Find index of that ticket in the data array
+                const indexInData = columnTickets.findIndex(t => t.uiId === nextId);
+                dropIndex = indexInData === -1 ? columnTickets.length : indexInData;
+            } else {
+                // Dropped at the end
+                dropIndex = columnTickets.length;
             }
+        }
+
+        // 3. Call Apex to Reorder (Insert at Index & Shift)
+        try {
+            await reorderTicket({ 
+                ticketId: ticketId, 
+                newStage: newInternalStage, 
+                newIndex: dropIndex 
+            });
+            this.showToast('Success', 'Ticket moved.', 'success');
+            this.refreshTickets();
+        } catch (error) {
+            const errorMessage = error.body?.message || 'An unknown error occurred.';
+            this.showToast('Move Failed', errorMessage, 'error');
         }
     }
 
-    // [Dependency Management & Search]
-    handleManageDependenciesClick(event) {
-        const ticketId = event.currentTarget.dataset.id;
-        this.selectedTicket = this.enrichedTickets.find(t => t.uiId === ticketId);
-        if (this.selectedTicket) {
-            this.isModalOpen = true;
+    // 3. ADD this new helper function to calculate sort order
+    calculateNewSortOrder(placeholder, columnTickets) {
+        const prevSibling = placeholder.previousElementSibling;
+        const nextSibling = placeholder.nextElementSibling;
+
+        // Find the corresponding ticket data for the siblings
+        const prevTicket = prevSibling
+            ? columnTickets.find((t) => t.uiId === prevSibling.dataset.id)
+            : null;
+        const nextTicket = nextSibling
+            ? columnTickets.find((t) => t.uiId === nextSibling.dataset.id)
+            : null;
+        
+        // FIX: Handle namespace for SortOrder here too using our new safe patterns or direct access
+        const getSort = (t) => t[FIELDS.SORT_ORDER] || t['delivery__SortOrderNumber__c'] || t['SortOrderNumber__c'] || 0;
+
+        const sortBefore = prevTicket ? getSort(prevTicket) : 0;
+
+        if (nextTicket) {
+            return (sortBefore + getSort(nextTicket)) / 2.0;
+        } else {
+            return sortBefore + 1; 
         }
     }
     
@@ -1050,6 +1096,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
+    // FIX: Removed unused event param
     async handleAiEnhance() {
         try {
             let titleValue = "";
@@ -1161,8 +1208,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     dismissAiSuggestions() { this.aiSuggestions = null; }
     
-    // ... [Search Logic] ...
     handleSearchTermChange(event) { this.searchTerm = event.target.value; }
+
+    // FIX: Added logging to empty catch blocks to satisfy linter
     async handleSearch() {
         if (this.searchTerm.length < 3) return;
         this.isSearching = true;
@@ -1182,6 +1230,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             this.isSearching = false; 
         }
     }
+
     async handleSelectBlockingTicket(event) {
         const blockingTicketId = event.currentTarget.dataset.blockingId;
         try {
@@ -1192,6 +1241,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             console.error('Dependency create error:', error);
         }
     }
+
     async handleRemoveDependency(event) {
         const dependencyId = event.currentTarget.dataset.dependencyId;
         try {
@@ -1203,7 +1253,24 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
+    // [Dependency Management & Search]
+    handleManageDependenciesClick(event) {
+        const ticketId = event.currentTarget.dataset.id;
+        this.selectedTicket = this.enrichedTickets.find(t => t.uiId === ticketId);
+        if (this.selectedTicket) {
+            this.isModalOpen = true;
+        }
+    }
+
     showToast(title, message, variant) {
         this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+    }
+    
+    // [Modal & Transition Handlers]
+    closeTransitionModal() {
+        this.showTransitionModal = false;
+        this.transitionTicketId = null;
+        this.transitionTargetStage = null;
+        this.transitionRequiredFields = [];
     }
 }
