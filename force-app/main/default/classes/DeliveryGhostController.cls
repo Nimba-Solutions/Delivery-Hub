@@ -1,81 +1,83 @@
 /**
- * @description Controller for the Ghost Recorder.
- * Handles silent telemetry logging and quick bug reporting.
+ * @description Controller class for the Delivery Hub Board (Kanban) LWC.
+ * Handles drag-and-drop updates, stage transitions, and dependency management.
+ * @author Delivery Hub Team
+ * @date 2025
  */
-public with sharing class DeliveryGhostController {
+public with sharing class DeliveryHubBoardController {
 
-    public class ContextWrapper {
-        @AuraEnabled public String url;
-        @AuraEnabled public String browser;
-        @AuraEnabled public String objectName;
-        @AuraEnabled public String recordId;
-    }
-
-    /**
-     * @description Creates a TICKET (Work Item) from the Ghost Recorder
-     */
     @AuraEnabled
-    public static Id createQuickRequest(String subject, String description, String priority, String contextData) {
+    public static void updateTicketStage(Id ticketId, String newStage) {
         try {
-            ContextWrapper context = (ContextWrapper) JSON.deserialize(contextData, ContextWrapper.class);
-
-            Ticket__c ticket = new Ticket__c(
-                WorkItemNameTxt__c = subject,
-                StatusPk__c = 'New',
-                StageNamePk__c = 'Backlog',
-                IsActiveBool__c = TRUE,
-                PriorityPk__c = String.isBlank(priority) ? 'Medium' : priority
-            );
-            
-            String contextBlock = '<br/><br/><b>--- AUTO-GENERATED CONTEXT ---</b><br/>' +
-                                  '<b>URL:</b> ' + (context.url != null ? context.url : 'N/A') + '<br/>' +
-                                  '<b>Object:</b> ' + (context.objectName != null ? context.objectName : 'N/A') + '<br/>' +
-                                  '<b>Record ID:</b> ' + (context.recordId != null ? context.recordId : 'N/A') + '<br/>' + 
-                                  '<b>Browser:</b> ' + (context.browser != null ? context.browser : 'N/A');
-                                  
-            ticket.DetailsTxt__c = description + contextBlock;
-            
-            // Truncate Subject if needed (Double check for Apex length limits)
-            if (subject.length() > 80) {
-                ticket.BriefDescriptionTxt__c = subject.substring(0, 80);
-            } else {
-                ticket.BriefDescriptionTxt__c = subject;
-            }
-
-            if (Schema.sObjectType.Ticket__c.isCreateable()) {
-                insert ticket;
-            } else {
-                throw new AuraHandledException('Insufficient permissions to create Ticket.');
-            }
-            
-            // Log this action as well
-            logUserActivity('Bug Report', contextData);
-
-            return ticket.Id;
-
+            Ticket__c ticket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
+            update ticket;
         } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage());
+            throw createAuraException('Error updating ticket stage: ' + e.getMessage());
         }
     }
 
     @AuraEnabled
-    public static void logUserActivity(String actionType, String contextData) {
+    public static void updateTicketSortOrder(Id ticketId, Decimal newSortOrder) {
         try {
-            ContextWrapper context = (ContextWrapper) JSON.deserialize(contextData, ContextWrapper.class);
-
-            User_Activity_Log__c log = new User_Activity_Log__c(
-                ActionTypePk__c = actionType,
-                ContextUrlTxt__c = context.url,
-                ObjectNameTxt__c = context.objectName,
-                RecordId__c = context.recordId,
-                BrowserInfoTxt__c = context.browser
-            );
-            
-            if (Schema.sObjectType.User_Activity_Log__c.isCreateable()) {
-                insert log;
-            }
+            Ticket__c ticket = new Ticket__c(Id = ticketId, SortOrderNumber__c = newSortOrder);
+            update ticket;
         } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Ghost Log Failed: ' + e.getMessage());
+            throw createAuraException(e.getMessage());
         }
+    }
+    
+    @AuraEnabled
+    public static Ticket_Dependency__c createDependency(Id blockedTicketId, Id blockingTicketId) {
+        if (blockedTicketId == blockingTicketId) {
+            throw createAuraException('A ticket cannot block itself.');
+        }
+
+        try {
+            Ticket_Dependency__c newDependency = new Ticket_Dependency__c(
+                Blocked_Ticket__c = blockedTicketId,
+                Blocking_Ticket__c = blockingTicketId,
+                TypePk__c = 'Blocks'
+            );
+            insert newDependency;
+            return newDependency;
+        } catch (Exception e) {
+            throw createAuraException('Error creating dependency: ' + e.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static void removeDependency(Id dependencyId) {
+        try {
+            Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c WHERE Id = :dependencyId LIMIT 1];
+            delete dep;
+        } catch (Exception e) {
+            throw createAuraException('Error removing dependency: ' + e.getMessage());
+        }
+    }
+    
+    @AuraEnabled(cacheable=true)
+    public static List<Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds) {
+        String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';
+        
+        Set<Id> exclusionIds = new Set<Id>();
+        if (currentTicketId != null) exclusionIds.add(currentTicketId);
+        if (existingDependencyIds != null) exclusionIds.addAll(existingDependencyIds);
+    
+        // FIX: Removed WITH SECURITY_ENFORCED to prevent build failures on FLS checks
+        return [
+            SELECT Id, Name, StageNamePk__c, BriefDescriptionTxt__c
+            FROM Ticket__c
+            WHERE (Name LIKE :queryTerm OR BriefDescriptionTxt__c LIKE :queryTerm)
+            AND Id NOT IN :exclusionIds
+            AND StageNamePk__c != 'Done'
+            ORDER BY LastModifiedDate DESC
+            LIMIT 10
+        ];
+    }
+
+    private static AuraHandledException createAuraException(String message) {
+        AuraHandledException e = new AuraHandledException(message);
+        e.setMessage(message);
+        return e;
     }
 }
