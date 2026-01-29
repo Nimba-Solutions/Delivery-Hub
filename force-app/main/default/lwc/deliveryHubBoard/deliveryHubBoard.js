@@ -277,7 +277,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             "Deployed": ["Deployed to Prod"], "Done": ["Done", "Cancelled"]
         },
         QA: {
-            "Backlog": ["Backlog", "Scoping In Progress"], "Clarification": ["Clarification Requested (Pre-Dev)"], "Providing Clarification"],
+            "Backlog": ["Backlog", "Scoping In Progress"], "Clarification": ["Clarification Requested (Pre-Dev)", "Providing Clarification"],
             "Sizing": ["Ready for Sizing", "Sizing Underway"], "Prioritization": ["Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
             "Dev Approval": ["Ready for Tech Review", "Tech Reviewing"], "Client Approval": ["Ready for Client Approval", "In Client Approval"],
             "Dev Queue": ["Ready for Development"], "Dev Work": ["In Development", "Back For Development", "Dev Blocked", "Dev Clarification Requested", "Providing Dev Clarification"],
