@@ -1,14 +1,16 @@
 /**
  * @description Centralized service for handling Delivery Hub HTTP callouts.
- * Replaces disparate Http logic in Sender and CommentController.
  */
 public inherited sharing class DeliveryHubCalloutService {
 
+    // Centralize the default named credential path here
+    private static final String DEFAULT_NAMED_CRED = 'callout:Mothership/services/apexrest/delivery/deliveryhub/v1';
+
     /**
      * @description Generic POST method for JSON payloads.
-     * @param endpointUrl The full URL or Named Credential (e.g. 'callout:Mothership/...')
-     * @param payload The object to serialize as JSON.
-     * @return HttpResponse The HTTP response from the server.
+     * @param endpointUrl The full URL.
+     * @param payload The object to serialize.
+     * @return HttpResponse
      */
     public static HttpResponse post(String endpointUrl, Object payload) {
         HttpRequest req = new HttpRequest();
@@ -16,16 +18,25 @@ public inherited sharing class DeliveryHubCalloutService {
         req.setMethod('POST');
         req.setHeader('Content-Type', 'application/json');
         req.setBody(JSON.serialize(payload));
-        req.setTimeout(120000); // 2 minute timeout
-        
+        req.setTimeout(120000); 
         return new Http().send(req);
     }
     
     /**
-     * @description Helper to normalize base URLs (ensures trailing slash).
-     * @param specificUrl A specific URL override (optional).
-     * @param defaultUrl The fallback URL if specificUrl is blank.
-     * @return String The normalized URL with a trailing slash.
+     * @description Simpler method: Only pass the specific URL. 
+     * If blank, it automatically uses the stored Default Named Credential.
+     * @param specificUrl The override URL (optional).
+     * @return String The normalized URL.
+     */
+    public static String getBaseUrl(String specificUrl) {
+        return getBaseUrl(specificUrl, DEFAULT_NAMED_CRED);
+    }
+
+    /**
+     * @description Original method (kept for flexibility).
+     * @param specificUrl The override URL.
+     * @param defaultUrl The fallback URL.
+     * @return String The normalized URL.
      */
     public static String getBaseUrl(String specificUrl, String defaultUrl) {
         String url = String.isNotBlank(specificUrl) ? specificUrl : defaultUrl;
