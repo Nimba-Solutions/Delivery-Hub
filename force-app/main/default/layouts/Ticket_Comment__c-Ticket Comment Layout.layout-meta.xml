@@ -8,6 +8,12 @@
         <label>Information</label>
         <layoutColumns>
             <layoutItems>
+                <behavior>Edit</behavior>
+                <field>BodyTxt__c</field>
+            </layoutItems>
+        </layoutColumns>
+        <layoutColumns>
+            <layoutItems>
                 <behavior>Required</behavior>
                 <field>TicketId__c</field>
             </layoutItems>
@@ -16,22 +22,19 @@
                 <field>AuthorTxt__c</field>
             </layoutItems>
             <layoutItems>
-                <emptySpace>true</emptySpace>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
-                <field>BodyTxt__c</field>
-            </layoutItems>
-        </layoutColumns>
-        <layoutColumns>
-            <layoutItems>
                 <behavior>Readonly</behavior>
                 <field>SourcePk__c</field>
             </layoutItems>
-            <layoutItems>
-                <behavior>Readonly</behavior>
-                <field>JiraCommentIdTxt__c</field>
-            </layoutItems>
+        </layoutColumns>
+        <style>TwoColumnsTopToBottom</style>
+    </layoutSections>
+    
+    <layoutSections>
+        <customLabel>true</customLabel>
+        <detailHeading>true</detailHeading>
+        <editHeading>true</editHeading>
+        <label>Integration Details</label>
+        <layoutColumns>
             <layoutItems>
                 <behavior>Readonly</behavior>
                 <field>JiraSyncStatusTxt__c</field>
@@ -41,11 +44,18 @@
                 <field>SyncedDateTime__c</field>
             </layoutItems>
         </layoutColumns>
-        <style>TwoColumnsTopToBottom</style>
+        <layoutColumns>
+             <layoutItems>
+                <behavior>Readonly</behavior>
+                <field>JiraCommentIdTxt__c</field>
+            </layoutItems>
+        </layoutColumns>
+        <style>TwoColumnsLeftToRight</style>
     </layoutSections>
+
     <layoutSections>
         <customLabel>false</customLabel>
-        <detailHeading>false</detailHeading>
+        <detailHeading>true</detailHeading>
         <editHeading>true</editHeading>
         <label>System Information</label>
         <layoutColumns>
