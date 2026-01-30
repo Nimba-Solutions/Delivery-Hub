@@ -63,7 +63,6 @@
     <tabs>Network_Entity__c</tabs>
     <tabs>Request__c</tabs>
     <tabs>Ticket_Board</tabs>
-    <tabs>draganddroplwc</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
 </CustomApplication>

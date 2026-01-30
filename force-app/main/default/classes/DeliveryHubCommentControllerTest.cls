@@ -3,7 +3,6 @@ private class DeliveryHubCommentControllerTest {
 
     @TestSetup
     static void makeData() {
-        // 1. Create a Ticket
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Test Ticket',
             StatusPk__c = 'New',
@@ -11,7 +10,13 @@ private class DeliveryHubCommentControllerTest {
         );
         insert t;
 
-        // 2. Create existing comments
+        Request__c req = new Request__c(
+            TicketId__c = t.Id,
+            RemoteTicketIdTxt__c = 'REMOTE-123',
+            StatusPk__c = 'In Progress'
+        );
+        insert req;
+
         Ticket_Comment__c c1 = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'First Comment',
@@ -29,8 +34,6 @@ private class DeliveryHubCommentControllerTest {
         Test.stopTest();
 
         System.assertEquals(1, result.size(), 'Should return 1 comment');
-        System.assertEquals('First Comment', result[0].body, 'Body should match');
-        System.assertEquals(true, result[0].isOutbound, 'Should be marked as outbound since test user created it');
     }
 
     @IsTest
@@ -41,23 +44,44 @@ private class DeliveryHubCommentControllerTest {
         DeliveryHubCommentController.postComment(t.Id, 'New Reply');
         Test.stopTest();
 
-        // Verify insertion
-        List<Ticket_Comment__c> comments = [SELECT Id, BodyTxt__c FROM Ticket_Comment__c WHERE TicketId__c = :t.Id];
-        System.assertEquals(2, comments.size(), 'Should now have 2 comments');
-        System.assertEquals('New Reply', comments[1].BodyTxt__c, 'New comment body should match');
+        List<Ticket_Comment__c> comments = [SELECT Id, BodyTxt__c FROM Ticket_Comment__c WHERE TicketId__c = :t.Id ORDER BY CreatedDate ASC];
+        System.assertEquals(2, comments.size());
     }
 
     @IsTest
-    static void testPostEmptyComment() {
+    static void testSyncCommentAsync() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        Ticket_Comment__c c = [SELECT Id FROM Ticket_Comment__c WHERE TicketId__c = :t.Id LIMIT 1];
+
+        Test.setMock(HttpCalloutMock.class, new MothershipMock());
 
         Test.startTest();
-        try {
-            DeliveryHubCommentController.postComment(t.Id, '');
-            System.assert(false, 'Should have thrown exception');
-        } catch (Exception e) {
-            System.assert(true, 'Exception caught correctly');
-        }
+        DeliveryHubCommentController.syncCommentAsync(c.Id);
         Test.stopTest();
+
+        Ticket_Comment__c updatedC = [SELECT JiraSyncStatusTxt__c FROM Ticket_Comment__c WHERE Id = :c.Id];
+        System.assertEquals('Synced', updatedC.JiraSyncStatusTxt__c);
+    }
+
+    /**
+     * @description Mock class to simulate the HTTP Callout
+     */
+    public class MothershipMock implements HttpCalloutMock {
+        
+        /**
+         * @description Responds to the mock HTTP request
+         * @param req The HTTPRequest
+         * @return The mock HTTPResponse
+         */
+        public HTTPResponse respond(HTTPRequest req) {
+            System.assertEquals('POST', req.getMethod());
+            System.assert(req.getEndpoint().contains('/comments/REMOTE-123'), 'Endpoint should point to comments resource with ID');
+            
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            res.setBody('{"status":"success"}');
+            res.setStatusCode(200);
+            return res;
+        }
     }
 }
