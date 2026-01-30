@@ -27,12 +27,6 @@
                 <identifier>c_deliveryBudgetSummary</identifier>
             </componentInstance>
         </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>dragAndDropLwc</componentName>
-                <identifier>c_dragAndDropLwc</identifier>
-            </componentInstance>
-        </itemInstances>
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
