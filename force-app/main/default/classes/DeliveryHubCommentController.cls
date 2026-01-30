@@ -5,6 +5,9 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
+    /**
+     * @description Wrapper class to send clean data to the LWC
+     */
     public class CommentWrapper {
         @AuraEnabled public String id;
         @AuraEnabled public String body;
@@ -13,6 +16,11 @@ public with sharing class DeliveryHubCommentController {
         @AuraEnabled public Boolean isOutbound; 
     }
 
+    /**
+     * @description Fetches all comments for a specific Ticket, ordered chronologically.
+     * @param ticketId The ID of the Ticket record.
+     * @return List<CommentWrapper>
+     */
     @AuraEnabled(cacheable=true)
     public static List<CommentWrapper> getComments(Id ticketId) {
         try {
@@ -41,6 +49,11 @@ public with sharing class DeliveryHubCommentController {
         }
     }
 
+    /**
+     * @description Posts a new comment to the Ticket.
+     * @param ticketId The Ticket ID.
+     * @param body The message content.
+     */
     @AuraEnabled
     public static void postComment(Id ticketId, String body) {
         try {
@@ -66,6 +79,10 @@ public with sharing class DeliveryHubCommentController {
         }
     }
 
+    /**
+     * @description Asynchronously syncs a comment to the remote system via the linked Request.
+     * @param commentId The ID of the local Ticket_Comment__c record to sync.
+     */
     @future(callout=true)
     public static void syncCommentAsync(Id commentId) {
         try {
@@ -78,7 +95,6 @@ public with sharing class DeliveryHubCommentController {
             ];
 
             // 2. Find the active Request linked to this Ticket that has a Remote ID
-            // We order by CreatedDate DESC to get the latest engagement if multiple exist.
             List<Request__c> relatedRequests = [
                 SELECT RemoteTicketIdTxt__c 
                 FROM Request__c 
@@ -88,7 +104,6 @@ public with sharing class DeliveryHubCommentController {
                 LIMIT 1
             ];
 
-            // If no linked request found, we cannot sync.
             if (relatedRequests.isEmpty()) {
                 c.JiraSyncStatusTxt__c = 'Skipped: No Linked Request';
                 update c;

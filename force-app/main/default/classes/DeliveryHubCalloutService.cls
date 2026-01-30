@@ -8,7 +8,7 @@ public inherited sharing class DeliveryHubCalloutService {
      * @description Generic POST method for JSON payloads.
      * @param endpointUrl The full URL or Named Credential (e.g. 'callout:Mothership/...')
      * @param payload The object to serialize as JSON.
-     * @return HttpResponse
+     * @return HttpResponse The HTTP response from the server.
      */
     public static HttpResponse post(String endpointUrl, Object payload) {
         HttpRequest req = new HttpRequest();
@@ -23,6 +23,9 @@ public inherited sharing class DeliveryHubCalloutService {
     
     /**
      * @description Helper to normalize base URLs (ensures trailing slash).
+     * @param specificUrl A specific URL override (optional).
+     * @param defaultUrl The fallback URL if specificUrl is blank.
+     * @return String The normalized URL with a trailing slash.
      */
     public static String getBaseUrl(String specificUrl, String defaultUrl) {
         String url = String.isNotBlank(specificUrl) ? specificUrl : defaultUrl;
