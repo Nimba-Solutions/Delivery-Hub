@@ -69,13 +69,74 @@ public with sharing class DeliveryHubCommentController {
             Ticket_Comment__c comment = new Ticket_Comment__c(
                 TicketId__c = ticketId,
                 BodyTxt__c = body,
-                AuthorTxt__c = UserInfo.getName() // Auto-stamp the sender's name
+                AuthorTxt__c = UserInfo.getName(), // Auto-stamp the sender's name
+                JiraSyncStatusTxt__c = 'Pending'   // Mark as pending sync
             );
             
             insert comment;
             
+            // --- NEW: Trigger Async Sync to Mothership ---
+            // Only attempt sync if this is not a test context (unless mocking callouts)
+            if (!Test.isRunningTest()) {
+                syncCommentAsync(comment.Id);
+            }
+            
         } catch (Exception e) {
             throw new AuraHandledException('Error posting comment: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Async method to send the comment to the Mothership org.
+     * Requires a Named Credential 'Mothership' to be configured.
+     * @param commentId The ID of the comment to sync.
+     */
+    @future(callout=true)
+    public static void syncCommentAsync(Id commentId) {
+        try {
+            // 1. Fetch the comment and the Remote Ticket ID (the link to the other org)
+            Ticket_Comment__c c = [
+                SELECT Id, BodyTxt__c, AuthorTxt__c, TicketId__r.RemoteTicketIdTxt__c 
+                FROM Ticket_Comment__c 
+                WHERE Id = :commentId 
+                LIMIT 1
+            ];
+
+            // If there is no link to the other org, we can't sync.
+            if (String.isBlank(c.TicketId__r.RemoteTicketIdTxt__c)) {
+                return; 
+            }
+
+            // 2. Prepare the Payload
+            Map<String, String> payload = new Map<String, String>();
+            payload.put('remoteTicketId', c.TicketId__r.RemoteTicketIdTxt__c); // The ID on the OTHER org
+            payload.put('body', c.BodyTxt__c);
+            payload.put('author', c.AuthorTxt__c);
+
+            // 3. Build the Request
+            // NOTE: 'callout:Mothership' assumes you have a Named Credential with this name.
+            Http http = new Http();
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:Mothership/services/apexrest/DeliveryHubRemoteDiscussion'); 
+            req.setMethod('POST');
+            req.setHeader('Content-Type', 'application/json');
+            req.setBody(JSON.serialize(payload));
+
+            // 4. Send
+            HttpResponse res = http.send(req);
+
+            // 5. Update Status based on result
+            if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+                c.JiraSyncStatusTxt__c = 'Synced';
+                c.SyncedDateTime__c = System.now();
+                // Optionally store the remote ID if returned: c.JiraCommentIdTxt__c = res.getBody();
+            } else {
+                c.JiraSyncStatusTxt__c = 'Failed: ' + res.getStatus();
+            }
+            update c;
+
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Sync Failed: ' + e.getMessage());
         }
     }
 }

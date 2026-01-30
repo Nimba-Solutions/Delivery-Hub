@@ -11,6 +11,7 @@ export default class DeliveryTicketChat extends LightningElement {
     @track commentsData = [];
     
     wiredResult; 
+    _pollingInterval; // To store the timer ID
 
     @wire(getComments, { ticketId: '$recordId' })
     wiredComments(result) {
@@ -19,13 +20,35 @@ export default class DeliveryTicketChat extends LightningElement {
             this.commentsData = result.data.map(msg => {
                 return {
                     ...msg,
+                    // Dynamic classes based on who sent it
                     wrapperClass: msg.isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
                     bubbleClass: msg.isOutbound ? 'bubble outbound' : 'bubble inbound',
                     metaClass: msg.isOutbound ? 'meta outbound-meta' : 'meta inbound-meta'
                 };
             });
+            // Only scroll to bottom on initial load or if user sends message
+            // You might want smarter logic here to not scroll if user is reading history
             this.scrollToBottom();
         }
+    }
+
+    // Start Polling when component loads
+    connectedCallback() {
+        // Check for new messages every 5 seconds
+        this._pollingInterval = setInterval(() => {
+            this.refreshChat();
+        }, 5000);
+    }
+
+    // Stop Polling when component is removed/tab closed
+    disconnectedCallback() {
+        if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+        }
+    }
+
+    refreshChat() {
+        return refreshApex(this.wiredResult);
     }
 
     get comments() {
@@ -44,7 +67,7 @@ export default class DeliveryTicketChat extends LightningElement {
         postComment({ ticketId: this.recordId, body: this.commentBody })
             .then(() => {
                 this.commentBody = ''; 
-                return refreshApex(this.wiredResult); 
+                return this.refreshChat(); 
             })
             .then(() => {
                 this.scrollToBottom();
