@@ -4,6 +4,10 @@
 @RestResource(urlMapping='/deliveryhub/v1/discussion/*')
 global without sharing class DeliveryHubRemoteDiscussion {
 
+    /**
+     * @description POST method to create a new comment on a ticket.
+     * Expects the Ticket Name (e.g. T-0001) in the URL and a JSON body with 'body' and 'author'.
+     */
     @HttpPost
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     global static void postComment() {
@@ -20,8 +24,7 @@ global without sharing class DeliveryHubRemoteDiscussion {
             String msgBody = (String) payload.get('body');
             String author = (String) payload.get('author');
 
-            // FIX: Query by Name (or Id), NOT RemoteTicketIdTxt__c
-            // The Mothership knows this ticket by its own Name.
+            // Query by Name (or Id)
             Ticket__c t = [SELECT Id FROM Ticket__c WHERE Name = :targetTicketName LIMIT 1];
 
             Ticket_Comment__c c = new Ticket_Comment__c(
