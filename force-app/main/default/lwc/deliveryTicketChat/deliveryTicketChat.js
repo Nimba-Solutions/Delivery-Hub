@@ -11,7 +11,7 @@ export default class DeliveryTicketChat extends LightningElement {
     @track commentsData = [];
     
     wiredResult; 
-    _pollingInterval; // To store the timer ID
+    _pollingInterval;
 
     @wire(getComments, { ticketId: '$recordId' })
     wiredComments(result) {
@@ -20,36 +20,29 @@ export default class DeliveryTicketChat extends LightningElement {
             this.commentsData = result.data.map(msg => {
                 return {
                     ...msg,
-                    // Dynamic classes based on who sent it
                     wrapperClass: msg.isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
                     bubbleClass: msg.isOutbound ? 'bubble outbound' : 'bubble inbound',
                     metaClass: msg.isOutbound ? 'meta outbound-meta' : 'meta inbound-meta'
                 };
             });
-            // Only scroll to bottom on initial load or if user sends message
-            // You might want smarter logic here to not scroll if user is reading history
-            this.scrollToBottom();
+            // Auto-scroll to bottom only on initial load to avoid jumping while reading
+            if (!this._pollingInterval) {
+                 this.scrollToBottom();
+            }
         }
     }
 
-    // Start Polling when component loads
+    // --- ADDED: Auto-Refresh Logic ---
     connectedCallback() {
-        // Check for new messages every 5 seconds
         this._pollingInterval = setInterval(() => {
-            this.refreshChat();
-        }, 5000);
+            refreshApex(this.wiredResult);
+        }, 5000); // Check every 5 seconds
     }
 
-    // Stop Polling when component is removed/tab closed
     disconnectedCallback() {
-        if (this._pollingInterval) {
-            clearInterval(this._pollingInterval);
-        }
+        clearInterval(this._pollingInterval);
     }
-
-    refreshChat() {
-        return refreshApex(this.wiredResult);
-    }
+    // ----------------------------------
 
     get comments() {
         return { data: this.commentsData };
@@ -67,7 +60,7 @@ export default class DeliveryTicketChat extends LightningElement {
         postComment({ ticketId: this.recordId, body: this.commentBody })
             .then(() => {
                 this.commentBody = ''; 
-                return this.refreshChat(); 
+                return refreshApex(this.wiredResult); 
             })
             .then(() => {
                 this.scrollToBottom();

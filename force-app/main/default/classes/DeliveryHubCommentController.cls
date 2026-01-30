@@ -5,9 +5,6 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
-    /**
-     * @description Wrapper class to send clean data to the LWC
-     */
     public class CommentWrapper {
         @AuraEnabled public String id;
         @AuraEnabled public String body;
@@ -16,11 +13,6 @@ public with sharing class DeliveryHubCommentController {
         @AuraEnabled public Boolean isOutbound; 
     }
 
-    /**
-     * @description Fetches all comments for a specific Ticket, ordered chronologically.
-     * @param ticketId The ID of the Ticket record.
-     * @return List<CommentWrapper>
-     */
     @AuraEnabled(cacheable=true)
     public static List<CommentWrapper> getComments(Id ticketId) {
         try {
@@ -49,11 +41,6 @@ public with sharing class DeliveryHubCommentController {
         }
     }
 
-    /**
-     * @description Posts a new comment to the Ticket.
-     * @param ticketId The Ticket ID.
-     * @param body The message content.
-     */
     @AuraEnabled
     public static void postComment(Id ticketId, String body) {
         try {
@@ -79,14 +66,9 @@ public with sharing class DeliveryHubCommentController {
         }
     }
 
-    /**
-     * @description Asynchronously syncs a comment to the remote system via the linked Request.
-     * @param commentId The ID of the local Ticket_Comment__c record to sync.
-     */
     @future(callout=true)
     public static void syncCommentAsync(Id commentId) {
         try {
-            // 1. Fetch the comment and its Ticket ID
             Ticket_Comment__c c = [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, TicketId__c 
                 FROM Ticket_Comment__c 
@@ -94,9 +76,9 @@ public with sharing class DeliveryHubCommentController {
                 LIMIT 1
             ];
 
-            // 2. Find the active Request linked to this Ticket that has a Remote ID
+            // Find linked request
             List<Request__c> relatedRequests = [
-                SELECT RemoteTicketIdTxt__c 
+                SELECT RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE TicketId__c = :c.TicketId__c 
                 AND RemoteTicketIdTxt__c != NULL
@@ -110,25 +92,29 @@ public with sharing class DeliveryHubCommentController {
                 return; 
             }
 
-            String remoteId = relatedRequests[0].RemoteTicketIdTxt__c;
+            Request__c activeRequest = relatedRequests[0];
+            String remoteId = activeRequest.RemoteTicketIdTxt__c;
 
-            // 3. Prepare Payload
+            // Determine Base URL
+            String baseUrl = DeliveryHubCalloutService.getBaseUrl(
+                activeRequest.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
+                'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
+            );
+
+            // UPDATED: Matches your existing class (comments/{id})
+            String endpoint = baseUrl + 'comments/' + remoteId;
+
             Map<String, String> payload = new Map<String, String>();
-            payload.put('remoteTicketId', remoteId);
             payload.put('body', c.BodyTxt__c);
             payload.put('author', c.AuthorTxt__c);
 
-            // 4. Send via Service
-            HttpResponse res = DeliveryHubCalloutService.post(
-                'callout:Mothership/services/apexrest/DeliveryHubRemoteDiscussion', 
-                payload
-            );
+            HttpResponse res = DeliveryHubCalloutService.post(endpoint, payload);
 
             if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
                 c.JiraSyncStatusTxt__c = 'Synced';
                 c.SyncedDateTime__c = System.now();
             } else {
-                c.JiraSyncStatusTxt__c = 'Failed: ' + res.getStatus();
+                c.JiraSyncStatusTxt__c = 'Failed: ' + res.getStatus() + ' ' + res.getBody();
             }
             update c;
 
