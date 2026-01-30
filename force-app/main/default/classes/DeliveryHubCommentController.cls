@@ -1,6 +1,6 @@
 /**
  * @description Controller for the internal Ticket Chat LWC.
- * Handles fetching and posting comments to the Ticket_Comment__c object.
+ * Handles fetching and posting comments, syncing via the related Request.
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
@@ -13,7 +13,7 @@ public with sharing class DeliveryHubCommentController {
         @AuraEnabled public String body;
         @AuraEnabled public String authorName;
         @AuraEnabled public DateTime timestamp;
-        @AuraEnabled public Boolean isOutbound; // True = Current User (Right side), False = Others (Left side)
+        @AuraEnabled public Boolean isOutbound; 
     }
 
     /**
@@ -39,13 +39,8 @@ public with sharing class DeliveryHubCommentController {
                 w.id = c.Id;
                 w.body = c.BodyTxt__c;
                 w.timestamp = c.CreatedDate;
-                
-                // Logic: If AuthorTxt__c (manual name) is set, use it. Otherwise use the System User Name.
                 w.authorName = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : c.CreatedBy.Name;
-                
-                // Logic: Determine alignment. If I created it, it's "Outbound" (Right).
                 w.isOutbound = (c.CreatedById == currentUserId);
-                
                 chat.add(w);
             }
             return chat;
@@ -69,13 +64,76 @@ public with sharing class DeliveryHubCommentController {
             Ticket_Comment__c comment = new Ticket_Comment__c(
                 TicketId__c = ticketId,
                 BodyTxt__c = body,
-                AuthorTxt__c = UserInfo.getName() // Auto-stamp the sender's name
+                AuthorTxt__c = UserInfo.getName(), 
+                JiraSyncStatusTxt__c = 'Pending'   
             );
             
             insert comment;
             
+            if (!Test.isRunningTest()) {
+                syncCommentAsync(comment.Id);
+            }
+            
         } catch (Exception e) {
             throw new AuraHandledException('Error posting comment: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Asynchronously syncs a comment to the remote system via the linked Request.
+     * @param commentId The ID of the local Ticket_Comment__c record to sync.
+     */
+    @future(callout=true)
+    public static void syncCommentAsync(Id commentId) {
+        try {
+            Ticket_Comment__c c = [
+                SELECT Id, BodyTxt__c, AuthorTxt__c, TicketId__c 
+                FROM Ticket_Comment__c 
+                WHERE Id = :commentId 
+                LIMIT 1
+            ];
+
+            List<Request__c> relatedRequests = [
+                SELECT RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
+                FROM Request__c 
+                WHERE TicketId__c = :c.TicketId__c 
+                AND RemoteTicketIdTxt__c != NULL
+                ORDER BY CreatedDate DESC 
+                LIMIT 1
+            ];
+
+            if (relatedRequests.isEmpty()) {
+                c.JiraSyncStatusTxt__c = 'Skipped: No Linked Request';
+                update c;
+                return; 
+            }
+
+            Request__c activeRequest = relatedRequests[0];
+            String remoteId = activeRequest.RemoteTicketIdTxt__c;
+
+            String baseUrl = DeliveryHubCalloutService.getBaseUrl(
+                activeRequest.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
+                'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
+            );
+
+            String endpoint = baseUrl + 'comments/' + remoteId;
+
+            Map<String, String> payload = new Map<String, String>();
+            payload.put('body', c.BodyTxt__c);
+            payload.put('author', c.AuthorTxt__c);
+
+            HttpResponse res = DeliveryHubCalloutService.post(endpoint, payload);
+
+            if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+                c.JiraSyncStatusTxt__c = 'Synced';
+                c.SyncedDateTime__c = System.now();
+            } else {
+                c.JiraSyncStatusTxt__c = 'Failed: ' + res.getStatus() + ' ' + res.getBody();
+            }
+            update c;
+
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Sync Failed: ' + e.getMessage());
         }
     }
 }
