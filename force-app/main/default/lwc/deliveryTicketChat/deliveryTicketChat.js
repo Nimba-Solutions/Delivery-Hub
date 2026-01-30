@@ -11,6 +11,7 @@ export default class DeliveryTicketChat extends LightningElement {
     @track commentsData = [];
     
     wiredResult; 
+    _pollingInterval;
 
     @wire(getComments, { ticketId: '$recordId' })
     wiredComments(result) {
@@ -24,9 +25,24 @@ export default class DeliveryTicketChat extends LightningElement {
                     metaClass: msg.isOutbound ? 'meta outbound-meta' : 'meta inbound-meta'
                 };
             });
-            this.scrollToBottom();
+            // Auto-scroll to bottom only on initial load to avoid jumping while reading
+            if (!this._pollingInterval) {
+                 this.scrollToBottom();
+            }
         }
     }
+
+    // --- ADDED: Auto-Refresh Logic ---
+    connectedCallback() {
+        this._pollingInterval = setInterval(() => {
+            refreshApex(this.wiredResult);
+        }, 5000); // Check every 5 seconds
+    }
+
+    disconnectedCallback() {
+        clearInterval(this._pollingInterval);
+    }
+    // ----------------------------------
 
     get comments() {
         return { data: this.commentsData };
