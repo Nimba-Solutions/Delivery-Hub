@@ -5,6 +5,9 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
+    /**
+     * @description Wrapper class to send clean data to the LWC
+     */
     public class CommentWrapper {
         @AuraEnabled public String id;
         @AuraEnabled public String body;
@@ -13,6 +16,11 @@ public with sharing class DeliveryHubCommentController {
         @AuraEnabled public Boolean isOutbound; 
     }
 
+    /**
+     * @description Fetches all comments for a specific Ticket, ordered chronologically.
+     * @param ticketId The ID of the Ticket record.
+     * @return List<CommentWrapper>
+     */
     @AuraEnabled(cacheable=true)
     public static List<CommentWrapper> getComments(Id ticketId) {
         try {
@@ -41,6 +49,11 @@ public with sharing class DeliveryHubCommentController {
         }
     }
 
+    /**
+     * @description Posts a new comment to the Ticket.
+     * @param ticketId The Ticket ID.
+     * @param body The message content.
+     */
     @AuraEnabled
     public static void postComment(Id ticketId, String body) {
         try {
@@ -66,6 +79,10 @@ public with sharing class DeliveryHubCommentController {
         }
     }
 
+    /**
+     * @description Asynchronously syncs a comment to the remote system via the linked Request.
+     * @param commentId The ID of the local Ticket_Comment__c record to sync.
+     */
     @future(callout=true)
     public static void syncCommentAsync(Id commentId) {
         try {
@@ -76,7 +93,6 @@ public with sharing class DeliveryHubCommentController {
                 LIMIT 1
             ];
 
-            // Find linked request
             List<Request__c> relatedRequests = [
                 SELECT RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
@@ -95,13 +111,11 @@ public with sharing class DeliveryHubCommentController {
             Request__c activeRequest = relatedRequests[0];
             String remoteId = activeRequest.RemoteTicketIdTxt__c;
 
-            // Determine Base URL
             String baseUrl = DeliveryHubCalloutService.getBaseUrl(
                 activeRequest.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
                 'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
             );
 
-            // UPDATED: Matches your existing class (comments/{id})
             String endpoint = baseUrl + 'comments/' + remoteId;
 
             Map<String, String> payload = new Map<String, String>();

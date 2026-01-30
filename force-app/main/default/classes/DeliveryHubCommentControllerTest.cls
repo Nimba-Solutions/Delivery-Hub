@@ -63,10 +63,18 @@ private class DeliveryHubCommentControllerTest {
         System.assertEquals('Synced', updatedC.JiraSyncStatusTxt__c);
     }
 
+    /**
+     * @description Mock class to simulate the HTTP Callout
+     */
     public class MothershipMock implements HttpCalloutMock {
+        
+        /**
+         * @description Responds to the mock HTTP request
+         * @param req The HTTPRequest
+         * @return The mock HTTPResponse
+         */
         public HTTPResponse respond(HTTPRequest req) {
             System.assertEquals('POST', req.getMethod());
-            // UPDATED: Matches the new URL structure
             System.assert(req.getEndpoint().contains('/comments/REMOTE-123'), 'Endpoint should point to comments resource with ID');
             
             HttpResponse res = new HttpResponse();
