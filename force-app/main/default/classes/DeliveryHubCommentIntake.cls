@@ -1,12 +1,14 @@
 /**
  * @description API for real-time comment streaming.
  * Allows Client Orgs to fetch history and post new comments to a Ticket.
+ * Updated to support time-based filtering and directional routing.
  */
 @RestResource(urlMapping='/deliveryhub/v1/comments/*')
 global without sharing class DeliveryHubCommentIntake {
 
     /**
-     * @description GET: Fetch all comments for a specific Ticket
+     * @description GET: Fetch comments for a specific Ticket.
+     * Supports optional query param '?since={timestamp}' to fetch only new comments.
      */
     @HttpGet
     global static void getComments() {
@@ -16,12 +18,19 @@ global without sharing class DeliveryHubCommentIntake {
         try {
             // Extract Ticket ID from URL: .../comments/{TICKET_ID}
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
+            
+            // Extract 'since' parameter for incremental sync
+            String sinceParam = req.params.get('since');
+            DateTime lastSync = (sinceParam != null && String.isNotBlank(sinceParam)) 
+                ? DateTime.newInstance(Long.valueOf(sinceParam)) 
+                : DateTime.newInstance(1900, 1, 1); // Default to beginning of time
 
-            // FIX: Removed WITH USER_MODE to prevent "No such column" errors during packaging
+            // Query comments (optionally filtered by time)
             List<Ticket_Comment__c> comments = [
-                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate 
+                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c 
                 FROM Ticket_Comment__c 
                 WHERE TicketId__c = :ticketId 
+                AND CreatedDate > :lastSync
                 ORDER BY CreatedDate ASC
             ];
 
@@ -31,7 +40,8 @@ global without sharing class DeliveryHubCommentIntake {
                     'id' => c.Id,
                     'body' => c.BodyTxt__c,
                     'author' => c.AuthorTxt__c,
-                    'timestamp' => c.CreatedDate
+                    'timestamp' => c.CreatedDate.getTime(),
+                    'source' => c.SourcePk__c // Return source so client knows who sent it
                 });
             }
 
@@ -45,7 +55,8 @@ global without sharing class DeliveryHubCommentIntake {
     }
 
     /**
-     * @description POST: Add a new comment to a Ticket
+     * @description POST: Add a new comment to a Ticket.
+     * Captures 'direction' to determine if this is Upstream or Downstream traffic.
      */
     @HttpPost
     @SuppressWarnings('PMD.ApexCRUDViolation') 
@@ -61,6 +72,7 @@ global without sharing class DeliveryHubCommentIntake {
             
             String body = (String) payload.get('body');
             String author = (String) payload.get('author'); 
+            String direction = (String) payload.get('direction'); // Capture direction
 
             if (String.isBlank(body)) {
                 res.statusCode = 400;
@@ -72,6 +84,12 @@ global without sharing class DeliveryHubCommentIntake {
             comm.TicketId__c = ticketId;
             comm.BodyTxt__c = body;
             comm.AuthorTxt__c = String.isBlank(author) ? 'Client User' : author;
+            
+            // Universal Router Logic:
+            // 1. Mark as 'Synced' because it came from an external source (don't echo back).
+            comm.JiraSyncStatusTxt__c = 'Synced';
+            // 2. Set SourcePk__c so the Router knows where to forward it next.
+            comm.SourcePk__c = direction; 
             
             insert comm;
 
