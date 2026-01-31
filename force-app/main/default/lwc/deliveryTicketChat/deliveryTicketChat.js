@@ -1,6 +1,6 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
-import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments';
+import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments'; // Or getCommentsLive if using that
 import postComment from '@salesforce/apex/DeliveryHubCommentController.postComment';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
@@ -32,10 +32,13 @@ export default class DeliveryTicketChat extends LightningElement {
         }
     }
 
-    // --- ADDED: Auto-Refresh Logic ---
+    // --- Auto-Refresh Logic ---
     connectedCallback() {
+        // console.log('Chat Component Initialized. Starting Poll...');
         this._pollingInterval = setInterval(() => {
-            refreshApex(this.wiredResult);
+            // console.log('Polling for new comments...');
+            refreshApex(this.wiredResult)
+                .catch(error => console.error('Error refreshing chat:', error));
         }, 5000); // Check every 5 seconds
     }
 
