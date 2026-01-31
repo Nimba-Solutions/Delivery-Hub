@@ -1,5 +1,5 @@
 /**
- * @description Scheduled job to batch pull comments from remote Motherships via Requests.
+ * @description Scheduled job to batch pull comments from remote Motherships.
  */
 public class DeliveryHubPullScheduler implements Schedulable, Database.Batchable<sObject>, Database.AllowsCallouts {
     
@@ -8,16 +8,16 @@ public class DeliveryHubPullScheduler implements Schedulable, Database.Batchable
      * @param sc The schedulable context.
      */
     public void execute(SchedulableContext sc) {
-        Database.executeBatch(this, 10); 
+        Database.executeBatch(this, 10); // Batch size 10 to allow callouts
     }
 
     /**
      * @description Start the Batchable context.
      * @param bc The batchable context.
-     * @return Database.QueryLocator Queries active REQUESTS.
+     * @return Database.QueryLocator The records to process.
      */
     public Database.QueryLocator start(Database.BatchableContext bc) {
-        // Query REQUESTS that have a Remote ID (meaning they are linked)
+        // Query all OPEN REQUESTS that are linked to a Mothership
         return Database.getQueryLocator([
             SELECT Id, TicketId__c 
             FROM Request__c 
@@ -27,12 +27,12 @@ public class DeliveryHubPullScheduler implements Schedulable, Database.Batchable
     }
 
     /**
-     * @description Execute the batch logic.
+     * @description Execute the batch logic for a scope of records.
      * @param bc The batchable context.
      * @param scope The list of Requests.
      */
     public void execute(Database.BatchableContext bc, List<Request__c> scope) {
-        // Collect Ticket IDs to avoid duplicates if multiple requests exist for one ticket
+        // Collect Ticket IDs to avoid duplicates
         Set<Id> ticketIds = new Set<Id>();
         for(Request__c r : scope) {
             ticketIds.add(r.TicketId__c);
