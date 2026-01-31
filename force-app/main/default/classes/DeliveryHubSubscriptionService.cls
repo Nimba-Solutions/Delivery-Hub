@@ -1,31 +1,29 @@
 /**
- * @description Service to "Pull" (Subscribe) to updates from an upstream Mothership.
+ * @description Service to "Pull" (Subscribe) to updates from upstream Motherships.
+ * Now supports multi-vendor syncing by checking all active Requests.
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public inherited sharing class DeliveryHubSubscriptionService {
 
     /**
-     * @description Pulls latest comments for a specific ticket from its linked Request.
+     * @description Pulls latest comments for a specific ticket from ALL linked Requests.
      * @param localTicketId The ID of the ticket in the Client Org.
      */
     public static void pullUpdates(Id localTicketId) {
-        // 1. Find the Active Request linking this Ticket to a Mothership
-        // We look for a Request that has a Remote Ticket ID populated.
+        // 1. Find ALL Active Requests (Vendors)
+        // Filter out Inactive requests to stop syncing with fired vendors
         List<Request__c> requests = [
             SELECT Id, RemoteTicketIdTxt__c, 
                    DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
             FROM Request__c 
             WHERE TicketId__c = :localTicketId 
             AND RemoteTicketIdTxt__c != NULL
-            ORDER BY CreatedDate DESC 
-            LIMIT 1
+            AND StatusPk__c != 'Inactive'
         ];
 
         if (requests.isEmpty()) {
-            return; // No active link to pull from
+            return; // No active links
         }
-
-        Request__c req = requests[0];
 
         // 2. Determine "Last Sync" Time
         // Query the most recent comment on the Ticket to find where we left off.
@@ -42,45 +40,50 @@ public inherited sharing class DeliveryHubSubscriptionService {
             lastSyncTime = latestComments[0].CreatedDate.getTime();
         }
 
-        // 3. Build Request URL using the REQUEST's info (not the Ticket's)
-        String baseUrl = DeliveryHubCalloutService.getBaseUrl(
-            req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
-            'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
-        );
-        
-        String endpoint = baseUrl + 'comments/' + req.RemoteTicketIdTxt__c + '?since=' + lastSyncTime;
+        // 3. Loop through EVERY Vendor and ask for updates
+        List<Ticket_Comment__c> allNewComments = new List<Ticket_Comment__c>();
 
-        HttpRequest httpReq = new HttpRequest();
-        httpReq.setEndpoint(endpoint);
-        httpReq.setMethod('GET');
-        httpReq.setTimeout(60000);
+        for (Request__c req : requests) {
+            // Guard against missing URLs
+            if (String.isBlank(req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c)) continue;
 
-        try {
-            Http http = new Http();
-            HttpResponse res = http.send(httpReq);
+            String baseUrl = DeliveryHubCalloutService.getBaseUrl(
+                req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
+                'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
+            );
+            
+            String endpoint = baseUrl + 'comments/' + req.RemoteTicketIdTxt__c + '?since=' + lastSyncTime;
 
-            if (res.getStatusCode() == 200) {
-                List<Object> results = (List<Object>) JSON.deserializeUntyped(res.getBody());
-                List<Ticket_Comment__c> toInsert = new List<Ticket_Comment__c>();
+            try {
+                // Use the centralized service for the GET call
+                HttpResponse res = DeliveryHubCalloutService.get(endpoint);
 
-                for (Object obj : results) {
-                    Map<String, Object> data = (Map<String, Object>) obj;
+                if (res.getStatusCode() == 200) {
+                    List<Object> results = (List<Object>) JSON.deserializeUntyped(res.getBody());
+                    
+                    for (Object obj : results) {
+                        Map<String, Object> data = (Map<String, Object>) obj;
 
-                    Ticket_Comment__c c = new Ticket_Comment__c(
-                        TicketId__c = localTicketId,
-                        BodyTxt__c = (String) data.get('body'),
-                        AuthorTxt__c = (String) data.get('author'),
-                        JiraSyncStatusTxt__c = 'Synced' // It came from remote, so it is synced
-                    );
-                    toInsert.add(c);
+                        // Create the comment locally
+                        Ticket_Comment__c c = new Ticket_Comment__c(
+                            TicketId__c = localTicketId,
+                            BodyTxt__c = (String) data.get('body'),
+                            AuthorTxt__c = (String) data.get('author'),
+                            JiraSyncStatusTxt__c = 'Synced', // It came from remote, so it is synced
+                            SourcePk__c = (String) data.get('source') // Capture source (e.g. Upstream/Downstream)
+                        );
+                        allNewComments.add(c);
+                    }
                 }
-
-                if (!toInsert.isEmpty()) {
-                    insert toInsert;
-                }
+            } catch (Exception e) {
+                // Log failure for this specific vendor but keep trying others
+                System.debug(LoggingLevel.ERROR, 'Failed to pull from vendor request ' + req.Id + ': ' + e.getMessage());
             }
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Subscription pull failed: ' + e.getMessage());
+        }
+
+        // 4. Batch Insert (if we found anything new)
+        if (!allNewComments.isEmpty()) {
+            insert allNewComments;
         }
     }
 }
