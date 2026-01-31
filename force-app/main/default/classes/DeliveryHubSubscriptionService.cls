@@ -1,3 +1,7 @@
+/**
+ * @description Service to "Pull" (Subscribe) to updates from an upstream Mothership.
+ */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public inherited sharing class DeliveryHubSubscriptionService {
 
     /**
@@ -15,7 +19,9 @@ public inherited sharing class DeliveryHubSubscriptionService {
             LIMIT 1
         ];
 
-        if (String.isBlank(t.RemoteTicketIdTxt__c)) return;
+        if (String.isBlank(t.RemoteTicketIdTxt__c)) {
+            return;
+        }
 
         // 2. Determine "Last Sync" Time (Max CreatedDate of local comments)
         Long lastSyncTime = 0;
@@ -24,7 +30,6 @@ public inherited sharing class DeliveryHubSubscriptionService {
         }
 
         // 3. Build Request
-        // Use Service for URL handling
         String baseUrl = DeliveryHubCalloutService.getBaseUrl(
             t.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
             'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
@@ -47,8 +52,7 @@ public inherited sharing class DeliveryHubSubscriptionService {
 
                 for (Object obj : results) {
                     Map<String, Object> data = (Map<String, Object>) obj;
-                    
-                    // Deduplication check could go here, but timestamp filter helps
+
                     Ticket_Comment__c c = new Ticket_Comment__c(
                         TicketId__c = t.Id,
                         BodyTxt__c = (String) data.get('body'),
@@ -63,7 +67,7 @@ public inherited sharing class DeliveryHubSubscriptionService {
                 }
             }
         } catch (Exception e) {
-            System.debug('Subscription pull failed: ' + e.getMessage());
+            System.debug(LoggingLevel.ERROR, 'Subscription pull failed: ' + e.getMessage());
         }
     }
 }

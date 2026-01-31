@@ -39,14 +39,10 @@ public with sharing class DeliveryHubCommentController {
     @AuraEnabled
     public static List<CommentWrapper> getCommentsLive(Id ticketId) {
         try {
-            // 1. Attempt to pull new messages from Mothership
             DeliveryHubSubscriptionService.pullUpdates(ticketId);
         } catch (Exception e) {
-            // Log failure but continue to return local cache so the UI doesn't break
             System.debug(LoggingLevel.ERROR, 'Live pull failed: ' + e.getMessage());
         }
-
-        // 2. Return the latest local records
         return queryComments(ticketId);
     }
 
@@ -67,7 +63,7 @@ public with sharing class DeliveryHubCommentController {
                 TicketId__c = ticketId,
                 BodyTxt__c = body,
                 AuthorTxt__c = UserInfo.getName(), 
-                JiraSyncStatusTxt__c = 'Pending' // Trigger will pick this up
+                JiraSyncStatusTxt__c = 'Pending' 
             );
             
             insert comment;
@@ -80,6 +76,8 @@ public with sharing class DeliveryHubCommentController {
     /**
      * @description Private helper to query and wrap comments.
      * Centralizes the query logic used by both getComments and getCommentsLive.
+     * @param ticketId The ID of the ticket.
+     * @return List<CommentWrapper> The list of wrapped comments.
      */
     private static List<CommentWrapper> queryComments(Id ticketId) {
         List<CommentWrapper> chat = new List<CommentWrapper>();
