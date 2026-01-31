@@ -48,7 +48,6 @@ public with sharing class DeliveryHubCommentController {
 
     /**
      * @description Posts a new comment to the Ticket.
-     * The TicketCommentRouter trigger will handle the actual syncing/routing.
      * @param ticketId The Ticket ID.
      * @param body The message content.
      */
@@ -75,7 +74,6 @@ public with sharing class DeliveryHubCommentController {
 
     /**
      * @description Private helper to query and wrap comments.
-     * Centralizes the query logic used by both getComments and getCommentsLive.
      * @param ticketId The ID of the ticket.
      * @return List<CommentWrapper> The list of wrapped comments.
      */

@@ -1,10 +1,24 @@
 /**
  * @description Centralized service for handling Delivery Hub HTTP callouts.
+ * Updated to include GET support for subscription polling.
  */
 public inherited sharing class DeliveryHubCalloutService {
 
     // Centralize the default named credential path here
     private static final String DEFAULT_NAMED_CRED = 'callout:Mothership/services/apexrest/delivery/deliveryhub/v1';
+
+    /**
+     * @description Generic GET method. Required for polling/subscription.
+     * @param endpointUrl The full URL.
+     * @return HttpResponse
+     */
+    public static HttpResponse get(String endpointUrl) {
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpointUrl);
+        req.setMethod('GET');
+        req.setTimeout(60000); // Standardize timeout
+        return new Http().send(req);
+    }
 
     /**
      * @description Generic POST method for JSON payloads.
