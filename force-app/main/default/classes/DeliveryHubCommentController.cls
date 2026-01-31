@@ -1,6 +1,6 @@
 /**
  * @description Controller for the internal Ticket Chat LWC.
- * Handles fetching and posting comments, syncing via the related Request.
+ * Handles fetching, posting, and on-demand refreshing of comments.
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
@@ -24,33 +24,35 @@ public with sharing class DeliveryHubCommentController {
     @AuraEnabled(cacheable=true)
     public static List<CommentWrapper> getComments(Id ticketId) {
         try {
-            List<CommentWrapper> chat = new List<CommentWrapper>();
-            String currentUserId = UserInfo.getUserId();
-
-            List<Ticket_Comment__c> records = [
-                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, CreatedById, CreatedBy.Name 
-                FROM Ticket_Comment__c 
-                WHERE TicketId__c = :ticketId 
-                ORDER BY CreatedDate ASC
-            ];
-
-            for (Ticket_Comment__c c : records) {
-                CommentWrapper w = new CommentWrapper();
-                w.id = c.Id;
-                w.body = c.BodyTxt__c;
-                w.timestamp = c.CreatedDate;
-                w.authorName = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : c.CreatedBy.Name;
-                w.isOutbound = (c.CreatedById == currentUserId);
-                chat.add(w);
-            }
-            return chat;
+            return queryComments(ticketId);
         } catch (Exception e) {
             throw new AuraHandledException('Error fetching comments: ' + e.getMessage());
         }
     }
 
     /**
+     * @description Forces a live pull from the Mothership before returning comments.
+     * Called by the "Refresh" button or initial load in the LWC.
+     * @param ticketId The ID of the Ticket record.
+     * @return List<CommentWrapper> Updated list of comments.
+     */
+    @AuraEnabled
+    public static List<CommentWrapper> getCommentsLive(Id ticketId) {
+        try {
+            // 1. Attempt to pull new messages from Mothership
+            DeliveryHubSubscriptionService.pullUpdates(ticketId);
+        } catch (Exception e) {
+            // Log failure but continue to return local cache so the UI doesn't break
+            System.debug(LoggingLevel.ERROR, 'Live pull failed: ' + e.getMessage());
+        }
+
+        // 2. Return the latest local records
+        return queryComments(ticketId);
+    }
+
+    /**
      * @description Posts a new comment to the Ticket.
+     * The TicketCommentRouter trigger will handle the actual syncing/routing.
      * @param ticketId The Ticket ID.
      * @param body The message content.
      */
@@ -65,14 +67,10 @@ public with sharing class DeliveryHubCommentController {
                 TicketId__c = ticketId,
                 BodyTxt__c = body,
                 AuthorTxt__c = UserInfo.getName(), 
-                JiraSyncStatusTxt__c = 'Pending'   
+                JiraSyncStatusTxt__c = 'Pending' // Trigger will pick this up
             );
             
             insert comment;
-            
-            if (!Test.isRunningTest()) {
-                syncCommentAsync(comment.Id);
-            }
             
         } catch (Exception e) {
             throw new AuraHandledException('Error posting comment: ' + e.getMessage());
@@ -80,60 +78,29 @@ public with sharing class DeliveryHubCommentController {
     }
 
     /**
-     * @description Asynchronously syncs a comment to the remote system via the linked Request.
-     * @param commentId The ID of the local Ticket_Comment__c record to sync.
+     * @description Private helper to query and wrap comments.
+     * Centralizes the query logic used by both getComments and getCommentsLive.
      */
-    @future(callout=true)
-    public static void syncCommentAsync(Id commentId) {
-        try {
-            Ticket_Comment__c c = [
-                SELECT Id, BodyTxt__c, AuthorTxt__c, TicketId__c 
-                FROM Ticket_Comment__c 
-                WHERE Id = :commentId 
-                LIMIT 1
-            ];
+    private static List<CommentWrapper> queryComments(Id ticketId) {
+        List<CommentWrapper> chat = new List<CommentWrapper>();
+        String currentUserId = UserInfo.getUserId();
 
-            List<Request__c> relatedRequests = [
-                SELECT RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
-                FROM Request__c 
-                WHERE TicketId__c = :c.TicketId__c 
-                AND RemoteTicketIdTxt__c != NULL
-                ORDER BY CreatedDate DESC 
-                LIMIT 1
-            ];
+        List<Ticket_Comment__c> records = [
+            SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, CreatedById, CreatedBy.Name 
+            FROM Ticket_Comment__c 
+            WHERE TicketId__c = :ticketId 
+            ORDER BY CreatedDate ASC
+        ];
 
-            if (relatedRequests.isEmpty()) {
-                c.JiraSyncStatusTxt__c = 'Skipped: No Linked Request';
-                update c;
-                return; 
-            }
-
-            Request__c activeRequest = relatedRequests[0];
-            String remoteId = activeRequest.RemoteTicketIdTxt__c;
-
-            String baseUrl = DeliveryHubCalloutService.getBaseUrl(
-                activeRequest.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
-                'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
-            );
-
-            String endpoint = baseUrl + 'comments/' + remoteId;
-
-            Map<String, String> payload = new Map<String, String>();
-            payload.put('body', c.BodyTxt__c);
-            payload.put('author', c.AuthorTxt__c);
-
-            HttpResponse res = DeliveryHubCalloutService.post(endpoint, payload);
-
-            if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
-                c.JiraSyncStatusTxt__c = 'Synced';
-                c.SyncedDateTime__c = System.now();
-            } else {
-                c.JiraSyncStatusTxt__c = 'Failed: ' + res.getStatus() + ' ' + res.getBody();
-            }
-            update c;
-
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Sync Failed: ' + e.getMessage());
+        for (Ticket_Comment__c c : records) {
+            CommentWrapper w = new CommentWrapper();
+            w.id = c.Id;
+            w.body = c.BodyTxt__c;
+            w.timestamp = c.CreatedDate;
+            w.authorName = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : c.CreatedBy.Name;
+            w.isOutbound = (c.CreatedById == currentUserId);
+            chat.add(w);
         }
+        return chat;
     }
 }
