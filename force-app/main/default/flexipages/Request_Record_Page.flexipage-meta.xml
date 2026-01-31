@@ -130,12 +130,6 @@
                 <identifier>c_deliveryFileSender</identifier>
             </componentInstance>
         </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryCommentStream</componentName>
-                <identifier>c_deliveryCommentStream</identifier>
-            </componentInstance>
-        </itemInstances>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>
