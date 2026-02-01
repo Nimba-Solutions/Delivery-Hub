@@ -5,6 +5,10 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public inherited sharing class DeliveryHubSubscriptionService {
 
+    /**
+     * @description Pulls latest comments for a specific ticket from ALL linked Requests.
+     * @param localTicketId The ID of the ticket in the Client Org.
+     */
     public static void pullUpdates(Id localTicketId) {
         // 1. Find ALL Active Requests
         List<Request__c> requests = [
@@ -16,7 +20,10 @@ public inherited sharing class DeliveryHubSubscriptionService {
             AND StatusPk__c != 'Inactive'
         ];
 
-        if (requests.isEmpty()) return;
+        // FIXED: Added braces for PMD compliance
+        if (requests.isEmpty()) {
+            return;
+        }
 
         // 2. Determine "Last Sync" Time
         Long lastSyncTime = 0;
@@ -38,7 +45,10 @@ public inherited sharing class DeliveryHubSubscriptionService {
 
         // 3. Loop through Vendors and Fetch
         for (Request__c req : requests) {
-            if (String.isBlank(req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c)) continue;
+            // FIXED: Added braces for PMD compliance
+            if (String.isBlank(req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c)) {
+                continue;
+            }
 
             String baseUrl = DeliveryHubCalloutService.getBaseUrl(req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c);
             String endpoint = baseUrl + 'comments/' + req.RemoteTicketIdTxt__c + '?since=' + lastSyncTime;
@@ -59,7 +69,7 @@ public inherited sharing class DeliveryHubSubscriptionService {
                             continue;
                         }
 
-                        if(String.isNotBlank(remoteId)) {
+                        if (String.isNotBlank(remoteId)) {
                              incomingRemoteIds.add(remoteId);
                              // Store the valid result + Request context for later
                              // We attach the RequestId to the data map so we know who sent it
@@ -75,8 +85,8 @@ public inherited sharing class DeliveryHubSubscriptionService {
 
         // 4. Check Ledger for Duplicates
         Set<String> existingRemoteIds = new Set<String>();
-        if(!incomingRemoteIds.isEmpty()) {
-            for(Sync_Item__c log : [SELECT RemoteExternalIdTxt__c 
+        if (!incomingRemoteIds.isEmpty()) {
+            for (Sync_Item__c log : [SELECT RemoteExternalIdTxt__c 
                                     FROM Sync_Item__c 
                                     WHERE RemoteExternalIdTxt__c IN :incomingRemoteIds 
                                     AND ObjectTypePk__c = 'Ticket_Comment__c']) {

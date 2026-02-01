@@ -6,6 +6,8 @@ public inherited sharing class DeliveryHubCalloutService {
 
     /**
      * @description Generic GET method.
+     * @param endpointUrl The fully qualified URL to send the GET request to.
+     * @return HttpResponse The result of the callout.
      */
     public static HttpResponse get(String endpointUrl) {
         HttpRequest req = new HttpRequest();
@@ -17,6 +19,9 @@ public inherited sharing class DeliveryHubCalloutService {
 
     /**
      * @description Generic POST method.
+     * @param endpointUrl The fully qualified URL to send the POST request to.
+     * @param payload The data object to serialize into the JSON body.
+     * @return HttpResponse The result of the callout.
      */
     public static HttpResponse post(String endpointUrl, Object payload) {
         HttpRequest req = new HttpRequest();
@@ -31,6 +36,8 @@ public inherited sharing class DeliveryHubCalloutService {
     /**
      * @description Helper to normalize URLs. 
      * Throws an exception if the URL is blank (since we aren't using Named Creds).
+     * @param specificUrl The raw URL string from the Network Entity.
+     * @return String The normalized URL ending with a forward slash.
      */
     public static String getBaseUrl(String specificUrl) {
         if (String.isBlank(specificUrl)) {
@@ -44,6 +51,9 @@ public inherited sharing class DeliveryHubCalloutService {
 
     /**
      * @description Overloaded method for backward compatibility, but ignores defaultUrl.
+     * @param specificUrl The raw URL string from the Network Entity.
+     * @param unusedDefault Legacy parameter, no longer used.
+     * @return String The normalized URL ending with a forward slash.
      */
     public static String getBaseUrl(String specificUrl, String unusedDefault) {
         return getBaseUrl(specificUrl);

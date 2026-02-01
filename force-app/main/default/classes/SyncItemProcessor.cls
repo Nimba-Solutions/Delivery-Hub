@@ -2,23 +2,57 @@
  * @description Queueable Worker that processes 'Sync_Item__c' records.
  * Picks up "Queued" items and sends them to the Vendor/Mothership.
  */
-public class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
+public inherited sharing class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
+    /**
+     * @description Execution method for the Queueable interface.
+     * Orchestrates querying, processing, and saving of Sync Items.
+     * @param context The Queueable context.
+     */
     public void execute(QueueableContext context) {
-        // 1. Query Queued Items (Batch of 50 to stay safe)
-        // We fetch the connection details (URL, Remote ID) via the Request Lookup
-        List<Sync_Item__c> items = [
-            SELECT Id, ObjectTypePk__c, LocalRecordIdTxt__c, 
+        // 1. Query Queued Items
+        List<Sync_Item__c> items = getQueuedItems();
+
+        if (items.isEmpty()) {
+            return;
+        }
+
+        // 2. Pre-fetch Data
+        Map<Id, Ticket_Comment__c> commentsMap = getRelatedComments(items);
+
+        // 3. Process Items
+        List<Sync_Item__c> itemsToUpdate = processItems(items, commentsMap);
+
+        // 4. Save Results
+        if (!itemsToUpdate.isEmpty()) {
+            update itemsToUpdate;
+        }
+
+        // 5. Chain Job
+        chainJobIfNeeded();
+    }
+
+    /**
+     * @description Queries for the next batch of Queued Sync Items.
+     * @return List<Sync_Item__c> Batch of items to process.
+     */
+    private List<Sync_Item__c> getQueuedItems() {
+        return [
+            SELECT Id, ObjectTypePk__c, LocalRecordIdTxt__c,
                    RequestId__r.RemoteTicketIdTxt__c,
                    RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
             FROM Sync_Item__c 
             WHERE StatusPk__c = 'Queued'
             LIMIT 50
         ];
+    }
 
-        if (items.isEmpty()) return;
-
-        // 2. Separate by Type for efficient querying
+    /**
+     * @description Bulk fetches related Ticket Comments for the current batch.
+     * @param items The list of sync items.
+     * @return Map<Id, Ticket_Comment__c> Map of ID to Comment.
+     */
+    private Map<Id, Ticket_Comment__c> getRelatedComments(List<Sync_Item__c> items) {
         Set<Id> commentIds = new Set<Id>();
         for (Sync_Item__c item : items) {
             if (item.ObjectTypePk__c == 'Ticket_Comment__c') {
@@ -26,22 +60,29 @@ public class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
             }
         }
 
-        // 3. Pre-fetch Data (Bulkify)
-        Map<Id, Ticket_Comment__c> commentsMap = new Map<Id, Ticket_Comment__c>();
-        if (!commentIds.isEmpty()) {
-            commentsMap = new Map<Id, Ticket_Comment__c>([
-                SELECT Id, BodyTxt__c, AuthorTxt__c 
-                FROM Ticket_Comment__c 
-                WHERE Id IN :commentIds
-            ]);
+        if (commentIds.isEmpty()) {
+            return new Map<Id, Ticket_Comment__c>();
         }
 
-        // 4. Process Each Item
-        List<Sync_Item__c> itemsToUpdate = new List<Sync_Item__c>();
+        return new Map<Id, Ticket_Comment__c>([
+            SELECT Id, BodyTxt__c, AuthorTxt__c 
+            FROM Ticket_Comment__c 
+            WHERE Id IN :commentIds
+        ]);
+    }
+
+    /**
+     * @description Iterates through items and attempts to process them.
+     * @param items The items to process.
+     * @param commentsMap The pre-fetched comments.
+     * @return List<Sync_Item__c> The list of items with updated statuses.
+     */
+    private List<Sync_Item__c> processItems(List<Sync_Item__c> items, Map<Id, Ticket_Comment__c> commentsMap) {
+        List<Sync_Item__c> results = new List<Sync_Item__c>();
 
         for (Sync_Item__c item : items) {
             try {
-                // VALIDATION: Ensure we have a valid destination
+                // Validation
                 String endpointUrl = item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
                 String remoteTicketId = item.RequestId__r.RemoteTicketIdTxt__c;
 
@@ -49,45 +90,54 @@ public class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
                     throw new CalloutException('Missing Endpoint URL or Remote Ticket ID on the Request.');
                 }
 
-                // LOGIC SWITCH: Handle Comments (and later Files)
+                // Processing
                 if (item.ObjectTypePk__c == 'Ticket_Comment__c') {
-                    Ticket_Comment__c c = commentsMap.get(item.LocalRecordIdTxt__c);
-                    if (c != null) {
-                        processComment(item, c, endpointUrl, remoteTicketId);
-                        item.StatusPk__c = 'Synced'; // Success
-                        item.ErrorLogTxt__c = null;
-                    } else {
-                        throw new CalloutException('Source comment record not found (deleted?).');
-                    }
+                     handleCommentSync(item, commentsMap, endpointUrl, remoteTicketId);
                 }
-                
+
+                // Success
+                item.StatusPk__c = 'Synced';
+                item.ErrorLogTxt__c = null;
+
             } catch (Exception e) {
                 item.StatusPk__c = 'Failed';
                 item.ErrorLogTxt__c = e.getMessage();
             }
-            itemsToUpdate.add(item);
+            results.add(item);
         }
-
-        // 5. Save Results
-        if (!itemsToUpdate.isEmpty()) {
-            update itemsToUpdate;
-        }
-        
-        // 6. Chain Job: If there are more queued items, run again immediately
-        Integer remaining = [SELECT Count() FROM Sync_Item__c WHERE StatusPk__c = 'Queued' LIMIT 1];
-        if (remaining > 0 && !Test.isRunningTest()) {
-            System.enqueueJob(new SyncItemProcessor());
-        }
+        return results;
     }
 
-    // --- HELPER: Process Comment ---
-    private void processComment(Sync_Item__c item, Ticket_Comment__c c, String baseUrl, String remoteTicketId) {
+    /**
+     * @description Validates and sends a specific comment.
+     * @param item The sync item being processed.
+     * @param commentsMap The map of available comments.
+     * @param endpointUrl The destination URL.
+     * @param remoteTicketId The destination Ticket ID.
+     */
+    private void handleCommentSync(Sync_Item__c item, Map<Id, Ticket_Comment__c> commentsMap, String endpointUrl, String remoteTicketId) {
+        Ticket_Comment__c c = commentsMap.get(item.LocalRecordIdTxt__c);
+        
+        if (c == null) {
+            throw new CalloutException('Source comment record not found (deleted?).');
+        }
+
+        sendCommentCallout(c, endpointUrl, remoteTicketId);
+    }
+
+    /**
+     * @description Performs the HTTP Callout for a comment.
+     * @param c The comment record.
+     * @param baseUrl The base URL of the remote system.
+     * @param remoteTicketId The ID of the ticket on the remote system.
+     */
+    private void sendCommentCallout(Ticket_Comment__c c, String baseUrl, String remoteTicketId) {
         String fullUrl = DeliveryHubCalloutService.getBaseUrl(baseUrl) + 'comments/' + remoteTicketId;
         
         Map<String, Object> payload = new Map<String, Object>{
             'body' => c.BodyTxt__c,
             'author' => c.AuthorTxt__c,
-            'direction' => 'Downstream', // Client sending to Vendor
+            'direction' => 'Downstream',
             'source' => 'Client Org'
         };
 
@@ -95,6 +145,16 @@ public class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
         if (res.getStatusCode() != 200 && res.getStatusCode() != 201) {
             throw new CalloutException('HTTP ' + res.getStatusCode() + ': ' + res.getBody());
+        }
+    }
+
+    /**
+     * @description Checks if more items exist and chains the job.
+     */
+    private void chainJobIfNeeded() {
+        Integer remaining = [SELECT Count() FROM Sync_Item__c WHERE StatusPk__c = 'Queued' LIMIT 1];
+        if (remaining > 0 && !Test.isRunningTest()) {
+            System.enqueueJob(new SyncItemProcessor());
         }
     }
 }

@@ -5,6 +5,9 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
+    /**
+     * @description Wrapper class to transport comment data to LWC.
+     */
     public class CommentWrapper {
         @AuraEnabled public String id;
         @AuraEnabled public String body;
@@ -13,6 +16,11 @@ public with sharing class DeliveryHubCommentController {
         @AuraEnabled public Boolean isOutbound; 
     }
 
+    /**
+     * @description Fetches cached comments for a Ticket.
+     * @param ticketId The ID of the Ticket to query.
+     * @return List<CommentWrapper> List of formatted comments.
+     */
     @AuraEnabled(cacheable=true)
     public static List<CommentWrapper> getComments(Id ticketId) {
         try {
@@ -22,6 +30,11 @@ public with sharing class DeliveryHubCommentController {
         }
     }
 
+    /**
+     * @description Forces a live API pull from vendors, then returns the latest comments.
+     * @param ticketId The ID of the Ticket to refresh.
+     * @return List<CommentWrapper> List of formatted comments including new ones.
+     */
     @AuraEnabled
     public static List<CommentWrapper> getCommentsLive(Id ticketId) {
         try {
@@ -35,10 +48,18 @@ public with sharing class DeliveryHubCommentController {
         return queryComments(ticketId);
     }
 
+    /**
+     * @description Posts a new comment to the database.
+     * @param ticketId The parent Ticket ID.
+     * @param body The text content of the comment.
+     */
     @AuraEnabled
     public static void postComment(Id ticketId, String body) {
         try {
-            if (String.isBlank(body)) throw new AuraHandledException('Comment body cannot be empty.');
+            // FIXED: Added braces for PMD compliance
+            if (String.isBlank(body)) {
+                throw new AuraHandledException('Comment body cannot be empty.');
+            }
 
             Ticket_Comment__c comment = new Ticket_Comment__c(
                 TicketId__c = ticketId,
@@ -55,7 +76,9 @@ public with sharing class DeliveryHubCommentController {
 
     /**
      * @description Private helper to query and wrap comments.
-     * FIXED: Logic for determining "isOutbound" (Left vs Right alignment).
+     * Includes logic for determining "isOutbound" (Left vs Right alignment).
+     * @param ticketId The Ticket ID to query.
+     * @return List<CommentWrapper>
      */
     private static List<CommentWrapper> queryComments(Id ticketId) {
         List<CommentWrapper> chat = new List<CommentWrapper>();
@@ -75,7 +98,7 @@ public with sharing class DeliveryHubCommentController {
             w.timestamp = c.CreatedDate;
             w.authorName = c.AuthorTxt__c;
 
-            // --- ALIGNMENT LOGIC FIX ---
+            // --- ALIGNMENT LOGIC ---
             // 1. If I am the Author, it's Outbound (Right).
             // 2. If the Source is EXPLICITLY 'Client Org', it's Outbound (Right).
             // 3. Otherwise (Source is 'Mothership' or Author is 'Support'), it's Inbound (Left).
