@@ -1,30 +1,22 @@
 /**
  * @description Centralized service for handling Delivery Hub HTTP callouts.
- * Updated to include GET support for subscription polling.
+ * FIXED: Removed Named Credential dependency. Now relies strictly on the provided URL.
  */
 public inherited sharing class DeliveryHubCalloutService {
 
-    // Centralize the default named credential path here
-    private static final String DEFAULT_NAMED_CRED = 'callout:Mothership/services/apexrest/delivery/deliveryhub/v1';
-
     /**
-     * @description Generic GET method. Required for polling/subscription.
-     * @param endpointUrl The full URL.
-     * @return HttpResponse
+     * @description Generic GET method.
      */
     public static HttpResponse get(String endpointUrl) {
         HttpRequest req = new HttpRequest();
         req.setEndpoint(endpointUrl);
         req.setMethod('GET');
-        req.setTimeout(60000); // Standardize timeout
+        req.setTimeout(60000); 
         return new Http().send(req);
     }
 
     /**
-     * @description Generic POST method for JSON payloads.
-     * @param endpointUrl The full URL.
-     * @param payload The object to serialize.
-     * @return HttpResponse
+     * @description Generic POST method.
      */
     public static HttpResponse post(String endpointUrl, Object payload) {
         HttpRequest req = new HttpRequest();
@@ -37,26 +29,23 @@ public inherited sharing class DeliveryHubCalloutService {
     }
     
     /**
-     * @description Simpler method: Only pass the specific URL. 
-     * If blank, it automatically uses the stored Default Named Credential.
-     * @param specificUrl The override URL (optional).
-     * @return String The normalized URL.
+     * @description Helper to normalize URLs. 
+     * Throws an exception if the URL is blank (since we aren't using Named Creds).
      */
     public static String getBaseUrl(String specificUrl) {
-        return getBaseUrl(specificUrl, DEFAULT_NAMED_CRED);
+        if (String.isBlank(specificUrl)) {
+            // Fail loudly so you know to fix the Network Entity record
+            throw new CalloutException('Missing Endpoint URL. Check the Network Entity record.');
+        }
+        
+        // Ensure URL ends with '/'
+        return specificUrl.endsWith('/') ? specificUrl : specificUrl + '/';
     }
 
     /**
-     * @description Original method (kept for flexibility).
-     * @param specificUrl The override URL.
-     * @param defaultUrl The fallback URL.
-     * @return String The normalized URL.
+     * @description Overloaded method for backward compatibility, but ignores defaultUrl.
      */
-    public static String getBaseUrl(String specificUrl, String defaultUrl) {
-        String url = String.isNotBlank(specificUrl) ? specificUrl : defaultUrl;
-        if (!url.endsWith('/')) {
-            url += '/';
-        }
-        return url;
+    public static String getBaseUrl(String specificUrl, String unusedDefault) {
+        return getBaseUrl(specificUrl);
     }
 }

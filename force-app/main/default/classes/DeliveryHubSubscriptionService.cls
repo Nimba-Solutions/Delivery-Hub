@@ -48,9 +48,9 @@ public inherited sharing class DeliveryHubSubscriptionService {
             }
 
             String baseUrl = DeliveryHubCalloutService.getBaseUrl(
-                req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
-                'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
-            );
+                req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c//, 
+                );//'callout:Mothership/services/apexrest/delivery/deliveryhub/v1'
+            //);
             
             String endpoint = baseUrl + 'comments/' + req.RemoteTicketIdTxt__c + '?since=' + lastSyncTime;
 
