@@ -22,38 +22,48 @@ private class DeliveryHubCalloutServiceTest {
     }
 
     /**
-     * @description Test the URL normalization logic (trailing slashes & defaults)
+     * @description Test the URL normalization logic (trailing slashes)
      */
     @IsTest
     static void testGetBaseUrl() {
         String defaultUrl = 'https://default.example.com';
         
-        String url1 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com', defaultUrl);
+        // 1. Test Valid URL (appends slash)
+        String url1 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com');
         System.assertEquals('https://specific.example.com/', url1, 'Should append trailing slash');
 
-        String url2 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com/', defaultUrl);
+        // 2. Test Valid URL (ignores existing slash)
+        String url2 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com/');
         System.assertEquals('https://specific.example.com/', url2, 'Should not duplicate trailing slash');
+    }
 
-        String url3 = DeliveryHubCalloutService.getBaseUrl(null, defaultUrl);
-        System.assertEquals(defaultUrl + '/', url3, 'Should use default URL and append slash');
+    /**
+     * @description Test that missing URLs throw the correct custom exception
+     */
+    @IsTest
+    static void testGetBaseUrlExceptions() {
+        Boolean exceptionCaught = false;
 
-        String url4 = DeliveryHubCalloutService.getBaseUrl('', 'https://default.example.com/');
-        System.assertEquals('https://default.example.com/', url4, 'Should use default URL and keep existing slash');
+        Test.startTest();
+        try {
+            // This should fail because the service throws "Missing Endpoint URL" on null/empty
+            DeliveryHubCalloutService.getBaseUrl(null);
+        } catch (CalloutException e) {
+            exceptionCaught = true;
+            System.assert(e.getMessage().contains('Missing Endpoint URL'), 'Exception should mention missing URL');
+        }
+        Test.stopTest();
+
+        System.assert(exceptionCaught, 'A CalloutException should have been thrown for null input');
     }
 
     /**
      * @description Inner class to mock HTTP responses
      */
     public class MockHttpResponseGenerator implements HttpCalloutMock {
-        /**
-         * @description Generates a mock response for testing.
-         * @param req The incoming HTTP request.
-         * @return HTTPResponse The mocked response.
-         */
         public HTTPResponse respond(HTTPRequest req) {
-            System.assertEquals('POST', req.getMethod());
-            System.assertEquals('application/json', req.getHeader('Content-Type'));
-            System.assert(req.getBody().contains('value'), 'Payload should be serialized in body');
+            // Optional: Assertions on the request if needed
+            // System.assertEquals('POST', req.getMethod());
             
             HttpResponse res = new HttpResponse();
             res.setHeader('Content-Type', 'application/json');

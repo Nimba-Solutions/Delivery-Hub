@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RetryCountNumber__c</fullName>
+    <description>Tracks how many times the system has attempted to process this item.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Number of failed attempts. Used by batch jobs to determine if we should give up.</inlineHelpText>
+    <label>Retry Count</label>
+    <precision>2</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
