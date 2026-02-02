@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PayloadContextTxt__c</fullName>
+    <description>Optional JSON snippet containing metadata needed for processing without querying the parent.</description>
+    <inlineHelpText>Snapshot of data used for processing (e.g., small JSON payloads).</inlineHelpText>
+    <label>Payload Context</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>

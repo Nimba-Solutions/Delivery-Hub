@@ -1,6 +1,8 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
-import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments'; // Or getCommentsLive if using that
+import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments';
+// 1. IMPORT THE LIVE FETCH METHOD
+import getCommentsLive from '@salesforce/apex/DeliveryHubCommentController.getCommentsLive';
 import postComment from '@salesforce/apex/DeliveryHubCommentController.postComment';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
@@ -17,27 +19,38 @@ export default class DeliveryTicketChat extends LightningElement {
     wiredComments(result) {
         this.wiredResult = result;
         if (result.data) {
-            this.commentsData = result.data.map(msg => {
-                return {
-                    ...msg,
-                    wrapperClass: msg.isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
-                    bubbleClass: msg.isOutbound ? 'bubble outbound' : 'bubble inbound',
-                    metaClass: msg.isOutbound ? 'meta outbound-meta' : 'meta inbound-meta'
-                };
-            });
-            // Auto-scroll to bottom only on initial load to avoid jumping while reading
+            this.updateComments(result.data);
+            
+            // Auto-scroll to bottom only on initial load
             if (!this._pollingInterval) {
                  this.scrollToBottom();
             }
         }
     }
 
-    // --- Auto-Refresh Logic ---
+    // Helper to process data and add CSS classes
+    updateComments(data) {
+        this.commentsData = data.map(msg => {
+            return {
+                ...msg,
+                wrapperClass: msg.isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
+                bubbleClass: msg.isOutbound ? 'bubble outbound' : 'bubble inbound',
+                metaClass: msg.isOutbound ? 'meta outbound-meta' : 'meta inbound-meta'
+            };
+        });
+    }
+
+    // --- Auto-Refresh Logic (THE FIX) ---
     connectedCallback() {
-        // console.log('Chat Component Initialized. Starting Poll...');
         this._pollingInterval = setInterval(() => {
-            // console.log('Polling for new comments...');
-            refreshApex(this.wiredResult)
+            // 2. CALL THE API-FETCHING METHOD, NOT JUST THE DB QUERY
+            getCommentsLive({ ticketId: this.recordId })
+                .then(result => {
+                    // Update the UI with the fresh data from the server
+                    this.updateComments(result);
+                    // Update the cache so the next wire refresh is accurate
+                    return refreshApex(this.wiredResult);
+                })
                 .catch(error => console.error('Error refreshing chat:', error));
         }, 5000); // Check every 5 seconds
     }
@@ -63,10 +76,13 @@ export default class DeliveryTicketChat extends LightningElement {
         postComment({ ticketId: this.recordId, body: this.commentBody })
             .then(() => {
                 this.commentBody = ''; 
-                return refreshApex(this.wiredResult); 
+                // Force a live pull immediately after sending to ensure sync
+                return getCommentsLive({ ticketId: this.recordId });
             })
-            .then(() => {
+            .then((result) => {
+                this.updateComments(result);
                 this.scrollToBottom();
+                return refreshApex(this.wiredResult);
             })
             .catch(error => {
                 this.dispatchEvent(new ShowToastEvent({
