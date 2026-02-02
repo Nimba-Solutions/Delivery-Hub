@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LocalRecordIdTxt__c</fullName>
+    <description>The Salesforce ID of the item being synced. Used for Files (ContentVersion) which cannot have lookups, or as a fallback for generic processing.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>System ID of the record (File, Comment, etc.) being processed.</inlineHelpText>
+    <label>Local Record ID</label>
+    <length>18</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

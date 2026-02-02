@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DirectionPk__c</fullName>
+    <description>Indicates movement direction.Values: Inbound, Outbound</description>
+    <inlineHelpText>Inbound: From Vendor to Client.Outbound: From Client to Vendor.</inlineHelpText>
+    <label>Direction</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Inbound</fullName>
+                <default>false</default>
+                <label>Inbound</label>
+            </value>
+            <value>
+                <fullName>Outbound</fullName>
+                <default>false</default>
+                <label>Outbound</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

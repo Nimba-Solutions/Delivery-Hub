@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequestId__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>The specific Vendor/Connection this sync item is associated with.</description>
+    <inlineHelpText>The Vendor or Mothership connection for this transaction.</inlineHelpText>
+    <label>Request</label>
+    <referenceTo>Request__c</referenceTo>
+    <relationshipLabel>Sync Items</relationshipLabel>
+    <relationshipName>Sync_Items</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
