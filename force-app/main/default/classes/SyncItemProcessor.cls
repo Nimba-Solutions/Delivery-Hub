@@ -92,7 +92,8 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
 
                 // Processing
                 if (item.ObjectTypePk__c == 'Ticket_Comment__c') {
-                     handleCommentSync(item, commentsMap, endpointUrl, remoteTicketId);
+                     // FIXED: Removed excessive parameters
+                     handleCommentSync(item, commentsMap);
                 }
 
                 // Success
@@ -110,12 +111,15 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
 
     /**
      * @description Validates and sends a specific comment.
-     * @param item The sync item being processed.
+     * Refactored to reduce parameter count (PMD Fix).
+     * @param item The sync item containing Request context (URL/RemoteID).
      * @param commentsMap The map of available comments.
-     * @param endpointUrl The destination URL.
-     * @param remoteTicketId The destination Ticket ID.
      */
-    private void handleCommentSync(Sync_Item__c item, Map<Id, Ticket_Comment__c> commentsMap, String endpointUrl, String remoteTicketId) {
+    private void handleCommentSync(Sync_Item__c item, Map<Id, Ticket_Comment__c> commentsMap) {
+        // Extract context directly from the item
+        String endpointUrl = item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
+        String remoteTicketId = item.RequestId__r.RemoteTicketIdTxt__c;
+
         Ticket_Comment__c c = commentsMap.get(item.LocalRecordIdTxt__c);
         
         if (c == null) {
