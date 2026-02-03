@@ -44,6 +44,11 @@
                 <default>false</default>
                 <label>Budget Hold</label>
             </value>
+            <value>
+                <fullName>Inactive</fullName>
+                <default>false</default>
+                <label>Inactive</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
