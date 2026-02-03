@@ -15,6 +15,18 @@
                 <identifier>flexipage_richText</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryHubSetup</componentName>
+                <identifier>c_deliveryHubSetup</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryBudgetSummary</componentName>
+                <identifier>c_deliveryBudgetSummary</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>
@@ -27,6 +39,20 @@
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>displayMode</name>
+                    <value>Card</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>enableShortcut</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentName>deliveryGhostRecorder</componentName>
+                <identifier>c_deliveryGhostRecorder</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
