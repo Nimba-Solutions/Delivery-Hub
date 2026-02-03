@@ -20,6 +20,16 @@
                 <default>false</default>
                 <label>Jira</label>
             </value>
+            <value>
+                <fullName>Client</fullName>
+                <default>false</default>
+                <label>Client</label>
+            </value>
+            <value>
+                <fullName>Mothership</fullName>
+                <default>false</default>
+                <label>Mothership</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
