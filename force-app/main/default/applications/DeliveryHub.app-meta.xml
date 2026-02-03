@@ -58,11 +58,8 @@
     <label>Delivery Hub</label>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
-    <tabs>Ticket__c</tabs>
-    <tabs>Delivery_Hub_Settings</tabs>
-    <tabs>Network_Entity__c</tabs>
-    <tabs>Request__c</tabs>
     <tabs>Ticket_Board</tabs>
+    <tabs>Ticket__c</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
 </CustomApplication>
