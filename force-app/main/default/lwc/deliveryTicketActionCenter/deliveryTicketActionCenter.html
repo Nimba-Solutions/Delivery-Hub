@@ -1,0 +1,70 @@
+<template>
+    <lightning-card icon-name="standard:flow" title="Ticket Action Center">
+        
+        <div class="slds-p-horizontal_medium">
+            <template if:true={isBlocked}>
+                <div class="slds-notify slds-notify_alert slds-theme_warning slds-m-bottom_small" role="alert">
+                    <lightning-icon icon-name="utility:warning" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                    <h2>To move forward, please address the following:</h2>
+                </div>
+            </template>
+
+            <template if:true={isFastTrack}>
+                <div class="slds-notify slds-notify_alert slds-theme_success slds-m-bottom_small" role="alert">
+                    <lightning-icon icon-name="utility:success" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                    <h2>🚀 Fast Track Available! Budget Approved.</h2>
+                </div>
+            </template>
+
+            <lightning-record-edit-form record-id={recordId} object-api-name="Ticket__c" onsuccess={handleFixSuccess}>
+                
+                <div class="fix-grid slds-grid slds-wrap slds-gutters">
+                    <template for:each={missingFields} for:item="field">
+                        <div key={field.apiName} class="slds-col slds-size_1-of-2">
+                            <div class="slds-box slds-box_x-small slds-theme_shade slds-m-bottom_small">
+                                <p class="slds-text-color_error slds-text-title_caps">{field.reason}</p>
+                                <lightning-input-field field-name={field.apiName} variant="label-hidden"></lightning-input-field>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <template if:true={hasMissingFields}>
+                    <div class="slds-align_absolute-center slds-m-bottom_medium">
+                        <lightning-button variant="brand" type="submit" label="Save & Update Requirements"></lightning-button>
+                    </div>
+                </template>
+
+            </lightning-record-edit-form>
+
+            <div class="slds-border_top slds-p-top_small">
+                <div class="slds-grid slds-grid_align-spread">
+                    
+                    <div class="button-group-left">
+                        <template for:each={backtrackOptions} for:item="opt">
+                            <lightning-button key={opt.stage} label={opt.label} icon-name="utility:back" onclick={handleMove} data-stage={opt.stage} class="slds-m-right_x-small"></lightning-button>
+                        </template>
+                    </div>
+
+                    <div class="button-group-right">
+                        <template for:each={advanceOptions} for:item="opt">
+                            <lightning-button 
+                                key={opt.stage} 
+                                variant={opt.variant} 
+                                label={opt.label} 
+                                icon-name="utility:forward" 
+                                icon-position="right" 
+                                onclick={handleMove} 
+                                data-stage={opt.stage}
+                                disabled={opt.disabled}
+                                title={opt.disabledReason}
+                            ></lightning-button>
+                        </template>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </lightning-card>
+</template>

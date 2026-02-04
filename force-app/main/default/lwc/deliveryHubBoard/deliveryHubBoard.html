@@ -182,28 +182,30 @@
                     </template>
                     
                     <template if:false={isAiProcessing}>
-                        <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%Ticket__c" 
+                        <lightning-record-edit-form object-api-name="T%%%NAMESPACED_ORG%%%icket__c" 
                             default-field-values={createDefaults} 
                             onsubmit={handleCreateSubmit}
                             onsuccess={handleCreateSuccess}>
                             
                             <lightning-input-field field-name="%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c" required onchange={handleFieldChange} value={createTicketTitle}></lightning-input-field>
                             <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DetailsTxt__c" onchange={handleFieldChange} value={createTicketDescription}></lightning-input-field>
-                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={createDefaults.%%%NAMESPACED_ORG%%%StageNamePk__c}></lightning-input-field>
-                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%PriorityPk__c" value={createDefaults.%%%NAMESPACED_ORG%%%PriorityPk__c}></lightning-input-field>
-                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c" value={estimatedDaysValue}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%PriorityPk__c" value={createDefaults.PriorityPk__c}></lightning-input-field>
                             
                             <div class="slds-hide">
-                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%IsActiveBool__c" value={createDefaults.%%%NAMESPACED_ORG%%%IsActiveBool__c}></lightning-input-field>
+                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%IsActiveBool__c" value={createDefaults.IsActiveBool__c}></lightning-input-field>
                             </div>
 
                             <lightning-file-upload label="Attach files" onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
                             
                             <details class="slds-m-top_small">
                                 <summary style="cursor:pointer;color:#005fb2;">Advanced fields</summary>
-                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Tags__c"></lightning-input-field>
-                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Epic__c"></lightning-input-field>
-                                <lightning-input-field field-name="%%%NAMESPACED_ORG%%%SortOrderNumber__c" value={nextSortOrder}></lightning-input-field>
+                                <div class="slds-p-left_medium slds-p-top_x-small">
+                                    <lightning-input-field field-name="%%%NAMESPACED_ORG%%%StageNamePk__c" value={createDefaults.StageNamePk__c}></lightning-input-field>
+                                    <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c" value={estimatedDaysValue}></lightning-input-field>
+                                    <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Tags__c"></lightning-input-field>
+                                    <lightning-input-field field-name="%%%NAMESPACED_ORG%%%Epic__c"></lightning-input-field>
+                                    <lightning-input-field field-name="%%%NAMESPACED_ORG%%%SortOrderNumber__c" value={nextSortOrder}></lightning-input-field>
+                                </div>
                             </details>
 
                             <div class="slds-m-top_medium slds-text-align_right">
