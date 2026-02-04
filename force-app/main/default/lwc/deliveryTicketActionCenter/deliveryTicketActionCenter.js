@@ -1,5 +1,5 @@
 import { LightningElement, api, wire, track } from 'lwc';
-import { getRecord, getFieldValue, updateRecord } from 'lightning/uiRecordApi';
+import { getRecord, getFieldValue } from 'lightning/uiRecordApi'; // Removed updateRecord
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 
@@ -7,7 +7,7 @@ import { refreshApex } from '@salesforce/apex';
 import updateTicketStage from '@salesforce/apex/DeliveryHubBoardController.updateTicketStage';
 
 // --- SCHEMA IMPORTS ---
-import ID_FIELD from '@salesforce/schema/Ticket__c.Id';
+// Removed ID_FIELD import
 import STAGE_FIELD from '@salesforce/schema/Ticket__c.StageNamePk__c';
 import ESTIMATED_HOURS_FIELD from '@salesforce/schema/Ticket__c.EstimatedHoursNumber__c';
 import PRE_APPROVED_HOURS_FIELD from '@salesforce/schema/Ticket__c.ClientPreApprovedHoursNumber__c';
@@ -24,10 +24,10 @@ const FIELDS = [
     PRIORITY_FIELD
 ];
 
-export default class TicketActionCenter extends LightningElement {
+export default class DeliveryTicketActionCenter extends LightningElement {
     @api recordId;
     @track ticket;
-    @track wiredTicketResult; // To support refreshApex
+    @track wiredTicketResult; 
 
     // State
     @track missingFields = [];
@@ -37,7 +37,7 @@ export default class TicketActionCenter extends LightningElement {
     @track isBlocked = false;
     @track processing = false;
 
-    // --- TRANSITION MAPS (The Rules of the Road) ---
+    // --- TRANSITION MAPS ---
     transitionMap = {
         // --- PHASE 1: DEFINITION & SCOPING ---
         "Backlog":                           ["Scoping In Progress",             "Clarification Requested (Pre-Dev)",    "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
@@ -198,8 +198,6 @@ export default class TicketActionCenter extends LightningElement {
 
         // --- 3. DETERMINE IF BLOCKED ---
         // If specific hard-stop fields are missing for the *current* stage, we block.
-        // We filter out the 'Soft Gate' (Budget) from the blocker list for logic purposes if needed,
-        // but for now, we treat the list as things the user *should* fix.
         this.isBlocked = this.hasMissingFields;
 
         // --- 4. CALCULATE BUTTONS ---
