@@ -390,85 +390,114 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             deployed: ["Ready for Internal UAT", "Internal UAT", "UAT", "Deployment", "Deployed", "Done"]
         }
     };
+transitionMap = {
+        // --- PHASE 1: DEFINITION & SCOPING ---
+        "Backlog":                           ["Scoping In Progress",             "Clarification Requested (Pre-Dev)",    "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
+        "Scoping In Progress":               ["Clarification Requested (Pre-Dev)",                                       "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
+        "Clarification Requested (Pre-Dev)": ["Providing Clarification",                                                 "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
+        "Providing Clarification":           [                                                                           "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
 
-    transitionMap = {
-        "Ready for Sizing": ["Sizing Underway", "Ready for Prioritization", "Ready for Tech Review", "Ready for Client Approval"], 
-        "Sizing Underway": ["Ready for Prioritization", "Proposal Requested", "Ready for Tech Review", "Ready for Client Approval"], 
-        "Ready for Tech Review": ["Tech Reviewing", "Ready for Client Approval", "Ready for Development"], 
-        "Tech Reviewing": ["Ready for Client Approval", "Ready for Development"], 
-        "Ready for Scratch Test": ["Scratch Testing", "Ready for QA", "Ready for Internal UAT", "Ready for Client UAT"],
-        "Scratch Testing": ["Ready for QA", "Ready for Internal UAT", "Ready for Client UAT", "Back For Development"],
-        "Ready for QA": ["QA In Progress", "Ready for Internal UAT", "Ready for Client UAT"],
-        "QA In Progress": ["Ready for Internal UAT", "Ready for Client UAT", "Back For Development"],
-        "Ready for Internal UAT": ["Internal UAT", "Ready for Client UAT"],
-        "Internal UAT": ["Ready for Client UAT", "Back For Development"],
-        "Ready for Client UAT": ["In Client UAT", "Ready for UAT Sign-off", "Ready for Merge", "Ready for Deployment"],
-        "In Client UAT": ["Ready for UAT Sign-off", "Ready for Merge", "Ready for Deployment", "Back For Development"],
-        "Ready for UAT Sign-off": ["Processing Sign-off", "Ready for Merge", "Ready for Deployment"],
-        "Processing Sign-off": ["Ready for Merge", "Ready for Deployment", "Back For Development"],
-        "Ready for Merge": ["Merging", "Ready for Deployment"],
-        "Merging": ["Ready for Deployment"],
-        "Backlog": ["Scoping In Progress", "Ready for Sizing", "Ready for Prioritization"],
-        "Scoping In Progress": ["Clarification Requested (Pre-Dev)", "Ready for Sizing", "Ready for Prioritization"],
-        "Clarification Requested (Pre-Dev)": ["Providing Clarification", "Ready for Sizing", "Ready for Tech Review"],
-        "Providing Clarification": ["Ready for Sizing", "Ready for Prioritization", "Ready for Tech Review"],
-        "Ready for Prioritization": ["Prioritizing", "Ready for Development", "Ready for Tech Review"],
-        "Prioritizing": ["Proposal Requested", "Ready for Tech Review", "Ready for Development"],
-        "Proposal Requested": ["Drafting Proposal"],
-        "Drafting Proposal": ["Ready for Tech Review", "Ready for Prioritization"],
-        "Ready for Client Approval": ["In Client Approval", "Ready for Development"],
-        "In Client Approval": ["Ready for Development"],
-        "Ready for Development": ["In Development"],
-        "In Development": ["Dev Clarification Requested", "Dev Blocked", "Ready for Scratch Test", "Ready for QA", "Ready for Deployment"],
-        "Dev Clarification Requested": ["Providing Dev Clarification"],
-        "Providing Dev Clarification": ["Back For Development"],
-        "Back For Development": ["In Development"],
-        "Dev Blocked": ["In Development", "Providing Dev Clarification"],
-        "Ready for Deployment": ["Deploying"],
-        "Deploying": ["Deployed to Prod"],
-        "Deployed to Prod": ["Done"],
-        "Done": [],
-        "Cancelled": ["Backlog", "Ready for Sizing"]
+        // --- PHASE 2: ESTIMATION & PRIORITIZATION ---
+        "Ready for Sizing":                  ["Sizing Underway",                                                         "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
+        "Sizing Underway":                   [                                                                           "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
+        "Ready for Prioritization":          ["Prioritizing",                                                                                           "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
+        "Prioritizing":                      [                                                                                                          "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
+        "Proposal Requested":                ["Drafting Proposal",                                                                                                               "Ready for Tech Review",    "Ready for Client Approval"],
+        "Drafting Proposal":                 [                                                                                                                                   "Ready for Tech Review",    "Ready for Client Approval"],
+
+        // --- PHASE 3: TECHNICAL & CLIENT APPROVAL ---
+        "Ready for Tech Review":             ["Tech Reviewing",                                                                                                                  "Ready for Client Approval",    "Ready for Development"],
+        "Tech Reviewing":                    [                                                                                                                                   "Ready for Client Approval",    "Ready for Development"],
+        "Ready for Client Approval":         ["In Client Approval",                                                                                                                                              "Ready for Development"],
+        "In Client Approval":                [                                                                                                                                                                   "Ready for Development"],
+
+        // --- PHASE 4: DEVELOPMENT ---
+        "Ready for Development":             ["In Development"],
+        "In Development":                    ["Dev Clarification Requested",     "Dev Blocked",     "Ready for Scratch Test",    "Ready for QA",    "Ready for Deployment"],
+        "Dev Clarification Requested":       ["Providing Dev Clarification"],
+        "Providing Dev Clarification":       ["Back For Development"],
+        "Dev Blocked":                       ["In Development",                  "Providing Dev Clarification"],
+        "Back For Development":              ["In Development"],
+
+        // --- PHASE 5: TESTING (QA & INTERNAL) ---
+        "Ready for Scratch Test":            ["Scratch Testing",                 "Ready for QA",              "Ready for Internal UAT",    "Ready for Client UAT"],
+        "Scratch Testing":                   ["Ready for QA",                    "Ready for Internal UAT",    "Ready for Client UAT",      "Back For Development"],
+        "Ready for QA":                      ["QA In Progress",                  "Ready for Internal UAT",    "Ready for Client UAT"],
+        "QA In Progress":                    ["Ready for Internal UAT",          "Ready for Client UAT",      "Back For Development"],
+        "Ready for Internal UAT":            ["Internal UAT",                    "Ready for Client UAT"],
+        "Internal UAT":                      ["Ready for Client UAT",            "Back For Development"],
+
+        // --- PHASE 6: CLIENT UAT ---
+        "Ready for Client UAT":              ["In Client UAT",                   "Ready for UAT Sign-off",    "Ready for Merge",           "Ready for Deployment"],
+        "In Client UAT":                     ["Ready for UAT Sign-off",          "Ready for Merge",           "Ready for Deployment",      "Back For Development"],
+        "Ready for UAT Sign-off":            ["Processing Sign-off",             "Ready for Merge",           "Ready for Deployment"],
+        "Processing Sign-off":               ["Ready for Merge",                 "Ready for Deployment",      "Back For Development"],
+
+        // --- PHASE 7: DEPLOYMENT ---
+        "Ready for Merge":                   ["Merging",                         "Ready for Deployment"],
+        "Merging":                           ["Ready for Deployment"],
+        "Ready for Deployment":              ["Deploying"],
+        "Deploying":                         ["Deployed to Prod"],
+        "Deployed to Prod":                  ["Done"],
+        
+        // --- PHASE 8: END STATES ---
+        "Done":                              [],
+        "Cancelled":                         ["Backlog", "Ready for Sizing"]
     };
 
     backtrackMap = {
-        "Ready for Sizing": ["Clarification Requested (Pre-Dev)", "Backlog", "Cancelled"],
-        "Sizing Underway": ["Ready for Sizing", "Backlog", "Cancelled"],
-        "Ready for Tech Review": ["Proposal Requested", "Ready for Prioritization", "Cancelled"],
-        "Tech Reviewing": ["Ready for Tech Review", "Cancelled"],
-        "Ready for Scratch Test": ["In Development", "Cancelled"],
-        "Scratch Testing": ["Ready for Scratch Test", "Ready for Development", "Cancelled"],
-        "Ready for QA": ["Ready for Scratch Test", "Cancelled"],
-        "QA In Progress": ["Ready for QA", "Ready for Scratch Test", "Cancelled"],
-        "Ready for Internal UAT": ["Ready for QA", "Cancelled"],
-        "Internal UAT": ["Ready for Internal UAT", "Ready for QA", "Cancelled"],
-        "Ready for Client UAT": ["Ready for Internal UAT", "Ready for Development", "Cancelled"],
-        "In Client UAT": ["Ready for Client UAT", "Ready for Internal UAT", "Cancelled"],
-        "Ready for UAT Sign-off": ["In Client UAT", "Cancelled"],
-        "Processing Sign-off": ["Ready for UAT Sign-off", "Ready for Development", "Cancelled"],
-        "Ready for Merge": ["Processing Sign-off", "Ready for Client UAT", "Ready for Development", "Cancelled"],
-        "Merging": ["Ready for Merge", "Cancelled"],
-        "Scoping In Progress": ["Backlog", "Cancelled"],
-        "Clarification Requested (Pre-Dev)": ["Backlog", "Cancelled"],
-        "Providing Clarification": ["Clarification Requested (Pre-Dev)", "Backlog", "Cancelled"],
-        "Ready for Prioritization": ["Ready for Sizing", "Backlog", "Cancelled"],
-        "Prioritizing": ["Ready for Prioritization", "Cancelled"],
-        "Proposal Requested": ["Ready for Prioritization", "Ready for Sizing", "Cancelled"],
-        "Drafting Proposal": ["Proposal Requested", "Cancelled"],
-        "Ready for Client Approval": ["Ready for Tech Review", "Cancelled"],
-        "In Client Approval": ["Ready for Client Approval", "Cancelled"],
-        "Ready for Development": ["In Client Approval", "Ready for Client Approval", "Ready for Tech Review", "Cancelled"],
-        "In Development": ["Ready for Development", "Cancelled"],
-        "Dev Clarification Requested": ["In Development", "Cancelled"],
-        "Providing Dev Clarification": ["Dev Clarification Requested", "Cancelled"],
-        "Back For Development": ["Dev Clarification Requested", "Ready for Development", "Cancelled"],
-        "Dev Blocked": ["In Development", "Cancelled"],
-        "Ready for Deployment": ["Ready for Merge", "Ready for Client UAT", "Cancelled"],
-        "Deploying": ["Ready for Deployment", "Cancelled"],
-        "Deployed to Prod": ["Ready for Deployment", "Ready for Client UAT", "Cancelled"],
-        "Done": ["Deployed to Prod", "Cancelled"],
-        "Backlog": ["Cancelled"],
-        "Cancelled": ["Backlog", "Ready for Sizing", "Ready for Development"] 
+        // --- PHASE 1: DEFINITION & SCOPING ---
+        "Scoping In Progress":               ["Backlog",                                                                                                                                                                                                                                                                                                                                                                                                                                                  "Cancelled"],
+        "Clarification Requested (Pre-Dev)": ["Scoping In Progress",               "Backlog",                                                                                                                                                                                                                                                                                                                                                                                                                 "Cancelled"],
+        "Providing Clarification":           ["Clarification Requested (Pre-Dev)", "Scoping In Progress",               "Backlog",                                                                                                                                                                                                                                                                                                                                                                                "Cancelled"],
+
+        // --- PHASE 2: ESTIMATION & PRIORITIZATION ---
+        "Ready for Sizing":                  ["Providing Clarification",           "Clarification Requested (Pre-Dev)", "Scoping In Progress",               "Backlog",                                                                                                                                                                                                                                                                                                                                       "Cancelled"],
+        "Sizing Underway":                   ["Ready for Sizing",                                                                                                                                                                                                                                                                                                                                                                                                                                                 "Cancelled"],
+        "Ready for Prioritization":          ["Sizing Underway",                   "Ready for Sizing",                  "Providing Clarification",                                                                                                                                                                                                                                                                                                                                                                "Cancelled"],
+        "Prioritizing":                      ["Ready for Prioritization",                                                                                                                                                                                                                                                                                                                                                                                                                                         "Cancelled"],
+        "Proposal Requested":                ["Prioritizing",                      "Ready for Prioritization",          "Sizing Underway",                                                                                                                                                                                                                                                                                                                                                                        "Cancelled"],
+        "Drafting Proposal":                 ["Proposal Requested",                                                                                                                                                                                                                                                                                                                                                                                                                                               "Cancelled"],
+
+        // --- PHASE 3: TECHNICAL & CLIENT APPROVAL ---
+        "Ready for Tech Review":             ["Drafting Proposal",                 "Proposal Requested",                "Sizing Underway",                   "Ready for Prioritization",                                                                                                                                                                                                                                                                                                                          "Cancelled"],
+        "Tech Reviewing":                    ["Ready for Tech Review",                                                                                                                                                                                                                                                                                                                                                                                                                                            "Cancelled"],
+        "Ready for Client Approval":         ["Tech Reviewing",                    "Ready for Tech Review",             "Drafting Proposal",                 "Sizing Underway",                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
+        "In Client Approval":                ["Ready for Client Approval",                                                                                                                                                                                                                                                                                                                                                                                                                                        "Cancelled"],
+
+        // --- PHASE 4: DEVELOPMENT ---
+        "Ready for Development":             ["In Client Approval",                "Ready for Client Approval",         "Tech Reviewing",                    "Prioritizing",                                                                                                                                                                                                                                                                                                                                      "Cancelled"],
+        "In Development":                    ["Ready for Development",                                                                                                                                                                                                                                                                                                                                                                                                                                            "Cancelled"],
+        "Dev Clarification Requested":       ["In Development",                                                                                                                                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
+        "Providing Dev Clarification":       ["Dev Clarification Requested",                                                                                                                                                                                                                                                                                                                                                                                                                                      "Cancelled"],
+        "Dev Blocked":                       ["In Development",                                                                                                                                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
+        "Back For Development":              ["Dev Clarification Requested",       "In Development",                                                                                                                                                                                                                                                                                                                                                                                                                  "Cancelled"],
+
+        // --- PHASE 5: TESTING (QA & INTERNAL) ---
+        "Ready for Scratch Test":            ["In Development",                                                                                                                                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
+        "Scratch Testing":                   ["Ready for Scratch Test",                                                                                                                                                                                                                                                                                                                                                                                                                                           "Cancelled"],
+        "Ready for QA":                      ["Scratch Testing",                   "Ready for Scratch Test",            "In Development",                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
+        "QA In Progress":                    ["Ready for QA",                                                                                                                                                                                                                                                                                                                                                                                                                                                     "Cancelled"],
+        "Ready for Internal UAT":            ["QA In Progress",                    "Ready for QA",                                                                                                                                                                                                                                                                                                                                                                                                                    "Cancelled"],
+        "Internal UAT":                      ["Ready for Internal UAT",                                                                                                                                                                                                                                                                                                                                                                                                                                           "Cancelled"],
+
+        // --- PHASE 6: CLIENT UAT ---
+        "Ready for Client UAT":              ["Internal UAT",                      "Ready for Internal UAT",            "QA In Progress",                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
+        "In Client UAT":                     ["Ready for Client UAT",                                                                                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
+        "Ready for UAT Sign-off":            ["In Client UAT",                                                                                                                                                                                                                                                                                                                                                                                                                                                    "Cancelled"],
+        "Processing Sign-off":               ["Ready for UAT Sign-off",                                                                                                                                                                                                                                                                                                                                                                                                                                           "Cancelled"],
+
+        // --- PHASE 7: DEPLOYMENT ---
+        "Ready for Merge":                   ["Processing Sign-off",               "Ready for UAT Sign-off",            "In Client UAT",                                                                                                                                                                                                                                                                                                                                                                              "Cancelled"],
+        "Merging":                           ["Ready for Merge",                                                                                                                                                                                                                                                                                                                                                                                                                                                  "Cancelled"],
+        "Ready for Deployment":              ["Merging",                           "Ready for Merge",                   "Processing Sign-off",                                                                                                                                                                                                                                                                                                                                                                        "Cancelled"],
+        "Deploying":                         ["Ready for Deployment",                                                                                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
+        "Deployed to Prod":                  ["Deploying",                         "Ready for Deployment",                                                                                                                                                                                                                                                                                                                                                                                                            "Cancelled"],
+        
+        // --- PHASE 8: END STATES ---
+        "Done":                              ["Deployed to Prod",                                                                                                                                                                                                                                                                                                                                                                                                                                                 "Cancelled"],
+        "Backlog":                           [                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "Cancelled"],
+        "Cancelled":                         ["Backlog",                           "Ready for Sizing",                  "Ready for Development"] 
     };
 
     intentionColor = { "Will Do": "#2196F3", "Sizing Only": "#FFD54F" };
