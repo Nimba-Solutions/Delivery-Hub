@@ -33,6 +33,12 @@
                 <identifier>c_deliveryTicketStageGateWarning</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketActionCenter</componentName>
+                <identifier>c_deliveryTicketActionCenter</identifier>
+            </componentInstance>
+        </itemInstances>
         <mode>Replace</mode>
         <name>header</name>
         <type>Region</type>
