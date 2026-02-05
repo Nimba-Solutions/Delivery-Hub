@@ -17,7 +17,7 @@ private class DeliveryHubSyncResourceTest {
      * @description Happy Path: Verifies that a valid JSON request updates the record.
      */
     @IsTest
-    static void testHandleIncomingSync_Success() {
+    static void testHandleIncomingSyncSuccess() {
         // 1. Get Target ID
         Ticket__c target = [SELECT Id FROM Ticket__c LIMIT 1];
         
@@ -60,7 +60,7 @@ private class DeliveryHubSyncResourceTest {
      * @description Error Path: Verifies 400 Bad Request when body is empty.
      */
     @IsTest
-    static void testHandleIncomingSync_EmptyBody() {
+    static void testHandleIncomingSyncEmptyBody() {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
@@ -83,7 +83,7 @@ private class DeliveryHubSyncResourceTest {
      * @description Error Path: Verifies 400 Bad Request when TargetId is missing.
      */
     @IsTest
-    static void testHandleIncomingSync_MissingTargetId() {
+    static void testHandleIncomingSyncMissingTargetId() {
         Map<String, Object> jsonMap = new Map<String, Object>();
         jsonMap.put('BriefDescriptionTxt__c', 'No ID provided');
         
@@ -109,7 +109,7 @@ private class DeliveryHubSyncResourceTest {
      * @description Error Path: Verifies 500 Server Error when Object Type is invalid.
      */
     @IsTest
-    static void testHandleIncomingSync_InvalidObjectType() {
+    static void testHandleIncomingSyncInvalidObjectType() {
         Ticket__c target = [SELECT Id FROM Ticket__c LIMIT 1];
         
         Map<String, Object> jsonMap = new Map<String, Object>();
@@ -138,7 +138,7 @@ private class DeliveryHubSyncResourceTest {
      * @description Error Path: Verifies 500 Server Error on malformed JSON.
      */
     @IsTest
-    static void testHandleIncomingSync_MalformedJson() {
+    static void testHandleIncomingSyncMalformedJson() {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
