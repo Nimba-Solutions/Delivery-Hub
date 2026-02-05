@@ -1,6 +1,6 @@
 /**
  * @description Queueable Worker that processes 'Sync_Item__c' records.
- * Acts as a router: sends generic JSON payloads to the Unified Sync Engine,
+ * Acts as a router: sends generic JSON payloads to the Unified Sync Engine (Fan-Out),
  * or routes legacy items to specific handlers.
  */
 public inherited sharing class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
@@ -18,7 +18,7 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
             return;
         }
 
-        // 2. Pre-fetch Data for Legacy Logic (Comments)
+        // 2. Pre-fetch Data for Legacy Logic (Comments Only)
         // We only do this for items that DO NOT have a payload (Legacy Mode)
         Map<Id, Ticket_Comment__c> legacyCommentsMap = getRelatedComments(items);
 
@@ -29,8 +29,12 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
             try {
                 // --- PATH A: NEW UNIFIED ENGINE (Has JSON) ---
                 if (String.isNotBlank(item.PayloadTxt__c)) {
-                    // This is the new High-Water Mark logic
-                    DeliveryHubSender.sendSyncPayload(item.ObjectTypePk__c, item.PayloadTxt__c);
+                    // Pass the Local Record ID (TicketId) so the Sender can find linked Requests
+                    DeliveryHubSender.sendSyncPayload(
+                        item.ObjectTypePk__c, 
+                        item.LocalRecordIdTxt__c, 
+                        item.PayloadTxt__c
+                    );
                 } 
                 // --- PATH B: LEGACY COMMENT SYNC (No JSON) ---
                 else if (item.ObjectTypePk__c == 'Ticket_Comment__c') {
@@ -38,7 +42,6 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                 }
                 // --- PATH C: UNKNOWN/ERROR ---
                 else {
-                    // If it has no payload and isn't a known legacy type, fail it
                     throw new CalloutException('Unknown Sync Item type with no Payload.');
                 }
 
