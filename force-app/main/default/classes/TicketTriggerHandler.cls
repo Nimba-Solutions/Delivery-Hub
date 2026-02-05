@@ -1,6 +1,6 @@
 /**
  * @description Aggregates Ticket rows that need a Jira *create* or *update*,
- * then enqueues worker jobs. Also handles Network Entity Sync.
+ * then enqueues worker jobs. Also handles Network Entity Sync and High-Water Mark Sync.
  */
 public without sharing class TicketTriggerHandler {
     
@@ -21,15 +21,44 @@ public without sharing class TicketTriggerHandler {
         Boolean isUpdate
     ){
         if (!TriggerControl.runAfterLogic) { return; }
+
+        // ============================================================================
+        // 1. UNIFIED SYNC ENGINE (High-Water Mark)
+        // ============================================================================
+        // Define the fields the Mothership needs to track.
+        Set<String> syncFields = new Set<String>{
+            'Name', 
+            'BriefDescriptionTxt__c', 
+            'DetailsTxt__c', 
+            'StageNamePk__c', 
+            'StatusPk__c', 
+            'PriorityPk__c', 
+            'DeveloperDaysSizeNumber__c', 
+            'EstimatedHoursNumber__c', 
+            'ClientPreApprovedHoursNumber__c', 
+            'Developer__c', 
+            'CalculatedETADate__c', 
+            'ProjectedUATReadyDate__c',
+            'AcceptanceCriteriaTxt__c', 
+            'StepsToReproduceTxt__c'
+        };
+
+        // Capture changes and queue JSON payload
+        // Note: We pass 'oldMap' directly; SyncEngine handles null checks for Inserts.
+        SyncEngine.captureChanges(newRows, oldMap, syncFields);
+
+        // ============================================================================
+        // 2. LEGACY & SPECIFIC MODULES (Jira / Brokerage)
+        // ============================================================================
         
         Set<Id> toCreate = new Set<Id>();
         Set<Id> toUpdate = new Set<Id>();
 
         if (isInsert){
-            // 1. Run Network Entity Sync (Auto-create and potentially Auto-send Requests)
+            // Run Network Entity Sync (Auto-create and potentially Auto-send Requests)
             handleNetworkEntitySync(newRows);
 
-            // 2. Jira Logic
+            // Jira Logic
             for (Ticket__c row : newRows){
                 if (String.isBlank(row.JiraTicketKeyTxt__c)){
                     toCreate.add(row.Id);
@@ -55,6 +84,8 @@ public without sharing class TicketTriggerHandler {
                 }
             }
         }
+        
+        // (Note: Your Jira queueable firing logic would typically go here if using 'toCreate'/'toUpdate')
     }
 
     /**
@@ -78,8 +109,6 @@ public without sharing class TicketTriggerHandler {
         }
 
         // 2. Get active vendors
-        // FIX: Removed WITH USER_MODE to prevent "No such column" errors in tests/community contexts
-        // where the user may not have FLS on the config object. This runs in System Mode (without sharing class).
         List<Network_Entity__c> vendors = [
             SELECT Id 
             FROM Network_Entity__c 
@@ -148,7 +177,6 @@ public without sharing class TicketTriggerHandler {
             }
         }
         if (!ticketsToCheck.isEmpty()) {
-            // FIX: Removed WITH USER_MODE to prevent test failures on dependency checks
             List<Ticket_Dependency__c> unresolvedBlockers = [
                 SELECT Blocked_Ticket__c, Blocking_Ticket__r.Name, Blocking_Ticket__r.StageNamePk__c
                 FROM Ticket_Dependency__c
