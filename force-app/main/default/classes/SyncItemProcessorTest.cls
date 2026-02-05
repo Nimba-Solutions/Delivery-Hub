@@ -1,6 +1,6 @@
 /**
  * @description Test class for SyncItemProcessor.
- * Covers success, failure, and edge cases (deleted records).
+ * Covers both the Legacy Path (Comments without payload) and the Unified Path (JSON Payloads).
  */
 @IsTest
 private class SyncItemProcessorTest {
@@ -12,21 +12,11 @@ private class SyncItemProcessorTest {
         private Integer statusCode;
         private String responseBody;
 
-        /**
-         * @description Constructor to set the desired mock response.
-         * @param code HTTP Status Code.
-         * @param body HTTP Response Body.
-         */
         public DeliveryHubMock(Integer code, String body) {
             this.statusCode = code;
             this.responseBody = body;
         }
 
-        /**
-         * @description Responds to the callout with the pre-configured response.
-         * @param req The HTTP Request.
-         * @return HttpResponse The mocked response.
-         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setHeader('Content-Type', 'application/json');
@@ -38,18 +28,19 @@ private class SyncItemProcessorTest {
 
     @TestSetup
     static void setupData() {
-        // Network Entity (Mothership)
+        // 1. Network Entity (Mothership) - Must be ACTIVE
         Network_Entity__c entity = new Network_Entity__c(
             Name = 'Mothership Node',
+            StatusPk__c = 'Active', 
             IntegrationEndpointUrlTxt__c = 'https://example.com/api'
         );
         insert entity;
 
-        // Ticket
+        // 2. Ticket
         Ticket__c t = new Ticket__c(BriefDescriptionTxt__c = 'Test');
         insert t;
 
-        // Request (Connection)
+        // 3. Request (Connection)
         Request__c r = new Request__c(
             TicketId__c = t.Id,
             DeliveryEntityId__c = entity.Id,
@@ -58,7 +49,7 @@ private class SyncItemProcessorTest {
         );
         insert r;
 
-        // Comment
+        // 4. Comment (For Legacy Test)
         Ticket_Comment__c c = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'Test Payload',
@@ -66,7 +57,7 @@ private class SyncItemProcessorTest {
         );
         insert c;
 
-        // Queue Item (Outbox)
+        // 5. Queue Item (Legacy Path - No Payload)
         Sync_Item__c item = new Sync_Item__c(
             TicketId__c = t.Id,
             TicketCommentId__c = c.Id,
@@ -80,26 +71,52 @@ private class SyncItemProcessorTest {
     }
 
     /**
-     * @description Verifies that a successful API call updates the item to 'Synced'.
+     * @description Verifies the LEGACY path (Ticket_Comment__c without Payload).
      */
     @IsTest
-    static void testProcessorSuccess() {
+    static void testLegacyPath_Success() {
         Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(200, '{"status":"Success"}'));
 
         Test.startTest();
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c LIMIT 1];
+        // FIX: Replaced WHERE PayloadTxt__c = NULL with ObjectType filter (Long Text fields cannot be filtered)
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE ObjectTypePk__c = 'Ticket_Comment__c' LIMIT 1];
         
-        // FIXED: Uncommented assertions to satisfy PMD
-        System.assert(TRUE,'BLANK MESSAGE');
-        //System.assertEquals('Synced', result.StatusPk__c, 'Status should be Synced on success.');
-        //System.assertEquals(null, result.ErrorLogTxt__c, 'Error log should be empty on success.');
+        System.assertEquals('Synced', result.StatusPk__c, 'Legacy item should be Synced');
+        System.assertEquals(null, result.ErrorLogTxt__c, 'Error log should be empty');
     }
 
     /**
-     * @description Verifies that a 500 error updates the item to 'Failed'.
+     * @description Verifies the NEW Unified Engine path (Sync Items WITH Payload).
+     */
+    @IsTest
+    static void testUnifiedPath_Success() {
+        // Setup a Sync Item with JSON Payload (The new way)
+        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        Sync_Item__c unifiedItem = new Sync_Item__c(
+            TicketId__c = t.Id,
+            LocalRecordIdTxt__c = t.Id, // Pass Ticket ID for Fan-Out lookup
+            ObjectTypePk__c = 'Ticket__c',
+            PayloadTxt__c = '{"Action":"Update", "StageNamePk__c":"Done"}',
+            DirectionPk__c = 'Outbound',
+            StatusPk__c = 'Queued'
+        );
+        insert unifiedItem;
+
+        Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(200, '{"status":"Success"}'));
+
+        Test.startTest();
+        System.enqueueJob(new SyncItemProcessor());
+        Test.stopTest();
+
+        Sync_Item__c result = [SELECT StatusPk__c FROM Sync_Item__c WHERE Id = :unifiedItem.Id];
+        System.assertEquals('Synced', result.StatusPk__c, 'Unified item should be Synced');
+    }
+
+    /**
+     * @description Verifies that HTTP 500 updates status to 'Failed'.
      */
     @IsTest
     static void testProcessorFailure() {
@@ -109,18 +126,19 @@ private class SyncItemProcessorTest {
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c LIMIT 1];
+        // Get the legacy item created in Setup
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE ObjectTypePk__c = 'Ticket_Comment__c' LIMIT 1];
         
-        // FIXED: Uncommented assertions to satisfy PMD
-        System.assertEquals('Failed', result.StatusPk__c, 'Status should be Failed on 500 error.');
-        //System.assert(result.ErrorLogTxt__c.contains('HTTP 500'), 'Error log should contain the status code.');
+        System.assertEquals('Failed', result.StatusPk__c, 'Status should be Failed on 500 error');
+        System.assert(result.ErrorLogTxt__c != null, 'Error log should be populated');
     }
 
     /**
-     * @description Verifies handling of records deleted before processing.
+     * @description Verifies handling of records deleted before processing (Legacy Path specific).
      */
     @IsTest
     static void testSourceRecordDeleted() {
+        // Delete the comment referenced by the legacy sync item
         Ticket_Comment__c c = [SELECT Id FROM Ticket_Comment__c LIMIT 1];
         delete c;
 
@@ -128,10 +146,9 @@ private class SyncItemProcessorTest {
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c LIMIT 1];
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE ObjectTypePk__c = 'Ticket_Comment__c' LIMIT 1];
         
-        System.assert(TRUE,'BLANK MESSAGE');
-        //System.assertEquals('Failed', result.StatusPk__c, 'Status should fail if record is missing.');
-        //System.assert(result.ErrorLogTxt__c.containsIgnoreCase('not found'), 'Error log should mention record not found.');
+        System.assertEquals('Failed', result.StatusPk__c, 'Status should fail if source record is missing');
+        System.assert(result.ErrorLogTxt__c.contains('not found'), 'Error log should mention record not found');
     }
 }
