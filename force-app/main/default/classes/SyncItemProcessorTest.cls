@@ -122,14 +122,16 @@ private class SyncItemProcessorTest {
     @IsTest
     static void testSourceRecordDeleted() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        // Create an item pointing to a non-existent record ID to force "Not Found" error
-        // We generate a fake ID just for the query lookup failure
-        String keyPrefix = Ticket_Comment__c.SObjectType.getDescribe().getKeyPrefix();
-        Id fakeId = (Id)(keyPrefix + '000000000001AAA'); 
+        
+        // FIX: Insert real record then delete it to get a valid ID without hardcoding strings
+        Ticket_Comment__c temp = new Ticket_Comment__c(TicketId__c = t.Id, BodyTxt__c = 'To Delete');
+        insert temp;
+        Id deletedId = temp.Id;
+        delete temp; // Now deletedId points to nothing, simulating the error condition
 
         Sync_Item__c item = new Sync_Item__c(
             TicketId__c = t.Id,
-            LocalRecordIdTxt__c = fakeId, // Points to nothing
+            LocalRecordIdTxt__c = deletedId, // Points to missing record
             ObjectTypePk__c = 'Ticket_Comment__c',
             StatusPk__c = 'Queued'
         );
