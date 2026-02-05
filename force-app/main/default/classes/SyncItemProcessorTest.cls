@@ -12,6 +12,11 @@ private class SyncItemProcessorTest {
         private Integer statusCode;
         private String responseBody;
 
+        /**
+         * @description Constructor to set the desired mock response.
+         * @param code HTTP Status Code.
+         * @param body HTTP Response Body.
+         */
         public DeliveryHubMock(Integer code, String body) {
             this.statusCode = code;
             this.responseBody = body;
@@ -74,14 +79,14 @@ private class SyncItemProcessorTest {
      * @description Verifies the LEGACY path (Ticket_Comment__c without Payload).
      */
     @IsTest
-    static void testLegacyPath_Success() {
+    static void testLegacyPathSuccess() {
         Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(200, '{"status":"Success"}'));
 
         Test.startTest();
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        // FIX: Replaced WHERE PayloadTxt__c = NULL with ObjectType filter (Long Text fields cannot be filtered)
+        // FIX: Using ObjectType filter instead of Long Text field
         Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE ObjectTypePk__c = 'Ticket_Comment__c' LIMIT 1];
         
         System.assertEquals('Synced', result.StatusPk__c, 'Legacy item should be Synced');
@@ -92,7 +97,7 @@ private class SyncItemProcessorTest {
      * @description Verifies the NEW Unified Engine path (Sync Items WITH Payload).
      */
     @IsTest
-    static void testUnifiedPath_Success() {
+    static void testUnifiedPathSuccess() {
         // Setup a Sync Item with JSON Payload (The new way)
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
         Sync_Item__c unifiedItem = new Sync_Item__c(
@@ -126,7 +131,6 @@ private class SyncItemProcessorTest {
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        // Get the legacy item created in Setup
         Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE ObjectTypePk__c = 'Ticket_Comment__c' LIMIT 1];
         
         System.assertEquals('Failed', result.StatusPk__c, 'Status should be Failed on 500 error');
