@@ -49,7 +49,8 @@ public with sharing class DeliveryHubSyncService {
 
         for (String key : fieldsToMap.keySet()) {
             if (schemaFields.containsKey(key)) {
-                applyField(record, key, fieldsToMap.get(key), schemaFields.get(key));
+                // FIX: Removed 'key' string argument to reduce parameter count to 3
+                applyField(record, schemaFields.get(key), fieldsToMap.get(key));
             }
         }
     }
@@ -57,26 +58,28 @@ public with sharing class DeliveryHubSyncService {
     /**
      * @description Applies a single value to a field with type conversion.
      * @param record The record to update.
-     * @param key The field API name.
-     * @param val The value to set.
      * @param field The field definition.
+     * @param val The value to set.
      */
-    private static void applyField(SObject record, String key, Object val, SObjectField field) {
+    private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
+            
+            // Use SObjectField directly for 'put', avoiding the need for the String key
             if (val == null) {
-                record.put(key, null);
+                record.put(field, null);
             } else if (dtype == Schema.DisplayType.DATE) {
-                record.put(key, Date.valueOf((String)val));
+                record.put(field, Date.valueOf((String)val));
             } else if (dtype == Schema.DisplayType.DATETIME) {
-                record.put(key, JSON.deserialize('"' + val + '"', DateTime.class));
+                record.put(field, JSON.deserialize('"' + val + '"', DateTime.class));
             } else if (dtype == Schema.DisplayType.PERCENT || dtype == Schema.DisplayType.CURRENCY || dtype == Schema.DisplayType.DOUBLE) {
-                record.put(key, Decimal.valueOf(String.valueOf(val)));
+                record.put(field, Decimal.valueOf(String.valueOf(val)));
             } else {
-                record.put(key, val);
+                record.put(field, val);
             }
         } catch (Exception e) {
-            System.debug(LoggingLevel.WARN, 'Field Mapping Error [' + key + ']: ' + e.getMessage());
+            // We can still get the name from the field object for logging
+            System.debug(LoggingLevel.WARN, 'Field Mapping Error [' + field.getDescribe().getName() + ']: ' + e.getMessage());
         }
     }
 }
