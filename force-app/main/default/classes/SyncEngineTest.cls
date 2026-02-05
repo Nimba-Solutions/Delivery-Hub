@@ -19,9 +19,13 @@ private class SyncEngineTest {
      */
     @IsTest
     static void testCaptureChangesInsert() {
+        // Generate a fake ID dynamically to satisfy PMD
+        String keyPrefix = Ticket__c.SObjectType.getDescribe().getKeyPrefix();
+        Id fakeId = (Id)(keyPrefix + '000000000001AAA');
+
         // Prepare new record data (InMemory, simulating Trigger.new)
         Ticket__c newTicket = new Ticket__c(
-            Id = 'a01000000000001AAA', // Fake ID
+            Id = fakeId, 
             StageNamePk__c = 'Backlog',
             EstimatedHoursNumber__c = 10
         );
@@ -116,9 +120,13 @@ private class SyncEngineTest {
     static void testCaptureChangesChildLinking() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
         
+        // Generate fake ID for Comment
+        String keyPrefix = Ticket_Comment__c.SObjectType.getDescribe().getKeyPrefix();
+        Id fakeCommentId = (Id)(keyPrefix + '000000000001AAA');
+
         // Create a Comment (InMemory)
         Ticket_Comment__c comment = new Ticket_Comment__c(
-            Id = 'a02000000000001AAA',
+            Id = fakeCommentId,
             TicketId__c = t.Id,
             BodyTxt__c = 'Test Comment'
         );
@@ -141,7 +149,10 @@ private class SyncEngineTest {
      */
     @IsTest
     static void testCaptureChangesInvalidFieldGracefulFail() {
-        Ticket__c newTicket = new Ticket__c(Id = 'a01000000000001AAA');
+        String keyPrefix = Ticket__c.SObjectType.getDescribe().getKeyPrefix();
+        Id fakeId = (Id)(keyPrefix + '000000000001AAA');
+
+        Ticket__c newTicket = new Ticket__c(Id = fakeId);
         List<SObject> newRecords = new List<SObject>{ newTicket };
         
         // Pass a garbage field name
