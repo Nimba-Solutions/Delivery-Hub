@@ -12,7 +12,10 @@ public with sharing class SyncEngine {
      */
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> monitoredFields) {
         List<Sync_Item__c> syncItemsToInsert = new List<Sync_Item__c>();
-        String objectType = String.valueOf(newRecords[0].getSObjectType());
+        
+        // FIX: Use getLocalName() to strip Namespace prefix (e.g., 'delivery__Ticket__c' -> 'Ticket__c')
+        // This prevents INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST errors in managed packages.
+        String objectType = newRecords[0].getSObjectType().getDescribe().getLocalName();
 
         for (SObject newRecord : newRecords) {
             SObject oldRecord = (oldMap != null) ? oldMap.get(newRecord.Id) : null;
