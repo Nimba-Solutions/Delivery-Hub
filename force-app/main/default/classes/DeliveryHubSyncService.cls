@@ -10,8 +10,9 @@ public with sharing class DeliveryHubSyncService {
      * @param payload The JSON map containing field updates.
      */
     public static void processSync(String objectType, Map<String, Object> payload) {
-        // 1. Validate Object Type
-        Schema.SObjectType targetType = Schema.getGlobalDescribe().get(objectType);
+        // 1. Validate Object Type (Namespace Resilient)
+        Schema.SObjectType targetType = findSObjectType(objectType);
+        
         if (targetType == null) {
             throw new CalloutException('Invalid Object Type: ' + objectType);
         }
@@ -26,6 +27,29 @@ public with sharing class DeliveryHubSyncService {
         // 4. Commit to Database
         // FIX: CRUD violation. Using System Mode as this is an integration process.
         Database.update(recordToUpdate, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description Helper to find SObjectType handling Namespaces safely.
+     * Finds 'delivery__Ticket__c' even if input is 'Ticket__c'.
+     */
+    private static Schema.SObjectType findSObjectType(String apiName) {
+        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
+        
+        // 1. Try Exact Match
+        if (gd.containsKey(apiName)) {
+            return gd.get(apiName);
+        }
+        
+        // 2. Try Local Name Match (Scanning keys is safer in packages)
+        String searchKey = apiName.toLowerCase();
+        for (String key : gd.keySet()) {
+            SObjectType type = gd.get(key);
+            if (type.getDescribe().getLocalName().toLowerCase() == searchKey) {
+                return type;
+            }
+        }
+        return null;
     }
 
     /**
@@ -48,9 +72,22 @@ public with sharing class DeliveryHubSyncService {
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
 
         for (String key : fieldsToMap.keySet()) {
-            if (schemaFields.containsKey(key)) {
-                // FIX: Removed 'key' string argument to reduce parameter count to 3
-                applyField(record, schemaFields.get(key), fieldsToMap.get(key));
+            // Check exact match first
+            SObjectField field = schemaFields.get(key);
+            
+            // If null, try to find namespaced match (e.g. key="StageNamePk__c", field="delivery__StageNamePk__c")
+            if (field == null) {
+                for(String fieldApi : schemaFields.keySet()) {
+                    SObjectField f = schemaFields.get(fieldApi);
+                    if (f.getDescribe().getLocalName() == key) {
+                        field = f;
+                        break;
+                    }
+                }
+            }
+
+            if (field != null) {
+                applyField(record, field, fieldsToMap.get(key));
             }
         }
     }
@@ -65,7 +102,6 @@ public with sharing class DeliveryHubSyncService {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
             
-            // Use SObjectField directly for 'put', avoiding the need for the String key
             if (val == null) {
                 record.put(field, null);
             } else if (dtype == Schema.DisplayType.DATE) {
@@ -78,7 +114,6 @@ public with sharing class DeliveryHubSyncService {
                 record.put(field, val);
             }
         } catch (Exception e) {
-            // We can still get the name from the field object for logging
             System.debug(LoggingLevel.WARN, 'Field Mapping Error [' + field.getDescribe().getName() + ']: ' + e.getMessage());
         }
     }
