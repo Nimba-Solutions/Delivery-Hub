@@ -14,6 +14,8 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSenderTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSettingsControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSetupControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSyncResourceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSyncServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%ForgotPasswordControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%HtmlToAdfConverterTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%JiraAttachmentHandlerTest</testClassName>
@@ -35,6 +37,8 @@
     <testClassName>%%%NAMESPACE_DOT%%%MyProfilePageControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%SiteLoginControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%SiteRegisterControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%SyncEngineTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%SyncItemProcessorTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%Ticket_JiraSyncTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%TicketControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%TicketETAServiceTest</testClassName>
