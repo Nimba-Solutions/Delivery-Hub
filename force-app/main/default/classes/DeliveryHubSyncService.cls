@@ -32,6 +32,8 @@ public with sharing class DeliveryHubSyncService {
     /**
      * @description Helper to find SObjectType handling Namespaces safely.
      * Finds 'delivery__Ticket__c' even if input is 'Ticket__c'.
+     * @param apiName The API name to search for.
+     * @return The matching SObjectType, or null if not found.
      */
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
