@@ -12,85 +12,108 @@ public with sharing class SyncEngine {
      */
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> monitoredFields) {
         List<Sync_Item__c> syncItemsToInsert = new List<Sync_Item__c>();
-        
-        // Dynamic Object Type Detection (e.g., 'Ticket__c', 'Ticket_Comment__c')
         String objectType = String.valueOf(newRecords[0].getSObjectType());
 
         for (SObject newRecord : newRecords) {
             SObject oldRecord = (oldMap != null) ? oldMap.get(newRecord.Id) : null;
-            Map<String, Object> deltaPayload = new Map<String, Object>();
-            boolean hasChange = false;
-
-            // --- SCENARIO 1: INSERT (New Record) ---
-            if (oldRecord == null) {
-                deltaPayload.put('Action', 'Create');
-                // For inserts, grab the monitored fields to establish initial state
-                if (monitoredFields != null) {
-                    for (String field : monitoredFields) {
-                        try {
-                            // Only include non-null values to keep payload light
-                            Object val = newRecord.get(field);
-                            if (val != null) {
-                                deltaPayload.put(field, val);
-                            }
-                        } catch(Exception e) { 
-                            // Gracefully skip fields that might be queried incorrectly or unavailable
-                        }
-                    }
-                }
-                hasChange = true;
-            } 
-            // --- SCENARIO 2: UPDATE (Diffing) ---
-            else {
-                deltaPayload.put('Action', 'Update');
-                for (String field : monitoredFields) {
-                    // Dynamic SObject .get() works for any object type
-                    Object newVal = newRecord.get(field);
-                    Object oldVal = oldRecord.get(field);
-                    
-                    if (newVal != oldVal) {
-                        deltaPayload.put(field, newVal);
-                        hasChange = true;
-                    }
-                }
-            }
-
-            // --- PACKAGING ---
-            if (hasChange) {
-                // Add Context ("Who & When")
-                deltaPayload.put('Id', newRecord.Id); // Source Record ID
-                deltaPayload.put('LastModifiedBy', UserInfo.getName());
-                deltaPayload.put('LastModifiedDate', System.now());
-
-                Sync_Item__c item = new Sync_Item__c();
-                
-                // Intelligent Parent Linking (Optional, helpful for ordering/debugging)
-                if (objectType == 'Ticket__c') {
-                    item.TicketId__c = (Id)newRecord.get('Id');
-                } else if (objectType == 'Ticket_Comment__c' || objectType == 'WorkLog__c') {
-                    try {
-                        item.TicketId__c = (Id)newRecord.get('TicketId__c');
-                    } catch (Exception e) { /* Parent field might not exist or be accessible */ }
-                }
-
-                item.DirectionPk__c = 'Outbound';
-                item.StatusPk__c = 'Queued';
-                item.ObjectTypePk__c = objectType;
-                item.PayloadTxt__c = JSON.serialize(deltaPayload);
-                item.LocalRecordIdTxt__c = (String)newRecord.get('Id'); // Backup reference
-                
+            
+            // 1. Calculate Delta
+            Map<String, Object> deltaPayload = calculateDelta(newRecord, oldRecord, monitoredFields);
+            
+            // 2. Packaging
+            if (deltaPayload != null && !deltaPayload.isEmpty()) {
+                Sync_Item__c item = createSyncItem(newRecord, objectType, deltaPayload);
                 syncItemsToInsert.add(item);
             }
         }
 
         if (!syncItemsToInsert.isEmpty()) {
-            insert syncItemsToInsert;
+            // FIX: CRUD Violation - Explicitly using System Mode for infrastructure logging
+            Database.insert(syncItemsToInsert, AccessLevel.SYSTEM_MODE);
             
-            // Fire the processor immediately for near-real-time processing
-            // Check limits to prevent "Too many queueable jobs" error during bulk loads
+            // Fire the processor immediately if limits allow
             if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs() && !System.isFuture() && !System.isBatch()) {
                 System.enqueueJob(new SyncItemProcessor());
             }
         }
+    }
+
+    /**
+     * @description Helper to calculate the difference between old and new records.
+     * @param newRecord The new state of the record.
+     * @param oldRecord The old state (null for insert).
+     * @param fields The fields to monitor.
+     * @return Map<String, Object> The JSON payload map, or null if no change.
+     */
+    private static Map<String, Object> calculateDelta(SObject newRecord, SObject oldRecord, Set<String> fields) {
+        Map<String, Object> payload = new Map<String, Object>();
+        boolean hasChange = false;
+
+        // SCENARIO 1: INSERT
+        if (oldRecord == null) {
+            payload.put('Action', 'Create');
+            if (fields != null) {
+                for (String field : fields) {
+                    try {
+                        Object val = newRecord.get(field);
+                        if (val != null) {
+                            payload.put(field, val);
+                        }
+                    } catch (Exception e) {
+                        // PMD Suppression: Gracefully skip fields that are invalid/inaccessible
+                        continue;
+                    }
+                }
+            }
+            hasChange = true;
+        } 
+        // SCENARIO 2: UPDATE
+        else {
+            payload.put('Action', 'Update');
+            for (String field : fields) {
+                Object newVal = newRecord.get(field);
+                Object oldVal = oldRecord.get(field);
+                if (newVal != oldVal) {
+                    payload.put(field, newVal);
+                    hasChange = true;
+                }
+            }
+        }
+
+        return hasChange ? payload : null;
+    }
+
+    /**
+     * @description Helper to construct the Sync_Item__c record.
+     * @param record The source record.
+     * @param objectType The API name of the source object.
+     * @param payload The calculated delta payload.
+     * @return Sync_Item__c The record to insert.
+     */
+    private static Sync_Item__c createSyncItem(SObject record, String objectType, Map<String, Object> payload) {
+        // Add Context
+        payload.put('Id', record.Id);
+        payload.put('LastModifiedBy', UserInfo.getName());
+        payload.put('LastModifiedDate', System.now());
+
+        Sync_Item__c item = new Sync_Item__c();
+        item.DirectionPk__c = 'Outbound';
+        item.StatusPk__c = 'Queued';
+        item.ObjectTypePk__c = objectType;
+        item.PayloadTxt__c = JSON.serialize(payload);
+        item.LocalRecordIdTxt__c = (String)record.get('Id');
+
+        // Intelligent Parent Linking
+        if (objectType == 'Ticket__c') {
+            item.TicketId__c = (Id)record.get('Id');
+        } else if (objectType == 'Ticket_Comment__c' || objectType == 'WorkLog__c') {
+            try {
+                item.TicketId__c = (Id)record.get('TicketId__c');
+            } catch (Exception e) {
+                // PMD Suppression: Parent field might not exist on generic object
+                System.debug(LoggingLevel.FINE, 'Parent ID linking failed: ' + e.getMessage());
+            }
+        }
+        return item;
     }
 }

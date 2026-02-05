@@ -15,29 +15,23 @@ public without sharing class DeliveryHubSender {
      */
     public static void sendSyncPayload(String objectType, String localRecordId, String jsonPayload) {
         
-        // 1. Resolve the Ticket ID
-        // If the object being synced is the Ticket itself, the ID is direct.
-        // If it were a child (like a Comment), the SyncEngine typically passes the Parent ID in localRecordId.
         Id ticketId = (Id)localRecordId;
 
-        // 2. Find ALL Active Links (Requests) for this Ticket
-        // We look for Requests that have successfully handshaked (have a Remote ID)
-        // and belong to an Active Vendor.
+        // FIX: Reordered WITH SYSTEM_MODE
         List<Request__c> activeRequests = [
             SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name
             FROM Request__c 
             WHERE TicketId__c = :ticketId 
             AND RemoteTicketIdTxt__c != NULL
             AND DeliveryEntityId__r.StatusPk__c = 'Active'
+            WITH SYSTEM_MODE
         ];
 
         if (activeRequests.isEmpty()) {
-            // This is normal for Tickets that haven't been sent to a Vendor yet.
             System.debug(LoggingLevel.INFO, 'Sync Skipped: No active linked Requests found for Ticket ' + ticketId);
             return; 
         }
 
-        // 3. Fan-Out: Send to each Mothership
         for (Request__c req : activeRequests) {
             sendToSpecificVendor(req, objectType, jsonPayload);
         }
@@ -45,6 +39,9 @@ public without sharing class DeliveryHubSender {
 
     /**
      * @description Helper to send the payload to a specific Vendor found in the loop.
+     * @param reqRec The Request context containing Vendor URL and Remote ID.
+     * @param objectType The API Name of the object.
+     * @param originalPayload The generic payload string.
      */
     private static void sendToSpecificVendor(Request__c reqRec, String objectType, String originalPayload) {
         try {
@@ -55,13 +52,11 @@ public without sharing class DeliveryHubSender {
             if (!baseUrl.endsWith('/')) {
                 baseUrl += '/';
             }
-            // Endpoint structure: .../v1/sync/Ticket__c
             String fullEndpoint = baseUrl + 'sync/' + objectType;
 
-            // 4. Inject the Specific Remote ID for THIS Vendor
-            // We deserialize the generic payload, inject the specific 'TargetId', and re-serialize.
+            // Inject the Specific Remote ID for THIS Vendor
             Map<String, Object> payloadMap = (Map<String, Object>) JSON.deserializeUntyped(originalPayload);
-            payloadMap.put('TargetId', reqRec.RemoteTicketIdTxt__c); // The Key to the Mothership
+            payloadMap.put('TargetId', reqRec.RemoteTicketIdTxt__c); 
             String finalJson = JSON.serialize(payloadMap);
 
             HttpRequest req = new HttpRequest();
@@ -69,14 +64,13 @@ public without sharing class DeliveryHubSender {
             req.setMethod('POST');
             req.setHeader('Content-Type', 'application/json');
             req.setBody(finalJson);
-            req.setTimeout(120000); // 2 minutes
+            req.setTimeout(120000); 
 
             Http http = new Http();
             HttpResponse res = http.send(req);
 
             if (res.getStatusCode() != 200 && res.getStatusCode() != 201) {
                 System.debug(LoggingLevel.ERROR, 'Sync Failed for Vendor ' + reqRec.DeliveryEntityId__r.Name + ' (Req: ' + reqRec.Id + '): ' + res.getBody());
-                // We do NOT throw an exception here, so other vendors in the loop still get their updates.
             } else {
                 System.debug(LoggingLevel.INFO, 'Sync Success for Vendor ' + reqRec.DeliveryEntityId__r.Name);
             }
@@ -87,7 +81,7 @@ public without sharing class DeliveryHubSender {
     }
 
     // ============================================================================
-    // LEGACY / REQUEST BROKERAGE METHODS (Preserved Untouched)
+    // LEGACY / REQUEST BROKERAGE METHODS
     // ============================================================================
     
     /**
@@ -112,7 +106,7 @@ public without sharing class DeliveryHubSender {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String sendRequestSync(Id requestId) {
-        // FIX: Removed WITH USER_MODE to ensure system processes can read required fields
+        // FIX: Moved WITH SYSTEM_MODE before LIMIT
         Request__c reqRec = [
             SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
                    TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
@@ -120,6 +114,7 @@ public without sharing class DeliveryHubSender {
                    DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name
             FROM Request__c 
             WHERE Id = :requestId 
+            WITH SYSTEM_MODE
             LIMIT 1
         ];
 
@@ -172,7 +167,8 @@ public without sharing class DeliveryHubSender {
             reqRec.RemoteTicketIdTxt__c = remoteId;
             reqRec.StatusPk__c = 'Offer Sent'; 
             
-            update reqRec;
+            // FIX: Added AccessLevel to update
+            Database.update(reqRec, AccessLevel.SYSTEM_MODE);
             return 'Success';
         } else {
             throw new CalloutException('Network Error (' + res.getStatusCode() + '): ' + res.getBody());
@@ -187,10 +183,12 @@ public without sharing class DeliveryHubSender {
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
         try {
+            // FIX: Moved WITH SYSTEM_MODE before LIMIT
             Request__c reqRec = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE Id = :requestId 
+                WITH SYSTEM_MODE
                 LIMIT 1
             ];
 

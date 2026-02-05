@@ -60,7 +60,8 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
 
         // 4. Save Results
         if (!itemsToUpdate.isEmpty()) {
-            update itemsToUpdate;
+            // FIX: Use System Mode to bypass CRUD checks for infrastructure updates
+            Database.update(itemsToUpdate, AccessLevel.SYSTEM_MODE);
         }
 
         // 5. Chain Job (Recursion for large queues)
@@ -79,6 +80,7 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                    RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
             FROM Sync_Item__c 
             WHERE StatusPk__c = 'Queued'
+            WITH SYSTEM_MODE
             LIMIT 50
         ];
     }
@@ -87,7 +89,8 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
      * @description Checks if more items exist and chains the job.
      */
     private void chainJobIfNeeded() {
-        Integer remaining = [SELECT Count() FROM Sync_Item__c WHERE StatusPk__c = 'Queued' LIMIT 1];
+        // FIX: System Mode check
+        Integer remaining = [SELECT Count() FROM Sync_Item__c WHERE StatusPk__c = 'Queued' WITH SYSTEM_MODE LIMIT 1];
         if (remaining > 0 && !Test.isRunningTest()) {
             System.enqueueJob(new SyncItemProcessor());
         }
@@ -115,10 +118,12 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
             return new Map<Id, Ticket_Comment__c>();
         }
 
+        // FIX: System Mode for query
         return new Map<Id, Ticket_Comment__c>([
             SELECT Id, BodyTxt__c, AuthorTxt__c 
             FROM Ticket_Comment__c 
             WHERE Id IN :commentIds
+            WITH SYSTEM_MODE
         ]);
     }
 
@@ -150,7 +155,9 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
      */
     private void sendLegacyCommentCallout(Ticket_Comment__c c, String baseUrl, String remoteTicketId) {
         // Normalize URL
-        if (!baseUrl.endsWith('/')) baseUrl += '/';
+        if (!baseUrl.endsWith('/')) {
+            baseUrl += '/';
+        }
         String fullUrl = baseUrl + 'comments/' + remoteTicketId;
         
         Map<String, Object> payload = new Map<String, Object>{
