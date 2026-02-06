@@ -1,133 +1,113 @@
 /**
- * @description The Unified Engine for High-Water Mark Sync.
- * Captures changes from Triggers, generates JSON deltas, and queues Sync Items.
+ * @description Core engine for handling outbound synchronization.
+ * Captures changes from triggers and queues them as Sync Items.
  */
-public with sharing class SyncEngine {
+public without sharing class SyncEngine {
+
+    // Prevent recursive triggers or loops
+    private static Boolean isSyncContext = false;
 
     /**
-     * @description Generic method to capture changes for ANY object.
-     * @param newRecords List of new versions (Trigger.new)
-     * @param oldMap Map of old versions (Trigger.oldMap) - Pass NULL for Insert
-     * @param monitoredFields Set of API Names to track. If null, tracks ALL fields.
+     * @description Sets the context to avoid infinite loops (echo prevention).
      */
-    public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> monitoredFields) {
-        List<Sync_Item__c> syncItemsToInsert = new List<Sync_Item__c>();
-        
-        // Use getLocalName() to strip Namespace prefix (e.g., 'delivery__Ticket__c' -> 'Ticket__c')
-        String objectType = newRecords[0].getSObjectType().getDescribe().getLocalName();
-
-        for (SObject newRecord : newRecords) {
-            SObject oldRecord = (oldMap != null) ? oldMap.get(newRecord.Id) : null;
-            
-            // 1. Calculate Delta
-            Map<String, Object> deltaPayload = calculateDelta(newRecord, oldRecord, monitoredFields);
-            
-            // 2. Packaging
-            if (deltaPayload != null && !deltaPayload.isEmpty()) {
-                Sync_Item__c item = createSyncItem(newRecord, objectType, deltaPayload);
-                syncItemsToInsert.add(item);
-            }
-        }
-
-        if (!syncItemsToInsert.isEmpty()) {
-            // Explicitly using System Mode for infrastructure logging
-            Database.insert(syncItemsToInsert, AccessLevel.SYSTEM_MODE);
-            
-            // Fire the processor immediately if limits allow
-            if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs() && !System.isFuture() && !System.isBatch()) {
-                System.enqueueJob(new SyncItemProcessor());
-            }
-        }
+    public static void setSyncContext() {
+        isSyncContext = true;
     }
 
     /**
-     * @description Helper to calculate the difference between old and new records.
-     * @param newRecord The new state of the record.
-     * @param oldRecord The old state (null for insert).
-     * @param fields The fields to monitor.
-     * @return Map<String, Object> The JSON payload map, or null if no change.
+     * @description Captures changes from a Trigger and creates Sync Items.
+     * @param newRecords The list of new/updated records (Trigger.new).
+     * @param oldMap The map of old records (Trigger.oldMap).
+     * @param fieldsToTrack Set of specific fields to monitor for changes.
      */
-    private static Map<String, Object> calculateDelta(SObject newRecord, SObject oldRecord, Set<String> fields) {
-        Map<String, Object> payload = new Map<String, Object>();
-        boolean hasChange = false;
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> fieldsToTrack) {
+        
+        // 1. Safety Checks
+        if (isSyncContext) {
+            return; 
+        }
+        if (newRecords == null || newRecords.isEmpty()) {
+            return;
+        }
 
-        // SCENARIO 1: INSERT
-        if (oldRecord == null) {
-            payload.put('Action', 'Create');
-            if (fields != null) {
-                for (String field : fields) {
-                    try {
-                        Object val = newRecord.get(field);
-                        if (val != null) {
-                            payload.put(field, val);
+        try {
+            // 2. Get Active Vendor (Mothership)
+            // We need to know who we are sending to.
+            Network_Entity__c vendor = [
+                SELECT Id, IntegrationEndpointUrlTxt__c, StatusPk__c 
+                FROM Network_Entity__c 
+                WHERE EntityTypePk__c = 'Vendor' 
+                LIMIT 1
+            ];
+
+            // If no active vendor, we don't queue anything.
+            if (vendor.StatusPk__c != 'Active') {
+                return;
+            }
+
+            List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
+
+            // 3. Loop through records
+            for (SObject rec : newRecords) {
+                Boolean shouldSync = false;
+
+                // INSERT Context
+                if (oldMap == null) {
+                    shouldSync = true;
+                } 
+                // UPDATE Context
+                else {
+                    SObject oldRec = oldMap.get(rec.Id);
+                    // Check if any tracked field changed
+                    for (String field : fieldsToTrack) {
+                        if (rec.get(field) != oldRec.get(field)) {
+                            shouldSync = true;
+                            break;
                         }
-                    } catch (Exception e) {
-                        continue; // Gracefully skip invalid fields
                     }
                 }
-            }
-            hasChange = true;
-        } 
-        // SCENARIO 2: UPDATE
-        else {
-            payload.put('Action', 'Update');
-            for (String field : fields) {
-                Object newVal = newRecord.get(field);
-                Object oldVal = oldRecord.get(field);
-                if (newVal != oldVal) {
-                    payload.put(field, newVal);
-                    hasChange = true;
+
+                if (shouldSync) {
+                    itemsToInsert.add(createSyncItem(rec, vendor));
                 }
             }
-        }
 
-        return hasChange ? payload : null;
+            // 4. Insert Sync Items
+            if (!itemsToInsert.isEmpty()) {
+                insert itemsToInsert;
+            }
+
+        } catch (Exception e) {
+            // Log error but don't break the user's transaction unless critical
+            System.debug(LoggingLevel.ERROR, 'SyncEngine Error: ' + e.getMessage());
+        }
     }
 
     /**
-     * @description Helper to construct the Sync_Item__c record.
-     * @param record The source record.
-     * @param objectType The API name of the source object.
-     * @param payload The calculated delta payload.
-     * @return Sync_Item__c The record to insert.
+     * @description Helper to build the Sync_Item__c record.
      */
-    private static Sync_Item__c createSyncItem(SObject record, String objectType, Map<String, Object> payload) {
-        // Add Context
-        payload.put('Id', record.Id);
-        payload.put('LastModifiedBy', UserInfo.getName());
-        
-        // Capture Event Time (Source of Truth)
-        DateTime eventTime;
-        try {
-            eventTime = (DateTime)record.get('LastModifiedDate');
-        } catch(Exception e) {
-            // Fallback for tests or memory-only records where LastModifiedDate isn't set
-            eventTime = System.now();
-        }
-        if (eventTime == null) { eventTime = System.now(); }
-        
-        payload.put('LastModifiedDate', eventTime);
-
+    private static Sync_Item__c createSyncItem(SObject rec, Network_Entity__c vendor) {
         Sync_Item__c item = new Sync_Item__c();
-        item.DirectionPk__c = 'Outbound';
         item.StatusPk__c = 'Queued';
-        item.ObjectTypePk__c = objectType;
-        item.PayloadTxt__c = JSON.serialize(payload);
-        item.LocalRecordIdTxt__c = (String)record.get('Id');
+        item.DirectionPk__c = 'Outbound';
+        item.LocalRecordIdTxt__c = (String)rec.Id;
         
-        // NEW: Populate the Source Event Timestamp for High-Water Mark logic
-        item.SourceEventTimestampDateTime__c = eventTime;
+        // Determine Object Type dynamically
+        Id recordId = (Id)rec.Id;
+        String objectType = recordId.getSobjectType().getDescribe().getName();
+        item.ObjectTypePk__c = objectType;
 
-        // Intelligent Parent Linking
+        // Specific Logic for Tickets vs Comments
         if (objectType == 'Ticket__c') {
-            item.TicketId__c = (Id)record.get('Id');
-        } else if (objectType == 'Ticket_Comment__c' || objectType == 'WorkLog__c') {
-            try {
-                item.TicketId__c = (Id)record.get('TicketId__c');
-            } catch (Exception e) {
-                System.debug(LoggingLevel.FINE, 'Parent ID linking failed: ' + e.getMessage());
-            }
+            item.TicketId__c = (String)rec.Id;
+        } else if (objectType == 'Ticket_Comment__c') {
+            item.TicketId__c = (String)rec.get('TicketId__c');
         }
+
+        // Create Payload
+        item.PayloadTxt__c = JSON.serialize(rec);
+
         return item;
     }
 }
