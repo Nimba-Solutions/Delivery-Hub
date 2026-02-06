@@ -26,9 +26,15 @@ private class SyncEngineTest {
         insert newTicket; 
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c, ObjectTypePk__c, TicketId__c FROM Sync_Item__c WHERE TicketId__c = :newTicket.Id];
+        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c, ObjectTypePk__c, TicketId__c, SourceEventTimestampDateTime__c FROM Sync_Item__c WHERE TicketId__c = :newTicket.Id];
         System.assertEquals(1, items.size(), 'Should create 1 Sync Item');
         
+        // NEW: Verify Source Timestamp
+        System.assertNotEquals(null, items[0].SourceEventTimestampDateTime__c, 'Source Timestamp should be populated');
+        // It should be very close to now (within seconds)
+        Long diff = Math.abs(System.now().getTime() - items[0].SourceEventTimestampDateTime__c.getTime());
+        System.assert(diff < 5000, 'Timestamp should be recent (within 5s)');
+
         Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(items[0].PayloadTxt__c);
         System.assertEquals('Create', payload.get('Action'));
     }
@@ -42,7 +48,10 @@ private class SyncEngineTest {
         update t; 
         Test.stopTest();
 
-        Sync_Item__c item = [SELECT PayloadTxt__c FROM Sync_Item__c WHERE TicketId__c = :t.Id LIMIT 1];
+        Sync_Item__c item = [SELECT PayloadTxt__c, SourceEventTimestampDateTime__c FROM Sync_Item__c WHERE TicketId__c = :t.Id LIMIT 1];
+        
+        System.assertNotEquals(null, item.SourceEventTimestampDateTime__c, 'Update should also capture timestamp');
+        
         Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(item.PayloadTxt__c);
         System.assertEquals('In Development', payload.get('StageNamePk__c'));
     }
@@ -64,13 +73,10 @@ private class SyncEngineTest {
     static void testCaptureChangesChildLinking() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
         
-        // SHORTCUT: Manually call engine to avoid relying on Comment Triggers
         Ticket_Comment__c comment = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'Test Comment'
         );
-        // We simulate "After Insert" by calling captureChanges directly
-        // We must perform DML first to get an ID for the comment
         insert comment; 
         
         List<SObject> newRecords = new List<SObject>{ comment };
