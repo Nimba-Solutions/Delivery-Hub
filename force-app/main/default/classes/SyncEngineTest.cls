@@ -1,9 +1,12 @@
 @IsTest
 private class SyncEngineTest {
 
+    /**
+     * @description CRITICAL: Creates the required "Active Vendor" record.
+     * Without this, SyncEngine aborts and all tests fail with "Actual: 0".
+     */
     @TestSetup
     static void setupData() {
-        // CRITICAL: SyncEngine now requires an Active Vendor to function.
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Mothership',
             EntityTypePk__c = 'Vendor',
@@ -15,7 +18,7 @@ private class SyncEngineTest {
 
     @IsTest
     static void testCaptureChangesInsert() {
-        // 1. Create a Ticket (should trigger SyncEngine)
+        // 1. Create a Ticket (Trigger fires -> SyncEngine runs)
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Test Ticket',
             StageNamePk__c = 'Backlog',
@@ -28,6 +31,8 @@ private class SyncEngineTest {
 
         // 2. Verify Sync Item created
         List<Sync_Item__c> items = [SELECT Id, ObjectTypePk__c, StatusPk__c FROM Sync_Item__c];
+        
+        // If this fails with "Actual: 0", the Vendor record is missing or not Active.
         System.assertEquals(1, items.size(), 'Should create 1 Sync Item on insert');
         System.assertEquals('Ticket__c', items[0].ObjectTypePk__c);
         System.assertEquals('Queued', items[0].StatusPk__c);
@@ -42,7 +47,7 @@ private class SyncEngineTest {
         );
         insert t;
         
-        // Clear initial sync item from insert
+        // Clear the initial sync item from the insert so we can test the update
         delete [SELECT Id FROM Sync_Item__c];
 
         // 2. Update Ticket
@@ -51,7 +56,7 @@ private class SyncEngineTest {
         update t;
         Test.stopTest();
 
-        // 3. Verify Sync Item created
+        // 3. Verify Sync Item created for the update
         List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
         System.assertEquals(1, items.size(), 'Should create 1 Sync Item on update');
         System.assert(items[0].PayloadTxt__c.contains('Updated Name'), 'Payload should contain new value');
@@ -79,9 +84,12 @@ private class SyncEngineTest {
         Test.stopTest();
 
         // 3. Verify Sync Item uses Parent ID
-        Sync_Item__c item = [SELECT Id, TicketId__c, ObjectTypePk__c FROM Sync_Item__c LIMIT 1];
-        System.assertEquals('Ticket_Comment__c', item.ObjectTypePk__c);
-        System.assertEquals(t.Id, item.TicketId__c, 'Sync Item should be linked to the Parent Ticket');
+        // The query below previously caused "List has no rows" because no items were created.
+        List<Sync_Item__c> items = [SELECT Id, TicketId__c, ObjectTypePk__c FROM Sync_Item__c LIMIT 1];
+        
+        System.assert(!items.isEmpty(), 'Sync Item should be created for Comment');
+        System.assertEquals('Ticket_Comment__c', items[0].ObjectTypePk__c);
+        System.assertEquals(t.Id, items[0].TicketId__c, 'Sync Item should be linked to the Parent Ticket');
     }
     
     @IsTest
