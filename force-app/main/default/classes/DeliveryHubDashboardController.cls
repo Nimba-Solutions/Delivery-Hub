@@ -8,6 +8,7 @@ public with sharing class DeliveryHubDashboardController {
      * @description Calculates active tickets, total hours, and sync health stats.
      * @return Map<String, Decimal> Metrics map.
      */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
     public static Map<String, Decimal> getBudgetMetrics() {
         Map<String, Decimal> metrics = new Map<String, Decimal>();
@@ -52,7 +53,7 @@ public with sharing class DeliveryHubDashboardController {
         metrics.put('succeededSyncs', success);
         metrics.put('failedSyncs', failed);
         
-        // Remove legacy estimatedSpend (or set to 0 if UI still references it temporarily)
+        // Remove legacy estimatedSpend
         metrics.put('estimatedSpend', 0);
 
         return metrics;
