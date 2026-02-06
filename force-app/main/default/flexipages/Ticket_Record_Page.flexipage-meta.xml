@@ -29,12 +29,6 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryTicketStageGateWarning</componentName>
-                <identifier>c_deliveryTicketStageGateWarning</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentName>deliveryTicketActionCenter</componentName>
                 <identifier>c_deliveryTicketActionCenter</identifier>
             </componentInstance>
@@ -130,6 +124,12 @@
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketStageGateWarning</componentName>
+                <identifier>c_deliveryTicketStageGateWarning</identifier>
+            </componentInstance>
+        </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentName>deliveryTicketChat</componentName>
