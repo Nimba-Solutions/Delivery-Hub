@@ -3,7 +3,6 @@
     <fullName>IsActiveBool__c</fullName>
     <defaultValue>false</defaultValue>
     <description>Indicates whether this ticket is active and should be displayed on the board</description>
-    <externalId>false</externalId>
     <label>Is Active</label>
     <trackTrending>false</trackTrending>
     <type>Checkbox</type>

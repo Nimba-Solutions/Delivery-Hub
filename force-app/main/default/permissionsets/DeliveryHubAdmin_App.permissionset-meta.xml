@@ -57,6 +57,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Network_Entity__c.LastInboundSyncDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Network_Entity__c.RemoteExternalIdTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Network_Entity__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -167,6 +177,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Sync_Item__c.SourceEventTimestampDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Sync_Item__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -243,6 +258,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Ticket__c.ClientIntentionPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Ticket__c.ClientNetworkEntityId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
