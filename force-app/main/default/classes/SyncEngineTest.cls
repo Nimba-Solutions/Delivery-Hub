@@ -1,12 +1,13 @@
 @IsTest
 private class SyncEngineTest {
 
-    // Helper to ensure data exists in the current transaction scope
-    private static void createVendor() {
+    @TestSetup
+    static void setupData() {
+        // Create the Mothership record required by SyncEngine
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Mothership',
             EntityTypePk__c = 'Vendor',
-            StatusPk__c = 'Active',
+            StatusPk__c = 'Active', 
             IntegrationEndpointUrlTxt__c = 'https://fake-endpoint.com'
         );
         insert vendor;
@@ -14,8 +15,7 @@ private class SyncEngineTest {
 
     @IsTest
     static void testCaptureChangesInsert() {
-        createVendor(); // Explicit creation in method
-
+        // Trigger SyncEngine
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Test Ticket',
             StageNamePk__c = 'Backlog',
@@ -26,6 +26,7 @@ private class SyncEngineTest {
         insert t;
         Test.stopTest();
 
+        // Verify Sync Item
         List<Sync_Item__c> items = [SELECT Id, ObjectTypePk__c, StatusPk__c FROM Sync_Item__c];
         System.assertEquals(1, items.size(), 'Should create 1 Sync Item on insert');
         System.assertEquals('Ticket__c', items[0].ObjectTypePk__c);
@@ -33,21 +34,21 @@ private class SyncEngineTest {
 
     @IsTest
     static void testCaptureChangesUpdate() {
-        createVendor(); // Explicit creation in method
-
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog'
         );
         insert t;
         
-        delete [SELECT Id FROM Sync_Item__c]; // Clear insert sync
+        // Clear insert sync item
+        delete [SELECT Id FROM Sync_Item__c];
 
         Test.startTest();
         t.WorkItemNameTxt__c = 'Updated Name';
         update t;
         Test.stopTest();
 
+        // Verify update sync item
         List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
         System.assertEquals(1, items.size(), 'Should create 1 Sync Item on update');
         System.assert(items[0].PayloadTxt__c.contains('Updated Name'), 'Payload should contain new value');
@@ -55,15 +56,12 @@ private class SyncEngineTest {
 
     @IsTest
     static void testCaptureChangesChildLinking() {
-        createVendor(); // Explicit creation in method
-
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Parent Ticket',
             StageNamePk__c = 'Backlog'
         );
         insert t;
-
-        delete [SELECT Id FROM Sync_Item__c]; // Clear insert sync
+        delete [SELECT Id FROM Sync_Item__c];
 
         Test.startTest();
         Ticket_Comment__c c = new Ticket_Comment__c(
@@ -81,8 +79,6 @@ private class SyncEngineTest {
     
     @IsTest
     static void testLoopPrevention() {
-        createVendor(); 
-
         SyncEngine.setSyncContext();
         
         Test.startTest();
