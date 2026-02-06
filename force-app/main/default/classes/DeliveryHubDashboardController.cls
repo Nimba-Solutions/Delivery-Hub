@@ -24,8 +24,7 @@ public with sharing class DeliveryHubDashboardController {
         metrics.put('activeRequests', activeCount);
         metrics.put('totalHours', 0); // Placeholder until field exists
 
-        // 2. Last Entry Logic (Find most recent activity on tickets with hours)
-        // Since we don't have a separate Log object yet, we use Ticket LastModified
+        // 2. Last Entry Logic (Find most recent activity on tickets)
         List<Ticket__c> lastActivity = [
             SELECT LastModifiedDate 
             FROM Ticket__c 
@@ -43,8 +42,9 @@ public with sharing class DeliveryHubDashboardController {
         }
 
         // 3. Sync Health Metrics
+        // FIX: Alias 'StatusPk__c' to 'val' to prevent "Invalid field" errors in AggregateResult
         AggregateResult[] syncStats = [
-            SELECT StatusPk__c, Count(Id) cnt 
+            SELECT StatusPk__c val, Count(Id) cnt 
             FROM Sync_Item__c 
             WHERE StatusPk__c IN ('Synced', 'Failed')
             GROUP BY StatusPk__c
@@ -54,7 +54,8 @@ public with sharing class DeliveryHubDashboardController {
         Decimal failed = 0;
 
         for (AggregateResult ar : syncStats) {
-            String status = (String)ar.get('StatusPk__c');
+            // Use the alias 'val'
+            String status = (String)ar.get('val'); 
             Decimal count = (Decimal)ar.get('cnt');
             
             if (status == 'Synced') {
