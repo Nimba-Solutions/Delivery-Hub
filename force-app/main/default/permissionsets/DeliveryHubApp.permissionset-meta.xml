@@ -27,6 +27,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Network_Entity__c.LastInboundSyncDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Network_Entity__c.RemoteExternalIdTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Network_Entity__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
