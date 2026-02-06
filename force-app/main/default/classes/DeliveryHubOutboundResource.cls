@@ -1,6 +1,14 @@
+/**
+ * @description REST API Resource used by Client Orgs to pull updates from this Mothership.
+ * Acts as the server-side endpoint for the Peer-to-Peer sync engine.
+ */
 @RestResource(urlMapping='/v1/sync/changes/*')
-global with sharing class DeliveryHubOutboundResource {
+global without sharing class DeliveryHubOutboundResource {
 
+    /**
+     * @description GET Endpoint for Clients to poll for updates.
+     * Expects 'Client-Entity-ID' header and optional 'since' parameter.
+     */
     @HttpGet
     global static void getChanges() {
         RestRequest req = RestContext.request;
@@ -21,8 +29,7 @@ global with sharing class DeliveryHubOutboundResource {
             DateTime sinceDt = (sinceStr != null) ? DateTime.valueOf(sinceStr.replace('T', ' ')) : DateTime.newInstance(1900, 1, 1);
 
             // 3. Query the SYNC STREAM via Relationship Traversal
-            // We find Sync Items where the PARENT TICKET belongs to this Client.
-            // This works for Tickets, Comments, and Logs because SyncEngine links them all to TicketId__c.
+            // Standard Apex SOQL runs in System Mode for FLS/CRUD by default.
             List<Sync_Item__c> items = [
                 SELECT Id, 
                        ObjectTypePk__c, 

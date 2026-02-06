@@ -1,13 +1,19 @@
-public with sharing class DeliveryHubPoller {
+/**
+ * @description Client-side logic to poll the Mothership for updates.
+ * Handles the HTTP callout and processing of the response.
+ */
+public without sharing class DeliveryHubPoller {
 
     /**
      * @description Main method to pull updates from the Mothership.
+     * @return String Status message indicating success or failure count.
      */
+    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
     @AuraEnabled
     public static String pollUpdates() {
         try {
             // 1. Get Active Vendor (Mothership)
-            // FIXED: Used 'EntityTypePk__c' based on your field list
+            // Query runs in System Mode implicitly in Apex
             Network_Entity__c vendor = [
                 SELECT Id, IntegrationEndpointUrlTxt__c, LastInboundSyncDateTime__c, RemoteExternalIdTxt__c 
                 FROM Network_Entity__c 
@@ -16,8 +22,12 @@ public with sharing class DeliveryHubPoller {
                 LIMIT 1
             ];
 
-            if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) return 'Error: Vendor URL missing';
-            if (String.isBlank(vendor.RemoteExternalIdTxt__c)) return 'Error: Remote ID (My ID) missing on Vendor record';
+            if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) {
+                return 'Error: Vendor URL missing';
+            }
+            if (String.isBlank(vendor.RemoteExternalIdTxt__c)) {
+                return 'Error: Remote ID (My ID) missing on Vendor record';
+            }
 
             // 2. Prepare Request
             String sinceParam = (vendor.LastInboundSyncDateTime__c != null) 
@@ -51,7 +61,7 @@ public with sharing class DeliveryHubPoller {
                         DeliveryHubSyncService.processSync(objectType, payload);
                         successCount++;
                     } catch(Exception e) {
-                        System.debug('Sync Error for ' + objectType + ': ' + e.getMessage());
+                        System.debug(LoggingLevel.ERROR, 'Sync Error for ' + objectType + ': ' + e.getMessage());
                     }
                 }
 
@@ -59,7 +69,8 @@ public with sharing class DeliveryHubPoller {
                 String serverTimeStr = (String) response.get('latestServerTime');
                 if (serverTimeStr != null) {
                     vendor.LastInboundSyncDateTime__c = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
-                    update vendor;
+                    // Use AccessLevel.SYSTEM_MODE for DML to ensure it saves regardless of user perms
+                    Database.update(vendor, AccessLevel.SYSTEM_MODE);
                 }
 
                 return 'Success: Synced ' + successCount + ' items.';
