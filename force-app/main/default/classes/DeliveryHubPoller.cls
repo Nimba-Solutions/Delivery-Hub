@@ -8,7 +8,7 @@ public without sharing class DeliveryHubPoller {
      * @description Main method to pull updates from the Mothership.
      * @return String Status message indicating success or failure count.
      */
-    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
+    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
     public static String pollUpdates() {
         try {
@@ -21,7 +21,6 @@ public without sharing class DeliveryHubPoller {
                 LIMIT 1
             ];
 
-            // FIX: Added braces to satisfy PMD
             if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) {
                 return 'Error: Vendor URL missing';
             }
@@ -72,6 +71,7 @@ public without sharing class DeliveryHubPoller {
         String serverTimeStr = (String) response.get('latestServerTime');
         if (serverTimeStr != null) {
             vendor.LastInboundSyncDateTime__c = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
+            // AccessLevel.SYSTEM_MODE ensures the timestamp updates regardless of user perms
             Database.update(vendor, AccessLevel.SYSTEM_MODE);
         }
 
