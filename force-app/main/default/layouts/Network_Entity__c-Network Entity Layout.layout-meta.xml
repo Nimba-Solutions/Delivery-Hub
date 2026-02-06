@@ -32,6 +32,14 @@
                 <behavior>Edit</behavior>
                 <field>StatusPk__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>LastInboundSyncDateTime__c</field>
+            </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>RemoteExternalIdTxt__c</field>
+            </layoutItems>
         </layoutColumns>
         <layoutColumns>
             <layoutItems>
@@ -92,6 +100,10 @@
     <relatedLists>
         <fields>NAME</fields>
         <relatedList>Request__c.DeliveryEntityId__c</relatedList>
+    </relatedLists>
+    <relatedLists>
+        <fields>NAME</fields>
+        <relatedList>Ticket__c.ClientNetworkEntityId__c</relatedList>
     </relatedLists>
     <showEmailCheckbox>false</showEmailCheckbox>
     <showHighlightsPanel>false</showHighlightsPanel>

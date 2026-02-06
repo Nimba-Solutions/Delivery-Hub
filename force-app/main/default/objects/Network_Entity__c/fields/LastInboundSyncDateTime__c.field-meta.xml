@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastInboundSyncDateTime__c</fullName>
+    <description>Tracks when we last pulled updates from this vendor.</description>
+    <inlineHelpText>Tracks when we last pulled updates from this vendor.</inlineHelpText>
+    <label>Last Inbound Sync</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
