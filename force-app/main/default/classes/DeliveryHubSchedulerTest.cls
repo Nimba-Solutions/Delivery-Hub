@@ -3,7 +3,6 @@ private class DeliveryHubSchedulerTest {
 
     @TestSetup
     static void makeData() {
-        // Create the Vendor config so the Poller doesn't crash
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Mothership',
             StatusPk__c = 'Active',
@@ -19,18 +18,23 @@ private class DeliveryHubSchedulerTest {
         Test.setMock(HttpCalloutMock.class, new MockResponse());
 
         Test.startTest();
-        // Schedule the job
-        String cronExp = '0 0 * * * ?'; // Every hour
+        String cronExp = '0 0 * * * ?'; 
         String jobId = System.schedule('Test Delivery Hub Sync', cronExp, new DeliveryHubScheduler());
         Test.stopTest();
 
-        // Verify job was scheduled
         CronTrigger ct = [SELECT Id, CronExpression, TimesTriggered FROM CronTrigger WHERE Id = :jobId];
         System.assertEquals(cronExp, ct.CronExpression);
     }
     
-    // Simple Mock to satisfy the Callout
+    /**
+     * @description Mock implementation for Callout
+     */
     public class MockResponse implements HttpCalloutMock {
+        /**
+         * @description Respond to the mock request
+         * @param req The HTTP request
+         * @return The HTTP response
+         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);

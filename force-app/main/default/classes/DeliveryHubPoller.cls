@@ -13,7 +13,6 @@ public without sharing class DeliveryHubPoller {
     public static String pollUpdates() {
         try {
             // 1. Get Active Vendor (Mothership)
-            // Query runs in System Mode implicitly in Apex
             Network_Entity__c vendor = [
                 SELECT Id, IntegrationEndpointUrlTxt__c, LastInboundSyncDateTime__c, RemoteExternalIdTxt__c 
                 FROM Network_Entity__c 
@@ -22,12 +21,8 @@ public without sharing class DeliveryHubPoller {
                 LIMIT 1
             ];
 
-            if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) {
-                return 'Error: Vendor URL missing';
-            }
-            if (String.isBlank(vendor.RemoteExternalIdTxt__c)) {
-                return 'Error: Remote ID (My ID) missing on Vendor record';
-            }
+            if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) return 'Error: Vendor URL missing';
+            if (String.isBlank(vendor.RemoteExternalIdTxt__c)) return 'Error: Remote ID (My ID) missing on Vendor record';
 
             // 2. Prepare Request
             String sinceParam = (vendor.LastInboundSyncDateTime__c != null) 
@@ -46,34 +41,7 @@ public without sharing class DeliveryHubPoller {
             HttpResponse res = http.send(req);
 
             if (res.getStatusCode() == 200) {
-                // 3. Process Results
-                Map<String, Object> response = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-                List<Object> events = (List<Object>) response.get('events');
-                
-                Integer successCount = 0;
-
-                for (Object itemObj : events) {
-                    Map<String, Object> item = (Map<String, Object>) itemObj;
-                    String objectType = (String) item.get('objectType');
-                    Map<String, Object> payload = (Map<String, Object>) item.get('payload');
-                    
-                    try {
-                        DeliveryHubSyncService.processSync(objectType, payload);
-                        successCount++;
-                    } catch(Exception e) {
-                        System.debug(LoggingLevel.ERROR, 'Sync Error for ' + objectType + ': ' + e.getMessage());
-                    }
-                }
-
-                // 4. Update High-Water Mark
-                String serverTimeStr = (String) response.get('latestServerTime');
-                if (serverTimeStr != null) {
-                    vendor.LastInboundSyncDateTime__c = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
-                    // Use AccessLevel.SYSTEM_MODE for DML to ensure it saves regardless of user perms
-                    Database.update(vendor, AccessLevel.SYSTEM_MODE);
-                }
-
-                return 'Success: Synced ' + successCount + ' items.';
+                return handleSuccess(res.getBody(), vendor);
             } else {
                 return 'Error: HTTP ' + res.getStatusCode() + ' ' + res.getBody();
             }
@@ -81,5 +49,49 @@ public without sharing class DeliveryHubPoller {
         } catch (Exception e) {
             return 'Exception: ' + e.getMessage() + ' ' + e.getStackTraceString();
         }
+    }
+
+    /**
+     * @description Helper to process the successful JSON response.
+     * @param responseBody The JSON string from the server.
+     * @param vendor The vendor record to update with the new high-water mark.
+     * @return Status string.
+     */
+    private static String handleSuccess(String responseBody, Network_Entity__c vendor) {
+        Map<String, Object> response = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
+        List<Object> events = (List<Object>) response.get('events');
+        
+        Integer successCount = processEvents(events);
+
+        // Update High-Water Mark
+        String serverTimeStr = (String) response.get('latestServerTime');
+        if (serverTimeStr != null) {
+            vendor.LastInboundSyncDateTime__c = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
+            Database.update(vendor, AccessLevel.SYSTEM_MODE);
+        }
+
+        return 'Success: Synced ' + successCount + ' items.';
+    }
+
+    /**
+     * @description Helper to loop through events and call the service.
+     * @param events List of event objects.
+     * @return Count of successfully processed items.
+     */
+    private static Integer processEvents(List<Object> events) {
+        Integer count = 0;
+        for (Object itemObj : events) {
+            Map<String, Object> item = (Map<String, Object>) itemObj;
+            try {
+                DeliveryHubSyncService.processSync(
+                    (String) item.get('objectType'), 
+                    (Map<String, Object>) item.get('payload')
+                );
+                count++;
+            } catch(Exception e) {
+                System.debug(LoggingLevel.ERROR, 'Sync Error: ' + e.getMessage());
+            }
+        }
+        return count;
     }
 }
