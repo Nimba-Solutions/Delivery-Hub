@@ -137,6 +137,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Sync_Item__c.SourceEventTimestampDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Sync_Item__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
