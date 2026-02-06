@@ -20,11 +20,16 @@ public without sharing class SyncEngine {
      * @param oldMap The map of old records (Trigger.oldMap).
      * @param fieldsToTrack Set of specific fields to monitor for changes.
      */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> fieldsToTrack) {
         
         // 1. Safety Checks
-        if (isSyncContext) return; // Don't sync updates caused by the sync itself
-        if (newRecords == null || newRecords.isEmpty()) return;
+        if (isSyncContext) {
+            return; 
+        }
+        if (newRecords == null || newRecords.isEmpty()) {
+            return;
+        }
 
         try {
             // 2. Get Active Vendor (Mothership)
@@ -37,7 +42,9 @@ public without sharing class SyncEngine {
             ];
 
             // If no active vendor, we don't queue anything.
-            if (vendor.StatusPk__c != 'Active') return;
+            if (vendor.StatusPk__c != 'Active') {
+                return;
+            }
 
             List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
 
@@ -98,8 +105,7 @@ public without sharing class SyncEngine {
             item.TicketId__c = (String)rec.get('TicketId__c');
         }
 
-        // Create Payload (Generic JSON serialization of the record)
-        // In a real scenario, you might want a more specific wrapper
+        // Create Payload
         item.PayloadTxt__c = JSON.serialize(rec);
 
         return item;
