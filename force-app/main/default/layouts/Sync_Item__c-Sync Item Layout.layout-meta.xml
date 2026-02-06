@@ -18,6 +18,10 @@
                 <behavior>Edit</behavior>
                 <field>DirectionPk__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>SourceEventTimestampDateTime__c</field>
+            </layoutItems>
         </layoutColumns>
         <layoutColumns>
             <layoutItems>
