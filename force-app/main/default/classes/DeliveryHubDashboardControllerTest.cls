@@ -1,28 +1,44 @@
 @IsTest
 private class DeliveryHubDashboardControllerTest {
+    
     @IsTest
     static void testGetMetrics() {
-        // Create dummy request
-        Network_Entity__c v = new Network_Entity__c(Name='V', IntegrationEndpointUrlTxt__c='x'); 
-        insert v;
-        Ticket__c t = new Ticket__c(WorkItemNameTxt__c='T'); 
-        insert t;
-        
-        Request__c r = new Request__c(
-            TicketId__c=t.Id, 
-            DeliveryEntityId__c=v.Id, 
-            StatusPk__c='Draft',
-            PreApprovedHoursNumber__c=10, 
-            HourlyRateCurrency__c=100
+        // 1. Create Active Ticket with Hours
+        Ticket__c t = new Ticket__c(
+            WorkItemNameTxt__c = 'Test Ticket',
+            StageNamePk__c = 'In Progress', // Not 'Closed' or 'Done'
+            LoggedHoursNum__c = 10
         );
-        insert r;
+        insert t;
+
+        // 2. Create Sync Items (1 Success, 1 Failure)
+        List<Sync_Item__c> items = new List<Sync_Item__c>();
+        
+        items.add(new Sync_Item__c(
+            ObjectTypePk__c = 'Ticket__c',
+            StatusPk__c = 'Synced',
+            PayloadTxt__c = '{}',
+            TicketId__c = t.Id
+        ));
+        
+        items.add(new Sync_Item__c(
+            ObjectTypePk__c = 'Ticket__c',
+            StatusPk__c = 'Failed',
+            PayloadTxt__c = '{}',
+            TicketId__c = t.Id
+        ));
+        
+        insert items;
 
         Test.startTest();
         Map<String, Decimal> metrics = DeliveryHubDashboardController.getBudgetMetrics();
         Test.stopTest();
 
-        System.assertEquals(10, metrics.get('totalHours'));
-        System.assertEquals(1000, metrics.get('estimatedSpend'));
-        System.assertEquals(1, metrics.get('activeRequests'));
+        // 3. Assertions
+        System.assertEquals(1, metrics.get('activeRequests'), 'Should count 1 active ticket');
+        System.assertEquals(10, metrics.get('totalHours'), 'Should sum logged hours');
+        System.assertEquals(1, metrics.get('succeededSyncs'), 'Should count 1 success');
+        System.assertEquals(1, metrics.get('failedSyncs'), 'Should count 1 failure');
+        System.assertEquals(0, metrics.get('estimatedSpend'), 'Spend should be zero');
     }
 }
