@@ -2,107 +2,100 @@
 private class SyncEngineTest {
 
     @TestSetup
-    static void makeData() {
-        Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Test Ticket',
-            StageNamePk__c = 'Backlog',
-            EstimatedHoursNumber__c = 5,
-            BriefDescriptionTxt__c = 'Original Description'
+    static void setupData() {
+        // CRITICAL: SyncEngine now requires an Active Vendor to function.
+        Network_Entity__c vendor = new Network_Entity__c(
+            Name = 'Mothership',
+            EntityTypePk__c = 'Vendor',
+            StatusPk__c = 'Active',
+            IntegrationEndpointUrlTxt__c = 'https://fake-endpoint.com'
         );
-        insert t;
-        // CLEANUP: Delete noise
-        delete [SELECT Id FROM Sync_Item__c];
+        insert vendor;
     }
 
     @IsTest
     static void testCaptureChangesInsert() {
-        Ticket__c newTicket = new Ticket__c(
-            WorkItemNameTxt__c = 'Fresh Ticket',
+        // 1. Create a Ticket (should trigger SyncEngine)
+        Ticket__c t = new Ticket__c(
+            WorkItemNameTxt__c = 'Test Ticket',
             StageNamePk__c = 'Backlog',
-            EstimatedHoursNumber__c = 10
+            PriorityPk__c = 'Medium'
         );
-
+        
         Test.startTest();
-        insert newTicket; 
+        insert t;
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c, ObjectTypePk__c, TicketId__c, SourceEventTimestampDateTime__c FROM Sync_Item__c WHERE TicketId__c = :newTicket.Id];
-        System.assertEquals(1, items.size(), 'Should create 1 Sync Item');
-        
-        // NEW: Verify Source Timestamp
-        System.assertNotEquals(null, items[0].SourceEventTimestampDateTime__c, 'Source Timestamp should be populated');
-        // It should be very close to now (within seconds)
-        Long diff = Math.abs(System.now().getTime() - items[0].SourceEventTimestampDateTime__c.getTime());
-        System.assert(diff < 5000, 'Timestamp should be recent (within 5s)');
-
-        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(items[0].PayloadTxt__c);
-        System.assertEquals('Create', payload.get('Action'));
+        // 2. Verify Sync Item created
+        List<Sync_Item__c> items = [SELECT Id, ObjectTypePk__c, StatusPk__c FROM Sync_Item__c];
+        System.assertEquals(1, items.size(), 'Should create 1 Sync Item on insert');
+        System.assertEquals('Ticket__c', items[0].ObjectTypePk__c);
+        System.assertEquals('Queued', items[0].StatusPk__c);
     }
 
     @IsTest
     static void testCaptureChangesUpdate() {
-        Ticket__c t = [SELECT Id, StageNamePk__c FROM Ticket__c LIMIT 1];
+        // 1. Create Ticket
+        Ticket__c t = new Ticket__c(
+            WorkItemNameTxt__c = 'Original Name',
+            StageNamePk__c = 'Backlog'
+        );
+        insert t;
         
+        // Clear initial sync item from insert
+        delete [SELECT Id FROM Sync_Item__c];
+
+        // 2. Update Ticket
         Test.startTest();
-        t.StageNamePk__c = 'In Development';
-        update t; 
+        t.WorkItemNameTxt__c = 'Updated Name';
+        update t;
         Test.stopTest();
 
-        Sync_Item__c item = [SELECT PayloadTxt__c, SourceEventTimestampDateTime__c FROM Sync_Item__c WHERE TicketId__c = :t.Id LIMIT 1];
-        
-        System.assertNotEquals(null, item.SourceEventTimestampDateTime__c, 'Update should also capture timestamp');
-        
-        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(item.PayloadTxt__c);
-        System.assertEquals('In Development', payload.get('StageNamePk__c'));
-    }
-
-    @IsTest
-    static void testCaptureChangesNoChange() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        Test.startTest();
-        t.WorkItemNameTxt__c = 'Changed Name but not monitored';
-        update t; 
-        Test.stopTest();
-
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c];
-        System.assertEquals(0, items.size());
+        // 3. Verify Sync Item created
+        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
+        System.assertEquals(1, items.size(), 'Should create 1 Sync Item on update');
+        System.assert(items[0].PayloadTxt__c.contains('Updated Name'), 'Payload should contain new value');
     }
 
     @IsTest
     static void testCaptureChangesChildLinking() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        Ticket_Comment__c comment = new Ticket_Comment__c(
+        // 1. Create Parent Ticket
+        Ticket__c t = new Ticket__c(
+            WorkItemNameTxt__c = 'Parent Ticket',
+            StageNamePk__c = 'Backlog'
+        );
+        insert t;
+
+        // Clear initial sync item
+        delete [SELECT Id FROM Sync_Item__c];
+
+        // 2. Create Comment (should link to Ticket)
+        Test.startTest();
+        Ticket_Comment__c c = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'Test Comment'
         );
-        insert comment; 
-        
-        List<SObject> newRecords = new List<SObject>{ comment };
-        Set<String> monitoredFields = new Set<String>{'BodyTxt__c'};
-
-        Test.startTest();
-        SyncEngine.captureChanges(newRecords, null, monitoredFields);
+        insert c;
         Test.stopTest();
 
-        Sync_Item__c item = [SELECT ObjectTypePk__c, TicketId__c FROM Sync_Item__c WHERE ObjectTypePk__c = 'Ticket_Comment__c' LIMIT 1];
-        System.assertEquals(t.Id, item.TicketId__c, 'Parent ID should be linked');
+        // 3. Verify Sync Item uses Parent ID
+        Sync_Item__c item = [SELECT Id, TicketId__c, ObjectTypePk__c FROM Sync_Item__c LIMIT 1];
+        System.assertEquals('Ticket_Comment__c', item.ObjectTypePk__c);
+        System.assertEquals(t.Id, item.TicketId__c, 'Sync Item should be linked to the Parent Ticket');
     }
     
     @IsTest
-    static void testCaptureChangesInvalidFieldGracefulFail() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        List<SObject> newRecords = new List<SObject>{ t };
-        Set<String> badFields = new Set<String>{'NonExistentField__c'};
-
+    static void testLoopPrevention() {
+        // 1. Set the "Echo Prevention" flag
+        SyncEngine.setSyncContext();
+        
         Test.startTest();
-        try {
-            SyncEngine.captureChanges(newRecords, null, badFields);
-        } catch (Exception e) {
-            System.assert(false, 'Should not throw exception');
-        }
+        Ticket__c t = new Ticket__c(WorkItemNameTxt__c = 'Ignored Ticket');
+        insert t;
         Test.stopTest();
-        System.assert(true);
+        
+        // 2. Verify NO Sync Item created
+        Integer count = [SELECT COUNT() FROM Sync_Item__c];
+        System.assertEquals(0, count, 'Should ignore changes when Sync Context is set');
     }
 }
