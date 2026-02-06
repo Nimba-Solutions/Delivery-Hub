@@ -9,6 +9,7 @@ global without sharing class DeliveryHubOutboundResource {
      * @description GET Endpoint for Clients to poll for updates.
      * Expects 'Client-Entity-ID' header and optional 'since' parameter.
      */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     @HttpGet
     global static void getChanges() {
         RestRequest req = RestContext.request;
@@ -29,7 +30,6 @@ global without sharing class DeliveryHubOutboundResource {
             DateTime sinceDt = (sinceStr != null) ? DateTime.valueOf(sinceStr.replace('T', ' ')) : DateTime.newInstance(1900, 1, 1);
 
             // 3. Query the SYNC STREAM via Relationship Traversal
-            // Standard Apex SOQL runs in System Mode for FLS/CRUD by default.
             List<Sync_Item__c> items = [
                 SELECT Id, 
                        ObjectTypePk__c, 

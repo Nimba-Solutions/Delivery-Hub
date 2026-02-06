@@ -21,8 +21,13 @@ public without sharing class DeliveryHubPoller {
                 LIMIT 1
             ];
 
-            if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) return 'Error: Vendor URL missing';
-            if (String.isBlank(vendor.RemoteExternalIdTxt__c)) return 'Error: Remote ID (My ID) missing on Vendor record';
+            // FIX: Added braces to satisfy PMD
+            if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) {
+                return 'Error: Vendor URL missing';
+            }
+            if (String.isBlank(vendor.RemoteExternalIdTxt__c)) {
+                return 'Error: Remote ID (My ID) missing on Vendor record';
+            }
 
             // 2. Prepare Request
             String sinceParam = (vendor.LastInboundSyncDateTime__c != null) 
