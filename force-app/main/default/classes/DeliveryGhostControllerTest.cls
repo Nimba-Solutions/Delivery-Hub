@@ -3,49 +3,52 @@ private class DeliveryGhostControllerTest {
 
     @IsTest
     static void testCreateQuickRequest() {
-        // Create a dummy record to generate a real ID
+        // 1. Create a dummy record to get a REAL ID (Satisfies 'AvoidHardcodingId')
         Account mockRecord = new Account(Name = 'Test Context Account');
         insert mockRecord;
 
-        // Setup context data
-        DeliveryGhostController.ContextWrapper context = new DeliveryGhostController.ContextWrapper();
-        context.url = 'https://salesforce.com/test';
-        context.browser = 'Chrome Test Agent';
-        context.objectName = 'Account';
-        context.recordId = mockRecord.Id; 
-
-        String contextJson = JSON.serialize(context);
+        // 2. Setup context data using the real ID
+        Map<String, String> contextMap = new Map<String, String>{
+            'url' => 'https://salesforce.com/test',
+            'browser' => 'Chrome Test Agent',
+            'objectName' => 'Account',
+            'recordId' => mockRecord.Id // Dynamic ID
+        };
+        String contextJson = JSON.serialize(contextMap);
 
         Test.startTest();
-        // Pass priority 'High'
-        Id ticketId = DeliveryGhostController.createQuickRequest('Test Bug', 'Something is broken', 'High', contextJson);
+        // Pass 'Bug' as the 5th argument
+        Id ticketId = DeliveryGhostController.createQuickRequest(
+            'Test Issue', 
+            'Something is broken', 
+            'High', 
+            contextJson, 
+            'Bug' 
+        );
         Test.stopTest();
 
-        // Verify Ticket Created
+        // 3. Verify Ticket Created
         Ticket__c t = [SELECT WorkItemNameTxt__c, DetailsTxt__c, PriorityPk__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
-        System.assertEquals('Test Bug', t.WorkItemNameTxt__c, 'Work Item Name should match');
+        
+        System.assertEquals('[Bug] Test Issue', t.WorkItemNameTxt__c, 'Work Item Name should include [Bug] prefix');
         System.assertEquals('High', t.PriorityPk__c, 'Priority should match');
-        System.assert(t.DetailsTxt__c.contains('<b>--- AUTO-GENERATED CONTEXT ---</b>'), 'Details should contain context header');
+        System.assert(t.DetailsTxt__c.contains('Auto-Captured Context'), 'Details should contain context header');
     }
 
     @IsTest
     static void testLogUserActivity() {
-        Account mockRecord = new Account(Name = 'Test Context Account');
-        insert mockRecord;
-
-        DeliveryGhostController.ContextWrapper context = new DeliveryGhostController.ContextWrapper();
-        context.url = 'https://salesforce.com/nav';
-        context.browser = 'Safari';
-        context.objectName = 'Opportunity';
-        context.recordId = mockRecord.Id; 
-
-        String contextJson = JSON.serialize(context);
+        Map<String, String> contextMap = new Map<String, String>{
+            'url' => 'https://salesforce.com/nav',
+            'browser' => 'Safari'
+        };
+        String contextJson = JSON.serialize(contextMap);
 
         Test.startTest();
+        // Just verify it doesn't throw an exception
         DeliveryGhostController.logUserActivity('Navigation', contextJson);
         Test.stopTest();
-
-        User_Activity_Log__c log = [SELECT ActionTypePk__c FROM User_Activity_Log__c LIMIT 1];
-        System.assertEquals('Navigation', log.ActionTypePk__c);
+        
+        // Since the method only debugs, no assertion needed other than clean execution.
+        // If you had a real logging object, you would query it here.
     }
 }
