@@ -2,7 +2,6 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>PriorityPk__c</fullName>
     <description>Priority level of the ticket</description>
-    <externalId>false</externalId>
     <label>Priority</label>
     <required>false</required>
     <trackTrending>false</trackTrending>

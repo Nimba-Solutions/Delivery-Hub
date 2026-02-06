@@ -13,8 +13,7 @@ public with sharing class SyncEngine {
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> monitoredFields) {
         List<Sync_Item__c> syncItemsToInsert = new List<Sync_Item__c>();
         
-        // FIX: Use getLocalName() to strip Namespace prefix (e.g., 'delivery__Ticket__c' -> 'Ticket__c')
-        // This prevents INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST errors in managed packages.
+        // Use getLocalName() to strip Namespace prefix (e.g., 'delivery__Ticket__c' -> 'Ticket__c')
         String objectType = newRecords[0].getSObjectType().getDescribe().getLocalName();
 
         for (SObject newRecord : newRecords) {
@@ -31,7 +30,7 @@ public with sharing class SyncEngine {
         }
 
         if (!syncItemsToInsert.isEmpty()) {
-            // FIX: CRUD Violation - Explicitly using System Mode for infrastructure logging
+            // Explicitly using System Mode for infrastructure logging
             Database.insert(syncItemsToInsert, AccessLevel.SYSTEM_MODE);
             
             // Fire the processor immediately if limits allow
@@ -63,8 +62,7 @@ public with sharing class SyncEngine {
                             payload.put(field, val);
                         }
                     } catch (Exception e) {
-                        // PMD Suppression: Gracefully skip fields that are invalid/inaccessible
-                        continue;
+                        continue; // Gracefully skip invalid fields
                     }
                 }
             }
@@ -97,7 +95,18 @@ public with sharing class SyncEngine {
         // Add Context
         payload.put('Id', record.Id);
         payload.put('LastModifiedBy', UserInfo.getName());
-        payload.put('LastModifiedDate', System.now());
+        
+        // Capture Event Time (Source of Truth)
+        DateTime eventTime;
+        try {
+            eventTime = (DateTime)record.get('LastModifiedDate');
+        } catch(Exception e) {
+            // Fallback for tests or memory-only records where LastModifiedDate isn't set
+            eventTime = System.now();
+        }
+        if (eventTime == null) { eventTime = System.now(); }
+        
+        payload.put('LastModifiedDate', eventTime);
 
         Sync_Item__c item = new Sync_Item__c();
         item.DirectionPk__c = 'Outbound';
@@ -105,6 +114,9 @@ public with sharing class SyncEngine {
         item.ObjectTypePk__c = objectType;
         item.PayloadTxt__c = JSON.serialize(payload);
         item.LocalRecordIdTxt__c = (String)record.get('Id');
+        
+        // NEW: Populate the Source Event Timestamp for High-Water Mark logic
+        item.SourceEventTimestampDateTime__c = eventTime;
 
         // Intelligent Parent Linking
         if (objectType == 'Ticket__c') {
@@ -113,7 +125,6 @@ public with sharing class SyncEngine {
             try {
                 item.TicketId__c = (Id)record.get('TicketId__c');
             } catch (Exception e) {
-                // PMD Suppression: Parent field might not exist on generic object
                 System.debug(LoggingLevel.FINE, 'Parent ID linking failed: ' + e.getMessage());
             }
         }
