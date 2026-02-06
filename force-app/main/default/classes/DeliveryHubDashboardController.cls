@@ -1,11 +1,11 @@
 /**
  * @description Controller for the Delivery Hub Dashboard LWC.
- * Returns System Pulse metrics: Active Tickets, Hours, and Sync Health.
+ * Returns System Pulse metrics: Active Tickets and Sync Health.
  */
 public with sharing class DeliveryHubDashboardController {
 
     /**
-     * @description Calculates active tickets, total hours, and sync health stats.
+     * @description Calculates active tickets and sync health stats.
      * @return Map<String, Decimal> Metrics map.
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
@@ -13,22 +13,20 @@ public with sharing class DeliveryHubDashboardController {
     public static Map<String, Decimal> getBudgetMetrics() {
         Map<String, Decimal> metrics = new Map<String, Decimal>();
 
-        // 1. Ticket Metrics (Active Count & Hours)
-        // We use Ticket__c as it is the main object for the Delivery Hub
+        // 1. Ticket Metrics (Active Count Only)
+        // Removed LoggedHoursNum__c to fix deployment error
         AggregateResult[] ticketStats = [
-            SELECT Count(Id) total, Sum(LoggedHoursNum__c) hours 
+            SELECT Count(Id) total
             FROM Ticket__c 
             WHERE StageNamePk__c NOT IN ('Closed', 'Done')
         ];
 
         Decimal activeCount = (ticketStats[0].get('total') != null) ? (Decimal)ticketStats[0].get('total') : 0;
-        Decimal totalHours = (ticketStats[0].get('hours') != null) ? (Decimal)ticketStats[0].get('hours') : 0;
-
+        
         metrics.put('activeRequests', activeCount);
-        metrics.put('totalHours', totalHours);
+        metrics.put('totalHours', 0); // Placeholder until field exists
 
         // 2. Sync Health Metrics (Succeeded vs Failed)
-        // Aggregate by Status to get counts efficiently
         AggregateResult[] syncStats = [
             SELECT StatusPk__c, Count(Id) cnt 
             FROM Sync_Item__c 
@@ -52,8 +50,6 @@ public with sharing class DeliveryHubDashboardController {
 
         metrics.put('succeededSyncs', success);
         metrics.put('failedSyncs', failed);
-        
-        // Remove legacy estimatedSpend
         metrics.put('estimatedSpend', 0);
 
         return metrics;

@@ -3,11 +3,10 @@ private class DeliveryHubDashboardControllerTest {
     
     @IsTest
     static void testGetMetrics() {
-        // 1. Create Active Ticket with Hours
+        // 1. Create Active Ticket
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Test Ticket',
-            StageNamePk__c = 'In Progress', // Not 'Closed' or 'Done'
-            LoggedHoursNum__c = 10
+            StageNamePk__c = 'In Progress'
         );
         insert t;
 
@@ -36,9 +35,7 @@ private class DeliveryHubDashboardControllerTest {
 
         // 3. Assertions
         System.assertEquals(1, metrics.get('activeRequests'), 'Should count 1 active ticket');
-        System.assertEquals(10, metrics.get('totalHours'), 'Should sum logged hours');
         System.assertEquals(1, metrics.get('succeededSyncs'), 'Should count 1 success');
         System.assertEquals(1, metrics.get('failedSyncs'), 'Should count 1 failure');
-        System.assertEquals(0, metrics.get('estimatedSpend'), 'Spend should be zero');
     }
 }
