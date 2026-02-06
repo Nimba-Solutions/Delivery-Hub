@@ -32,19 +32,19 @@ public without sharing class SyncEngine {
         }
 
         try {
-            // 2. Get Active Vendor (Mothership)
-            // We need to know who we are sending to.
-            Network_Entity__c vendor = [
+            // FIX: Use List query to handle "0 rows" gracefully without throwing Exception
+            List<Network_Entity__c> vendors = [
                 SELECT Id, IntegrationEndpointUrlTxt__c, StatusPk__c 
                 FROM Network_Entity__c 
                 WHERE EntityTypePk__c = 'Vendor' 
                 LIMIT 1
             ];
 
-            // If no active vendor, we don't queue anything.
-            if (vendor.StatusPk__c != 'Active') {
+            // If no vendor found OR not active, abort gracefully
+            if (vendors.isEmpty() || vendors[0].StatusPk__c != 'Active') {
                 return;
             }
+            Network_Entity__c vendor = vendors[0];
 
             List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
 
@@ -79,7 +79,6 @@ public without sharing class SyncEngine {
             }
 
         } catch (Exception e) {
-            // Log error but don't break the user's transaction unless critical
             System.debug(LoggingLevel.ERROR, 'SyncEngine Error: ' + e.getMessage());
         }
     }
@@ -93,21 +92,17 @@ public without sharing class SyncEngine {
         item.DirectionPk__c = 'Outbound';
         item.LocalRecordIdTxt__c = (String)rec.Id;
         
-        // Determine Object Type dynamically
         Id recordId = (Id)rec.Id;
         String objectType = recordId.getSobjectType().getDescribe().getName();
         item.ObjectTypePk__c = objectType;
 
-        // Specific Logic for Tickets vs Comments
         if (objectType == 'Ticket__c') {
             item.TicketId__c = (String)rec.Id;
         } else if (objectType == 'Ticket_Comment__c') {
             item.TicketId__c = (String)rec.get('TicketId__c');
         }
 
-        // Create Payload
         item.PayloadTxt__c = JSON.serialize(rec);
-
         return item;
     }
 }
