@@ -11,6 +11,9 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFileIntakeTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFileSenderTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubIntakeServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubOutboundResourceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubPollerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSchedulerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSenderTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSettingsControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSetupControllerTest</testClassName>
