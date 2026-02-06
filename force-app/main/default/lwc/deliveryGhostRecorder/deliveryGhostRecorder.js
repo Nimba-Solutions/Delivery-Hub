@@ -3,7 +3,6 @@ import { CurrentPageReference } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import userId from '@salesforce/user/Id';
 
-// Apex Controllers
 import createTicket from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest'; 
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
@@ -13,7 +12,8 @@ export default class DeliveryGhostRecorder extends LightningElement {
     @api displayMode = 'Card';   
     
     @track isOpen = false;
-    @track subject = '';      // New Field
+    @track requestType = 'Bug'; // Default to Bug
+    @track subject = ''; 
     @track description = '';
     @track priority = 'Medium';
     @track isSending = false;
@@ -22,9 +22,33 @@ export default class DeliveryGhostRecorder extends LightningElement {
     currentPageRef;
     currentUserId = userId; 
 
+    // --- GETTERS FOR DYNAMIC UI ---
     get isCardMode() { return this.displayMode === 'Card'; }
     get isFloatingMode() { return this.displayMode === 'Floating Button'; }
     
+    get typeOptions() {
+        return [
+            { label: 'Report Issue', value: 'Bug' },
+            { label: 'Request Feature', value: 'Feature' }
+        ];
+    }
+
+    get isBug() { return this.requestType === 'Bug'; }
+
+    get cardTitle() { return this.isBug ? 'Report Issue' : 'New Feature Request'; }
+    get cardIcon() { return this.isBug ? 'utility:bug' : 'utility:light_bulb'; }
+    
+    get subjectLabel() { return this.isBug ? 'Summary' : 'Feature Name'; }
+    get subjectPlaceholder() { return this.isBug ? 'e.g., Sort not working...' : 'e.g., Dark Mode for Dashboard...'; }
+    
+    get detailsPlaceholder() { 
+        return this.isBug 
+            ? 'Steps to reproduce, expected behavior, error messages...' 
+            : 'What problem does this solve? How should it work?'; 
+    }
+
+    get submitButtonLabel() { return this.isBug ? 'Report Bug' : 'Submit Feature'; }
+
     get priorityOptions() {
         return [
             { label: 'Low', value: 'Low' },
@@ -38,18 +62,13 @@ export default class DeliveryGhostRecorder extends LightningElement {
         return this.uploadedFileIds.length;
     }
 
-    // CLEAN DISPLAY NAME FOR UI
+    // ... (Keep Context gathering Logic same as before) ...
     get contextDisplayName() {
         if (!this.currentPageRef) return 'General';
-        
         const attrs = this.currentPageRef.attributes;
         if (attrs.objectApiName) return attrs.objectApiName;
         if (attrs.name) return attrs.name; 
-        
-        if (this.currentPageRef.type === 'standard__namedPage') {
-            return 'Page: ' + attrs.pageName;
-        }
-        
+        if (this.currentPageRef.type === 'standard__namedPage') return 'Page: ' + attrs.pageName;
         return 'General Context';
     }
     
@@ -89,6 +108,11 @@ export default class DeliveryGhostRecorder extends LightningElement {
         this.isOpen = !this.isOpen;
     }
 
+    // --- HANDLERS ---
+    handleTypeChange(event) {
+        this.requestType = event.detail.value;
+    }
+
     handleSubjectChange(event) {
         this.subject = event.target.value;
     }
@@ -107,35 +131,33 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     handleSubmit() {
-        // Validation: Must have at least a description OR a subject
         if (!this.description && !this.subject) return;
         
         this.isSending = true;
-
         const context = this.gatherContext();
         
-        // --- SMART SUBJECT LOGIC ---
-        let finalSubject = this.subject;
-
-        // If Subject is empty, auto-generate from Description
-        if (!finalSubject && this.description) {
-            if (this.description.length > 95) {
-                finalSubject = this.description.substring(0, 95) + '...';
-            } else {
-                finalSubject = this.description;
-            }
-        }
+        // Add Type to the context so Apex knows what it is
+        // Or better yet, send it as a dedicated param if the controller supports it
+        // For now, we prepend it to the description or subject if we don't want to change Apex params
+        // But the best way is to update Apex to accept 'type'.
+        // Assuming current Apex is rigid, we pass it in context or modify subject slightly.
         
-        // Fallback if somehow both are essentially empty
+        // Let's modify the Apex controller to accept 'ticketType' (See Step 3 below)
+        
+        let finalSubject = this.subject;
+        if (!finalSubject && this.description) {
+            finalSubject = (this.description.length > 95 ? this.description.substring(0, 95) + '...' : this.description);
+        }
         if (!finalSubject) {
-            finalSubject = 'Issue on ' + (context.objectName || 'Home Page');
+            finalSubject = (this.isBug ? 'Issue' : 'Feature') + ' on ' + (context.objectName || 'Home Page');
         }
 
         createTicket({ 
             subject: finalSubject,
             description: this.description,
             priority: this.priority,
-            contextData: JSON.stringify(context)
+            contextData: JSON.stringify(context),
+            ticketType: this.requestType // NEW PARAMETER
         })
         .then(ticketId => {
             if (this.uploadedFileIds.length > 0) {
@@ -146,17 +168,12 @@ export default class DeliveryGhostRecorder extends LightningElement {
             }
 
             this.dispatchEvent(new ShowToastEvent({
-                title: 'Ticket Created',
-                message: 'Support has been notified.',
+                title: this.isBug ? 'Bug Reported' : 'Feature Requested',
+                message: 'Thank you for your feedback.',
                 variant: 'success'
             }));
             
-            // Reset
-            this.subject = '';
-            this.description = '';
-            this.priority = 'Medium';
-            this.uploadedFileIds = [];
-            this.isOpen = false;
+            this.resetForm();
         })
         .catch(error => {
             this.dispatchEvent(new ShowToastEvent({
@@ -170,14 +187,21 @@ export default class DeliveryGhostRecorder extends LightningElement {
         });
     }
 
+    resetForm() {
+        this.subject = '';
+        this.description = '';
+        this.priority = 'Medium';
+        this.uploadedFileIds = [];
+        this.isOpen = false;
+        this.requestType = 'Bug'; // Reset to default
+    }
+
     gatherContext() {
         let objName = this.currentPageRef?.attributes?.objectApiName;
         let recId = this.currentPageRef?.attributes?.recordId;
-        
         if (!objName && this.currentPageRef?.attributes?.name) {
             objName = this.currentPageRef.attributes.name;
         }
-
         return {
             url: window.location.href,
             browser: navigator.userAgent,

@@ -1,37 +1,78 @@
 <template>
-    <lightning-card title="Project Overview" icon-name="standard:currency">
-        <div class="slds-p-around_medium">
-            <div class="slds-grid slds-gutters">
+    <lightning-card title="System Pulse" icon-name="standard:service_report">
+        
+        <lightning-button-icon 
+            icon-name="utility:refresh" 
+            slot="actions" 
+            variant="border-filled" 
+            onclick={handleRefresh} 
+            alternative-text="Refresh Metrics">
+        </lightning-button-icon>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            
+            <div class="slds-grid slds-wrap slds-gutters_small">
                 
-                <div class="slds-col slds-size_1-of-3">
-                    <div class="slds-box slds-box_x-small slds-text-align_center slds-theme_shade">
-                        <div class="slds-text-heading_large slds-text-color_success">
-                            {metrics.activeRequests}
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-media slds-media_center slds-box slds-box_x-small slds-theme_shade">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="standard:case" size="medium"></lightning-icon>
                         </div>
-                        <div class="slds-text-body_small slds-text-color_weak">Active Tickets</div>
+                        <div class="slds-media__body">
+                            <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
+                                <strong>{metrics.activeRequests}</strong>
+                            </div>
+                            <div class="slds-text-title_caps slds-text-color_weak">Active Tickets</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="slds-col slds-size_1-of-3">
-                    <div class="slds-box slds-box_x-small slds-text-align_center slds-theme_shade">
-                        <div class="slds-text-heading_large">
-                            {metrics.totalHours}
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-media slds-media_center slds-box slds-box_x-small slds-theme_shade">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="standard:log_a_call" size="medium"></lightning-icon>
                         </div>
-                        <div class="slds-text-body_small slds-text-color_weak">Hours Booked</div>
+                        <div class="slds-media__body">
+                            <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
+                                <strong>{metrics.totalHours}</strong>
+                            </div>
+                            <div class="slds-text-title_caps slds-text-color_weak">Hours Booked</div>
+                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small" if:true={metrics.lastEntry}>
+                                Last: {metrics.lastEntry}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="slds-col slds-size_1-of-3">
-                    <div class="slds-box slds-box_x-small slds-text-align_center slds-theme_shade">
-                        <div class="slds-text-heading_large">
-                            <lightning-formatted-number 
-                                value={metrics.estimatedSpend} 
-                                format-style="currency" 
-                                currency-code="USD"
-                                maximum-fraction-digits="0">
-                            </lightning-formatted-number>
+                <div class="slds-col slds-size_1-of-1 slds-m-vertical_small">
+                    <div class="slds-border_bottom"></div>
+                </div>
+
+                <div class="slds-col slds-size_1-of-1 slds-m-bottom_small">
+                    <div class="slds-grid slds-grid_align-spread slds-m-bottom_xx-small">
+                        <span class="slds-text-body_small slds-text-color_weak">Connection Health</span>
+                        <span class="slds-text-body_small"><strong>{syncHealth}%</strong></span>
+                    </div>
+                    <div class="slds-progress-bar slds-progress-bar_small" aria-valuemin="0" aria-valuemax="100" aria-valuenow={syncHealth} role="progressbar">
+                        <span class={healthBarClass} style={barStyle}></span>
+                    </div>
+                </div>
+
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-box slds-box_xx-small slds-text-align_center slds-theme_default slds-border_right slds-border_left">
+                        <div class="slds-text-heading_medium slds-text-color_success">
+                            {metrics.succeededSyncs}
                         </div>
-                        <div class="slds-text-body_small slds-text-color_weak">Est. Spend</div>
+                        <div class="slds-text-body_small slds-text-color_weak">Synced</div>
+                    </div>
+                </div>
+
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-box slds-box_xx-small slds-text-align_center slds-theme_default slds-border_right slds-border_left">
+                        <div class={failTextClass}>
+                            {metrics.failedSyncs}
+                        </div>
+                        <div class="slds-text-body_small slds-text-color_weak">Failed</div>
                     </div>
                 </div>
 
