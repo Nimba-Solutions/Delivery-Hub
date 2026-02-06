@@ -252,6 +252,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Ticket__c.ClientNetworkEntityId__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Ticket__c.ClientPreApprovedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
