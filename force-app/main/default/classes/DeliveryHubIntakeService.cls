@@ -16,7 +16,7 @@ global without sharing class DeliveryHubIntakeService {
 
     @HttpPost
     global static void createTicket() {
-        // FIX: Just use the class name directly. No prefix needed.
+        // 1. STOP THE ECHO (Critical)
         SyncEngine.setSyncContext();
 
         RestRequest req = RestContext.request;
@@ -26,6 +26,27 @@ global without sharing class DeliveryHubIntakeService {
             String jsonBody = req.requestBody.toString();
             InboundPacket packet = (InboundPacket) JSON.deserialize(jsonBody, InboundPacket.class);
 
+            // 2. FIND OR CREATE CLIENT ENTITY
+            Network_Entity__c clientEntity;
+            List<Network_Entity__c> existingEntities = [
+                SELECT Id, Name FROM Network_Entity__c 
+                WHERE Name = :packet.companyName 
+                LIMIT 1
+            ];
+
+            if (!existingEntities.isEmpty()) {
+                clientEntity = existingEntities[0];
+            } else {
+                clientEntity = new Network_Entity__c(
+                    Name = packet.companyName,
+                    StatusPk__c = 'Active',
+                    // FIX: Changed TypePk__c to EntityTypePk__c to match your schema
+                    EntityTypePk__c = 'Client' 
+                );
+                insert as user clientEntity;
+            }
+
+            // 3. CREATE TICKET
             Ticket__c t = new Ticket__c();
             t.WorkItemNameTxt__c = packet.title; 
             t.BriefDescriptionTxt__c = packet.briefSummary;
@@ -36,6 +57,9 @@ global without sharing class DeliveryHubIntakeService {
             t.SourceEventReplayIdTxt__c = packet.brokerRequestId; 
             t.RequestTypePk__c = 'Partner Request';
             t.StatusPk__c = 'Backlog'; 
+            
+            // FIX: Commented out until you create the Lookup field on Ticket__c
+            // t.Network_Entity__c = clientEntity.Id; 
 
             insert as user t;
 
@@ -43,7 +67,8 @@ global without sharing class DeliveryHubIntakeService {
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'success' => true,
                 'ticketId' => t.Id,
-                'status' => t.StatusPk__c
+                'status' => t.StatusPk__c,
+                'entityId' => clientEntity.Id 
             }));
 
         } catch (Exception e) {
