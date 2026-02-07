@@ -8,7 +8,7 @@ public without sharing class DeliveryHubFileSender {
      */
     @AuraEnabled
     public static String sendFileToBroker(Id recordId, Id contentDocumentId) {
-        // REMOVED OUTER TRY/CATCH to prevent masking the real error message
+        // REMOVED OUTER TRY/CATCH to prevent masking real errors
         
         // 1. IDENTIFY CONTEXT
         String sObjectType = recordId.getSObjectType().getDescribe().getName();
@@ -24,26 +24,32 @@ public without sharing class DeliveryHubFileSender {
         ];
 
         // 3. FIND DESTINATIONS
+        // FIX: Removed 'RemoteTicketIdTxt__c != null' from WHERE clauses.
+        // We now query the record purely by ID and validate the field in Apex.
         if (sObjectType == 'Request__c') {
-            // Case A: Request
             Request__c req = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE Id = :recordId
-                AND RemoteTicketIdTxt__c != null
                 LIMIT 1
             ];
-            destinations.add(req);
+            // Filter in memory instead of SOQL
+            if (req.RemoteTicketIdTxt__c != null) {
+                destinations.add(req);
+            }
         } 
         else if (sObjectType == 'Ticket__c') {
-            // Case B: Ticket
-            destinations = [
+            List<Request__c> potentialDestinations = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
                 WHERE TicketId__c = :recordId 
-                AND RemoteTicketIdTxt__c != null
-                AND DeliveryEntityId__r.IntegrationEndpointUrlTxt__c != null
             ];
+            // Filter in memory
+            for (Request__c r : potentialDestinations) {
+                if (r.RemoteTicketIdTxt__c != null && r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c != null) {
+                    destinations.add(r);
+                }
+            }
         }
 
         // 4. VALIDATION
@@ -52,7 +58,7 @@ public without sharing class DeliveryHubFileSender {
                 ? 'This Ticket has no active Vendor Requests.' 
                 : 'This Request is not synced (Missing Remote ID).';
             
-            // Construct exception with setBody to ensure message visibility
+            // Construct exception with explicit message
             AuraHandledException e = new AuraHandledException(msg);
             e.setMessage(msg); 
             throw e;
@@ -65,7 +71,6 @@ public without sharing class DeliveryHubFileSender {
         for (Request__c req : destinations) {
             try {
                 // --- SAFE NAVIGATION START ---
-                // Prevent NullPointerException if the relationship wasn't loaded due to Test/Package context
                 String baseUrl = null;
                 if (req.DeliveryEntityId__r != null) {
                     baseUrl = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
@@ -80,7 +85,7 @@ public without sharing class DeliveryHubFileSender {
                 }
 
                 if (String.isBlank(baseUrl)) {
-                     throw new CalloutException('Vendor Endpoint URL is missing/blank for Request ' + req.Id);
+                     throw new CalloutException('Vendor Endpoint URL is missing for Request ' + req.Id);
                 }
                 // --- SAFE NAVIGATION END ---
 
@@ -116,11 +121,9 @@ public without sharing class DeliveryHubFileSender {
         if (successCount > 0) {
             return 'File sent to ' + successCount + ' vendor(s).';
         } else {
-            // Throw exception cleanly without wrapping it in another try/catch
             String msg = String.isNotBlank(lastError) ? lastError : 'Unknown error during upload loop.';
-            
             AuraHandledException e = new AuraHandledException('Upload Failed: ' + msg);
-            e.setMessage('Upload Failed: ' + msg); // Critical for Tests/LWC to see the string
+            e.setMessage('Upload Failed: ' + msg); 
             throw e;
         }
     }
