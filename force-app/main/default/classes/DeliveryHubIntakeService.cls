@@ -39,7 +39,7 @@ global without sharing class DeliveryHubIntakeService {
             } else {
                 clientEntity = new Network_Entity__c(
                     Name = packet.companyName,
-                    StatusPk__c = 'Active',
+                    StatusPk__c = 'Prospective',
                     // FIX: Changed TypePk__c to EntityTypePk__c to match your schema
                     EntityTypePk__c = 'Client' 
                 );
@@ -59,7 +59,7 @@ global without sharing class DeliveryHubIntakeService {
             t.StatusPk__c = 'Backlog'; 
             
             // FIX: Commented out until you create the Lookup field on Ticket__c
-            // t.Network_Entity__c = clientEntity.Id; 
+            t.ClientNetworkEntityId__c = clientEntity.Id; 
 
             insert as user t;
 
