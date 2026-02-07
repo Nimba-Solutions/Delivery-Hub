@@ -75,6 +75,9 @@ export default class DeliveryTicketChat extends LightningElement {
     }
 
     handleSend() {
+        // 1. CRITICAL FIX: Lock to prevent double-submit
+        if (this.isSending) return;
+        
         if (!this.commentBody || this.commentBody.trim() === '') return;
 
         this.isSending = true;
@@ -82,8 +85,7 @@ export default class DeliveryTicketChat extends LightningElement {
         postComment({ ticketId: this.recordId, body: this.commentBody })
             .then(() => {
                 this.commentBody = ''; 
-                // FIX: Removed the double-fetch logic. 
-                // Just refreshing the wire is enough and prevents the "double typing" visual glitch.
+                // Refresh wire to get the new comment from DB
                 return refreshApex(this.wiredResult);
             })
             .then(() => {

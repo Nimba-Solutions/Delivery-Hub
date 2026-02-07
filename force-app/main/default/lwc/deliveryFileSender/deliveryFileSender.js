@@ -35,8 +35,10 @@ export default class DeliveryFileSender extends LightningElement {
         const fileId = event.target.dataset.id;
         this.isLoading = true;
 
+        // CRITICAL: The key 'requestId' must match the Apex method parameter name EXACTLY.
+        // Even though this is a Ticket, the Apex expects 'requestId' as the variable name.
         sendFileToBroker({ requestId: this.recordId, contentDocumentId: fileId })
-            .then(() => {
+            .then(result => {
                 this.dispatchEvent(new ShowToastEvent({
                     title: 'Success',
                     message: 'File sent to Developer successfully!',
