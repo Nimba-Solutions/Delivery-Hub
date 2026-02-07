@@ -13,8 +13,7 @@ public without sharing class DeliveryHubFileSender {
             String sObjectType = recordId.getSObjectType().getDescribe().getName();
             List<Request__c> destinations = new List<Request__c>();
 
-            // 2. QUERY FILE DATA
-            // Running without sharing to ensure system file access works
+            // 2. QUERY FILE DATA (System Mode)
             ContentVersion file = [
                 SELECT Title, VersionData, FileExtension 
                 FROM ContentVersion 
@@ -23,11 +22,10 @@ public without sharing class DeliveryHubFileSender {
                 LIMIT 1
             ];
 
-            // 3. FIND DESTINATIONS (Polymorphic Logic)
+            // 3. FIND DESTINATIONS
             if (sObjectType == 'Request__c') {
-                // CASE A: We are on a Request Record
                 Request__c req = [
-                    SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
+                    SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                     FROM Request__c 
                     WHERE Id = :recordId
                     AND RemoteTicketIdTxt__c != null
@@ -36,9 +34,8 @@ public without sharing class DeliveryHubFileSender {
                 destinations.add(req);
             } 
             else if (sObjectType == 'Ticket__c') {
-                // CASE B: We are on a Ticket Record
                 destinations = [
-                    SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
+                    SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                     FROM Request__c 
                     WHERE TicketId__c = :recordId 
                     AND RemoteTicketIdTxt__c != null
@@ -63,12 +60,19 @@ public without sharing class DeliveryHubFileSender {
                 try {
                     String baseUrl = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
                     
-                    // Guard against missing URL configuration (Test Failure Cause)
-                    if (String.isBlank(baseUrl)) {
-                         // Fallback logic: If the relationship query failed due to data skew/visibility, try querying directly?
-                         // In 'without sharing', this should not happen if data exists.
-                         throw new CalloutException('Vendor Endpoint URL is missing on the Network Entity.');
+                    // --- DEFENSIVE CODING START ---
+                    // If the relationship query returned null (FLS issue), query the Entity directly to be sure.
+                    if (String.isBlank(baseUrl) && req.DeliveryEntityId__c != null) {
+                        List<Network_Entity__c> fallback = [SELECT IntegrationEndpointUrlTxt__c FROM Network_Entity__c WHERE Id = :req.DeliveryEntityId__c LIMIT 1];
+                        if (!fallback.isEmpty()) {
+                            baseUrl = fallback[0].IntegrationEndpointUrlTxt__c;
+                        }
                     }
+
+                    if (String.isBlank(baseUrl)) {
+                         throw new CalloutException('Vendor Endpoint URL is missing/blank for Request ' + req.Id);
+                    }
+                    // --- DEFENSIVE CODING END ---
 
                     String filesUrl = baseUrl.replace('/intake', '/files') + '/' + req.RemoteTicketIdTxt__c;
 
@@ -90,7 +94,7 @@ public without sharing class DeliveryHubFileSender {
                         successCount++;
                     } else {
                         System.debug(LoggingLevel.ERROR, 'Failed to send to Request ' + req.Id + ': ' + res.getBody());
-                        lastError = 'Req ' + req.Id + ': ' + res.getBody();
+                        lastError = 'Req ' + req.Id + ': ' + res.getStatus() + ' (' + res.getStatusCode() + ')';
                     }
                 } catch (Exception innerEx) {
                     System.debug(LoggingLevel.ERROR, 'Error sending to Request ' + req.Id + ': ' + innerEx.getMessage());
@@ -102,12 +106,13 @@ public without sharing class DeliveryHubFileSender {
             if (successCount > 0) {
                 return 'File sent to ' + successCount + ' vendor(s).';
             } else {
+                // Return the REAL error, not "Script-thrown exception"
                 String msg = String.isNotBlank(lastError) ? lastError : 'Unknown error during upload loop.';
                 throw new AuraHandledException('Upload Failed: ' + msg);
             }
 
         } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'DeliveryHubFileSender Exception: ' + e.getMessage() + '\n' + e.getStackTraceString());
+            System.debug(LoggingLevel.ERROR, 'DeliveryHubFileSender Exception: ' + e.getMessage());
             throw new AuraHandledException(e.getMessage());
         }
     }
