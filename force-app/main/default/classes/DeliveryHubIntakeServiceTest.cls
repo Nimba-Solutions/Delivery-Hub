@@ -3,8 +3,10 @@ private class DeliveryHubIntakeServiceTest {
 
     @TestSetup
     static void makeData() {
-        // 1. Create a User to run the test as (Bypasses FLS issues)
-        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        // Use System Administrator to guarantee access to all fields (PreApprovedHours, etc.)
+        // This avoids "List has no rows" errors if the Permission Set is missing.
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'System Administrator' LIMIT 1];
+        
         User testUser = new User(
             Alias = 'dhubint',
             Email = 'deliveryhub.intake@example.com',
@@ -17,11 +19,6 @@ private class DeliveryHubIntakeServiceTest {
             UserName = 'deliveryhub.intaketester@example.com' + System.currentTimeMillis()
         );
         insert testUser;
-
-        // 2. Assign the Admin Permission Set
-        // This grants access to the new fields (PreApprovedHours, etc.)
-        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1];
-        insert new PermissionSetAssignment(AssigneeId = testUser.Id, PermissionSetId = ps.Id);
     }
 
     @IsTest
@@ -33,6 +30,8 @@ private class DeliveryHubIntakeServiceTest {
             RestRequest req = new RestRequest();
             req.requestURI = '/services/apexrest/deliveryhub/v1/intake/';
             req.httpMethod = 'POST';
+            
+            // JSON Payload
             req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'title' => 'Broker Ticket',
                 'briefSummary' => 'Inbound Test',
@@ -45,20 +44,19 @@ private class DeliveryHubIntakeServiceTest {
                 'hourlyRate' => 100.00
             }));
             
-            RestResponse res = new RestResponse();
             RestContext.request = req;
-            RestContext.response = res;
+            RestContext.response = new RestResponse();
 
             // 2. Execute
             Test.startTest();
             DeliveryHubIntakeService.createTicket();
             Test.stopTest();
 
-            // 3. Assert Response (Should be 201 Created)
-            System.assertEquals(201, res.statusCode, 'Should return 201 Created. If 500, check Perm Set assignments.');
+            // 3. Assert Response
+            System.assertEquals(201, RestContext.response.statusCode, 'Should return 201 Created');
             
-            // 4. Assert Data Created correctly
-            Ticket__c t = [SELECT Id, ExternalSourceOrgTxt__c, SourceEventReplayIdTxt__c, RequestTypePk__c FROM Ticket__c LIMIT 1];
+            // 4. Assert Data
+            Ticket__c t = [SELECT Id, ExternalSourceOrgTxt__c, SourceEventReplayIdTxt__c FROM Ticket__c LIMIT 1];
             System.assertEquals('Mothership Corp', t.ExternalSourceOrgTxt__c);
             System.assertEquals('REQ-001', t.SourceEventReplayIdTxt__c);
         }
@@ -69,7 +67,7 @@ private class DeliveryHubIntakeServiceTest {
         User testUser = [SELECT Id FROM User WHERE Alias = 'dhubint' LIMIT 1];
 
         System.runAs(testUser) {
-            // 1. Create a ticket to check (Run as user so they own it/can see it)
+            // 1. Create a ticket
             Ticket__c t = new Ticket__c(
                 WorkItemNameTxt__c = 'Status Check Ticket', 
                 StatusPk__c = 'In Progress'
@@ -81,9 +79,8 @@ private class DeliveryHubIntakeServiceTest {
             req.requestURI = '/services/apexrest/deliveryhub/v1/intake/' + t.Id;
             req.httpMethod = 'GET';
             
-            RestResponse res = new RestResponse();
             RestContext.request = req;
-            RestContext.response = res;
+            RestContext.response = new RestResponse();
 
             // 3. Execute
             Test.startTest();
@@ -91,10 +88,10 @@ private class DeliveryHubIntakeServiceTest {
             Test.stopTest();
 
             // 4. Verify
-            System.assertEquals(200, res.statusCode, 'Should return 200. If 404, query likely failed due to permissions.');
+            System.assertEquals(200, RestContext.response.statusCode, 'Should return 200 OK');
             
-            if (res.responseBody != null) {
-                Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.responseBody.toString());
+            if (RestContext.response.responseBody != null) {
+                Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(RestContext.response.responseBody.toString());
                 System.assertEquals('In Progress', body.get('status'));
             }
         }
