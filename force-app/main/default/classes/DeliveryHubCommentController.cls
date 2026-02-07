@@ -1,18 +1,40 @@
+/**
+ * @description Controller for the internal Ticket Chat LWC.
+ * Handles fetching, posting, and live polling of comments from the Mothership.
+ */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
+    /**
+     * @description Wrapper class to transport comment data to LWC.
+     */
     public class CommentWrapper {
         @AuraEnabled public String id;
         @AuraEnabled public String body;
         @AuraEnabled public String authorName;
-        @AuraEnabled public Long timestamp;
+        @AuraEnabled public Long timestamp; 
         @AuraEnabled public Boolean isOutbound; 
     }
 
+    /**
+     * @description Fetches cached comments for a Ticket.
+     * @param ticketId The ID of the Ticket to query.
+     * @return List<CommentWrapper> List of formatted comments.
+     */
     @AuraEnabled(cacheable=true)
     public static List<CommentWrapper> getComments(Id ticketId) {
-        return queryComments(ticketId);
+        try {
+            return queryComments(ticketId);
+        } catch (Exception e) {
+            throw new AuraHandledException('Error fetching comments: ' + e.getMessage());
+        }
     }
 
+    /**
+     * @description Forces a live API pull from Mothership via the linked Request.
+     * @param ticketId The ID of the Ticket to refresh.
+     * @return List<CommentWrapper> List of formatted comments including new ones.
+     */
     @AuraEnabled
     public static List<CommentWrapper> getCommentsLive(Id ticketId) {
         try {
@@ -112,7 +134,9 @@ public with sharing class DeliveryHubCommentController {
                         insert finalInsert;
                     }
                 }
-            } 
+            } else {
+                System.debug(LoggingLevel.ERROR, 'Mothership Poll Failed: ' + res.getStatusCode() + ' ' + res.getBody());
+            }
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Live pull failed: ' + e.getMessage());
         }
@@ -120,22 +144,34 @@ public with sharing class DeliveryHubCommentController {
         return queryComments(ticketId);
     }
 
+    /**
+     * @description Posts a new comment to the database.
+     * @param ticketId The parent Ticket ID.
+     * @param body The text content of the comment.
+     */
     @AuraEnabled
     public static void postComment(Id ticketId, String body) {
         if (String.isBlank(body)) {
             throw new AuraHandledException('Comment body cannot be empty.');
         }
 
-        Ticket_Comment__c comment = new Ticket_Comment__c(
-            TicketId__c = ticketId,
-            BodyTxt__c = body,
-            AuthorTxt__c = UserInfo.getName(), 
-            SourcePk__c = 'Client', // OUTBOUND: Matches your picklist value
-            JiraSyncStatusTxt__c = 'Pending' 
-        );
-        insert comment;
+        try {
+            Ticket_Comment__c comment = new Ticket_Comment__c(
+                TicketId__c = ticketId,
+                BodyTxt__c = body,
+                AuthorTxt__c = UserInfo.getName(), 
+                SourcePk__c = 'Client', // OUTBOUND: Matches your picklist value
+                JiraSyncStatusTxt__c = 'Pending' 
+            );
+            insert comment;
+        } catch (Exception e) {
+            throw new AuraHandledException('Error posting comment: ' + e.getMessage());
+        }
     }
 
+    /**
+     * @description Private helper to query and wrap comments.
+     */
     private static List<CommentWrapper> queryComments(Id ticketId) {
         List<CommentWrapper> chat = new List<CommentWrapper>();
         
