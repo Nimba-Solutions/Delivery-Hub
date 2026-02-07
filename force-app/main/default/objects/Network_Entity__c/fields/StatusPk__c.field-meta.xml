@@ -7,9 +7,13 @@
     <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
-        <restricted>true</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
+            <value>
+                <fullName>Prospective</fullName>
+                <default>false</default>
+                <label>Prospective</label>
+            </value>
             <value>
                 <fullName>Active</fullName>
                 <default>false</default>
