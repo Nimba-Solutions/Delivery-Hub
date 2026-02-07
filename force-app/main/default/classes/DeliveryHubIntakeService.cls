@@ -1,9 +1,6 @@
 @RestResource(urlMapping='/deliveryhub/v1/intake/*')
 global without sharing class DeliveryHubIntakeService {
 
-    /**
-     * @description DTO to map the incoming JSON structure.
-     */
     global class InboundPacket {
         public String title;
         public String briefSummary;
@@ -17,15 +14,10 @@ global without sharing class DeliveryHubIntakeService {
         public String brokerRequestId; 
     }
 
-    /**
-     * @description POST: Ingest a new ticket
-     */
     @HttpPost
     global static void createTicket() {
-        // FIX: STOP THE ECHO LOOP
-        // This tells the system: "We are currently processing an inbound sync."
-        // The Triggers will see this flag and REFUSE to create an outbound Sync Item.
-        delivery.SyncEngine.setSyncContext();
+        // FIX: REMOVED 'delivery.' PREFIX
+        SyncEngine.setSyncContext();
 
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
@@ -35,7 +27,6 @@ global without sharing class DeliveryHubIntakeService {
             InboundPacket packet = (InboundPacket) JSON.deserialize(jsonBody, InboundPacket.class);
 
             Ticket__c t = new Ticket__c();
-
             t.WorkItemNameTxt__c = packet.title; 
             t.BriefDescriptionTxt__c = packet.briefSummary;
             t.DetailsTxt__c = packet.detailedContent; 
@@ -64,14 +55,10 @@ global without sharing class DeliveryHubIntakeService {
         }
     }
 
-    /**
-     * @description GET: Check Status
-     */
     @HttpGet
     global static void checkStatus() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
-        
         String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
 
         try {
