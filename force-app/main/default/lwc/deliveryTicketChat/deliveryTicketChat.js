@@ -1,7 +1,6 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments';
-import getCommentsLive from '@salesforce/apex/DeliveryHubCommentController.getCommentsLive';
 import postComment from '@salesforce/apex/DeliveryHubCommentController.postComment';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
@@ -14,13 +13,14 @@ export default class DeliveryTicketChat extends LightningElement {
     wiredResult; 
     _pollingInterval;
 
+    // 1. Fetch Comments via Wire
     @wire(getComments, { ticketId: '$recordId' })
     wiredComments(result) {
         this.wiredResult = result;
         if (result.data) {
             this.updateComments(result.data);
             
-            // Auto-scroll to bottom only on initial load
+            // Auto-scroll to bottom only on initial load (when no interval is set yet)
             if (!this._pollingInterval) {
                  this.scrollToBottom();
             }
@@ -34,22 +34,21 @@ export default class DeliveryTicketChat extends LightningElement {
                 ...msg,
                 wrapperClass: msg.isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
                 bubbleClass: msg.isOutbound ? 'bubble outbound' : 'bubble inbound',
-                // FIX: Added explicit text alignment to ensure names sit on the correct side
                 metaClass: msg.isOutbound ? 'meta outbound-meta slds-text-align_right' : 'meta inbound-meta slds-text-align_left'
             };
         });
     }
 
+    // 2. Optimized Polling
     connectedCallback() {
+        // Poll every 5 seconds to check for new messages from the Mothership
         this._pollingInterval = setInterval(() => {
-            getCommentsLive({ ticketId: this.recordId })
-                .then(result => {
-                    this.updateComments(result);
-                    // Silently update cache without triggering a second render cycle if data is same
-                    // But we call refreshApex to keep the wire sync
-                    refreshApex(this.wiredResult);
-                })
-                .catch(error => console.error('Error refreshing chat:', error));
+            // Only refresh the Wire. 
+            // This is efficient and prevents "double rendering" flicker.
+            if (this.wiredResult) {
+                refreshApex(this.wiredResult)
+                    .catch(error => console.error('Error refreshing chat:', error));
+            }
         }, 5000); 
     }
 
@@ -65,27 +64,28 @@ export default class DeliveryTicketChat extends LightningElement {
         this.commentBody = event.target.value;
     }
 
-    // FIX: Enter Key Handler
     handleKeyDown(event) {
-        // If Enter is pressed WITHOUT Shift, send.
+        // Send on Enter (without Shift)
         if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault(); // Stop new line
+            event.preventDefault(); 
             this.handleSend();
         }
     }
 
+    // 3. The Duplicate Fix (Locked Sender)
     handleSend() {
-        // 1. CRITICAL FIX: Lock to prevent double-submit
+        // STOP DOUBLE SUBMITS: If already sending, do nothing.
         if (this.isSending) return;
         
         if (!this.commentBody || this.commentBody.trim() === '') return;
 
+        // Lock
         this.isSending = true;
 
         postComment({ ticketId: this.recordId, body: this.commentBody })
             .then(() => {
-                this.commentBody = ''; 
-                // Refresh wire to get the new comment from DB
+                this.commentBody = ''; // Clear input
+                // Force an immediate refresh from server
                 return refreshApex(this.wiredResult);
             })
             .then(() => {
@@ -99,11 +99,13 @@ export default class DeliveryTicketChat extends LightningElement {
                 }));
             })
             .finally(() => {
+                // Unlock only when finished
                 this.isSending = false;
             });
     }
 
     scrollToBottom() {
+        // Small delay to allow DOM to render new message before scrolling
         setTimeout(() => {
             const chatContainer = this.template.querySelector('.chat-container');
             if (chatContainer) {
