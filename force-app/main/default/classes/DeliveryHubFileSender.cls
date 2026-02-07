@@ -1,30 +1,53 @@
-/**
- * @description Controller for sending files from the Client Org to the Broker.
- */
 public with sharing class DeliveryHubFileSender {
 
-    /**
-     * @description Sends a specific file to the Broker.
-     * @param requestId The Request ID.
-     * @param contentDocumentId The File ID.
-     * @return String Status message.
-     */
     @AuraEnabled
     public static String sendFileToBroker(Id requestId, Id contentDocumentId) {
         try {
-            // REMOVED WITH USER_MODE
-            Request__c req = [
-                SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
-                FROM Request__c 
-                WHERE Id = :requestId 
-                LIMIT 1
-            ];
+            // 1. DETERMINE CONTEXT: Is 'requestId' a Ticket or a Request?
+            Id recordId = requestId;
+            String sObjectType = recordId.getSObjectType().getDescribe().getName();
+            
+            String remoteTicketId;
+            String targetEndpoint;
 
-            if (String.isBlank(req.RemoteTicketIdTxt__c)) {
-                throw new AuraHandledException('This request is not linked to a Ticket yet. Send the Offer first.');
+            // 2. PATH A: It's a Request (Keep your original logic)
+            if (sObjectType == 'Request__c') {
+                Request__c req = [
+                    SELECT RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
+                    FROM Request__c 
+                    WHERE Id = :recordId 
+                    LIMIT 1
+                ];
+                remoteTicketId = req.RemoteTicketIdTxt__c;
+                if (req.DeliveryEntityId__r != null) {
+                    targetEndpoint = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c.replace('/intake', '/files');
+                }
+            } 
+            // 3. PATH B: It's a Ticket (The Scenario in your Screenshot)
+            else if (sObjectType == 'Ticket__c') {
+                Ticket__c t = [
+                    SELECT SourceEventReplayIdTxt__c, ExternalSourceOrgTxt__c 
+                    FROM Ticket__c 
+                    WHERE Id = :recordId 
+                    LIMIT 1
+                ];
+                remoteTicketId = t.SourceEventReplayIdTxt__c;
+                
+                // FALLBACK: Use Named Credential if we can't find a URL on the record
+                // This assumes you set up "DeliveryHubMothership" in Named Credentials
+                // OR you can use your Custom Setting: Delivery_Hub_Settings__c.getOrgDefaults().Mothership_URL__c
+                targetEndpoint = 'callout:DeliveryHubMothership/services/apexrest/deliveryhub/v1/files'; 
             }
 
-            // REMOVED WITH USER_MODE
+            // 4. VALIDATION
+            if (String.isBlank(remoteTicketId)) {
+                throw new AuraHandledException('This record is not synced to the Mothership yet. Wait for the sync.');
+            }
+            if (String.isBlank(targetEndpoint)) {
+                 throw new AuraHandledException('Could not determine Target Endpoint URL.');
+            }
+
+            // 5. GET FILE CONTENT
             ContentVersion file = [
                 SELECT Title, VersionData, FileExtension 
                 FROM ContentVersion 
@@ -33,8 +56,8 @@ public with sharing class DeliveryHubFileSender {
                 LIMIT 1
             ];
 
-            String baseUrl = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
-            String filesUrl = baseUrl.replace('/intake', '/files') + '/' + req.RemoteTicketIdTxt__c;
+            // 6. SEND
+            String filesUrl = targetEndpoint + '/' + remoteTicketId;
 
             Map<String, Object> payload = new Map<String, Object>{
                 'filename' => file.Title + '.' + file.FileExtension,
@@ -50,7 +73,7 @@ public with sharing class DeliveryHubFileSender {
             Http http = new Http();
             HttpResponse res = http.send(httpReq);
 
-            if (res.getStatusCode() == 201) {
+            if (res.getStatusCode() == 201 || res.getStatusCode() == 200) {
                 return 'File Sent Successfully';
             } else {
                 throw new AuraHandledException('Upload Failed: ' + res.getBody());
