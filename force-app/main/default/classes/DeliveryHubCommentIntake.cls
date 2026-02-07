@@ -1,12 +1,12 @@
 /**
  * @description API for real-time comment streaming.
- * Updated to use inclusive time filtering (>=) to prevent missed messages.
+ * Handles both "Pull" requests (GET) and "Push" injections (POST).
  */
 @RestResource(urlMapping='/deliveryhub/v1/comments/*')
 global without sharing class DeliveryHubCommentIntake {
 
     /**
-     * @description GET: Fetch comments for a specific Ticket.
+     * @description GET: Client asks "Do you have any new comments for this Ticket?"
      */
     @HttpGet
     global static void getComments() {
@@ -14,15 +14,14 @@ global without sharing class DeliveryHubCommentIntake {
         RestResponse res = RestContext.response;
 
         try {
+            // URL Format: /deliveryhub/v1/comments/{TicketID}
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
             String sinceParam = req.params.get('since');
             
-            // Default to a very old date if no param is passed
             DateTime lastSync = (sinceParam != null && String.isNotBlank(sinceParam)) 
                 ? DateTime.newInstance(Long.valueOf(sinceParam)) 
                 : DateTime.newInstance(1900, 1, 1);
 
-            // FIX: Changed '>' to '>=' to capture messages created in the same second
             List<Ticket_Comment__c> comments = [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c 
                 FROM Ticket_Comment__c 
@@ -52,15 +51,20 @@ global without sharing class DeliveryHubCommentIntake {
     }
 
     /**
-     * @description POST: Add a new comment to a Ticket.
+     * @description POST: Client pushes a new comment to the Mothership.
      */
     @HttpPost
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     global static void postComment() {
+        // *** CRITICAL FIX: ECHO BLOCKER ***
+        // Prevents the TicketTrigger from sending this comment BACK to the client.
+        delivery.SyncEngine.setSyncContext(); 
+        
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
 
         try {
+            // URL Format: /deliveryhub/v1/comments/{TicketID}
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
             String jsonBody = req.requestBody.toString();
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
@@ -80,7 +84,6 @@ global without sharing class DeliveryHubCommentIntake {
             comm.BodyTxt__c = body;
             comm.AuthorTxt__c = String.isBlank(author) ? 'Client User' : author;
             
-            // Router Logic
             comm.JiraSyncStatusTxt__c = 'Synced';
             comm.SourcePk__c = direction; 
             
