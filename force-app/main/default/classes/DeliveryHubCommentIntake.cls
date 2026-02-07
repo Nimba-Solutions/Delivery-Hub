@@ -1,12 +1,18 @@
 @RestResource(urlMapping='/deliveryhub/v1/comments/*')
 global without sharing class DeliveryHubCommentIntake {
 
+    /**
+     * @description GET: Client polls this endpoint to get new messages.
+     * We query the Sync_Item__c table (The Outbox) to see what has happened since the last check.
+     * URL param 'since' (Timestamp in Milliseconds) filters for new items only.
+     */
     @HttpGet
     global static void getComments() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
 
         try {
+            // 1. Parse Ticket ID and 'Since' Timestamp
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
             String sinceParam = req.params.get('since');
             
@@ -14,23 +20,37 @@ global without sharing class DeliveryHubCommentIntake {
                 ? DateTime.newInstance(Long.valueOf(sinceParam)) 
                 : DateTime.newInstance(1900, 1, 1);
 
-            List<Ticket_Comment__c> comments = [
-                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c 
-                FROM Ticket_Comment__c 
+            // 2. Query SYNC ITEMS (The Truth Source)
+            // We retrieve all successfully processed Sync Items created after the last check.
+            // We do NOT filter by 'Outbound' only, to ensure messages from 3rd party Hubs (Dev Orgs)
+            // are correctly passed down to the Client.
+            List<Sync_Item__c> items = [
+                SELECT Id, PayloadTxt__c, CreatedDate, StatusPk__c, RemoteExternalIDTxt__c
+                FROM Sync_Item__c 
                 WHERE TicketId__c = :ticketId 
-                AND CreatedDate >= :lastSync
+                AND CreatedDate > :lastSync
+                AND StatusPk__c = 'Success' 
                 ORDER BY CreatedDate ASC
+                LIMIT 50
             ];
 
             List<Map<String, Object>> responseList = new List<Map<String, Object>>();
-            for (Ticket_Comment__c c : comments) {
-                responseList.add(new Map<String, Object>{
-                    'id' => c.Id,
-                    'body' => c.BodyTxt__c,
-                    'author' => c.AuthorTxt__c,
-                    'timestamp' => c.CreatedDate.getTime(),
-                    'source' => c.SourcePk__c 
-                });
+
+            for (Sync_Item__c item : items) {
+                if (String.isNotBlank(item.PayloadTxt__c)) {
+                    try {
+                        // Unpack the JSON payload stored in the Sync Item
+                        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(item.PayloadTxt__c);
+                        
+                        // Append Metadata for the Client to process
+                        payload.put('mothershipSyncId', item.Id); // The Golden Thread ID
+                        payload.put('timestamp', item.CreatedDate.getTime());
+                        
+                        responseList.add(payload);
+                    } catch (Exception e) {
+                        System.debug('Skipping corrupt payload in SyncItem ' + item.Id);
+                    }
+                }
             }
 
             res.statusCode = 200;
@@ -42,10 +62,13 @@ global without sharing class DeliveryHubCommentIntake {
         }
     }
 
+    /**
+     * @description POST: Receive a new comment from the Client.
+     */
     @HttpPost
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     global static void postComment() {
-        // FIX: Just use the class name directly. No prefix needed.
+        // 1. STOP THE ECHO: Critical line to prevent infinite loops
         SyncEngine.setSyncContext(); 
         
         RestRequest req = RestContext.request;
@@ -58,7 +81,9 @@ global without sharing class DeliveryHubCommentIntake {
             
             String body = (String) payload.get('body');
             String author = (String) payload.get('author'); 
-            String direction = (String) payload.get('direction');
+            // 'direction' usually comes in as 'Outbound' from Client perspective, so it is 'Inbound' to us.
+            // But we can store what they sent us.
+            String direction = (String) payload.get('direction'); 
 
             if (String.isBlank(body)) {
                 res.statusCode = 400;
@@ -70,7 +95,7 @@ global without sharing class DeliveryHubCommentIntake {
             comm.TicketId__c = ticketId;
             comm.BodyTxt__c = body;
             comm.AuthorTxt__c = String.isBlank(author) ? 'Client User' : author;
-            comm.JiraSyncStatusTxt__c = 'Synced';
+            comm.JiraSyncStatusTxt__c = 'Synced'; // Auto-mark as synced since it is here
             comm.SourcePk__c = direction; 
             
             insert comm;
