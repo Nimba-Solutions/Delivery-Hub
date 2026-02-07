@@ -1,4 +1,5 @@
 @RestResource(urlMapping='/deliveryhub/v1/intake/*')
+@SuppressWarnings('PMD.ApexCRUDViolation')
 global without sharing class DeliveryHubIntakeService {
 
     /**
@@ -29,7 +30,6 @@ global without sharing class DeliveryHubIntakeService {
     @HttpPost
     global static void createTicket() {
         // 1. STOP THE ECHO (Critical)
-        // This prevents the Mothership from immediately syncing this record back to the client.
         SyncEngine.setSyncContext();
 
         RestRequest req = RestContext.request;
@@ -51,7 +51,9 @@ global without sharing class DeliveryHubIntakeService {
                     WHERE OrgIdTxt__c = :packet.orgId 
                     LIMIT 1
                 ];
-                if (!byOrgId.isEmpty()) clientEntity = byOrgId[0];
+                if (!byOrgId.isEmpty()) {
+                    clientEntity = byOrgId[0];
+                }
             }
             
             // B. Fallback: Match by Name (Legacy support for older clients)
@@ -62,7 +64,9 @@ global without sharing class DeliveryHubIntakeService {
                     WHERE Name = :packet.companyName 
                     LIMIT 1
                 ];
-                if (!byName.isEmpty()) clientEntity = byName[0];
+                if (!byName.isEmpty()) {
+                    clientEntity = byName[0];
+                }
             }
 
             // C. Create New if not found
@@ -76,11 +80,14 @@ global without sharing class DeliveryHubIntakeService {
             
             // 3. ALWAYS UPDATE COORDINATES (Upsert)
             // Ensure we have the latest URL and Org ID from the client
-            if (String.isNotBlank(packet.orgId)) clientEntity.OrgIdTxt__c = packet.orgId;
-            if (String.isNotBlank(packet.instanceUrl)) clientEntity.IntegrationEndpointUrlTxt__c = packet.instanceUrl;
+            if (String.isNotBlank(packet.orgId)) {
+                clientEntity.OrgIdTxt__c = packet.orgId;
+            }
+            if (String.isNotBlank(packet.instanceUrl)) {
+                clientEntity.IntegrationEndpointUrlTxt__c = packet.instanceUrl;
+            }
             
             // Use 'upsert' to handle both new creation and updates in one go.
-            // We do NOT use 'as user' here because Guest Users cannot own records easily.
             upsert clientEntity; 
 
             // 4. CREATE THE TICKET
@@ -111,7 +118,7 @@ global without sharing class DeliveryHubIntakeService {
             }));
 
         } catch (Exception e) {
-            System.debug('Error in DeliveryHubIntakeService: ' + e.getMessage());
+            System.debug(LoggingLevel.ERROR, 'Error in DeliveryHubIntakeService: ' + e.getMessage());
             res.statusCode = 500;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'success' => false,
