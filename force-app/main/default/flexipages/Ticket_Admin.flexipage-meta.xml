@@ -25,12 +25,6 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryCommentStream</componentName>
-                <identifier>c_deliveryCommentStream</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentName>deliveryTicketRefiner</componentName>
                 <identifier>c_deliveryTicketRefiner</identifier>
             </componentInstance>
