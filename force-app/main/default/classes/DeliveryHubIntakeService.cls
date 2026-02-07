@@ -22,6 +22,11 @@ global without sharing class DeliveryHubIntakeService {
      */
     @HttpPost
     global static void createTicket() {
+        // FIX: STOP THE ECHO LOOP
+        // This tells the system: "We are currently processing an inbound sync."
+        // The Triggers will see this flag and REFUSE to create an outbound Sync Item.
+        delivery.SyncEngine.setSyncContext();
+
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
 
@@ -41,7 +46,6 @@ global without sharing class DeliveryHubIntakeService {
             t.RequestTypePk__c = 'Partner Request';
             t.StatusPk__c = 'Backlog'; 
 
-            // FIX: Added 'as user' to satisfy CRUD Check
             insert as user t;
 
             res.statusCode = 201;
@@ -71,7 +75,6 @@ global without sharing class DeliveryHubIntakeService {
         String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
 
         try {
-            // FIX: Added 'WITH USER_MODE' to satisfy CRUD Check
             Ticket__c t = [SELECT StatusPk__c, TotalLoggedHoursNumber__c 
                            FROM Ticket__c 
                            WHERE Id = :ticketId 
