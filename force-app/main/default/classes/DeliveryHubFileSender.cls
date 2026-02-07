@@ -12,12 +12,13 @@ public with sharing class DeliveryHubFileSender {
             String sObjectType = recordId.getSObjectType().getDescribe().getName();
             List<Request__c> destinations = new List<Request__c>();
 
-            // 2. QUERY FILE DATA
+            // 2. QUERY FILE DATA (Enforce Security)
             ContentVersion file = [
                 SELECT Title, VersionData, FileExtension 
                 FROM ContentVersion 
                 WHERE ContentDocumentId = :contentDocumentId 
                 AND IsLatest = true 
+                WITH SECURITY_ENFORCED
                 LIMIT 1
             ];
 
@@ -29,23 +30,21 @@ public with sharing class DeliveryHubFileSender {
                     FROM Request__c 
                     WHERE Id = :recordId
                     AND RemoteTicketIdTxt__c != null
+                    WITH SECURITY_ENFORCED
                     LIMIT 1
                 ];
                 destinations.add(req);
             } 
             else if (sObjectType == 'Ticket__c') {
-                // CASE B: We are on a Ticket Record (Your Screenshot Scenario)
-                // We must find ALL child Requests linked to this Ticket.
-                
-                // IMPORTANT: Verify the API Name of the lookup field on Request__c!
-                // I am using 'TicketId__c' based on your previous error. 
-                // If this fails, check Object Manager > Request > Fields.
+                // CASE B: We are on a Ticket Record
+                // Look up using the field name you verified earlier (TicketId__c)
                 destinations = [
                     SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                     FROM Request__c 
                     WHERE TicketId__c = :recordId 
                     AND RemoteTicketIdTxt__c != null
                     AND DeliveryEntityId__r.IntegrationEndpointUrlTxt__c != null
+                    WITH SECURITY_ENFORCED
                 ];
             }
 
@@ -65,7 +64,6 @@ public with sharing class DeliveryHubFileSender {
             for (Request__c req : destinations) {
                 try {
                     String baseUrl = req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
-                    // Construct URL: .../deliveryhub/v1/files/{RemoteID}
                     String filesUrl = baseUrl.replace('/intake', '/files') + '/' + req.RemoteTicketIdTxt__c;
 
                     Map<String, Object> payload = new Map<String, Object>{
@@ -85,10 +83,11 @@ public with sharing class DeliveryHubFileSender {
                     if (res.getStatusCode() == 201 || res.getStatusCode() == 200) {
                         successCount++;
                     } else {
-                        System.debug('Failed Req ' + req.Id + ': ' + res.getBody());
+                        System.debug(LoggingLevel.ERROR, 'Failed to send to Request ' + req.Id + ': ' + res.getBody());
                         lastError = 'Req ' + req.Id + ': ' + res.getBody();
                     }
                 } catch (Exception innerEx) {
+                    System.debug(LoggingLevel.ERROR, 'Error sending to Request ' + req.Id + ': ' + innerEx.getMessage());
                     lastError = innerEx.getMessage();
                 }
             }
