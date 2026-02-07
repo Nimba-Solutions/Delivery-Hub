@@ -43,7 +43,7 @@ global without sharing class DeliveryHubIntakeService {
                     // FIX: Changed TypePk__c to EntityTypePk__c to match your schema
                     EntityTypePk__c = 'Client' 
                 );
-                insert as user clientEntity;
+                insert clientEntity;
             }
 
             // 3. CREATE TICKET
@@ -61,7 +61,7 @@ global without sharing class DeliveryHubIntakeService {
             // FIX: Commented out until you create the Lookup field on Ticket__c
             t.ClientNetworkEntityId__c = clientEntity.Id; 
 
-            insert as user t;
+            insert t;
 
             res.statusCode = 201;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
