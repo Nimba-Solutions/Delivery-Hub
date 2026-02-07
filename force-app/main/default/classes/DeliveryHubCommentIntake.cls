@@ -45,8 +45,8 @@ global without sharing class DeliveryHubCommentIntake {
     @HttpPost
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     global static void postComment() {
-        // FIX: REMOVED 'delivery.' PREFIX
-        %%%NAMESPACE_DOT%%%SyncEngine.setSyncContext(); 
+        // FIX: Just use the class name directly. No prefix needed.
+        SyncEngine.setSyncContext(); 
         
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
