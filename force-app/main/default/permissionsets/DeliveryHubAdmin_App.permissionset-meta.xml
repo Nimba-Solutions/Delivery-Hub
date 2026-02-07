@@ -62,6 +62,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Network_Entity__c.OrgIdTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Network_Entity__c.RemoteExternalIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>

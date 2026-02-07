@@ -40,6 +40,10 @@
                 <behavior>Edit</behavior>
                 <field>RemoteExternalIdTxt__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>OrgIdTxt__c</field>
+            </layoutItems>
         </layoutColumns>
         <layoutColumns>
             <layoutItems>

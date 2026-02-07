@@ -1,6 +1,10 @@
 @RestResource(urlMapping='/deliveryhub/v1/intake/*')
+@SuppressWarnings('PMD.ApexCRUDViolation')
 global without sharing class DeliveryHubIntakeService {
 
+    /**
+     * @description DTO to map the incoming JSON structure from the Client.
+     */
     global class InboundPacket {
         public String title;
         public String briefSummary;
@@ -9,11 +13,20 @@ global without sharing class DeliveryHubIntakeService {
         public String companyName;
         public String priority;
         public String type;
+        
+        // Critical Identifiers for Smart Linking
+        public String orgId;        
+        public String instanceUrl;  
+        public String registeredBy; 
+        
         public Decimal preApprovedHours; 
         public Decimal hourlyRate;
         public String brokerRequestId; 
     }
 
+    /**
+     * @description POST: Ingest a new ticket from a Client Org
+     */
     @HttpPost
     global static void createTicket() {
         // 1. STOP THE ECHO (Critical)
@@ -26,27 +39,58 @@ global without sharing class DeliveryHubIntakeService {
             String jsonBody = req.requestBody.toString();
             InboundPacket packet = (InboundPacket) JSON.deserialize(jsonBody, InboundPacket.class);
 
-            // 2. FIND OR CREATE CLIENT ENTITY
             Network_Entity__c clientEntity;
-            List<Network_Entity__c> existingEntities = [
-                SELECT Id, Name FROM Network_Entity__c 
-                WHERE Name = :packet.companyName 
-                LIMIT 1
-            ];
-
-            if (!existingEntities.isEmpty()) {
-                clientEntity = existingEntities[0];
-            } else {
-                clientEntity = new Network_Entity__c(
-                    Name = packet.companyName,
-                    StatusPk__c = 'Prospective',
-                    // FIX: Changed TypePk__c to EntityTypePk__c to match your schema
-                    EntityTypePk__c = 'Client' 
-                );
-                insert clientEntity;
+            
+            // 2. FIND OR CREATE CLIENT ENTITY (Smart-Link Logic)
+            
+            // A. Try matching by Org ID (The Gold Standard - Unique & Immutable)
+            if (String.isNotBlank(packet.orgId)) {
+                List<Network_Entity__c> byOrgId = [
+                    SELECT Id, Name, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
+                    FROM Network_Entity__c 
+                    WHERE OrgIdTxt__c = :packet.orgId 
+                    LIMIT 1
+                ];
+                if (!byOrgId.isEmpty()) {
+                    clientEntity = byOrgId[0];
+                }
+            }
+            
+            // B. Fallback: Match by Name (Legacy support for older clients)
+            if (clientEntity == null) {
+                List<Network_Entity__c> byName = [
+                    SELECT Id, Name, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
+                    FROM Network_Entity__c 
+                    WHERE Name = :packet.companyName 
+                    LIMIT 1
+                ];
+                if (!byName.isEmpty()) {
+                    clientEntity = byName[0];
+                }
             }
 
-            // 3. CREATE TICKET
+            // C. Create New if not found
+            if (clientEntity == null) {
+                clientEntity = new Network_Entity__c(
+                    Name = packet.companyName,
+                    StatusPk__c = 'Active',
+                    EntityTypePk__c = 'Client'
+                );
+            }
+            
+            // 3. ALWAYS UPDATE COORDINATES (Upsert)
+            // Ensure we have the latest URL and Org ID from the client
+            if (String.isNotBlank(packet.orgId)) {
+                clientEntity.OrgIdTxt__c = packet.orgId;
+            }
+            if (String.isNotBlank(packet.instanceUrl)) {
+                clientEntity.IntegrationEndpointUrlTxt__c = packet.instanceUrl;
+            }
+            
+            // Use 'upsert' to handle both new creation and updates in one go.
+            upsert clientEntity; 
+
+            // 4. CREATE THE TICKET
             Ticket__c t = new Ticket__c();
             t.WorkItemNameTxt__c = packet.title; 
             t.BriefDescriptionTxt__c = packet.briefSummary;
@@ -58,11 +102,13 @@ global without sharing class DeliveryHubIntakeService {
             t.RequestTypePk__c = 'Partner Request';
             t.StatusPk__c = 'Backlog'; 
             
-            // FIX: Commented out until you create the Lookup field on Ticket__c
+            // Link to the Entity we found/created
             t.ClientNetworkEntityId__c = clientEntity.Id; 
 
+            // Insert the Ticket (System Mode to avoid sharing rule conflicts)
             insert t;
 
+            // 5. SUCCESS RESPONSE
             res.statusCode = 201;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'success' => true,
@@ -72,6 +118,7 @@ global without sharing class DeliveryHubIntakeService {
             }));
 
         } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Error in DeliveryHubIntakeService: ' + e.getMessage());
             res.statusCode = 500;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'success' => false,
@@ -80,6 +127,9 @@ global without sharing class DeliveryHubIntakeService {
         }
     }
 
+    /**
+     * @description GET: Check Status of a Ticket
+     */
     @HttpGet
     global static void checkStatus() {
         RestRequest req = RestContext.request;

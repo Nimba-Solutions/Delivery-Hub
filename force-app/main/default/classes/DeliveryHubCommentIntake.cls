@@ -14,23 +14,30 @@ global without sharing class DeliveryHubCommentIntake {
                 ? DateTime.newInstance(Long.valueOf(sinceParam)) 
                 : DateTime.newInstance(1900, 1, 1);
 
-            List<Ticket_Comment__c> comments = [
-                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c 
-                FROM Ticket_Comment__c 
+            List<Sync_Item__c> items = [
+                SELECT Id, PayloadTxt__c, CreatedDate, StatusPk__c, RemoteExternalIDTxt__c
+                FROM Sync_Item__c 
                 WHERE TicketId__c = :ticketId 
-                AND CreatedDate >= :lastSync
+                AND CreatedDate > :lastSync
+                AND StatusPk__c = 'Success' 
                 ORDER BY CreatedDate ASC
+                LIMIT 50
             ];
 
             List<Map<String, Object>> responseList = new List<Map<String, Object>>();
-            for (Ticket_Comment__c c : comments) {
-                responseList.add(new Map<String, Object>{
-                    'id' => c.Id,
-                    'body' => c.BodyTxt__c,
-                    'author' => c.AuthorTxt__c,
-                    'timestamp' => c.CreatedDate.getTime(),
-                    'source' => c.SourcePk__c 
-                });
+
+            for (Sync_Item__c item : items) {
+                if (String.isNotBlank(item.PayloadTxt__c)) {
+                    try {
+                        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(item.PayloadTxt__c);
+                        payload.put('mothershipSyncId', item.Id);
+                        payload.put('timestamp', item.CreatedDate.getTime());
+                        responseList.add(payload);
+                    } catch (Exception e) {
+                        // FIX: Added LoggingLevel
+                        System.debug(LoggingLevel.WARN, 'Skipping corrupt payload in SyncItem ' + item.Id);
+                    }
+                }
             }
 
             res.statusCode = 200;
@@ -45,7 +52,6 @@ global without sharing class DeliveryHubCommentIntake {
     @HttpPost
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     global static void postComment() {
-        // FIX: Just use the class name directly. No prefix needed.
         SyncEngine.setSyncContext(); 
         
         RestRequest req = RestContext.request;
@@ -58,7 +64,7 @@ global without sharing class DeliveryHubCommentIntake {
             
             String body = (String) payload.get('body');
             String author = (String) payload.get('author'); 
-            String direction = (String) payload.get('direction');
+            String direction = (String) payload.get('direction'); 
 
             if (String.isBlank(body)) {
                 res.statusCode = 400;
@@ -70,7 +76,7 @@ global without sharing class DeliveryHubCommentIntake {
             comm.TicketId__c = ticketId;
             comm.BodyTxt__c = body;
             comm.AuthorTxt__c = String.isBlank(author) ? 'Client User' : author;
-            comm.JiraSyncStatusTxt__c = 'Synced';
+            comm.JiraSyncStatusTxt__c = 'Synced'; 
             comm.SourcePk__c = direction; 
             
             insert comm;
