@@ -1,20 +1,12 @@
-/**
- * @description API for real-time comment streaming.
- * Handles both "Pull" requests (GET) and "Push" injections (POST).
- */
 @RestResource(urlMapping='/deliveryhub/v1/comments/*')
 global without sharing class DeliveryHubCommentIntake {
 
-    /**
-     * @description GET: Client asks "Do you have any new comments for this Ticket?"
-     */
     @HttpGet
     global static void getComments() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
 
         try {
-            // URL Format: /deliveryhub/v1/comments/{TicketID}
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
             String sinceParam = req.params.get('since');
             
@@ -50,21 +42,16 @@ global without sharing class DeliveryHubCommentIntake {
         }
     }
 
-    /**
-     * @description POST: Client pushes a new comment to the Mothership.
-     */
     @HttpPost
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     global static void postComment() {
-        // *** CRITICAL FIX: ECHO BLOCKER ***
-        // Prevents the TicketTrigger from sending this comment BACK to the client.
-        delivery.SyncEngine.setSyncContext(); 
+        // FIX: REMOVED 'delivery.' PREFIX
+        %%%NAMESPACE_DOT%%%SyncEngine.setSyncContext(); 
         
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
 
         try {
-            // URL Format: /deliveryhub/v1/comments/{TicketID}
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
             String jsonBody = req.requestBody.toString();
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
@@ -83,7 +70,6 @@ global without sharing class DeliveryHubCommentIntake {
             comm.TicketId__c = ticketId;
             comm.BodyTxt__c = body;
             comm.AuthorTxt__c = String.isBlank(author) ? 'Client User' : author;
-            
             comm.JiraSyncStatusTxt__c = 'Synced';
             comm.SourcePk__c = direction; 
             

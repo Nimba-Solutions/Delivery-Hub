@@ -17,7 +17,7 @@ global without sharing class DeliveryHubIntakeService {
     @HttpPost
     global static void createTicket() {
         // FIX: REMOVED 'delivery.' PREFIX
-        SyncEngine.setSyncContext();
+        %%%NAMESPACE_DOT%%%SyncEngine.setSyncContext();
 
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
