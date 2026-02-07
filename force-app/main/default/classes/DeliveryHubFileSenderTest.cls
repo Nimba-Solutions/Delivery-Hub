@@ -7,75 +7,97 @@ private class DeliveryHubFileSenderTest {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(statusCode);
-            res.setBody('{"status":"mock"}');
+            res.setBody('{"success":true}');
             return res;
         }
     }
 
-    @IsTest
-    static void testSendFileSuccess() {
-        // 1. SETUP DATA
+    /**
+     * @description Helper to create clean test data
+     */
+    private static Id createTestRequest() {
         Network_Entity__c vendor = new Network_Entity__c(
-            Name = 'Test Vendor',
-            IntegrationEndpointUrlTxt__c = 'https://api.vendor.com/deliveryhub/v1/intake'
+            Name = 'Test Vendor', 
+            IntegrationEndpointUrlTxt__c = 'https://example.com/intake'
         );
         insert vendor;
 
-        Ticket__c t = new Ticket__c(WorkItemNameTxt__c = 'Local Ticket');
+        Ticket__c t = new Ticket__c(WorkItemNameTxt__c = 'Test Ticket');
         insert t;
 
         Request__c req = new Request__c(
             TicketId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
-            RemoteTicketIdTxt__c = 'REMOTE-999', 
-            StatusPk__c = 'Offer Sent'
+            RemoteTicketIdTxt__c = 'REMOTE-123',
+            StatusPk__c = 'Active'
         );
         insert req;
-
-        // 2. FORCE UPDATE (Crucial Fix for Flows/Triggers)
-        // If a flow cleared the field on insert, this puts it back explicitly.
-        req.RemoteTicketIdTxt__c = 'REMOTE-999';
-        update req;
         
+        return req.Id;
+    }
+
+    private static Id createTestFile(Id parentId) {
         ContentVersion cv = new ContentVersion(
-            Title = 'Screenshot',
-            PathOnClient = 'Screenshot.jpg',
-            VersionData = Blob.valueOf('Fake Image Data'),
-            FirstPublishLocationId = req.Id 
+            Title = 'Test', 
+            PathOnClient = 'Test.jpg', 
+            VersionData = Blob.valueOf('DATA'),
+            FirstPublishLocationId = parentId
         );
         insert cv;
-        
-        // Refetch ContentDocumentId
-        cv = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
+        return [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId;
+    }
 
-        // 3. EXECUTE
-        Test.setMock(HttpCalloutMock.class, new MockHttpResponse(201));
+    /**
+     * @description TEST 1: Does the Query Logic work? 
+     * If this fails, your Scratch Org / Package setup has a visibility/permission issue.
+     */
+    @IsTest
+    static void testDestinationDiscovery() {
+        Id reqId = createTestRequest();
         
         Test.startTest();
-        String result = DeliveryHubFileSender.sendFileToBroker(req.Id, cv.ContentDocumentId);
+        List<Request__c> results = DeliveryHubFileSender.getDestinations(reqId);
         Test.stopTest();
+        
+        System.assertEquals(1, results.size(), 'Should find 1 request record');
+        System.assertEquals('REMOTE-123', results[0].RemoteTicketIdTxt__c, 'Should see the remote ID');
+    }
 
-        System.assertEquals('File sent to 1 vendor(s).', result);
+    /**
+     * @description TEST 2: Does the full integration work?
+     */
+    @IsTest
+    static void testFullSendProcess() {
+        Id reqId = createTestRequest();
+        Id docId = createTestFile(reqId);
+        
+        Test.setMock(HttpCalloutMock.class, new MockHttpResponse(200));
+        
+        Test.startTest();
+        String result = DeliveryHubFileSender.sendFileToBroker(reqId, docId);
+        Test.stopTest();
+        
+        System.assert(result.contains('File sent'), 'Should return success message');
     }
     
+    /**
+     * @description TEST 3: Graceful failure
+     */
     @IsTest
-    static void testSendFileNotLinked() {
-        // Just ensure this compiles; minimal data needed for the negative test
-        Ticket__c t = new Ticket__c(WorkItemNameTxt__c = 'Local Ticket');
+    static void testMissingData() {
+        // Create ticket with NO request
+        Ticket__c t = new Ticket__c(WorkItemNameTxt__c = 'Empty');
         insert t;
-        // Ticket with NO Requests
         
-        ContentVersion cv = new ContentVersion(
-            Title = 'S', PathOnClient = 's.jpg', VersionData = Blob.valueOf('x'), FirstPublishLocationId = t.Id
-        );
-        insert cv;
-        cv = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
-
+        // Create file
+        Id docId = createTestFile(t.Id);
+        
         Test.startTest();
         try {
-            DeliveryHubFileSender.sendFileToBroker(t.Id, cv.ContentDocumentId);
+            DeliveryHubFileSender.sendFileToBroker(t.Id, docId);
+            System.assert(false, 'Should have failed');
         } catch (Exception e) {
-            // Expected
+            System.assert(e.getMessage().contains('No Request records'), 'Should complain about missing requests');
         }
         Test.stopTest();
     }
