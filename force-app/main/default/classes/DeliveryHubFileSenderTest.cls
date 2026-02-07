@@ -67,7 +67,7 @@ private class DeliveryHubFileSenderTest {
         String result = DeliveryHubFileSender.sendFileToBroker(req.Id, cv.ContentDocumentId);
         Test.stopTest();
 
-        System.assertEquals('File Sent Successfully', result);
+        System.assertEquals('File sent to 1 vendor(s)', result);
     }
 
     @IsTest
