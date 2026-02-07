@@ -1,7 +1,6 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments';
-// 1. IMPORT THE LIVE FETCH METHOD
 import getCommentsLive from '@salesforce/apex/DeliveryHubCommentController.getCommentsLive';
 import postComment from '@salesforce/apex/DeliveryHubCommentController.postComment';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
@@ -35,30 +34,28 @@ export default class DeliveryTicketChat extends LightningElement {
                 ...msg,
                 wrapperClass: msg.isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
                 bubbleClass: msg.isOutbound ? 'bubble outbound' : 'bubble inbound',
-                metaClass: msg.isOutbound ? 'meta outbound-meta' : 'meta inbound-meta'
+                // FIX: Added explicit text alignment to ensure names sit on the correct side
+                metaClass: msg.isOutbound ? 'meta outbound-meta slds-text-align_right' : 'meta inbound-meta slds-text-align_left'
             };
         });
     }
 
-    // --- Auto-Refresh Logic (THE FIX) ---
     connectedCallback() {
         this._pollingInterval = setInterval(() => {
-            // 2. CALL THE API-FETCHING METHOD, NOT JUST THE DB QUERY
             getCommentsLive({ ticketId: this.recordId })
                 .then(result => {
-                    // Update the UI with the fresh data from the server
                     this.updateComments(result);
-                    // Update the cache so the next wire refresh is accurate
-                    return refreshApex(this.wiredResult);
+                    // Silently update cache without triggering a second render cycle if data is same
+                    // But we call refreshApex to keep the wire sync
+                    refreshApex(this.wiredResult);
                 })
                 .catch(error => console.error('Error refreshing chat:', error));
-        }, 5000); // Check every 5 seconds
+        }, 5000); 
     }
 
     disconnectedCallback() {
         clearInterval(this._pollingInterval);
     }
-    // ----------------------------------
 
     get comments() {
         return { data: this.commentsData };
@@ -66,6 +63,15 @@ export default class DeliveryTicketChat extends LightningElement {
 
     handleInputChange(event) {
         this.commentBody = event.target.value;
+    }
+
+    // FIX: Enter Key Handler
+    handleKeyDown(event) {
+        // If Enter is pressed WITHOUT Shift, send.
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault(); // Stop new line
+            this.handleSend();
+        }
     }
 
     handleSend() {
@@ -76,13 +82,12 @@ export default class DeliveryTicketChat extends LightningElement {
         postComment({ ticketId: this.recordId, body: this.commentBody })
             .then(() => {
                 this.commentBody = ''; 
-                // Force a live pull immediately after sending to ensure sync
-                return getCommentsLive({ ticketId: this.recordId });
-            })
-            .then((result) => {
-                this.updateComments(result);
-                this.scrollToBottom();
+                // FIX: Removed the double-fetch logic. 
+                // Just refreshing the wire is enough and prevents the "double typing" visual glitch.
                 return refreshApex(this.wiredResult);
+            })
+            .then(() => {
+                this.scrollToBottom();
             })
             .catch(error => {
                 this.dispatchEvent(new ShowToastEvent({
