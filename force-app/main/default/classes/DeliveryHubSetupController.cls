@@ -6,33 +6,38 @@ public without sharing class DeliveryHubSetupController {
         @AuraEnabled public Network_Entity__c entity;
     }
 
+    // Helper: Detect Namespace Prefix (e.g., 'delivery__')
+    private static String getNamespace() {
+        String ns = [SELECT NamespacePrefix FROM Organization].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
+    }
+
+    @SuppressWarnings('PMD.ApexSOQLInjection')
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
-        // FIX: Added WITH USER_MODE to satisfy security scanner
-        List<Network_Entity__c> entities = [
-            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c 
-            FROM Network_Entity__c 
-            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
-            WITH USER_MODE
-            LIMIT 1
-        ];
+        String ns = getNamespace();
+        // FIX: Dynamic SOQL to handle namespaced environments
+        String query = 'SELECT Id, Name, ' + ns + 'StatusPk__c, ' + ns + 'IntegrationEndpointUrlTxt__c ' +
+                       'FROM ' + ns + 'Network_Entity__c ' +
+                       'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
+                       'WITH USER_MODE ' +
+                       'LIMIT 1';
+
+        List<SObject> entities = Database.query(query);
 
         if (!entities.isEmpty()) {
             status.isConnected = true;
-            status.entity = entities[0];
+            status.entity = (Network_Entity__c)entities[0];
         } else {
             status.isConnected = false;
         }
         return status;
     }
 
-    /**
-     * @description Robust Connection: Handshake -> Parse Identity -> Save Everything Automagically
-     */
-    @SuppressWarnings('PMD.ApexCRUDViolation')
+    @SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexSOQLInjection')
     @AuraEnabled
     public static void connectToDefaultMothership() {
         String mothershipBase = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
@@ -68,37 +73,39 @@ public without sharing class DeliveryHubSetupController {
             throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
         }
 
-        // 3. PARSE RESPONSE
         Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
         String remoteTicketId = (String) responseMap.get('ticketId');
         String remoteEntityId = (String) responseMap.get('entityId'); 
 
-        // 4. SAVE LOCAL RECORDS
+        // 3. SAVE LOCAL RECORDS
+        String ns = getNamespace();
         
-        // A. Create/Update Vendor Entity
-        List<Network_Entity__c> existing = [
-            SELECT Id, RemoteExternalIdTxt__c 
-            FROM Network_Entity__c 
-            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
-            LIMIT 1
-        ];
+        // A. Create/Update Vendor Entity (Dynamic SOQL)
+        String entityQuery = 'SELECT Id, ' + ns + 'RemoteExternalIdTxt__c ' +
+                             'FROM ' + ns + 'Network_Entity__c ' +
+                             'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
+                             'LIMIT 1';
+        
+        List<SObject> existing = Database.query(entityQuery);
         Network_Entity__c mothership;
         
         if (existing.isEmpty()) {
-            mothership = new Network_Entity__c(
-                Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
-                StatusPk__c = 'Active',
-                EntityTypePk__c = 'Vendor',
-                IntegrationEndpointUrlTxt__c = mothershipBase,
-                RemoteExternalIdTxt__c = remoteEntityId
-            );
+            mothership = new Network_Entity__c();
+            mothership.Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
+            mothership.put(ns + 'StatusPk__c', 'Active');
+            mothership.put(ns + 'EntityTypePk__c', 'Vendor');
+            mothership.put(ns + 'IntegrationEndpointUrlTxt__c', mothershipBase);
+            mothership.put(ns + 'RemoteExternalIdTxt__c', remoteEntityId);
+            
             if (Schema.sObjectType.Network_Entity__c.isCreateable()) {
                 insert mothership;
             }
         } else {
-            mothership = existing[0];
-            if (mothership.RemoteExternalIdTxt__c != remoteEntityId) {
-                 mothership.RemoteExternalIdTxt__c = remoteEntityId;
+            mothership = (Network_Entity__c)existing[0];
+            String currentRemoteId = (String) mothership.get(ns + 'RemoteExternalIdTxt__c');
+            
+            if (currentRemoteId != remoteEntityId) {
+                 mothership.put(ns + 'RemoteExternalIdTxt__c', remoteEntityId);
                  if (Schema.sObjectType.Network_Entity__c.isUpdateable()) {
                      update mothership;
                  }
@@ -108,25 +115,23 @@ public without sharing class DeliveryHubSetupController {
         // B. Initialize Settings
         initializeDefaultSettings();
 
-        // C. Create Local Ticket
-        Ticket__c regTicket = new Ticket__c(
-            WorkItemNameTxt__c = 'New Org Connection',
-            BriefDescriptionTxt__c = 'Connection Established Successfully.',
-            StageNamePk__c = 'Backlog',
-            PriorityPk__c = 'High'
-        );
+        // C. Create Local Ticket (Using Dynamic Fields to be safe)
+        Ticket__c regTicket = new Ticket__c();
+        regTicket.put(ns + 'WorkItemNameTxt__c', 'New Org Connection');
+        regTicket.put(ns + 'BriefDescriptionTxt__c', 'Connection Established Successfully.');
+        regTicket.put(ns + 'StageNamePk__c', 'Backlog');
+        regTicket.put(ns + 'PriorityPk__c', 'High');
 
         if (Schema.sObjectType.Ticket__c.isCreateable()) {
             insert regTicket;
         }
 
-        // D. Create Request
-        Request__c regRequest = new Request__c(
-            TicketId__c = regTicket.Id,           
-            DeliveryEntityId__c = mothership.Id,  
-            RemoteTicketIdTxt__c = remoteTicketId, 
-            StatusPk__c = 'Open'
-        );
+        // D. Create Request (Link Ticket to Mothership)
+        Request__c regRequest = new Request__c();
+        regRequest.put(ns + 'TicketId__c', regTicket.Id);
+        regRequest.put(ns + 'DeliveryEntityId__c', mothership.Id);
+        regRequest.put(ns + 'RemoteTicketIdTxt__c', remoteTicketId);
+        regRequest.put(ns + 'StatusPk__c', 'Open');
 
         if (Schema.sObjectType.Request__c.isCreateable()) {
             insert regRequest;

@@ -43,10 +43,10 @@ private class DeliveryHubSetupControllerTest {
 
             Test.startTest();
             DeliveryHubSetupController.connectToDefaultMothership();
-            
+            Test.stopTest(); // Forces async jobs and DML to commit
+
             // Check status again
             DeliveryHubSetupController.SetupStatus result = DeliveryHubSetupController.getSetupStatus();
-            Test.stopTest();
 
             System.assertEquals(true, result.isConnected, 'Should be connected after setup');
             System.assertNotEquals(null, result.entity, 'Entity object should be returned');
@@ -62,19 +62,32 @@ private class DeliveryHubSetupControllerTest {
         User testUser = [SELECT Id FROM User WHERE Alias = 'stdusr' LIMIT 1];
         
         System.runAs(testUser) {
-            // 1. Create it the first time
+            // 1. PRE-SEED DATA
+            // We create the "Duplicate" record manually BEFORE Test.startTest().
+            // This ensures the DML (Insert) happens in a separate context from the Callout.
+            Network_Entity__c existing = new Network_Entity__c(
+                Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
+                StatusPk__c = 'Active',
+                EntityTypePk__c = 'Vendor',
+                IntegrationEndpointUrlTxt__c = 'https://old.url',
+                RemoteExternalIdTxt__c = 'OLD_ID'
+            );
+            insert existing;
+
+            // 2. Set Mock for the callout that will happen in the method
             Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
-            DeliveryHubSetupController.connectToDefaultMothership();
 
             Test.startTest();
-            // 2. Create it again (Should handle duplicates gracefully)
-            // We need to set the mock again for the second callout
-            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
+            // 3. Run Logic (This should detect the existing record and UPDATE it, not Insert)
             DeliveryHubSetupController.connectToDefaultMothership();
             Test.stopTest();
 
+            // 4. VERIFY
             Integer count = [SELECT COUNT() FROM Network_Entity__c WHERE Name LIKE 'Cloud Nimbus%'];
             System.assertEquals(1, count, 'Should not duplicate entities');
+            
+            Network_Entity__c updated = [SELECT RemoteExternalIdTxt__c FROM Network_Entity__c WHERE Id = :existing.Id];
+            System.assertEquals('E-REMOTE-456', updated.RemoteExternalIdTxt__c, 'Should update the existing record with new Remote ID');
         }
     }
 
