@@ -1,18 +1,37 @@
 @IsTest
 private class DeliveryHubSetupControllerTest {
 
+    @TestSetup
+    static void makeData() {
+        // Create a standard user to run tests to avoid mixed DML errors or context issues
+        Profile p = [SELECT Id FROM Profile WHERE Name='Standard User' LIMIT 1];
+        User u = new User(
+            Alias = 'stdusr', 
+            Email='standarduser@testorg.com',
+            EmailEncodingKey='UTF-8', 
+            LastName='Testing', 
+            LanguageLocaleKey='en_US',
+            LocaleSidKey='en_US', 
+            ProfileId = p.Id,
+            TimeZoneSidKey='America/Los_Angeles', 
+            UserName='standarduser' + DateTime.now().getTime() + '@testorg.com'
+        );
+        insert u;
+        
+        // Assign Permission Set if needed (Optional, depending on your org config)
+        // PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Delivery_Hub_Admin'];
+        // insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
+    }
+
     @IsTest
     static void testGetStatusDisconnected() {
-        // Run as a user who can see the Network Entity
-        User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+        User testUser = [SELECT Id FROM User WHERE Alias = 'stdusr' LIMIT 1];
         
         System.runAs(testUser) {
             Test.startTest();
-            // FIX: Assign to the actual inner class type, not Map
             DeliveryHubSetupController.SetupStatus result = DeliveryHubSetupController.getSetupStatus();
             Test.stopTest();
 
-            // FIX: Access fields directly via dot notation
             System.assertEquals(false, result.isConnected, 'Should not be connected initially');
             System.assertNotEquals(null, result.requiredRemoteSite, 'Remote site URL should be returned');
         }
@@ -20,11 +39,13 @@ private class DeliveryHubSetupControllerTest {
 
     @IsTest
     static void testConnectSuccess() {
-        User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+        User testUser = [SELECT Id FROM User WHERE Alias = 'stdusr' LIMIT 1];
         
         System.runAs(testUser) {
+            // FIX: Set the mock because the controller makes an HTTP callout
+            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
+
             Test.startTest();
-            // FIX: Method returns void, so just call it. Do not assign to String.
             DeliveryHubSetupController.connectToDefaultMothership();
             
             // Check status again
@@ -42,19 +63,43 @@ private class DeliveryHubSetupControllerTest {
 
     @IsTest
     static void testConnectDuplicateHandling() {
-        User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+        User testUser = [SELECT Id FROM User WHERE Alias = 'stdusr' LIMIT 1];
         
         System.runAs(testUser) {
-            // Create it once
+            // 1. Create it the first time
+            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
             DeliveryHubSetupController.connectToDefaultMothership();
 
             Test.startTest();
-            // Create it again (Should handle duplicates gracefully)
+            // 2. Create it again (Should handle duplicates gracefully)
+            // We need to set the mock again for the second callout
+            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
             DeliveryHubSetupController.connectToDefaultMothership();
             Test.stopTest();
 
             Integer count = [SELECT COUNT() FROM Network_Entity__c WHERE Name LIKE 'Cloud Nimbus%'];
             System.assertEquals(1, count, 'Should not duplicate entities');
+        }
+    }
+
+    /**
+     * @description Mock implementation for HTTP Success response that matches Controller expectations
+     */
+    public class MockResponseSuccess implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(200);
+            
+            // The controller expects 'ticketId' and 'entityId' in the response
+            String jsonBody = '{' +
+                '"success": true,' +
+                '"ticketId": "T-REMOTE-123",' +
+                '"entityId": "E-REMOTE-456",' +
+                '"status": "Backlog"' +
+            '}';
+            
+            res.setBody(jsonBody);
+            return res;
         }
     }
 }

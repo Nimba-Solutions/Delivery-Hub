@@ -1,47 +1,61 @@
 public without sharing class DeliveryHubPoller {
 
+    // Helper: Detects if we are in a Managed Package ('delivery__') or Scratch Org ('')
+    private static String getNamespace() {
+        String ns = [SELECT NamespacePrefix FROM Organization].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
+    }
+
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
     public static String pollUpdates() {
         try {
-            // 1. Get Active Vendor
-            // Added WITH USER_MODE to satisfy security scanner
-            Network_Entity__c vendor = [
-                SELECT Id, IntegrationEndpointUrlTxt__c, LastInboundSyncDateTime__c, RemoteExternalIdTxt__c 
-                FROM Network_Entity__c 
-                WHERE StatusPk__c = 'Active' 
-                AND EntityTypePk__c = 'Vendor' 
-                WITH USER_MODE
-                LIMIT 1
-            ];
+            String ns = getNamespace();
 
-            // FIX: Added curly braces for PMD compliance
-            if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) {
-                return 'Error: Vendor URL missing';
-            }
-            if (String.isBlank(vendor.RemoteExternalIdTxt__c)) {
-                return 'Error: Remote ID (My ID) missing on Vendor record';
-            }
+            // 1. DYNAMIC SOQL (Fixes the "No Such Column" Build Error)
+            // We build the query string manually so we can inject the namespace prefix
+            String query = 'SELECT Id, ' + 
+                           ns + 'IntegrationEndpointUrlTxt__c, ' + 
+                           ns + 'LastInboundSyncDateTime__c, ' + 
+                           ns + 'RemoteExternalIdTxt__c ' +
+                           'FROM ' + ns + 'Network_Entity__c ' +
+                           'WHERE ' + ns + 'StatusPk__c = \'Active\' ' +
+                           'AND ' + ns + 'EntityTypePk__c = \'Vendor\' ' +
+                           'LIMIT 1';
 
-            // 2. Prepare Request
-            String sinceParam = (vendor.LastInboundSyncDateTime__c != null) 
-                ? vendor.LastInboundSyncDateTime__c.formatGmt('yyyy-MM-dd HH:mm:ss')
+            List<SObject> results = Database.query(query);
+            
+            if (results.isEmpty()) return 'Error: No Active Vendor found.';
+            SObject vendor = results[0];
+
+            // 2. GET FIELDS DYNAMICALLY
+            String endpointUrl = (String) vendor.get(ns + 'IntegrationEndpointUrlTxt__c');
+            String remoteId = (String) vendor.get(ns + 'RemoteExternalIdTxt__c');
+            DateTime lastSync = (DateTime) vendor.get(ns + 'LastInboundSyncDateTime__c');
+
+            if (String.isBlank(endpointUrl)) return 'Error: Vendor URL missing';
+            if (String.isBlank(remoteId)) return 'Error: Remote ID (My ID) missing on Vendor record';
+
+            // 3. PREPARE REQUEST
+            String sinceParam = (lastSync != null) 
+                ? lastSync.formatGmt('yyyy-MM-dd HH:mm:ss')
                 : '1900-01-01 00:00:00';
 
-            // FIX: Corrected URL Logic (Removed duplicate 'services/apexrest')
-            String endpoint = vendor.IntegrationEndpointUrlTxt__c + '/sync/changes?since=' + EncodingUtil.urlEncode(sinceParam, 'UTF-8');
+            // Corrected URL Logic
+            String endpoint = endpointUrl + '/sync/changes?since=' + EncodingUtil.urlEncode(sinceParam, 'UTF-8');
             
             HttpRequest req = new HttpRequest();
             req.setEndpoint(endpoint);
             req.setMethod('GET');
-            req.setHeader('Client-Entity-ID', vendor.RemoteExternalIdTxt__c); 
+            req.setHeader('Client-Entity-ID', remoteId); 
             req.setHeader('Authorization', 'Bearer ' + UserInfo.getSessionId()); 
 
             Http http = new Http();
             HttpResponse res = http.send(req);
 
             if (res.getStatusCode() == 200) {
-                return handleSuccess(res.getBody(), vendor);
+                // Cast SObject back to concrete type for the helper method (safe here)
+                return handleSuccess(res.getBody(), (Network_Entity__c)vendor, ns);
             } else {
                 return 'Error: HTTP ' + res.getStatusCode() + ' ' + res.getBody();
             }
@@ -51,14 +65,16 @@ public without sharing class DeliveryHubPoller {
         }
     }
 
-    private static String handleSuccess(String responseBody, Network_Entity__c vendor) {
+    private static String handleSuccess(String responseBody, Network_Entity__c vendor, String ns) {
         Map<String, Object> response = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
         List<Object> events = (List<Object>) response.get('events');
         Integer successCount = processEvents(events);
 
         String serverTimeStr = (String) response.get('latestServerTime');
         if (serverTimeStr != null) {
-            vendor.LastInboundSyncDateTime__c = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
+            DateTime dt = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
+            // Dynamic Update
+            vendor.put(ns + 'LastInboundSyncDateTime__c', dt);
             Database.update(vendor, AccessLevel.SYSTEM_MODE);
         }
         return 'Success: Synced ' + successCount + ' items.';
