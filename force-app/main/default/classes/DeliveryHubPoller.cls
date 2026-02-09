@@ -5,14 +5,17 @@ public without sharing class DeliveryHubPoller {
     public static String pollUpdates() {
         try {
             // 1. Get Active Vendor
+            // Added WITH USER_MODE to satisfy security scanner
             Network_Entity__c vendor = [
                 SELECT Id, IntegrationEndpointUrlTxt__c, LastInboundSyncDateTime__c, RemoteExternalIdTxt__c 
                 FROM Network_Entity__c 
                 WHERE StatusPk__c = 'Active' 
                 AND EntityTypePk__c = 'Vendor' 
+                WITH USER_MODE
                 LIMIT 1
             ];
 
+            // FIX: Added curly braces for PMD compliance
             if (String.isBlank(vendor.IntegrationEndpointUrlTxt__c)) {
                 return 'Error: Vendor URL missing';
             }
@@ -25,7 +28,7 @@ public without sharing class DeliveryHubPoller {
                 ? vendor.LastInboundSyncDateTime__c.formatGmt('yyyy-MM-dd HH:mm:ss')
                 : '1900-01-01 00:00:00';
 
-            // FIX: Don't repeat '/services/apexrest'. Just append the specific resource path.
+            // FIX: Corrected URL Logic (Removed duplicate 'services/apexrest')
             String endpoint = vendor.IntegrationEndpointUrlTxt__c + '/sync/changes?since=' + EncodingUtil.urlEncode(sinceParam, 'UTF-8');
             
             HttpRequest req = new HttpRequest();

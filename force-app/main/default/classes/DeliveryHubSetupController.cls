@@ -11,7 +11,14 @@ public without sharing class DeliveryHubSetupController {
         SetupStatus status = new SetupStatus();
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
-        List<Network_Entity__c> entities = [SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c FROM Network_Entity__c WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' LIMIT 1];
+        // FIX: Added WITH USER_MODE to satisfy security scanner
+        List<Network_Entity__c> entities = [
+            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c 
+            FROM Network_Entity__c 
+            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
+            WITH USER_MODE
+            LIMIT 1
+        ];
 
         if (!entities.isEmpty()) {
             status.isConnected = true;
@@ -69,7 +76,12 @@ public without sharing class DeliveryHubSetupController {
         // 4. SAVE LOCAL RECORDS
         
         // A. Create/Update Vendor Entity
-        List<Network_Entity__c> existing = [SELECT Id, RemoteExternalIdTxt__c FROM Network_Entity__c WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' LIMIT 1];
+        List<Network_Entity__c> existing = [
+            SELECT Id, RemoteExternalIdTxt__c 
+            FROM Network_Entity__c 
+            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
+            LIMIT 1
+        ];
         Network_Entity__c mothership;
         
         if (existing.isEmpty()) {
