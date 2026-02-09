@@ -11,9 +11,9 @@ public without sharing class DeliveryHubSetupController {
         SetupStatus status = new SetupStatus();
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
-        // REFACTOR: STATIC SOQL
-        // The compiler automatically maps 'StatusPk__c' to 'delivery__StatusPk__c'
-        // because this class lives in the same package as the field.
+        // REFACTOR: Use Static SOQL. The compiler handles the namespace automatically.
+        // We use 'WITH USER_MODE' to satisfy security scanners if possible, or stripInaccessible if needed.
+        // Since we are in 'without sharing', we can just run the query.
         List<Network_Entity__c> entities = [
             SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c 
             FROM Network_Entity__c 
@@ -40,7 +40,6 @@ public without sharing class DeliveryHubSetupController {
         String myOrgId = UserInfo.getOrganizationId();
         String myName = UserInfo.getOrganizationName();
 
-        // 1. Packet Construction
         Map<String, Object> packet = new Map<String, Object>();
         packet.put('companyName', myName); 
         packet.put('orgId', myOrgId);       
@@ -69,7 +68,7 @@ public without sharing class DeliveryHubSetupController {
         String remoteTicketId = (String) responseMap.get('ticketId');
         String remoteEntityId = (String) responseMap.get('entityId'); 
 
-        // 2. CHECK FOR EXISTING (STATIC SOQL)
+        // REFACTOR: Static SOQL for the Entity check
         List<Network_Entity__c> existing = [
             SELECT Id, RemoteExternalIdTxt__c 
             FROM Network_Entity__c 
@@ -80,7 +79,6 @@ public without sharing class DeliveryHubSetupController {
         Network_Entity__c mothership;
         
         if (existing.isEmpty()) {
-            // 3. INSERT (STATIC DML)
             mothership = new Network_Entity__c(
                 Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
@@ -90,7 +88,6 @@ public without sharing class DeliveryHubSetupController {
             );
             insert mothership;
         } else {
-            // 4. UPDATE (STATIC DML)
             mothership = existing[0];
             if (mothership.RemoteExternalIdTxt__c != remoteEntityId) {
                  mothership.RemoteExternalIdTxt__c = remoteEntityId;
