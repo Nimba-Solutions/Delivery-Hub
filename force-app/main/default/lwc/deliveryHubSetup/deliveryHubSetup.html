@@ -1,61 +1,72 @@
 <template>
-    <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
-        <div class="slds-p-around_medium">
-            
-            <div if:true={isLoading}>
-                <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
+    <template if:true={isMothership}>
+        <lightning-card title="Delivery Hub Mothership" icon-name="standard:service_territory_member">
+            <div class="slds-p-around_medium slds-text-align_center">
+                <lightning-icon icon-name="utility:success" variant="success" size="small" class="slds-m-right_small"></lightning-icon>
+                <span class="slds-text-heading_small">This is the Host Org</span>
             </div>
+        </lightning-card>
+    </template>
 
-            <template if:true={status.isConnected}>
-                <div class="slds-text-align_center slds-theme_success slds-p-around_medium slds-m-bottom_medium slds-box">
-                    <lightning-icon icon-name="action:approval" size="small" variant="inverse"></lightning-icon>
-                    <h2 class="slds-text-heading_medium slds-m-top_small">Connected</h2>
-                    <p>This org is linked to <strong>{status.entity.Name}</strong>.</p>
+    <template if:false={isMothership}>
+        <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
+            <div class="slds-p-around_medium">
+                
+                <div if:true={isLoading}>
+                    <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
                 </div>
-                <div class="slds-text-align_center">
-                    <p>You are ready to go.</p>
-                    <p class="slds-m-top_small">
-                        <lightning-button label="Go to the Ticket Board" onclick={navigateToTickets} variant="neutral"></lightning-button>
-                    </p>
-                </div>
-            </template>
 
-            <template if:false={status.isConnected}>
-                <div class="slds-illustration slds-illustration_small">
-                    <div class="slds-text-longform">
-                        <h3 class="slds-text-heading_medium">Quickstart Setup</h3>
-                        <p class="slds-text-body_regular">
-                            Establish a secure connection to the Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team). 
-                            This will configure your default settings and automatically register this org 
-                            so you can start sending requests immediately.
+                <template if:true={status.isConnected}>
+                    <div class="slds-text-align_center slds-theme_success slds-p-around_medium slds-m-bottom_medium slds-box">
+                        <lightning-icon icon-name="action:approval" size="small" variant="inverse"></lightning-icon>
+                        <h2 class="slds-text-heading_medium slds-m-top_small">Connected</h2>
+                        <p>This org is linked to <strong>{status.entity.Name}</strong>.</p>
+                    </div>
+                    <div class="slds-text-align_center">
+                        <p>You are ready to go.</p>
+                        <p class="slds-m-top_small">
+                            <lightning-button label="Go to the Ticket Board" onclick={navigateToTickets} variant="neutral"></lightning-button>
                         </p>
                     </div>
-                </div>
+                </template>
 
-                <div class="slds-box slds-theme_warning slds-m-vertical_medium">
-                    <div class="slds-media slds-media_center">
-                        <div class="slds-media__figure">
-                            <lightning-icon icon-name="utility:warning" size="small"></lightning-icon>
-                        </div>
-                        <div class="slds-media__body">
-                            <p><strong>Admin Action Required:</strong></p>
-                            <p>Ensure this URL is in <strong>Remote Site Settings</strong> before connecting:</p>
-                            <code class="slds-text-color_error">{status.requiredRemoteSite}</code>
+                <template if:false={status.isConnected}>
+                    <div class="slds-illustration slds-illustration_small">
+                        <div class="slds-text-longform">
+                            <h3 class="slds-text-heading_medium">Quickstart Setup</h3>
+                            <p class="slds-text-body_regular">
+                                Establish a secure connection to the Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team). 
+                                This will configure your default settings and automatically register this org 
+                                so you can start sending requests immediately.
+                            </p>
                         </div>
                     </div>
-                </div>
 
-                <div class="slds-align_absolute-center slds-m-top_large">
-                    <lightning-button 
-                        variant="brand" 
-                        label="Quickstart Connection" 
-                        icon-name="utility:link" 
-                        onclick={handleConnect} 
-                        class="slds-p-horizontal_large">
-                    </lightning-button>
-                </div>
-            </template>
+                    <div class="slds-box slds-theme_warning slds-m-vertical_medium">
+                        <div class="slds-media slds-media_center">
+                            <div class="slds-media__figure">
+                                <lightning-icon icon-name="utility:warning" size="small"></lightning-icon>
+                            </div>
+                            <div class="slds-media__body">
+                                <p><strong>Admin Action Required:</strong></p>
+                                <p>Ensure this URL is in <strong>Remote Site Settings</strong> before connecting:</p>
+                                <code class="slds-text-color_error">{status.requiredRemoteSite}</code>
+                            </div>
+                        </div>
+                    </div>
 
-        </div>
-    </lightning-card>
+                    <div class="slds-align_absolute-center slds-m-top_large">
+                        <lightning-button 
+                            variant="brand" 
+                            label="Quickstart Connection" 
+                            icon-name="utility:link" 
+                            onclick={handleConnect} 
+                            class="slds-p-horizontal_large">
+                        </lightning-button>
+                    </div>
+                </template>
+
+            </div>
+        </lightning-card>
+    </template>
 </template>

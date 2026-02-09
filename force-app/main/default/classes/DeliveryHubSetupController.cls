@@ -1,31 +1,22 @@
-/**
- * @description Controller for the Delivery Hub Setup LWC.
- * Handles connecting to the mothership (Cloud Nimbus LLC) and initializing app defaults.
- */
 public without sharing class DeliveryHubSetupController {
 
-    /**
-     * @description Data Transfer Object to pass setup status to the LWC.
-     */
     public class SetupStatus {
         @AuraEnabled public Boolean isConnected;
         @AuraEnabled public String requiredRemoteSite;
         @AuraEnabled public Network_Entity__c entity;
     }
 
-    /**
-     * @description Checks the current connection status.
-     * @return SetupStatus Object containing connection state and requirements.
-     */
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
+        // FIX: Added WITH USER_MODE to satisfy security scanner
         List<Network_Entity__c> entities = [
             SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c 
             FROM Network_Entity__c 
             WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
+            WITH USER_MODE
             LIMIT 1
         ];
 
@@ -39,75 +30,115 @@ public without sharing class DeliveryHubSetupController {
     }
 
     /**
-     * @description Connects the org, initializes settings, sends registration ticket, AND starts the sync heartbeat.
+     * @description Robust Connection: Handshake -> Parse Identity -> Save Everything Automagically
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
     public static void connectToDefaultMothership() {
-        // 1. Create/Find Network Entity
+        String mothershipBase = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
+        String intakeEndpoint = mothershipBase + '/intake';
+        
+        String myUrl = Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/deliveryhub/v1';
+        String myOrgId = UserInfo.getOrganizationId();
+        String myName = UserInfo.getOrganizationName();
+
+        // 1. CONSTRUCT PACKET
+        Map<String, Object> packet = new Map<String, Object>();
+        packet.put('companyName', myName); 
+        packet.put('orgId', myOrgId);       
+        packet.put('instanceUrl', myUrl);   
+        packet.put('registeredBy', UserInfo.getName());
+        packet.put('title', 'New Org Connection');
+        packet.put('briefSummary', 'Initial connection established from ' + myName);
+        packet.put('detailedContent', 'Automatic registration via Delivery Hub Setup.\n\nOrg ID: ' + myOrgId + '\nCallback URL: ' + myUrl);
+        packet.put('type', 'Task');
+        packet.put('priority', 'High');
+
+        // 2. SEND TO MOTHERSHIP
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(intakeEndpoint); 
+        req.setMethod('POST');
+        req.setHeader('Content-Type', 'application/json');
+        req.setBody(JSON.serialize(packet));
+
+        Http http = new Http();
+        HttpResponse res = http.send(req);
+
+        if (res.getStatusCode() >= 400) {
+            throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
+        }
+
+        // 3. PARSE RESPONSE
+        Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+        String remoteTicketId = (String) responseMap.get('ticketId');
+        String remoteEntityId = (String) responseMap.get('entityId'); 
+
+        // 4. SAVE LOCAL RECORDS
+        
+        // A. Create/Update Vendor Entity
         List<Network_Entity__c> existing = [
-            SELECT Id FROM Network_Entity__c 
+            SELECT Id, RemoteExternalIdTxt__c 
+            FROM Network_Entity__c 
             WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
             LIMIT 1
         ];
-
+        Network_Entity__c mothership;
+        
         if (existing.isEmpty()) {
-            Network_Entity__c mothership = new Network_Entity__c(
+            mothership = new Network_Entity__c(
                 Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
                 EntityTypePk__c = 'Vendor',
-                IntegrationEndpointUrlTxt__c = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1'
+                IntegrationEndpointUrlTxt__c = mothershipBase,
+                RemoteExternalIdTxt__c = remoteEntityId
             );
-            
-            // Check create permission on the specific object, but proceed if safe
             if (Schema.sObjectType.Network_Entity__c.isCreateable()) {
                 insert mothership;
-            } else {
-                throw new AuraHandledException('Insufficient permissions to create Network Entity.');
+            }
+        } else {
+            mothership = existing[0];
+            if (mothership.RemoteExternalIdTxt__c != remoteEntityId) {
+                 mothership.RemoteExternalIdTxt__c = remoteEntityId;
+                 if (Schema.sObjectType.Network_Entity__c.isUpdateable()) {
+                     update mothership;
+                 }
             }
         }
 
-        // 2. Initialize Settings
+        // B. Initialize Settings
         initializeDefaultSettings();
 
-        // 3. Create Registration Ticket
-        List<Ticket__c> existingReg = [
-            SELECT Id FROM Ticket__c 
-            WHERE WorkItemNameTxt__c = 'New Org Connection' 
-            LIMIT 1
-        ];
-        
-        if (existingReg.isEmpty()) {
-            String orgContext = 'Auto-generated registration.\n\n' +
-                                'Org Name: ' + UserInfo.getOrganizationName() + '\n' +
-                                'Org ID: ' + UserInfo.getOrganizationId() + '\n' +
-                                'Instance URL: ' + Url.getOrgDomainUrl().toExternalForm() + '\n' +
-                                'Registered By: ' + UserInfo.getName() + ' (' + UserInfo.getUserEmail() + ')';
+        // C. Create Local Ticket
+        Ticket__c regTicket = new Ticket__c(
+            WorkItemNameTxt__c = 'New Org Connection',
+            BriefDescriptionTxt__c = 'Connection Established Successfully.',
+            StageNamePk__c = 'Backlog',
+            PriorityPk__c = 'High'
+        );
 
-            Ticket__c regTicket = new Ticket__c(
-                WorkItemNameTxt__c = 'New Org Connection',
-                BriefDescriptionTxt__c = 'New Delivery Hub Installation: ' + UserInfo.getOrganizationName(),
-                DetailsTxt__c = orgContext,
-                StageNamePk__c = 'Backlog',
-                PriorityPk__c = 'High'
-            );
+        if (Schema.sObjectType.Ticket__c.isCreateable()) {
+            insert regTicket;
+        }
 
-            if (Schema.sObjectType.Ticket__c.isCreateable()) {
-                insert regTicket;
-            }
+        // D. Create Request
+        Request__c regRequest = new Request__c(
+            TicketId__c = regTicket.Id,           
+            DeliveryEntityId__c = mothership.Id,  
+            RemoteTicketIdTxt__c = remoteTicketId, 
+            StatusPk__c = 'Open'
+        );
+
+        if (Schema.sObjectType.Request__c.isCreateable()) {
+            insert regRequest;
         }
         
-        // 4. Start the Sync Heartbeat immediately
+        // E. Start Sync
         scheduleSyncJobs();
     }
 
-    /**
-     * @description Initializes default custom settings if none exist.
-     */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static void initializeDefaultSettings() {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
-        
         if (settings.Id == null) {
             settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
             settings.EnableNotificationsBool__c = true;
@@ -117,27 +148,15 @@ public without sharing class DeliveryHubSetupController {
             settings.AutoGenerateDescriptionsBool__c = true;
             settings.AIEstimationEnabledBool__c = true;
             settings.StagesToAutoShareWithDevTeamTxt__c = 'All';
-            
             if (Schema.sObjectType.Delivery_Hub_Settings__c.isCreateable()) {
                 insert settings;
             }
         }
     }
 
-    /**
-     * @description Schedules the background jobs (Poller) to keep data in sync.
-     * Uses SuppressWarnings because querying CronTrigger typically flags CRUD violations 
-     * but is necessary for system setup.
-     */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static void scheduleSyncJobs() {
-        // Check if jobs already exist to prevent duplicate errors
-        Integer jobCount = [
-            SELECT Count() 
-            FROM CronTrigger 
-            WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'
-        ];
-        
+        Integer jobCount = [SELECT Count() FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'];
         if (jobCount == 0) {
             System.schedule('Delivery Hub Sync - :00', '0 0 * * * ?', new DeliveryHubScheduler());
             System.schedule('Delivery Hub Sync - :15', '0 15 * * * ?', new DeliveryHubScheduler());

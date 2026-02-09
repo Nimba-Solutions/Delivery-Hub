@@ -3,21 +3,23 @@ import getSetupStatus from '@salesforce/apex/DeliveryHubSetupController.getSetup
 import connectToDefaultMothership from '@salesforce/apex/DeliveryHubSetupController.connectToDefaultMothership';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
-import { refreshApex } from '@salesforce/apex'; // 1. Import refreshApex
+import { refreshApex } from '@salesforce/apex'; 
 
 export default class DeliveryHubSetup extends NavigationMixin(LightningElement) {
     @track status = { isConnected: false, requiredRemoteSite: '', entity: {} };
     @track isLoading = true;
     
-    // Store the wired result so we can refresh it later
     wiredStatusResult;
 
-    // Load Status
+    // Hard-coded check: If URL matches Mothership, return TRUE
+    get isMothership() {
+        return window.location.hostname.includes('orgfarm-928a77dfd6-dev-ed');
+    }
+
     @wire(getSetupStatus)
     wiredStatus(result) {
-        this.wiredStatusResult = result; // 2. Cache the result for refreshing
+        this.wiredStatusResult = result; 
         const { data, error } = result;
-
         this.isLoading = false;
         if (data) {
             this.status = data;
@@ -30,8 +32,7 @@ export default class DeliveryHubSetup extends NavigationMixin(LightningElement) 
         this.isLoading = true;
         connectToDefaultMothership()
             .then(() => {
-                this.showToast('Success', 'Connection established successfully!', 'success');
-                // 3. Force the UI to update immediately
+                this.showToast('Success', 'Connection established!', 'success');
                 return refreshApex(this.wiredStatusResult); 
             })
             .catch(error => {
@@ -39,7 +40,6 @@ export default class DeliveryHubSetup extends NavigationMixin(LightningElement) 
                 this.isLoading = false;
             })
             .finally(() => {
-                // If refreshApex finishes fast, we ensure spinner stops
                 this.isLoading = false;
             });
     }
@@ -47,10 +47,7 @@ export default class DeliveryHubSetup extends NavigationMixin(LightningElement) 
     navigateToTickets() {
         this[NavigationMixin.Navigate]({
             type: 'standard__navItemPage',
-            attributes: {
-                // The API Name of the tab from your URL: /lightning/n/draganddroplwc
-                apiName: 'draganddroplwc'
-            }
+            attributes: { apiName: 'draganddroplwc' }
         });
     }
 
