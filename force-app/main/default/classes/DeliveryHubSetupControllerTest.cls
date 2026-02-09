@@ -17,10 +17,6 @@ private class DeliveryHubSetupControllerTest {
             UserName='standarduser' + DateTime.now().getTime() + '@testorg.com'
         );
         insert u;
-        
-        // Assign Permission Set if needed (Optional, depending on your org config)
-        // PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Delivery_Hub_Admin'];
-        // insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
     }
 
     @IsTest
@@ -86,6 +82,12 @@ private class DeliveryHubSetupControllerTest {
      * @description Mock implementation for HTTP Success response that matches Controller expectations
      */
     public class MockResponseSuccess implements HttpCalloutMock {
+        
+        /**
+         * @description Responds to the HTTP request with a mock JSON payload.
+         * @param req The HTTP Request being sent.
+         * @return The HTTP Response containing ticketId and entityId.
+         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
