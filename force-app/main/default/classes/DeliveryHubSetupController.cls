@@ -9,7 +9,6 @@ public without sharing class DeliveryHubSetupController {
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
-        // NOTE: This URL must match the Site URL of the Mothership
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
         List<Network_Entity__c> entities = [SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c FROM Network_Entity__c WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' LIMIT 1];
@@ -24,14 +23,11 @@ public without sharing class DeliveryHubSetupController {
     }
 
     /**
-     * @description Robust Connection: Sends a standard Ticket Packet that INCLUDES self-healing connection data.
-     * Uses the standard Intake endpoint so the Mothership processes it exactly like any other ticket.
+     * @description Robust Connection: Handshake -> Parse Identity -> Save Everything Automagically
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
     public static void connectToDefaultMothership() {
-        // 1. DEFINE ENDPOINTS
-        // We append '/intake' because that is where DeliveryHubIntakeService lives
         String mothershipBase = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
         String intakeEndpoint = mothershipBase + '/intake';
         
@@ -39,24 +35,19 @@ public without sharing class DeliveryHubSetupController {
         String myOrgId = UserInfo.getOrganizationId();
         String myName = UserInfo.getOrganizationName();
 
-        // 2. CONSTRUCT THE "SELF-HEALING" PACKET
-        // This matches the 'InboundPacket' class in the Mothership's IntakeService
+        // 1. CONSTRUCT PACKET
         Map<String, Object> packet = new Map<String, Object>();
-        
-        // --- A. Connection Identity (The Self-Healing Parts) ---
         packet.put('companyName', myName); 
         packet.put('orgId', myOrgId);       
         packet.put('instanceUrl', myUrl);   
         packet.put('registeredBy', UserInfo.getName());
-
-        // --- B. Ticket Content ---
         packet.put('title', 'New Org Connection');
         packet.put('briefSummary', 'Initial connection established from ' + myName);
         packet.put('detailedContent', 'Automatic registration via Delivery Hub Setup.\n\nOrg ID: ' + myOrgId + '\nCallback URL: ' + myUrl);
         packet.put('type', 'Task');
         packet.put('priority', 'High');
 
-        // 3. SEND TO MOTHERSHIP (HTTP CALLOUT)
+        // 2. SEND TO MOTHERSHIP
         HttpRequest req = new HttpRequest();
         req.setEndpoint(intakeEndpoint); 
         req.setMethod('POST');
@@ -70,16 +61,14 @@ public without sharing class DeliveryHubSetupController {
             throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
         }
 
-        // 4. PROCESS RESPONSE
-        // The Mothership returns the new Ticket ID and the Entity ID
+        // 3. PARSE RESPONSE (Get BOTH IDs)
         Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
         String remoteTicketId = (String) responseMap.get('ticketId');
+        String remoteEntityId = (String) responseMap.get('entityId'); // <--- THE MISSING PIECE
+
+        // 4. SAVE LOCAL RECORDS
         
-        // ---------------------------------------------------------
-        // 5. SAVE LOCAL RECORDS (Mirroring what happened in Mothership)
-        // ---------------------------------------------------------
-        
-        // A. Ensure Local "Vendor" Entity Exists
+        // A. Create/Update Vendor Entity with the REMOTE ID
         List<Network_Entity__c> existing = [SELECT Id FROM Network_Entity__c WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' LIMIT 1];
         Network_Entity__c mothership;
         
@@ -88,17 +77,23 @@ public without sharing class DeliveryHubSetupController {
                 Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
                 EntityTypePk__c = 'Vendor',
-                IntegrationEndpointUrlTxt__c = mothershipBase // Base URL for future calls
+                IntegrationEndpointUrlTxt__c = mothershipBase,
+                RemoteExternalIdTxt__c = remoteEntityId // <--- SAVE IT HERE
             );
             if (Schema.sObjectType.Network_Entity__c.isCreateable()) insert mothership;
         } else {
             mothership = existing[0];
+            // Ensure the existing record has the latest Remote ID
+            if (mothership.RemoteExternalIdTxt__c != remoteEntityId) {
+                 mothership.RemoteExternalIdTxt__c = remoteEntityId;
+                 if (Schema.sObjectType.Network_Entity__c.isUpdateable()) update mothership;
+            }
         }
 
         // B. Initialize Settings
         initializeDefaultSettings();
 
-        // C. Create Local Ticket (Parent)
+        // C. Create Local Ticket
         Ticket__c regTicket = new Ticket__c(
             WorkItemNameTxt__c = 'New Org Connection',
             BriefDescriptionTxt__c = 'Connection Established Successfully.',
@@ -110,8 +105,7 @@ public without sharing class DeliveryHubSetupController {
             insert regTicket;
         }
 
-        // D. Create Request (Child) - THE KEY LINK
-        // This stores the Remote Ticket ID so we are linked immediately
+        // D. Create Request (Link Ticket to Mothership)
         Request__c regRequest = new Request__c(
             TicketId__c = regTicket.Id,           
             DeliveryEntityId__c = mothership.Id,  
