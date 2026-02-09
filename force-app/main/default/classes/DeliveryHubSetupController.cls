@@ -6,10 +6,13 @@ public without sharing class DeliveryHubSetupController {
         @AuraEnabled public Network_Entity__c entity;
     }
 
-    // Helper: Detect Namespace Prefix (e.g., 'delivery__')
+    // FIX: Check GlobalDescribe to see if the object ACTUALLY has the prefix at runtime
     private static String getNamespace() {
-        String ns = [SELECT NamespacePrefix FROM Organization].NamespacePrefix;
-        return String.isBlank(ns) ? '' : ns + '__';
+        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
+        if (gd.containsKey('delivery__network_entity__c')) {
+            return 'delivery__';
+        }
+        return '';
     }
 
     @SuppressWarnings('PMD.ApexSOQLInjection')
@@ -19,7 +22,7 @@ public without sharing class DeliveryHubSetupController {
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
         String ns = getNamespace();
-        // FIX: Dynamic SOQL to handle namespaced environments
+        // Dynamic SOQL
         String query = 'SELECT Id, Name, ' + ns + 'StatusPk__c, ' + ns + 'IntegrationEndpointUrlTxt__c ' +
                        'FROM ' + ns + 'Network_Entity__c ' +
                        'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
@@ -47,7 +50,6 @@ public without sharing class DeliveryHubSetupController {
         String myOrgId = UserInfo.getOrganizationId();
         String myName = UserInfo.getOrganizationName();
 
-        // 1. CONSTRUCT PACKET
         Map<String, Object> packet = new Map<String, Object>();
         packet.put('companyName', myName); 
         packet.put('orgId', myOrgId);       
@@ -59,7 +61,6 @@ public without sharing class DeliveryHubSetupController {
         packet.put('type', 'Task');
         packet.put('priority', 'High');
 
-        // 2. SEND TO MOTHERSHIP
         HttpRequest req = new HttpRequest();
         req.setEndpoint(intakeEndpoint); 
         req.setMethod('POST');
@@ -77,10 +78,9 @@ public without sharing class DeliveryHubSetupController {
         String remoteTicketId = (String) responseMap.get('ticketId');
         String remoteEntityId = (String) responseMap.get('entityId'); 
 
-        // 3. SAVE LOCAL RECORDS
         String ns = getNamespace();
         
-        // A. Create/Update Vendor Entity (Dynamic SOQL)
+        // A. Create/Update Vendor Entity
         String entityQuery = 'SELECT Id, ' + ns + 'RemoteExternalIdTxt__c ' +
                              'FROM ' + ns + 'Network_Entity__c ' +
                              'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
@@ -97,47 +97,39 @@ public without sharing class DeliveryHubSetupController {
             mothership.put(ns + 'IntegrationEndpointUrlTxt__c', mothershipBase);
             mothership.put(ns + 'RemoteExternalIdTxt__c', remoteEntityId);
             
-            if (Schema.sObjectType.Network_Entity__c.isCreateable()) {
-                insert mothership;
-            }
+            // FIX: Removed isCreateable check - this is a system process in 'without sharing'
+            insert mothership;
         } else {
             mothership = (Network_Entity__c)existing[0];
             String currentRemoteId = (String) mothership.get(ns + 'RemoteExternalIdTxt__c');
             
             if (currentRemoteId != remoteEntityId) {
                  mothership.put(ns + 'RemoteExternalIdTxt__c', remoteEntityId);
-                 if (Schema.sObjectType.Network_Entity__c.isUpdateable()) {
-                     update mothership;
-                 }
+                 // FIX: Removed isUpdateable check - ensuring the update actually happens
+                 update mothership;
             }
         }
 
-        // B. Initialize Settings
         initializeDefaultSettings();
 
-        // C. Create Local Ticket (Using Dynamic Fields to be safe)
+        // C. Create Local Ticket
         Ticket__c regTicket = new Ticket__c();
         regTicket.put(ns + 'WorkItemNameTxt__c', 'New Org Connection');
         regTicket.put(ns + 'BriefDescriptionTxt__c', 'Connection Established Successfully.');
         regTicket.put(ns + 'StageNamePk__c', 'Backlog');
         regTicket.put(ns + 'PriorityPk__c', 'High');
 
-        if (Schema.sObjectType.Ticket__c.isCreateable()) {
-            insert regTicket;
-        }
+        insert regTicket;
 
-        // D. Create Request (Link Ticket to Mothership)
+        // D. Create Request
         Request__c regRequest = new Request__c();
         regRequest.put(ns + 'TicketId__c', regTicket.Id);
         regRequest.put(ns + 'DeliveryEntityId__c', mothership.Id);
         regRequest.put(ns + 'RemoteTicketIdTxt__c', remoteTicketId);
         regRequest.put(ns + 'StatusPk__c', 'Open');
 
-        if (Schema.sObjectType.Request__c.isCreateable()) {
-            insert regRequest;
-        }
+        insert regRequest;
         
-        // E. Start Sync
         scheduleSyncJobs();
     }
 
@@ -153,9 +145,7 @@ public without sharing class DeliveryHubSetupController {
             settings.AutoGenerateDescriptionsBool__c = true;
             settings.AIEstimationEnabledBool__c = true;
             settings.StagesToAutoShareWithDevTeamTxt__c = 'All';
-            if (Schema.sObjectType.Delivery_Hub_Settings__c.isCreateable()) {
-                insert settings;
-            }
+            insert settings;
         }
     }
 
