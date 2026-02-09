@@ -12,12 +12,13 @@ public without sharing class DeliveryHubSetupController {
         SetupStatus status = new SetupStatus();
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
-        // CLEANER: Ask Salesforce for the correct API Name of the object (handles namespace automatically)
-        String tableName = SObjectType.Network_Entity__c.getName();
-
-        // NOTE: We do NOT prefix the fields (StatusPk__c). 
-        // Inside the package, the code "sees" its own fields locally.
-        String query = 'SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c ' +
+        // 1. GET SAFE NAMES FROM SCHEMA
+        String tableName = Schema.SObjectType.Network_Entity__c.getName();
+        String statusField = Schema.SObjectType.Network_Entity__c.fields.StatusPk__c.getName();
+        String urlField = Schema.SObjectType.Network_Entity__c.fields.IntegrationEndpointUrlTxt__c.getName();
+        
+        // 2. BUILD DYNAMIC QUERY
+        String query = 'SELECT Id, Name, ' + statusField + ', ' + urlField + ' ' +
                        'FROM ' + tableName + ' ' +
                        'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
                        'WITH USER_MODE ' +
@@ -72,10 +73,14 @@ public without sharing class DeliveryHubSetupController {
         String remoteTicketId = (String) responseMap.get('ticketId');
         String remoteEntityId = (String) responseMap.get('entityId'); 
 
-        // CLEANER: Dynamic Table Name
-        String tableName = SObjectType.Network_Entity__c.getName();
-        
-        String entityQuery = 'SELECT Id, RemoteExternalIdTxt__c ' +
+        // 3. GET SAFE NAMES FOR DML/QUERY
+        String tableName = Schema.SObjectType.Network_Entity__c.getName();
+        String remoteIdField = Schema.SObjectType.Network_Entity__c.fields.RemoteExternalIdTxt__c.getName();
+        String statusField = Schema.SObjectType.Network_Entity__c.fields.StatusPk__c.getName();
+        String typeField = Schema.SObjectType.Network_Entity__c.fields.EntityTypePk__c.getName();
+        String urlField = Schema.SObjectType.Network_Entity__c.fields.IntegrationEndpointUrlTxt__c.getName();
+
+        String entityQuery = 'SELECT Id, ' + remoteIdField + ' ' +
                              'FROM ' + tableName + ' ' +
                              'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
                              'LIMIT 1';
@@ -87,41 +92,49 @@ public without sharing class DeliveryHubSetupController {
             mothership = new Network_Entity__c();
             mothership.Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
             
-            // Use .put() with STRING keys to avoid any compilation weirdness
-            mothership.put('StatusPk__c', 'Active');
-            mothership.put('EntityTypePk__c', 'Vendor');
-            mothership.put('IntegrationEndpointUrlTxt__c', mothershipBase);
-            mothership.put('RemoteExternalIdTxt__c', remoteEntityId);
+            // USE SAFE NAMES IN .put()
+            mothership.put(statusField, 'Active');
+            mothership.put(typeField, 'Vendor');
+            mothership.put(urlField, mothershipBase);
+            mothership.put(remoteIdField, remoteEntityId);
             
             insert mothership;
         } else {
             mothership = (Network_Entity__c)existing[0];
-            String currentRemoteId = (String) mothership.get('RemoteExternalIdTxt__c');
+            String currentRemoteId = (String) mothership.get(remoteIdField);
             
             if (currentRemoteId != remoteEntityId) {
-                 mothership.put('RemoteExternalIdTxt__c', remoteEntityId);
+                 mothership.put(remoteIdField, remoteEntityId);
                  update mothership;
             }
         }
 
         initializeDefaultSettings();
 
-        // Note: For Ticket/Request, static DML is usually fine unless they are also namespaced differently
-        // But consistent use of .put() keeps it safe.
-        Ticket__c regTicket = new Ticket__c();
-        regTicket.put('WorkItemNameTxt__c', 'New Org Connection');
-        regTicket.put('BriefDescriptionTxt__c', 'Connection Established Successfully.');
-        regTicket.put('StageNamePk__c', 'Backlog');
-        regTicket.put('PriorityPk__c', 'High');
+        // 4. SAFE NAMES FOR TICKET
+        String tName = Schema.SObjectType.Ticket__c.fields.WorkItemNameTxt__c.getName();
+        String tDesc = Schema.SObjectType.Ticket__c.fields.BriefDescriptionTxt__c.getName();
+        String tStage = Schema.SObjectType.Ticket__c.fields.StageNamePk__c.getName();
+        String tPriority = Schema.SObjectType.Ticket__c.fields.PriorityPk__c.getName();
 
+        Ticket__c regTicket = new Ticket__c();
+        regTicket.put(tName, 'New Org Connection');
+        regTicket.put(tDesc, 'Connection Established Successfully.');
+        regTicket.put(tStage, 'Backlog');
+        regTicket.put(tPriority, 'High');
         insert regTicket;
 
-        Request__c regRequest = new Request__c();
-        regRequest.put('TicketId__c', regTicket.Id);
-        regRequest.put('DeliveryEntityId__c', mothership.Id);
-        regRequest.put('RemoteTicketIdTxt__c', remoteTicketId);
-        regRequest.put('StatusPk__c', 'Open');
+        // 5. SAFE NAMES FOR REQUEST
+        String rTicketId = Schema.SObjectType.Request__c.fields.TicketId__c.getName();
+        String rEntityId = Schema.SObjectType.Request__c.fields.DeliveryEntityId__c.getName();
+        String rRemoteId = Schema.SObjectType.Request__c.fields.RemoteTicketIdTxt__c.getName();
+        String rStatus = Schema.SObjectType.Request__c.fields.StatusPk__c.getName();
 
+        Request__c regRequest = new Request__c();
+        regRequest.put(rTicketId, regTicket.Id);
+        regRequest.put(rEntityId, mothership.Id);
+        regRequest.put(rRemoteId, remoteTicketId);
+        regRequest.put(rStatus, 'Open');
         insert regRequest;
         
         scheduleSyncJobs();
