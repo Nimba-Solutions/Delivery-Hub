@@ -6,25 +6,19 @@ public without sharing class DeliveryHubSetupController {
         @AuraEnabled public Network_Entity__c entity;
     }
 
-    // FIX: Check GlobalDescribe to see if the object ACTUALLY has the prefix at runtime
-    private static String getNamespace() {
-        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey('delivery__network_entity__c')) {
-            return 'delivery__';
-        }
-        return '';
-    }
-
     @SuppressWarnings('PMD.ApexSOQLInjection')
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
         status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
 
-        String ns = getNamespace();
-        // Dynamic SOQL
-        String query = 'SELECT Id, Name, ' + ns + 'StatusPk__c, ' + ns + 'IntegrationEndpointUrlTxt__c ' +
-                       'FROM ' + ns + 'Network_Entity__c ' +
+        // CLEANER: Ask Salesforce for the correct API Name of the object (handles namespace automatically)
+        String tableName = SObjectType.Network_Entity__c.getName();
+
+        // NOTE: We do NOT prefix the fields (StatusPk__c). 
+        // Inside the package, the code "sees" its own fields locally.
+        String query = 'SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c ' +
+                       'FROM ' + tableName + ' ' +
                        'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
                        'WITH USER_MODE ' +
                        'LIMIT 1';
@@ -78,11 +72,11 @@ public without sharing class DeliveryHubSetupController {
         String remoteTicketId = (String) responseMap.get('ticketId');
         String remoteEntityId = (String) responseMap.get('entityId'); 
 
-        String ns = getNamespace();
+        // CLEANER: Dynamic Table Name
+        String tableName = SObjectType.Network_Entity__c.getName();
         
-        // A. Create/Update Vendor Entity
-        String entityQuery = 'SELECT Id, ' + ns + 'RemoteExternalIdTxt__c ' +
-                             'FROM ' + ns + 'Network_Entity__c ' +
+        String entityQuery = 'SELECT Id, RemoteExternalIdTxt__c ' +
+                             'FROM ' + tableName + ' ' +
                              'WHERE Name = \'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)\' ' +
                              'LIMIT 1';
         
@@ -92,41 +86,41 @@ public without sharing class DeliveryHubSetupController {
         if (existing.isEmpty()) {
             mothership = new Network_Entity__c();
             mothership.Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
-            mothership.put(ns + 'StatusPk__c', 'Active');
-            mothership.put(ns + 'EntityTypePk__c', 'Vendor');
-            mothership.put(ns + 'IntegrationEndpointUrlTxt__c', mothershipBase);
-            mothership.put(ns + 'RemoteExternalIdTxt__c', remoteEntityId);
             
-            // FIX: Removed isCreateable check - this is a system process in 'without sharing'
+            // Use .put() with STRING keys to avoid any compilation weirdness
+            mothership.put('StatusPk__c', 'Active');
+            mothership.put('EntityTypePk__c', 'Vendor');
+            mothership.put('IntegrationEndpointUrlTxt__c', mothershipBase);
+            mothership.put('RemoteExternalIdTxt__c', remoteEntityId);
+            
             insert mothership;
         } else {
             mothership = (Network_Entity__c)existing[0];
-            String currentRemoteId = (String) mothership.get(ns + 'RemoteExternalIdTxt__c');
+            String currentRemoteId = (String) mothership.get('RemoteExternalIdTxt__c');
             
             if (currentRemoteId != remoteEntityId) {
-                 mothership.put(ns + 'RemoteExternalIdTxt__c', remoteEntityId);
-                 // FIX: Removed isUpdateable check - ensuring the update actually happens
+                 mothership.put('RemoteExternalIdTxt__c', remoteEntityId);
                  update mothership;
             }
         }
 
         initializeDefaultSettings();
 
-        // C. Create Local Ticket
+        // Note: For Ticket/Request, static DML is usually fine unless they are also namespaced differently
+        // But consistent use of .put() keeps it safe.
         Ticket__c regTicket = new Ticket__c();
-        regTicket.put(ns + 'WorkItemNameTxt__c', 'New Org Connection');
-        regTicket.put(ns + 'BriefDescriptionTxt__c', 'Connection Established Successfully.');
-        regTicket.put(ns + 'StageNamePk__c', 'Backlog');
-        regTicket.put(ns + 'PriorityPk__c', 'High');
+        regTicket.put('WorkItemNameTxt__c', 'New Org Connection');
+        regTicket.put('BriefDescriptionTxt__c', 'Connection Established Successfully.');
+        regTicket.put('StageNamePk__c', 'Backlog');
+        regTicket.put('PriorityPk__c', 'High');
 
         insert regTicket;
 
-        // D. Create Request
         Request__c regRequest = new Request__c();
-        regRequest.put(ns + 'TicketId__c', regTicket.Id);
-        regRequest.put(ns + 'DeliveryEntityId__c', mothership.Id);
-        regRequest.put(ns + 'RemoteTicketIdTxt__c', remoteTicketId);
-        regRequest.put(ns + 'StatusPk__c', 'Open');
+        regRequest.put('TicketId__c', regTicket.Id);
+        regRequest.put('DeliveryEntityId__c', mothership.Id);
+        regRequest.put('RemoteTicketIdTxt__c', remoteTicketId);
+        regRequest.put('StatusPk__c', 'Open');
 
         insert regRequest;
         
