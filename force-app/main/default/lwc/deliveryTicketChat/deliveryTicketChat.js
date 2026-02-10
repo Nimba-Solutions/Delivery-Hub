@@ -2,6 +2,8 @@ import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments';
 import postComment from '@salesforce/apex/DeliveryHubCommentController.postComment';
+// 1. IMPORT THE POLLER
+import pollUpdates from '@salesforce/apex/DeliveryHubPoller.pollUpdates'; 
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DeliveryTicketChat extends LightningElement {
@@ -41,14 +43,24 @@ export default class DeliveryTicketChat extends LightningElement {
 
     // 2. Optimized Polling
     connectedCallback() {
-        // Poll every 5 seconds to check for new messages from the Mothership
+        // Poll every 5 seconds
         this._pollingInterval = setInterval(() => {
-            // Only refresh the Wire. 
-            // This is efficient and prevents "double rendering" flicker.
-            if (this.wiredResult) {
-                refreshApex(this.wiredResult)
-                    .catch(error => console.error('Error refreshing chat:', error));
-            }
+            
+            // A. RUN THE SYNC (The "Mail Carrier")
+            pollUpdates()
+                .then(result => {
+                    // Optional: Log result for debugging (e.g. "Success: Synced 1 items")
+                    // console.log('Poll Result:', result);
+
+                    // B. REFRESH THE VIEW (Only after sync tries to run)
+                    if (this.wiredResult) {
+                        return refreshApex(this.wiredResult);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling mothership:', error);
+                });
+
         }, 5000); 
     }
 
