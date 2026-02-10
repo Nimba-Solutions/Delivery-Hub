@@ -55,7 +55,7 @@ public without sharing class DeliveryHubPoller {
             req.setEndpoint(endpoint);
             req.setMethod('GET');
             req.setHeader('Client-Entity-ID', remoteId); 
-            req.setHeader('Authorization', 'Bearer ' + UserInfo.getSessionId()); 
+            //req.setHeader('Authorization', 'Bearer ' + UserInfo.getSessionId()); 
 
             Http http = new Http();
             HttpResponse res = http.send(req);
