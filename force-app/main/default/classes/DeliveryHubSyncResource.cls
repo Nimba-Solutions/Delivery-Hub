@@ -2,7 +2,7 @@
  * @description REST Resource for the Delivery Hub "Pull" Sync.
  * Endpoint: /services/apexrest/v1/sync/*
  */
-@RestResource(urlMapping='/v1/sync/*')
+@RestResource(urlMapping='/deliveryhub/v1/sync/*')
 global with sharing class DeliveryHubSyncResource {
 
     /**
