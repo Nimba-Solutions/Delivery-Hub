@@ -22,7 +22,6 @@ public inherited sharing class DeliveryHubSyncHandler {
             }
         }
 
-        // Fixed: Added braces
         if (ticketIds.isEmpty()) {
             return;
         }
@@ -34,7 +33,7 @@ public inherited sharing class DeliveryHubSyncHandler {
         if (!syncItems.isEmpty()) {
             insert syncItems;
             // This calls the Worker class we discussed earlier
-            System.enqueueJob(new SyncItemProcessor());
+            // System.enqueueJob(new SyncItemProcessor()); // Optional: If you use a queueable to process immediately
         }
     }
 
@@ -49,13 +48,14 @@ public inherited sharing class DeliveryHubSyncHandler {
         List<Sync_Item__c> items = new List<Sync_Item__c>();
         
         // Find Active Vendors (Requests)
+        // We look for Requests that link this Ticket to a specific Vendor (Client Org)
         Map<Id, List<Request__c>> ticketToRequests = new Map<Id, List<Request__c>>();
         
         List<Request__c> activeRequests = [
-            SELECT Id, TicketId__c 
+            SELECT Id, TicketId__c, DeliveryEntityId__c 
             FROM Request__c 
             WHERE TicketId__c IN :ticketIds 
-            AND StatusPk__c != 'Inactive' // Only active connections
+            AND StatusPk__c != 'Inactive' 
             AND DeliveryEntityId__c != NULL 
         ];
 
@@ -70,6 +70,15 @@ public inherited sharing class DeliveryHubSyncHandler {
         for (Ticket_Comment__c c : comments) {
             if (ticketToRequests.containsKey(c.TicketId__c)) {
                 for (Request__c req : ticketToRequests.get(c.TicketId__c)) {
+                    
+                    // --- THE FIX: GENERATE THE PAYLOAD ---
+                    Map<String, Object> payloadMap = new Map<String, Object>();
+                    payloadMap.put('TargetId', c.Id); // ID for matching
+                    payloadMap.put('Body', c.BodyTxt__c);
+                    payloadMap.put('Author', c.AuthorTxt__c);
+                    payloadMap.put('Timestamp', c.CreatedDate);
+                    payloadMap.put('Source', 'Mothership'); 
+                    
                     items.add(new Sync_Item__c(
                         TicketId__c = c.TicketId__c,
                         TicketCommentId__c = c.Id,
@@ -78,7 +87,8 @@ public inherited sharing class DeliveryHubSyncHandler {
                         ObjectTypePk__c = 'Ticket_Comment__c',
                         DirectionPk__c = 'Outbound',
                         StatusPk__c = 'Queued',
-                        RetryCountNumber__c = 0
+                        RetryCountNumber__c = 0,
+                        PayloadTxt__c = JSON.serialize(payloadMap) // <--- CRITICAL FIX
                     ));
                 }
             }
