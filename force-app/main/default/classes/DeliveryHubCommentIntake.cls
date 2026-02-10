@@ -7,19 +7,23 @@ global without sharing class DeliveryHubCommentIntake {
         RestResponse res = RestContext.response;
 
         try {
+            // Parse Ticket ID from URL
             String ticketId = req.requestURI.substring(req.requestURI.lastIndexOf('/')+1);
-            String sinceParam = req.params.get('since');
             
+            // Handle "Since" parameter for delta syncs
+            String sinceParam = req.params.get('since');
             DateTime lastSync = (sinceParam != null && String.isNotBlank(sinceParam)) 
                 ? DateTime.newInstance(Long.valueOf(sinceParam)) 
                 : DateTime.newInstance(1900, 1, 1);
 
+            // --- THE FIX IS HERE ---
+            // We now fetch 'Queued' and 'Pending' items so the Client gets them immediately.
             List<Sync_Item__c> items = [
                 SELECT Id, PayloadTxt__c, CreatedDate, StatusPk__c, RemoteExternalIDTxt__c
                 FROM Sync_Item__c 
                 WHERE TicketId__c = :ticketId 
                 AND CreatedDate > :lastSync
-                AND StatusPk__c = 'Success' 
+                AND StatusPk__c IN ('Queued', 'Pending', 'Success') 
                 ORDER BY CreatedDate ASC
                 LIMIT 50
             ];
@@ -27,14 +31,18 @@ global without sharing class DeliveryHubCommentIntake {
             List<Map<String, Object>> responseList = new List<Map<String, Object>>();
 
             for (Sync_Item__c item : items) {
+                // Safety check for empty payloads (prevents the "null input" 500 error)
                 if (String.isNotBlank(item.PayloadTxt__c)) {
                     try {
                         Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(item.PayloadTxt__c);
+                        
+                        // Add metadata for the client to track sync state
                         payload.put('mothershipSyncId', item.Id);
                         payload.put('timestamp', item.CreatedDate.getTime());
+                        
                         responseList.add(payload);
                     } catch (Exception e) {
-                        // FIX: Added LoggingLevel
+                        // Gracefully skip corrupt records instead of crashing the whole sync
                         System.debug(LoggingLevel.WARN, 'Skipping corrupt payload in SyncItem ' + item.Id);
                     }
                 }
