@@ -1,6 +1,6 @@
 /**
  * @description Service class to process incoming JSON payloads and update SObjects.
- * Handles type conversion and generic DML.
+ * FIXED: Handles INSERT vs UPDATE logic based on ID checks.
  */
 public with sharing class DeliveryHubSyncService {
 
@@ -18,32 +18,60 @@ public with sharing class DeliveryHubSyncService {
         }
 
         // 2. Prepare Record
-        SObject recordToUpdate = targetType.newSObject();
-        recordToUpdate.put('Id', (String) payload.get('TargetId'));
+        SObject record = targetType.newSObject();
+        String targetId = (String) payload.get('TargetId');
+        Boolean isInsert = false;
+
+        // --- THE FIX: Smart ID Handling ---
+        try {
+            Id sId = (Id) targetId;
+            
+            // Check if the ID provided actually matches the Object Type we are processing
+            if (sId.getSObjectType() == targetType) {
+                // It matches (e.g. Comment ID -> Comment Object), so it's an UPDATE
+                record.put('Id', targetId);
+            } else {
+                // Mismatch (e.g. Ticket ID -> Comment Object), so it's a Parent ID for an INSERT
+                isInsert = true;
+                
+                // We assume the TargetId is the Parent Ticket ID. 
+                // We need to set the lookup field 'TicketId__c' (handling namespace)
+                String ns = getNamespace(targetType);
+                record.put(ns + 'TicketId__c', targetId);
+            }
+        } catch (Exception e) {
+            // If ID is invalid or null, assume Insert (fallback)
+            isInsert = true;
+        }
 
         // 3. Map Fields
-        mapFields(recordToUpdate, payload, targetType);
+        mapFields(record, payload, targetType);
 
         // 4. Commit to Database
-        // FIX: CRUD violation. Using System Mode as this is an integration process.
-        Database.update(recordToUpdate, AccessLevel.SYSTEM_MODE);
+        if (isInsert) {
+             Database.insert(record, AccessLevel.SYSTEM_MODE);
+        } else {
+             Database.update(record, AccessLevel.SYSTEM_MODE);
+        }
     }
 
+    // --- HELPER METHODS ---
+
     /**
-     * @description Helper to find SObjectType handling Namespaces safely.
-     * Finds 'delivery__Ticket__c' even if input is 'Ticket__c'.
-     * @param apiName The API name to search for.
-     * @return The matching SObjectType, or null if not found.
+     * @description Helper to find namespace of the found object type
      */
+    private static String getNamespace(Schema.SObjectType soType) {
+        String name = soType.getDescribe().getName();
+        if (name.contains('__') && name.countMatches('__') == 2) {
+             return name.substring(0, name.indexOf('__') + 2); // e.g. "delivery__"
+        }
+        return '';
+    }
+
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
+        if (gd.containsKey(apiName)) return gd.get(apiName);
         
-        // 1. Try Exact Match
-        if (gd.containsKey(apiName)) {
-            return gd.get(apiName);
-        }
-        
-        // 2. Try Local Name Match (Scanning keys is safer in packages)
         String searchKey = apiName.toLowerCase();
         for (String key : gd.keySet()) {
             SObjectType type = gd.get(key);
@@ -54,30 +82,23 @@ public with sharing class DeliveryHubSyncService {
         return null;
     }
 
-    /**
-     * @description Helper to map JSON values to SObject fields with type safety.
-     * @param record The SObject to populate.
-     * @param payload The source JSON map.
-     * @param targetType The SchemaType for field lookups.
-     */
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
-        // Remove Metadata
+        // Remove Metadata so we don't try to map them to fields
         Set<String> metadataKeys = new Set<String>{
-            'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate'
+            'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
         for(String key : metadataKeys) {
-            fieldsToMap.remove(key);
+            if(fieldsToMap.containsKey(key)) fieldsToMap.remove(key);
         }
 
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
 
         for (String key : fieldsToMap.keySet()) {
-            // Check exact match first
             SObjectField field = schemaFields.get(key);
             
-            // If null, try to find namespaced match (e.g. key="StageNamePk__c", field="delivery__StageNamePk__c")
+            // NameSpace Fallback
             if (field == null) {
                 for(String fieldApi : schemaFields.keySet()) {
                     SObjectField f = schemaFields.get(fieldApi);
@@ -88,35 +109,28 @@ public with sharing class DeliveryHubSyncService {
                 }
             }
 
-            if (field != null) {
+            if (field != null && fieldsToMap.get(key) != null) {
                 applyField(record, field, fieldsToMap.get(key));
             }
         }
     }
 
-    /**
-     * @description Applies a single value to a field with type conversion.
-     * @param record The record to update.
-     * @param field The field definition.
-     * @param val The value to set.
-     */
     private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
-            
-            if (val == null) {
-                record.put(field, null);
-            } else if (dtype == Schema.DisplayType.DATE) {
+            if (dtype == Schema.DisplayType.DATE) {
                 record.put(field, Date.valueOf((String)val));
             } else if (dtype == Schema.DisplayType.DATETIME) {
-                record.put(field, JSON.deserialize('"' + val + '"', DateTime.class));
+                // Handle standard JSON DateTime format
+                String dtStr = (String)val;
+                record.put(field, (DateTime)JSON.deserialize('"' + dtStr + '"', DateTime.class));
             } else if (dtype == Schema.DisplayType.PERCENT || dtype == Schema.DisplayType.CURRENCY || dtype == Schema.DisplayType.DOUBLE) {
                 record.put(field, Decimal.valueOf(String.valueOf(val)));
             } else {
                 record.put(field, val);
             }
         } catch (Exception e) {
-            System.debug(LoggingLevel.WARN, 'Field Mapping Error [' + field.getDescribe().getName() + ']: ' + e.getMessage());
+            System.debug(LoggingLevel.WARN, 'Field Mapping Error [' + field + ']: ' + e.getMessage());
         }
     }
 }
