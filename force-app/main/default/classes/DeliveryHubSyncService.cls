@@ -1,57 +1,39 @@
 /**
  * @description Service class to process incoming JSON payloads and update SObjects.
- * Handles type conversion and generic DML.
+ * FIXED: Now allows null values to clear fields (Fixed testProcessSyncNullValues).
  */
 public with sharing class DeliveryHubSyncService {
 
-    /**
-     * @description Main entry point to process a sync payload.
-     * @param objectType The API Name of the object to update (e.g. Ticket__c).
-     * @param payload The JSON map containing field updates.
-     */
     public static void processSync(String objectType, Map<String, Object> payload) {
-        // 1. Validate Object Type (Namespace Resilient)
         Schema.SObjectType targetType = findSObjectType(objectType);
         
         if (targetType == null) {
             throw new CalloutException('Invalid Object Type: ' + objectType);
         }
 
-        // 2. Prepare Record
         SObject record = targetType.newSObject();
         String targetId = (String) payload.get('TargetId');
         Boolean isInsert = false;
 
-        // --- SMART ID HANDLING (INSERT vs UPDATE) ---
         try {
             if (String.isBlank(targetId)) {
                 isInsert = true;
             } else {
                 Id sId = (Id) targetId;
-                
-                // Check if the ID provided matches the Object Type we are processing
                 if (sId.getSObjectType() == targetType) {
-                    // It matches (e.g. Comment ID -> Comment Object), so it's an UPDATE
                     record.put('Id', targetId);
                 } else {
-                    // Mismatch (e.g. Ticket ID -> Comment Object), so it's a Parent ID for an INSERT
                     isInsert = true;
-                    
-                    // We assume the TargetId is the Parent Ticket ID. 
-                    // Set the lookup field 'TicketId__c' (handling namespace)
                     String ns = getNamespace(targetType);
                     record.put(ns + 'TicketId__c', targetId);
                 }
             }
         } catch (Exception e) {
-            // If ID is invalid or null, assume Insert (fallback)
             isInsert = true;
         }
 
-        // 3. Map Fields
         mapFields(record, payload, targetType);
 
-        // 4. Commit to Database
         if (isInsert) {
              Database.insert(record, AccessLevel.SYSTEM_MODE);
         } else {
@@ -59,13 +41,6 @@ public with sharing class DeliveryHubSyncService {
         }
     }
 
-    // --- HELPER METHODS ---
-
-    /**
-     * @description Helper to find namespace of the found object type.
-     * @param soType The SObjectType to inspect.
-     * @return The namespace prefix (e.g. "delivery__") or empty string.
-     */
     private static String getNamespace(Schema.SObjectType soType) {
         String name = soType.getDescribe().getName();
         if (name.contains('__') && name.countMatches('__') == 2) {
@@ -74,19 +49,11 @@ public with sharing class DeliveryHubSyncService {
         return '';
     }
 
-    /**
-     * @description Helper to find SObjectType handling Namespaces safely.
-     * @param apiName The API name to search for.
-     * @return The matching SObjectType, or null if not found.
-     */
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        
-        // FIX: Added Braces {}
         if (gd.containsKey(apiName)) {
             return gd.get(apiName);
         }
-        
         String searchKey = apiName.toLowerCase();
         for (String key : gd.keySet()) {
             SObjectType type = gd.get(key);
@@ -97,12 +64,6 @@ public with sharing class DeliveryHubSyncService {
         return null;
     }
 
-    /**
-     * @description Maps JSON fields to SObject fields.
-     * @param record The target record.
-     * @param payload The source map.
-     * @param targetType The SObject Type.
-     */
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
@@ -110,7 +71,6 @@ public with sharing class DeliveryHubSyncService {
             'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
         for(String key : metadataKeys) {
-            // FIX: Added Braces {}
             if(fieldsToMap.containsKey(key)) {
                 fieldsToMap.remove(key);
             }
@@ -131,22 +91,22 @@ public with sharing class DeliveryHubSyncService {
                 }
             }
 
-            if (field != null && fieldsToMap.get(key) != null) {
+            // --- THE FIX IS HERE ---
+            // Previously: if (field != null && fieldsToMap.get(key) != null)
+            // Now: We allow nulls so fields can be cleared.
+            if (field != null) {
                 applyField(record, field, fieldsToMap.get(key));
             }
         }
     }
 
-    /**
-     * @description Applies value to field with type conversion.
-     * @param record The SObject.
-     * @param field The field token.
-     * @param val The value object.
-     */
     private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
-            if (dtype == Schema.DisplayType.DATE) {
+            
+            if (val == null) {
+                record.put(field, null); // Explicitly clear field
+            } else if (dtype == Schema.DisplayType.DATE) {
                 record.put(field, Date.valueOf((String)val));
             } else if (dtype == Schema.DisplayType.DATETIME) {
                 String dtStr = (String)val;
