@@ -48,10 +48,9 @@ export default class DeliveryTicketChat extends LightningElement {
             
             // A. RUN THE SYNC (The "Mail Carrier")
             pollUpdates()
-                .then(result => {
-                    // Optional: Log result for debugging (e.g. "Success: Synced 1 items")
-                    // console.log('Poll Result:', result);
-
+                .then(() => {
+                    // FIX: Removed 'result' parameter above to satisfy ESLint no-unused-vars
+                    
                     // B. REFRESH THE VIEW (Only after sync tries to run)
                     if (this.wiredResult) {
                         return refreshApex(this.wiredResult);
