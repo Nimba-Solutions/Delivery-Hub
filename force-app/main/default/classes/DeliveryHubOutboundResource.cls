@@ -2,7 +2,7 @@
  * @description REST API Resource used by Client Orgs to pull updates from this Mothership.
  * Acts as the server-side endpoint for the Peer-to-Peer sync engine.
  */
-@RestResource(urlMapping='/v1/sync/changes/*')
+@RestResource(urlMapping='/deliveryhub/v1/sync/changes/*')
 global without sharing class DeliveryHubOutboundResource {
 
     /**
