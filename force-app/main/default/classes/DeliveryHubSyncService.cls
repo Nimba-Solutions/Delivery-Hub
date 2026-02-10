@@ -1,6 +1,6 @@
 /**
  * @description Service class to process incoming JSON payloads and update SObjects.
- * FIXED: Handles INSERT vs UPDATE logic based on ID checks.
+ * Handles type conversion and generic DML.
  */
 public with sharing class DeliveryHubSyncService {
 
@@ -22,22 +22,26 @@ public with sharing class DeliveryHubSyncService {
         String targetId = (String) payload.get('TargetId');
         Boolean isInsert = false;
 
-        // --- THE FIX: Smart ID Handling ---
+        // --- SMART ID HANDLING (INSERT vs UPDATE) ---
         try {
-            Id sId = (Id) targetId;
-            
-            // Check if the ID provided actually matches the Object Type we are processing
-            if (sId.getSObjectType() == targetType) {
-                // It matches (e.g. Comment ID -> Comment Object), so it's an UPDATE
-                record.put('Id', targetId);
-            } else {
-                // Mismatch (e.g. Ticket ID -> Comment Object), so it's a Parent ID for an INSERT
+            if (String.isBlank(targetId)) {
                 isInsert = true;
+            } else {
+                Id sId = (Id) targetId;
                 
-                // We assume the TargetId is the Parent Ticket ID. 
-                // We need to set the lookup field 'TicketId__c' (handling namespace)
-                String ns = getNamespace(targetType);
-                record.put(ns + 'TicketId__c', targetId);
+                // Check if the ID provided matches the Object Type we are processing
+                if (sId.getSObjectType() == targetType) {
+                    // It matches (e.g. Comment ID -> Comment Object), so it's an UPDATE
+                    record.put('Id', targetId);
+                } else {
+                    // Mismatch (e.g. Ticket ID -> Comment Object), so it's a Parent ID for an INSERT
+                    isInsert = true;
+                    
+                    // We assume the TargetId is the Parent Ticket ID. 
+                    // Set the lookup field 'TicketId__c' (handling namespace)
+                    String ns = getNamespace(targetType);
+                    record.put(ns + 'TicketId__c', targetId);
+                }
             }
         } catch (Exception e) {
             // If ID is invalid or null, assume Insert (fallback)
@@ -58,19 +62,30 @@ public with sharing class DeliveryHubSyncService {
     // --- HELPER METHODS ---
 
     /**
-     * @description Helper to find namespace of the found object type
+     * @description Helper to find namespace of the found object type.
+     * @param soType The SObjectType to inspect.
+     * @return The namespace prefix (e.g. "delivery__") or empty string.
      */
     private static String getNamespace(Schema.SObjectType soType) {
         String name = soType.getDescribe().getName();
         if (name.contains('__') && name.countMatches('__') == 2) {
-             return name.substring(0, name.indexOf('__') + 2); // e.g. "delivery__"
+             return name.substring(0, name.indexOf('__') + 2); 
         }
         return '';
     }
 
+    /**
+     * @description Helper to find SObjectType handling Namespaces safely.
+     * @param apiName The API name to search for.
+     * @return The matching SObjectType, or null if not found.
+     */
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) return gd.get(apiName);
+        
+        // FIX: Added Braces {}
+        if (gd.containsKey(apiName)) {
+            return gd.get(apiName);
+        }
         
         String searchKey = apiName.toLowerCase();
         for (String key : gd.keySet()) {
@@ -82,15 +97,23 @@ public with sharing class DeliveryHubSyncService {
         return null;
     }
 
+    /**
+     * @description Maps JSON fields to SObject fields.
+     * @param record The target record.
+     * @param payload The source map.
+     * @param targetType The SObject Type.
+     */
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
-        // Remove Metadata so we don't try to map them to fields
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
         for(String key : metadataKeys) {
-            if(fieldsToMap.containsKey(key)) fieldsToMap.remove(key);
+            // FIX: Added Braces {}
+            if(fieldsToMap.containsKey(key)) {
+                fieldsToMap.remove(key);
+            }
         }
 
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
@@ -98,7 +121,6 @@ public with sharing class DeliveryHubSyncService {
         for (String key : fieldsToMap.keySet()) {
             SObjectField field = schemaFields.get(key);
             
-            // NameSpace Fallback
             if (field == null) {
                 for(String fieldApi : schemaFields.keySet()) {
                     SObjectField f = schemaFields.get(fieldApi);
@@ -115,13 +137,18 @@ public with sharing class DeliveryHubSyncService {
         }
     }
 
+    /**
+     * @description Applies value to field with type conversion.
+     * @param record The SObject.
+     * @param field The field token.
+     * @param val The value object.
+     */
     private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
             if (dtype == Schema.DisplayType.DATE) {
                 record.put(field, Date.valueOf((String)val));
             } else if (dtype == Schema.DisplayType.DATETIME) {
-                // Handle standard JSON DateTime format
                 String dtStr = (String)val;
                 record.put(field, (DateTime)JSON.deserialize('"' + dtStr + '"', DateTime.class));
             } else if (dtype == Schema.DisplayType.PERCENT || dtype == Schema.DisplayType.CURRENCY || dtype == Schema.DisplayType.DOUBLE) {
