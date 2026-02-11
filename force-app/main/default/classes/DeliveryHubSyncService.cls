@@ -1,6 +1,6 @@
 /**
  * @description Service class to process incoming JSON payloads.
- * CLIENT VERSION: Handles 'Ticket__c' mapping and prevents Ping-Pong loops.
+ * Handles cross-org Ticket_Comment__c parent resolution and prevents Ping-Pong loops.
  */
 public without sharing class DeliveryHubSyncService {
 
@@ -12,31 +12,39 @@ public without sharing class DeliveryHubSyncService {
 
         SObject record = targetType.newSObject();
         String targetId = (String) payload.get('TargetId');
+        if (String.isBlank(targetId)) {
+            targetId = (String) payload.get('targetId');
+        }
+
         Boolean isInsert = false;
 
         // 1. SMART ID & PARENT LOOKUP
-        try {
-            if (String.isBlank(targetId)) {
-                isInsert = true;
-            } else {
-                Id sId = (Id) targetId;
-                if (sId.getSObjectType() == targetType) {
-                    record.put('Id', targetId); // It's an Update
+        // For Ticket_Comment__c, targetId is ALWAYS the parent Ticket ID from
+        // the Mothership, never a local comment ID. Key prefix collision between
+        // orgs (a08 = Ticket__c on Mothership, Ticket_Comment__c on Client)
+        // means getSObjectType() gives a false match. Always INSERT for comments.
+        if (objectType.contains('Ticket_Comment__c')) {
+            isInsert = true;
+            if (String.isNotBlank(targetId)) {
+                Id localTicketId = resolveLocalTicketId(targetId);
+                record.put('TicketId__c', localTicketId);
+            }
+        } else {
+            try {
+                if (String.isBlank(targetId)) {
+                    isInsert = true;
                 } else {
-                    isInsert = true; // It's an Insert
-                    
-                    // --- FIX 1: HANDLE FIELD NAME MISMATCH ---
-                    // Mothership sends 'TicketId__c', but Client uses 'Ticket__c'
-                    if (objectType.contains('Ticket_Comment__c')) {
-                         record.put('Ticket__c', targetId);
+                    Id sId = (Id) targetId;
+                    if (sId.getSObjectType() == targetType) {
+                        record.put('Id', targetId);
                     } else {
-                         // Default fallback for other objects
-                         record.put('TicketId__c', targetId);
+                        isInsert = true;
+                        record.put('TicketId__c', targetId);
                     }
                 }
+            } catch (Exception e) {
+                isInsert = true;
             }
-        } catch (Exception e) {
-            isInsert = true;
         }
 
         // 2. MAP FIELDS
@@ -54,13 +62,28 @@ public without sharing class DeliveryHubSyncService {
 
         // 3. COMMIT
         if (isInsert) {
-             Database.insert(record, AccessLevel.SYSTEM_MODE);
+            Database.insert(record, AccessLevel.SYSTEM_MODE);
         } else {
-             Database.update(record, AccessLevel.SYSTEM_MODE);
+            Database.update(record, AccessLevel.SYSTEM_MODE);
         }
     }
 
     // --- HELPER METHODS ---
+
+    private static Id resolveLocalTicketId(String remoteTicketId) {
+        List<Request__c> requests = [
+            SELECT TicketId__c
+            FROM Request__c
+            WHERE RemoteTicketIdTxt__c = :remoteTicketId
+            AND StatusPk__c != 'Inactive'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (!requests.isEmpty()) {
+            return requests[0].TicketId__c;
+        }
+        return (Id) remoteTicketId;
+    }
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
@@ -72,7 +95,7 @@ public without sharing class DeliveryHubSyncService {
         Map<String, Object> fieldsToMap = payload.clone();
         
         Set<String> metadataKeys = new Set<String>{
-            'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
+            'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
         for(String key : metadataKeys) {
             if(fieldsToMap.containsKey(key)) fieldsToMap.remove(key);

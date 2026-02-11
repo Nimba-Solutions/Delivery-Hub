@@ -79,7 +79,7 @@ public inherited sharing class DeliveryHubSyncHandler {
                     // CRITICAL FIX: Use the Remote Ticket ID (Mothership ID) if available.
                     // Fallback to local ID only if remote is missing (which usually implies an error in setup).
                     String targetId = (req.RemoteTicketIdTxt__c != null) ? req.RemoteTicketIdTxt__c : c.TicketId__c;
-                    payloadMap.put('targetId', targetId); 
+                    payloadMap.put('TargetId', targetId);
                     
                     // Lowercase keys to match Mothership's expectations
                     payloadMap.put('body', c.BodyTxt__c);      

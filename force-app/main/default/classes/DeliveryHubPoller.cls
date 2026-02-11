@@ -77,10 +77,9 @@ public without sharing class DeliveryHubPoller {
         Integer successCount = processEvents(events);
 
         String serverTimeStr = (String) response.get('latestServerTime');
-        if (serverTimeStr != null) {
+        if (serverTimeStr != null && (successCount > 0 || events == null || events.isEmpty())) {
             DateTime dt = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
-            
-            // Dynamic Update
+
             vendor.put(ns + 'LastInboundSyncDateTime__c', dt);
             Database.update(vendor, AccessLevel.SYSTEM_MODE);
         }
