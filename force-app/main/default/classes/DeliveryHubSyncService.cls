@@ -5,6 +5,11 @@
  */
 public without sharing class DeliveryHubSyncService {
 
+    /**
+     * @description Main entry point to process a sync payload.
+     * @param objectType The API Name of the object to update (e.g. Ticket__c).
+     * @param payload The JSON map containing field updates.
+     */
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
         
@@ -49,6 +54,11 @@ public without sharing class DeliveryHubSyncService {
 
     // --- HELPER METHODS ---
 
+    /**
+     * @description Helper to find namespace of the found object type.
+     * @param soType The SObjectType to inspect.
+     * @return The namespace prefix (e.g. "delivery__") or empty string.
+     */
     private static String getNamespace(Schema.SObjectType soType) {
         String name = soType.getDescribe().getName();
         if (name.contains('__') && name.countMatches('__') == 2) {
@@ -57,9 +67,18 @@ public without sharing class DeliveryHubSyncService {
         return '';
     }
 
+    /**
+     * @description Helper to find SObjectType handling Namespaces safely.
+     * @param apiName The API name to search for.
+     * @return The matching SObjectType, or null if not found.
+     */
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) return gd.get(apiName);
+        
+        // FIX: Added Braces for PMD
+        if (gd.containsKey(apiName)) {
+            return gd.get(apiName);
+        }
         
         String searchKey = apiName.toLowerCase();
         for (String key : gd.keySet()) {
@@ -71,6 +90,12 @@ public without sharing class DeliveryHubSyncService {
         return null;
     }
 
+    /**
+     * @description Maps JSON fields to SObject fields.
+     * @param record The target record.
+     * @param payload The source map.
+     * @param targetType The SObject Type.
+     */
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
@@ -79,11 +104,13 @@ public without sharing class DeliveryHubSyncService {
             'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
         for(String key : metadataKeys) {
-            if(fieldsToMap.containsKey(key)) fieldsToMap.remove(key);
+            // FIX: Added Braces for PMD
+            if(fieldsToMap.containsKey(key)) {
+                fieldsToMap.remove(key);
+            }
         }
 
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
-        String namespace = getNamespace(targetType);
 
         // --- SMART MAPPING LOOP ---
         for (String payloadKey : fieldsToMap.keySet()) {
@@ -91,11 +118,15 @@ public without sharing class DeliveryHubSyncService {
             String lowerKey = payloadKey.toLowerCase();
 
             // A. Try Fuzzy Aliases (Fixes your "body" vs "BodyTxt__c" issue)
-            if (lowerKey == 'body') lowerKey = 'bodytxt__c';
-            if (lowerKey == 'author') lowerKey = 'authortxt__c';
+            // FIX: Added Braces for PMD
+            if (lowerKey == 'body') {
+                lowerKey = 'bodytxt__c';
+            }
+            if (lowerKey == 'author') {
+                lowerKey = 'authortxt__c';
+            }
 
             // B. Find Field by Local Name (Case Insensitive)
-            // This handles "BodyTxt__c" matching "delivery__BodyTxt__c"
             for(String fieldApi : schemaFields.keySet()) {
                 SObjectField f = schemaFields.get(fieldApi);
                 String localName = f.getDescribe().getLocalName().toLowerCase();
@@ -115,6 +146,12 @@ public without sharing class DeliveryHubSyncService {
         }
     }
 
+    /**
+     * @description Applies value to field with type conversion.
+     * @param record The SObject.
+     * @param field The field token.
+     * @param val The value object.
+     */
     private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
