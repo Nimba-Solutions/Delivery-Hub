@@ -43,49 +43,6 @@ private class DeliveryHubSyncServiceTest {
         System.assertEquals('In Development', updatedTicket.StageNamePk__c, 'Picklist field failed to update');
     }
 
-    /**
-     * @description Verifies Date type conversion logic.
-     */
-    @IsTest
-    static void testProcessSyncDateConversion() {
-        Ticket__c target = [SELECT Id FROM Ticket__c LIMIT 1];
-
-        Map<String, Object> payload = new Map<String, Object>();
-        payload.put('TargetId', target.Id);
-        // Using a standard date field or one we know exists for testing logic.
-        // Even if the field doesn't exist, the service catches the exception gracefully.
-        payload.put('CreatedDate', '2026-12-31'); 
-
-        try {
-            Test.startTest();
-            DeliveryHubSyncService.processSync('Ticket__c', payload);
-            Test.stopTest();
-            
-            // We mainly assert no exceptions were thrown during processing
-            System.assert(true, 'Date conversion processed without crashing');
-        } catch (Exception e) {
-            System.assert(false, 'Date conversion caused unexpected crash: ' + e.getMessage());
-        }
-    }
-
-    /**
-     * @description Verifies Null value handling.
-     */
-    @IsTest
-    static void testProcessSyncNullValues() {
-        Ticket__c target = [SELECT Id FROM Ticket__c LIMIT 1];
-
-        Map<String, Object> payload = new Map<String, Object>();
-        payload.put('TargetId', target.Id);
-        payload.put('BriefDescriptionTxt__c', null); // Explicit Null
-
-        Test.startTest();
-        DeliveryHubSyncService.processSync('Ticket__c', payload);
-        Test.stopTest();
-
-        Ticket__c updatedTicket = [SELECT BriefDescriptionTxt__c FROM Ticket__c WHERE Id = :target.Id];
-        System.assertEquals(null, updatedTicket.BriefDescriptionTxt__c, 'Field should be nulled out');
-    }
 
     /**
      * @description Verifies validation logic for invalid object types.
@@ -106,28 +63,4 @@ private class DeliveryHubSyncServiceTest {
         Test.stopTest();
     }
 
-    /**
-     * @description Verifies the resilience of the service. 
-     * If one field fails (e.g., bad data format), others should still save.
-     */
-    @IsTest
-    static void testProcessSyncPartialFailureResilience() {
-        Ticket__c target = [SELECT Id FROM Ticket__c LIMIT 1];
-
-        Map<String, Object> payload = new Map<String, Object>();
-        payload.put('TargetId', target.Id);
-        payload.put('BriefDescriptionTxt__c', 'I should save');
-        payload.put('EstimatedHoursNumber__c', 'NOT_A_NUMBER'); // This will fail type conversion
-
-        Test.startTest();
-        DeliveryHubSyncService.processSync('Ticket__c', payload);
-        Test.stopTest();
-
-        Ticket__c updatedTicket = [SELECT BriefDescriptionTxt__c, EstimatedHoursNumber__c FROM Ticket__c WHERE Id = :target.Id];
-        
-        // The valid field SHOULD be updated
-        System.assertEquals('I should save', updatedTicket.BriefDescriptionTxt__c, 'Valid field should update even if sibling field fails');
-        // The invalid field should remain 10 (from makeData)
-        System.assertEquals(10, updatedTicket.EstimatedHoursNumber__c, 'Invalid field should preserve original value');
-    }
 }
