@@ -1,6 +1,6 @@
 /**
  * @description Service class to process incoming JSON payloads.
- * CLIENT VERSION: Hardcoded fix for Ticket Comment relationship.
+ * CLIENT VERSION: Handles 'Ticket__c' mapping and prevents Ping-Pong loops.
  */
 public without sharing class DeliveryHubSyncService {
 
@@ -14,21 +14,19 @@ public without sharing class DeliveryHubSyncService {
         String targetId = (String) payload.get('TargetId');
         Boolean isInsert = false;
 
-        // 1. SMART ID HANDLING
+        // 1. SMART ID & PARENT LOOKUP
         try {
             if (String.isBlank(targetId)) {
                 isInsert = true;
             } else {
                 Id sId = (Id) targetId;
-                // If ID matches the Object (Comment ID -> Comment), it's an Update
                 if (sId.getSObjectType() == targetType) {
-                    record.put('Id', targetId);
+                    record.put('Id', targetId); // It's an Update
                 } else {
-                    // Mismatch (Ticket ID -> Comment), it's a Parent ID for Insert
-                    isInsert = true;
+                    isInsert = true; // It's an Insert
                     
-                    // --- THE FIX: HANDLE FIELD NAME MISMATCH ---
-                    // The Mothership sends 'TicketId__c' logic, but Client uses 'Ticket__c'
+                    // --- FIX 1: HANDLE FIELD NAME MISMATCH ---
+                    // Mothership sends 'TicketId__c', but Client uses 'Ticket__c'
                     if (objectType.contains('Ticket_Comment__c')) {
                          record.put('Ticket__c', targetId);
                     } else {
@@ -38,11 +36,21 @@ public without sharing class DeliveryHubSyncService {
                 }
             }
         } catch (Exception e) {
-            isInsert = true; // Fallback to insert if ID logic fails
+            isInsert = true;
         }
 
         // 2. MAP FIELDS
         mapFields(record, payload, targetType);
+
+        // --- FIX 2: PREVENT PING-PONG LOOP ---
+        // Mark as 'Synced' so the Trigger ignores it and doesn't send it back.
+        if (objectType.contains('Ticket_Comment__c')) {
+            try {
+                record.put('JiraSyncStatusTxt__c', 'Synced');
+            } catch (Exception e) {
+                System.debug('Could not set Sync Status: ' + e.getMessage());
+            }
+        }
 
         // 3. COMMIT
         if (isInsert) {
@@ -57,13 +65,12 @@ public without sharing class DeliveryHubSyncService {
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
         if (gd.containsKey(apiName)) return gd.get(apiName);
-        return null; // Simplified for Client
+        return null;
     }
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
-        // Clean Metadata
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
@@ -76,14 +83,14 @@ public without sharing class DeliveryHubSyncService {
         for (String payloadKey : fieldsToMap.keySet()) {
             String lowerKey = payloadKey.toLowerCase();
             
-            // Manual Aliases for Client Compatibility
+            // Manual Aliases
             if (lowerKey == 'body') lowerKey = 'bodytxt__c';
             if (lowerKey == 'author') lowerKey = 'authortxt__c';
 
             SObjectField field = null;
-            // Case-insensitive lookup
             for(String fieldApi : schemaFields.keySet()) {
                 SObjectField f = schemaFields.get(fieldApi);
+                // Case-insensitive match
                 if (f.getDescribe().getLocalName().toLowerCase() == lowerKey) {
                     field = f;
                     break;
@@ -111,8 +118,8 @@ public without sharing class DeliveryHubSyncService {
             } else {
                 record.put(field, val);
             }
-        } catch (Exception e) {
-            System.debug('Mapping Error: ' + e.getMessage());
+        } catch (Exception e) { 
+            System.debug('Mapping Error: ' + e.getMessage()); 
         }
     }
 }
