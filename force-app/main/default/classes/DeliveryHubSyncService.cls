@@ -1,6 +1,7 @@
 /**
- * @description Service class to process incoming JSON payloads and update SObjects.
- * FIXED: Now allows null values to clear fields (Fixed testProcessSyncNullValues).
+ * @description Service class to process incoming JSON payloads on the Mothership.
+ * MANAGED PACKAGE VERSION.
+ * UPDATED: 'without sharing', Smart Field Mapping (Fixes Blanks), and Basic Deduplication.
  */
 public without sharing class DeliveryHubSyncService {
 
@@ -15,15 +16,18 @@ public without sharing class DeliveryHubSyncService {
         String targetId = (String) payload.get('TargetId');
         Boolean isInsert = false;
 
+        // 1. Determine Insert vs Update
         try {
             if (String.isBlank(targetId)) {
                 isInsert = true;
             } else {
                 Id sId = (Id) targetId;
+                // If ID matches the Object (Comment ID -> Comment), it's an Update
                 if (sId.getSObjectType() == targetType) {
                     record.put('Id', targetId);
                 } else {
-                    isInsert = true;
+                    // Mismatch (Ticket ID -> Comment), it's a Parent ID for Insert
+                    isInsert = true; 
                     String ns = getNamespace(targetType);
                     record.put(ns + 'TicketId__c', targetId);
                 }
@@ -32,14 +36,18 @@ public without sharing class DeliveryHubSyncService {
             isInsert = true;
         }
 
+        // 2. Map Fields (Now includes Fuzzy Matching for "body" -> "BodyTxt__c")
         mapFields(record, payload, targetType);
 
+        // 3. Database Commit
         if (isInsert) {
              Database.insert(record, AccessLevel.SYSTEM_MODE);
         } else {
              Database.update(record, AccessLevel.SYSTEM_MODE);
         }
     }
+
+    // --- HELPER METHODS ---
 
     private static String getNamespace(Schema.SObjectType soType) {
         String name = soType.getDescribe().getName();
@@ -51,9 +59,8 @@ public without sharing class DeliveryHubSyncService {
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) {
-            return gd.get(apiName);
-        }
+        if (gd.containsKey(apiName)) return gd.get(apiName);
+        
         String searchKey = apiName.toLowerCase();
         for (String key : gd.keySet()) {
             SObjectType type = gd.get(key);
@@ -67,35 +74,43 @@ public without sharing class DeliveryHubSyncService {
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
+        // Remove Metadata
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
         for(String key : metadataKeys) {
-            if(fieldsToMap.containsKey(key)) {
-                fieldsToMap.remove(key);
-            }
+            if(fieldsToMap.containsKey(key)) fieldsToMap.remove(key);
         }
 
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
+        String namespace = getNamespace(targetType);
 
-        for (String key : fieldsToMap.keySet()) {
-            SObjectField field = schemaFields.get(key);
-            
-            if (field == null) {
-                for(String fieldApi : schemaFields.keySet()) {
-                    SObjectField f = schemaFields.get(fieldApi);
-                    if (f.getDescribe().getLocalName() == key) {
-                        field = f;
-                        break;
-                    }
+        // --- SMART MAPPING LOOP ---
+        for (String payloadKey : fieldsToMap.keySet()) {
+            SObjectField field = null;
+            String lowerKey = payloadKey.toLowerCase();
+
+            // A. Try Fuzzy Aliases (Fixes your "body" vs "BodyTxt__c" issue)
+            if (lowerKey == 'body') lowerKey = 'bodytxt__c';
+            if (lowerKey == 'author') lowerKey = 'authortxt__c';
+
+            // B. Find Field by Local Name (Case Insensitive)
+            // This handles "BodyTxt__c" matching "delivery__BodyTxt__c"
+            for(String fieldApi : schemaFields.keySet()) {
+                SObjectField f = schemaFields.get(fieldApi);
+                String localName = f.getDescribe().getLocalName().toLowerCase();
+                
+                if (localName == lowerKey) {
+                    field = f;
+                    break;
                 }
             }
 
-            // --- THE FIX IS HERE ---
-            // Previously: if (field != null && fieldsToMap.get(key) != null)
-            // Now: We allow nulls so fields can be cleared.
+            // C. Apply Value
             if (field != null) {
-                applyField(record, field, fieldsToMap.get(key));
+                applyField(record, field, fieldsToMap.get(payloadKey));
+            } else {
+                System.debug(LoggingLevel.WARN, 'Could not map payload key: ' + payloadKey);
             }
         }
     }
@@ -103,9 +118,8 @@ public without sharing class DeliveryHubSyncService {
     private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
-            
             if (val == null) {
-                record.put(field, null); // Explicitly clear field
+                record.put(field, null);
             } else if (dtype == Schema.DisplayType.DATE) {
                 record.put(field, Date.valueOf((String)val));
             } else if (dtype == Schema.DisplayType.DATETIME) {
