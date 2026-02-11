@@ -2,7 +2,7 @@
  * @description Service class to process incoming JSON payloads and update SObjects.
  * FIXED: Now allows null values to clear fields (Fixed testProcessSyncNullValues).
  */
-public with sharing class DeliveryHubSyncService {
+public without sharing class DeliveryHubSyncService {
 
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
