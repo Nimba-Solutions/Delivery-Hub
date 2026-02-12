@@ -126,26 +126,14 @@ public without sharing class DeliveryHubSetupController {
             StageNamePk__c = 'Backlog'
         );
         Database.insert(newTicket, AccessLevel.SYSTEM_MODE);
-        finalTicketId = newTicket.Id;
 
-        // --- 3. LINK REQUEST ---
-        List<Request__c> existingReqs = [
-            SELECT Id FROM Request__c 
-            WHERE TicketId__c = :finalTicketId 
-            AND DeliveryEntityId__c = :mothership.Id 
-            WITH USER_MODE 
-            LIMIT 1
-        ];
-
-        if (existingReqs.isEmpty()) {
-            Request__c newReq = new Request__c(
-                TicketId__c = finalTicketId,           
-                DeliveryEntityId__c = mothership.Id,  
-                RemoteTicketIdTxt__c = remoteTicketId, 
-                StatusPk__c = 'Open for Bids'
-            );
-            Database.insert(newReq, AccessLevel.SYSTEM_MODE);
-        }
+        Request__c newReq = new Request__c(
+            TicketId__c = newTicket.Id,           
+            DeliveryEntityId__c = mothership.Id,  
+            RemoteTicketIdTxt__c = remoteTicketId, 
+            StatusPk__c = 'Open for Bids'
+        );
+        Database.insert(newReq, AccessLevel.SYSTEM_MODE);
         
         scheduleSyncJobs();
     }
