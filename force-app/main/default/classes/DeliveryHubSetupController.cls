@@ -156,7 +156,7 @@ public without sharing class DeliveryHubSetupController {
                 TicketId__c = finalTicketId,           
                 DeliveryEntityId__c = mothership.Id,  
                 RemoteTicketIdTxt__c = remoteTicketId, 
-                StatusPk__c = 'Open'
+                StatusPk__c = 'Active'
             );
             Database.insert(newReq, AccessLevel.SYSTEM_MODE);
         }
