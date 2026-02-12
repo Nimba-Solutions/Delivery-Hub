@@ -61,7 +61,8 @@ global without sharing class DeliveryHubIntakeService {
                 clientEntity = new Network_Entity__c(
                     Name = packet.companyName,
                     StatusPk__c = 'Active',
-                    EntityTypePk__c = 'Client'
+                    EntityTypePk__c = 'Client',
+                    OrgIdTxt__c = packet.orgId
                 );
             }
             
