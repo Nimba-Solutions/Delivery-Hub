@@ -4,14 +4,7 @@
  */
 public without sharing class DeliveryHubSender {
 
-    /**
-     * @description Helper to get the endpoint from Custom Metadata.
-     * Replaces the old DEFAULT_BASE_URL constant.
-     */
-    private static String getMothershipEndpoint() {
-        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
-        return (config != null) ? config.Cloud_Nimbus_LLC_Endpoint__c : null;
-    }
+    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
 
     /**
      * @description NEW: Generic Sender for High-Water Mark Sync.
@@ -51,16 +44,9 @@ public without sharing class DeliveryHubSender {
      * @param originalPayload The generic payload string.
      */
     private static void sendToSpecificVendor(Request__c reqRec, String objectType, String originalPayload) {
-        String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
-
-        // Fallback to Custom Metadata if the Vendor record has no URL
-        if (String.isBlank(baseUrl)) {
-            baseUrl = getMothershipEndpoint();
-        }
-
-        if (String.isBlank(baseUrl)) {
-            throw new CalloutException('Sync Failed: No Endpoint URL found on Vendor record or Custom Metadata.');
-        }
+        String baseUrl = (String.isNotBlank(reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c))
+            ? reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
+            : DEFAULT_BASE_URL;
 
         if (!baseUrl.endsWith('/')) {
             baseUrl += '/';
@@ -140,11 +126,7 @@ public without sharing class DeliveryHubSender {
 
         String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
         if (String.isBlank(baseUrl)) {
-            baseUrl = getMothershipEndpoint();
-        }
-
-        if (String.isBlank(baseUrl)) {
-            throw new CalloutException('Request Failed: No Endpoint URL found on Vendor record or Custom Metadata.');
+            baseUrl = DEFAULT_BASE_URL;
         }
 
         if (!baseUrl.endsWith('/')) {
@@ -222,11 +204,7 @@ public without sharing class DeliveryHubSender {
 
             String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
             if (String.isBlank(baseUrl)) {
-                baseUrl = getMothershipEndpoint();
-            }
-
-            if (String.isBlank(baseUrl)) {
-                return 'Check Failed: No Endpoint URL found.';
+                baseUrl = DEFAULT_BASE_URL;
             }
 
             if (!baseUrl.endsWith('/')) {

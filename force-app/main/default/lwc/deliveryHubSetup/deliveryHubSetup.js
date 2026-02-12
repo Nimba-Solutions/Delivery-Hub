@@ -11,22 +11,9 @@ export default class DeliveryHubSetup extends NavigationMixin(LightningElement) 
     
     wiredStatusResult;
 
-    /**
-     * @description Dynamically determines if this org is the Mothership by comparing 
-     * current hostname against the endpoint defined in Custom Metadata.
-     */
+    // Hard-coded check: If URL matches Mothership, return TRUE
     get isMothership() {
-        if (!this.status || !this.status.requiredRemoteSite) {
-            return false;
-        }
-        try {
-            // Compare the current browser hostname to the hostname in the metadata URL
-            const mothershipHost = new URL(this.status.requiredRemoteSite).hostname;
-            return window.location.hostname.includes(mothershipHost);
-        } catch (e) {
-            // Fallback for malformed URLs
-            return false;
-        }
+        return window.location.hostname.includes('orgfarm-928a77dfd6-dev-ed');
     }
 
     @wire(getSetupStatus)

@@ -3,7 +3,7 @@
     <label>Cloud Nimbus LLC Marketing Enabled</label>
     <protected>false</protected>
     <values>
-        <field>Cloud_Nimbus_LLC_Endpoint__c</field>
+        <field>CloudNimbusLlcEndpointTxt__c</field>
         <value xsi:type="xsd:string">https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1</value>
     </values>
     <values>
