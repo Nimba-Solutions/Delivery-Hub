@@ -4,6 +4,7 @@
  */
 public without sharing class DeliveryHubSyncService {
 
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
         if (targetType == null) {
@@ -22,13 +23,11 @@ public without sharing class DeliveryHubSyncService {
         Boolean isInsert = false;
 
         // 1. SMART ID & PARENT LOOKUP
-        // For Ticket_Comment__c, targetId is ALWAYS the parent Ticket ID from
-        // the Mothership, never a local comment ID. Key prefix collision between
-        // orgs (a08 = Ticket__c on Mothership, Ticket_Comment__c on Client)
-        // means getSObjectType() gives a false match. Always INSERT for comments.
+        // Ticket_Comment__c requires special handling because targetId is the REMOTE Ticket ID.
         if (objectType.contains('Ticket_Comment__c')) {
             isInsert = true;
             if (String.isNotBlank(targetId)) {
+                // Resolve the local Ticket record ID using the Request bridge
                 Id localTicketId = resolveLocalTicketId(targetId);
                 record.put(fns + 'TicketId__c', localTicketId);
             }
@@ -38,11 +37,12 @@ public without sharing class DeliveryHubSyncService {
                     isInsert = true;
                 } else {
                     Id sId = (Id) targetId;
+                    // If the ID matches our local object type, it's an update
                     if (sId.getSObjectType() == targetType) {
                         record.put('Id', targetId);
                     } else {
+                        // Otherwise, treat as a new insert (common during first sync)
                         isInsert = true;
-                        record.put(fns + 'TicketId__c', targetId);
                     }
                 }
             } catch (Exception e) {
@@ -53,17 +53,11 @@ public without sharing class DeliveryHubSyncService {
         // 2. MAP FIELDS
         mapFields(record, payload, targetType);
 
-        // --- FIX 2: PREVENT PING-PONG LOOP ---
-        // Mark as 'Synced' so the Trigger ignores it and doesn't send it back.
-        if (objectType.contains('Ticket_Comment__c')) {
-            try {
-                record.put(fns + 'JiraSyncStatusTxt__c', 'Synced');
-            } catch (Exception e) {
-                System.debug('Could not set Sync Status: ' + e.getMessage());
-            }
-        }
+        // 3. PREVENT PING-PONG LOOP
+        // We tag the record so the Trigger/Sender knows this came FROM the Mothership
+        setSyncStatus(record, fns);
 
-        // 3. COMMIT
+        // 4. COMMIT
         if (isInsert) {
             Database.insert(record, AccessLevel.SYSTEM_MODE);
         } else {
@@ -73,17 +67,18 @@ public without sharing class DeliveryHubSyncService {
 
     // --- HELPER METHODS ---
 
-    // Cached namespace prefix for dynamic field puts.
-    // Returns '' on Client (no namespace) or 'delivery__' on Mothership.
     private static String cachedFieldNs;
     private static String getFieldNs() {
         if (cachedFieldNs == null) {
-            String ns = [SELECT NamespacePrefix FROM Organization].NamespacePrefix;
+            String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
             cachedFieldNs = String.isBlank(ns) ? '' : ns + '__';
         }
         return cachedFieldNs;
     }
 
+    /**
+     * @description Bridges the gap between the Remote Org ID and the Local Record ID.
+     */
     private static Id resolveLocalTicketId(String remoteTicketId) {
         List<Request__c> requests = [
             SELECT TicketId__c
@@ -96,6 +91,7 @@ public without sharing class DeliveryHubSyncService {
         if (!requests.isEmpty()) {
             return requests[0].TicketId__c;
         }
+        // Fallback: If it's already a local ID, return it
         return (Id) remoteTicketId;
     }
 
@@ -103,9 +99,6 @@ public without sharing class DeliveryHubSyncService {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
         if (gd.containsKey(apiName)) return gd.get(apiName);
 
-        // On Mothership (managed package), getGlobalDescribe() keys include
-        // the namespace prefix (e.g., 'delivery__Ticket_Comment__c').
-        // The Client sends objectType without prefix, so try with namespace.
         String fns = getFieldNs();
         if (String.isNotBlank(fns)) {
             String namespacedName = fns + apiName;
@@ -117,11 +110,12 @@ public without sharing class DeliveryHubSyncService {
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
+        // Metadata fields to ignore during field mapping
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
         for(String key : metadataKeys) {
-            if(fieldsToMap.containsKey(key)) fieldsToMap.remove(key);
+            fieldsToMap.remove(key);
         }
 
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
@@ -129,21 +123,20 @@ public without sharing class DeliveryHubSyncService {
         for (String payloadKey : fieldsToMap.keySet()) {
             String lowerKey = payloadKey.toLowerCase();
             
-            // Manual Aliases
+            // Handle Field Aliases
             if (lowerKey == 'body') lowerKey = 'bodytxt__c';
             if (lowerKey == 'author') lowerKey = 'authortxt__c';
 
             SObjectField field = null;
             for(String fieldApi : schemaFields.keySet()) {
                 SObjectField f = schemaFields.get(fieldApi);
-                // Case-insensitive match
                 if (f.getDescribe().getLocalName().toLowerCase() == lowerKey) {
                     field = f;
                     break;
                 }
             }
 
-            if (field != null) {
+            if (field != null && field.getDescribe().isUpdateable()) {
                 applyField(record, field, fieldsToMap.get(payloadKey));
             }
         }
@@ -157,6 +150,7 @@ public without sharing class DeliveryHubSyncService {
             } else if (dtype == Schema.DisplayType.DATE) {
                 record.put(field, Date.valueOf((String)val));
             } else if (dtype == Schema.DisplayType.DATETIME) {
+                // ISO 8601 Date format handling
                 String dtStr = (String)val;
                 record.put(field, (DateTime)JSON.deserialize('"' + dtStr + '"', DateTime.class));
             } else if (dtype == Schema.DisplayType.PERCENT || dtype == Schema.DisplayType.CURRENCY || dtype == Schema.DisplayType.DOUBLE) {
@@ -165,7 +159,20 @@ public without sharing class DeliveryHubSyncService {
                 record.put(field, val);
             }
         } catch (Exception e) { 
-            System.debug('Mapping Error: ' + e.getMessage()); 
+            System.debug(LoggingLevel.WARN, 'Field Mapping Error on ' + field + ': ' + e.getMessage()); 
+        }
+    }
+
+    /**
+     * @description Sets the sync status to prevent the local trigger from 
+     * re-sending this record back to the Mothership.
+     */
+    private static void setSyncStatus(SObject record, String fns) {
+        try {
+            // Attempt to set sync status for loop prevention
+            record.put(fns + 'JiraSyncStatusTxt__c', 'Synced');
+        } catch (Exception e) {
+            // Field might not exist on all synced objects; ignore safely.
         }
     }
 }

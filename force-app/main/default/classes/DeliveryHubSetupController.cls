@@ -1,3 +1,8 @@
+/**
+ * @description Controller for the Delivery Hub Setup LWC.
+ * Handles the initial handshake with the Mothership.
+ */
+@SuppressWarnings('PMD.ApexSharingViolations')
 public without sharing class DeliveryHubSetupController {
 
     public class SetupStatus {
@@ -6,18 +11,30 @@ public without sharing class DeliveryHubSetupController {
         @AuraEnabled public Network_Entity__c entity;
     }
 
+    /**
+     * @description Checks connection status.
+     * NOW PULLS URL DYNAMICALLY FROM METADATA.
+     */
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
-        status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
+        
+        // --- FIX: Get Endpoint from Custom Metadata ---
+        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
+        
+        if (config != null && String.isNotBlank(config.CloudNimbusLlcEndpointTxt__c)) {
+            // Remove trailing slash to ensure clean Remote Site Setting comparison
+            status.requiredRemoteSite = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
+        } else {
+            status.requiredRemoteSite = ''; // UI should handle this as "Not Configured"
+        }
 
-        // REFACTOR: Use Static SOQL. The compiler handles the namespace automatically.
-        // We use 'WITH USER_MODE' to satisfy security scanners if possible, or stripInaccessible if needed.
-        // Since we are in 'without sharing', we can just run the query.
+        // Check for existing entity
         List<Network_Entity__c> entities = [
-            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c 
+            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
             FROM Network_Entity__c 
-            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
+            WHERE Name LIKE 'Cloud Nimbus LLC%' 
+            WITH USER_MODE 
             LIMIT 1
         ];
 
@@ -30,88 +47,119 @@ public without sharing class DeliveryHubSetupController {
         return status;
     }
 
-    @SuppressWarnings('PMD.ApexCRUDViolation')
+    /**
+     * @description Initiates handshake. Prevents duplicates by checking OrgId AND Name.
+     */
+    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
     public static void connectToDefaultMothership() {
-        String mothershipBase = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
+        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
+        
+        if (config == null || String.isBlank(config.CloudNimbusLlcEndpointTxt__c)) {
+            throw new AuraHandledException('Metadata Error: Endpoint not configured.');
+        }
+
+        String mothershipBase = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
         String intakeEndpoint = mothershipBase + '/intake';
         
-        String myUrl = Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/deliveryhub/v1';
-        String myOrgId = UserInfo.getOrganizationId();
-        String myName = UserInfo.getOrganizationName();
-
-        Map<String, Object> packet = new Map<String, Object>();
-        packet.put('companyName', myName); 
-        packet.put('orgId', myOrgId);       
-        packet.put('instanceUrl', myUrl);   
-        packet.put('registeredBy', UserInfo.getName());
-        packet.put('title', 'New Org Connection');
-        packet.put('briefSummary', 'Initial connection established from ' + myName);
-        packet.put('detailedContent', 'Automatic registration via Delivery Hub Setup.\n\nOrg ID: ' + myOrgId + '\nCallback URL: ' + myUrl);
-        packet.put('type', 'Task');
-        packet.put('priority', 'High');
+        Map<String, Object> packet = new Map<String, Object>{
+            'companyName' => UserInfo.getOrganizationName(),
+            'orgId' => UserInfo.getOrganizationId(),
+            'instanceUrl' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/deliveryhub/v1',
+            'registeredBy' => UserInfo.getName(),
+            'title' => 'New Org Connection'
+        };
 
         HttpRequest req = new HttpRequest();
         req.setEndpoint(intakeEndpoint); 
         req.setMethod('POST');
         req.setHeader('Content-Type', 'application/json');
         req.setBody(JSON.serialize(packet));
+        req.setTimeout(60000); 
 
         Http http = new Http();
         HttpResponse res = http.send(req);
 
         if (res.getStatusCode() >= 400) {
-            throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
+            throw new AuraHandledException('Connection Failed: ' + res.getBody());
         }
 
         Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
         String remoteTicketId = (String) responseMap.get('ticketId');
-        String remoteEntityId = (String) responseMap.get('entityId'); 
+        String remoteEntityId = (String) responseMap.get('entityId');
+        String remoteOrgId = (String) responseMap.get('orgId');
 
-        // REFACTOR: Static SOQL for the Entity check
-        List<Network_Entity__c> existing = [
-            SELECT Id, RemoteExternalIdTxt__c 
+        // --- 1. HYBRID DUPLICATE PREVENTION ---
+        // Prefer Org ID, fallback to Name for legacy records.
+        String entityName = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
+        
+        List<Network_Entity__c> existingEntities = [
+            SELECT Id, OrgIdTxt__c 
             FROM Network_Entity__c 
-            WHERE Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)' 
+            WHERE OrgIdTxt__c = :remoteOrgId 
+               OR Name = :entityName
             LIMIT 1
         ];
-        
+
         Network_Entity__c mothership;
-        
-        if (existing.isEmpty()) {
-            mothership = new Network_Entity__c(
-                Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
-                StatusPk__c = 'Active',
-                EntityTypePk__c = 'Vendor',
-                IntegrationEndpointUrlTxt__c = mothershipBase,
-                RemoteExternalIdTxt__c = remoteEntityId
-            );
-            insert mothership;
+        if (!existingEntities.isEmpty()) {
+            mothership = existingEntities[0];
         } else {
-            mothership = existing[0];
-            if (mothership.RemoteExternalIdTxt__c != remoteEntityId) {
-                 mothership.RemoteExternalIdTxt__c = remoteEntityId;
-                 update mothership;
-            }
+            mothership = new Network_Entity__c();
+            mothership.EntityTypePk__c = 'Vendor';
         }
+
+        // Update Fields
+        mothership.Name = entityName; 
+        mothership.OrgIdTxt__c = remoteOrgId;
+        mothership.StatusPk__c = 'Active';
+        mothership.IntegrationEndpointUrlTxt__c = mothershipBase;
+        mothership.RemoteExternalIdTxt__c = remoteEntityId;
+        
+        // Save (Upsert/Update is safer than hard upsert on non-indexed field)
+        Database.upsert(mothership, AccessLevel.SYSTEM_MODE);
 
         initializeDefaultSettings();
 
-        Ticket__c regTicket = new Ticket__c(
-            WorkItemNameTxt__c = 'New Org Connection',
-            BriefDescriptionTxt__c = 'Connection Established Successfully.',
-            StageNamePk__c = 'Backlog',
-            PriorityPk__c = 'High'
-        );
-        insert regTicket;
+        // --- 2. SMART TICKET HANDLING ---
+        List<Ticket__c> existingTickets = [
+            SELECT Id FROM Ticket__c 
+            WHERE WorkItemNameTxt__c = 'New Org Connection' 
+            WITH USER_MODE 
+            LIMIT 1
+        ];
+        
+        Id finalTicketId;
+        if (existingTickets.isEmpty()) {
+            Ticket__c newTicket = new Ticket__c(
+                WorkItemNameTxt__c = 'New Org Connection',
+                BriefDescriptionTxt__c = 'Connection Established Successfully.',
+                StageNamePk__c = 'Backlog'
+            );
+            Database.insert(newTicket, AccessLevel.SYSTEM_MODE);
+            finalTicketId = newTicket.Id;
+        } else {
+            finalTicketId = existingTickets[0].Id;
+        }
 
-        Request__c regRequest = new Request__c(
-            TicketId__c = regTicket.Id,           
-            DeliveryEntityId__c = mothership.Id,  
-            RemoteTicketIdTxt__c = remoteTicketId, 
-            StatusPk__c = 'Open'
-        );
-        insert regRequest;
+        // --- 3. LINK REQUEST ---
+        List<Request__c> existingReqs = [
+            SELECT Id FROM Request__c 
+            WHERE TicketId__c = :finalTicketId 
+            AND DeliveryEntityId__c = :mothership.Id 
+            WITH USER_MODE 
+            LIMIT 1
+        ];
+
+        if (existingReqs.isEmpty()) {
+            Request__c newReq = new Request__c(
+                TicketId__c = finalTicketId,           
+                DeliveryEntityId__c = mothership.Id,  
+                RemoteTicketIdTxt__c = remoteTicketId, 
+                StatusPk__c = 'Open'
+            );
+            Database.insert(newReq, AccessLevel.SYSTEM_MODE);
+        }
         
         scheduleSyncJobs();
     }
@@ -120,22 +168,24 @@ public without sharing class DeliveryHubSetupController {
     private static void initializeDefaultSettings() {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings.Id == null) {
-            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
-            settings.EnableNotificationsBool__c = true;
-            settings.AutoCreateRequestFromTicketBool__c = true; 
-            settings.AutoSyncNetworkEntityBool__c = true;       
-            settings.AISuggestionsEnabledBool__c = true; 
-            settings.AutoGenerateDescriptionsBool__c = true;
-            settings.AIEstimationEnabledBool__c = true;
-            settings.StagesToAutoShareWithDevTeamTxt__c = 'All';
-            insert settings;
+            settings = new Delivery_Hub_Settings__c(
+                SetupOwnerId = UserInfo.getOrganizationId(),
+                EnableNotificationsBool__c = true,
+                AutoCreateRequestFromTicketBool__c = true,
+                AutoSyncNetworkEntityBool__c = true,
+                AISuggestionsEnabledBool__c = true,
+                AutoGenerateDescriptionsBool__c = true,
+                AIEstimationEnabledBool__c = true,
+                StagesToAutoShareWithDevTeamTxt__c = 'All'
+            );
+            insert settings; 
         }
     }
 
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static void scheduleSyncJobs() {
-        Integer jobCount = [SELECT Count() FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'];
-        if (jobCount == 0) {
+        List<CronTrigger> jobs = [SELECT Id FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'];
+        if (jobs.isEmpty()) {
             System.schedule('Delivery Hub Sync - :00', '0 0 * * * ?', new DeliveryHubScheduler());
             System.schedule('Delivery Hub Sync - :15', '0 15 * * * ?', new DeliveryHubScheduler());
             System.schedule('Delivery Hub Sync - :30', '0 30 * * * ?', new DeliveryHubScheduler());
