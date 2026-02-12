@@ -33,11 +33,11 @@ public without sharing class DeliveryHubSetupController {
     @AuraEnabled
     public static void connectToDefaultMothership() {
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
-        if (config == null || String.isBlank(config.Cloud_Nimbus_LLC_Endpoint__c)) {
+        if (config == null || String.isBlank(config.CloudNimbusLlcEndpointTxt__c)) {
             throw new AuraHandledException('Metadata Error: Endpoint not configured.');
         }
 
-        String mothershipBase = config.Cloud_Nimbus_LLC_Endpoint__c.removeEnd('/');
+        String mothershipBase = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
         String intakeEndpoint = mothershipBase + '/intake';
         
         // Build Packet
