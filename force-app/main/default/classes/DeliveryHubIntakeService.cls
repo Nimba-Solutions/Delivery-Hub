@@ -99,7 +99,8 @@ global without sharing class DeliveryHubIntakeService {
                 'success' => true,
                 'ticketId' => t.Id,
                 'status' => t.StatusPk__c,
-                'entityId' => clientEntity.Id 
+                'entityId' => clientEntity.Id,
+                'orgId' => UserInfo.getOrganizationId() 
             }));
 
         } catch (Exception e) {

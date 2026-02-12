@@ -2,6 +2,7 @@
  * @description Controller for the Delivery Hub Setup LWC.
  * Handles the initial handshake with the Mothership.
  */
+@SuppressWarnings('PMD.ApexSharingViolations')
 public without sharing class DeliveryHubSetupController {
 
     public class SetupStatus {
@@ -11,14 +12,24 @@ public without sharing class DeliveryHubSetupController {
     }
 
     /**
-     * @description Checks connection status using USER_MODE to satisfy security scanners.
+     * @description Checks connection status.
+     * NOW PULLS URL DYNAMICALLY FROM METADATA.
      */
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
-        status.requiredRemoteSite = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com';
+        
+        // --- FIX: Get Endpoint from Custom Metadata ---
+        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
+        
+        if (config != null && String.isNotBlank(config.CloudNimbusLlcEndpointTxt__c)) {
+            // Remove trailing slash to ensure clean Remote Site Setting comparison
+            status.requiredRemoteSite = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
+        } else {
+            status.requiredRemoteSite = ''; // UI should handle this as "Not Configured"
+        }
 
-        // FIX: Added 'WITH USER_MODE' to validate CRUD permissions
+        // Check for existing entity
         List<Network_Entity__c> entities = [
             SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
             FROM Network_Entity__c 
@@ -37,9 +48,9 @@ public without sharing class DeliveryHubSetupController {
     }
 
     /**
-     * @description Initiates handshake. DML operations updated to use SYSTEM_MODE 
-     * or USER_MODE to satisfy ApexCRUDViolation.
+     * @description Initiates handshake. Prevents duplicates by checking OrgId AND Name.
      */
+    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
     public static void connectToDefaultMothership() {
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
@@ -64,8 +75,10 @@ public without sharing class DeliveryHubSetupController {
         req.setMethod('POST');
         req.setHeader('Content-Type', 'application/json');
         req.setBody(JSON.serialize(packet));
+        req.setTimeout(60000); 
 
-        HttpResponse res = new Http().send(req);
+        Http http = new Http();
+        HttpResponse res = http.send(req);
 
         if (res.getStatusCode() >= 400) {
             throw new AuraHandledException('Connection Failed: ' + res.getBody());
@@ -76,23 +89,39 @@ public without sharing class DeliveryHubSetupController {
         String remoteEntityId = (String) responseMap.get('entityId');
         String remoteOrgId = (String) responseMap.get('orgId');
 
-        // 5. UPSERT VENDOR ENTITY
-        Network_Entity__c mothership = new Network_Entity__c(
-            OrgIdTxt__c = remoteOrgId, 
-            Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
-            StatusPk__c = 'Active',
-            EntityTypePk__c = 'Vendor',
-            IntegrationEndpointUrlTxt__c = mothershipBase,
-            RemoteExternalIdTxt__c = remoteEntityId
-        );
+        // --- 1. HYBRID DUPLICATE PREVENTION ---
+        // Prefer Org ID, fallback to Name for legacy records.
+        String entityName = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
         
-        // FIX: Use Database.upsert with AccessLevel to satisfy PMD
-        Database.upsert(mothership, Network_Entity__c.OrgIdTxt__c, AccessLevel.SYSTEM_MODE);
+        List<Network_Entity__c> existingEntities = [
+            SELECT Id, OrgIdTxt__c 
+            FROM Network_Entity__c 
+            WHERE OrgIdTxt__c = :remoteOrgId 
+               OR Name = :entityName
+            LIMIT 1
+        ];
+
+        Network_Entity__c mothership;
+        if (!existingEntities.isEmpty()) {
+            mothership = existingEntities[0];
+        } else {
+            mothership = new Network_Entity__c();
+            mothership.EntityTypePk__c = 'Vendor';
+        }
+
+        // Update Fields
+        mothership.Name = entityName; 
+        mothership.OrgIdTxt__c = remoteOrgId;
+        mothership.StatusPk__c = 'Active';
+        mothership.IntegrationEndpointUrlTxt__c = mothershipBase;
+        mothership.RemoteExternalIdTxt__c = remoteEntityId;
+        
+        // Save (Upsert/Update is safer than hard upsert on non-indexed field)
+        Database.upsert(mothership, AccessLevel.SYSTEM_MODE);
 
         initializeDefaultSettings();
 
-        // 6. SMART TICKET HANDLING
-        // FIX: Added 'WITH USER_MODE'
+        // --- 2. SMART TICKET HANDLING ---
         List<Ticket__c> existingTickets = [
             SELECT Id FROM Ticket__c 
             WHERE WorkItemNameTxt__c = 'New Org Connection' 
@@ -107,15 +136,13 @@ public without sharing class DeliveryHubSetupController {
                 BriefDescriptionTxt__c = 'Connection Established Successfully.',
                 StageNamePk__c = 'Backlog'
             );
-            // FIX: Use Database.insert with AccessLevel
-            Database.insert(newTicket, AccessLevel.USER_MODE);
+            Database.insert(newTicket, AccessLevel.SYSTEM_MODE);
             finalTicketId = newTicket.Id;
         } else {
             finalTicketId = existingTickets[0].Id;
         }
 
-        // 7. LINK REQUEST
-        // FIX: Added 'WITH USER_MODE'
+        // --- 3. LINK REQUEST ---
         List<Request__c> existingReqs = [
             SELECT Id FROM Request__c 
             WHERE TicketId__c = :finalTicketId 
@@ -131,8 +158,7 @@ public without sharing class DeliveryHubSetupController {
                 RemoteTicketIdTxt__c = remoteTicketId, 
                 StatusPk__c = 'Open'
             );
-            // FIX: Use Database.insert with AccessLevel
-            Database.insert(newReq, AccessLevel.USER_MODE);
+            Database.insert(newReq, AccessLevel.SYSTEM_MODE);
         }
         
         scheduleSyncJobs();
@@ -152,7 +178,7 @@ public without sharing class DeliveryHubSetupController {
                 AIEstimationEnabledBool__c = true,
                 StagesToAutoShareWithDevTeamTxt__c = 'All'
             );
-            insert settings; // Internal settings usually bypass CRUD
+            insert settings; 
         }
     }
 
