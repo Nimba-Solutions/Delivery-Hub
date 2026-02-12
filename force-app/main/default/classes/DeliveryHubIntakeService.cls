@@ -55,21 +55,8 @@ global without sharing class DeliveryHubIntakeService {
                     clientEntity = byOrgId[0];
                 }
             }
-            
-            // B. Fallback: Match by Name (Legacy support for older clients)
-            if (clientEntity == null) {
-                List<Network_Entity__c> byName = [
-                    SELECT Id, Name, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
-                    FROM Network_Entity__c 
-                    WHERE Name = :packet.companyName 
-                    LIMIT 1
-                ];
-                if (!byName.isEmpty()) {
-                    clientEntity = byName[0];
-                }
-            }
 
-            // C. Create New if not found
+            // B. Create New if not found
             if (clientEntity == null) {
                 clientEntity = new Network_Entity__c(
                     Name = packet.companyName,
@@ -78,11 +65,9 @@ global without sharing class DeliveryHubIntakeService {
                 );
             }
             
-            // 3. ALWAYS UPDATE COORDINATES (Upsert)
-            // Ensure we have the latest URL and Org ID from the client
-            if (String.isNotBlank(packet.orgId)) {
-                clientEntity.OrgIdTxt__c = packet.orgId;
-            }
+            // 2. STOP THE ECHO (Critical)
+            SyncEngine.setSyncContext();
+
             if (String.isNotBlank(packet.instanceUrl)) {
                 clientEntity.IntegrationEndpointUrlTxt__c = packet.instanceUrl;
             }
