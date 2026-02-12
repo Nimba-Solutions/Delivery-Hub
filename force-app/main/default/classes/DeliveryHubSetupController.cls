@@ -120,17 +120,13 @@ public without sharing class DeliveryHubSetupController {
 
         initializeDefaultSettings();
         
-        Id finalTicketId;
-        if (existingTickets.isEmpty()) {
-            Ticket__c newTicket = new Ticket__c(
-                BriefDescriptionTxt__c = 'Connection Established Successfully.',
-                StageNamePk__c = 'Backlog'
-            );
-            Database.insert(newTicket, AccessLevel.SYSTEM_MODE);
-            finalTicketId = newTicket.Id;
-        } else {
-            finalTicketId = existingTickets[0].Id;
-        }
+
+        Ticket__c newTicket = new Ticket__c(
+            BriefDescriptionTxt__c = 'Connection Established Successfully.',
+            StageNamePk__c = 'Backlog'
+        );
+        Database.insert(newTicket, AccessLevel.SYSTEM_MODE);
+        finalTicketId = newTicket.Id;
 
         // --- 3. LINK REQUEST ---
         List<Request__c> existingReqs = [
