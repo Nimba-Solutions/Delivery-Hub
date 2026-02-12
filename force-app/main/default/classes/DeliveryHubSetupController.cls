@@ -34,7 +34,6 @@ public without sharing class DeliveryHubSetupController {
             SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
             FROM Network_Entity__c 
             WHERE Name LIKE 'Cloud Nimbus LLC%' 
-            WITH USER_MODE 
             LIMIT 1
         ];
 
@@ -120,19 +119,10 @@ public without sharing class DeliveryHubSetupController {
         Database.upsert(mothership, AccessLevel.SYSTEM_MODE);
 
         initializeDefaultSettings();
-
-        // --- 2. SMART TICKET HANDLING ---
-        List<Ticket__c> existingTickets = [
-            SELECT Id FROM Ticket__c 
-            WHERE WorkItemNameTxt__c = 'New Org Connection' 
-            WITH USER_MODE 
-            LIMIT 1
-        ];
         
         Id finalTicketId;
         if (existingTickets.isEmpty()) {
             Ticket__c newTicket = new Ticket__c(
-                WorkItemNameTxt__c = 'New Org Connection',
                 BriefDescriptionTxt__c = 'Connection Established Successfully.',
                 StageNamePk__c = 'Backlog'
             );
@@ -156,7 +146,7 @@ public without sharing class DeliveryHubSetupController {
                 TicketId__c = finalTicketId,           
                 DeliveryEntityId__c = mothership.Id,  
                 RemoteTicketIdTxt__c = remoteTicketId, 
-                StatusPk__c = 'Active'
+                StatusPk__c = 'Open for Bids'
             );
             Database.insert(newReq, AccessLevel.SYSTEM_MODE);
         }
