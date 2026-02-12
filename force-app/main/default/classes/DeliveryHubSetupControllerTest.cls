@@ -7,7 +7,7 @@ private class DeliveryHubSetupControllerTest {
         User u = new User(
             Alias = 'sysadm', 
             Email='admin@testorg.com',
-            EmailEncodingKey='UTF-8', 
+            EmailEncodingKey='TF-8', 
             LastName='Testing', 
             LanguageLocaleKey='en_US',
             LocaleSidKey='en_US', 
