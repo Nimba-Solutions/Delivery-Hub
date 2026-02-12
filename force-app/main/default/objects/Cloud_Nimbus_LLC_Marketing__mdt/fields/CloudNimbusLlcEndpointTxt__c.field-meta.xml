@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Cloud_Nimbus_LLC_Endpoint__c</fullName>
+    <fullName>CloudNimbusLlcEndpointTxt__c</fullName>
     <description>The Cloud Nimbus LLC Endpoint</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
