@@ -20,7 +20,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Cloud_Nimbus_LLC_Endpoint__c</field>
+                <field>CloudNimbusLlcEndpointTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
