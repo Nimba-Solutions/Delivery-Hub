@@ -10,6 +10,9 @@ public without sharing class DeliveryHubSyncService {
             throw new CalloutException('Invalid Object Type: ' + objectType);
         }
 
+        // Namespace prefix for dynamic field puts (e.g., '' on Client, 'delivery__' on Mothership)
+        String fns = getFieldNs();
+
         SObject record = targetType.newSObject();
         String targetId = (String) payload.get('TargetId');
         if (String.isBlank(targetId)) {
@@ -27,7 +30,7 @@ public without sharing class DeliveryHubSyncService {
             isInsert = true;
             if (String.isNotBlank(targetId)) {
                 Id localTicketId = resolveLocalTicketId(targetId);
-                record.put('TicketId__c', localTicketId);
+                record.put(fns + 'TicketId__c', localTicketId);
             }
         } else {
             try {
@@ -39,7 +42,7 @@ public without sharing class DeliveryHubSyncService {
                         record.put('Id', targetId);
                     } else {
                         isInsert = true;
-                        record.put('TicketId__c', targetId);
+                        record.put(fns + 'TicketId__c', targetId);
                     }
                 }
             } catch (Exception e) {
@@ -54,7 +57,7 @@ public without sharing class DeliveryHubSyncService {
         // Mark as 'Synced' so the Trigger ignores it and doesn't send it back.
         if (objectType.contains('Ticket_Comment__c')) {
             try {
-                record.put('JiraSyncStatusTxt__c', 'Synced');
+                record.put(fns + 'JiraSyncStatusTxt__c', 'Synced');
             } catch (Exception e) {
                 System.debug('Could not set Sync Status: ' + e.getMessage());
             }
@@ -69,6 +72,17 @@ public without sharing class DeliveryHubSyncService {
     }
 
     // --- HELPER METHODS ---
+
+    // Cached namespace prefix for dynamic field puts.
+    // Returns '' on Client (no namespace) or 'delivery__' on Mothership.
+    private static String cachedFieldNs;
+    private static String getFieldNs() {
+        if (cachedFieldNs == null) {
+            String ns = [SELECT NamespacePrefix FROM Organization].NamespacePrefix;
+            cachedFieldNs = String.isBlank(ns) ? '' : ns + '__';
+        }
+        return cachedFieldNs;
+    }
 
     private static Id resolveLocalTicketId(String remoteTicketId) {
         List<Request__c> requests = [
@@ -88,6 +102,15 @@ public without sharing class DeliveryHubSyncService {
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
         if (gd.containsKey(apiName)) return gd.get(apiName);
+
+        // On Mothership (managed package), getGlobalDescribe() keys include
+        // the namespace prefix (e.g., 'delivery__Ticket_Comment__c').
+        // The Client sends objectType without prefix, so try with namespace.
+        String fns = getFieldNs();
+        if (String.isNotBlank(fns)) {
+            String namespacedName = fns + apiName;
+            if (gd.containsKey(namespacedName)) return gd.get(namespacedName);
+        }
         return null;
     }
 

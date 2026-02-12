@@ -44,39 +44,45 @@ public without sharing class DeliveryHubSender {
      * @param originalPayload The generic payload string.
      */
     private static void sendToSpecificVendor(Request__c reqRec, String objectType, String originalPayload) {
-        try {
-            String baseUrl = (String.isNotBlank(reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c)) 
-                ? reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
-                : DEFAULT_BASE_URL;
+        String baseUrl = (String.isNotBlank(reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c))
+            ? reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
+            : DEFAULT_BASE_URL;
 
-            if (!baseUrl.endsWith('/')) {
-                baseUrl += '/';
+        if (!baseUrl.endsWith('/')) {
+            baseUrl += '/';
+        }
+
+        // Detect the remote org's namespace from the Sites URL path.
+        // Managed package Sites URLs follow: /services/apexrest/{namespace}/deliveryhub/v1
+        // If a namespace segment exists before 'deliveryhub', prefix objectType with it
+        // so the remote findSObjectType() can resolve the managed SObject.
+        String remoteObjectType = objectType;
+        if (baseUrl.contains('/apexrest/')) {
+            String afterApexrest = baseUrl.substring(baseUrl.indexOf('/apexrest/') + 10);
+            String firstSegment = afterApexrest.split('/')[0];
+            if (firstSegment != 'deliveryhub' && String.isNotBlank(firstSegment)) {
+                remoteObjectType = firstSegment + '__' + objectType;
             }
-            String fullEndpoint = baseUrl + 'sync/' + objectType;
+        }
+        String fullEndpoint = baseUrl + 'sync/' + remoteObjectType;
 
-            // Inject the Specific Remote ID for THIS Vendor
-            Map<String, Object> payloadMap = (Map<String, Object>) JSON.deserializeUntyped(originalPayload);
-            payloadMap.put('TargetId', reqRec.RemoteTicketIdTxt__c); 
-            String finalJson = JSON.serialize(payloadMap);
+        // Inject the Specific Remote ID for THIS Vendor
+        Map<String, Object> payloadMap = (Map<String, Object>) JSON.deserializeUntyped(originalPayload);
+        payloadMap.put('TargetId', reqRec.RemoteTicketIdTxt__c);
+        String finalJson = JSON.serialize(payloadMap);
 
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint(fullEndpoint);
-            req.setMethod('POST');
-            req.setHeader('Content-Type', 'application/json');
-            req.setBody(finalJson);
-            req.setTimeout(120000); 
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(fullEndpoint);
+        req.setMethod('POST');
+        req.setHeader('Content-Type', 'application/json');
+        req.setBody(finalJson);
+        req.setTimeout(120000);
 
-            Http http = new Http();
-            HttpResponse res = http.send(req);
+        Http http = new Http();
+        HttpResponse res = http.send(req);
 
-            if (res.getStatusCode() != 200 && res.getStatusCode() != 201) {
-                System.debug(LoggingLevel.ERROR, 'Sync Failed for Vendor ' + reqRec.DeliveryEntityId__r.Name + ' (Req: ' + reqRec.Id + '): ' + res.getBody());
-            } else {
-                System.debug(LoggingLevel.INFO, 'Sync Success for Vendor ' + reqRec.DeliveryEntityId__r.Name);
-            }
-
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Sync Exception for Request ' + reqRec.Id + ': ' + e.getMessage());
+        if (res.getStatusCode() != 200 && res.getStatusCode() != 201) {
+            throw new CalloutException('Sync Failed (' + res.getStatusCode() + '): ' + res.getBody());
         }
     }
 
