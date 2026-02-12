@@ -108,28 +108,39 @@ public without sharing class TicketTriggerHandler {
             return;
         }
 
-        // 2. Get active vendors
+        // 2. Determine entity for Request creation
+        // Client orgs have exactly 1 Vendor entity; Mothership has Client entities.
         List<Network_Entity__c> vendors = [
-            SELECT Id 
-            FROM Network_Entity__c 
-            WHERE StatusPk__c = 'Active' 
-            LIMIT 2
+            SELECT Id FROM Network_Entity__c
+            WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'
+            LIMIT 1
         ];
 
-        if (vendors.size() != 1) {
-            return; // Only sync if exactly one active vendor exists
-        }
-
-        Network_Entity__c vendor = vendors[0];
         List<Request__c> newRequests = new List<Request__c>();
 
-        for (Ticket__c t : newTickets) {
-            newRequests.add(new Request__c(
-                TicketId__c = t.Id, 
-                DeliveryEntityId__c = vendor.Id,
-                StatusPk__c = 'Draft',
-                PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
-            ));
+        if (!vendors.isEmpty()) {
+            // CLIENT ORG: Link all new tickets to the single Vendor
+            Network_Entity__c vendor = vendors[0];
+            for (Ticket__c t : newTickets) {
+                newRequests.add(new Request__c(
+                    TicketId__c = t.Id,
+                    DeliveryEntityId__c = vendor.Id,
+                    StatusPk__c = 'Draft',
+                    PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
+                ));
+            }
+        } else {
+            // MOTHERSHIP: Use each ticket's ClientNetworkEntityId__c (set by IntakeService)
+            for (Ticket__c t : newTickets) {
+                if (t.ClientNetworkEntityId__c != null) {
+                    newRequests.add(new Request__c(
+                        TicketId__c = t.Id,
+                        DeliveryEntityId__c = t.ClientNetworkEntityId__c,
+                        StatusPk__c = 'Draft',
+                        PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
+                    ));
+                }
+            }
         }
 
         if (newRequests.isEmpty()) {
