@@ -58,8 +58,19 @@ global without sharing class DeliveryHubIntakeService {
 
             // B. Create New if not found
             if (clientEntity == null) {
+                // 1. Generate Timestamp (e.g., " 2026-02-12")
+                String timestamp = ' ' + Date.today().format(); 
+                
+                // 2. Calculate safe length for the Company Name
+                Integer maxNameLength = 80 - timestamp.length();
+                String truncatedName = packet.companyName;
+                
+                if (truncatedName.length() > maxNameLength) {
+                    truncatedName = truncatedName.substring(0, maxNameLength);
+                }
+
                 clientEntity = new Network_Entity__c(
-                    Name = packet.companyName,
+                    Name = truncatedName + timestamp,
                     StatusPk__c = 'Active',
                     EntityTypePk__c = 'Client',
                     OrgIdTxt__c = packet.orgId
