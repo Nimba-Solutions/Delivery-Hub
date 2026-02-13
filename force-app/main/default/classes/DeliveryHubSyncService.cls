@@ -11,7 +11,7 @@ public without sharing class DeliveryHubSyncService {
             throw new CalloutException('Invalid Object Type: ' + objectType);
         }
 
-        // Namespace prefix for dynamic field puts (e.g., '' on Client, 'delivery__' on Mothership)
+        // Namespace prefix for dynamic field puts
         String fns = getFieldNs();
 
         SObject record = targetType.newSObject();
@@ -23,7 +23,6 @@ public without sharing class DeliveryHubSyncService {
         Boolean isInsert = false;
 
         // 1. SMART ID & PARENT LOOKUP
-        // Ticket_Comment__c requires special handling because targetId is the REMOTE Ticket ID.
         if (objectType.contains('Ticket_Comment__c')) {
             isInsert = true;
             if (String.isNotBlank(targetId)) {
@@ -41,7 +40,6 @@ public without sharing class DeliveryHubSyncService {
                     if (sId.getSObjectType() == targetType) {
                         record.put('Id', targetId);
                     } else {
-                        // Otherwise, treat as a new insert (common during first sync)
                         isInsert = true;
                     }
                 }
@@ -54,7 +52,6 @@ public without sharing class DeliveryHubSyncService {
         mapFields(record, payload, targetType);
 
         // 3. PREVENT PING-PONG LOOP
-        // We tag the record so the Trigger/Sender knows this came FROM the Mothership
         setSyncStatus(record, fns);
 
         // 4. COMMIT
@@ -76,9 +73,6 @@ public without sharing class DeliveryHubSyncService {
         return cachedFieldNs;
     }
 
-    /**
-     * @description Bridges the gap between the Remote Org ID and the Local Record ID.
-     */
     private static Id resolveLocalTicketId(String remoteTicketId) {
         List<Request__c> requests = [
             SELECT TicketId__c
@@ -91,7 +85,6 @@ public without sharing class DeliveryHubSyncService {
         if (!requests.isEmpty()) {
             return requests[0].TicketId__c;
         }
-        // Fallback: If it's already a local ID, return it
         return (Id) remoteTicketId;
     }
 
@@ -110,7 +103,6 @@ public without sharing class DeliveryHubSyncService {
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
         
-        // Metadata fields to ignore during field mapping
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
@@ -130,13 +122,16 @@ public without sharing class DeliveryHubSyncService {
             SObjectField field = null;
             for(String fieldApi : schemaFields.keySet()) {
                 SObjectField f = schemaFields.get(fieldApi);
+                // Compare LocalName to ignore namespace prefix (e.g. BodyTxt__c matches bodytxt__c)
                 if (f.getDescribe().getLocalName().toLowerCase() == lowerKey) {
                     field = f;
                     break;
                 }
             }
 
-            if (field != null && field.getDescribe().isUpdateable()) {
+            // FIX: Removed '&& field.getDescribe().isUpdateable()' 
+            // The Site Guest User often lacks FLS, but this is a System Sync so we must write the data.
+            if (field != null) {
                 applyField(record, field, fieldsToMap.get(payloadKey));
             }
         }
@@ -150,7 +145,6 @@ public without sharing class DeliveryHubSyncService {
             } else if (dtype == Schema.DisplayType.DATE) {
                 record.put(field, Date.valueOf((String)val));
             } else if (dtype == Schema.DisplayType.DATETIME) {
-                // ISO 8601 Date format handling
                 String dtStr = (String)val;
                 record.put(field, (DateTime)JSON.deserialize('"' + dtStr + '"', DateTime.class));
             } else if (dtype == Schema.DisplayType.PERCENT || dtype == Schema.DisplayType.CURRENCY || dtype == Schema.DisplayType.DOUBLE) {
@@ -163,16 +157,11 @@ public without sharing class DeliveryHubSyncService {
         }
     }
 
-    /**
-     * @description Sets the sync status to prevent the local trigger from 
-     * re-sending this record back to the Mothership.
-     */
     private static void setSyncStatus(SObject record, String fns) {
         try {
-            // Attempt to set sync status for loop prevention
             record.put(fns + 'JiraSyncStatusTxt__c', 'Synced');
         } catch (Exception e) {
-            // Field might not exist on all synced objects; ignore safely.
+            // Ignore if field doesn't exist
         }
     }
 }
