@@ -15,7 +15,8 @@ global without sharing class DeliveryHubIntakeService {
         public String type;
         
         // Critical Identifiers for Smart Linking
-        public String orgId;        
+        public String orgId;    
+        public String entityId;        
         public String instanceUrl;  
         public String registeredBy; 
         
@@ -83,7 +84,7 @@ global without sharing class DeliveryHubIntakeService {
             // Ensure the Org ID is stamped (Self-heals legacy records found by Name)
             clientEntity.OrgIdTxt__c = packet.orgId; 
             clientEntity.RemoteExternalIdTxt__c = packet.entityId; 
-            
+
             if (String.isNotBlank(packet.instanceUrl)) {
                 clientEntity.IntegrationEndpointUrlTxt__c = packet.instanceUrl;
             }
