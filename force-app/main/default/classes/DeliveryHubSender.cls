@@ -7,6 +7,7 @@ public without sharing class DeliveryHubSender {
     /**
      * @description Helper to get the Default Endpoint from Custom Metadata.
      * Replaces the hardcoded DEFAULT_BASE_URL.
+     * @return String The configured endpoint URL or an empty string if missing.
      */
     private static String getDefaultBaseUrl() {
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
