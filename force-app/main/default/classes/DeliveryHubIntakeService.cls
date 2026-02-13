@@ -41,7 +41,7 @@ global without sharing class DeliveryHubIntakeService {
 
             Network_Entity__c clientEntity;
             
-            // 2. FIND OR CREATE CLIENT ENTITY (Smart-Link Logic)
+            // 2. FIND OR CREATE CLIENT ENTITY (Waterfall Logic)
             
             // A. Try matching by Org ID (The Gold Standard - Unique & Immutable)
             if (String.isNotBlank(packet.orgId)) {
@@ -77,14 +77,18 @@ global without sharing class DeliveryHubIntakeService {
                 );
             }
             
-            // 2. STOP THE ECHO (Critical)
-            SyncEngine.setSyncContext();
+            // 3. UPDATE & UPSERT (Self-Healing)
+            SyncEngine.setSyncContext(); // Reinforce context before DML
 
+            // Ensure the Org ID is stamped (Self-heals legacy records found by Name)
+            clientEntity.OrgIdTxt__c = packet.orgId; 
+            clientEntity.RemoteExternalIdTxt__c = packet.entityId; 
+            
             if (String.isNotBlank(packet.instanceUrl)) {
                 clientEntity.IntegrationEndpointUrlTxt__c = packet.instanceUrl;
             }
             
-            // Use 'upsert' to handle both new creation and updates in one go.
+            // Upsert handles both the Insert (new) and Update (legacy/found) scenarios
             upsert clientEntity; 
 
             // 4. CREATE THE TICKET
@@ -112,7 +116,7 @@ global without sharing class DeliveryHubIntakeService {
                 'ticketId' => t.Id,
                 'status' => t.StatusPk__c,
                 'entityId' => clientEntity.Id,
-                'orgId' => UserInfo.getOrganizationId() 
+                'orgId' => UserInfo.getOrganizationId() // Send Mothership Org ID back to Client
             }));
 
         } catch (Exception e) {

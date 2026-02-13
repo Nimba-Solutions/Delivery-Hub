@@ -13,23 +13,21 @@ public without sharing class DeliveryHubSetupController {
 
     /**
      * @description Checks connection status.
-     * NOW PULLS URL DYNAMICALLY FROM METADATA.
      */
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
         
-        // --- FIX: Get Endpoint from Custom Metadata ---
+        // Get Endpoint from Custom Metadata
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
         
         if (config != null && String.isNotBlank(config.CloudNimbusLlcEndpointTxt__c)) {
-            // Remove trailing slash to ensure clean Remote Site Setting comparison
             status.requiredRemoteSite = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
         } else {
-            status.requiredRemoteSite = ''; // UI should handle this as "Not Configured"
+            status.requiredRemoteSite = ''; 
         }
 
-        // Check for existing entity
+        // Check for existing entity (Display purposes only)
         List<Network_Entity__c> entities = [
             SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
             FROM Network_Entity__c 
@@ -47,7 +45,7 @@ public without sharing class DeliveryHubSetupController {
     }
 
     /**
-     * @description Initiates handshake. Prevents duplicates by checking OrgId AND Name.
+     * @description Initiates handshake. Prevents duplicates by checking IDs only.
      */
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
@@ -88,15 +86,13 @@ public without sharing class DeliveryHubSetupController {
         String remoteEntityId = (String) responseMap.get('entityId');
         String remoteOrgId = (String) responseMap.get('orgId');
 
-        // --- 1. HYBRID DUPLICATE PREVENTION ---
-        // Prefer Org ID, fallback to Name for legacy records.
-        String entityName = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
-        
+        // --- 1. STRICT ID MATCHING ---
+        // Match on Org ID OR the Remote Record ID. Do NOT match by Name.
         List<Network_Entity__c> existingEntities = [
-            SELECT Id, OrgIdTxt__c 
+            SELECT Id, OrgIdTxt__c, RemoteExternalIdTxt__c 
             FROM Network_Entity__c 
-            WHERE OrgIdTxt__c = :remoteOrgId 
-               OR Name = :entityName
+            WHERE (OrgIdTxt__c != null AND OrgIdTxt__c = :remoteOrgId)
+               OR (RemoteExternalIdTxt__c != null AND RemoteExternalIdTxt__c = :remoteEntityId)
             LIMIT 1
         ];
 
@@ -105,21 +101,22 @@ public without sharing class DeliveryHubSetupController {
             mothership = existingEntities[0];
         } else {
             mothership = new Network_Entity__c();
+            mothership.Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
             mothership.EntityTypePk__c = 'Vendor';
         }
 
         // Update Fields
-        mothership.Name = entityName; 
         mothership.OrgIdTxt__c = remoteOrgId;
         mothership.StatusPk__c = 'Active';
         mothership.IntegrationEndpointUrlTxt__c = mothershipBase;
         mothership.RemoteExternalIdTxt__c = remoteEntityId;
         
-        // Save (Upsert/Update is safer than hard upsert on non-indexed field)
+        // Save using upsert/update (Safer than upsert on non-unique fields)
         Database.upsert(mothership, AccessLevel.SYSTEM_MODE);
 
         initializeDefaultSettings();
-        
+
+        // --- 2. TICKET CREATION ---
 
         Ticket__c newTicket = new Ticket__c(
             BriefDescriptionTxt__c = 'Connection Established Successfully.',
@@ -134,6 +131,7 @@ public without sharing class DeliveryHubSetupController {
             StatusPk__c = 'Open for Bids'
         );
         Database.insert(newReq, AccessLevel.SYSTEM_MODE);
+
         
         scheduleSyncJobs();
     }
