@@ -127,7 +127,7 @@ public without sharing class DeliveryHubSender {
         Request__c reqRec = [
             SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
                    TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
-                   TicketId__r.DetailsTxt__c, TicketId__r.PriorityPk__c, TicketId__r.WorkItemTypeTxt__c,
+                   TicketId__r.DetailsTxt__c, TicketId__r.PriorityPk__c, TicketId__r.WorkItemTypeTxt__c, DeliveryEntityId__c,
                    DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name, DeliveryEntityId__r.RemoteExternalIdTxt__c, DeliveryEntityId__r.OrgIdTxt__c
             FROM Request__c 
             WHERE Id = :requestId 
@@ -158,7 +158,7 @@ public without sharing class DeliveryHubSender {
             'companyName' => UserInfo.getOrganizationName(),
             'instanceUrl' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/deliveryhub/v1',
             'orgId' => UserInfo.getOrganizationId(),
-            'entityId' => reqRec.Id,
+            'entityId' => reqRec.DeliveryEntityId__c,
             'preApprovedHours' => reqRec.PreApprovedHoursNumber__c,
             'hourlyRate' => reqRec.HourlyRateCurrency__c,
             'brokerRequestId' => reqRec.Id 
