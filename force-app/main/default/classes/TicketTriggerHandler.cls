@@ -44,7 +44,6 @@ public without sharing class TicketTriggerHandler {
         };
 
         // Capture changes and queue JSON payload
-        // Note: We pass 'oldMap' directly; SyncEngine handles null checks for Inserts.
         SyncEngine.captureChanges(newRows, oldMap, syncFields);
 
         // ============================================================================
@@ -84,8 +83,6 @@ public without sharing class TicketTriggerHandler {
                 }
             }
         }
-        
-        // (Note: Your Jira queueable firing logic would typically go here if using 'toCreate'/'toUpdate')
     }
 
     /**
@@ -95,7 +92,7 @@ public without sharing class TicketTriggerHandler {
     private static void handleNetworkEntitySync(List<Ticket__c> newTickets) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
         
-        // 1. Check "Create Request" Setting (Default TRUE if missing)
+        // 1. Check "Create Request" Setting
         Boolean shouldCreateRequest = true;
         if (settings.Id != null) {
             Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
@@ -109,7 +106,6 @@ public without sharing class TicketTriggerHandler {
         }
 
         // 2. Determine entity for Request creation
-        // Client orgs have exactly 1 Vendor entity; Mothership has Client entities.
         List<Network_Entity__c> vendors = [
             SELECT Id FROM Network_Entity__c
             WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'
@@ -119,7 +115,6 @@ public without sharing class TicketTriggerHandler {
         List<Request__c> newRequests = new List<Request__c>();
 
         if (!vendors.isEmpty()) {
-            // CLIENT ORG: Link all new tickets to the single Vendor
             Network_Entity__c vendor = vendors[0];
             for (Ticket__c t : newTickets) {
                 newRequests.add(new Request__c(
@@ -130,7 +125,6 @@ public without sharing class TicketTriggerHandler {
                 ));
             }
         } else {
-            // MOTHERSHIP: Use each ticket's ClientNetworkEntityId__c (set by IntakeService)
             for (Ticket__c t : newTickets) {
                 if (t.ClientNetworkEntityId__c != null) {
                     newRequests.add(new Request__c(
@@ -147,27 +141,44 @@ public without sharing class TicketTriggerHandler {
             return;
         }
 
-        // We keep stripInaccessible for the INSERT as that creates new user data, which is safer
         SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, newRequests);
         insert decision.getRecords();
 
-        // 3. Check "Auto-Send" Setting (Default TRUE if missing, per requirements)
+        // 3. Check "Auto-Send" Setting
         Boolean shouldAutoSend = true;
         if (settings.Id != null) {
             Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
-            if (populatedFields.containsKey('AutoSyncNetworkEntityBool__c')) { // This is your "Send" field
+            if (populatedFields.containsKey('AutoSyncNetworkEntityBool__c')) {
                 shouldAutoSend = settings.AutoSyncNetworkEntityBool__c;
             }
         }
 
-        // 4. Enqueue Job if Auto-Send is ON
+        // 4. Enqueue Job if Auto-Send is ON and Entity is 'Vendor'
         if (shouldAutoSend) {
-            List<Id> createdRequestIds = new List<Id>();
-            for (SObject r : decision.getRecords()) {
-                createdRequestIds.add(r.Id);
+            List<Request__c> insertedRequests = (List<Request__c>)decision.getRecords();
+            Set<Id> entityIds = new Set<Id>();
+
+            for (Request__c req : insertedRequests) {
+                if (req.DeliveryEntityId__c != null) {
+                    entityIds.add(req.DeliveryEntityId__c);
+                }
             }
-            if (!createdRequestIds.isEmpty()) {
-                System.enqueueJob(new DeliveryHubRequestSenderQueueable(createdRequestIds));
+
+            // Identify which target entities are Vendors to satisfy the 'Vendor-only' auto-send requirement
+            Map<Id, Network_Entity__c> vendorCheckMap = new Map<Id, Network_Entity__c>([
+                SELECT Id FROM Network_Entity__c 
+                WHERE Id IN :entityIds AND EntityTypePk__c = 'Vendor'
+            ]);
+
+            List<Id> requestsToEnqueue = new List<Id>();
+            for (Request__c req : insertedRequests) {
+                if (vendorCheckMap.containsKey(req.DeliveryEntityId__c)) {
+                    requestsToEnqueue.add(req.Id);
+                }
+            }
+
+            if (!requestsToEnqueue.isEmpty()) {
+                System.enqueueJob(new DeliveryHubRequestSenderQueueable(requestsToEnqueue));
             }
         }
     }
