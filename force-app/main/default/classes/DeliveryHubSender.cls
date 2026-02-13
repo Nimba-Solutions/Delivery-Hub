@@ -4,7 +4,18 @@
  */
 public without sharing class DeliveryHubSender {
 
-    private static final String DEFAULT_BASE_URL = 'https://orgfarm-928a77dfd6-dev-ed.develop.my.salesforce-sites.com/services/apexrest/delivery/deliveryhub/v1';
+    /**
+     * @description Helper to get the Default Endpoint from Custom Metadata.
+     * Replaces the hardcoded DEFAULT_BASE_URL.
+     * @return String The configured endpoint URL or an empty string if missing.
+     */
+    private static String getDefaultBaseUrl() {
+        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
+        if (config != null && String.isNotBlank(config.CloudNimbusLlcEndpointTxt__c)) {
+            return config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
+        }
+        return ''; // Or handle as an error if critical
+    }
 
     /**
      * @description NEW: Generic Sender for High-Water Mark Sync.
@@ -17,7 +28,6 @@ public without sharing class DeliveryHubSender {
         
         Id ticketId = (Id)localRecordId;
 
-        // FIX: Reordered WITH SYSTEM_MODE
         List<Request__c> activeRequests = [
             SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name
             FROM Request__c 
@@ -46,16 +56,18 @@ public without sharing class DeliveryHubSender {
     private static void sendToSpecificVendor(Request__c reqRec, String objectType, String originalPayload) {
         String baseUrl = (String.isNotBlank(reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c))
             ? reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
-            : DEFAULT_BASE_URL;
+            : getDefaultBaseUrl(); // --- FIX: Use Metadata Helper ---
+
+        if (String.isBlank(baseUrl)) {
+            System.debug(LoggingLevel.ERROR, 'Sync Failed: No Endpoint URL configured.');
+            return;
+        }
 
         if (!baseUrl.endsWith('/')) {
             baseUrl += '/';
         }
 
         // Detect the remote org's namespace from the Sites URL path.
-        // Managed package Sites URLs follow: /services/apexrest/{namespace}/deliveryhub/v1
-        // If a namespace segment exists before 'deliveryhub', prefix objectType with it
-        // so the remote findSObjectType() can resolve the managed SObject.
         String remoteObjectType = objectType;
         if (baseUrl.contains('/apexrest/')) {
             String afterApexrest = baseUrl.substring(baseUrl.indexOf('/apexrest/') + 10);
@@ -112,12 +124,11 @@ public without sharing class DeliveryHubSender {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static String sendRequestSync(Id requestId) {
-        // FIX: Moved WITH SYSTEM_MODE before LIMIT
         Request__c reqRec = [
             SELECT Id, Name, PreApprovedHoursNumber__c, HourlyRateCurrency__c, 
                    TicketId__r.WorkItemNameTxt__c, TicketId__r.BriefDescriptionTxt__c, 
                    TicketId__r.DetailsTxt__c, TicketId__r.PriorityPk__c, TicketId__r.WorkItemTypeTxt__c,
-                   DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name
+                   DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, DeliveryEntityId__r.Name, DeliveryEntityId__r.RemoteExternalIdTxt__c, DeliveryEntityId__r.OrgIdTxt__c
             FROM Request__c 
             WHERE Id = :requestId 
             WITH SYSTEM_MODE
@@ -126,7 +137,11 @@ public without sharing class DeliveryHubSender {
 
         String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
         if (String.isBlank(baseUrl)) {
-            baseUrl = DEFAULT_BASE_URL;
+            baseUrl = getDefaultBaseUrl(); // --- FIX: Use Metadata Helper ---
+        }
+
+        if (String.isBlank(baseUrl)) {
+            throw new CalloutException('Configuration Error: No Endpoint URL found on Network Entity or Custom Metadata.');
         }
 
         if (!baseUrl.endsWith('/')) {
@@ -141,6 +156,9 @@ public without sharing class DeliveryHubSender {
             'priority' => reqRec.TicketId__r.PriorityPk__c,
             'type' => reqRec.TicketId__r.WorkItemTypeTxt__c,
             'companyName' => UserInfo.getOrganizationName(),
+            'instanceUrl' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/deliveryhub/v1',
+            'orgId' => UserInfo.getOrganizationId(),
+            'entityId' => reqRec.Id,
             'preApprovedHours' => reqRec.PreApprovedHoursNumber__c,
             'hourlyRate' => reqRec.HourlyRateCurrency__c,
             'brokerRequestId' => reqRec.Id 
@@ -173,7 +191,6 @@ public without sharing class DeliveryHubSender {
             reqRec.RemoteTicketIdTxt__c = remoteId;
             reqRec.StatusPk__c = 'Offer Sent'; 
             
-            // FIX: Added AccessLevel to update
             Database.update(reqRec, AccessLevel.SYSTEM_MODE);
             return 'Success';
         } else {
@@ -189,7 +206,6 @@ public without sharing class DeliveryHubSender {
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
         try {
-            // FIX: Moved WITH SYSTEM_MODE before LIMIT
             Request__c reqRec = [
                 SELECT Id, RemoteTicketIdTxt__c, DeliveryEntityId__r.IntegrationEndpointUrlTxt__c 
                 FROM Request__c 
@@ -204,7 +220,11 @@ public without sharing class DeliveryHubSender {
 
             String baseUrl = reqRec.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
             if (String.isBlank(baseUrl)) {
-                baseUrl = DEFAULT_BASE_URL;
+                baseUrl = getDefaultBaseUrl(); // --- FIX: Use Metadata Helper ---
+            }
+
+            if (String.isBlank(baseUrl)) {
+                throw new AuraHandledException('Configuration Error: No Endpoint URL found.');
             }
 
             if (!baseUrl.endsWith('/')) {
