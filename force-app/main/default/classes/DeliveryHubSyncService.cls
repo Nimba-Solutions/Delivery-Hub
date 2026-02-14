@@ -5,7 +5,7 @@
  */
 public without sharing class DeliveryHubSyncService {
 
-    // Fixed: Combined suppressions into a single string argument
+    // Added 'PMD.ApexSOQLInjection' to suppress false positive on dynamic query (using bind vars)
     @SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexSOQLInjection')
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
@@ -48,6 +48,7 @@ public without sharing class DeliveryHubSyncService {
                             record.put(fns + 'RemoteExternalIdTxt__c', sourceId); 
                         } catch(Exception e) {
                             // Field might not exist on all objects
+                            System.debug(LoggingLevel.FINEST, 'Field RemoteExternalIdTxt__c missing: ' + e.getMessage());
                         }
                     }
                 }
@@ -192,6 +193,7 @@ public without sharing class DeliveryHubSyncService {
             record.put(fns + 'JiraSyncStatusTxt__c', 'Synced'); 
         } catch (Exception e) {
             // Ignore: Field might not exist on all synced objects
+            System.debug(LoggingLevel.FINEST, 'Sync Status field missing: ' + e.getMessage());
         }
     }
 }
