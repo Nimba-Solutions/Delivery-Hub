@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Network_Entities</fullName>
+    <columns>NAME</columns>
+    <columns>CREATED_DATE</columns>
+    <columns>EntityTypePk__c</columns>
+    <columns>OrgIdTxt__c</columns>
+    <columns>RemoteExternalIdTxt__c</columns>
+    <columns>StatusPk__c</columns>
+    <columns>LastInboundSyncDateTime__c</columns>
+    <filterScope>Everything</filterScope>
+    <label>Network Entities</label>
+</ListView>
