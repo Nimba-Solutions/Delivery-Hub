@@ -3,10 +3,12 @@ private class DeliveryHubSyncHandlerTest {
 
     @testSetup
     static void setupData() {
-        // 0. Disable Auto-Creation features to prevent "Ghost" Requests
+        // --- FIX: DISABLE AUTOMATION ---
+        // Prevent the Org from auto-creating a "Ghost Request" when we insert the Ticket.
+        // This ensures we only have the ONE Request we manually create below.
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            AutoCreateRequestFromTicketBool__c = false, // Stop auto-linking
+            AutoCreateRequestFromTicketBool__c = false, 
             AutoSyncNetworkEntityBool__c = false
         );
         insert settings;
@@ -38,7 +40,7 @@ private class DeliveryHubSyncHandlerTest {
 
     @isTest
     static void testValidCommentCreatesSyncItem() {
-        // Clear any artifacts from setup (like Ticket sync items)
+        // Clear artifact sync items from setup
         delete [SELECT Id FROM Sync_Item__c];
 
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
@@ -55,7 +57,7 @@ private class DeliveryHubSyncHandlerTest {
         Test.stopTest();
 
         List<Sync_Item__c> items = [SELECT Id, StatusPk__c, ObjectTypePk__c FROM Sync_Item__c];
-        System.assertEquals(1, items.size(), 'Should create exactly 1 Sync Item');
+        System.assertEquals(1, items.size(), 'Should create exactly 1 Sync Item (1 Request)');
         System.assertEquals('Queued', items[0].StatusPk__c, 'Status should be Queued');
         System.assertEquals('Ticket_Comment__c', items[0].ObjectTypePk__c, 'Object Type match');
     }
@@ -107,9 +109,6 @@ private class DeliveryHubSyncHandlerTest {
         System.assertEquals(0, count, 'Should not create sync items for Inactive vendors');
     }
 
-    /**
-     * @description New test to verify the 'Edit' logic.
-     */
     @isTest
     static void testCommentUpdateCreatesSyncItem() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
