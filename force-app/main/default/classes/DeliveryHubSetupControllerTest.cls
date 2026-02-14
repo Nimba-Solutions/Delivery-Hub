@@ -50,6 +50,11 @@ private class DeliveryHubSetupControllerTest {
             
             Network_Entity__c created = [SELECT Id, Name FROM Network_Entity__c WHERE Id = :result.entity.Id];
             System.assert(created.Name.contains('Cloud Nimbus'), 'Name should match new branding');
+
+            // --- VERIFY DUPLICATE REQUEST FIX ---
+            // Ensure we only have 1 Request (Created by Trigger), not 2 (Trigger + Controller)
+            Integer reqCount = [SELECT COUNT() FROM Request__c];
+            System.assertEquals(1, reqCount, 'Should generate exactly one Request via Ticket Trigger');
         }
     }
 
@@ -58,13 +63,13 @@ private class DeliveryHubSetupControllerTest {
         User testUser = [SELECT Id FROM User WHERE Alias = 'sysadm' LIMIT 1];
         
         System.runAs(testUser) {
-            // FIX: Match the ID returned by MockResponseSuccess ('E-REMOTE-456')
+            // Setup existing entity with ID matching the Mock
             Network_Entity__c existing = new Network_Entity__c(
                 Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
                 EntityTypePk__c = 'Vendor',
                 IntegrationEndpointUrlTxt__c = 'https://old.url',
-                RemoteExternalIdTxt__c = 'E-REMOTE-456' // <--- MATCHES MOCK NOW
+                RemoteExternalIdTxt__c = 'E-REMOTE-456' 
             );
             insert existing;
 
@@ -78,7 +83,6 @@ private class DeliveryHubSetupControllerTest {
             System.assertEquals(1, count, 'Should not duplicate entities (matched by Remote ID)');
             
             Network_Entity__c updated = [SELECT IntegrationEndpointUrlTxt__c FROM Network_Entity__c WHERE Id = :existing.Id];
-            // Ensure fields updated
             System.assert(updated.IntegrationEndpointUrlTxt__c.contains('deliveryhub'), 'Should update the endpoint');
         }
     }

@@ -4,14 +4,15 @@ private class DeliveryHubSyncHandlerTest {
     @testSetup
     static void setupData() {
         // 1. Create Network/Delivery Entity
-        // NOTE: Using 'Network_Entity__c'. If your object is named differently, update this class name.
         Network_Entity__c entity = new Network_Entity__c(
             Name = 'Mothership Node',
+            StatusPk__c = 'Active',
+            EntityTypePk__c = 'Vendor',
             IntegrationEndpointUrlTxt__c = 'https://example.com/api'
         );
         insert entity;
 
-        // 2. Create Ticket (REMOVED Name field because it is Auto-Number)
+        // 2. Create Ticket
         Ticket__c t = new Ticket__c(
             BriefDescriptionTxt__c = 'Test Ticket'
         );
@@ -20,7 +21,7 @@ private class DeliveryHubSyncHandlerTest {
         // 3. Create Active Request (The Connection)
         Request__c r = new Request__c(
             TicketId__c = t.Id,
-            DeliveryEntityId__c = entity.Id, // Ensure this lookup exists on Request__c
+            DeliveryEntityId__c = entity.Id,
             RemoteTicketIdTxt__c = 'REMOTE-100',
             StatusPk__c = 'Open'
         );
@@ -43,9 +44,9 @@ private class DeliveryHubSyncHandlerTest {
         Test.stopTest();
 
         List<Sync_Item__c> items = [SELECT Id, StatusPk__c, ObjectTypePk__c FROM Sync_Item__c];
-        System.assert(TRUE,'Nothing');
-        //System.assertEquals(1, items.size(), 'Should create 1 Sync Item');
-        //System.assertEquals('Queued', items[0].StatusPk__c, 'Status should be Queued');
+        System.assertEquals(1, items.size(), 'Should create 1 Sync Item');
+        System.assertEquals('Queued', items[0].StatusPk__c, 'Status should be Queued');
+        System.assertEquals('Ticket_Comment__c', items[0].ObjectTypePk__c, 'Object Type match');
     }
 
     @isTest
@@ -54,6 +55,8 @@ private class DeliveryHubSyncHandlerTest {
 
         Test.startTest();
         
+        // Simulating an incoming sync from Mothership (Status = Synced)
+        // This should NOT trigger an outbound sync item (Loop Prevention)
         Ticket_Comment__c c = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'Incoming Message',
@@ -64,12 +67,12 @@ private class DeliveryHubSyncHandlerTest {
         Test.stopTest();
 
         Integer count = [SELECT Count() FROM Sync_Item__c];
-        System.assert(TRUE,'Nothing');
-        //System.assertEquals(0, count, 'Should ignore incoming synced comments');
+        System.assertEquals(0, count, 'Should ignore incoming synced comments');
     }
 
     @isTest
     static void testInactiveRequestIgnored() {
+        // Set Request to Inactive
         Request__c r = [SELECT Id FROM Request__c LIMIT 1];
         r.StatusPk__c = 'Inactive';
         update r;
@@ -88,7 +91,37 @@ private class DeliveryHubSyncHandlerTest {
         Test.stopTest();
 
         Integer count = [SELECT Count() FROM Sync_Item__c];
-        System.assert(TRUE,'Nothing');
-        //System.assertEquals(0, count, 'Should not create sync items for Inactive vendors');
+        System.assertEquals(0, count, 'Should not create sync items for Inactive vendors');
+    }
+
+    /**
+     * @description New test to verify the 'Edit' logic we just added.
+     */
+    @isTest
+    static void testCommentUpdateCreatesSyncItem() {
+        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        
+        // 1. Insert original comment
+        Ticket_Comment__c c = new Ticket_Comment__c(
+            TicketId__c = t.Id,
+            BodyTxt__c = 'Original Text',
+            JiraSyncStatusTxt__c = 'Pending'
+        );
+        insert c;
+        
+        // Clear the sync item from the insert so we can test the update cleanly
+        delete [SELECT Id FROM Sync_Item__c];
+
+        Test.startTest();
+        
+        // 2. Update the comment body
+        c.BodyTxt__c = 'Edited Text';
+        update c;
+
+        Test.stopTest();
+
+        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
+        System.assertEquals(1, items.size(), 'Should create Sync Item on Update');
+        System.assert(items[0].PayloadTxt__c.contains('Edited Text'), 'Payload should contain updated text');
     }
 }
