@@ -3,16 +3,6 @@ private class DeliveryHubSyncHandlerTest {
 
     @testSetup
     static void setupData() {
-        // --- FIX: DISABLE AUTOMATION ---
-        // Prevent the Org from auto-creating a "Ghost Request" when we insert the Ticket.
-        // This ensures we only have the ONE Request we manually create below.
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
-            SetupOwnerId = UserInfo.getOrganizationId(),
-            AutoCreateRequestFromTicketBool__c = false, 
-            AutoSyncNetworkEntityBool__c = false
-        );
-        insert settings;
-
         // 1. Create Network/Delivery Entity
         Network_Entity__c entity = new Network_Entity__c(
             Name = 'Mothership Node',
@@ -28,7 +18,12 @@ private class DeliveryHubSyncHandlerTest {
         );
         insert t;
 
-        // 3. Create Active Request (The Connection)
+        // --- FIX: SCORCHED EARTH POLICY ---
+        // Delete ANY Requests that might have been auto-created by triggers/flows/settings
+        // immediately after Ticket insertion. This ensures we start with 0 Requests.
+        delete [SELECT Id FROM Request__c WHERE TicketId__c = :t.Id];
+
+        // 3. Create MANUAL Active Request (The Only One We Want)
         Request__c r = new Request__c(
             TicketId__c = t.Id,
             DeliveryEntityId__c = entity.Id,
