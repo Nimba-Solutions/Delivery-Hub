@@ -5,8 +5,8 @@
  */
 public without sharing class DeliveryHubSyncService {
 
-    // Added 'PMD.ApexSOQLInjection' to suppress false positive on dynamic query (using bind vars)
-    @SuppressWarnings('PMD.ApexCRUDViolation', 'PMD.ApexSOQLInjection')
+    // Fixed: Combined suppressions into a single string argument
+    @SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexSOQLInjection')
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
         if (targetType == null) {
