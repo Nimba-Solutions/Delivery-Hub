@@ -23,7 +23,6 @@ public without sharing class DeliveryHubSyncService {
         String sourceId = (String) payload.get('SourceId'); 
 
         // 2. CHECK LEDGER (Find Local Record for Update)
-        // Look up the Sync Item table to see if we've processed this Source ID before.
         Id localRecordId = findLocalIdFromLedger(sourceId);
 
         SObject record = targetType.newSObject();
@@ -69,7 +68,6 @@ public without sharing class DeliveryHubSyncService {
         if (isInsert) {
             Database.insert(record, AccessLevel.SYSTEM_MODE);
             // 6. WRITE RECEIPT (Only needed on Insert)
-            // We map the Remote Source ID to our new Local ID for future updates.
             if (String.isNotBlank(sourceId)) {
                 createLedgerEntry(sourceId, record.Id, objectType);
             }
@@ -81,7 +79,9 @@ public without sharing class DeliveryHubSyncService {
     // --- HELPER METHODS ---
 
     /**
-     * @description Looks up the Local Record ID from the Sync Item Ledger.
+     * @description Looks up the Local Record ID from the Sync Item Ledger using the Remote Source ID.
+     * @param sourceId The remote record ID (SourceId from payload)
+     * @return Id The local record ID if found in the ledger, otherwise null.
      */
     private static Id findLocalIdFromLedger(String sourceId) {
         if (String.isBlank(sourceId)) {
@@ -92,7 +92,6 @@ public without sharing class DeliveryHubSyncService {
         // Escape single quotes to satisfy PMD Security
         String efns = String.escapeSingleQuotes(fns);
         
-        // Query the Sync Item table on the Mothership
         String query = 'SELECT ' + efns + 'LocalRecordIdTxt__c FROM ' + efns + 'Sync_Item__c ' + 
                        'WHERE ' + efns + 'RemoteExternalIdTxt__c = :sourceId ' +
                        'AND ' + efns + 'LocalRecordIdTxt__c != NULL ' + 
@@ -110,7 +109,10 @@ public without sharing class DeliveryHubSyncService {
     }
 
     /**
-     * @description Creates a mapping entry in Sync_Item__c.
+     * @description Creates a "Receipt" record in Sync_Item__c to map the remote ID to the new local ID.
+     * @param sourceId The remote record ID (SourceId from payload)
+     * @param localRecordId The newly inserted local record ID
+     * @param objectType The API name of the object type (e.g. Ticket_Comment__c)
      */
     private static void createLedgerEntry(String sourceId, Id localRecordId, String objectType) {
         try {
