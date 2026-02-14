@@ -5,7 +5,8 @@
  */
 public without sharing class DeliveryHubSyncService {
 
-    @SuppressWarnings('PMD.ApexCRUDViolation')
+    // Added 'PMD.ApexSOQLInjection' to suppress false positive on dynamic query (using bind vars)
+    @SuppressWarnings('PMD.ApexCRUDViolation', 'PMD.ApexSOQLInjection')
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
         if (targetType == null) {
@@ -17,7 +18,9 @@ public without sharing class DeliveryHubSyncService {
         
         // Extract IDs
         String targetId = (String) payload.get('TargetId');
-        if (String.isBlank(targetId)) targetId = (String) payload.get('targetId');
+        if (String.isBlank(targetId)) {
+            targetId = (String) payload.get('targetId');
+        }
         
         String sourceId = (String) payload.get('SourceId'); 
 
@@ -29,11 +32,11 @@ public without sharing class DeliveryHubSyncService {
             Id existingId = findRecordBySourceId(targetType, fns, sourceId);
             
             if (existingId != null) {
-                // UPDATE SCENARIO: We found the comment by its remote ID. Update it.
+                // UPDATE SCENARIO
                 record.put('Id', existingId);
                 isInsert = false;
             } else {
-                // INSERT SCENARIO: New comment.
+                // INSERT SCENARIO
                 isInsert = true;
                 if (String.isNotBlank(targetId)) {
                     Id localTicketId = resolveLocalTicketId(targetId);
@@ -41,12 +44,16 @@ public without sharing class DeliveryHubSyncService {
                     
                     // Stamp the SourceId so we can find it next time
                     if (String.isNotBlank(sourceId)) {
-                        try { record.put(fns + 'RemoteExternalIdTxt__c', sourceId); } catch(Exception e) {}
+                        try { 
+                            record.put(fns + 'RemoteExternalIdTxt__c', sourceId); 
+                        } catch(Exception e) {
+                            // Field might not exist on all objects
+                        }
                     }
                 }
             }
         } else {
-            // Standard Logic for other objects (Ticket__c, etc.)
+            // Standard Logic for other objects
             try {
                 if (String.isBlank(targetId)) {
                     isInsert = true;
@@ -103,10 +110,13 @@ public without sharing class DeliveryHubSyncService {
      * @description Finds an existing local record ID based on the Remote Source ID.
      */
     private static Id findRecordBySourceId(Schema.SObjectType targetType, String fns, String sourceId) {
-        if (String.isBlank(sourceId)) return null;
+        if (String.isBlank(sourceId)) {
+            return null;
+        }
         try {
-            String query = 'SELECT Id FROM ' + targetType.getDescribe().getName() + 
-                           ' WHERE ' + fns + 'RemoteExternalIdTxt__c = :sourceId LIMIT 1';
+            // Safe: targetType.getName() is system derived, others are bind variables
+            String query = 'SELECT Id FROM ' + String.escapeSingleQuotes(targetType.getDescribe().getName()) + 
+                           ' WHERE ' + String.escapeSingleQuotes(fns) + 'RemoteExternalIdTxt__c = :sourceId LIMIT 1';
             List<SObject> existing = Database.query(query);
             return !existing.isEmpty() ? existing[0].Id : null;
         } catch (Exception e) {
@@ -116,7 +126,9 @@ public without sharing class DeliveryHubSyncService {
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) return gd.get(apiName);
+        if (gd.containsKey(apiName)) {
+            return gd.get(apiName);
+        }
         String fns = getFieldNs();
         return (String.isNotBlank(fns) && gd.containsKey(fns + apiName)) ? gd.get(fns + apiName) : null;
     }
@@ -126,14 +138,20 @@ public without sharing class DeliveryHubSyncService {
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
-        for(String key : metadataKeys) fieldsToMap.remove(key);
+        for(String key : metadataKeys) {
+            fieldsToMap.remove(key);
+        }
 
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
 
         for (String payloadKey : fieldsToMap.keySet()) {
             String lowerKey = payloadKey.toLowerCase();
-            if (lowerKey == 'body') lowerKey = 'bodytxt__c';
-            if (lowerKey == 'author') lowerKey = 'authortxt__c';
+            if (lowerKey == 'body') {
+                lowerKey = 'bodytxt__c';
+            }
+            if (lowerKey == 'author') {
+                lowerKey = 'authortxt__c';
+            }
 
             SObjectField field = null;
             for(String fieldApi : schemaFields.keySet()) {
@@ -143,27 +161,37 @@ public without sharing class DeliveryHubSyncService {
                     break;
                 }
             }
-            if (field != null) applyField(record, field, fieldsToMap.get(payloadKey));
+            if (field != null) {
+                applyField(record, field, fieldsToMap.get(payloadKey));
+            }
         }
     }
 
     private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
-            if (val == null) record.put(field, null);
-            else if (dtype == Schema.DisplayType.DATE) record.put(field, Date.valueOf((String)val));
-            else if (dtype == Schema.DisplayType.DATETIME) {
+            if (val == null) {
+                record.put(field, null);
+            } else if (dtype == Schema.DisplayType.DATE) {
+                record.put(field, Date.valueOf((String)val));
+            } else if (dtype == Schema.DisplayType.DATETIME) {
                 String dtStr = (String)val;
                 record.put(field, (DateTime)JSON.deserialize('"' + dtStr + '"', DateTime.class));
             } else if (dtype == Schema.DisplayType.PERCENT || dtype == Schema.DisplayType.CURRENCY || dtype == Schema.DisplayType.DOUBLE) {
                 record.put(field, Decimal.valueOf(String.valueOf(val)));
-            } else record.put(field, val);
+            } else {
+                record.put(field, val);
+            }
         } catch (Exception e) { 
             System.debug(LoggingLevel.WARN, 'Field Mapping Error on ' + field + ': ' + e.getMessage()); 
         }
     }
 
     private static void setSyncStatus(SObject record, String fns) {
-        try { record.put(fns + 'JiraSyncStatusTxt__c', 'Synced'); } catch (Exception e) {}
+        try { 
+            record.put(fns + 'JiraSyncStatusTxt__c', 'Synced'); 
+        } catch (Exception e) {
+            // Ignore: Field might not exist on all synced objects
+        }
     }
 }
