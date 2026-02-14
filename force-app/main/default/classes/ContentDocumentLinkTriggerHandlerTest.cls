@@ -5,7 +5,7 @@ private class ContentDocumentLinkTriggerHandlerTest {
     static void testHandleAfterInsertWithTicket() {
         // Create test Ticket
         Ticket__c ticket = new Ticket__c(
-            Name = 'Test Ticket'
+            //Name = 'Test Ticket'
         );
         insert ticket;
 
