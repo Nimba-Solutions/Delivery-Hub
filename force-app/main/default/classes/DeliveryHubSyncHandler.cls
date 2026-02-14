@@ -8,6 +8,7 @@ public inherited sharing class DeliveryHubSyncHandler {
 
     /**
      * @description Main entry point for INSERT. 
+     * @param newComments List of new comments
      */
     public static void handleAfterInsert(List<Ticket_Comment__c> newComments) {
         List<Ticket_Comment__c> outboundComments = new List<Ticket_Comment__c>();
@@ -27,6 +28,8 @@ public inherited sharing class DeliveryHubSyncHandler {
     /**
      * @description Main entry point for UPDATE. 
      * Only syncs if the Body content has changed.
+     * @param newMap Map of new comments
+     * @param oldMap Map of old comments
      */
     public static void handleAfterUpdate(Map<Id, Ticket_Comment__c> newMap, Map<Id, Ticket_Comment__c> oldMap) {
         List<Ticket_Comment__c> changedComments = new List<Ticket_Comment__c>();
@@ -48,9 +51,14 @@ public inherited sharing class DeliveryHubSyncHandler {
 
     /**
      * @description Common logic to create and insert Sync Items for identified records.
+     * @param comments List of comments to sync
+     * @param ticketIds Set of related Ticket IDs
      */
     private static void processOutbound(List<Ticket_Comment__c> comments, Set<Id> ticketIds) {
-        if (comments.isEmpty()) return;
+        // FIX: Added braces
+        if (comments.isEmpty()) { 
+            return; 
+        }
 
         List<Sync_Item__c> syncItems = createSyncItemsForComments(comments, ticketIds);
 
@@ -87,7 +95,6 @@ public inherited sharing class DeliveryHubSyncHandler {
                     Map<String, Object> payloadMap = new Map<String, Object>();
                     
                     // IDEMPOTENCY KEY: Send Local ID as SourceId.
-                    // This allows the Mothership to identify this as an Edit to an existing record.
                     payloadMap.put('SourceId', c.Id); 
                     
                     String targetId = (req.RemoteTicketIdTxt__c != null) ? req.RemoteTicketIdTxt__c : c.TicketId__c;
