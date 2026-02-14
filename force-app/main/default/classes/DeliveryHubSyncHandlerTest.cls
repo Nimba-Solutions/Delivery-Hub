@@ -3,6 +3,14 @@ private class DeliveryHubSyncHandlerTest {
 
     @testSetup
     static void setupData() {
+        // 0. Disable Auto-Creation features to prevent "Ghost" Requests
+        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+            SetupOwnerId = UserInfo.getOrganizationId(),
+            AutoCreateRequestFromTicketBool__c = false, // Stop auto-linking
+            AutoSyncNetworkEntityBool__c = false
+        );
+        insert settings;
+
         // 1. Create Network/Delivery Entity
         Network_Entity__c entity = new Network_Entity__c(
             Name = 'Mothership Node',
@@ -30,6 +38,9 @@ private class DeliveryHubSyncHandlerTest {
 
     @isTest
     static void testValidCommentCreatesSyncItem() {
+        // Clear any artifacts from setup (like Ticket sync items)
+        delete [SELECT Id FROM Sync_Item__c];
+
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
 
         Test.startTest();
@@ -44,19 +55,19 @@ private class DeliveryHubSyncHandlerTest {
         Test.stopTest();
 
         List<Sync_Item__c> items = [SELECT Id, StatusPk__c, ObjectTypePk__c FROM Sync_Item__c];
-        System.assertEquals(1, items.size(), 'Should create 1 Sync Item');
+        System.assertEquals(1, items.size(), 'Should create exactly 1 Sync Item');
         System.assertEquals('Queued', items[0].StatusPk__c, 'Status should be Queued');
         System.assertEquals('Ticket_Comment__c', items[0].ObjectTypePk__c, 'Object Type match');
     }
 
     @isTest
     static void testSyncedCommentIgnored() {
+        delete [SELECT Id FROM Sync_Item__c];
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
 
         Test.startTest();
         
-        // Simulating an incoming sync from Mothership (Status = Synced)
-        // This should NOT trigger an outbound sync item (Loop Prevention)
+        // Simulating an incoming sync (Status = Synced). Should NOT trigger outbound.
         Ticket_Comment__c c = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'Incoming Message',
@@ -72,6 +83,8 @@ private class DeliveryHubSyncHandlerTest {
 
     @isTest
     static void testInactiveRequestIgnored() {
+        delete [SELECT Id FROM Sync_Item__c];
+        
         // Set Request to Inactive
         Request__c r = [SELECT Id FROM Request__c LIMIT 1];
         r.StatusPk__c = 'Inactive';
@@ -95,7 +108,7 @@ private class DeliveryHubSyncHandlerTest {
     }
 
     /**
-     * @description New test to verify the 'Edit' logic we just added.
+     * @description New test to verify the 'Edit' logic.
      */
     @isTest
     static void testCommentUpdateCreatesSyncItem() {
