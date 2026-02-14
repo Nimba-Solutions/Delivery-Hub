@@ -4,6 +4,7 @@
  */
 public without sharing class DeliveryHubSyncService {
 
+    // Suppress warnings for dynamic SOQL and CRUD (System context is intentional)
     @SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexSOQLInjection')
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
@@ -22,24 +23,24 @@ public without sharing class DeliveryHubSyncService {
         String sourceId = (String) payload.get('SourceId'); 
 
         // 2. CHECK LEDGER (Find Local Record for Update)
-        // If we have seen this SourceId before, we get the Local ID to perform an UPDATE.
+        // Look up the Sync Item table to see if we've processed this Source ID before.
         Id localRecordId = findLocalIdFromLedger(sourceId);
 
         SObject record = targetType.newSObject();
         Boolean isInsert = true;
 
         if (localRecordId != null) {
-            // UPDATE SCENARIO
+            // UPDATE SCENARIO via Ledger
             record.put('Id', localRecordId);
             isInsert = false;
         } else {
-            // INSERT SCENARIO (or special parent linking)
+            // INSERT SCENARIO
             isInsert = true;
             if (objectType.contains('Ticket_Comment__c') && String.isNotBlank(targetId)) {
                 Id localTicketId = resolveLocalTicketId(targetId);
                 record.put(fns + 'TicketId__c', localTicketId);
             } else if (String.isNotBlank(targetId)) {
-                // For Tickets/Requests, if targetId is provided, try to use it
+                // For Tickets, if targetId is provided, try to use it
                 try {
                     Id sId = (Id) targetId;
                     if (sId.getSObjectType() == targetType) {
@@ -59,6 +60,11 @@ public without sharing class DeliveryHubSyncService {
         // 4. PREVENT PING-PONG LOOP
         setSyncStatus(record, fns);
 
+        // --- DEFENSIVE FIX: Override isInsert if ID exists ---
+        if (record.get('Id') != null) {
+            isInsert = false;
+        }
+
         // 5. COMMIT
         if (isInsert) {
             Database.insert(record, AccessLevel.SYSTEM_MODE);
@@ -75,9 +81,7 @@ public without sharing class DeliveryHubSyncService {
     // --- HELPER METHODS ---
 
     /**
-     * @description Looks up the Local Record ID from the Sync Item Ledger using the Remote Source ID.
-     * @param sourceId The remote record ID
-     * @return Id The local record ID if found, otherwise null
+     * @description Looks up the Local Record ID from the Sync Item Ledger.
      */
     private static Id findLocalIdFromLedger(String sourceId) {
         if (String.isBlank(sourceId)) {
@@ -85,9 +89,10 @@ public without sharing class DeliveryHubSyncService {
         }
         
         String fns = getFieldNs();
-        // FIX: Escape the namespace variable to satisfy PMD SOQL Injection rule
+        // Escape single quotes to satisfy PMD Security
         String efns = String.escapeSingleQuotes(fns);
         
+        // Query the Sync Item table on the Mothership
         String query = 'SELECT ' + efns + 'LocalRecordIdTxt__c FROM ' + efns + 'Sync_Item__c ' + 
                        'WHERE ' + efns + 'RemoteExternalIdTxt__c = :sourceId ' +
                        'AND ' + efns + 'LocalRecordIdTxt__c != NULL ' + 
@@ -99,7 +104,6 @@ public without sharing class DeliveryHubSyncService {
                 return (Id) localIdStr;
             }
         } catch (Exception e) {
-            // Fail gracefully if query issues occur
             System.debug(LoggingLevel.WARN, 'Ledger Lookup Error: ' + e.getMessage());
         }
         return null;
@@ -107,9 +111,6 @@ public without sharing class DeliveryHubSyncService {
 
     /**
      * @description Creates a mapping entry in Sync_Item__c.
-     * @param sourceId The remote record ID
-     * @param localRecordId The local record ID
-     * @param objectType The API name of the object
      */
     private static void createLedgerEntry(String sourceId, Id localRecordId, String objectType) {
         try {
