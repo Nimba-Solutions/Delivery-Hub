@@ -1,11 +1,9 @@
 /**
  * @description Service class to process incoming JSON payloads.
- * Handles cross-org Ticket_Comment__c parent resolution and prevents Ping-Pong loops.
- * UPDATED: Supports Idempotency AND Edits via Upsert-style logic on SourceId.
+ * Uses Sync_Item__c as a "Translation Ledger" to support Bi-Directional Inserts AND Updates.
  */
 public without sharing class DeliveryHubSyncService {
 
-    // Added 'PMD.ApexSOQLInjection' to suppress false positive on dynamic query (using bind vars)
     @SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexSOQLInjection')
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
@@ -14,78 +12,107 @@ public without sharing class DeliveryHubSyncService {
         }
 
         String fns = getFieldNs();
-        SObject record = targetType.newSObject();
         
-        // Extract IDs
+        // 1. EXTRACT IDs
         String targetId = (String) payload.get('TargetId');
-        if (String.isBlank(targetId)) {
-            targetId = (String) payload.get('targetId');
-        }
+        if (String.isBlank(targetId)) targetId = (String) payload.get('targetId');
         
         String sourceId = (String) payload.get('SourceId'); 
 
-        Boolean isInsert = false;
+        // 2. CHECK LEDGER (Find Local Record for Update)
+        // If we have seen this SourceId before, we get the Local ID to perform an UPDATE.
+        Id localRecordId = findLocalIdFromLedger(sourceId);
 
-        // 1. SMART ID & PARENT LOOKUP
-        if (objectType.contains('Ticket_Comment__c')) {
-            // Check if we already have this record (Handle Edits/Idempotency)
-            Id existingId = findRecordBySourceId(targetType, fns, sourceId);
-            
-            if (existingId != null) {
-                // UPDATE SCENARIO
-                record.put('Id', existingId);
-                isInsert = false;
-            } else {
-                // INSERT SCENARIO
-                isInsert = true;
-                if (String.isNotBlank(targetId)) {
-                    Id localTicketId = resolveLocalTicketId(targetId);
-                    record.put(fns + 'TicketId__c', localTicketId);
-                    
-                    // Stamp the SourceId so we can find it next time
-                    if (String.isNotBlank(sourceId)) {
-                        try { 
-                            record.put(fns + 'RemoteExternalIdTxt__c', sourceId); 
-                        } catch(Exception e) {
-                            // Field might not exist on all objects
-                            System.debug(LoggingLevel.FINEST, 'Field RemoteExternalIdTxt__c missing: ' + e.getMessage());
-                        }
-                    }
-                }
-            }
+        SObject record = targetType.newSObject();
+        Boolean isInsert = true;
+
+        if (localRecordId != null) {
+            // UPDATE SCENARIO
+            record.put('Id', localRecordId);
+            isInsert = false;
         } else {
-            // Standard Logic for other objects
-            try {
-                if (String.isBlank(targetId)) {
-                    isInsert = true;
-                } else {
+            // INSERT SCENARIO (or special parent linking)
+            isInsert = true;
+            if (objectType.contains('Ticket_Comment__c') && String.isNotBlank(targetId)) {
+                Id localTicketId = resolveLocalTicketId(targetId);
+                record.put(fns + 'TicketId__c', localTicketId);
+            } else if (String.isNotBlank(targetId)) {
+                // For Tickets/Requests, if targetId is provided, try to use it
+                try {
                     Id sId = (Id) targetId;
                     if (sId.getSObjectType() == targetType) {
                         record.put('Id', targetId);
-                    } else {
-                        isInsert = true;
+                        isInsert = false;
                     }
-                }
-            } catch (Exception e) {
-                isInsert = true;
+                } catch (Exception e) { /* Invalid ID, treat as Insert */ }
             }
         }
 
-        // 2. MAP FIELDS
+        // 3. MAP FIELDS
         mapFields(record, payload, targetType);
 
-        // 3. PREVENT PING-PONG LOOP
+        // 4. PREVENT PING-PONG LOOP
         setSyncStatus(record, fns);
 
-        // 4. COMMIT
+        // 5. COMMIT
         if (isInsert) {
             Database.insert(record, AccessLevel.SYSTEM_MODE);
+            // 6. WRITE RECEIPT (Only needed on Insert)
+            // We map the Remote Source ID to our new Local ID for future updates.
+            if (String.isNotBlank(sourceId)) {
+                createLedgerEntry(sourceId, record.Id, objectType);
+            }
         } else {
             Database.update(record, AccessLevel.SYSTEM_MODE);
         }
     }
 
     // --- HELPER METHODS ---
+
+    /**
+     * @description Looks up the Local Record ID from the Sync Item Ledger using the Remote Source ID.
+     */
+    private static Id findLocalIdFromLedger(String sourceId) {
+        if (String.isBlank(sourceId)) return null;
+        
+        String fns = getFieldNs();
+        // Check Inbound Sync Items for a match
+        String query = 'SELECT ' + fns + 'LocalRecordIdTxt__c FROM ' + fns + 'Sync_Item__c ' + 
+                       'WHERE ' + fns + 'RemoteExternalIdTxt__c = :sourceId ' +
+                       'AND ' + fns + 'LocalRecordIdTxt__c != NULL ' + 
+                       'LIMIT 1';
+        try {
+            List<SObject> items = Database.query(query);
+            if (!items.isEmpty()) {
+                String localIdStr = (String) items[0].get(fns + 'LocalRecordIdTxt__c');
+                return (Id) localIdStr;
+            }
+        } catch (Exception e) {
+            // Fail gracefully if query issues occur
+        }
+        return null;
+    }
+
+    /**
+     * @description Creates a mapping entry in Sync_Item__c.
+     */
+    private static void createLedgerEntry(String sourceId, Id localRecordId, String objectType) {
+        try {
+            String fns = getFieldNs();
+            SObject item = Schema.getGlobalDescribe().get(fns + 'Sync_Item__c').newSObject();
+            
+            item.put(fns + 'RemoteExternalIdTxt__c', sourceId); 
+            item.put(fns + 'LocalRecordIdTxt__c', (String)localRecordId);
+            item.put(fns + 'StatusPk__c', 'Synced'); 
+            item.put(fns + 'DirectionPk__c', 'Inbound');
+            item.put(fns + 'ObjectTypePk__c', objectType);
+            item.put(fns + 'PayloadTxt__c', 'Ledger Map: ' + sourceId + ' -> ' + localRecordId);
+            
+            Database.insert(item, AccessLevel.SYSTEM_MODE);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Failed to create Ledger Entry: ' + e.getMessage());
+        }
+    }
 
     private static String cachedFieldNs;
     private static String getFieldNs() {
@@ -107,29 +134,9 @@ public without sharing class DeliveryHubSyncService {
         return !requests.isEmpty() ? requests[0].TicketId__c : (Id) remoteTicketId;
     }
 
-    /**
-     * @description Finds an existing local record ID based on the Remote Source ID.
-     */
-    private static Id findRecordBySourceId(Schema.SObjectType targetType, String fns, String sourceId) {
-        if (String.isBlank(sourceId)) {
-            return null;
-        }
-        try {
-            // Safe: targetType.getName() is system derived, others are bind variables
-            String query = 'SELECT Id FROM ' + String.escapeSingleQuotes(targetType.getDescribe().getName()) + 
-                           ' WHERE ' + String.escapeSingleQuotes(fns) + 'RemoteExternalIdTxt__c = :sourceId LIMIT 1';
-            List<SObject> existing = Database.query(query);
-            return !existing.isEmpty() ? existing[0].Id : null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) {
-            return gd.get(apiName);
-        }
+        if (gd.containsKey(apiName)) return gd.get(apiName);
         String fns = getFieldNs();
         return (String.isNotBlank(fns) && gd.containsKey(fns + apiName)) ? gd.get(fns + apiName) : null;
     }
@@ -139,20 +146,14 @@ public without sharing class DeliveryHubSyncService {
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
-        for(String key : metadataKeys) {
-            fieldsToMap.remove(key);
-        }
+        for(String key : metadataKeys) fieldsToMap.remove(key);
 
         Map<String, SObjectField> schemaFields = targetType.getDescribe().fields.getMap();
 
         for (String payloadKey : fieldsToMap.keySet()) {
             String lowerKey = payloadKey.toLowerCase();
-            if (lowerKey == 'body') {
-                lowerKey = 'bodytxt__c';
-            }
-            if (lowerKey == 'author') {
-                lowerKey = 'authortxt__c';
-            }
+            if (lowerKey == 'body') lowerKey = 'bodytxt__c';
+            if (lowerKey == 'author') lowerKey = 'authortxt__c';
 
             SObjectField field = null;
             for(String fieldApi : schemaFields.keySet()) {
@@ -162,37 +163,28 @@ public without sharing class DeliveryHubSyncService {
                     break;
                 }
             }
-            if (field != null) {
-                applyField(record, field, fieldsToMap.get(payloadKey));
-            }
+            if (field != null) applyField(record, field, fieldsToMap.get(payloadKey));
         }
     }
 
     private static void applyField(SObject record, SObjectField field, Object val) {
         try {
             Schema.DisplayType dtype = field.getDescribe().getType();
-            if (val == null) {
-                record.put(field, null);
-            } else if (dtype == Schema.DisplayType.DATE) {
-                record.put(field, Date.valueOf((String)val));
-            } else if (dtype == Schema.DisplayType.DATETIME) {
+            if (val == null) record.put(field, null);
+            else if (dtype == Schema.DisplayType.DATE) record.put(field, Date.valueOf((String)val));
+            else if (dtype == Schema.DisplayType.DATETIME) {
                 String dtStr = (String)val;
                 record.put(field, (DateTime)JSON.deserialize('"' + dtStr + '"', DateTime.class));
             } else if (dtype == Schema.DisplayType.PERCENT || dtype == Schema.DisplayType.CURRENCY || dtype == Schema.DisplayType.DOUBLE) {
                 record.put(field, Decimal.valueOf(String.valueOf(val)));
-            } else {
-                record.put(field, val);
-            }
+            } else record.put(field, val);
         } catch (Exception e) { 
             System.debug(LoggingLevel.WARN, 'Field Mapping Error on ' + field + ': ' + e.getMessage()); 
         }
     }
 
     private static void setSyncStatus(SObject record, String fns) {
-        try { 
-            record.put(fns + 'JiraSyncStatusTxt__c', 'Synced'); 
-        } catch (Exception e) {
-            // Ignore: Field might not exist on all synced objects
+        try { record.put(fns + 'JiraSyncStatusTxt__c', 'Synced'); } catch (Exception e) {
             System.debug(LoggingLevel.FINEST, 'Sync Status field missing: ' + e.getMessage());
         }
     }

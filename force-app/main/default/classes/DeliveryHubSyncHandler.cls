@@ -1,32 +1,59 @@
 /**
  * @description Handler for Delivery Hub specific logic on Ticket Comments.
  * Decoupled from Jira logic to ensure modularity.
- * UPDATED: Sends 'SourceId' (Local Record ID) to enable Idempotency on the Mothership.
+ * UPDATED: Added handleAfterUpdate for comment editing.
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public inherited sharing class DeliveryHubSyncHandler {
 
+    /**
+     * @description Main entry point for INSERT. 
+     */
     public static void handleAfterInsert(List<Ticket_Comment__c> newComments) {
-        // 1. Identify Outbound Comments
         List<Ticket_Comment__c> outboundComments = new List<Ticket_Comment__c>();
         Set<Id> ticketIds = new Set<Id>();
 
         for (Ticket_Comment__c c : newComments) {
-            // Filter out comments syncing IN from mothership to prevent loops
+            // Filter out comments syncing IN from mothership
             if (c.JiraSyncStatusTxt__c != 'Synced') { 
                 outboundComments.add(c);
                 ticketIds.add(c.TicketId__c);
             }
         }
 
-        if (ticketIds.isEmpty()) {
-            return;
+        processOutbound(outboundComments, ticketIds);
+    }
+
+    /**
+     * @description Main entry point for UPDATE. 
+     * Only syncs if the Body content has changed.
+     */
+    public static void handleAfterUpdate(Map<Id, Ticket_Comment__c> newMap, Map<Id, Ticket_Comment__c> oldMap) {
+        List<Ticket_Comment__c> changedComments = new List<Ticket_Comment__c>();
+        Set<Id> ticketIds = new Set<Id>();
+
+        for (Ticket_Comment__c c : newMap.values()) {
+            Ticket_Comment__c oldC = oldMap.get(c.Id);
+            
+            // 1. Check if Body Changed
+            // 2. Ensure it's not an inbound sync update
+            if (c.BodyTxt__c != oldC.BodyTxt__c && c.JiraSyncStatusTxt__c != 'Synced') {
+                changedComments.add(c);
+                ticketIds.add(c.TicketId__c);
+            }
         }
 
-        // 2. Find Active Vendors & Create Items
-        List<Sync_Item__c> syncItems = createSyncItemsForComments(outboundComments, ticketIds);
+        processOutbound(changedComments, ticketIds);
+    }
 
-        // 3. Insert & Kick off Worker
+    /**
+     * @description Common logic to create and insert Sync Items for identified records.
+     */
+    private static void processOutbound(List<Ticket_Comment__c> comments, Set<Id> ticketIds) {
+        if (comments.isEmpty()) return;
+
+        List<Sync_Item__c> syncItems = createSyncItemsForComments(comments, ticketIds);
+
         if (!syncItems.isEmpty()) {
             insert syncItems;
             System.enqueueJob(new SyncItemProcessor()); 
@@ -59,8 +86,8 @@ public inherited sharing class DeliveryHubSyncHandler {
                     
                     Map<String, Object> payloadMap = new Map<String, Object>();
                     
-                    // --- IDEMPOTENCY FIX ---
-                    // Send the Local ID as 'SourceId'. The Mothership will check this against its records.
+                    // IDEMPOTENCY KEY: Send Local ID as SourceId.
+                    // This allows the Mothership to identify this as an Edit to an existing record.
                     payloadMap.put('SourceId', c.Id); 
                     
                     String targetId = (req.RemoteTicketIdTxt__c != null) ? req.RemoteTicketIdTxt__c : c.TicketId__c;
