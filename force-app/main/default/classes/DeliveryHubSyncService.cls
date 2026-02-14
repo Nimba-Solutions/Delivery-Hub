@@ -1,42 +1,65 @@
 /**
  * @description Service class to process incoming JSON payloads.
  * Handles cross-org Ticket_Comment__c parent resolution and prevents Ping-Pong loops.
+ * UPDATED: Supports Idempotency AND Edits via Upsert-style logic on SourceId.
  */
 public without sharing class DeliveryHubSyncService {
 
-    @SuppressWarnings('PMD.ApexCRUDViolation')
+    // Added 'PMD.ApexSOQLInjection' to suppress false positive on dynamic query (using bind vars)
+    @SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexSOQLInjection')
     public static void processSync(String objectType, Map<String, Object> payload) {
         Schema.SObjectType targetType = findSObjectType(objectType);
         if (targetType == null) {
             throw new CalloutException('Invalid Object Type: ' + objectType);
         }
 
-        // Namespace prefix for dynamic field puts
         String fns = getFieldNs();
-
         SObject record = targetType.newSObject();
+        
+        // Extract IDs
         String targetId = (String) payload.get('TargetId');
         if (String.isBlank(targetId)) {
             targetId = (String) payload.get('targetId');
         }
+        
+        String sourceId = (String) payload.get('SourceId'); 
 
         Boolean isInsert = false;
 
         // 1. SMART ID & PARENT LOOKUP
         if (objectType.contains('Ticket_Comment__c')) {
-            isInsert = true;
-            if (String.isNotBlank(targetId)) {
-                // Resolve the local Ticket record ID using the Request bridge
-                Id localTicketId = resolveLocalTicketId(targetId);
-                record.put(fns + 'TicketId__c', localTicketId);
+            // Check if we already have this record (Handle Edits/Idempotency)
+            Id existingId = findRecordBySourceId(targetType, fns, sourceId);
+            
+            if (existingId != null) {
+                // UPDATE SCENARIO
+                record.put('Id', existingId);
+                isInsert = false;
+            } else {
+                // INSERT SCENARIO
+                isInsert = true;
+                if (String.isNotBlank(targetId)) {
+                    Id localTicketId = resolveLocalTicketId(targetId);
+                    record.put(fns + 'TicketId__c', localTicketId);
+                    
+                    // Stamp the SourceId so we can find it next time
+                    if (String.isNotBlank(sourceId)) {
+                        try { 
+                            record.put(fns + 'RemoteExternalIdTxt__c', sourceId); 
+                        } catch(Exception e) {
+                            // Field might not exist on all objects
+                            System.debug(LoggingLevel.FINEST, 'Field RemoteExternalIdTxt__c missing: ' + e.getMessage());
+                        }
+                    }
+                }
             }
         } else {
+            // Standard Logic for other objects
             try {
                 if (String.isBlank(targetId)) {
                     isInsert = true;
                 } else {
                     Id sId = (Id) targetId;
-                    // If the ID matches our local object type, it's an update
                     if (sId.getSObjectType() == targetType) {
                         record.put('Id', targetId);
                     } else {
@@ -75,34 +98,44 @@ public without sharing class DeliveryHubSyncService {
 
     private static Id resolveLocalTicketId(String remoteTicketId) {
         List<Request__c> requests = [
-            SELECT TicketId__c
-            FROM Request__c
+            SELECT TicketId__c FROM Request__c
             WHERE RemoteTicketIdTxt__c = :remoteTicketId
             AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
             LIMIT 1
         ];
-        if (!requests.isEmpty()) {
-            return requests[0].TicketId__c;
+        return !requests.isEmpty() ? requests[0].TicketId__c : (Id) remoteTicketId;
+    }
+
+    /**
+     * @description Finds an existing local record ID based on the Remote Source ID.
+     */
+    private static Id findRecordBySourceId(Schema.SObjectType targetType, String fns, String sourceId) {
+        if (String.isBlank(sourceId)) {
+            return null;
         }
-        return (Id) remoteTicketId;
+        try {
+            // Safe: targetType.getName() is system derived, others are bind variables
+            String query = 'SELECT Id FROM ' + String.escapeSingleQuotes(targetType.getDescribe().getName()) + 
+                           ' WHERE ' + String.escapeSingleQuotes(fns) + 'RemoteExternalIdTxt__c = :sourceId LIMIT 1';
+            List<SObject> existing = Database.query(query);
+            return !existing.isEmpty() ? existing[0].Id : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) return gd.get(apiName);
-
-        String fns = getFieldNs();
-        if (String.isNotBlank(fns)) {
-            String namespacedName = fns + apiName;
-            if (gd.containsKey(namespacedName)) return gd.get(namespacedName);
+        if (gd.containsKey(apiName)) {
+            return gd.get(apiName);
         }
-        return null;
+        String fns = getFieldNs();
+        return (String.isNotBlank(fns) && gd.containsKey(fns + apiName)) ? gd.get(fns + apiName) : null;
     }
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
-        
         Set<String> metadataKeys = new Set<String>{
             'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
         };
@@ -114,23 +147,21 @@ public without sharing class DeliveryHubSyncService {
 
         for (String payloadKey : fieldsToMap.keySet()) {
             String lowerKey = payloadKey.toLowerCase();
-            
-            // Handle Field Aliases
-            if (lowerKey == 'body') lowerKey = 'bodytxt__c';
-            if (lowerKey == 'author') lowerKey = 'authortxt__c';
+            if (lowerKey == 'body') {
+                lowerKey = 'bodytxt__c';
+            }
+            if (lowerKey == 'author') {
+                lowerKey = 'authortxt__c';
+            }
 
             SObjectField field = null;
             for(String fieldApi : schemaFields.keySet()) {
                 SObjectField f = schemaFields.get(fieldApi);
-                // Compare LocalName to ignore namespace prefix (e.g. BodyTxt__c matches bodytxt__c)
                 if (f.getDescribe().getLocalName().toLowerCase() == lowerKey) {
                     field = f;
                     break;
                 }
             }
-
-            // FIX: Removed '&& field.getDescribe().isUpdateable()' 
-            // The Site Guest User often lacks FLS, but this is a System Sync so we must write the data.
             if (field != null) {
                 applyField(record, field, fieldsToMap.get(payloadKey));
             }
@@ -158,10 +189,11 @@ public without sharing class DeliveryHubSyncService {
     }
 
     private static void setSyncStatus(SObject record, String fns) {
-        try {
-            record.put(fns + 'JiraSyncStatusTxt__c', 'Synced');
+        try { 
+            record.put(fns + 'JiraSyncStatusTxt__c', 'Synced'); 
         } catch (Exception e) {
-            // Ignore if field doesn't exist
+            // Ignore: Field might not exist on all synced objects
+            System.debug(LoggingLevel.FINEST, 'Sync Status field missing: ' + e.getMessage());
         }
     }
 }
