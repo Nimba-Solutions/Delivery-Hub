@@ -3,6 +3,14 @@ private class DeliveryHubSyncHandlerTest {
 
     @testSetup
     static void setupData() {
+        // 0. Disable Auto-Creation features to prevent "Ghost" Requests
+        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+            SetupOwnerId = UserInfo.getOrganizationId(),
+            AutoCreateRequestFromTicketBool__c = false, 
+            AutoSyncNetworkEntityBool__c = false
+        );
+        insert settings;
+
         // 1. Create Network/Delivery Entity
         Network_Entity__c entity = new Network_Entity__c(
             Name = 'Mothership Node',
@@ -49,12 +57,15 @@ private class DeliveryHubSyncHandlerTest {
         );
         insert c;
 
-        Test.stopTest();
-
+        // --- FIX: ASSERT BEFORE STOPTEST ---
+        // We query here to verify the Trigger successfully created the item in 'Queued' status.
+        // If we wait until after stopTest(), the job will have run (and failed due to no mock), changing status to 'Failed'.
         List<Sync_Item__c> items = [SELECT Id, StatusPk__c, ObjectTypePk__c FROM Sync_Item__c];
         System.assertEquals(1, items.size(), 'Should create exactly 1 Sync Item (1 Request)');
-        System.assertEquals('Queued', items[0].StatusPk__c, 'Status should be Queued');
+        System.assertEquals('Queued', items[0].StatusPk__c, 'Status should be Queued immediately after insert');
         System.assertEquals('Ticket_Comment__c', items[0].ObjectTypePk__c, 'Object Type match');
+
+        Test.stopTest();
     }
 
     @isTest
@@ -125,10 +136,12 @@ private class DeliveryHubSyncHandlerTest {
         c.BodyTxt__c = 'Edited Text';
         update c;
 
-        Test.stopTest();
-
-        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
+        // --- FIX: ASSERT BEFORE STOPTEST ---
+        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c, StatusPk__c FROM Sync_Item__c];
         System.assertEquals(1, items.size(), 'Should create Sync Item on Update');
+        System.assertEquals('Queued', items[0].StatusPk__c, 'Status should be Queued');
         System.assert(items[0].PayloadTxt__c.contains('Edited Text'), 'Payload should contain updated text');
+
+        Test.stopTest();
     }
 }
