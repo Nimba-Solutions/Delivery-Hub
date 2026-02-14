@@ -124,13 +124,14 @@ public without sharing class DeliveryHubSetupController {
         );
         Database.insert(newTicket, AccessLevel.SYSTEM_MODE);
 
-        Request__c newReq = new Request__c(
-            TicketId__c = newTicket.Id,           
-            DeliveryEntityId__c = mothership.Id,  
-            RemoteTicketIdTxt__c = remoteTicketId, 
-            StatusPk__c = 'Open for Bids'
-        );
-        Database.insert(newReq, AccessLevel.SYSTEM_MODE);
+        //System should already create one request automatically so don't need this'
+        //Request__c newReq = new Request__c(
+        //    TicketId__c = newTicket.Id,           
+        //    DeliveryEntityId__c = mothership.Id,  
+        //    RemoteTicketIdTxt__c = remoteTicketId, 
+        //    StatusPk__c = 'Open for Bids'
+        //);
+        //Database.insert(newReq, AccessLevel.SYSTEM_MODE);
 
         
         scheduleSyncJobs();
