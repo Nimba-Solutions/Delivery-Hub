@@ -2,7 +2,7 @@
 private class ContentDocumentLinkTriggerHandlerTest {
 
     @IsTest
-    static void testHandleAfterInsert_WithTicket() {
+    static void testHandleAfterInsertWithTicket() {
         // Create test Ticket
         Ticket__c ticket = new Ticket__c(
             Name = 'Test Ticket'
@@ -49,7 +49,7 @@ private class ContentDocumentLinkTriggerHandlerTest {
 
 
     @IsTest
-    static void testHandleAfterInsert_NonTicketRecord() {
+    static void testHandleAfterInsertNonTicketRecord() {
         // Create an Account (not Ticket__c)
         Account acc = new Account(Name = 'Test Account');
         insert acc;
