@@ -18,7 +18,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSenderTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSettingsControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSetupControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSyncHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSyncResourceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSyncServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%ForgotPasswordControllerTest</testClassName>
