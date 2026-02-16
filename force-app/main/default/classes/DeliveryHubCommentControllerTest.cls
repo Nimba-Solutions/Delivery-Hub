@@ -6,12 +6,13 @@ private class DeliveryHubCommentControllerTest {
         // Create Mock Entity
         Network_Entity__c entity = new Network_Entity__c(
             Name = 'Mothership Entity',
-            IntegrationEndpointUrlTxt__c = 'https://example.com/services/apexrest/deliveryhub/v1'
+            IntegrationEndpointUrlTxt__c = 'https://example.com/services/apexrest/deliveryhub/v1',
+            StatusPk__c = 'Active'
         );
         insert entity;
 
         Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Test Ticket',
+            BriefDescriptionTxt__c = 'Test Ticket',
             StatusPk__c = 'New',
             PriorityPk__c = 'Medium'
         );
@@ -29,65 +30,64 @@ private class DeliveryHubCommentControllerTest {
         Ticket_Comment__c c1 = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'First Comment',
-            AuthorTxt__c = 'Test User'
+            AuthorTxt__c = 'Test User',
+            JiraSyncStatusTxt__c = 'Synced' // Simulate existing comment
         );
         insert c1;
     }
 
+    /**
+     * @description Test fetching comments using the Ticket ID directly.
+     */
     @IsTest
-    static void testGetComments() {
+    static void testGetCommentsByTicketId() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
 
         Test.startTest();
-        List<DeliveryHubCommentController.CommentWrapper> result = DeliveryHubCommentController.getComments(t.Id);
+        // Updated to return List<Ticket_Comment__c> instead of Wrapper
+        List<Ticket_Comment__c> result = DeliveryHubCommentController.getLiveComments(t.Id);
         Test.stopTest();
 
         System.assertEquals(1, result.size(), 'Should return 1 comment');
+        System.assertEquals('First Comment', result[0].BodyTxt__c);
     }
 
+    /**
+     * @description Test fetching comments using the Request ID (verifies resolveTicketId logic).
+     */
     @IsTest
-    static void testGetCommentsLive() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-
-        Test.setMock(HttpCalloutMock.class, new MothershipMock());
+    static void testGetCommentsByRequestId() {
+        Request__c req = [SELECT Id FROM Request__c LIMIT 1];
 
         Test.startTest();
-        List<DeliveryHubCommentController.CommentWrapper> result = DeliveryHubCommentController.getCommentsLive(t.Id);
+        // The controller should find the parent Ticket via the Request
+        List<Ticket_Comment__c> result = DeliveryHubCommentController.getLiveComments(req.Id);
         Test.stopTest();
 
-        System.assert(result.size() >= 1, 'Should return comments list');
+        System.assertEquals(1, result.size(), 'Should find comments attached to the parent Ticket');
     }
 
+    /**
+     * @description Test posting a new comment. 
+     * Verifies DB insertion which triggers SyncEngine.
+     */
     @IsTest
-    static void testPostComment() {
+    static void testPostLiveComment() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
 
         Test.startTest();
-        DeliveryHubCommentController.postComment(t.Id, 'New Reply');
+        DeliveryHubCommentController.postLiveComment(t.Id, 'New Reply');
         Test.stopTest();
 
-        List<Ticket_Comment__c> comments = [SELECT Id, BodyTxt__c FROM Ticket_Comment__c WHERE TicketId__c = :t.Id ORDER BY CreatedDate ASC];
-        System.assertEquals(2, comments.size(), 'Should have 2 comments');
-    }
-
-    public class MothershipMock implements HttpCalloutMock {
-        public HTTPResponse respond(HTTPRequest req) {
-            HttpResponse res = new HttpResponse();
-            res.setHeader('Content-Type', 'application/json');
-            
-            if (req.getMethod() == 'GET') {
-                String mockBody = '[{' +
-                    '"body": "Remote Reply", ' +
-                    '"author": "Mothership User", ' +
-                    '"source": "Upstream"' +
-                '}]';
-                res.setBody(mockBody);
-                res.setStatusCode(200);
-            } else {
-                res.setBody('{"status":"success"}');
-                res.setStatusCode(200);
-            }
-            return res;
-        }
+        List<Ticket_Comment__c> comments = [
+            SELECT Id, BodyTxt__c, JiraSyncStatusTxt__c 
+            FROM Ticket_Comment__c 
+            WHERE TicketId__c = :t.Id 
+            ORDER BY CreatedDate ASC
+        ];
+        
+        System.assertEquals(2, comments.size(), 'Should have 2 comments total');
+        System.assertEquals('New Reply', comments[1].BodyTxt__c);
+        System.assertEquals('Pending', comments[1].JiraSyncStatusTxt__c, 'Status should be Pending for Trigger pickup');
     }
 }

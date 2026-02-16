@@ -1,8 +1,8 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
-import getComments from '@salesforce/apex/DeliveryHubCommentController.getComments';
-import postComment from '@salesforce/apex/DeliveryHubCommentController.postComment';
-// 1. IMPORT THE POLLER
+// 1. IMPORT CORRECT CONTROLLER METHODS
+import getLiveComments from '@salesforce/apex/DeliveryHubCommentController.getLiveComments';
+import postLiveComment from '@salesforce/apex/DeliveryHubCommentController.postLiveComment';
 import pollUpdates from '@salesforce/apex/DeliveryHubPoller.pollUpdates'; 
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
@@ -16,27 +16,37 @@ export default class DeliveryTicketChat extends LightningElement {
     _pollingInterval;
 
     // 1. Fetch Comments via Wire
-    @wire(getComments, { ticketId: '$recordId' })
+    // FIX: Method is getLiveComments, Parameter is requestId (matches Apex)
+    @wire(getLiveComments, { requestId: '$recordId' })
     wiredComments(result) {
         this.wiredResult = result;
         if (result.data) {
             this.updateComments(result.data);
             
-            // Auto-scroll to bottom only on initial load (when no interval is set yet)
+            // Auto-scroll to bottom only on initial load
             if (!this._pollingInterval) {
                  this.scrollToBottom();
             }
         }
     }
 
-    // Helper to process data and add CSS classes
+    // Helper to process SObject data and add CSS classes
     updateComments(data) {
         this.commentsData = data.map(msg => {
+            // FIX: Map SObject fields (BodyTxt__c) to JS properties (body)
+            // Heuristic: For now, we treat all as outbound styling or you can add logic based on Author
+            const isOutbound = true; 
+
             return {
-                ...msg,
-                wrapperClass: msg.isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
-                bubbleClass: msg.isOutbound ? 'bubble outbound' : 'bubble inbound',
-                metaClass: msg.isOutbound ? 'meta outbound-meta slds-text-align_right' : 'meta inbound-meta slds-text-align_left'
+                Id: msg.Id,
+                body: msg.BodyTxt__c,       // SObject Field
+                author: msg.AuthorTxt__c,   // SObject Field
+                createdDate: msg.CreatedDate,
+                
+                // Keep existing CSS logic
+                wrapperClass: isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
+                bubbleClass: isOutbound ? 'bubble outbound' : 'bubble inbound',
+                metaClass: isOutbound ? 'meta outbound-meta slds-text-align_right' : 'meta inbound-meta slds-text-align_left'
             };
         });
     }
@@ -49,8 +59,6 @@ export default class DeliveryTicketChat extends LightningElement {
             // A. RUN THE SYNC (The "Mail Carrier")
             pollUpdates()
                 .then(() => {
-                    // FIX: Removed 'result' parameter above to satisfy ESLint no-unused-vars
-                    
                     // B. REFRESH THE VIEW (Only after sync tries to run)
                     if (this.wiredResult) {
                         return refreshApex(this.wiredResult);
@@ -85,15 +93,13 @@ export default class DeliveryTicketChat extends LightningElement {
 
     // 3. The Duplicate Fix (Locked Sender)
     handleSend() {
-        // STOP DOUBLE SUBMITS: If already sending, do nothing.
         if (this.isSending) return;
-        
         if (!this.commentBody || this.commentBody.trim() === '') return;
 
-        // Lock
         this.isSending = true;
 
-        postComment({ ticketId: this.recordId, body: this.commentBody })
+        // FIX: Call postLiveComment with requestId
+        postLiveComment({ requestId: this.recordId, body: this.commentBody })
             .then(() => {
                 this.commentBody = ''; // Clear input
                 // Force an immediate refresh from server
@@ -110,13 +116,11 @@ export default class DeliveryTicketChat extends LightningElement {
                 }));
             })
             .finally(() => {
-                // Unlock only when finished
                 this.isSending = false;
             });
     }
 
     scrollToBottom() {
-        // Small delay to allow DOM to render new message before scrolling
         setTimeout(() => {
             const chatContainer = this.template.querySelector('.chat-container');
             if (chatContainer) {
