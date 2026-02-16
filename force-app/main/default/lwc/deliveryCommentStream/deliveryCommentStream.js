@@ -1,13 +1,13 @@
 import { LightningElement, api, track } from 'lwc';
-import getLiveComments from '@salesforce/apex/DeliveryHubCommentSender.getLiveComments';
-import postLiveComment from '@salesforce/apex/DeliveryHubCommentSender.postLiveComment';
+import getLiveComments from '@salesforce/apex/DeliveryHubCommentController.getLiveComments';
+import postLiveComment from '@salesforce/apex/DeliveryHubCommentController.postLiveComment';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DeliveryCommentStream extends LightningElement {
     @api recordId;
     @track comments = [];
     @track commentBody = '';
-    isSending = false;
+    @track isSending = false;
 
     connectedCallback() {
         this.loadComments();
@@ -20,6 +20,7 @@ export default class DeliveryCommentStream extends LightningElement {
             })
             .catch(error => {
                 console.error('Error loading comments', error);
+                this.showToast('Error', 'Failed to load comments.', 'error');
             });
     }
 
@@ -31,20 +32,26 @@ export default class DeliveryCommentStream extends LightningElement {
         if (!this.commentBody) return;
         
         this.isSending = true;
+
         postLiveComment({ requestId: this.recordId, body: this.commentBody })
             .then(() => {
-                this.commentBody = ''; // Clear input
-                return this.loadComments(); // Refresh list
+                this.commentBody = ''; // Clear input on success
+                return this.loadComments(); // Refresh the list immediately
             })
             .catch(error => {
-                this.dispatchEvent(new ShowToastEvent({
-                    title: 'Error',
-                    message: error.body ? error.body.message : error.message,
-                    variant: 'error'
-                }));
+                const message = error.body ? error.body.message : error.message;
+                this.showToast('Error', message, 'error');
             })
             .finally(() => {
                 this.isSending = false;
             });
+    }
+
+    showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({
+            title: title,
+            message: message,
+            variant: variant
+        }));
     }
 }
