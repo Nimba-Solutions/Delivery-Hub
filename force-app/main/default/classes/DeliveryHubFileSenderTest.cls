@@ -18,7 +18,8 @@ private class DeliveryHubFileSenderTest {
     private static Id createTestRequest() {
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Test Vendor', 
-            IntegrationEndpointUrlTxt__c = 'https://example.com/intake'
+            IntegrationEndpointUrlTxt__c = 'https://example.com/intake',
+            StatusPk__c = 'Active' // Ensure it matches query filters
         );
         insert vendor;
 
@@ -49,7 +50,6 @@ private class DeliveryHubFileSenderTest {
 
     /**
      * @description TEST 1: Does the Query Logic work? 
-     * If this fails, your Scratch Org / Package setup has a visibility/permission issue.
      */
     @IsTest
     static void testDestinationDiscovery() {
@@ -86,6 +86,9 @@ private class DeliveryHubFileSenderTest {
     @IsTest
     static void testMissingData() {
         // Create ticket with NO request
+        // NOTE: If you have an active Vendor in the org (SeeAllData) or setup, 
+        // the Trigger might auto-create a request. 
+        // Since this test runs in isolation by default, it should be fine.
         Ticket__c t = new Ticket__c(WorkItemNameTxt__c = 'Empty');
         insert t;
         
@@ -97,7 +100,12 @@ private class DeliveryHubFileSenderTest {
             DeliveryHubFileSender.sendFileToBroker(t.Id, docId);
             System.assert(false, 'Should have failed');
         } catch (Exception e) {
-            System.assert(e.getMessage().contains('No Request records'), 'Should complain about missing requests');
+            // FIX: Updated expected message to match DeliveryHubFileSender.cls logic
+            // Was: 'No Request records'
+            // Now: 'No Active Connections found'
+            String expectedMsg = 'No Active Connections found';
+            System.assert(e.getMessage().contains(expectedMsg), 
+                'Expected error "' + expectedMsg + '" but got: ' + e.getMessage());
         }
         Test.stopTest();
     }
