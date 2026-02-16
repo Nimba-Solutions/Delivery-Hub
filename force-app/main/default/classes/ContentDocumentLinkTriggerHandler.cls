@@ -1,48 +1,48 @@
 /**
- * @description Trigger handler for ContentDocumentLink object to sync attachments with Jira
- * @author Delivery Hub Team
- * @date 2025
+ * @description Handler for ContentDocumentLinkTrigger.
+ * Filters for files attached to Tickets and offloads sync to @Future method to allow callouts.
  */
-public class ContentDocumentLinkTriggerHandler {
-    
-    // Cache the Ticket key prefix to avoid repeated describe calls
-    private static final String TICKET_KEY_PREFIX = Ticket__c.SObjectType.getDescribe().getKeyPrefix();
-    
+public inherited sharing class ContentDocumentLinkTriggerHandler {
+
     /**
-     * @description Handles after insert events for ContentDocumentLink records
-     * @param newLinks List of newly inserted ContentDocumentLink records
+     * @description Entry point for After Insert.
+     * @param newLinks List of new ContentDocumentLink records.
      */
     public static void handleAfterInsert(List<ContentDocumentLink> newLinks) {
-        // Filter for links to Ticket__c records
-        List<String> ticketIds = new List<String>();
-        List<String> contentDocumentIds = new List<String>();
-        
-        for (ContentDocumentLink link : newLinks) {
-            // Check if the linked entity is a Ticket__c record
-            if (String.valueOf(link.LinkedEntityId).startsWith(TICKET_KEY_PREFIX)) {
-                ticketIds.add(link.LinkedEntityId);
-                contentDocumentIds.add(link.ContentDocumentId);
+        // Map<ContentDocumentId, TicketId>
+        Map<Id, Id> filesToSend = new Map<Id, Id>();
+
+        for (ContentDocumentLink cdl : newLinks) {
+            // 1. Check if attached to a Ticket
+            if (cdl.LinkedEntityId != null && 
+                cdl.LinkedEntityId.getSObjectType() == Ticket__c.SObjectType) {
+                
+                // 2. Filter out Org/User specific visibility if needed
+                // (Optional: ignore 'Internal' only files if you have that requirement)
+                filesToSend.put(cdl.ContentDocumentId, cdl.LinkedEntityId);
             }
         }
-        
-        if (!ticketIds.isEmpty() && !contentDocumentIds.isEmpty()) {
-            // Group content documents by ticket
-            Map<String, List<String>> ticketToContentDocsMap = new Map<String, List<String>>();
-            
-            for (Integer i = 0; i < ticketIds.size(); i++) {
-                String ticketId = ticketIds[i];
-                String contentDocId = contentDocumentIds[i];
-                
-                if (!ticketToContentDocsMap.containsKey(ticketId)) {
-                    ticketToContentDocsMap.put(ticketId, new List<String>());
-                }
-                ticketToContentDocsMap.get(ticketId).add(contentDocId);
-            }
-            
-            // Sync files for each ticket
-            for (String ticketId : ticketToContentDocsMap.keySet()) {
-                List<String> contentDocs = ticketToContentDocsMap.get(ticketId);
-                AttachmentSyncService.syncFilesToJira(ticketId, contentDocs);
+
+        if (!filesToSend.isEmpty()) {
+            // 3. Call Async Method (Allows Callouts)
+            sendFilesAsync(filesToSend);
+        }
+    }
+
+    /**
+     * @description Asynchronous method to handle the actual HTTP Callout.
+     * Uses @Future(callout=true) to break the transaction boundary.
+     */
+    @Future(callout=true)
+    private static void sendFilesAsync(Map<Id, Id> filesToSend) {
+        for (Id docId : filesToSend.keySet()) {
+            Id ticketId = filesToSend.get(docId);
+            try {
+                // Call your existing Sender class
+                DeliveryHubFileSender.sendFileToBroker(ticketId, docId);
+            } catch (Exception e) {
+                // Log failure but don't crash the batch (it's async anyway)
+                System.debug(LoggingLevel.ERROR, 'Async File Send Failed for ' + docId + ': ' + e.getMessage());
             }
         }
     }
