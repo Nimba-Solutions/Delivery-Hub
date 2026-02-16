@@ -6,8 +6,17 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class DeliveryHubFileSender {
 
+    /**
+     * @description Custom Exception for File Sender errors
+     */
     public class FileSenderException extends Exception {}
 
+    /**
+     * @description Main entry point to send a specific file to downstream vendors.
+     * @param recordId The ID of the parent record (Ticket or Request)
+     * @param contentDocumentId The ID of the file to send
+     * @return String Status message
+     */
     @AuraEnabled
     public static String sendFileToBroker(Id recordId, Id contentDocumentId) {
         try {
@@ -17,7 +26,6 @@ public without sharing class DeliveryHubFileSender {
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'FileSender Error: ' + e.getMessage());
             String msg = e.getMessage();
-            // FIX: Added braces
             if (msg.contains('Script-thrown')) {
                 msg = 'Internal System Error. Check Debug Logs.';
             }
@@ -27,6 +35,12 @@ public without sharing class DeliveryHubFileSender {
         }
     }
 
+    /**
+     * @description Retrieves the actual file content from ContentVersion.
+     * Enforces size limits to prevent Heap errors.
+     * @param docId The ContentDocumentId
+     * @return ContentVersion The file record with VersionData
+     */
     @TestVisible
     private static ContentVersion getFile(Id docId) {
         List<ContentVersion> files = [
@@ -37,7 +51,6 @@ public without sharing class DeliveryHubFileSender {
             LIMIT 1
         ];
         
-        // FIX: Added braces
         if (files.isEmpty()) {
             throw new FileSenderException('File not found.');
         }
@@ -48,6 +61,11 @@ public without sharing class DeliveryHubFileSender {
         return files[0];
     }
 
+    /**
+     * @description Finds valid destination Requests for the given record.
+     * @param recordId The Ticket ID or Request ID
+     * @return List<Request__c> List of active requests with endpoints
+     */
     @TestVisible
     private static List<Request__c> getDestinations(Id recordId) {
         SObjectType type = recordId.getSObjectType();
@@ -78,6 +96,12 @@ public without sharing class DeliveryHubFileSender {
         return results;
     }
 
+    /**
+     * @description Iterates over the requests and triggers the upload.
+     * @param requests List of destination requests
+     * @param file The file to upload
+     * @return String Summary message
+     */
     private static String processBroadcast(List<Request__c> requests, ContentVersion file) {
         Integer successCount = 0;
         String lastError = '';
@@ -109,7 +133,6 @@ public without sharing class DeliveryHubFileSender {
                     baseUrl = fallbackMap.get(req.DeliveryEntityId__c).IntegrationEndpointUrlTxt__c;
                 }
 
-                // FIX: Added braces
                 if (String.isBlank(baseUrl)) {
                     continue;
                 }
@@ -126,13 +149,18 @@ public without sharing class DeliveryHubFileSender {
             }
         }
 
-        // FIX: Added braces
         if (successCount == 0) {
             throw new FileSenderException('Upload Failed. ' + lastError);
         }
         return 'File sent to ' + successCount + ' vendor(s).';
     }
 
+    /**
+     * @description Performs the single HTTP callout to upload the file.
+     * @param req The specific Request destination
+     * @param file The file to upload
+     * @param baseUrl The vendor's base URL
+     */
     private static void sendSingleFile(Request__c req, ContentVersion file, String baseUrl) {
         String filesUrl = baseUrl.removeEnd('/') + '/files/' + req.RemoteTicketIdTxt__c;
 
