@@ -17,7 +17,10 @@ public without sharing class DeliveryHubFileSender {
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'FileSender Error: ' + e.getMessage());
             String msg = e.getMessage();
-            if (msg.contains('Script-thrown')) msg = 'Internal System Error. Check Debug Logs.';
+            // FIX: Added braces
+            if (msg.contains('Script-thrown')) {
+                msg = 'Internal System Error. Check Debug Logs.';
+            }
             AuraHandledException uiError = new AuraHandledException(msg);
             uiError.setMessage(msg);
             throw uiError;
@@ -34,8 +37,13 @@ public without sharing class DeliveryHubFileSender {
             LIMIT 1
         ];
         
-        if (files.isEmpty()) throw new FileSenderException('File not found.');
-        if (files[0].ContentSize > 4500000) throw new FileSenderException('File is too large for sync (Max 4.5MB).');
+        // FIX: Added braces
+        if (files.isEmpty()) {
+            throw new FileSenderException('File not found.');
+        }
+        if (files[0].ContentSize > 4500000) {
+            throw new FileSenderException('File is too large for sync (Max 4.5MB).');
+        }
         
         return files[0];
     }
@@ -70,9 +78,6 @@ public without sharing class DeliveryHubFileSender {
         return results;
     }
 
-    /**
-     * @description Bulkified logic to prevent SOQL inside loops.
-     */
     private static String processBroadcast(List<Request__c> requests, ContentVersion file) {
         Integer successCount = 0;
         String lastError = '';
@@ -100,13 +105,17 @@ public without sharing class DeliveryHubFileSender {
             try {
                 String baseUrl = (req.DeliveryEntityId__r != null) ? req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c : null;
                 
-                // Use the map instead of a query inside the loop
                 if (String.isBlank(baseUrl) && fallbackMap.containsKey(req.DeliveryEntityId__c)) {
                     baseUrl = fallbackMap.get(req.DeliveryEntityId__c).IntegrationEndpointUrlTxt__c;
                 }
 
-                if (String.isBlank(baseUrl)) continue;
-                if (String.isBlank(req.RemoteTicketIdTxt__c)) continue; 
+                // FIX: Added braces
+                if (String.isBlank(baseUrl)) {
+                    continue;
+                }
+                if (String.isBlank(req.RemoteTicketIdTxt__c)) {
+                    continue; 
+                }
 
                 sendSingleFile(req, file, baseUrl);
                 successCount++;
@@ -117,7 +126,10 @@ public without sharing class DeliveryHubFileSender {
             }
         }
 
-        if (successCount == 0) throw new FileSenderException('Upload Failed. ' + lastError);
+        // FIX: Added braces
+        if (successCount == 0) {
+            throw new FileSenderException('Upload Failed. ' + lastError);
+        }
         return 'File sent to ' + successCount + ' vendor(s).';
     }
 
