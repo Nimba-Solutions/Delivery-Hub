@@ -3,6 +3,7 @@
  * Replaces the deleted DeliveryHubCommentSender.
  * Uses standard DML so the SyncEngine Trigger picks it up automatically.
  */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
     /**
@@ -10,12 +11,13 @@ public with sharing class DeliveryHubCommentController {
      * @param requestId The ID of the record the LWC is sitting on.
      * @return List of comments.
      */
-    @AuraEnabled
+    @AuraEnabled(cacheable=true)
     public static List<Ticket_Comment__c> getLiveComments(Id requestId) {
         try {
             // Resolve Ticket ID from Request if needed
             Id ticketId = resolveTicketId(requestId);
             
+            // Query with USER_MODE to enforce field-level security
             return [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, JiraSyncStatusTxt__c
                 FROM Ticket_Comment__c
@@ -45,7 +47,8 @@ public with sharing class DeliveryHubCommentController {
                 JiraSyncStatusTxt__c = 'Pending'   // Marks it for the Trigger to pick up
             );
             
-            insert comment; 
+            // Insert with USER_MODE to enforce permissions
+            insert as user comment; 
             
         } catch (Exception e) {
             throw new AuraHandledException('Failed to post comment: ' + e.getMessage());
@@ -54,6 +57,8 @@ public with sharing class DeliveryHubCommentController {
 
     /**
      * @description Helper to find the Ticket ID regardless of where the LWC is placed.
+     * @param recordId The ID of the current record context
+     * @return Id The resolved Ticket ID
      */
     private static Id resolveTicketId(Id recordId) {
         String objName = recordId.getSobjectType().getDescribe().getName();

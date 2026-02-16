@@ -8,40 +8,24 @@ public without sharing class DeliveryHubFileSender {
 
     public class FileSenderException extends Exception {}
 
-    /**
-     * @description Main entry point. Callable from LWC or Queueable/Future context.
-     */
     @AuraEnabled
     public static String sendFileToBroker(Id recordId, Id contentDocumentId) {
         try {
-            // 1. Get File
             ContentVersion file = getFile(contentDocumentId);
-            
-            // 2. Get Destinations (Find Active Requests)
             List<Request__c> destinations = getDestinations(recordId);
-            
-            // 3. Process
             return processBroadcast(destinations, file);
-
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'FileSender Error: ' + e.getMessage());
             String msg = e.getMessage();
             if (msg.contains('Script-thrown')) msg = 'Internal System Error. Check Debug Logs.';
-            
-            // Throw AuraHandledException for LWC clients
             AuraHandledException uiError = new AuraHandledException(msg);
             uiError.setMessage(msg);
             throw uiError;
         }
     }
 
-    /**
-     * @description Retrieving the file content.
-     * Enforces strict size limits to prevent Apex Heap errors during callouts.
-     */
     @TestVisible
     private static ContentVersion getFile(Id docId) {
-        // Enforce 4.5MB safe limit (Salesforce Sync Callout Max is 6MB, but Heap is tighter)
         List<ContentVersion> files = [
             SELECT Title, VersionData, FileExtension, ContentSize 
             FROM ContentVersion 
@@ -50,22 +34,12 @@ public without sharing class DeliveryHubFileSender {
             LIMIT 1
         ];
         
-        if (files.isEmpty()) {
-            throw new FileSenderException('File not found or not accessible.');
-        }
-        
-        // Safety Check
-        if (files[0].ContentSize > 4500000) {
-            throw new FileSenderException('File is too large for sync (Max 4.5MB).');
-        }
+        if (files.isEmpty()) throw new FileSenderException('File not found.');
+        if (files[0].ContentSize > 4500000) throw new FileSenderException('File is too large for sync (Max 4.5MB).');
         
         return files[0];
     }
 
-    /**
-     * @description Finds the bridge records (Requests) that link this record to a Vendor.
-     * Supports both Request__c (Direct) and Ticket__c (Parent) IDs.
-     */
     @TestVisible
     private static List<Request__c> getDestinations(Id recordId) {
         SObjectType type = recordId.getSObjectType();
@@ -91,45 +65,48 @@ public without sharing class DeliveryHubFileSender {
         }
 
         if (results.isEmpty()) {
-            // Include the resolved object name in the error for debugging
-            String name = type.getDescribe().getName();
-            throw new FileSenderException('No Active Connections found for this ' + name);
+            throw new FileSenderException('No Active Connections found for this ' + type.getDescribe().getName());
         }
-
         return results;
     }
 
     /**
-     * @description Iterates through all found destinations and sends the file.
+     * @description Bulkified logic to prevent SOQL inside loops.
      */
     private static String processBroadcast(List<Request__c> requests, ContentVersion file) {
         Integer successCount = 0;
         String lastError = '';
 
+        // 1. Bulkify: Collect IDs where the URL is missing
+        Set<Id> fallbackEntityIds = new Set<Id>();
+        for (Request__c req : requests) {
+            if (String.isBlank(req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c) && req.DeliveryEntityId__c != null) {
+                fallbackEntityIds.add(req.DeliveryEntityId__c);
+            }
+        }
+
+        // 2. Bulkify: Query Fallback Entities Map
+        Map<Id, Network_Entity__c> fallbackMap = new Map<Id, Network_Entity__c>();
+        if (!fallbackEntityIds.isEmpty()) {
+            fallbackMap = new Map<Id, Network_Entity__c>([
+                SELECT Id, IntegrationEndpointUrlTxt__c 
+                FROM Network_Entity__c 
+                WHERE Id IN :fallbackEntityIds
+            ]);
+        }
+
+        // 3. Process Callouts
         for (Request__c req : requests) {
             try {
                 String baseUrl = (req.DeliveryEntityId__r != null) ? req.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c : null;
                 
-                // Fallback query if relationship field wasn't populated
-                if (String.isBlank(baseUrl) && req.DeliveryEntityId__c != null) {
-                    List<Network_Entity__c> fallback = [
-                        SELECT IntegrationEndpointUrlTxt__c 
-                        FROM Network_Entity__c 
-                        WHERE Id = :req.DeliveryEntityId__c 
-                        LIMIT 1
-                    ];
-                    if (!fallback.isEmpty()) baseUrl = fallback[0].IntegrationEndpointUrlTxt__c;
+                // Use the map instead of a query inside the loop
+                if (String.isBlank(baseUrl) && fallbackMap.containsKey(req.DeliveryEntityId__c)) {
+                    baseUrl = fallbackMap.get(req.DeliveryEntityId__c).IntegrationEndpointUrlTxt__c;
                 }
 
-                if (String.isBlank(baseUrl)) {
-                    System.debug(LoggingLevel.ERROR, 'Skipping Request ' + req.Id + ': Missing Endpoint URL');
-                    continue; 
-                }
-                
-                if (String.isBlank(req.RemoteTicketIdTxt__c)) {
-                    System.debug(LoggingLevel.ERROR, 'Skipping Request ' + req.Id + ': Missing Remote ID');
-                    continue; 
-                }
+                if (String.isBlank(baseUrl)) continue;
+                if (String.isBlank(req.RemoteTicketIdTxt__c)) continue; 
 
                 sendSingleFile(req, file, baseUrl);
                 successCount++;
@@ -140,18 +117,11 @@ public without sharing class DeliveryHubFileSender {
             }
         }
 
-        if (successCount == 0) {
-            throw new FileSenderException('Upload Failed. ' + (String.isNotBlank(lastError) ? lastError : 'No valid destinations found.'));
-        }
-
+        if (successCount == 0) throw new FileSenderException('Upload Failed. ' + lastError);
         return 'File sent to ' + successCount + ' vendor(s).';
     }
 
-    /**
-     * @description Performs the actual HTTP Callout.
-     */
     private static void sendSingleFile(Request__c req, ContentVersion file, String baseUrl) {
-        // Construct clean URL: .../deliveryhub/v1/files/{RemoteID}
         String filesUrl = baseUrl.removeEnd('/') + '/files/' + req.RemoteTicketIdTxt__c;
 
         Map<String, Object> payload = new Map<String, Object>{
@@ -164,7 +134,7 @@ public without sharing class DeliveryHubFileSender {
         httpReq.setMethod('POST');
         httpReq.setHeader('Content-Type', 'application/json');
         httpReq.setBody(JSON.serialize(payload));
-        httpReq.setTimeout(120000); // Max timeout (2 mins) for large payloads
+        httpReq.setTimeout(120000); 
         
         Http http = new Http();
         HttpResponse res = http.send(httpReq);
