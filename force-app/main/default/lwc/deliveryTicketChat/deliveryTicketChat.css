@@ -1,59 +1,79 @@
-/* The scrolling area */
-.chat-container {
-    height: 400px;
-    overflow-y: auto;
-    background-color: #ebedef;
+/* --- 1. SCROLLING CONTAINER --- */
+/* We target the list directly to make it the scrollable area */
+.slds-chat-list {
+    height: 400px;             /* Fixed height for the chat window */
+    overflow-y: auto;          /* Allow scrolling */
+    background-color: #f3f3f3; /* Light grey background for contrast */
     padding: 1rem;
     border: 1px solid #dddbda;
-    border-radius: 4px;
+    border-radius: 0.25rem;
     display: flex;
     flex-direction: column;
+    margin-bottom: 0.5rem;
 }
 
-/* Bubbles */
-.bubble {
-    max-width: 85%;
-    padding: 8px 12px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    font-size: 0.85rem;
+/* Remove default list styles */
+.slds-chat-list li {
+    list-style: none;
+    margin-bottom: 0.75rem;
+}
+
+/* --- 2. BUBBLE BASE STYLES --- */
+/* Target the specific SLDS class used in your HTML */
+.slds-chat-message__text {
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    font-size: 0.9rem;
     line-height: 1.4;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    max-width: 80%;
+    position: relative;
     word-wrap: break-word;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-.inbound {
-    align-self: flex-start;
-    background-color: #ffffff;
-    color: #080707;
-    border-bottom-left-radius: 2px;
-}
-
-.outbound {
-    align-self: flex-end;
-    background-color: #005fb2;
+/* --- 3. OUTBOUND (MY MESSAGES - RIGHT) --- */
+.slds-chat-message__text_outbound {
+    background-color: #005fb2; /* Salesforce Brand Blue */
     color: #ffffff;
-    border-bottom-right-radius: 2px;
+    border-bottom-right-radius: 0; /* Sharp corner for "speech bubble" effect */
+    margin-left: auto; /* Pushes bubble to the right */
 }
 
-.outbound lightning-formatted-rich-text { color: white; }
-.outbound a { color: #c9e5fc; text-decoration: underline; }
+/* Force text inside blue bubbles to be white */
+.slds-chat-message__text_outbound lightning-formatted-text {
+    color: #ffffff !important;
+    --slds-c-text-color: #ffffff;
+}
 
-.meta {
+/* --- 4. INBOUND (THEIR MESSAGES - LEFT) --- */
+.slds-chat-message__text_inbound {
+    background-color: #ffffff;
+    color: #181818;
+    border-bottom-left-radius: 0; /* Sharp corner for "speech bubble" effect */
+    margin-right: auto; /* Pushes bubble to the left */
+    border: 1px solid #e5e5e5;
+}
+
+/* --- 5. META DATA (Author & Time) --- */
+.slds-chat-message__meta {
     font-size: 0.7rem;
-    margin-bottom: 2px;
-    color: #696969;
-}
-.inbound-meta { text-align: left; margin-left: 8px; }
-.outbound-meta { text-align: right; margin-right: 8px; }
-
-/* Footer Area */
-.footer {
-    margin-top: 10px;
-    padding-top: 5px;
+    color: #706e6b;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
 }
 
-/* Force text input color to black just in case */
+/* Right align meta for outbound */
+.slds-text-align_right {
+    text-align: right;
+    margin-right: 4px;
+}
+
+/* Left align meta for inbound */
+.slds-chat-message__meta:not(.slds-text-align_right) {
+    margin-left: 4px;
+}
+
+/* --- 6. INPUT AREA --- */
 .chat-input {
     --slds-c-textarea-text-color: #000000;
 }
