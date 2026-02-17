@@ -4,13 +4,26 @@
  */
 public with sharing class DeliveryGhostController {
 
+    /**
+     * @description Logs a user navigation event (Ghost Log).
+     * @param actionType The type of action (e.g., 'Navigation').
+     * @param contextData JSON string containing browser/URL info.
+     */
     @AuraEnabled
     public static void logUserActivity(String actionType, String contextData) {
+        // In a real scenario, this might write to a custom object or platform event
+        // Using LoggingLevel.INFO to satisfy PMD
         System.debug(LoggingLevel.INFO, 'Ghost Log: ' + actionType + ' | ' + contextData);
     }
 
     /**
      * @description Creates a Ticket from the Ghost Recorder.
+     * @param subject The ticket summary.
+     * @param description The detailed description.
+     * @param priority The priority level.
+     * @param contextData The captured browser/url context.
+     * @param ticketType 'Bug' or 'Feature' (from the new radio button).
+     * @return Id of the created Ticket.
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
@@ -34,7 +47,7 @@ public with sharing class DeliveryGhostController {
             // 4. Create Ticket
             Ticket__c t = new Ticket__c();
             t.WorkItemNameTxt__c = (fullSubject.length() > 80) ? fullSubject.substring(0, 80) : fullSubject;
-            t.BriefDescriptionTxt__c = briefDesc; // <--- NEW UPDATE HERE
+            t.BriefDescriptionTxt__c = briefDesc; 
             t.DetailsTxt__c = fullDescription;
             t.PriorityPk__c = priority;
             t.StageNamePk__c = 'Backlog'; 
