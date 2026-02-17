@@ -28,7 +28,6 @@ private class DeliveryHubSetupControllerTest {
             Test.stopTest();
 
             System.assertEquals(false, result.isConnected, 'Should not be connected initially');
-            // Note: requiredRemoteSite might be null or string depending on metadata presence in test context
         }
     }
 
@@ -37,17 +36,16 @@ private class DeliveryHubSetupControllerTest {
         User testUser = [SELECT Id FROM User WHERE Alias = 'sysadm' LIMIT 1];
         
         System.runAs(testUser) {
-            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
-
-            Test.startTest();
-            
-            // 1. Prepare Local Entity (Transaction 1: DML)
+            // 1. Prepare Local Entity (DML occurs here)
+            // IMPORTANT: calling this BEFORE Test.startTest() separates the DML context
             Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
             System.assertNotEquals(null, entity.Id, 'Local entity should be created before callout');
 
-            // 2. Perform Handshake (Transaction 2: Callout + Update)
+            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
+
+            // 2. Perform Handshake (Callout occurs here)
+            Test.startTest();
             DeliveryHubSetupController.performHandshake(entity.Id);
-            
             Test.stopTest(); 
 
             // Verify
@@ -58,13 +56,6 @@ private class DeliveryHubSetupControllerTest {
             Network_Entity__c created = [SELECT Id, Name, RemoteExternalIdTxt__c FROM Network_Entity__c WHERE Id = :result.entity.Id];
             System.assert(created.Name.contains('Cloud Nimbus'), 'Name should match new branding');
             System.assertEquals('E-REMOTE-456', created.RemoteExternalIdTxt__c, 'Remote ID should be updated from mock response');
-
-            // --- VERIFY DUPLICATE REQUEST FIX ---
-            // Ensure we only have 1 Request (Created by Trigger logic, not duplicated)
-            // Note: The controller logic silences the trigger for the welcome ticket, 
-            // so we expect 0 requests for the Welcome Ticket specifically if sync is disabled, 
-            // or 1 if the trigger runs normally elsewhere.
-            // Since we mocked the callout, the specific count depends on if your org sends the welcome ticket.
         }
     }
 
@@ -73,7 +64,7 @@ private class DeliveryHubSetupControllerTest {
         User testUser = [SELECT Id FROM User WHERE Alias = 'sysadm' LIMIT 1];
         
         System.runAs(testUser) {
-            // Setup existing entity
+            // Setup existing entity (DML 1)
             Network_Entity__c existing = new Network_Entity__c(
                 Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)',
                 StatusPk__c = 'Active',
@@ -83,24 +74,20 @@ private class DeliveryHubSetupControllerTest {
             );
             insert existing;
 
-            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
-
-            Test.startTest();
-            
-            // 1. Prepare (Should find existing)
+            // 1. Prepare (Updates existing entity - DML 2)
+            // Call BEFORE startTest to handle the DML
             Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
             System.assertEquals(existing.Id, entity.Id, 'Should return the existing entity ID');
 
-            // 2. Handshake
+            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
+
+            // 2. Handshake (Callout)
+            Test.startTest();
             DeliveryHubSetupController.performHandshake(entity.Id);
-            
             Test.stopTest();
 
             Integer count = [SELECT COUNT() FROM Network_Entity__c WHERE Name LIKE 'Cloud Nimbus%'];
             System.assertEquals(1, count, 'Should not duplicate entities (matched by name/ID)');
-            
-            Network_Entity__c updated = [SELECT IntegrationEndpointUrlTxt__c FROM Network_Entity__c WHERE Id = :existing.Id];
-            // Note: In test context without real metadata, this might stay as old url or update depending on metadata existence
         }
     }
 
