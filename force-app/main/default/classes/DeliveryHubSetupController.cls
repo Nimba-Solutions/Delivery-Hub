@@ -133,10 +133,20 @@ public without sharing class DeliveryHubSetupController {
                 StageNamePk__c = 'Backlog'
             );
             
+            // Disable trigger to prevent "Double Sync" via the SyncEngine
             Boolean originalState = TicketTriggerHandler.triggerDisabled;
             TicketTriggerHandler.triggerDisabled = true;
             try {
                 insert newTicket;
+
+                // NEW: Create the Request linking the Ticket to the Mothership Entity
+                Request__c newRequest = new Request__c(
+                    TicketId__c = newTicket.Id,
+                    DeliveryEntityId__c = localEntityId, // Points to the Network Entity we just set up
+                    StatusPk__c = 'Active'
+                );
+                insert newRequest;
+
             } finally {
                 TicketTriggerHandler.triggerDisabled = originalState;
             }
