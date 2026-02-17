@@ -8,6 +8,9 @@ public without sharing class SyncEngine {
     // Prevent recursive triggers
     private static Boolean isSyncContext = false;
 
+    /**
+     * @description Sets the sync context to prevent recursive trigger loops.
+     */
     public static void setSyncContext() {
         isSyncContext = true;
     }
@@ -63,11 +66,9 @@ public without sharing class SyncEngine {
             for (SObject rec : newRecords) {
                 
                 // --- LOOP PREVENTION START ---
-                // Helper logic to get SourcePk__c safely across namespaces
                 Object sourceVal = getSafeValue(rec, 'SourcePk__c', 'delivery__SourcePk__c');
                 String source = (sourceVal != null) ? (String)sourceVal : null;
 
-                // If Source is defined and NOT 'Client', ignore it (it's inbound data).
                 if (String.isNotBlank(source) && source != 'Client') {
                     continue; 
                 }
@@ -76,12 +77,10 @@ public without sharing class SyncEngine {
                 // Change Detection
                 Boolean shouldSync = false;
                 if (oldMap == null) {
-                    shouldSync = true; // Always sync on Insert
+                    shouldSync = true; 
                 } else if (fieldsToTrack != null) {
                     SObject oldRec = oldMap.get(rec.Id);
                     for (String field : fieldsToTrack) {
-                        // Handle potential namespace prefix in field tracking
-                        // We use the same helper to check both strict API name and namespaced variant
                         Object newVal = getSafeValue(rec, field, 'delivery__' + field);
                         Object oldVal = getSafeValue(oldRec, field, 'delivery__' + field);
                         
@@ -94,7 +93,6 @@ public without sharing class SyncEngine {
                     shouldSync = true;
                 }
 
-                // If changed, send to ALL active routes for this Ticket
                 Id tId = recordToTicketId.get(rec.Id);
                 if (shouldSync && routes.containsKey(tId)) {
                     for (Request__c req : routes.get(tId)) {
@@ -106,7 +104,6 @@ public without sharing class SyncEngine {
             if (!itemsToInsert.isEmpty()) {
                 insert itemsToInsert;
                 
-                // Fire the Queueable immediately to send data
                 if (!System.isQueueable() && !System.isFuture() && !System.isBatch()) {
                     System.enqueueJob(new SyncItemProcessor());
                 }
@@ -119,15 +116,15 @@ public without sharing class SyncEngine {
 
     /**
      * @description Helper to dynamically find the Ticket ID from supported objects.
+     * @param rec The SObject record to inspect.
+     * @return The Id of the related Ticket, or null if not found.
      */
     private static Id getTicketId(SObject rec) {
         String objName = rec.getSObjectType().getDescribe().getName();
         
-        // 1. Handle Ticket (Self)
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
             return (Id) rec.Id;
         } 
-        // 2. Handle Child Objects (Comment, Request)
         else if (objName.endsWith('Ticket_Comment__c') || objName.endsWith('Request__c')) { 
             Object tId = getSafeValue(rec, 'TicketId__c', 'delivery__TicketId__c');
             return (tId != null) ? (Id)tId : null;
@@ -137,38 +134,39 @@ public without sharing class SyncEngine {
 
     /**
      * @description Helper to safely retrieve a field value, checking standard first, then namespaced.
-     * Resolves PMD "Empty Catch Block" issues by centralizing the try/catch logic.
+     * @param rec The SObject record to read from.
+     * @param standardField The standard API name of the field.
+     * @param namespacedField The namespaced API name of the field.
+     * @return The value of the field if found, otherwise null.
      */
     private static Object getSafeValue(SObject rec, String standardField, String namespacedField) {
         try {
             return rec.get(standardField);
         } catch(Exception e) {
-            // Field not found, try namespaced
             try {
                 return rec.get(namespacedField);
             } catch(Exception e2) {
-                // Both attempts failed. This is expected in dynamic environments.
-                // Logging at finest to satisfy PMD and aid low-level debugging.
                 System.debug(LoggingLevel.FINEST, 'Field check failed for ' + standardField + '/' + namespacedField);
                 return null;
             }
         }
     }
 
+    /**
+     * @description Creates a Sync_Item__c record for a specific routing request.
+     * @param rec The record being synchronized.
+     * @param req The Request (connection) record determining the target.
+     * @return A populated Sync_Item__c record.
+     */
     private static Sync_Item__c createSyncItem(SObject rec, Request__c req) {
         Sync_Item__c item = new Sync_Item__c();
         item.StatusPk__c = 'Queued';
         item.DirectionPk__c = 'Outbound';
-        
-        // Linkage
         item.LocalRecordIdTxt__c = (String)rec.Id;
         item.TicketId__c = req.TicketId__c;
         item.RequestId__c = req.Id;
-
-        // Object Type
         item.ObjectTypePk__c = rec.getSObjectType().getDescribe().getName();
 
-        // Payload Construction
         Map<String, Object> payload = rec.getPopulatedFieldsAsMap().clone();
         payload.put('SourceId', rec.Id); 
         payload.put('TargetId', req.RemoteTicketIdTxt__c); 
