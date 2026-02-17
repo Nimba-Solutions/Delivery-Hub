@@ -27,8 +27,6 @@ public without sharing class SyncEngine {
 
         try {
             // 1. EXTRACT TICKET IDs
-            // We need to know which Ticket these records belong to (or are) 
-            // so we can find the Request connection.
             Set<Id> ticketIds = new Set<Id>();
             Map<Id, Id> recordToTicketId = new Map<Id, Id>();
 
@@ -43,8 +41,6 @@ public without sharing class SyncEngine {
             if (ticketIds.isEmpty()) { return; }
 
             // 2. FIND ROUTES (The "Network" Logic)
-            // Find ALL Active Requests linked to these Tickets.
-            // This enables the "Daisy Chain" (A->B->C).
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, DeliveryEntityId__c, RemoteTicketIdTxt__c 
                 FROM Request__c 
@@ -53,7 +49,6 @@ public without sharing class SyncEngine {
                 AND DeliveryEntityId__c != NULL
             ];
 
-            // Map Ticket ID -> List of Requests (Routes)
             Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
             for (Request__c r : connections) {
                 if (!routes.containsKey(r.TicketId__c)) {
@@ -68,25 +63,13 @@ public without sharing class SyncEngine {
             for (SObject rec : newRecords) {
                 
                 // --- LOOP PREVENTION START ---
-                // Filter out records that came from the Mothership to prevent "Echoing" them back.
-                try {
-                    // Helper logic to get SourcePk__c safely across namespaces
-                    String source = null;
-                    try {
-                        source = (String) rec.get('SourcePk__c');
-                    } catch(Exception e) {
-                        try {
-                            source = (String) rec.get('delivery__SourcePk__c');
-                        } catch(Exception e2) { /* Field doesn't exist, ignore */ }
-                    }
+                // Helper logic to get SourcePk__c safely across namespaces
+                Object sourceVal = getSafeValue(rec, 'SourcePk__c', 'delivery__SourcePk__c');
+                String source = (sourceVal != null) ? (String)sourceVal : null;
 
-                    // If Source is defined and NOT 'Client', ignore it (it's inbound data).
-                    // If Source is null, we assume it's local/client and sync it.
-                    if (String.isNotBlank(source) && source != 'Client') {
-                        continue; 
-                    }
-                } catch (Exception e) {
-                    System.debug(LoggingLevel.FINEST, 'Skipping Source Check: ' + e.getMessage());
+                // If Source is defined and NOT 'Client', ignore it (it's inbound data).
+                if (String.isNotBlank(source) && source != 'Client') {
+                    continue; 
                 }
                 // --- LOOP PREVENTION END ---
 
@@ -97,11 +80,10 @@ public without sharing class SyncEngine {
                 } else if (fieldsToTrack != null) {
                     SObject oldRec = oldMap.get(rec.Id);
                     for (String field : fieldsToTrack) {
-                        // Handle potential namespace prefix in field tracking if needed
-                        Object newVal = null; 
-                        Object oldVal = null;
-                        try { newVal = rec.get(field); oldVal = oldRec.get(field); } 
-                        catch(Exception e) { /* try namespaced? usually fieldsToTrack has correct API name */ }
+                        // Handle potential namespace prefix in field tracking
+                        // We use the same helper to check both strict API name and namespaced variant
+                        Object newVal = getSafeValue(rec, field, 'delivery__' + field);
+                        Object oldVal = getSafeValue(oldRec, field, 'delivery__' + field);
                         
                         if (newVal != oldVal) {
                             shouldSync = true;
@@ -109,8 +91,7 @@ public without sharing class SyncEngine {
                         }
                     }
                 } else {
-                    // If fieldsToTrack is null, assume we sync on any update (or just insert)
-                     shouldSync = true;
+                    shouldSync = true;
                 }
 
                 // If changed, send to ALL active routes for this Ticket
@@ -138,32 +119,40 @@ public without sharing class SyncEngine {
 
     /**
      * @description Helper to dynamically find the Ticket ID from supported objects.
-     * UPDATED: Handles both Unmanaged (Ticket__c) and Managed (delivery__Ticket__c) object names.
      */
     private static Id getTicketId(SObject rec) {
         String objName = rec.getSObjectType().getDescribe().getName();
         
         // 1. Handle Ticket (Self)
-        // Check using endsWith to support both 'Ticket__c' and 'delivery__Ticket__c'
-        // We exclude Ticket_Comment__c explicitly to avoid false positives if logic changes
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
             return (Id) rec.Id;
         } 
         // 2. Handle Child Objects (Comment, Request)
         else if (objName.endsWith('Ticket_Comment__c') || objName.endsWith('Request__c')) { 
-            // Try standard field first
-            try {
-                return (Id) rec.get('TicketId__c');
-            } catch(Exception e) {
-                // If failed, try namespaced field
-                try {
-                    return (Id) rec.get('delivery__TicketId__c');
-                } catch(Exception e2) {
-                    return null; // Field not found
-                }
-            }
+            Object tId = getSafeValue(rec, 'TicketId__c', 'delivery__TicketId__c');
+            return (tId != null) ? (Id)tId : null;
         }
         return null; 
+    }
+
+    /**
+     * @description Helper to safely retrieve a field value, checking standard first, then namespaced.
+     * Resolves PMD "Empty Catch Block" issues by centralizing the try/catch logic.
+     */
+    private static Object getSafeValue(SObject rec, String standardField, String namespacedField) {
+        try {
+            return rec.get(standardField);
+        } catch(Exception e) {
+            // Field not found, try namespaced
+            try {
+                return rec.get(namespacedField);
+            } catch(Exception e2) {
+                // Both attempts failed. This is expected in dynamic environments.
+                // Logging at finest to satisfy PMD and aid low-level debugging.
+                System.debug(LoggingLevel.FINEST, 'Field check failed for ' + standardField + '/' + namespacedField);
+                return null;
+            }
+        }
     }
 
     private static Sync_Item__c createSyncItem(SObject rec, Request__c req) {
@@ -173,17 +162,14 @@ public without sharing class SyncEngine {
         
         // Linkage
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        item.TicketId__c = req.TicketId__c;     // Link to the Ticket
-        item.RequestId__c = req.Id;             // Link to the Bridge
+        item.TicketId__c = req.TicketId__c;
+        item.RequestId__c = req.Id;
 
         // Object Type
-        String objectType = rec.getSObjectType().getDescribe().getName();
-        item.ObjectTypePk__c = objectType;
+        item.ObjectTypePk__c = rec.getSObjectType().getDescribe().getName();
 
         // Payload Construction
         Map<String, Object> payload = rec.getPopulatedFieldsAsMap().clone();
-        
-        // VITAL: Inject the Routing IDs so the Receiver knows what to update
         payload.put('SourceId', rec.Id); 
         payload.put('TargetId', req.RemoteTicketIdTxt__c); 
 
