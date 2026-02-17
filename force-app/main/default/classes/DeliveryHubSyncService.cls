@@ -62,6 +62,7 @@ public without sharing class DeliveryHubSyncService {
             record.put(fns + 'SourcePk__c', 'Mothership');
         } catch (Exception e) {
             // Field might not exist on all objects, safe to ignore
+            System.debug(LoggingLevel.FINEST, 'SourcePk check failed: ' + e.getMessage());
         }
 
         // 5. PREVENT PING-PONG LOOP

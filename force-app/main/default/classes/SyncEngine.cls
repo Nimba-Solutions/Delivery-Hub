@@ -79,6 +79,7 @@ public without sharing class SyncEngine {
                 } catch (Exception e) {
                     // Field 'SourcePk__c' might not exist on all objects (e.g. Ticket__c).
                     // Safe to ignore and proceed with sync.
+                    System.debug(LoggingLevel.FINEST, 'Skipping Source Check: ' + e.getMessage());
                 }
                 // --- LOOP PREVENTION END ---
 
