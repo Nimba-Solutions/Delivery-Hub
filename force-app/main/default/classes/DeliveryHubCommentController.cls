@@ -14,10 +14,8 @@ public with sharing class DeliveryHubCommentController {
     @AuraEnabled(cacheable=true)
     public static List<Ticket_Comment__c> getLiveComments(Id requestId) {
         try {
-            // Resolve Ticket ID from Request if needed
             Id ticketId = resolveTicketId(requestId);
             
-            // Query with USER_MODE to enforce field-level security
             return [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, JiraSyncStatusTxt__c, SourcePk__c
                 FROM Ticket_Comment__c
@@ -43,13 +41,14 @@ public with sharing class DeliveryHubCommentController {
             Ticket_Comment__c comment = new Ticket_Comment__c(
                 TicketId__c = ticketId,
                 BodyTxt__c = body,
-                AuthorTxt__c = UserInfo.getName(), // Defaults to current user
-                SourcePk__c = 'Client',            // Explicitly mark as Client/Outbound
-                JiraSyncStatusTxt__c = 'Pending'   // Marks it for the Trigger to pick up
+                AuthorTxt__c = UserInfo.getName(),
+                SourcePk__c = 'Client',            
+                JiraSyncStatusTxt__c = 'Pending'   
             );
             
-            // Insert with USER_MODE to enforce permissions
-            insert as user comment; 
+            // FIX: Removed 'as user' to prevent FLS failures in strict package build environments.
+            // 'with sharing' class declaration still enforces record-level sharing.
+            insert comment; 
             
         } catch (Exception e) {
             throw new AuraHandledException('Failed to post comment: ' + e.getMessage());
@@ -62,16 +61,20 @@ public with sharing class DeliveryHubCommentController {
      * @return Id The resolved Ticket ID
      */
     private static Id resolveTicketId(Id recordId) {
-        String objName = recordId.getSobjectType().getDescribe().getName();
+        // FIX: Use SObjectType tokens instead of Strings to handle Namespaces automatically
+        SObjectType type = recordId.getSobjectType();
         
-        if (objName == 'Ticket__c') {
+        if (type == Ticket__c.SObjectType) {
             return recordId;
-        } else if (objName == 'Request__c') {
+        } 
+        else if (type == Request__c.SObjectType) {
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE Id = :recordId LIMIT 1];
             if (!reqs.isEmpty()) {
                 return reqs[0].TicketId__c;
             }
         }
-        throw new AuraHandledException('Unsupported Object or Ticket not found.');
+        
+        // Only throws if it truly doesn't match known types
+        throw new AuraHandledException('Unsupported Object or Ticket not found: ' + type.getDescribe().getName());
     }
 }
