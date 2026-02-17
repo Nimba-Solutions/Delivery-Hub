@@ -43,11 +43,9 @@ public without sharing class DeliveryHubSetupController {
 
     /**
      * STEP 1: Create or Retrieve the Local Entity record.
-     * This MUST happen in its own transaction so the ID is committed 
-     * before we attempt a callout in the next step.
      */
     @AuraEnabled
-    @SuppressWarnings('PMD.ApexCRUDViolation') // Added to satisfy PMD
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static Network_Entity__c prepareLocalEntity() {
         List<Network_Entity__c> existingEntities = [
             SELECT Id, Name FROM Network_Entity__c 
@@ -75,7 +73,7 @@ public without sharing class DeliveryHubSetupController {
 
     /**
      * STEP 2: Perform the Handshake Callout.
-     * Takes the ID from Step 1, sends it to Mothership, and processes the return.
+     * Takes the ID from Step 1, sends it to Mothership, creates the Ticket AND Request.
      */
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
@@ -87,7 +85,7 @@ public without sharing class DeliveryHubSetupController {
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
         String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/intake';
 
-        // Construct Packet - entityId is now definitely populated
+        // Construct Packet
         Map<String, Object> packet = new Map<String, Object>{
             'companyName' => UserInfo.getOrganizationName(),
             'orgId' => UserInfo.getOrganizationId(),
@@ -112,21 +110,30 @@ public without sharing class DeliveryHubSetupController {
             throw new AuraHandledException('Connection Failed: ' + res.getBody());
         }
 
+        // 1. EXTRACT DATA FROM RESPONSE
         Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-        
-        // Update record with Mothership's returned IDs
+        String remoteEntityId = (String) responseMap.get('entityId');
+        String remoteOrgId = (String) responseMap.get('orgId');
+        String remoteTicketId = (String) responseMap.get('ticketId'); // <-- NEW: Capture Ticket ID
+
+        // 2. UPDATE LOCAL ENTITY
         Network_Entity__c mothership = new Network_Entity__c(
             Id = localEntityId,
-            OrgIdTxt__c = (String) responseMap.get('orgId'),
-            RemoteExternalIdTxt__c = (String) responseMap.get('entityId')
+            OrgIdTxt__c = remoteOrgId,
+            RemoteExternalIdTxt__c = remoteEntityId
         );
         update mothership;
 
         initializeDefaultSettings();
         
-        // Only create the success ticket if this was a brand new connection
-        // (Checking if we already had a remote ID before this update)
-        List<Ticket__c> existingTickets = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.' LIMIT 1];
+        // 3. CREATE LOCAL TICKET & REQUEST
+        // We look for existing tickets to avoid duplicates
+        List<Ticket__c> existingTickets = [
+            SELECT Id FROM Ticket__c 
+            WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.' 
+            LIMIT 1
+        ];
+
         if (existingTickets.isEmpty()) {
             Ticket__c newTicket = new Ticket__c(
                 BriefDescriptionTxt__c = 'Connection Established Successfully.',
@@ -139,11 +146,12 @@ public without sharing class DeliveryHubSetupController {
             try {
                 insert newTicket;
 
-                // NEW: Create the Request linking the Ticket to the Mothership Entity
+                // 4. CREATE REQUEST WITH REMOTE ID
                 Request__c newRequest = new Request__c(
                     TicketId__c = newTicket.Id,
-                    DeliveryEntityId__c = localEntityId, // Points to the Network Entity we just set up
-                    StatusPk__c = 'Active'
+                    DeliveryEntityId__c = localEntityId, 
+                    StatusPk__c = 'Active',
+                    RemoteTicketIdTxt__c = remoteTicketId // <-- NEW: Populate the Remote ID
                 );
                 insert newRequest;
 
