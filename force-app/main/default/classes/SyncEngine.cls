@@ -70,15 +70,22 @@ public without sharing class SyncEngine {
                 // --- LOOP PREVENTION START ---
                 // Filter out records that came from the Mothership to prevent "Echoing" them back.
                 try {
-                    String source = (String) rec.get('SourcePk__c');
+                    // Helper logic to get SourcePk__c safely across namespaces
+                    String source = null;
+                    try {
+                        source = (String) rec.get('SourcePk__c');
+                    } catch(Exception e) {
+                        try {
+                            source = (String) rec.get('delivery__SourcePk__c');
+                        } catch(Exception e2) { /* Field doesn't exist, ignore */ }
+                    }
+
                     // If Source is defined and NOT 'Client', ignore it (it's inbound data).
                     // If Source is null, we assume it's local/client and sync it.
                     if (String.isNotBlank(source) && source != 'Client') {
                         continue; 
                     }
                 } catch (Exception e) {
-                    // Field 'SourcePk__c' might not exist on all objects (e.g. Ticket__c).
-                    // Safe to ignore and proceed with sync.
                     System.debug(LoggingLevel.FINEST, 'Skipping Source Check: ' + e.getMessage());
                 }
                 // --- LOOP PREVENTION END ---
@@ -90,7 +97,13 @@ public without sharing class SyncEngine {
                 } else if (fieldsToTrack != null) {
                     SObject oldRec = oldMap.get(rec.Id);
                     for (String field : fieldsToTrack) {
-                        if (rec.get(field) != oldRec.get(field)) {
+                        // Handle potential namespace prefix in field tracking if needed
+                        Object newVal = null; 
+                        Object oldVal = null;
+                        try { newVal = rec.get(field); oldVal = oldRec.get(field); } 
+                        catch(Exception e) { /* try namespaced? usually fieldsToTrack has correct API name */ }
+                        
+                        if (newVal != oldVal) {
                             shouldSync = true;
                             break;
                         }
@@ -125,13 +138,30 @@ public without sharing class SyncEngine {
 
     /**
      * @description Helper to dynamically find the Ticket ID from supported objects.
+     * UPDATED: Handles both Unmanaged (Ticket__c) and Managed (delivery__Ticket__c) object names.
      */
     private static Id getTicketId(SObject rec) {
         String objName = rec.getSObjectType().getDescribe().getName();
-        if (objName == 'Ticket__c') {
-            return (Id) rec.get('Id');
-        } else if (objName == 'Ticket_Comment__c' || objName == 'Request__c') { 
-            return (Id) rec.get('TicketId__c');
+        
+        // 1. Handle Ticket (Self)
+        // Check using endsWith to support both 'Ticket__c' and 'delivery__Ticket__c'
+        // We exclude Ticket_Comment__c explicitly to avoid false positives if logic changes
+        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
+            return (Id) rec.Id;
+        } 
+        // 2. Handle Child Objects (Comment, Request)
+        else if (objName.endsWith('Ticket_Comment__c') || objName.endsWith('Request__c')) { 
+            // Try standard field first
+            try {
+                return (Id) rec.get('TicketId__c');
+            } catch(Exception e) {
+                // If failed, try namespaced field
+                try {
+                    return (Id) rec.get('delivery__TicketId__c');
+                } catch(Exception e2) {
+                    return null; // Field not found
+                }
+            }
         }
         return null; 
     }
