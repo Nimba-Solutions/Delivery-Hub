@@ -23,7 +23,16 @@ public without sharing class TicketTriggerHandler {
         if (!TriggerControl.runAfterLogic) { return; }
 
         // ============================================================================
-        // 1. UNIFIED SYNC ENGINE (High-Water Mark)
+        // 1. BRIDGE CREATION (Network Entity Sync)
+        // ============================================================================
+        // CRITICAL: This must run BEFORE SyncEngine.
+        // On Insert, this creates the Request__c records that SyncEngine uses for routing.
+        if (isInsert){
+            handleNetworkEntitySync(newRows);
+        }
+
+        // ============================================================================
+        // 2. UNIFIED SYNC ENGINE (High-Water Mark)
         // ============================================================================
         // Define the fields the Mothership needs to track.
         Set<String> syncFields = new Set<String>{
@@ -44,19 +53,17 @@ public without sharing class TicketTriggerHandler {
         };
 
         // Capture changes and queue JSON payload
+        // Now that Requests exist (from Step 1), SyncEngine will correctly route new Tickets.
         SyncEngine.captureChanges(newRows, oldMap, syncFields);
 
         // ============================================================================
-        // 2. LEGACY & SPECIFIC MODULES (Jira / Brokerage)
+        // 3. JIRA & LEGACY MODULES
         // ============================================================================
         
         Set<Id> toCreate = new Set<Id>();
         Set<Id> toUpdate = new Set<Id>();
 
         if (isInsert){
-            // Run Network Entity Sync (Auto-create and potentially Auto-send Requests)
-            handleNetworkEntitySync(newRows);
-
             // Jira Logic
             for (Ticket__c row : newRows){
                 if (String.isBlank(row.JiraTicketKeyTxt__c)){
@@ -106,6 +113,8 @@ public without sharing class TicketTriggerHandler {
         }
 
         // 2. Determine entity for Request creation
+        // FIX: Removed LIMIT 1 to support multiple active vendors if architecture allows,
+        // though logic below currently picks the first one found or ClientNetworkEntityId__c.
         List<Network_Entity__c> vendors = [
             SELECT Id FROM Network_Entity__c
             WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'

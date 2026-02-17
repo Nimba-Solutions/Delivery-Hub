@@ -6,9 +6,9 @@
             <div class="chat-container" ref="chatList">
                 <template if:true={comments.data}>
                     <template for:each={comments.data} for:item="msg">
-                        <div key={msg.id} class={msg.wrapperClass}>
+                        <div key={msg.Id} class={msg.wrapperClass}>
                             <div class={msg.metaClass}>
-                                {msg.authorName} • <lightning-formatted-date-time value={msg.timestamp} hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
+                                {msg.author} • <lightning-formatted-date-time value={msg.createdDate} hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
                             </div>
                             <div class={msg.bubbleClass}>
                                 <lightning-formatted-rich-text value={msg.body}></lightning-formatted-rich-text>

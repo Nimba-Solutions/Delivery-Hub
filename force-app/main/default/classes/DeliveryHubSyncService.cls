@@ -56,7 +56,16 @@ public without sharing class DeliveryHubSyncService {
         // 3. MAP FIELDS
         mapFields(record, payload, targetType);
 
-        // 4. PREVENT PING-PONG LOOP
+        // 4. SOURCE OVERRIDE (CRITICAL FIX)
+        // Ensure incoming records are marked as 'Mothership' so SyncEngine ignores them.
+        try {
+            record.put(fns + 'SourcePk__c', 'Mothership');
+        } catch (Exception e) {
+            // Field might not exist on all objects, safe to ignore
+            System.debug(LoggingLevel.FINEST, 'SourcePk check failed: ' + e.getMessage());
+        }
+
+        // 5. PREVENT PING-PONG LOOP
         setSyncStatus(record, fns);
 
         // --- DEFENSIVE FIX: Override isInsert if ID exists ---
@@ -64,10 +73,10 @@ public without sharing class DeliveryHubSyncService {
             isInsert = false;
         }
 
-        // 5. COMMIT
+        // 6. COMMIT
         if (isInsert) {
             Database.insert(record, AccessLevel.SYSTEM_MODE);
-            // 6. WRITE RECEIPT (Only needed on Insert)
+            // 7. WRITE RECEIPT (Only needed on Insert)
             if (String.isNotBlank(sourceId)) {
                 createLedgerEntry(sourceId, record.Id, objectType);
             }
@@ -78,11 +87,6 @@ public without sharing class DeliveryHubSyncService {
 
     // --- HELPER METHODS ---
 
-    /**
-     * @description Looks up the Local Record ID from the Sync Item Ledger using the Remote Source ID.
-     * @param sourceId The remote record ID (SourceId from payload)
-     * @return Id The local record ID if found in the ledger, otherwise null.
-     */
     private static Id findLocalIdFromLedger(String sourceId) {
         if (String.isBlank(sourceId)) {
             return null;
@@ -108,12 +112,6 @@ public without sharing class DeliveryHubSyncService {
         return null;
     }
 
-    /**
-     * @description Creates a "Receipt" record in Sync_Item__c to map the remote ID to the new local ID.
-     * @param sourceId The remote record ID (SourceId from payload)
-     * @param localRecordId The newly inserted local record ID
-     * @param objectType The API name of the object type (e.g. Ticket_Comment__c)
-     */
     private static void createLedgerEntry(String sourceId, Id localRecordId, String objectType) {
         try {
             String fns = getFieldNs();
@@ -163,9 +161,14 @@ public without sharing class DeliveryHubSyncService {
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType targetType) {
         Map<String, Object> fieldsToMap = payload.clone();
+        
+        // FIX: Add TicketId__c to blacklist so we don't overwrite the correctly linked ID with the Client's ID
         Set<String> metadataKeys = new Set<String>{
-            'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp'
+            'Id', 'SourceId', 'TargetId', 'targetId', 'Action', 
+            'LastModifiedBy', 'LastModifiedDate', 'direction', 'timestamp',
+            'TicketId__c', 'delivery__TicketId__c' // <--- ADDED
         };
+        
         for(String key : metadataKeys) {
             fieldsToMap.remove(key);
         }
