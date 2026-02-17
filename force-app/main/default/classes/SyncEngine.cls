@@ -66,6 +66,22 @@ public without sharing class SyncEngine {
             List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
 
             for (SObject rec : newRecords) {
+                
+                // --- LOOP PREVENTION START ---
+                // Filter out records that came from the Mothership to prevent "Echoing" them back.
+                try {
+                    String source = (String) rec.get('SourcePk__c');
+                    // If Source is defined and NOT 'Client', ignore it (it's inbound data).
+                    // If Source is null, we assume it's local/client and sync it.
+                    if (String.isNotBlank(source) && source != 'Client') {
+                        continue; 
+                    }
+                } catch (Exception e) {
+                    // Field 'SourcePk__c' might not exist on all objects (e.g. Ticket__c).
+                    // Safe to ignore and proceed with sync.
+                }
+                // --- LOOP PREVENTION END ---
+
                 // Change Detection
                 Boolean shouldSync = false;
                 if (oldMap == null) {

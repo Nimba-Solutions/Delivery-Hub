@@ -16,7 +16,7 @@ export default class DeliveryTicketChat extends LightningElement {
     _pollingInterval;
 
     // 1. Fetch Comments via Wire
-    // FIX: Method is getLiveComments, Parameter is requestId (matches Apex)
+    // Method is getLiveComments, Parameter is requestId (matches Apex)
     @wire(getLiveComments, { requestId: '$recordId' })
     wiredComments(result) {
         this.wiredResult = result;
@@ -33,9 +33,9 @@ export default class DeliveryTicketChat extends LightningElement {
     // Helper to process SObject data and add CSS classes
     updateComments(data) {
         this.commentsData = data.map(msg => {
-            // FIX: Map SObject fields (BodyTxt__c) to JS properties (body)
-            // Heuristic: For now, we treat all as outbound styling or you can add logic based on Author
-            const isOutbound = true; 
+            // FIX: Dynamic UI Check.
+            // 'Client' = Me (Right side). 'Mothership' = Them (Left side).
+            const isOutbound = (msg.SourcePk__c === 'Client'); 
 
             return {
                 Id: msg.Id,
@@ -43,7 +43,7 @@ export default class DeliveryTicketChat extends LightningElement {
                 author: msg.AuthorTxt__c,   // SObject Field
                 createdDate: msg.CreatedDate,
                 
-                // Keep existing CSS logic
+                // Dynamic CSS based on Source
                 wrapperClass: isOutbound ? 'slds-chat-listitem slds-chat-listitem_outbound' : 'slds-chat-listitem slds-chat-listitem_inbound',
                 bubbleClass: isOutbound ? 'bubble outbound' : 'bubble inbound',
                 metaClass: isOutbound ? 'meta outbound-meta slds-text-align_right' : 'meta inbound-meta slds-text-align_left'
@@ -98,11 +98,11 @@ export default class DeliveryTicketChat extends LightningElement {
 
         this.isSending = true;
 
-        // FIX: Call postLiveComment with requestId
+        // Call postLiveComment with requestId
         postLiveComment({ requestId: this.recordId, body: this.commentBody })
             .then(() => {
                 this.commentBody = ''; // Clear input
-                // Force an immediate refresh from server
+                // Force an immediate refresh from server to show the new message
                 return refreshApex(this.wiredResult);
             })
             .then(() => {

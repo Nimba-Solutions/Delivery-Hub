@@ -19,10 +19,10 @@ public with sharing class DeliveryHubCommentController {
             
             // Query with USER_MODE to enforce field-level security
             return [
-                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, JiraSyncStatusTxt__c
+                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, JiraSyncStatusTxt__c, SourcePk__c
                 FROM Ticket_Comment__c
                 WHERE TicketId__c = :ticketId
-                ORDER BY CreatedDate DESC
+                ORDER BY CreatedDate ASC
             ];
         } catch (Exception e) {
             throw new AuraHandledException(e.getMessage());
@@ -44,6 +44,7 @@ public with sharing class DeliveryHubCommentController {
                 TicketId__c = ticketId,
                 BodyTxt__c = body,
                 AuthorTxt__c = UserInfo.getName(), // Defaults to current user
+                SourcePk__c = 'Client',            // Explicitly mark as Client/Outbound
                 JiraSyncStatusTxt__c = 'Pending'   // Marks it for the Trigger to pick up
             );
             
