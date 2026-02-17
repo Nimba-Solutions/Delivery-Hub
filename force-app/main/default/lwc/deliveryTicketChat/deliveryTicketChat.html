@@ -1,6 +1,6 @@
 <template>
     <div class="slds-chat-container">
-        <ul class="slds-chat-list">
+        <ul class="slds-chat-list" data-id="chatList"> 
             <template for:each={comments.data} for:item="msg">
                 <li key={msg.Id} class={msg.wrapperClass}>
                     <div class="slds-chat-message">

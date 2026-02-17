@@ -1,6 +1,6 @@
 import { LightningElement, wire, api, track } from 'lwc';
-import getLiveComments from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.getLiveComments';
-import postLiveComment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.postLiveComment';
+import getLiveComments from '@salesforce/apex/DeliveryHubCommentController.getLiveComments';
+import postLiveComment from '@salesforce/apex/DeliveryHubCommentController.postLiveComment';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
@@ -19,6 +19,29 @@ export default class DeliveryTicketChat extends LightningElement {
     @track isSending = false;
     
     wiredResult;
+    _hasScrolled = false;
+
+    // --- LIFECYCLE HOOKS ---
+    
+    // Called whenever the component finishes rendering (initial load + updates)
+    renderedCallback() {
+        if (!this._hasScrolled && this.comments.data.length > 0) {
+            this.scrollToBottom();
+            this._hasScrolled = true;
+        }
+    }
+
+    // --- HELPER METHODS ---
+
+    scrollToBottom() {
+        // We use a slight delay to ensure the DOM is fully painted
+        setTimeout(() => {
+            const chatList = this.template.querySelector('[data-id="chatList"]');
+            if (chatList) {
+                chatList.scrollTop = chatList.scrollHeight;
+            }
+        }, 100);
+    }
 
     @wire(getLiveComments, { requestId: '$recordId' })
     wiredComments(result) {
@@ -72,6 +95,10 @@ export default class DeliveryTicketChat extends LightningElement {
                         : 'slds-chat-message__text slds-chat-message__text_inbound'
                 };
             });
+
+            // Auto-scroll when new data arrives
+            this.scrollToBottom();
+
         } else if (error) {
             console.error('Error loading comments', error);
         }
@@ -96,6 +123,10 @@ export default class DeliveryTicketChat extends LightningElement {
             .then(() => {
                 this.commentBody = '';
                 return refreshApex(this.wiredResult);
+            })
+            .then(() => {
+                // Scroll again after refresh
+                this.scrollToBottom();
             })
             .catch(error => {
                 this.dispatchEvent(new ShowToastEvent({
