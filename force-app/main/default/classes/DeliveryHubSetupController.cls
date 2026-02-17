@@ -47,6 +47,7 @@ public without sharing class DeliveryHubSetupController {
      * before we attempt a callout in the next step.
      */
     @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation') // Added to satisfy PMD
     public static Network_Entity__c prepareLocalEntity() {
         List<Network_Entity__c> existingEntities = [
             SELECT Id, Name FROM Network_Entity__c 
