@@ -133,23 +133,21 @@ public without sharing class SyncEngine {
     }
 
     /**
-     * @description Helper to safely retrieve a field value, checking standard first, then namespaced.
+     * @description Helper to safely retrieve a field value without try/catch logic.
      * @param rec The SObject record to read from.
      * @param standardField The standard API name of the field.
      * @param namespacedField The namespaced API name of the field.
      * @return The value of the field if found, otherwise null.
      */
     private static Object getSafeValue(SObject rec, String standardField, String namespacedField) {
-        try {
-            return rec.get(standardField);
-        } catch(Exception e) {
-            try {
-                return rec.get(namespacedField);
-            } catch(Exception e2) {
-                System.debug(LoggingLevel.FINEST, 'Field check failed for ' + standardField + '/' + namespacedField);
-                return null;
-            }
+        Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
+        
+        if (fields.containsKey(standardField)) {
+            return fields.get(standardField);
+        } else if (fields.containsKey(namespacedField)) {
+            return fields.get(namespacedField);
         }
+        return null;
     }
 
     /**
@@ -165,7 +163,11 @@ public without sharing class SyncEngine {
         item.LocalRecordIdTxt__c = (String)rec.Id;
         item.TicketId__c = req.TicketId__c;
         item.RequestId__c = req.Id;
-        item.ObjectTypePk__c = rec.getSObjectType().getDescribe().getName();
+        
+        // FIX: Strip namespace to satisfy Restricted Picklist
+        String objectType = rec.getSObjectType().getDescribe().getName();
+        objectType = objectType.replace('delivery__', ''); 
+        item.ObjectTypePk__c = objectType;
 
         Map<String, Object> payload = rec.getPopulatedFieldsAsMap().clone();
         payload.put('SourceId', rec.Id); 
