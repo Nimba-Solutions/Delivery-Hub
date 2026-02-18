@@ -3,14 +3,12 @@ private class SyncEngineTest {
 
     @TestSetup
     static void setupData() {
-        // 1. Create Settings
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
             AutoCreateRequestFromTicketBool__c = false, 
             AutoSyncNetworkEntityBool__c = false
         );
         insert settings;
 
-        // 2. Create Vendor
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Mothership',
             EntityTypePk__c = 'Vendor',
@@ -19,7 +17,6 @@ private class SyncEngineTest {
         );
         insert vendor;
 
-        // 3. Create Ticket
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Base Ticket',
             StageNamePk__c = 'Backlog',
@@ -28,7 +25,6 @@ private class SyncEngineTest {
         );
         insert t;
 
-        // 4. Create Request Bridge
         Request__c req = new Request__c(
             TicketId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
@@ -42,7 +38,7 @@ private class SyncEngineTest {
     static void testCaptureChangesUpdate() {
         Ticket__c t = [SELECT Id, BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
         
-        // CLEANUP: Delete any sync items created during setup (e.g. from Insert triggers)
+        // Clean slate to avoid counting setup logs
         delete [SELECT Id FROM Sync_Item__c];
 
         Test.startTest();
@@ -50,22 +46,22 @@ private class SyncEngineTest {
         update t;
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c, ObjectTypePk__c, StatusPk__c FROM Sync_Item__c];
+        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c, ObjectTypePk__c FROM Sync_Item__c];
         
-        // We expect at least one. If Flows cause recursion, we might get duplicates,
-        // but we verify the FIRST one is correct.
+        // Use >= 1 to account for potential Flow recursion in the Org
         System.assert(items.size() >= 1, 'Should create at least 1 Sync Item on update');
         
-        String objType = items[0].ObjectTypePk__c.replace('delivery__', '');
+        // Check the last item to ensure the final state was captured
+        Sync_Item__c lastItem = items[items.size()-1];
+        String objType = lastItem.ObjectTypePk__c.replace('delivery__', '');
+        
         System.assertEquals('Ticket__c', objType, 'Object Type should be Ticket__c');
-        System.assert(items[0].PayloadTxt__c.contains('Updated Description'), 'Payload should contain new value');
+        System.assert(lastItem.PayloadTxt__c.contains('Updated Description'), 'Payload should contain new value');
     }
 
     @IsTest
     static void testCaptureChangesChildLinking() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        // CLEANUP
         delete [SELECT Id FROM Sync_Item__c];
 
         Test.startTest();
@@ -98,9 +94,7 @@ private class SyncEngineTest {
     @IsTest
     static void testSyncContextPrevention() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        // This stops ALL syncs (Nuclear Option)
-        SyncEngine.setSyncContext();
+        SyncEngine.setSyncContext(); // Nuclear Switch
         
         Test.startTest();
         t.BriefDescriptionTxt__c = 'Infinite Loop Attempt';
@@ -117,23 +111,28 @@ private class SyncEngineTest {
         System.assertEquals(false, foundLoop, 'Should ignore changes when Sync Context is set');
     }
 
+    /**
+     * @description Directly tests the Engine logic to ensure ignoreOrigin works, 
+     * bypassing Trigger recursion noise.
+     */
     @IsTest
     static void testSmartRoutingEchoPrevention() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
         Request__c req = [SELECT RemoteTicketIdTxt__c FROM Request__c WHERE TicketId__c = :t.Id LIMIT 1];
 
-        // LEDGER SIMULATION: 
-        // We tell the Engine "This update is coming from REMOTE-TICKET-101".
-        // It should therefore NOT send an update back to REMOTE-TICKET-101.
+        // 1. Tell Engine to ignore this Origin (Simulating Inbound process)
         SyncEngine.ignoreOrigin(req.RemoteTicketIdTxt__c); 
         
+        // 2. Manually invoke captureChanges (Unit Test style) to strictly test the Engine logic
+        // This avoids confusion with Trigger firing multiple times due to flows.
         t.BriefDescriptionTxt__c = 'Echo Update';
-
+        Set<String> allowList = new Set<String>{'BriefDescriptionTxt__c'};
+        
         Test.startTest();
-        update t;
+        SyncEngine.captureChanges(new List<SObject>{t}, null, allowList);
         Test.stopTest();
 
-        // Check: Did we create a sync item for this update?
+        // 3. Verify
         List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
         Boolean foundEcho = false;
         for(Sync_Item__c item : items) {
@@ -148,7 +147,6 @@ private class SyncEngineTest {
     @IsTest
     static void testAllowlistFiltering() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
         delete [SELECT Id FROM Sync_Item__c];
 
         Test.startTest();
