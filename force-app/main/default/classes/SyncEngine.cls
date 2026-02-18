@@ -26,9 +26,6 @@ public without sharing class SyncEngine {
 
     /**
      * @description Main Entry Point. Captures changes and queues Sync Items.
-     * @param newRecords Trigger.new
-     * @param oldMap Trigger.oldMap
-     * @param allowedFields Set of API names to sync
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
@@ -48,11 +45,8 @@ public without sharing class SyncEngine {
                 }
             }
 
-            if (ticketIds.isEmpty()) {
-                return;
-            }
+            if (ticketIds.isEmpty()) { return; }
 
-            // Find Active Routes
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
                 FROM Request__c 
@@ -61,6 +55,7 @@ public without sharing class SyncEngine {
 
             Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
             for (Request__c r : connections) {
+                // Use Safe Value to get the TicketId in namespaced orgs
                 Id rTicketId = (Id) getSafeValue(r, 'TicketId__c');
                 if (rTicketId == null) { continue; }
                 if (!routes.containsKey(rTicketId)) {
@@ -78,9 +73,9 @@ public without sharing class SyncEngine {
                 Id tId = recordToTicketId.get(rec.Id);
                 if (routes.containsKey(tId)) {
                     for (Request__c req : routes.get(tId)) {
-                        // CRITICAL: Use Safe Value for the Echo Check 
+                        // CRITICAL: Use Safe Value for the Echo Suppression Check
                         String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
-                        if (blockedOrigins.contains(remoteId)) {
+                        if (String.isNotBlank(remoteId) && blockedOrigins.contains(remoteId)) {
                             continue; 
                         }
                         itemsToInsert.add(createSyncItem(rec, req, allowedFields));
@@ -100,22 +95,16 @@ public without sharing class SyncEngine {
     }
 
     private static Boolean hasSignificantChange(SObject rec, SObject oldRec, Set<String> allowedFields) {
-        if (oldRec == null) { return true; }
-        if (allowedFields == null || allowedFields.isEmpty()) { return true; }
-        
+        if (oldRec == null || allowedFields == null || allowedFields.isEmpty()) { return true; }
         for (String field : allowedFields) {
-            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) {
-                return true;
-            }
+            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) { return true; }
         }
         return false;
     }
 
     private static Id getTicketId(SObject rec) {
         String objName = rec.getSObjectType().getDescribe().getName();
-        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            return (Id) rec.Id;
-        } 
+        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) { return (Id) rec.Id; } 
         return (Id) getSafeValue(rec, 'TicketId__c');
     }
 
