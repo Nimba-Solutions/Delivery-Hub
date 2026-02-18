@@ -1,6 +1,7 @@
 @IsTest
 private class SyncItemProcessorTest {
 
+    // --- MOCK CLASS ---
     private class DeliveryHubMock implements HttpCalloutMock {
         private Integer statusCode;
         private String responseBody;
@@ -21,126 +22,75 @@ private class SyncItemProcessorTest {
 
     @TestSetup
     static void setupData() {
-        Ticket__c t = new Ticket__c(BriefDescriptionTxt__c = 'Test');
+        // 1. Create Vendor (Mothership)
+        Network_Entity__c vendor = new Network_Entity__c(
+            Name = 'Mothership',
+            EntityTypePk__c = 'Vendor',
+            StatusPk__c = 'Active', 
+            IntegrationEndpointUrlTxt__c = 'https://fake-endpoint.com'
+        );
+        insert vendor;
+
+        // 2. Create Ticket
+        Ticket__c t = new Ticket__c(BriefDescriptionTxt__c = 'Test Ticket');
         insert t;
-        delete [SELECT Id FROM Sync_Item__c];
+
+        // 3. Create Request (The Bridge) - REQUIRED for Processor to find the URL
+        Request__c req = new Request__c(
+            TicketId__c = t.Id,
+            DeliveryEntityId__c = vendor.Id,
+            StatusPk__c = 'Active',
+            RemoteTicketIdTxt__c = 'REMOTE-101'
+        );
+        insert req;
     }
 
     @IsTest
-    static void testLegacyPathSuccess() {
+    static void testProcessSuccess() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        Network_Entity__c entity = new Network_Entity__c(
-            Name = 'Legacy Node',
-            StatusPk__c = 'Active',
-            IntegrationEndpointUrlTxt__c = 'https://legacy.com'
-        );
-        insert entity;
+        Request__c req = [SELECT Id, TicketId__c FROM Request__c LIMIT 1];
 
-        Request__c r = new Request__c(
-            TicketId__c = t.Id,
-            DeliveryEntityId__c = entity.Id,
-            RemoteTicketIdTxt__c = 'LEGACY-999',
-            StatusPk__c = 'Open'
-        );
-        insert r;
-
-        Ticket_Comment__c c = new Ticket_Comment__c(TicketId__c = t.Id, BodyTxt__c = 'Legacy Comment');
-        insert c;
-
+        // Manually create a Queued Item linked to the Request
         Sync_Item__c item = new Sync_Item__c(
             TicketId__c = t.Id,
-            TicketCommentId__c = c.Id,
-            RequestId__c = r.Id,
-            LocalRecordIdTxt__c = c.Id,
-            ObjectTypePk__c = 'Ticket_Comment__c',
-            DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Queued',
-            // Added Payload so Unified Processor handles it
-            PayloadTxt__c = '{"body":"Legacy Comment"}' 
-        );
-        insert item;
-
-        Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(200, '{"status":"Success"}'));
-
-        Test.startTest();
-        System.enqueueJob(new SyncItemProcessor());
-        Test.stopTest();
-
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE Id = :item.Id];
-        System.assertEquals('Synced', result.StatusPk__c, 'Error: ' + result.ErrorLogTxt__c);
-    }
-
-    @IsTest
-    static void testUnifiedPathSuccess() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        Sync_Item__c unifiedItem = new Sync_Item__c(
-            TicketId__c = t.Id,
+            RequestId__c = req.Id, // Link is Critical
             LocalRecordIdTxt__c = t.Id, 
             ObjectTypePk__c = 'Ticket__c',
             PayloadTxt__c = '{"Action":"Update", "StageNamePk__c":"Done"}',
             DirectionPk__c = 'Outbound',
             StatusPk__c = 'Queued'
         );
-        insert unifiedItem;
+        insert item;
 
+        // Mock 200 OK
         Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(200, '{"status":"Success"}'));
 
         Test.startTest();
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c FROM Sync_Item__c WHERE Id = :unifiedItem.Id];
-        System.assertEquals('Synced', result.StatusPk__c);
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE Id = :item.Id];
+        System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK');
+        System.assertEquals(null, result.ErrorLogTxt__c, 'Error log should be clear');
     }
 
     @IsTest
-    static void testProcessorFailure() {
+    static void testProcessHttpFailure() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        Sync_Item__c item = new Sync_Item__c(
-            TicketId__c = t.Id,
-            ObjectTypePk__c = 'Ticket_Comment__c',
-            StatusPk__c = 'Queued',
-            // FIX: Added Payload so the processor attempts to send it.
-            // Without payload, processor skips sending and marks as Synced (Success).
-            PayloadTxt__c = '{"force":"fail"}' 
-        );
-        insert item;
-
-        // Mock a 500 error
-        Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(500, 'Server Error'));
-
-        Test.startTest();
-        System.enqueueJob(new SyncItemProcessor());
-        Test.stopTest();
-
-        Sync_Item__c result = [SELECT StatusPk__c FROM Sync_Item__c WHERE Id = :item.Id];
-        // Now it should actually fail
-        System.assert(TRUE,'true');
-        //System.assertEquals('Failed', result.StatusPk__c);
-    }
-
-    @IsTest
-    static void testSourceRecordDeleted() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        Ticket_Comment__c temp = new Ticket_Comment__c(TicketId__c = t.Id, BodyTxt__c = 'To Delete');
-        insert temp;
-        Id deletedId = temp.Id;
-        delete temp;
+        Request__c req = [SELECT Id, TicketId__c FROM Request__c LIMIT 1];
 
         Sync_Item__c item = new Sync_Item__c(
             TicketId__c = t.Id,
-            LocalRecordIdTxt__c = deletedId,
-            ObjectTypePk__c = 'Ticket_Comment__c',
-            StatusPk__c = 'Queued',
-            // FIX: Added Payload so processor attempts logic
-            PayloadTxt__c = '{"force":"fail"}' 
+            RequestId__c = req.Id,
+            LocalRecordIdTxt__c = t.Id, 
+            ObjectTypePk__c = 'Ticket__c',
+            PayloadTxt__c = '{"Action":"Fail"}',
+            DirectionPk__c = 'Outbound',
+            StatusPk__c = 'Queued'
         );
         insert item;
 
-        // Force failure via Mock since the unified processor doesn't query the deleted record
+        // Mock 500 Server Error
         Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(500, 'Server Error'));
 
         Test.startTest();
@@ -148,7 +98,47 @@ private class SyncItemProcessorTest {
         Test.stopTest();
 
         Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE Id = :item.Id];
-        System.assert(TRUE,'true');
-        //System.assertEquals('Failed', result.StatusPk__c);
+        System.assertEquals('Failed', result.StatusPk__c, 'Status should fail on 500 error');
+        System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
+    }
+
+    @IsTest
+    static void testMissingEndpointConfiguration() {
+        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        
+        // Create a Vendor WITHOUT a URL
+        Network_Entity__c badVendor = new Network_Entity__c(
+            Name = 'Bad Config', 
+            EntityTypePk__c = 'Vendor', 
+            StatusPk__c = 'Active'
+            // Missing IntegrationEndpointUrlTxt__c
+        );
+        insert badVendor;
+
+        Request__c badReq = new Request__c(
+            TicketId__c = t.Id,
+            DeliveryEntityId__c = badVendor.Id,
+            StatusPk__c = 'Active',
+            RemoteTicketIdTxt__c = 'REMOTE-BAD'
+        );
+        insert badReq;
+
+        Sync_Item__c item = new Sync_Item__c(
+            TicketId__c = t.Id,
+            RequestId__c = badReq.Id,
+            ObjectTypePk__c = 'Ticket__c',
+            PayloadTxt__c = '{}',
+            DirectionPk__c = 'Outbound',
+            StatusPk__c = 'Queued'
+        );
+        insert item;
+
+        Test.startTest();
+        System.enqueueJob(new SyncItemProcessor());
+        Test.stopTest();
+
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE Id = :item.Id];
+        System.assertEquals('Failed', result.StatusPk__c, 'Should fail if URL is missing');
+        System.assert(result.ErrorLogTxt__c.contains('Configuration Error'), 'Should log config error');
     }
 }

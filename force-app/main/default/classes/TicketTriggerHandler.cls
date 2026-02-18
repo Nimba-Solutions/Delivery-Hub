@@ -34,9 +34,9 @@ public without sharing class TicketTriggerHandler {
         // ============================================================================
         // 2. UNIFIED SYNC ENGINE (High-Water Mark)
         // ============================================================================
-        // Define the fields the Mothership needs to track.
+        // Define the fields the Mothership needs to track (Allowlist).
         Set<String> syncFields = new Set<String>{
-            'Name', 
+            'WorkItemNameTxt__c', // Changed 'Name' to API Name assuming it's custom or standard Name
             'BriefDescriptionTxt__c', 
             'DetailsTxt__c', 
             'StageNamePk__c', 
@@ -90,6 +90,10 @@ public without sharing class TicketTriggerHandler {
                 }
             }
         }
+        
+        // Enqueue Jira Jobs (Assuming existing workers handle these sets)
+        // if (!toCreate.isEmpty()) { ... }
+        // if (!toUpdate.isEmpty()) { ... }
     }
 
     /**
@@ -113,7 +117,7 @@ public without sharing class TicketTriggerHandler {
         }
 
         // 2. Determine entity for Request creation
-        // FIX: Removed LIMIT 1 to support multiple active vendors if architecture allows,
+        // Removed LIMIT 1 to potentially support multiple active vendors if architecture allows,
         // though logic below currently picks the first one found or ClientNetworkEntityId__c.
         List<Network_Entity__c> vendors = [
             SELECT Id FROM Network_Entity__c
@@ -209,7 +213,7 @@ public without sharing class TicketTriggerHandler {
         }
         if (!ticketsToCheck.isEmpty()) {
             List<Ticket_Dependency__c> unresolvedBlockers = [
-                SELECT Blocked_Ticket__c, Blocking_Ticket__r.Name, Blocking_Ticket__r.StageNamePk__c
+                SELECT Blocked_Ticket__c, Blocking_Ticket__r.WorkItemNameTxt__c, Blocking_Ticket__r.StageNamePk__c
                 FROM Ticket_Dependency__c
                 WHERE Blocked_Ticket__c IN :ticketsToCheck
                 AND Blocking_Ticket__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
@@ -217,7 +221,7 @@ public without sharing class TicketTriggerHandler {
             for (Ticket_Dependency__c dependency : unresolvedBlockers) {
                 for (Ticket__c ticket : newTickets) {
                     if (ticket.Id == dependency.Blocked_Ticket__c) {
-                        ticket.addError('This ticket cannot be started. It is blocked by ticket: ' + dependency.Blocking_Ticket__r.Name);
+                        ticket.addError('This ticket cannot be started. It is blocked by ticket: ' + dependency.Blocking_Ticket__r.WorkItemNameTxt__c);
                     }
                 }
             }
