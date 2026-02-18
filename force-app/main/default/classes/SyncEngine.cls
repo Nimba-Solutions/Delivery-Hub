@@ -1,35 +1,31 @@
 /**
  * @description Core engine for handling outbound synchronization.
- * UPDATED: Replaces 'DeliveryHubSyncHandler' logic.
- * Uses Request__c to dynamically route updates to the correct Vendor(s).
+ * Implements Push/Pull Architecture with Smart Routing and Allowlist Filtering.
  */
 public without sharing class SyncEngine {
 
-    // Prevent recursive triggers
+    // Prevent recursive triggers during Inbound processing
     private static Boolean isSyncContext = false;
 
-    /**
-     * @description Sets the sync context to prevent recursive trigger loops.
-     */
     public static void setSyncContext() {
         isSyncContext = true;
     }
 
     /**
-     * @description Generic entry point for Triggers.
-     * Automatically finds the specific Vendor(s) for these records via Request__c.
-     * @param newRecords List of new records (Trigger.new)
-     * @param oldMap Map of old records (Trigger.oldMap)
-     * @param fieldsToTrack Set of field API names to monitor for changes
+     * @description Main Entry Point. Captures changes, applies logic, and queues Sync Items.
+     * @param newRecords Trigger.new
+     * @param oldMap Trigger.oldMap
+     * @param allowedFields Set of API names to sync (The Allowlist)
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> fieldsToTrack) {
+    public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
         
+        // 1. Context Check (Optional: relying on Smart Routing is safer for Hubs, but this saves CPU on direct-echo)
         if (isSyncContext) { return; }
         if (newRecords == null || newRecords.isEmpty()) { return; }
 
         try {
-            // 1. EXTRACT TICKET IDs
+            // 2. Resolve Parent Ticket IDs
             Set<Id> ticketIds = new Set<Id>();
             Map<Id, Id> recordToTicketId = new Map<Id, Id>();
 
@@ -43,9 +39,11 @@ public without sharing class SyncEngine {
 
             if (ticketIds.isEmpty()) { return; }
 
-            // 2. FIND ROUTES (The "Network" Logic)
+            // 3. Find Active Routes (Requests)
+            // We fetch the RemoteTicketIdTxt__c to perform Smart Routing (Loop Prevention)
             List<Request__c> connections = [
-                SELECT Id, TicketId__c, DeliveryEntityId__c, RemoteTicketIdTxt__c 
+                SELECT Id, TicketId__c, DeliveryEntityId__c, RemoteTicketIdTxt__c, 
+                       DeliveryEntityId__r.StatusPk__c
                 FROM Request__c 
                 WHERE TicketId__c IN :ticketIds 
                 AND StatusPk__c != 'Inactive' 
@@ -60,50 +58,56 @@ public without sharing class SyncEngine {
                 routes.get(r.TicketId__c).add(r);
             }
 
-            // 3. GENERATE SYNC ITEMS
+            // 4. Process Records
             List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
 
             for (SObject rec : newRecords) {
-                
-                // --- LOOP PREVENTION START ---
-                Object sourceVal = getSafeValue(rec, 'SourcePk__c', 'delivery__SourcePk__c');
-                String source = (sourceVal != null) ? (String)sourceVal : null;
+                SObject oldRec = (oldMap != null) ? oldMap.get(rec.Id) : null;
 
-                if (String.isNotBlank(source) && source != 'Client') {
-                    continue; 
-                }
-                // --- LOOP PREVENTION END ---
-
-                // Change Detection
-                Boolean shouldSync = false;
-                if (oldMap == null) {
-                    shouldSync = true; 
-                } else if (fieldsToTrack != null) {
-                    SObject oldRec = oldMap.get(rec.Id);
-                    for (String field : fieldsToTrack) {
-                        Object newVal = getSafeValue(rec, field, 'delivery__' + field);
-                        Object oldVal = getSafeValue(oldRec, field, 'delivery__' + field);
-                        
-                        if (newVal != oldVal) {
-                            shouldSync = true;
+                // --- A. Field Change Check (Optimization) ---
+                // If allowedFields is provided, check if any of them actually changed.
+                Boolean hasChanged = false;
+                if (oldRec == null) {
+                    hasChanged = true; // Always sync on Insert
+                } else if (allowedFields != null && !allowedFields.isEmpty()) {
+                    Map<String, Object> newFields = rec.getPopulatedFieldsAsMap();
+                    Map<String, Object> oldFields = oldRec.getPopulatedFieldsAsMap();
+                    
+                    for (String field : allowedFields) {
+                        Object nVal = newFields.containsKey(field) ? newFields.get(field) : newFields.get('delivery__' + field);
+                        Object oVal = oldFields.containsKey(field) ? oldFields.get(field) : oldFields.get('delivery__' + field);
+                        if (nVal != oVal) {
+                            hasChanged = true;
                             break;
                         }
                     }
                 } else {
-                    shouldSync = true;
+                    hasChanged = true; // No allowlist = Sync everything (e.g. Comments)
                 }
 
+                if (!hasChanged) { continue; }
+
+                // --- B. Route & Package ---
                 Id tId = recordToTicketId.get(rec.Id);
-                if (shouldSync && routes.containsKey(tId)) {
+                if (routes.containsKey(tId)) {
+                    
+                    // Get Origin ID for Smart Routing
+                    String originId = getSafeString(rec, 'RemoteExternalIdTxt__c');
+
                     for (Request__c req : routes.get(tId)) {
-                        itemsToInsert.add(createSyncItem(rec, req));
+                        // --- C. SMART ROUTING (Loop Prevention) ---
+                        // If the record came from Vendor A (originId), do NOT send it back to Vendor A (req.RemoteTicketId).
+                        if (String.isNotBlank(originId) && originId == req.RemoteTicketIdTxt__c) {
+                            continue; 
+                        }
+                        
+                        itemsToInsert.add(createSyncItem(rec, req, allowedFields));
                     }
                 }
             }
 
             if (!itemsToInsert.isEmpty()) {
                 insert itemsToInsert;
-                
                 if (!System.isQueueable() && !System.isFuture() && !System.isBatch()) {
                     System.enqueueJob(new SyncItemProcessor());
                 }
@@ -114,66 +118,63 @@ public without sharing class SyncEngine {
         }
     }
 
-    /**
-     * @description Helper to dynamically find the Ticket ID from supported objects.
-     * @param rec The SObject record to inspect.
-     * @return The Id of the related Ticket, or null if not found.
-     */
+    // --- HELPERS ---
+
     private static Id getTicketId(SObject rec) {
         String objName = rec.getSObjectType().getDescribe().getName();
-        
+        // Support Tickets, Comments, and potentially Files (ContentVersion requires extra query usually, simplified here)
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
             return (Id) rec.Id;
         } 
-        else if (objName.endsWith('Ticket_Comment__c') || objName.endsWith('Request__c')) { 
-            Object tId = getSafeValue(rec, 'TicketId__c', 'delivery__TicketId__c');
-            return (tId != null) ? (Id)tId : null;
-        }
-        return null; 
+        // Comments and Requests link via TicketId__c
+        Object tId = getSafeValue(rec, 'TicketId__c');
+        return (tId != null) ? (Id)tId : null;
     }
 
-    /**
-     * @description Helper to safely retrieve a field value without try/catch logic.
-     * @param rec The SObject record to read from.
-     * @param standardField The standard API name of the field.
-     * @param namespacedField The namespaced API name of the field.
-     * @return The value of the field if found, otherwise null.
-     */
-    private static Object getSafeValue(SObject rec, String standardField, String namespacedField) {
+    private static Object getSafeValue(SObject rec, String field) {
         Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
-        
-        if (fields.containsKey(standardField)) {
-            return fields.get(standardField);
-        } else if (fields.containsKey(namespacedField)) {
-            return fields.get(namespacedField);
-        }
+        if (fields.containsKey(field)) return fields.get(field);
+        if (fields.containsKey('delivery__' + field)) return fields.get('delivery__' + field);
         return null;
     }
 
-    /**
-     * @description Creates a Sync_Item__c record for a specific routing request.
-     * @param rec The record being synchronized.
-     * @param req The Request (connection) record determining the target.
-     * @return A populated Sync_Item__c record.
-     */
-    private static Sync_Item__c createSyncItem(SObject rec, Request__c req) {
+    private static String getSafeString(SObject rec, String field) {
+        return (String) getSafeValue(rec, field);
+    }
+
+    private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields) {
         Sync_Item__c item = new Sync_Item__c();
         item.StatusPk__c = 'Queued';
         item.DirectionPk__c = 'Outbound';
         item.LocalRecordIdTxt__c = (String)rec.Id;
         item.TicketId__c = req.TicketId__c;
-        item.RequestId__c = req.Id;
+        item.RequestId__c = req.Id; // Link strictly to this Request route
         
-        // FIX: Strip namespace to satisfy Restricted Picklist
-        String objectType = rec.getSObjectType().getDescribe().getName();
-        objectType = objectType.replace('delivery__', ''); 
-        item.ObjectTypePk__c = objectType;
+        String objType = rec.getSObjectType().getDescribe().getName().replace('delivery__', '');
+        item.ObjectTypePk__c = objType;
 
-        Map<String, Object> payload = rec.getPopulatedFieldsAsMap().clone();
-        payload.put('SourceId', rec.Id); 
-        payload.put('TargetId', req.RemoteTicketIdTxt__c); 
+        // --- FIELD FILTERING ---
+        Map<String, Object> rawMap = rec.getPopulatedFieldsAsMap();
+        Map<String, Object> finalPayload = new Map<String, Object>();
 
-        item.PayloadTxt__c = JSON.serialize(payload);
+        if (allowedFields != null && !allowedFields.isEmpty()) {
+            for (String field : allowedFields) {
+                // Check standard
+                if (rawMap.containsKey(field)) finalPayload.put(field, rawMap.get(field));
+                // Check namespaced
+                else if (rawMap.containsKey('delivery__' + field)) finalPayload.put(field, rawMap.get('delivery__' + field));
+            }
+        } else {
+            // If no allowlist (e.g. Comments), copy everything except system fields
+            // (You might want to add a default blocklist here in future)
+            finalPayload = rawMap.clone();
+        }
+
+        // --- HEADER INJECTION ---
+        finalPayload.put('SourceId', rec.Id); 
+        finalPayload.put('TargetId', req.RemoteTicketIdTxt__c); 
+
+        item.PayloadTxt__c = JSON.serialize(finalPayload);
         return item;
     }
 }
