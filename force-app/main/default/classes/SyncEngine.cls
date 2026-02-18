@@ -1,32 +1,25 @@
 /**
  * @description Core engine for handling outbound synchronization.
- * Implements Push/Pull Architecture with Smart Routing and Allowlist Filtering.
+ * UPDATED: Ignores routes missing a Remote ID to prevent ledger pollution.
  */
 public without sharing class SyncEngine {
 
     private static Boolean isSyncContext = false;
-    private static Set<String> blockedOrigins = new Set<String>();
+    @TestVisible private static Set<String> blockedOrigins = new Set<String>();
 
-    /**
-     * @description Sets the sync context to prevent recursive triggers.
-     */
     public static void setSyncContext() {
         isSyncContext = true;
     }
     
     /**
-     * @description Called by Ingestor to prevent echoing updates back to this specific origin.
-     * @param remoteId The external ID of the source system to block.
+     * @description Normalizes and adds an origin to the block list.
      */
     public static void ignoreOrigin(String remoteId) {
         if (String.isNotBlank(remoteId)) {
-            blockedOrigins.add(remoteId);
+            blockedOrigins.add(remoteId.trim());
         }
     }
 
-    /**
-     * @description Main Entry Point. Captures changes and queues Sync Items.
-     */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
         if (isSyncContext || newRecords == null || newRecords.isEmpty()) {
@@ -47,6 +40,7 @@ public without sharing class SyncEngine {
 
             if (ticketIds.isEmpty()) { return; }
 
+            // Query active connections
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
                 FROM Request__c 
@@ -55,7 +49,6 @@ public without sharing class SyncEngine {
 
             Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
             for (Request__c r : connections) {
-                // Use Safe Value to get the TicketId in namespaced orgs
                 Id rTicketId = (Id) getSafeValue(r, 'TicketId__c');
                 if (rTicketId == null) { continue; }
                 if (!routes.containsKey(rTicketId)) {
@@ -73,9 +66,11 @@ public without sharing class SyncEngine {
                 Id tId = recordToTicketId.get(rec.Id);
                 if (routes.containsKey(tId)) {
                     for (Request__c req : routes.get(tId)) {
-                        // CRITICAL: Use Safe Value for the Echo Suppression Check
                         String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
-                        if (String.isNotBlank(remoteId) && blockedOrigins.contains(remoteId)) {
+                        
+                        // FIX: If no remote ID exists, we can't sync. If it is blocked, we shouldn't sync.
+                        if (String.isBlank(remoteId) || blockedOrigins.contains(remoteId.trim())) {
+                            System.debug(LoggingLevel.INFO, 'SyncEngine: Skipping route for ' + remoteId);
                             continue; 
                         }
                         itemsToInsert.add(createSyncItem(rec, req, allowedFields));
