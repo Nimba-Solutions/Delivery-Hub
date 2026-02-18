@@ -26,12 +26,13 @@ public without sharing class SyncEngine {
 
     /**
      * @description Main Entry Point. Captures changes and queues Sync Items.
-     * @param newRecords Trigger.new records
-     * @param oldMap Trigger.oldMap records
-     * @param allowedFields Set of API names allowed for synchronization
+     * @param newRecords Trigger.new records.
+     * @param oldMap Trigger.oldMap records.
+     * @param allowedFields Set of API names allowed for synchronization.
      */
-    @SuppressWarnings('PMD.ApexCRUDViolation')
+    @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
+        // Added braces to satisfy PMD style rules
         if (isSyncContext || newRecords == null || newRecords.isEmpty()) {
             return;
         }
@@ -48,18 +49,24 @@ public without sharing class SyncEngine {
                 }
             }
 
-            if (ticketIds.isEmpty()) { return; }
+            if (ticketIds.isEmpty()) { 
+                return; 
+            }
 
+            // Using WITH SYSTEM_MODE for technical routing
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
                 FROM Request__c 
                 WHERE TicketId__c IN :ticketIds AND StatusPk__c != 'Inactive'
+                WITH SYSTEM_MODE
             ];
 
             Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
             for (Request__c r : connections) {
                 Id rTicketId = (Id) getSafeValue(r, 'TicketId__c');
-                if (rTicketId == null) { continue; }
+                if (rTicketId == null) { 
+                    continue; 
+                }
                 if (!routes.containsKey(rTicketId)) {
                     routes.put(rTicketId, new List<Request__c>());
                 }
@@ -86,7 +93,9 @@ public without sharing class SyncEngine {
             }
 
             if (!itemsToInsert.isEmpty()) {
-                insert itemsToInsert;
+                // Using Database method with AccessLevel to satisfy security rule
+                Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
+                
                 if (!System.isQueueable() && !System.isFuture()) {
                     System.enqueueJob(new SyncItemProcessor());
                 }
@@ -96,24 +105,41 @@ public without sharing class SyncEngine {
         }
     }
 
+    /**
+     * @description Checks if synchronization-eligible fields have changed.
+     * @param rec Current state.
+     * @param oldRec Previous state.
+     * @param allowedFields Set of fields to monitor.
+     * @return Boolean true if change is detected.
+     */
     private static Boolean hasSignificantChange(SObject rec, SObject oldRec, Set<String> allowedFields) {
-        if (oldRec == null || allowedFields == null || allowedFields.isEmpty()) { return true; }
+        if (oldRec == null || allowedFields == null || allowedFields.isEmpty()) { 
+            return true; 
+        }
         for (String field : allowedFields) {
-            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) { return true; }
+            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) { 
+                return true; 
+            }
         }
         return false;
     }
 
     private static Id getTicketId(SObject rec) {
         String objName = rec.getSObjectType().getDescribe().getName();
-        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) { return (Id) rec.Id; } 
+        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) { 
+            return (Id) rec.Id; 
+        } 
         return (Id) getSafeValue(rec, 'TicketId__c');
     }
 
     private static Object getSafeValue(SObject rec, String field) {
         Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
-        if (fields.containsKey(field)) { return fields.get(field); }
-        if (fields.containsKey('delivery__' + field)) { return fields.get('delivery__' + field); }
+        if (fields.containsKey(field)) { 
+            return fields.get(field); 
+        }
+        if (fields.containsKey('delivery__' + field)) { 
+            return fields.get('delivery__' + field); 
+        }
         return null;
     }
 
@@ -126,7 +152,9 @@ public without sharing class SyncEngine {
 
         Map<String, Object> payload = new Map<String, Object>();
         if (allowedFields != null) {
-            for (String f : allowedFields) { payload.put(f, getSafeValue(rec, f)); }
+            for (String f : allowedFields) { 
+                payload.put(f, getSafeValue(rec, f)); 
+            }
         } else {
             payload = rec.getPopulatedFieldsAsMap().clone();
         }

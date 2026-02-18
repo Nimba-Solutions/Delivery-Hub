@@ -12,7 +12,6 @@ public without sharing class DeliverySyncItemIngestor {
     public static void processInboundItem(String objectType, Map<String, Object> payload) {
         
         // 1. Prevent Echo Loops
-        // We tell the Engine: "We are currently syncing, don't fire outbound triggers."
         SyncEngine.setSyncContext();
 
         Schema.SObjectType targetType = findSObjectType(objectType);
@@ -21,8 +20,8 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         // 2. Extract Keys
-        String sourceId = (String) payload.get('SourceId'); // The Remote ID
-        String targetId = (String) payload.get('TargetId'); // Remote's Parent ID (if linked)
+        String sourceId = (String) payload.get('SourceId'); 
+        String targetId = (String) payload.get('TargetId'); 
         
         // 3. LEDGER LOOKUP: Find Local Record ID
         Id localRecordId = findLocalId(targetType, sourceId);
@@ -30,13 +29,11 @@ public without sharing class DeliverySyncItemIngestor {
         SObject recordToUpsert;
         
         if (localRecordId != null) {
-            // --- UPDATE PATH ---
             recordToUpsert = targetType.newSObject(localRecordId);
         } else {
-            // --- INSERT PATH ---
             recordToUpsert = targetType.newSObject();
             
-            // Handle Parenting (e.g., Linking a new Comment to an existing local Ticket)
+            // Handle Parenting
             if (String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
                 Id localParentId = findLocalTicketId(targetId);
                 if (localParentId != null) {
@@ -48,47 +45,50 @@ public without sharing class DeliverySyncItemIngestor {
         // 4. Map Payload to Fields
         mapFields(recordToUpsert, payload, targetType);
 
-        // 5. Audit: Mark as coming from Vendor
-        // Wrapped in try/catch to handle orgs where the SourcePk__c field doesn't exist yet
+        // 5. Audit Logic
         try {
             putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
         } catch (Exception e) {
-            System.debug(LoggingLevel.FINE, 'SourcePk__c field not found, skipping audit stamp.');
+            System.debug(LoggingLevel.FINE, 'Audit field missing: ' + e.getMessage());
         }
 
-        // 6. Execute DML
+        // 6. Execute DML with Explicit Access Levels
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
             
             // 7. WRITE TO LEDGER
-            // Record the mapping so future updates to this Remote ID find this Local ID.
             createLedgerEntry(objectType, sourceId, recordToUpsert.Id);
         }
     }
 
     // --- LEDGER HELPERS ---
 
+    /**
+     * @description Finds local ID using SOQL with Security enforcement.
+     */
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
         
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            // Tickets use the Request table as the bridge
+            // Added WITH USER_MODE to satisfy CRUD security rule
             List<Request__c> reqs = [
                 SELECT TicketId__c 
                 FROM Request__c 
                 WHERE RemoteTicketIdTxt__c = :remoteId 
+                WITH USER_MODE 
                 LIMIT 1
             ];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
-            // Others use previous Sync_Items as the ledger
+            // Added WITH USER_MODE to satisfy CRUD security rule
             List<Sync_Item__c> ledger = [
                 SELECT LocalRecordIdTxt__c 
                 FROM Sync_Item__c 
                 WHERE RemoteExternalIdTxt__c = :remoteId
                 AND ObjectTypePk__c = :objName.replace('delivery__', '')
+                WITH USER_MODE 
                 LIMIT 1
             ];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
@@ -96,8 +96,13 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static Id findLocalTicketId(String remoteTicketId) {
+        // Added WITH USER_MODE to satisfy CRUD security rule
         List<Request__c> reqs = [
-            SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId LIMIT 1
+            SELECT TicketId__c 
+            FROM Request__c 
+            WHERE RemoteTicketIdTxt__c = :remoteTicketId 
+            WITH USER_MODE 
+            LIMIT 1
         ];
         return reqs.isEmpty() ? null : reqs[0].TicketId__c;
     }
@@ -110,7 +115,9 @@ public without sharing class DeliverySyncItemIngestor {
         item.RemoteExternalIdTxt__c = remoteId;
         item.LocalRecordIdTxt__c = (String)localId;
         item.PayloadTxt__c = 'Ledger Mapping Created';
-        insert item;
+        
+        // Use Database method with AccessLevel to satisfy security rule
+        Database.insert(item, AccessLevel.USER_MODE);
     }
 
     // --- UTILITIES ---
@@ -120,14 +127,23 @@ public without sharing class DeliverySyncItemIngestor {
         Set<String> blocklist = new Set<String>{'SourceId', 'TargetId', 'attributes', 'Id'};
 
         for (String key : payload.keySet()) {
-            if (blocklist.contains(key)) continue;
+            // Added curly braces to satisfy Code Style rule
+            if (blocklist.contains(key)) { 
+                continue; 
+            }
 
             SObjectField field = fieldMap.get(key);
-            if (field == null) field = fieldMap.get('delivery__' + key);
+            // Added curly braces to satisfy Code Style rule
+            if (field == null) { 
+                field = fieldMap.get('delivery__' + key); 
+            }
 
             if (field != null && field.getDescribe().isUpdateable()) {
                 Object val = payload.get(key);
-                if (val == null) { record.put(field, null); continue; }
+                if (val == null) { 
+                    record.put(field, null); 
+                    continue; 
+                }
                 
                 Schema.DisplayType dtype = field.getDescribe().getType();
                 if (dtype == Schema.DisplayType.DATE) {
@@ -145,14 +161,24 @@ public without sharing class DeliverySyncItemIngestor {
         try {
             rec.put(field, val);
         } catch (Exception e) {
-            try { rec.put('delivery__' + field, val); } catch (Exception ex) {}
+            try { 
+                rec.put('delivery__' + field, val); 
+            } catch (Exception ex) {
+                // Added debug to satisfy EmptyCatchBlock rule
+                System.debug(LoggingLevel.FINEST, 'Namespace fallback failed: ' + ex.getMessage());
+            }
         }
     }
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) return gd.get(apiName);
-        if (gd.containsKey('delivery__' + apiName)) return gd.get('delivery__' + apiName);
+        // Added curly braces to satisfy Code Style rule
+        if (gd.containsKey(apiName)) { 
+            return gd.get(apiName); 
+        }
+        if (gd.containsKey('delivery__' + apiName)) { 
+            return gd.get('delivery__' + apiName); 
+        }
         return null;
     }
 }
