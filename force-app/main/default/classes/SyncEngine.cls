@@ -6,9 +6,22 @@ public without sharing class SyncEngine {
 
     // Prevent recursive triggers during Inbound processing
     private static Boolean isSyncContext = false;
+    
+    // LEDGER PATTERN: In-memory list of Remote IDs to ignore (Prevent Loops/Echoes)
+    // The Receiver (Ingestor) populates this before performing DML.
+    private static Set<String> blockedOrigins = new Set<String>();
 
     public static void setSyncContext() {
         isSyncContext = true;
+    }
+    
+    /**
+     * @description Called by Ingestor to prevent echoing updates back to this specific origin.
+     */
+    public static void ignoreOrigin(String remoteId) {
+        if (String.isNotBlank(remoteId)) {
+            blockedOrigins.add(remoteId);
+        }
     }
 
     /**
@@ -20,7 +33,7 @@ public without sharing class SyncEngine {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
         
-        // 1. Context Check
+        // 1. Context Check (Global "Nuclear" Switch)
         if (isSyncContext) {
             return;
         }
@@ -97,11 +110,10 @@ public without sharing class SyncEngine {
                 Id tId = recordToTicketId.get(rec.Id);
                 if (routes.containsKey(tId)) {
                     
-                    String originId = getSafeString(rec, 'RemoteExternalIdTxt__c');
-
                     for (Request__c req : routes.get(tId)) {
                         // --- C. SMART ROUTING (Loop Prevention) ---
-                        if (String.isNotBlank(originId) && originId == req.RemoteTicketIdTxt__c) {
+                        // Check against the in-memory blocked list (populated by Receiver)
+                        if (blockedOrigins.contains(req.RemoteTicketIdTxt__c)) {
                             continue; 
                         }
                         
@@ -140,7 +152,6 @@ public without sharing class SyncEngine {
 
     private static Object getSafeValue(SObject rec, String field) {
         Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
-        // PMD FIX: Added braces for if statements
         if (fields.containsKey(field)) {
             return fields.get(field);
         }
@@ -148,10 +159,6 @@ public without sharing class SyncEngine {
             return fields.get('delivery__' + field);
         }
         return null;
-    }
-
-    private static String getSafeString(SObject rec, String field) {
-        return (String) getSafeValue(rec, field);
     }
 
     private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields) {
@@ -170,7 +177,6 @@ public without sharing class SyncEngine {
 
         if (allowedFields != null && !allowedFields.isEmpty()) {
             for (String field : allowedFields) {
-                // PMD FIX: Added braces for if/else statements
                 if (rawMap.containsKey(field)) {
                     finalPayload.put(field, rawMap.get(field));
                 } else if (rawMap.containsKey('delivery__' + field)) {
