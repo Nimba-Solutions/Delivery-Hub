@@ -3,6 +3,7 @@ global without sharing class DeliveryHubSyncService {
 
     /**
      * @description Handles incoming POST requests containing sync payloads.
+     * Identifies the object type from the URL and hands the payload to the ingestor.
      * URL Pattern: /services/apexrest/delivery/sync/Ticket__c
      */
     @HttpPost
@@ -24,7 +25,7 @@ global without sharing class DeliveryHubSyncService {
 
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
 
-            // 3. Hand off to Ingestor (Updated to reference the renamed class)
+            // 3. Hand off to Ingestor (Referencing renamed class) [cite: 1754, 1789]
             DeliverySyncItemIngestor.processInboundItem(objectType, payload);
 
             // 4. Respond

@@ -5,8 +5,8 @@
 public without sharing class DeliveryHubPoller {
 
     /**
-     * @description Detects the namespace prefix. 
-     * Returns '' on Client or 'delivery__' on Mothership.
+     * @description Detects the namespace prefix for namespaced scratch orgs.
+     * @return String prefix (e.g., 'delivery__') or empty string.
      */
     private static String getNamespace() {
         String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
@@ -14,8 +14,8 @@ public without sharing class DeliveryHubPoller {
     }
 
     /**
-     * @description Main entry point for polling updates.
-     * @return String Status message for the logs.
+     * @description Main entry point for polling updates. Fetches changes since the last sync.
+     * @return String Status message indicating success or specific error details.
      */
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation, PMD.ApexSOQLInjection')
     @AuraEnabled
@@ -57,7 +57,6 @@ public without sharing class DeliveryHubPoller {
                 ? lastSync.formatGmt('yyyy-MM-dd HH:mm:ss')
                 : '1900-01-01 00:00:00';
 
-            // Ensure the URL is formatted correctly
             if (endpointUrl.endsWith('/')) {
                 endpointUrl = endpointUrl.removeEnd('/');
             }
@@ -87,6 +86,10 @@ public without sharing class DeliveryHubPoller {
 
     /**
      * @description Processes a successful response and updates the sync timestamp.
+     * @param responseBody Raw JSON response from the Mothership.
+     * @param vendor The Network_Entity__c record being updated.
+     * @param ns The detected namespace prefix.
+     * @return String status summary.
      */
     private static String handleSuccess(String responseBody, Network_Entity__c vendor, String ns) {
         Map<String, Object> response = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
@@ -96,25 +99,25 @@ public without sharing class DeliveryHubPoller {
 
         String serverTimeStr = (String) response.get('latestServerTime');
         if (serverTimeStr != null && (successCount > 0 || events == null || events.isEmpty())) {
-            // Deserialize ISO string to DateTime
             DateTime dt = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
-
             vendor.put(ns + 'LastInboundSyncDateTime__c', dt);
-            // Use SYSTEM_MODE to ensure we can update the technical sync field
             Database.update(vendor, AccessLevel.SYSTEM_MODE);
         }
         return 'Success: Synced ' + successCount + ' items.';
     }
 
     /**
-     * @description Iterates through events and hands them off to the SyncService.
+     * @description Iterates through events and hands them off to the Ingestor logic.
+     * @param events List of event objects from the Mothership.
+     * @return Integer number of successfully processed events.
      */
     private static Integer processEvents(List<Object> events) {
         Integer count = 0;
         for (Object itemObj : events) {
             Map<String, Object> item = (Map<String, Object>) itemObj;
             try {
-                DeliveryHubSyncService.processSync(
+                // FIXED: Pointing to the new ingestor class and method
+                DeliverySyncItemIngestor.processInboundItem(
                     (String) item.get('objectType'), 
                     (Map<String, Object>) item.get('payload')
                 );

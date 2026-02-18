@@ -3,58 +3,68 @@ private class DeliveryHubSyncResourceTest {
 
     @TestSetup
     static void makeData() {
-        // Setup a record to update (Target)
-        // We use Ticket__c as the standard object for these tests
+        // 1. Setup a local record to update
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog',
             BriefDescriptionTxt__c = 'Original Description'
         );
         insert t;
+
+        // 2. Setup Network Entity (Vendor)
+        Network_Entity__c vendor = new Network_Entity__c(
+            Name = 'Mothership',
+            EntityTypePk__c = 'Vendor',
+            StatusPk__c = 'Active'
+        );
+        insert vendor;
+
+        // 3. Setup the Bridge (Request) linking Local ID to a Remote ID
+        // The Ledger Pattern requires this to find the local ticket
+        insert new Request__c(
+            TicketId__c = t.Id,
+            DeliveryEntityId__c = vendor.Id,
+            StatusPk__c = 'Active',
+            RemoteTicketIdTxt__c = 'REMOTE-TKT-777'
+        );
     }
 
     /**
-     * @description Happy Path: Verifies that a valid JSON request updates the record.
+     * @description Happy Path: Verifies that a valid JSON request updates the record 
+     * using the SourceId (Remote ID) lookup.
      */
     @IsTest
     static void testHandleIncomingSyncSuccess() {
-        // 1. Get Target ID
-        Ticket__c target = [SELECT Id FROM Ticket__c LIMIT 1];
+        // 1. Prepare JSON Payload using SourceId
+        Map<String, Object> jsonMap = new Map<String, Object>{
+            'SourceId' => 'REMOTE-TKT-777',
+            'BriefDescriptionTxt__c' => 'Updated via Sync Resource',
+            'StageNamePk__c' => 'In Development'
+        };
         
-        // 2. Prepare JSON Payload
-        Map<String, Object> jsonMap = new Map<String, Object>();
-        jsonMap.put('TargetId', target.Id);
-        jsonMap.put('BriefDescriptionTxt__c', 'Updated via Sync');
-        jsonMap.put('StageNamePk__c', 'In Development');
-        
-        String jsonBody = JSON.serialize(jsonMap);
-
-        // 3. Setup RestContext
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
-        // Note: The URL logic handles namespaces dynamically in the main class
-        req.requestURI = '/services/apexrest/v1/sync/Ticket__c'; 
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/Ticket__c'; 
         req.httpMethod = 'POST';
-        req.requestBody = Blob.valueOf(jsonBody);
+        req.requestBody = Blob.valueOf(JSON.serialize(jsonMap));
         
         RestContext.request = req;
         RestContext.response = res;
 
-        // 4. Execute
+        // 2. Execute
         Test.startTest();
         DeliveryHubSyncResource.handleIncomingSync();
         Test.stopTest();
 
-        // 5. Verify Response
-        System.assert(TRUE,'true');
-        //System.assertEquals(200, res.statusCode, 'Should return 200 OK');
-        //System.assert(res.responseBody.toString().contains('Success'), 'Response should mention Success');
+        // 3. Verify Response
+        System.assertEquals(200, res.statusCode, 'Should return 200 OK');
+        System.assert(res.responseBody.toString().contains('Success'), 'Response should mention Success');
 
-        // 6. Verify Database Update
-        //Ticket__c updatedTicket = [SELECT BriefDescriptionTxt__c, StageNamePk__c FROM Ticket__c WHERE Id = :target.Id];
-        //System.assertEquals('Updated via Sync', updatedTicket.BriefDescriptionTxt__c, 'Field should be updated');
-        //System.assertEquals('In Development', updatedTicket.StageNamePk__c, 'Stage should be updated');
+        // 4. Verify Database Update
+        Ticket__c updatedTicket = [SELECT BriefDescriptionTxt__c, StageNamePk__c FROM Ticket__c LIMIT 1];
+        System.assertEquals('Updated via Sync Resource', updatedTicket.BriefDescriptionTxt__c, 'Field should be updated via Ledger lookup');
+        System.assertEquals('In Development', updatedTicket.StageNamePk__c, 'Stage should be updated');
     }
 
     /**
@@ -65,9 +75,9 @@ private class DeliveryHubSyncResourceTest {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
-        req.requestURI = '/services/apexrest/v1/sync/Ticket__c';
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/Ticket__c';
         req.httpMethod = 'POST';
-        req.requestBody = null; // Empty
+        req.requestBody = null; 
 
         RestContext.request = req;
         RestContext.response = res;
@@ -77,21 +87,22 @@ private class DeliveryHubSyncResourceTest {
         Test.stopTest();
 
         System.assertEquals(400, res.statusCode, 'Should return 400 for empty body');
-        System.assertEquals('Empty Request Body', res.responseBody.toString());
+        System.assert(res.responseBody.toString().contains('Empty Request Body'));
     }
 
     /**
-     * @description Error Path: Verifies 400 Bad Request when TargetId is missing.
+     * @description Error Path: Verifies 400 Bad Request when SourceId is missing.
      */
     @IsTest
-    static void testHandleIncomingSyncMissingTargetId() {
-        Map<String, Object> jsonMap = new Map<String, Object>();
-        jsonMap.put('BriefDescriptionTxt__c', 'No ID provided');
+    static void testHandleIncomingSyncMissingSourceId() {
+        Map<String, Object> jsonMap = new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'No ID provided'
+        };
         
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
-        req.requestURI = '/services/apexrest/v1/sync/Ticket__c';
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/Ticket__c';
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serialize(jsonMap));
 
@@ -102,8 +113,8 @@ private class DeliveryHubSyncResourceTest {
         DeliveryHubSyncResource.handleIncomingSync();
         Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 for missing TargetId');
-        System.assert(res.responseBody.toString().contains('Missing TargetId'), 'Should mention missing ID');
+        System.assertEquals(400, res.statusCode, 'Should return 400 for missing SourceId');
+        System.assert(res.responseBody.toString().contains('Missing SourceId'), 'Should mention missing remote ID');
     }
 
     /**
@@ -111,16 +122,12 @@ private class DeliveryHubSyncResourceTest {
      */
     @IsTest
     static void testHandleIncomingSyncInvalidObjectType() {
-        Ticket__c target = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        Map<String, Object> jsonMap = new Map<String, Object>();
-        jsonMap.put('TargetId', target.Id);
+        Map<String, Object> jsonMap = new Map<String, Object>{ 'SourceId' => 'REMOTE-TKT-777' };
 
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
-        // INVALID Object Name in URL
-        req.requestURI = '/services/apexrest/v1/sync/NonExistentObject__c'; 
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/NonExistentObject__c'; 
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serialize(jsonMap));
 
@@ -143,9 +150,9 @@ private class DeliveryHubSyncResourceTest {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
-        req.requestURI = '/services/apexrest/v1/sync/Ticket__c';
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/Ticket__c';
         req.httpMethod = 'POST';
-        req.requestBody = Blob.valueOf('{ "TargetId": "123", "Bad Json: }'); // Syntax error
+        req.requestBody = Blob.valueOf('{ "SourceId": "123", "Bad Json: }'); 
 
         RestContext.request = req;
         RestContext.response = res;
