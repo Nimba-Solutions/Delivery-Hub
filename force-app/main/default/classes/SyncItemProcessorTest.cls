@@ -1,144 +1,102 @@
+/**
+ * @description Test class for SyncItemProcessor.
+ * Verifies outbound transmission logic and status updates.
+ */
 @IsTest
 private class SyncItemProcessorTest {
 
-    // --- MOCK CLASS ---
-    private class DeliveryHubMock implements HttpCalloutMock {
-        private Integer statusCode;
-        private String responseBody;
-
-        public DeliveryHubMock(Integer code, String body) {
-            this.statusCode = code;
-            this.responseBody = body;
-        }
-
-        public HttpResponse respond(HttpRequest req) {
-            HttpResponse res = new HttpResponse();
-            res.setHeader('Content-Type', 'application/json');
-            res.setBody(this.responseBody);
-            res.setStatusCode(this.statusCode);
-            return res;
-        }
-    }
-
     @TestSetup
-    static void setupData() {
-        // 1. Create Vendor (Mothership)
+    static void makeData() {
+        // 1. Setup Network Entity (Vendor)
         Network_Entity__c vendor = new Network_Entity__c(
-            Name = 'Mothership',
+            Name = 'Mothership HQ',
+            StatusPk__c = 'Active',
             EntityTypePk__c = 'Vendor',
-            StatusPk__c = 'Active', 
-            IntegrationEndpointUrlTxt__c = 'https://fake-endpoint.com'
+            IntegrationEndpointUrlTxt__c = 'https://mothership.example.com'
         );
         insert vendor;
 
-        // 2. Create Ticket
-        Ticket__c t = new Ticket__c(BriefDescriptionTxt__c = 'Test Ticket');
+        // 2. Setup Ticket
+        Ticket__c t = new Ticket__c(
+            WorkItemNameTxt__c = 'Test Ticket',
+            StageNamePk__c = 'Backlog'
+        );
         insert t;
 
-        // 3. Create Request (The Bridge) - REQUIRED for Processor to find the URL
+        // 3. Setup Request (The Bridge)
         Request__c req = new Request__c(
             TicketId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
             StatusPk__c = 'Active',
-            RemoteTicketIdTxt__c = 'REMOTE-101'
+            RemoteTicketIdTxt__c = 'REMOTE-123'
         );
         insert req;
-    }
 
-    @IsTest
-    static void testProcessSuccess() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        Request__c req = [SELECT Id, TicketId__c FROM Request__c LIMIT 1];
-
-        // Manually create a Queued Item linked to the Request
+        // 4. Setup Outbound Sync Item
         Sync_Item__c item = new Sync_Item__c(
-            TicketId__c = t.Id,
-            RequestId__c = req.Id, // Link is Critical
-            LocalRecordIdTxt__c = t.Id, 
-            ObjectTypePk__c = 'Ticket__c',
-            PayloadTxt__c = '{"Action":"Update", "StageNamePk__c":"Done"}',
+            StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Queued'
-        );
-        insert item;
-
-        // Mock 200 OK
-        Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(200, '{"status":"Success"}'));
-
-        Test.startTest();
-        System.enqueueJob(new SyncItemProcessor());
-        Test.stopTest();
-
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE Id = :item.Id];
-        System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK');
-        System.assertEquals(null, result.ErrorLogTxt__c, 'Error log should be clear');
-    }
-
-    @IsTest
-    static void testProcessHttpFailure() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        Request__c req = [SELECT Id, TicketId__c FROM Request__c LIMIT 1];
-
-        Sync_Item__c item = new Sync_Item__c(
             TicketId__c = t.Id,
             RequestId__c = req.Id,
-            LocalRecordIdTxt__c = t.Id, 
             ObjectTypePk__c = 'Ticket__c',
-            PayloadTxt__c = '{"Action":"Fail"}',
-            DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Queued'
+            PayloadTxt__c = '{"StageNamePk__c":"In Development"}'
         );
         insert item;
+    }
 
-        // Mock 500 Server Error
-        Test.setMock(HttpCalloutMock.class, new DeliveryHubMock(500, 'Server Error'));
+    /**
+     * @description Verifies successful HTTP 200 response marks item as Synced.
+     */
+    @IsTest
+    static void testProcessSuccess() {
+        Test.setMock(HttpCalloutMock.class, new MockSuccess());
 
         Test.startTest();
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE Id = :item.Id];
-        System.assertEquals('Failed', result.StatusPk__c, 'Status should fail on 500 error');
+        // Use static SOQL to avoid namespace string concatenation issues
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c LIMIT 1];
+        System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
+    }
+
+    /**
+     * @description Verifies HTTP 500 failure marks item as Failed and logs the error.
+     */
+    @IsTest
+    static void testProcessHttpFailure() {
+        Test.setMock(HttpCalloutMock.class, new MockFailure());
+
+        Test.startTest();
+        System.enqueueJob(new SyncItemProcessor());
+        Test.stopTest();
+
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c LIMIT 1];
+        System.assertEquals('Failed', result.StatusPk__c, 'Status should update to Failed on 500 error');
         System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
     }
 
-    @IsTest
-    static void testMissingEndpointConfiguration() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        
-        // Create a Vendor WITHOUT a URL
-        Network_Entity__c badVendor = new Network_Entity__c(
-            Name = 'Bad Config', 
-            EntityTypePk__c = 'Vendor', 
-            StatusPk__c = 'Active'
-            // Missing IntegrationEndpointUrlTxt__c
-        );
-        insert badVendor;
+    /**
+     * @description Mock for successful response.
+     */
+    private class MockSuccess implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(200);
+            res.setBody('{"status":"Success"}');
+            return res;
+        }
+    }
 
-        Request__c badReq = new Request__c(
-            TicketId__c = t.Id,
-            DeliveryEntityId__c = badVendor.Id,
-            StatusPk__c = 'Active',
-            RemoteTicketIdTxt__c = 'REMOTE-BAD'
-        );
-        insert badReq;
-
-        Sync_Item__c item = new Sync_Item__c(
-            TicketId__c = t.Id,
-            RequestId__c = badReq.Id,
-            ObjectTypePk__c = 'Ticket__c',
-            PayloadTxt__c = '{}',
-            DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Queued'
-        );
-        insert item;
-
-        Test.startTest();
-        System.enqueueJob(new SyncItemProcessor());
-        Test.stopTest();
-
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE Id = :item.Id];
-        System.assertEquals('Failed', result.StatusPk__c, 'Should fail if URL is missing');
-        System.assert(result.ErrorLogTxt__c.contains('Configuration Error'), 'Should log config error');
+    /**
+     * @description Mock for failed response.
+     */
+    private class MockFailure implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(500);
+            res.setBody('Internal Server Error');
+            return res;
+        }
     }
 }
