@@ -69,8 +69,7 @@ private class SyncEngineTest {
         insert c;
         Test.stopTest();
 
-        // Query all and filter in memory since ObjectType might be Long Text depending on config, 
-        // but usually checking the relation is safer.
+        // Query all and filter in memory
         List<Sync_Item__c> allItems = [
             SELECT Id, TicketId__c, ObjectTypePk__c, PayloadTxt__c 
             FROM Sync_Item__c 
@@ -100,7 +99,7 @@ private class SyncEngineTest {
         update t;
         Test.stopTest();
         
-        // FIX: Query all and filter in Apex because PayloadTxt__c is Long Text Area
+        // Filter in Apex because PayloadTxt__c is Long Text Area
         List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
         Boolean foundLoop = false;
         for (Sync_Item__c item : items) {
@@ -116,12 +115,12 @@ private class SyncEngineTest {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
         Request__c req = [SELECT RemoteTicketIdTxt__c FROM Request__c WHERE TicketId__c = :t.Id LIMIT 1];
 
-        // FIX: Use .put() to assign RemoteExternalIdTxt__c dynamically
-        // This prevents "Variable does not exist" error if the field is missing in your org currently.
+        // Use .put() to assign RemoteExternalIdTxt__c dynamically
         try {
             t.put('RemoteExternalIdTxt__c', req.RemoteTicketIdTxt__c); // 'REMOTE-TICKET-101'
         } catch(Exception e) {
-            System.debug('Field RemoteExternalIdTxt__c missing, skipping strict assignment for compilation.');
+            // FIX: Added LoggingLevel to satisfy PMD
+            System.debug(LoggingLevel.WARN, 'Field RemoteExternalIdTxt__c missing, skipping strict assignment for compilation.');
         }
         
         t.BriefDescriptionTxt__c = 'Echo Update';
@@ -130,7 +129,7 @@ private class SyncEngineTest {
         update t;
         Test.stopTest();
 
-        // FIX: Filter in memory
+        // Filter in memory
         List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
         Boolean foundEcho = false;
         for(Sync_Item__c item : items) {
@@ -139,8 +138,6 @@ private class SyncEngineTest {
             }
         }
         
-        // Note: If the field RemoteExternalIdTxt__c doesn't exist, this test might "fail to prevent" the echo,
-        // causing this assertion to fail. If that happens, you MUST create the field on Ticket__c.
         System.assertEquals(false, foundEcho, 'Should skip sync if Origin matches Destination (Smart Routing)');
     }
 
