@@ -8,7 +8,6 @@ public without sharing class SyncEngine {
     private static Boolean isSyncContext = false;
     
     // LEDGER PATTERN: In-memory list of Remote IDs to ignore (Prevent Loops/Echoes)
-    // The Receiver (Ingestor) populates this before performing DML.
     private static Set<String> blockedOrigins = new Set<String>();
 
     public static void setSyncContext() {
@@ -17,6 +16,7 @@ public without sharing class SyncEngine {
     
     /**
      * @description Called by Ingestor to prevent echoing updates back to this specific origin.
+     * @param remoteId The external ID of the source system to block (prevents loopback).
      */
     public static void ignoreOrigin(String remoteId) {
         if (String.isNotBlank(remoteId)) {
