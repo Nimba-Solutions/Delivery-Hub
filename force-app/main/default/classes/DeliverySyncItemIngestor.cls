@@ -44,7 +44,11 @@ public without sharing class DeliverySyncItemIngestor {
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
-            String cleanName = objName.contains('__') ? objName.split('__')[objName.split('__').size()-2] + '__c' : objName;
+            String cleanName = objName.contains('__') ? objName.split('__')[objName.split('__').size()-1] : objName;
+            // Handle specific case for namespaced packaging where split might leave suffix
+            if (cleanName == 'c') {
+                 cleanName = objName.split('__')[objName.split('__').size()-2] + '__c';
+            }
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
@@ -59,7 +63,11 @@ public without sharing class DeliverySyncItemIngestor {
         Sync_Item__c item = new Sync_Item__c();
         item.DirectionPk__c = 'Inbound';
         item.StatusPk__c = 'Synced';
-        item.ObjectTypePk__c = objType.contains('__') ? objType.split('__')[objType.split('__').size()-2] + '__c' : objType;
+        String cleanType = objType.contains('__') ? objType.split('__')[objType.split('__').size()-1] : objType;
+         if (cleanType == 'c') {
+             cleanType = objType.split('__')[objType.split('__').size()-2] + '__c';
+        }
+        item.ObjectTypePk__c = cleanType;
         item.RemoteExternalIdTxt__c = remoteId;
         item.LocalRecordIdTxt__c = (String)localId;
         item.PayloadTxt__c = 'Ledger Mapping Created';
