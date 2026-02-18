@@ -1,17 +1,19 @@
 /**
- * @description Queueable Worker for the CLIENT (Unmanaged/Scratch).
- * UPDATED: Injects 'SourceId' for deduplication and uses TicketId to find the bridge.
+ * @description Queueable Worker that processes 'Outbound' Sync Items.
+ * It reads the specific Endpoint from the linked Request and pushes the payload.
  */
 public inherited sharing class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
     public void execute(QueueableContext context) {
         
-        // 1. Query Queued Items
+        // 1. Query Queued Outbound Items linked to a valid Request route
         List<Sync_Item__c> items = [
-            SELECT Id, ObjectTypePk__c, StatusPk__c, PayloadTxt__c, 
-                   LocalRecordIdTxt__c, TicketId__c 
+            SELECT Id, ObjectTypePk__c, PayloadTxt__c, 
+                   RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
             FROM Sync_Item__c 
             WHERE StatusPk__c = 'Queued' 
+            AND DirectionPk__c = 'Outbound'
+            AND RequestId__c != NULL 
             WITH SYSTEM_MODE 
             LIMIT 50
         ];
@@ -23,39 +25,31 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
         List<Sync_Item__c> itemsToUpdate = new List<Sync_Item__c>();
 
         for (Sync_Item__c item : items) {
-            String payloadJson = item.PayloadTxt__c;
-            String objectType = item.ObjectTypePk__c;
-            
-            // Fix: Use Ticket ID to find the Request Bridge
-            String targetContextId = item.TicketId__c;
-            if (String.isBlank(targetContextId)) {
-                targetContextId = item.LocalRecordIdTxt__c;
-            }
-            
             try {
-                if (String.isNotBlank(payloadJson)) {
-                    // --- ENHANCEMENT: INJECT SOURCE ID ---
-                    // We parse the JSON, add the SourceId, and re-serialize.
-                    // This allows the Mothership to deduplicate retries.
-                    Map<String, Object> payloadMap = (Map<String, Object>) JSON.deserializeUntyped(payloadJson);
-                    if (!payloadMap.containsKey('SourceId')) {
-                        payloadMap.put('SourceId', item.LocalRecordIdTxt__c);
-                        payloadJson = JSON.serialize(payloadMap);
-                    }
-
-                    // Send to Mothership
-                    DeliveryHubSender.sendSyncPayload(objectType, targetContextId, payloadJson);
-                } 
+                String endpointUrl = item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
                 
-                item.StatusPk__c = 'Synced';
-                item.ErrorLogTxt__c = null;
+                // Validate Endpoint Configuration
+                if (String.isBlank(endpointUrl)) {
+                    item.StatusPk__c = 'Failed';
+                    item.ErrorLogTxt__c = 'Configuration Error: Linked Network Entity is missing Integration Endpoint URL.';
+                } else {
+                    // --- TRANSMISSION ---
+                    // The Payload is already fully formed by SyncEngine (including SourceId/TargetId)
+                    DeliveryHubSender.sendSyncPayload(
+                        endpointUrl, 
+                        item.ObjectTypePk__c, 
+                        item.PayloadTxt__c
+                    );
+                    
+                    item.StatusPk__c = 'Synced';
+                    item.ErrorLogTxt__c = null;
+                }
 
             } catch (Exception e) {
-                // If it's a timeout, we might retry, leading to duplicates.
-                // The SourceId fix above prevents the Mothership from creating dupes.
+                // Handle HTTP or System Errors
                 item.StatusPk__c = 'Failed';
                 item.ErrorLogTxt__c = e.getMessage();
-                System.debug(LoggingLevel.ERROR, 'Sync Error: ' + e.getMessage());
+                System.debug(LoggingLevel.ERROR, 'SyncItemProcessor Error: ' + e.getMessage());
             }
             itemsToUpdate.add(item);
         }
@@ -64,8 +58,16 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
             Database.update(itemsToUpdate, AccessLevel.SYSTEM_MODE);
         }
 
-        // Chain Job
-        Integer remaining = [SELECT Count() FROM Sync_Item__c WHERE StatusPk__c = 'Queued' WITH SYSTEM_MODE LIMIT 1];
+        // Chain Job if more outbound work exists
+        Integer remaining = [
+            SELECT Count() 
+            FROM Sync_Item__c 
+            WHERE StatusPk__c = 'Queued' 
+            AND DirectionPk__c = 'Outbound' 
+            WITH SYSTEM_MODE 
+            LIMIT 1
+        ];
+        
         if (remaining > 0 && !Test.isRunningTest()) {
             System.enqueueJob(new SyncItemProcessor());
         }

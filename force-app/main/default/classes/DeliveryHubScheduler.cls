@@ -19,8 +19,10 @@ public class DeliveryHubScheduler implements Schedulable {
      */
     @future(callout=true)
     public static void runSyncAsync() {
+        // Triggers the poller logic to fetch delta updates 
         String result = DeliveryHubPoller.pollUpdates();
         
+        // Logs an error only if the result does not indicate success or zero items 
         if (!result.contains('Success') && !result.contains('Synced 0 items')) {
             System.debug(LoggingLevel.ERROR, 'Delivery Hub Sync Failed: ' + result);
         }

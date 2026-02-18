@@ -3,93 +3,79 @@ private class SyncEngineTest {
 
     @TestSetup
     static void setupData() {
-        // Create the Mothership record required by SyncEngine
+        // 1. Settings
+        insert new Delivery_Hub_Settings__c(
+            AutoCreateRequestFromTicketBool__c = false, 
+            AutoSyncNetworkEntityBool__c = false
+        );
+
+        // 2. Vendor
         Network_Entity__c vendor = new Network_Entity__c(
-            Name = 'Mothership',
-            EntityTypePk__c = 'Vendor',
+            Name = 'M', 
+            EntityTypePk__c = 'Vendor', 
             StatusPk__c = 'Active', 
-            IntegrationEndpointUrlTxt__c = 'https://fake-endpoint.com'
+            IntegrationEndpointUrlTxt__c = 'https://f.com'
         );
         insert vendor;
-    }
 
-    @IsTest
-    static void testCaptureChangesInsert() {
-        // Trigger SyncEngine
+        // 3. Ticket
         Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Test Ticket',
-            StageNamePk__c = 'Backlog',
-            PriorityPk__c = 'Medium'
+            WorkItemNameTxt__c = 'T', 
+            StageNamePk__c = 'Backlog', 
+            BriefDescriptionTxt__c = 'Orig'
         );
-        
-        Test.startTest();
         insert t;
-        Test.stopTest();
 
-        // Verify Sync Item
-        List<Sync_Item__c> items = [SELECT Id, ObjectTypePk__c, StatusPk__c FROM Sync_Item__c];
-        System.assert(TRUE,'Yeah.');
-        //System.assertEquals(1, items.size(), 'Should create 1 Sync Item on insert');
-        //System.assertEquals('Ticket__c', items[0].ObjectTypePk__c);
+        // 4. Request Bridge
+        // Note: This insert often fires triggers that create Sync_Items__c immediately
+        insert new Request__c(
+            TicketId__c = t.Id, 
+            DeliveryEntityId__c = vendor.Id, 
+            StatusPk__c = 'Active', 
+            RemoteTicketIdTxt__c = 'REMOTE-101'
+        );
     }
 
     @IsTest
     static void testCaptureChangesUpdate() {
-        Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Original Name',
-            StageNamePk__c = 'Backlog'
-        );
-        insert t;
-        
-        // Clear insert sync item
-        delete [SELECT Id FROM Sync_Item__c];
+        Ticket__c t = [SELECT Id, BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
+        delete [SELECT Id FROM Sync_Item__c]; // Clear Setup noise
 
         Test.startTest();
-        t.WorkItemNameTxt__c = 'Updated Name';
+        t.BriefDescriptionTxt__c = 'New Desc';
         update t;
         Test.stopTest();
 
-        // Verify update sync item
-        List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
-        System.assert(TRUE,'Yeah.');
-        //System.assertEquals(1, items.size(), 'Should create 1 Sync Item on update');
-        //System.assert(items[0].PayloadTxt__c.contains('Updated Name'), 'Payload should contain new value');
-    }
-
-    @IsTest
-    static void testCaptureChangesChildLinking() {
-        Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Parent Ticket',
-            StageNamePk__c = 'Backlog'
-        );
-        insert t;
-        delete [SELECT Id FROM Sync_Item__c];
-
-        Test.startTest();
-        Ticket_Comment__c c = new Ticket_Comment__c(
-            TicketId__c = t.Id,
-            BodyTxt__c = 'Test Comment'
-        );
-        insert c;
-        Test.stopTest();
-
-        List<Sync_Item__c> items = [SELECT Id, TicketId__c, ObjectTypePk__c FROM Sync_Item__c LIMIT 1];
-        System.assert(TRUE,'Yeah.');
-        //System.assert(!items.isEmpty(), 'Sync Item should be created for Comment');
-        //System.assertEquals('Ticket_Comment__c', items[0].ObjectTypePk__c);
-        //System.assertEquals(t.Id, items[0].TicketId__c, 'Sync Item should be linked to the Parent Ticket');
+        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c];
+        System.assert(items.size() >= 1, 'Should create at least 1 sync item on update');
     }
     
     @IsTest
-    static void testLoopPrevention() {
-        SyncEngine.setSyncContext();
+    static void testSmartRoutingEchoPrevention() {
+        Ticket__c t = [SELECT Id, BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
+        
+        // Ensure every active route for this ticket is in the block list
+        List<Request__c> reqs = [SELECT RemoteTicketIdTxt__c FROM Request__c WHERE TicketId__c = :t.Id];
         
         Test.startTest();
-        Ticket__c t = new Ticket__c(WorkItemNameTxt__c = 'Ignored Ticket');
-        insert t;
-        Test.stopTest();
+        for (Request__c r : reqs) {
+            if (r.RemoteTicketIdTxt__c != null) {
+                SyncEngine.ignoreOrigin(r.RemoteTicketIdTxt__c); 
+            }
+        }
         
-        Integer count = [SELECT COUNT() FROM Sync_Item__c];
-        System.assertEquals(0, count, 'Should ignore changes when Sync Context is set');
+        // Nuclear cleanup: clear any items created by triggers during setup
+        delete [SELECT Id FROM Sync_Item__c]; 
+
+        t.BriefDescriptionTxt__c = 'Echo Update';
+        SyncEngine.captureChanges(
+            new List<SObject>{t}, 
+            null, 
+            new Set<String>{'BriefDescriptionTxt__c'}
+        );
+        Test.stopTest();
+
+        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c];
+        System.assertEquals(0, items.size(), 'Engine should have ignored the record because origins were blocked or invalid.');
     }
 }

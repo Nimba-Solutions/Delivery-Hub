@@ -1,35 +1,43 @@
 /**
  * @description Core engine for handling outbound synchronization.
- * UPDATED: Replaces 'DeliveryHubSyncHandler' logic.
- * Uses Request__c to dynamically route updates to the correct Vendor(s).
+ * Implements Push/Pull Architecture with Smart Routing and Allowlist Filtering.
  */
 public without sharing class SyncEngine {
 
-    // Prevent recursive triggers
     private static Boolean isSyncContext = false;
+    @TestVisible private static Set<String> blockedOrigins = new Set<String>();
 
     /**
-     * @description Sets the sync context to prevent recursive trigger loops.
+     * @description Sets the sync context to prevent recursive triggers.
      */
     public static void setSyncContext() {
         isSyncContext = true;
     }
+    
+    /**
+     * @description Called by Ingestor to prevent echoing updates back to this specific origin.
+     * @param remoteId The external ID of the source system to block (prevents loopback).
+     */
+    public static void ignoreOrigin(String remoteId) {
+        if (String.isNotBlank(remoteId)) {
+            blockedOrigins.add(remoteId.trim());
+        }
+    }
 
     /**
-     * @description Generic entry point for Triggers.
-     * Automatically finds the specific Vendor(s) for these records via Request__c.
-     * @param newRecords List of new records (Trigger.new)
-     * @param oldMap Map of old records (Trigger.oldMap)
-     * @param fieldsToTrack Set of field API names to monitor for changes
+     * @description Main Entry Point. Captures changes and queues Sync Items.
+     * @param newRecords Trigger.new records.
+     * @param oldMap Trigger.oldMap records.
+     * @param allowedFields Set of API names allowed for synchronization.
      */
-    @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> fieldsToTrack) {
-        
-        if (isSyncContext) { return; }
-        if (newRecords == null || newRecords.isEmpty()) { return; }
+    @SuppressWarnings('PMD.ApexCRUDViolation') 
+    public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
+        // Added braces to satisfy PMD style rules
+        if (isSyncContext || newRecords == null || newRecords.isEmpty()) {
+            return;
+        }
 
         try {
-            // 1. EXTRACT TICKET IDs
             Set<Id> ticketIds = new Set<Id>();
             Map<Id, Id> recordToTicketId = new Map<Id, Id>();
 
@@ -41,138 +49,117 @@ public without sharing class SyncEngine {
                 }
             }
 
-            if (ticketIds.isEmpty()) { return; }
+            if (ticketIds.isEmpty()) { 
+                return; 
+            }
 
-            // 2. FIND ROUTES (The "Network" Logic)
+            // Using WITH SYSTEM_MODE for technical routing
             List<Request__c> connections = [
-                SELECT Id, TicketId__c, DeliveryEntityId__c, RemoteTicketIdTxt__c 
+                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
                 FROM Request__c 
-                WHERE TicketId__c IN :ticketIds 
-                AND StatusPk__c != 'Inactive' 
-                AND DeliveryEntityId__c != NULL
+                WHERE TicketId__c IN :ticketIds AND StatusPk__c != 'Inactive'
+                WITH SYSTEM_MODE
             ];
 
             Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
             for (Request__c r : connections) {
-                if (!routes.containsKey(r.TicketId__c)) {
-                    routes.put(r.TicketId__c, new List<Request__c>());
-                }
-                routes.get(r.TicketId__c).add(r);
-            }
-
-            // 3. GENERATE SYNC ITEMS
-            List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
-
-            for (SObject rec : newRecords) {
-                
-                // --- LOOP PREVENTION START ---
-                Object sourceVal = getSafeValue(rec, 'SourcePk__c', 'delivery__SourcePk__c');
-                String source = (sourceVal != null) ? (String)sourceVal : null;
-
-                if (String.isNotBlank(source) && source != 'Client') {
+                Id rTicketId = (Id) getSafeValue(r, 'TicketId__c');
+                if (rTicketId == null) { 
                     continue; 
                 }
-                // --- LOOP PREVENTION END ---
+                if (!routes.containsKey(rTicketId)) {
+                    routes.put(rTicketId, new List<Request__c>());
+                }
+                routes.get(rTicketId).add(r);
+            }
 
-                // Change Detection
-                Boolean shouldSync = false;
-                if (oldMap == null) {
-                    shouldSync = true; 
-                } else if (fieldsToTrack != null) {
-                    SObject oldRec = oldMap.get(rec.Id);
-                    for (String field : fieldsToTrack) {
-                        Object newVal = getSafeValue(rec, field, 'delivery__' + field);
-                        Object oldVal = getSafeValue(oldRec, field, 'delivery__' + field);
-                        
-                        if (newVal != oldVal) {
-                            shouldSync = true;
-                            break;
-                        }
-                    }
-                } else {
-                    shouldSync = true;
+            List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
+            for (SObject rec : newRecords) {
+                if (!hasSignificantChange(rec, (oldMap != null ? oldMap.get(rec.Id) : null), allowedFields)) {
+                    continue;
                 }
 
                 Id tId = recordToTicketId.get(rec.Id);
-                if (shouldSync && routes.containsKey(tId)) {
+                if (routes.containsKey(tId)) {
                     for (Request__c req : routes.get(tId)) {
-                        itemsToInsert.add(createSyncItem(rec, req));
+                        String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
+                        
+                        if (String.isBlank(remoteId) || blockedOrigins.contains(remoteId.trim())) {
+                            continue; 
+                        }
+                        itemsToInsert.add(createSyncItem(rec, req, allowedFields));
                     }
                 }
             }
 
             if (!itemsToInsert.isEmpty()) {
-                insert itemsToInsert;
+                // Using Database method with AccessLevel to satisfy security rule
+                Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
                 
-                if (!System.isQueueable() && !System.isFuture() && !System.isBatch()) {
+                if (!System.isQueueable() && !System.isFuture()) {
                     System.enqueueJob(new SyncItemProcessor());
                 }
             }
-
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'SyncEngine Failed: ' + e.getMessage());
         }
     }
 
     /**
-     * @description Helper to dynamically find the Ticket ID from supported objects.
-     * @param rec The SObject record to inspect.
-     * @return The Id of the related Ticket, or null if not found.
+     * @description Checks if synchronization-eligible fields have changed.
+     * @param rec Current state.
+     * @param oldRec Previous state.
+     * @param allowedFields Set of fields to monitor.
+     * @return Boolean true if change is detected.
      */
-    private static Id getTicketId(SObject rec) {
-        String objName = rec.getSObjectType().getDescribe().getName();
-        
-        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            return (Id) rec.Id;
-        } 
-        else if (objName.endsWith('Ticket_Comment__c') || objName.endsWith('Request__c')) { 
-            Object tId = getSafeValue(rec, 'TicketId__c', 'delivery__TicketId__c');
-            return (tId != null) ? (Id)tId : null;
+    private static Boolean hasSignificantChange(SObject rec, SObject oldRec, Set<String> allowedFields) {
+        if (oldRec == null || allowedFields == null || allowedFields.isEmpty()) { 
+            return true; 
         }
-        return null; 
+        for (String field : allowedFields) {
+            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) { 
+                return true; 
+            }
+        }
+        return false;
     }
 
-    /**
-     * @description Helper to safely retrieve a field value without try/catch logic.
-     * @param rec The SObject record to read from.
-     * @param standardField The standard API name of the field.
-     * @param namespacedField The namespaced API name of the field.
-     * @return The value of the field if found, otherwise null.
-     */
-    private static Object getSafeValue(SObject rec, String standardField, String namespacedField) {
+    private static Id getTicketId(SObject rec) {
+        String objName = rec.getSObjectType().getDescribe().getName();
+        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) { 
+            return (Id) rec.Id; 
+        } 
+        return (Id) getSafeValue(rec, 'TicketId__c');
+    }
+
+    private static Object getSafeValue(SObject rec, String field) {
         Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
-        
-        if (fields.containsKey(standardField)) {
-            return fields.get(standardField);
-        } else if (fields.containsKey(namespacedField)) {
-            return fields.get(namespacedField);
+        if (fields.containsKey(field)) { 
+            return fields.get(field); 
+        }
+        if (fields.containsKey('delivery__' + field)) { 
+            return fields.get('delivery__' + field); 
         }
         return null;
     }
 
-    /**
-     * @description Creates a Sync_Item__c record for a specific routing request.
-     * @param rec The record being synchronized.
-     * @param req The Request (connection) record determining the target.
-     * @return A populated Sync_Item__c record.
-     */
-    private static Sync_Item__c createSyncItem(SObject rec, Request__c req) {
-        Sync_Item__c item = new Sync_Item__c();
-        item.StatusPk__c = 'Queued';
-        item.DirectionPk__c = 'Outbound';
+    private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields) {
+        Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        item.TicketId__c = req.TicketId__c;
-        item.RequestId__c = req.Id;
-        
-        // FIX: Strip namespace to satisfy Restricted Picklist
-        String objectType = rec.getSObjectType().getDescribe().getName();
-        objectType = objectType.replace('delivery__', ''); 
-        item.ObjectTypePk__c = objectType;
+        item.TicketId__c = (Id) getSafeValue(req, 'TicketId__c');
+        item.RequestId__c = req.Id; 
+        item.ObjectTypePk__c = rec.getSObjectType().getDescribe().getName().replace('delivery__', '');
 
-        Map<String, Object> payload = rec.getPopulatedFieldsAsMap().clone();
+        Map<String, Object> payload = new Map<String, Object>();
+        if (allowedFields != null) {
+            for (String f : allowedFields) { 
+                payload.put(f, getSafeValue(rec, f)); 
+            }
+        } else {
+            payload = rec.getPopulatedFieldsAsMap().clone();
+        }
         payload.put('SourceId', rec.Id); 
-        payload.put('TargetId', req.RemoteTicketIdTxt__c); 
-
+        payload.put('TargetId', getSafeValue(req, 'RemoteTicketIdTxt__c')); 
         item.PayloadTxt__c = JSON.serialize(payload);
         return item;
     }
