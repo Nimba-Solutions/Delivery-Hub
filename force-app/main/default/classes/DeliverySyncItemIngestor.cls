@@ -1,6 +1,6 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Standardized to handle namespaced environments and ensure field mapping accuracy.
+ * Robust namespace handling by pre-indexing Schema fields.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -25,11 +25,9 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
-        // Apply changes from the payload
         mapFields(recordToUpsert, payload, targetType);
         putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
 
-        // Execute DML
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
@@ -44,11 +42,8 @@ public without sharing class DeliverySyncItemIngestor {
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
-            String cleanName = objName.contains('__') ? objName.split('__')[objName.split('__').size()-1] : objName;
-            // Handle specific case for namespaced packaging where split might leave suffix
-            if (cleanName == 'c') {
-                 cleanName = objName.split('__')[objName.split('__').size()-2] + '__c';
-            }
+            // Strip namespace to find the pure Object Type in the Ledger
+            String cleanName = objName.contains('__') ? objName.substringAfterLast('__') : objName;
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
@@ -63,11 +58,8 @@ public without sharing class DeliverySyncItemIngestor {
         Sync_Item__c item = new Sync_Item__c();
         item.DirectionPk__c = 'Inbound';
         item.StatusPk__c = 'Synced';
-        String cleanType = objType.contains('__') ? objType.split('__')[objType.split('__').size()-1] : objType;
-         if (cleanType == 'c') {
-             cleanType = objType.split('__')[objType.split('__').size()-2] + '__c';
-        }
-        item.ObjectTypePk__c = cleanType;
+        // Ensure we save "Ticket__c", not "delivery__Ticket__c" or "c"
+        item.ObjectTypePk__c = objType.contains('__') ? objType.substringAfterLast('__') : objType;
         item.RemoteExternalIdTxt__c = remoteId;
         item.LocalRecordIdTxt__c = (String)localId;
         item.PayloadTxt__c = 'Ledger Mapping Created';
@@ -75,38 +67,57 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     /**
-     * @description Robust field mapper. Matches payload keys to SObject fields with namespace awareness.
+     * @description Robust mapping: Indexes local Schema fields by their "clean" name 
+     * to match incoming payload keys regardless of namespace prefix.
      */
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
-        // Create a lowercase map for case-insensitive lookup
-        Map<String, SObjectField> lowerFieldMap = new Map<String, SObjectField>();
-        for (String fieldName : fieldMap.keySet()) {
-            lowerFieldMap.put(fieldName.toLowerCase(), fieldMap.get(fieldName));
+        
+        // 1. Build an Index: Clean Name -> Actual SObjectField
+        // e.g. "stagenamepk__c" -> delivery__StageNamePk__c
+        Map<String, SObjectField> cleanNameIndex = new Map<String, SObjectField>();
+        for (String fieldApi : fieldMap.keySet()) {
+            String clean = fieldApi.contains('__') ? fieldApi.substringAfterLast('__').toLowerCase() : fieldApi.toLowerCase();
+            cleanNameIndex.put(clean, fieldMap.get(fieldApi));
         }
 
+        // 2. Iterate Payload
         for (String key : payload.keySet()) {
-            String lowerKey = key.toLowerCase();
-            SObjectField field = null;
-            
-            if (lowerFieldMap.containsKey(lowerKey)) {
-                field = lowerFieldMap.get(lowerKey);
-            } else if (lowerFieldMap.containsKey('delivery__' + lowerKey)) {
-                field = lowerFieldMap.get('delivery__' + lowerKey);
-            }
-
-            if (field != null && field.getDescribe().isUpdateable()) {
-                record.put(field, payload.get(key));
+            String searchKey = key.toLowerCase();
+            if (cleanNameIndex.containsKey(searchKey)) {
+                SObjectField field = cleanNameIndex.get(searchKey);
+                if (field.getDescribe().isUpdateable()) {
+                    // 3. Handle Date/Time conversions
+                    Object val = payload.get(key);
+                    Schema.DisplayType dtype = field.getDescribe().getType();
+                    
+                    if (val != null) {
+                        if (dtype == Schema.DisplayType.DATE) {
+                            record.put(field, Date.valueOf((String)val));
+                        } else if (dtype == Schema.DisplayType.DATETIME) {
+                            record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
+                        } else {
+                            record.put(field, val);
+                        }
+                    } else {
+                        record.put(field, null);
+                    }
+                }
             }
         }
     }
 
     private static void putSafe(SObject rec, String field, Object val) {
         Map<String, SObjectField> fieldMap = rec.getSObjectType().getDescribe().fields.getMap();
-        String lowerField = field.toLowerCase();
-        for (String fName : fieldMap.keySet()) {
-            if (fName.toLowerCase() == lowerField || fName.toLowerCase() == 'delivery__' + lowerField) {
-                rec.put(fieldMap.get(fName), val);
+        String cleanField = field.toLowerCase();
+        
+        // Similar Indexing Strategy for putSafe
+        for (String fieldApi : fieldMap.keySet()) {
+            String clean = fieldApi.contains('__') ? fieldApi.substringAfterLast('__').toLowerCase() : fieldApi.toLowerCase();
+            if (clean == cleanField) {
+                if (fieldMap.get(fieldApi).getDescribe().isUpdateable()) {
+                    rec.put(fieldMap.get(fieldApi), val);
+                }
                 return;
             }
         }
@@ -115,8 +126,9 @@ public without sharing class DeliverySyncItemIngestor {
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
         String lowerName = apiName.toLowerCase();
+        // Check for direct match or namespaced match
         for (String key : gd.keySet()) {
-            if (key.toLowerCase() == lowerName || key.toLowerCase() == 'delivery__' + lowerName) {
+            if (key == lowerName || key.endsWith('__' + lowerName)) {
                 return gd.get(key);
             }
         }
