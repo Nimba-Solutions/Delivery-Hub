@@ -1,10 +1,9 @@
 /* --- 1. SCROLLING CONTAINER --- */
-/* We target the list directly to make it the scrollable area */
 .slds-chat-list {
-    height: 400px;             /* Fixed height for the chat window */
-    overflow-y: auto;          /* Allow scrolling */
-    background-color: #f3f3f3; /* Light grey background for contrast */
-    padding: 1rem;
+    height: 400px;
+    overflow-y: auto;
+    background-color: #f3f3f3;
+    padding: 0.5rem; /* Reduced from 1rem */
     border: 1px solid #dddbda;
     border-radius: 0.25rem;
     display: flex;
@@ -12,31 +11,30 @@
     margin-bottom: 0.5rem;
 }
 
-/* Remove default list styles */
+/* Remove default list styles and tighten gap between messages */
 .slds-chat-list li {
     list-style: none;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.25rem; /* Drastically reduced from standard spacing */
 }
 
 /* --- 2. BUBBLE BASE STYLES --- */
-/* Target the specific SLDS class used in your HTML */
 .slds-chat-message__text {
-    padding: 0.75rem 1rem;
-    border-radius: 1rem;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    max-width: 80%;
+    padding: 0.4rem 0.75rem; /* Slimmer padding inside bubbles */
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    max-width: 85%;
     position: relative;
     word-wrap: break-word;
 }
 
 /* --- 3. OUTBOUND (MY MESSAGES - RIGHT) --- */
 .slds-chat-message__text_outbound {
-    background-color: #005fb2; /* Salesforce Brand Blue */
+    background-color: #005fb2;
     color: #ffffff;
-    border-bottom-right-radius: 0; /* Sharp corner for "speech bubble" effect */
-    margin-left: auto; /* Pushes bubble to the right */
+    border-bottom-right-radius: 0;
+    margin-left: auto;
 }
 
 /* Force text inside blue bubbles to be white */
@@ -49,26 +47,24 @@
 .slds-chat-message__text_inbound {
     background-color: #ffffff;
     color: #181818;
-    border-bottom-left-radius: 0; /* Sharp corner for "speech bubble" effect */
-    margin-right: auto; /* Pushes bubble to the left */
+    border-bottom-left-radius: 0;
+    margin-right: auto;
     border: 1px solid #e5e5e5;
 }
 
 /* --- 5. META DATA (Author & Time) --- */
 .slds-chat-message__meta {
-    font-size: 0.7rem;
+    font-size: 0.65rem; /* Smaller, less intrusive font */
     color: #706e6b;
-    margin-top: 0.25rem;
-    margin-bottom: 0.25rem;
+    margin-top: 0.1rem; /* Pulls meta closer to bubble */
+    margin-bottom: 0;
 }
 
-/* Right align meta for outbound */
 .slds-text-align_right {
     text-align: right;
     margin-right: 4px;
 }
 
-/* Left align meta for inbound */
 .slds-chat-message__meta:not(.slds-text-align_right) {
     margin-left: 4px;
 }
