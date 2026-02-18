@@ -55,36 +55,19 @@ private class SyncEngineTest {
     static void testSmartRoutingEchoPrevention() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
         Request__c req = [SELECT RemoteTicketIdTxt__c FROM Request__c WHERE TicketId__c = :t.Id LIMIT 1];
-<<<<<<< HEAD
 
         // 1. Setup origin block
         SyncEngine.ignoreOrigin(req.RemoteTicketIdTxt__c); 
         delete [SELECT Id FROM Sync_Item__c]; // Clear noise
 
         // 2. Use direct Unit Test approach to isolate SyncEngine logic from Trigger noise
-=======
-    
-        // 1. Tell Engine to ignore this Origin (Simulating Inbound process)
-        SyncEngine.ignoreOrigin(req.RemoteTicketIdTxt__c); 
-        
-        // 2. Clear ANY items created by the @TestSetup or previous steps
-        delete [SELECT Id FROM Sync_Item__c];
-    
-        // 3. Manually invoke captureChanges to bypass TriggerHandler automation
-        // This proves the logic inside SyncEngine works without noise from the rest of the handler
->>>>>>> 2b6345bf9e6a6a264b20eafa98bf36de6884cad3
         t.BriefDescriptionTxt__c = 'Echo Update';
         Set<String> allowList = new Set<String>{'BriefDescriptionTxt__c'};
         
         Test.startTest();
         SyncEngine.captureChanges(new List<SObject>{t}, null, allowList);
         Test.stopTest();
-<<<<<<< HEAD
 
-=======
-    
-        // 4. Verify no item was created
->>>>>>> 2b6345bf9e6a6a264b20eafa98bf36de6884cad3
         List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
         Boolean foundEcho = false;
         for(Sync_Item__c item : items) {
@@ -94,7 +77,7 @@ private class SyncEngineTest {
         }
         System.assertEquals(false, foundEcho, 'Should skip sync when Origin is blocked via ignoreOrigin');
     }
-    
+
     @IsTest
     static void testSyncContextPrevention() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
