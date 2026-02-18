@@ -119,31 +119,34 @@ private class SyncEngineTest {
     static void testSmartRoutingEchoPrevention() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
         Request__c req = [SELECT RemoteTicketIdTxt__c FROM Request__c WHERE TicketId__c = :t.Id LIMIT 1];
-
+    
         // 1. Tell Engine to ignore this Origin (Simulating Inbound process)
         SyncEngine.ignoreOrigin(req.RemoteTicketIdTxt__c); 
         
-        // 2. Manually invoke captureChanges (Unit Test style) to strictly test the Engine logic
-        // This avoids confusion with Trigger firing multiple times due to flows.
+        // 2. Clear ANY items created by the @TestSetup or previous steps
+        delete [SELECT Id FROM Sync_Item__c];
+    
+        // 3. Manually invoke captureChanges to bypass TriggerHandler automation
+        // This proves the logic inside SyncEngine works without noise from the rest of the handler
         t.BriefDescriptionTxt__c = 'Echo Update';
         Set<String> allowList = new Set<String>{'BriefDescriptionTxt__c'};
         
         Test.startTest();
         SyncEngine.captureChanges(new List<SObject>{t}, null, allowList);
         Test.stopTest();
-
-        // 3. Verify
+    
+        // 4. Verify no item was created
         List<Sync_Item__c> items = [SELECT Id, PayloadTxt__c FROM Sync_Item__c];
         Boolean foundEcho = false;
         for(Sync_Item__c item : items) {
-            if (item.PayloadTxt__c.contains('Echo Update')) {
+            if (item.PayloadTxt__c != null && item.PayloadTxt__c.contains('Echo Update')) {
                 foundEcho = true;
             }
         }
         
         System.assertEquals(false, foundEcho, 'Should skip sync if Origin matches Destination (Smart Routing)');
     }
-
+    
     @IsTest
     static void testAllowlistFiltering() {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
