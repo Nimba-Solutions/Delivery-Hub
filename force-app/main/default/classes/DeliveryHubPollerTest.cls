@@ -1,9 +1,13 @@
+/**
+ * @description Test class for DeliveryHubPoller.
+ * Verifies that the poller successfully fetches changes and updates local records via the ingestor.
+ */
 @IsTest
 private class DeliveryHubPollerTest {
 
     @TestSetup
     static void makeData() {
-        // 1. Setup Settings
+        // 1. Setup Required Settings
         insert new Delivery_Hub_Settings__c(
             AutoCreateRequestFromTicketBool__c = false,
             AutoSyncNetworkEntityBool__c = false
@@ -27,6 +31,7 @@ private class DeliveryHubPollerTest {
         insert t;
 
         // 4. Setup the Ledger bridge
+        // This is critical for matching SourceId to a local record without custom fields.
         insert new Request__c(
             TicketId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
@@ -47,33 +52,34 @@ private class DeliveryHubPollerTest {
         String result = DeliveryHubPoller.pollUpdates();
         Test.stopTest();
 
-        // 1. Verify Return Message
+        // 1. Verify Return Message indicating successful handoff
         System.assert(result.contains('Success'), 'Result should indicate success: ' + result);
         System.assert(result.contains('Synced 1 items'), 'Result should confirm 1 item was processed');
 
-        // 2. Verify Sync Timestamp on Vendor
+        // 2. Verify Sync Timestamp on Vendor updated via handleSuccess
         Network_Entity__c vendor = [SELECT LastInboundSyncDateTime__c FROM Network_Entity__c LIMIT 1];
         System.assertNotEquals(null, vendor.LastInboundSyncDateTime__c, 'Timestamp should be updated after successful sync.');
 
-        // 3. Verify the Ticket was actually updated by the Ingestor
+        // 3. Verify Database Update performed by DeliverySyncItemIngestor
         Ticket__c updatedT = [SELECT StageNamePk__c FROM Ticket__c LIMIT 1];
-        System.assertEquals('In Development', updatedT.StageNamePk__c, 'Ticket stage should have been updated by the mock payload.');
+        System.assertEquals('In Development', updatedT.StageNamePk__c, 'Ticket stage should have been updated by mock payload');
     }
     
     /**
-     * @description Mock implementation for HTTP Success response
+     * @description Mock implementation for successful HTTP response with namespaced data.
      */
     public class MockResponseSuccess implements HttpCalloutMock {
         /**
          * @description Respond with a payload containing 1 Ticket update.
-         * @param req The HTTP request
-         * @return The HTTP response
+         * @param req The HTTP request.
+         * @return The HTTP response.
          */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
             
-            // Payload uses SourceId to match the RemoteTicketIdTxt__c in the ledger
+            // Payload uses SourceId to match the RemoteTicketIdTxt__c in the Request bridge
+            // Note: objectType handles namespace-stripping logic in the Ingestor
             String jsonBody = '{' +
                 '"status": "Success",' +
                 '"latestServerTime": "2026-02-18T12:00:00.000Z",' +
