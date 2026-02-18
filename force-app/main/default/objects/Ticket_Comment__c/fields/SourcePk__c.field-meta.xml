@@ -30,6 +30,11 @@
                 <default>false</default>
                 <label>Mothership</label>
             </value>
+            <value>
+                <fullName>Vendor</fullName>
+                <default>false</default>
+                <label>Vendor</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
