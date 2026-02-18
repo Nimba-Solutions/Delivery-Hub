@@ -20,9 +20,13 @@ public without sharing class SyncEngine {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
         
-        // 1. Context Check (Optional: relying on Smart Routing is safer for Hubs, but this saves CPU on direct-echo)
-        if (isSyncContext) { return; }
-        if (newRecords == null || newRecords.isEmpty()) { return; }
+        // 1. Context Check
+        if (isSyncContext) {
+            return;
+        }
+        if (newRecords == null || newRecords.isEmpty()) {
+            return;
+        }
 
         try {
             // 2. Resolve Parent Ticket IDs
@@ -37,10 +41,11 @@ public without sharing class SyncEngine {
                 }
             }
 
-            if (ticketIds.isEmpty()) { return; }
+            if (ticketIds.isEmpty()) {
+                return;
+            }
 
             // 3. Find Active Routes (Requests)
-            // We fetch the RemoteTicketIdTxt__c to perform Smart Routing (Loop Prevention)
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, DeliveryEntityId__c, RemoteTicketIdTxt__c, 
                        DeliveryEntityId__r.StatusPk__c
@@ -64,11 +69,10 @@ public without sharing class SyncEngine {
             for (SObject rec : newRecords) {
                 SObject oldRec = (oldMap != null) ? oldMap.get(rec.Id) : null;
 
-                // --- A. Field Change Check (Optimization) ---
-                // If allowedFields is provided, check if any of them actually changed.
+                // --- A. Field Change Check ---
                 Boolean hasChanged = false;
                 if (oldRec == null) {
-                    hasChanged = true; // Always sync on Insert
+                    hasChanged = true; 
                 } else if (allowedFields != null && !allowedFields.isEmpty()) {
                     Map<String, Object> newFields = rec.getPopulatedFieldsAsMap();
                     Map<String, Object> oldFields = oldRec.getPopulatedFieldsAsMap();
@@ -82,21 +86,21 @@ public without sharing class SyncEngine {
                         }
                     }
                 } else {
-                    hasChanged = true; // No allowlist = Sync everything (e.g. Comments)
+                    hasChanged = true; 
                 }
 
-                if (!hasChanged) { continue; }
+                if (!hasChanged) {
+                    continue;
+                }
 
                 // --- B. Route & Package ---
                 Id tId = recordToTicketId.get(rec.Id);
                 if (routes.containsKey(tId)) {
                     
-                    // Get Origin ID for Smart Routing
                     String originId = getSafeString(rec, 'RemoteExternalIdTxt__c');
 
                     for (Request__c req : routes.get(tId)) {
                         // --- C. SMART ROUTING (Loop Prevention) ---
-                        // If the record came from Vendor A (originId), do NOT send it back to Vendor A (req.RemoteTicketId).
                         if (String.isNotBlank(originId) && originId == req.RemoteTicketIdTxt__c) {
                             continue; 
                         }
@@ -122,19 +126,27 @@ public without sharing class SyncEngine {
 
     private static Id getTicketId(SObject rec) {
         String objName = rec.getSObjectType().getDescribe().getName();
-        // Support Tickets, Comments, and potentially Files (ContentVersion requires extra query usually, simplified here)
+        
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
             return (Id) rec.Id;
         } 
-        // Comments and Requests link via TicketId__c
+        
         Object tId = getSafeValue(rec, 'TicketId__c');
-        return (tId != null) ? (Id)tId : null;
+        if (tId != null) {
+            return (Id)tId;
+        }
+        return null; 
     }
 
     private static Object getSafeValue(SObject rec, String field) {
         Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
-        if (fields.containsKey(field)) return fields.get(field);
-        if (fields.containsKey('delivery__' + field)) return fields.get('delivery__' + field);
+        // PMD FIX: Added braces for if statements
+        if (fields.containsKey(field)) {
+            return fields.get(field);
+        }
+        if (fields.containsKey('delivery__' + field)) {
+            return fields.get('delivery__' + field);
+        }
         return null;
     }
 
@@ -148,29 +160,27 @@ public without sharing class SyncEngine {
         item.DirectionPk__c = 'Outbound';
         item.LocalRecordIdTxt__c = (String)rec.Id;
         item.TicketId__c = req.TicketId__c;
-        item.RequestId__c = req.Id; // Link strictly to this Request route
+        item.RequestId__c = req.Id; 
         
         String objType = rec.getSObjectType().getDescribe().getName().replace('delivery__', '');
         item.ObjectTypePk__c = objType;
 
-        // --- FIELD FILTERING ---
         Map<String, Object> rawMap = rec.getPopulatedFieldsAsMap();
         Map<String, Object> finalPayload = new Map<String, Object>();
 
         if (allowedFields != null && !allowedFields.isEmpty()) {
             for (String field : allowedFields) {
-                // Check standard
-                if (rawMap.containsKey(field)) finalPayload.put(field, rawMap.get(field));
-                // Check namespaced
-                else if (rawMap.containsKey('delivery__' + field)) finalPayload.put(field, rawMap.get('delivery__' + field));
+                // PMD FIX: Added braces for if/else statements
+                if (rawMap.containsKey(field)) {
+                    finalPayload.put(field, rawMap.get(field));
+                } else if (rawMap.containsKey('delivery__' + field)) {
+                    finalPayload.put(field, rawMap.get('delivery__' + field));
+                }
             }
         } else {
-            // If no allowlist (e.g. Comments), copy everything except system fields
-            // (You might want to add a default blocklist here in future)
             finalPayload = rawMap.clone();
         }
 
-        // --- HEADER INJECTION ---
         finalPayload.put('SourceId', rec.Id); 
         finalPayload.put('TargetId', req.RemoteTicketIdTxt__c); 
 
