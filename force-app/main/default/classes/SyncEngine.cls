@@ -1,18 +1,22 @@
 /**
  * @description Core engine for handling outbound synchronization.
- * UPDATED: Ignores routes missing a Remote ID to prevent ledger pollution.
+ * Implements Push/Pull Architecture with Smart Routing and Allowlist Filtering.
  */
 public without sharing class SyncEngine {
 
     private static Boolean isSyncContext = false;
     @TestVisible private static Set<String> blockedOrigins = new Set<String>();
 
+    /**
+     * @description Sets the sync context to prevent recursive triggers.
+     */
     public static void setSyncContext() {
         isSyncContext = true;
     }
     
     /**
-     * @description Normalizes and adds an origin to the block list.
+     * @description Called by Ingestor to prevent echoing updates back to this specific origin.
+     * @param remoteId The external ID of the source system to block (prevents loopback).
      */
     public static void ignoreOrigin(String remoteId) {
         if (String.isNotBlank(remoteId)) {
@@ -20,6 +24,12 @@ public without sharing class SyncEngine {
         }
     }
 
+    /**
+     * @description Main Entry Point. Captures changes and queues Sync Items.
+     * @param newRecords Trigger.new records
+     * @param oldMap Trigger.oldMap records
+     * @param allowedFields Set of API names allowed for synchronization
+     */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
         if (isSyncContext || newRecords == null || newRecords.isEmpty()) {
@@ -40,7 +50,6 @@ public without sharing class SyncEngine {
 
             if (ticketIds.isEmpty()) { return; }
 
-            // Query active connections
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
                 FROM Request__c 
@@ -68,9 +77,7 @@ public without sharing class SyncEngine {
                     for (Request__c req : routes.get(tId)) {
                         String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
                         
-                        // FIX: If no remote ID exists, we can't sync. If it is blocked, we shouldn't sync.
                         if (String.isBlank(remoteId) || blockedOrigins.contains(remoteId.trim())) {
-                            System.debug(LoggingLevel.INFO, 'SyncEngine: Skipping route for ' + remoteId);
                             continue; 
                         }
                         itemsToInsert.add(createSyncItem(rec, req, allowedFields));
