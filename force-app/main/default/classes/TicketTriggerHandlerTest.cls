@@ -91,9 +91,10 @@ public class TicketTriggerHandlerTest {
 
     /**
      * @description Test Blocking Logic: Cannot move to 'In Development' if blocked.
+     * PMD Fix: Renamed to remove underscore.
      */
     @IsTest
-    static void testBeforeUpdate_BlocksOnDependency() {
+    static void testBeforeUpdateBlocksOnDependency() {
         Ticket__c blocked = [SELECT Id, StageNamePk__c FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Blocked Ticket' LIMIT 1];
         
         Test.startTest();
@@ -109,9 +110,10 @@ public class TicketTriggerHandlerTest {
 
     /**
      * @description Test Blocking Logic: CAN move if blocker is resolved.
+     * PMD Fix: Renamed to remove underscore.
      */
     @IsTest
-    static void testBeforeUpdate_AllowsUpdateWhenResolved() {
+    static void testBeforeUpdateAllowsUpdateWhenResolved() {
         Ticket__c blocker = [SELECT Id, StageNamePk__c FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Blocker Ticket' LIMIT 1];
         Ticket__c blocked = [SELECT Id, StageNamePk__c FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Blocked Ticket' LIMIT 1];
 
