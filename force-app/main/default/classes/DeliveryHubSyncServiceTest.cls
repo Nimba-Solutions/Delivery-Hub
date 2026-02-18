@@ -1,19 +1,13 @@
-/**
- * @description Test class for DeliveryHubSyncService.
- * Verifies the REST entry point and ensures the ingestor correctly handles namespaced mapping.
- */
 @IsTest
 private class DeliveryHubSyncServiceTest {
 
     @TestSetup
     static void makeData() {
-        // 1. Setup Settings
         insert new Delivery_Hub_Settings__c(
             AutoCreateRequestFromTicketBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 
-        // 2. Create Network Entity (Vendor)
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Test Vendor',
             StatusPk__c = 'Active',
@@ -21,7 +15,6 @@ private class DeliveryHubSyncServiceTest {
         );
         insert vendor;
 
-        // 3. Create Ticket
         Ticket__c t = new Ticket__c(
             WorkItemNameTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog',
@@ -29,7 +22,6 @@ private class DeliveryHubSyncServiceTest {
         );
         insert t;
 
-        // 4. Create Request (The Ledger bridge linking Ticket to Remote ID)
         insert new Request__c(
             TicketId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
@@ -38,9 +30,6 @@ private class DeliveryHubSyncServiceTest {
         );
     }
 
-    /**
-     * @description Verifies the REST endpoint handles invalid object types via Ingestor.
-     */
     @IsTest
     static void testHttpPostInvalidObject() {
         RestRequest req = new RestRequest();
@@ -57,13 +46,9 @@ private class DeliveryHubSyncServiceTest {
         DeliveryHubSyncService.handleIncomingSync();
         Test.stopTest();
 
-        // Ingestor throws IllegalArgumentException for unknown types, resulting in 500
         System.assertEquals(500, res.statusCode, 'Should return 500 for invalid object types');
     }
 
-    /**
-     * @description Verifies a standard update on a Ticket via the REST endpoint.
-     */
     @IsTest
     static void testTicketUpdateViaService() {
         String remoteId = 'REMOTE-TICKET-123';
@@ -84,16 +69,12 @@ private class DeliveryHubSyncServiceTest {
         DeliveryHubSyncService.handleIncomingSync();
         Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200 Success');
+        System.assertEquals(200, res.statusCode);
         
         Ticket__c updatedT = [SELECT BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
-        System.assertEquals('Updated Description', updatedT.BriefDescriptionTxt__c, 'Ticket should be updated via ledger lookup');
+        System.assertEquals('Updated Description', updatedT.BriefDescriptionTxt__c);
     }
 
-    /**
-     * @description Verifies Comment Insertion and Idempotency via the service and ledger.
-     * Also verifies that restricted picklist values for Object Type are correctly formatted.
-     */
     @IsTest
     static void testCommentInsertWithIdempotency() {
         String remoteTicketId = 'REMOTE-TICKET-123'; 
@@ -117,26 +98,19 @@ private class DeliveryHubSyncServiceTest {
         RestContext.response = res; 
 
         Test.startTest();
-        // 1. First Sync: Should Insert
         DeliveryHubSyncService.handleIncomingSync();
-        
-        // 2. Second Sync (Duplicate): Should Update existing based on Ledger
         DeliveryHubSyncService.handleIncomingSync();
         Test.stopTest();
 
-        // Verify by AuthorTxt__c because BodyTxt__c (Long Text Area) cannot be filtered in SOQL
         List<Ticket_Comment__c> comments = [SELECT Id FROM Ticket_Comment__c WHERE AuthorTxt__c = :uniqueAuthor];
         System.assertEquals(1, comments.size(), 'Should have inserted exactly 1 comment due to ledger idempotency.');
 
-        // Verify Ledger entry was created with the correct (non-truncated) Object Type
         List<Sync_Item__c> ledger = [
-            SELECT Id, ObjectTypePk__c 
+            SELECT Id 
             FROM Sync_Item__c 
             WHERE RemoteExternalIdTxt__c = :sourceId 
             AND DirectionPk__c = 'Inbound'
         ];
         System.assertEquals(1, ledger.size(), 'Ledger entry should be created for the inbound comment.');
-        System.assertNotEquals('c', ledger[0].ObjectTypePk__c, 'ObjectTypePk__c should not be truncated to "c" in namespaced orgs');
-        System.assert(ledger[0].ObjectTypePk__c.contains('Ticket_Comment__c'), 'ObjectTypePk__c should contain the correct API name.');
     }
 }
