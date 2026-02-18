@@ -1,3 +1,7 @@
+/**
+ * @description Test class for DeliveryHubSyncService.
+ * Verifies the REST entry point and ensures the ingestor correctly handles namespaced mapping.
+ */
 @IsTest
 private class DeliveryHubSyncServiceTest {
 
@@ -47,13 +51,13 @@ private class DeliveryHubSyncServiceTest {
         req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{'SourceId' => '123'}));
         
         RestContext.request = req;
-        RestContext.response = res; // Fix: Use 'response' instead of 'restResponse'
+        RestContext.response = res; 
 
         Test.startTest();
         DeliveryHubSyncService.handleIncomingSync();
         Test.stopTest();
 
-        // Service returns 500 when ingestor throws IllegalArgumentException
+        // Ingestor throws IllegalArgumentException for unknown types, resulting in 500
         System.assertEquals(500, res.statusCode, 'Should return 500 for invalid object types');
     }
 
@@ -74,26 +78,27 @@ private class DeliveryHubSyncServiceTest {
         }));
         
         RestContext.request = req;
-        RestContext.response = res; // Fix: Use 'response'
+        RestContext.response = res; 
 
         Test.startTest();
         DeliveryHubSyncService.handleIncomingSync();
         Test.stopTest();
 
-        System.assertEquals(200, res.statusCode);
+        System.assertEquals(200, res.statusCode, 'Should return 200 Success');
         
         Ticket__c updatedT = [SELECT BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
-        System.assertEquals('Updated Description', updatedT.BriefDescriptionTxt__c);
+        System.assertEquals('Updated Description', updatedT.BriefDescriptionTxt__c, 'Ticket should be updated via ledger lookup');
     }
 
     /**
      * @description Verifies Comment Insertion and Idempotency via the service and ledger.
+     * Also verifies that restricted picklist values for Object Type are correctly formatted.
      */
     @IsTest
     static void testCommentInsertWithIdempotency() {
         String remoteTicketId = 'REMOTE-TICKET-123'; 
         String sourceId = 'REMOTE-COMMENT-999';
-        String uniqueAuthor = 'REST_TEST_AUTHOR'; // Used for filtering
+        String uniqueAuthor = 'REST_TEST_AUTHOR';
 
         Map<String, Object> payload = new Map<String, Object>{
             'TargetId' => remoteTicketId, 
@@ -109,7 +114,7 @@ private class DeliveryHubSyncServiceTest {
         req.requestBody = Blob.valueOf(JSON.serialize(payload));
         
         RestContext.request = req;
-        RestContext.response = res; // Fix: Use 'response'
+        RestContext.response = res; 
 
         Test.startTest();
         // 1. First Sync: Should Insert
@@ -119,17 +124,19 @@ private class DeliveryHubSyncServiceTest {
         DeliveryHubSyncService.handleIncomingSync();
         Test.stopTest();
 
-        // Fix: Query by AuthorTxt__c because BodyTxt__c (Long Text Area) cannot be filtered in SOQL
+        // Verify by AuthorTxt__c because BodyTxt__c (Long Text Area) cannot be filtered in SOQL
         List<Ticket_Comment__c> comments = [SELECT Id FROM Ticket_Comment__c WHERE AuthorTxt__c = :uniqueAuthor];
         System.assertEquals(1, comments.size(), 'Should have inserted exactly 1 comment due to ledger idempotency.');
 
-        // Verify Ledger entry was created to map IDs
+        // Verify Ledger entry was created with the correct (non-truncated) Object Type
         List<Sync_Item__c> ledger = [
-            SELECT Id 
+            SELECT Id, ObjectTypePk__c 
             FROM Sync_Item__c 
             WHERE RemoteExternalIdTxt__c = :sourceId 
             AND DirectionPk__c = 'Inbound'
         ];
         System.assertEquals(1, ledger.size(), 'Ledger entry should be created for the inbound comment.');
+        System.assertNotEquals('c', ledger[0].ObjectTypePk__c, 'ObjectTypePk__c should not be truncated to "c" in namespaced orgs');
+        System.assert(ledger[0].ObjectTypePk__c.contains('Ticket_Comment__c'), 'ObjectTypePk__c should contain the correct API name.');
     }
 }
