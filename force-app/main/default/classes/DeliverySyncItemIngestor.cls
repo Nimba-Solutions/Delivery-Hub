@@ -1,21 +1,21 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Runs in System Mode (without sharing) to bypass FLS restrictions during Sync.
- * Handles namespace resolution for both Object Types and Fields automatically.
+ * Runs in System Mode (without sharing) to bypass FLS restrictions.
+ * Uses robust dynamic string stripping to eliminate Namespace issues in any org.
  */
 public without sharing class DeliverySyncItemIngestor {
 
-    // Helper to identify the namespace prefix (e.g. 'delivery__')
-    private static String getNamespacePrefix() {
-        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return String.isBlank(ns) ? '' : ns + '__';
+    /**
+     * @description Dynamically strips the namespace prefix from any API name (Object or Field).
+     * Works in scratch orgs, packaging orgs, and installed subscriber orgs.
+     */
+    private static String stripNamespace(String apiName) {
+        if (String.isNotBlank(apiName) && apiName.countMatches('__') > 1) {
+            return apiName.substringAfter('__');
+        }
+        return apiName;
     }
 
-    /**
-     * @description Main entry point for inbound data.
-     * @param objectType The API name (e.g., Ticket__c)
-     * @param payload The JSON map received from the sender
-     */
     public static void processInboundItem(String objectType, Map<String, Object> payload) {
         SyncEngine.setSyncContext();
 
@@ -34,7 +34,6 @@ public without sharing class DeliverySyncItemIngestor {
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
             Id localParentId = findLocalTicketId(targetId);
             if (localParentId != null) {
-                // Directly set the parent ID bypassing mapFields to avoid mapping errors
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
         }
@@ -61,10 +60,7 @@ public without sharing class DeliverySyncItemIngestor {
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
-            // FIX: Safely remove namespace from start, leaving __c suffix intact.
-            // This ensures we look up "Ticket_Comment__c" instead of "c".
-            String cleanName = objName.removeStartIgnoreCase(getNamespacePrefix());
-            
+            String cleanName = stripNamespace(objName);
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
@@ -79,40 +75,28 @@ public without sharing class DeliverySyncItemIngestor {
         Sync_Item__c item = new Sync_Item__c();
         item.DirectionPk__c = 'Inbound';
         item.StatusPk__c = 'Synced';
-        
-        // FIX: Ensure restricted picklist receives "Ticket__c" not "c"
-        // We strip the namespace prefix if it exists.
-        String cleanType = objType.removeStartIgnoreCase(getNamespacePrefix());
-        
-        item.ObjectTypePk__c = cleanType;
+        item.ObjectTypePk__c = stripNamespace(objType);
         item.RemoteExternalIdTxt__c = remoteId;
         item.LocalRecordIdTxt__c = (String)localId;
         item.PayloadTxt__c = 'Ledger Mapping Created';
         Database.insert(item, AccessLevel.SYSTEM_MODE);
     }
 
-    /**
-     * @description Robust mapping: Indexes local Schema fields by their "clean" name 
-     * to match incoming payload keys regardless of namespace prefix.
-     */
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
-        String ns = getNamespacePrefix().toLowerCase();
         
         // 1. Build Index: Clean Name (lowercase) -> Actual SObjectField
         Map<String, SObjectField> cleanNameIndex = new Map<String, SObjectField>();
         for (String fieldApi : fieldMap.keySet()) {
-            String lowerApi = fieldApi.toLowerCase();
-            String clean = lowerApi.removeStart(ns);
+            String clean = stripNamespace(fieldApi).toLowerCase();
             cleanNameIndex.put(clean, fieldMap.get(fieldApi));
         }
 
         // 2. Iterate Payload
         for (String key : payload.keySet()) {
-            String searchKey = key.toLowerCase();
+            String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
-                // System Mode - No isUpdateable() check needed for Sync process
                 Object val = payload.get(key);
                 Schema.DisplayType dtype = field.getDescribe().getType();
                 
@@ -133,13 +117,10 @@ public without sharing class DeliverySyncItemIngestor {
 
     private static void putSafe(SObject rec, String fieldName, Object val) {
         Map<String, SObjectField> fieldMap = rec.getSObjectType().getDescribe().fields.getMap();
-        String ns = getNamespacePrefix().toLowerCase();
-        String target = fieldName.toLowerCase();
+        String target = stripNamespace(fieldName).toLowerCase();
 
         for (String fieldApi : fieldMap.keySet()) {
-            String lowerApi = fieldApi.toLowerCase();
-            // Match exact or namespaced version
-            if (lowerApi == target || lowerApi == (ns + target)) {
+            if (stripNamespace(fieldApi).toLowerCase() == target) {
                 rec.put(fieldMap.get(fieldApi), val);
                 return;
             }
@@ -148,12 +129,10 @@ public without sharing class DeliverySyncItemIngestor {
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        String ns = getNamespacePrefix().toLowerCase();
-        String lowerName = apiName.toLowerCase();
+        String target = stripNamespace(apiName).toLowerCase();
         
         for (String key : gd.keySet()) {
-            String lowerKey = key.toLowerCase();
-            if (lowerKey == lowerName || lowerKey == (ns + lowerName)) {
+            if (stripNamespace(key).toLowerCase() == target) {
                 return gd.get(key);
             }
         }
