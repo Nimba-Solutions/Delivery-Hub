@@ -1,6 +1,6 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Robust namespace handling and System Mode execution.
+ * Runs in System Mode (without sharing) to bypass FLS restrictions during Sync.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -22,7 +22,7 @@ public without sharing class DeliverySyncItemIngestor {
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
             Id localParentId = findLocalTicketId(targetId);
             if (localParentId != null) {
-                // Directly set the parent ID bypassing mapFields
+                // Directly set the parent ID
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
         }
@@ -30,7 +30,7 @@ public without sharing class DeliverySyncItemIngestor {
         mapFields(recordToUpsert, payload, targetType);
         putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
 
-        // Execute DML in System Mode to ensure all fields are written regardless of User FLS
+        // Execute DML in System Mode
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
@@ -45,7 +45,6 @@ public without sharing class DeliverySyncItemIngestor {
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
-            // Strip namespace to find the pure Object Type in the Ledger
             String cleanName = objName.contains('__') ? objName.substringAfterLast('__') : objName;
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
@@ -61,7 +60,6 @@ public without sharing class DeliverySyncItemIngestor {
         Sync_Item__c item = new Sync_Item__c();
         item.DirectionPk__c = 'Inbound';
         item.StatusPk__c = 'Synced';
-        // Ensure we save "Ticket__c", not "delivery__Ticket__c" or "c"
         item.ObjectTypePk__c = objType.contains('__') ? objType.substringAfterLast('__') : objType;
         item.RemoteExternalIdTxt__c = remoteId;
         item.LocalRecordIdTxt__c = (String)localId;
@@ -70,14 +68,13 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     /**
-     * @description Robust mapping: Indexes local Schema fields by their "clean" name 
-     * to match incoming payload keys regardless of namespace prefix.
+     * @description Maps payload keys to SObject fields.
+     * REMOVED isUpdateable() checks to ensure System Mode execution.
      */
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
         
-        // 1. Build an Index: Clean Name -> Actual SObjectField
-        // e.g. "stagenamepk__c" -> delivery__StageNamePk__c
+        // 1. Build Index: Clean Name -> SObjectField
         Map<String, SObjectField> cleanNameIndex = new Map<String, SObjectField>();
         for (String fieldApi : fieldMap.keySet()) {
             String clean = fieldApi.contains('__') ? fieldApi.substringAfterLast('__').toLowerCase() : fieldApi.toLowerCase();
@@ -89,7 +86,7 @@ public without sharing class DeliverySyncItemIngestor {
             String searchKey = key.toLowerCase();
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
-                // Removed isUpdateable() check to allow System Mode synchronization
+                // Trusting System Mode - No FLS Check
                 Object val = payload.get(key);
                 Schema.DisplayType dtype = field.getDescribe().getType();
                 
@@ -108,6 +105,10 @@ public without sharing class DeliverySyncItemIngestor {
         }
     }
 
+    /**
+     * @description Sets a specific field value by finding the correct namespace key.
+     * REMOVED isUpdateable() checks.
+     */
     private static void putSafe(SObject rec, String field, Object val) {
         Map<String, SObjectField> fieldMap = rec.getSObjectType().getDescribe().fields.getMap();
         String cleanField = field.toLowerCase();
@@ -115,7 +116,6 @@ public without sharing class DeliverySyncItemIngestor {
         for (String fieldApi : fieldMap.keySet()) {
             String clean = fieldApi.contains('__') ? fieldApi.substringAfterLast('__').toLowerCase() : fieldApi.toLowerCase();
             if (clean == cleanField) {
-                // Removed isUpdateable check to ensure mandatory fields like TicketId__c are set
                 rec.put(fieldMap.get(fieldApi), val);
                 return;
             }
