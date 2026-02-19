@@ -6,7 +6,7 @@ public without sharing class DeliveryHubPoller {
     @AuraEnabled
     public static String pollUpdates() {
         try {
-            // Changed to SYSTEM_MODE to ensure configuration is readable regardless of User FLS
+            // Changed to SYSTEM_MODE to prevent "incomplete configuration" errors due to FLS
             List<Network_Entity__c> vendors = [
                 SELECT IntegrationEndpointUrlTxt__c, LastInboundSyncDateTime__c, RemoteExternalIdTxt__c 
                 FROM Network_Entity__c 
