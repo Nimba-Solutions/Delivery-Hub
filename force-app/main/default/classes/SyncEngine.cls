@@ -68,22 +68,30 @@ public without sharing class SyncEngine {
                 List<Request__c> reqs = routes.get(tId);
                 
                 if (reqs != null && !reqs.isEmpty()) {
-                    Boolean routed = false;
+                    Boolean hasPushableRoute = false;
+                    Boolean isBlocked = false;
+                    
                     // PUSH MODEL (Client Side): Create routed items
                     for (Request__c req : reqs) {
                         String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
-                        if (String.isBlank(remoteId) || blockedOrigins.contains(remoteId.trim())) {
-                            continue; 
+                        
+                        if (String.isNotBlank(remoteId)) {
+                            if (blockedOrigins.contains(remoteId.trim())) {
+                                isBlocked = true; // Explicitly marked as an echo prevention block
+                            } else {
+                                itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                                hasPushableRoute = true;
+                            }
                         }
-                        itemsToInsert.add(createSyncItem(rec, req, allowedFields));
-                        routed = true;
                     }
                     
-                    // NEW: If we had Requests but none were valid for pushing (blank remote IDs),
-                    // fallback to Hub Mode and create the passive item!
-                    if (!routed) {
+                    // PULL MODEL (Vendor Hub Fallback): 
+                    // If we had Requests but none were valid for pushing (blank remote IDs),
+                    // AND it wasn't intentionally blocked by Echo Prevention, fallback to Hub Mode.
+                    if (!hasPushableRoute && !isBlocked) {
                         itemsToInsert.add(createSyncItem(rec, null, allowedFields));
                     }
+                    
                 } else {
                     // PULL MODEL (Vendor Hub): No routing records exist. Create an unrouted item!
                     itemsToInsert.add(createSyncItem(rec, null, allowedFields));
@@ -93,12 +101,9 @@ public without sharing class SyncEngine {
             if (!itemsToInsert.isEmpty()) {
                 Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
                 
+                // Enqueue the processor if we are within limits
                 if (!System.isQueueable() && !System.isFuture()) {
-                    // FIX: Salesforce tests strictly limit us to 1 Queueable job per test context.
-                    // Production allows up to 50 (Limits.getLimitQueueableJobs()).
-                    Integer maxJobs = Test.isRunningTest() ? 1 : Limits.getLimitQueueableJobs();
-                    
-                    if (Limits.getQueueableJobs() < maxJobs) {
+                    if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs()) {
                         System.enqueueJob(new SyncItemProcessor());
                     }
                 }
