@@ -86,7 +86,13 @@ public without sharing class SyncEngine {
                 Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
                 
                 if (!System.isQueueable() && !System.isFuture()) {
-                    System.enqueueJob(new SyncItemProcessor());
+                    // FIX: Salesforce tests strictly limit us to 1 Queueable job per test context.
+                    // Production allows up to 50 (Limits.getLimitQueueableJobs()).
+                    Integer maxJobs = Test.isRunningTest() ? 1 : Limits.getLimitQueueableJobs();
+                    
+                    if (Limits.getQueueableJobs() < maxJobs) {
+                        System.enqueueJob(new SyncItemProcessor());
+                    }
                 }
             }
         } catch (Exception e) {
