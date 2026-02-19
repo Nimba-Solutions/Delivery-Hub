@@ -33,16 +33,25 @@ public without sharing class DeliverySyncItemIngestor {
         
         // Handle Parenting (Comments)
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
-            Id localParentId = null;
-            try {
-                Id castId = (Id) targetId;
-                if (castId.getSobjectType().getDescribe().getName().endsWith('Ticket__c')) {
-                    localParentId = castId;
-                }
-            } catch (Exception e) {}
+            
+            // 1. PULL ARCHITECTURE: Always check the routing bridge FIRST. 
+            // The TargetId is likely a Remote Vendor ID that we need to translate to a Local ID.
+            Id localParentId = findLocalTicketId(targetId);
 
+            // 2. PUSH ARCHITECTURE FALLBACK: If not in the bridge, see if the Sender passed us a valid local ID.
             if (localParentId == null) {
-                localParentId = findLocalTicketId(targetId);
+                try {
+                    Id castId = (Id) targetId;
+                    if (castId.getSobjectType().getDescribe().getName().endsWith('Ticket__c')) {
+                        // Prevent cross-org prefix collisions by ensuring the ID actually exists locally
+                        String query = 'SELECT Id FROM ' + castId.getSobjectType().getDescribe().getName() + ' WHERE Id = \'' + castId + '\' LIMIT 1';
+                        if (!Database.query(query).isEmpty()) {
+                            localParentId = castId;
+                        }
+                    }
+                } catch (Exception e) {
+                    // Not a valid ID string, safely ignore
+                }
             }
 
             if (localParentId != null) {
@@ -60,25 +69,15 @@ public without sharing class DeliverySyncItemIngestor {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
             createLedgerEntry(objectType, sourceId, recordToUpsert.Id);
             
-            // --- FIX: Bridge the Request Record for the Pull Architecture ---
+            // If the Client just inserted a Ticket, we MUST stamp the Vendor's ID onto the auto-created Request
             if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
                 String ns = getNamespacePrefix();
                 String query = 'SELECT Id FROM ' + ns + 'Request__c WHERE ' + ns + 'TicketId__c = \'' + recordToUpsert.Id + '\'';
                 List<SObject> existingReqs = Database.query(query);
                 
-                if (existingReqs.isEmpty()) {
-                    // Create a routing record so SyncEngine can queue Outbound items
-                    SObject req = (SObject) Type.forName(ns + 'Request__c').newInstance();
-                    req.put(ns + 'TicketId__c', recordToUpsert.Id);
-                    req.put(ns + 'RemoteTicketIdTxt__c', sourceId); // Save the Client's Ticket ID!
-                    req.put(ns + 'StatusPk__c', 'Active');
-                    // We purposefully leave DeliveryEntityId__c NULL so the Vendor does not attempt to push
-                    Database.insert(req, AccessLevel.SYSTEM_MODE);
-                } else {
-                    // If the trigger auto-created one, fix it by stripping the Vendor and adding the Remote ID
+                if (!existingReqs.isEmpty()) {
                     for (SObject req : existingReqs) {
-                        req.put(ns + 'RemoteTicketIdTxt__c', sourceId);
-                        req.put(ns + 'DeliveryEntityId__c', null); // Stop the push!
+                        req.put(ns + 'RemoteTicketIdTxt__c', sourceId); // The Vendor's Ticket ID
                     }
                     Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
                 }
