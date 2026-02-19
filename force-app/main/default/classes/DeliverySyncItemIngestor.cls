@@ -1,6 +1,6 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Robust namespace handling by pre-indexing Schema fields.
+ * Robust namespace handling and System Mode execution.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -18,9 +18,11 @@ public without sharing class DeliverySyncItemIngestor {
         Id localRecordId = findLocalId(targetType, sourceId);
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
         
+        // Handle parenting for new records (Comments)
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
             Id localParentId = findLocalTicketId(targetId);
             if (localParentId != null) {
+                // Directly set the parent ID bypassing mapFields
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
         }
@@ -28,6 +30,7 @@ public without sharing class DeliverySyncItemIngestor {
         mapFields(recordToUpsert, payload, targetType);
         putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
 
+        // Execute DML in System Mode to ensure all fields are written regardless of User FLS
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
@@ -86,22 +89,20 @@ public without sharing class DeliverySyncItemIngestor {
             String searchKey = key.toLowerCase();
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
-                if (field.getDescribe().isUpdateable()) {
-                    // 3. Handle Date/Time conversions
-                    Object val = payload.get(key);
-                    Schema.DisplayType dtype = field.getDescribe().getType();
-                    
-                    if (val != null) {
-                        if (dtype == Schema.DisplayType.DATE) {
-                            record.put(field, Date.valueOf((String)val));
-                        } else if (dtype == Schema.DisplayType.DATETIME) {
-                            record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
-                        } else {
-                            record.put(field, val);
-                        }
+                // Removed isUpdateable() check to allow System Mode synchronization
+                Object val = payload.get(key);
+                Schema.DisplayType dtype = field.getDescribe().getType();
+                
+                if (val != null) {
+                    if (dtype == Schema.DisplayType.DATE) {
+                        record.put(field, Date.valueOf((String)val));
+                    } else if (dtype == Schema.DisplayType.DATETIME) {
+                        record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
                     } else {
-                        record.put(field, null);
+                        record.put(field, val);
                     }
+                } else {
+                    record.put(field, null);
                 }
             }
         }
@@ -111,13 +112,11 @@ public without sharing class DeliverySyncItemIngestor {
         Map<String, SObjectField> fieldMap = rec.getSObjectType().getDescribe().fields.getMap();
         String cleanField = field.toLowerCase();
         
-        // Similar Indexing Strategy for putSafe
         for (String fieldApi : fieldMap.keySet()) {
             String clean = fieldApi.contains('__') ? fieldApi.substringAfterLast('__').toLowerCase() : fieldApi.toLowerCase();
             if (clean == cleanField) {
-                if (fieldMap.get(fieldApi).getDescribe().isUpdateable()) {
-                    rec.put(fieldMap.get(fieldApi), val);
-                }
+                // Removed isUpdateable check to ensure mandatory fields like TicketId__c are set
+                rec.put(fieldMap.get(fieldApi), val);
                 return;
             }
         }
@@ -126,7 +125,6 @@ public without sharing class DeliverySyncItemIngestor {
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
         String lowerName = apiName.toLowerCase();
-        // Check for direct match or namespaced match
         for (String key : gd.keySet()) {
             if (key == lowerName || key.endsWith('__' + lowerName)) {
                 return gd.get(key);
