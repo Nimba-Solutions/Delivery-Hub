@@ -3,24 +3,32 @@
  */
 public without sharing class DeliveryHubPoller {
 
+    // Helper to get the Org's namespace prefix
+    private static String getNamespacePrefix() {
+        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
+    }
+
     @AuraEnabled
     public static String pollUpdates() {
         try {
-            // Enforce SYSTEM_MODE to ensure fields are populated even if User lacks FLS
-            List<Network_Entity__c> vendors = [
-                SELECT IntegrationEndpointUrlTxt__c, LastInboundSyncDateTime__c, RemoteExternalIdTxt__c 
-                FROM Network_Entity__c 
-                WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor' 
-                WITH SYSTEM_MODE
-                LIMIT 1
-            ];
+            String ns = getNamespacePrefix();
+            
+            // Use Dynamic SOQL to guarantee correct field resolution in namespaced orgs
+            String query = 'SELECT Id, ' + ns + 'IntegrationEndpointUrlTxt__c, ' + ns + 'LastInboundSyncDateTime__c, ' + ns + 'RemoteExternalIdTxt__c ' +
+                           'FROM ' + ns + 'Network_Entity__c ' +
+                           'WHERE ' + ns + 'StatusPk__c = \'Active\' AND ' + ns + 'EntityTypePk__c = \'Vendor\' ' +
+                           'LIMIT 1';
+
+            // AccessLevel.SYSTEM_MODE ensures we get the data regardless of User permissions
+            List<SObject> vendors = Database.query(query, AccessLevel.SYSTEM_MODE);
             
             if (vendors.isEmpty()) { return 'Error: No Active Vendor found.'; }
-            Network_Entity__c vendor = vendors[0];
+            SObject vendor = vendors[0];
 
-            String endpointUrl = vendor.IntegrationEndpointUrlTxt__c;
-            String remoteId = vendor.RemoteExternalIdTxt__c;
-            DateTime lastSync = vendor.LastInboundSyncDateTime__c;
+            String endpointUrl = (String) vendor.get(ns + 'IntegrationEndpointUrlTxt__c');
+            String remoteId = (String) vendor.get(ns + 'RemoteExternalIdTxt__c');
+            DateTime lastSync = (DateTime) vendor.get(ns + 'LastInboundSyncDateTime__c');
 
             if (String.isBlank(endpointUrl) || String.isBlank(remoteId)) {
                 return 'Error: Vendor configuration incomplete';
@@ -35,14 +43,14 @@ public without sharing class DeliveryHubPoller {
             req.setHeader('Client-Entity-ID', remoteId); 
 
             HttpResponse res = new Http().send(req);
-            return (res.getStatusCode() == 200) ? handleSuccess(res.getBody(), vendor) : 'Error: HTTP ' + res.getStatusCode();
+            return (res.getStatusCode() == 200) ? handleSuccess(res.getBody(), (Network_Entity__c)vendor, ns) : 'Error: HTTP ' + res.getStatusCode();
 
         } catch (Exception e) {
             return 'Exception: ' + e.getMessage();
         }
     }
 
-    private static String handleSuccess(String responseBody, Network_Entity__c vendor) {
+    private static String handleSuccess(String responseBody, Network_Entity__c vendor, String ns) {
         Map<String, Object> response = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
         List<Object> events = (List<Object>) response.get('events');
         
@@ -57,8 +65,9 @@ public without sharing class DeliveryHubPoller {
 
         String serverTimeStr = (String) response.get('latestServerTime');
         if (serverTimeStr != null) {
-            vendor.LastInboundSyncDateTime__c = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
-            update as system vendor;
+            DateTime dt = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
+            vendor.put(ns + 'LastInboundSyncDateTime__c', dt);
+            Database.update(vendor, AccessLevel.SYSTEM_MODE);
         }
         return 'Success: Synced ' + successCount + ' items.';
     }

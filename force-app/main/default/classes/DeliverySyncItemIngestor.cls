@@ -4,7 +4,7 @@
  */
 public without sharing class DeliverySyncItemIngestor {
 
-    // Helper to get the Org's namespace prefix (e.g., 'delivery__') or empty string
+    // Helper to identify the namespace prefix (e.g. 'delivery__')
     private static String getNamespacePrefix() {
         String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
         return String.isBlank(ns) ? '' : ns + '__';
@@ -24,6 +24,7 @@ public without sharing class DeliverySyncItemIngestor {
         Id localRecordId = findLocalId(targetType, sourceId);
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
         
+        // Handle Parenting (Comments)
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
             Id localParentId = findLocalTicketId(targetId);
             if (localParentId != null) {
@@ -48,11 +49,13 @@ public without sharing class DeliverySyncItemIngestor {
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
+            // Check for Request bridge first
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
-            // FIX: Remove namespace prefix safely without corrupting the suffix
-            String cleanName = objName.removeStart(getNamespacePrefix());
+            // FIX: Safely remove namespace from start, leaving __c suffix intact
+            String cleanName = objName.removeStartIgnoreCase(getNamespacePrefix());
+            
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
@@ -69,8 +72,7 @@ public without sharing class DeliverySyncItemIngestor {
         item.StatusPk__c = 'Synced';
         
         // FIX: Ensure restricted picklist receives "Ticket__c" not "c"
-        // We strip the namespace prefix if it exists.
-        String cleanType = objType.removeStart(getNamespacePrefix());
+        String cleanType = objType.removeStartIgnoreCase(getNamespacePrefix());
         
         item.ObjectTypePk__c = cleanType;
         item.RemoteExternalIdTxt__c = remoteId;
@@ -87,7 +89,7 @@ public without sharing class DeliverySyncItemIngestor {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
         String ns = getNamespacePrefix().toLowerCase();
         
-        // 1. Build an Index: Clean Name (lowercase) -> Actual SObjectField
+        // 1. Build Index: Clean Name (lowercase) -> Actual SObjectField
         Map<String, SObjectField> cleanNameIndex = new Map<String, SObjectField>();
         for (String fieldApi : fieldMap.keySet()) {
             String lowerApi = fieldApi.toLowerCase();
@@ -100,7 +102,7 @@ public without sharing class DeliverySyncItemIngestor {
             String searchKey = key.toLowerCase();
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
-                // Trust System Mode - No isUpdateable() check needed for sync process
+                // System Mode - No isUpdateable() check needed for Sync
                 Object val = payload.get(key);
                 Schema.DisplayType dtype = field.getDescribe().getType();
                 
