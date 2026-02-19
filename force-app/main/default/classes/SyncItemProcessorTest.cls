@@ -7,6 +7,10 @@ private class SyncItemProcessorTest {
 
     @TestSetup
     static void makeData() {
+        // FIX: Prevent SyncEngine from firing during setup so it doesn't enqueue 
+        // a processor that sweeps up and fails our test records before the test starts!
+        SyncEngine.setSyncContext();
+
         // 1. Setup Network Entity (Vendor)
         Network_Entity__c vendor = new Network_Entity__c(
             Name = 'Mothership HQ',
@@ -42,6 +46,9 @@ private class SyncItemProcessorTest {
             PayloadTxt__c = '{"StageNamePk__c":"In Development"}'
         );
         insert item;
+        
+        // Clean up auto-generated passive items just in case
+        delete [SELECT Id FROM Sync_Item__c WHERE RequestId__c = null];
     }
 
     /**
@@ -55,8 +62,7 @@ private class SyncItemProcessorTest {
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        // Use static SOQL to avoid namespace string concatenation issues
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c LIMIT 1];
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE RequestId__c != null LIMIT 1];
         System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
     }
 
@@ -71,7 +77,7 @@ private class SyncItemProcessorTest {
         System.enqueueJob(new SyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c LIMIT 1];
+        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE RequestId__c != null LIMIT 1];
         System.assertEquals('Failed', result.StatusPk__c, 'Status should update to Failed on 500 error');
         System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
     }
