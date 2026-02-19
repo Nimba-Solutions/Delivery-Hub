@@ -68,6 +68,7 @@ public without sharing class SyncEngine {
                 List<Request__c> reqs = routes.get(tId);
                 
                 if (reqs != null && !reqs.isEmpty()) {
+                    Boolean routed = false;
                     // PUSH MODEL (Client Side): Create routed items
                     for (Request__c req : reqs) {
                         String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
@@ -75,6 +76,13 @@ public without sharing class SyncEngine {
                             continue; 
                         }
                         itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                        routed = true;
+                    }
+                    
+                    // NEW: If we had Requests but none were valid for pushing (blank remote IDs),
+                    // fallback to Hub Mode and create the passive item!
+                    if (!routed) {
+                        itemsToInsert.add(createSyncItem(rec, null, allowedFields));
                     }
                 } else {
                     // PULL MODEL (Vendor Hub): No routing records exist. Create an unrouted item!
