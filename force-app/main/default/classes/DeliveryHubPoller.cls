@@ -6,12 +6,11 @@ public without sharing class DeliveryHubPoller {
     @AuraEnabled
     public static String pollUpdates() {
         try {
-            // Changed to SYSTEM_MODE to prevent "incomplete configuration" errors due to FLS
+            // Simplified Query relying on 'without sharing' for field visibility
             List<Network_Entity__c> vendors = [
                 SELECT IntegrationEndpointUrlTxt__c, LastInboundSyncDateTime__c, RemoteExternalIdTxt__c 
                 FROM Network_Entity__c 
                 WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor' 
-                WITH SYSTEM_MODE
                 LIMIT 1
             ];
             
