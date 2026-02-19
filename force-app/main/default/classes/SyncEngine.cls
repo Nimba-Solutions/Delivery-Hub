@@ -7,32 +7,18 @@ public without sharing class SyncEngine {
     private static Boolean isSyncContext = false;
     @TestVisible private static Set<String> blockedOrigins = new Set<String>();
 
-    /**
-     * @description Sets the sync context to prevent recursive triggers.
-     */
     public static void setSyncContext() {
         isSyncContext = true;
     }
     
-    /**
-     * @description Called by Ingestor to prevent echoing updates back to this specific origin.
-     * @param remoteId The external ID of the source system to block (prevents loopback).
-     */
     public static void ignoreOrigin(String remoteId) {
         if (String.isNotBlank(remoteId)) {
             blockedOrigins.add(remoteId.trim());
         }
     }
 
-    /**
-     * @description Main Entry Point. Captures changes and queues Sync Items.
-     * @param newRecords Trigger.new records.
-     * @param oldMap Trigger.oldMap records.
-     * @param allowedFields Set of API names allowed for synchronization.
-     */
     @SuppressWarnings('PMD.ApexCRUDViolation') 
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
-        // Added braces to satisfy PMD style rules
         if (isSyncContext || newRecords == null || newRecords.isEmpty()) {
             return;
         }
@@ -53,7 +39,6 @@ public without sharing class SyncEngine {
                 return; 
             }
 
-            // Using WITH SYSTEM_MODE for technical routing
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
                 FROM Request__c 
@@ -80,20 +65,24 @@ public without sharing class SyncEngine {
                 }
 
                 Id tId = recordToTicketId.get(rec.Id);
-                if (routes.containsKey(tId)) {
-                    for (Request__c req : routes.get(tId)) {
+                List<Request__c> reqs = routes.get(tId);
+                
+                if (reqs != null && !reqs.isEmpty()) {
+                    // PUSH MODEL (Client Side): Create routed items
+                    for (Request__c req : reqs) {
                         String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
-                        
                         if (String.isBlank(remoteId) || blockedOrigins.contains(remoteId.trim())) {
                             continue; 
                         }
                         itemsToInsert.add(createSyncItem(rec, req, allowedFields));
                     }
+                } else {
+                    // PULL MODEL (Vendor Hub): No routing records exist. Create an unrouted item!
+                    itemsToInsert.add(createSyncItem(rec, null, allowedFields));
                 }
             }
 
             if (!itemsToInsert.isEmpty()) {
-                // Using Database method with AccessLevel to satisfy security rule
                 Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
                 
                 if (!System.isQueueable() && !System.isFuture()) {
@@ -105,13 +94,6 @@ public without sharing class SyncEngine {
         }
     }
 
-    /**
-     * @description Checks if synchronization-eligible fields have changed.
-     * @param rec Current state.
-     * @param oldRec Previous state.
-     * @param allowedFields Set of fields to monitor.
-     * @return Boolean true if change is detected.
-     */
     private static Boolean hasSignificantChange(SObject rec, SObject oldRec, Set<String> allowedFields) {
         if (oldRec == null || allowedFields == null || allowedFields.isEmpty()) { 
             return true; 
@@ -146,8 +128,9 @@ public without sharing class SyncEngine {
     private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields) {
         Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        item.TicketId__c = (Id) getSafeValue(req, 'TicketId__c');
-        item.RequestId__c = req.Id; 
+        
+        Id localTicketId = getTicketId(rec);
+        item.TicketId__c = localTicketId;
         item.ObjectTypePk__c = rec.getSObjectType().getDescribe().getName().replace('delivery__', '');
 
         Map<String, Object> payload = new Map<String, Object>();
@@ -158,8 +141,17 @@ public without sharing class SyncEngine {
         } else {
             payload = rec.getPopulatedFieldsAsMap().clone();
         }
+        
         payload.put('SourceId', rec.Id); 
-        payload.put('TargetId', getSafeValue(req, 'RemoteTicketIdTxt__c')); 
+        
+        if (req != null) {
+            item.RequestId__c = req.Id; 
+            payload.put('TargetId', getSafeValue(req, 'RemoteTicketIdTxt__c')); 
+        } else {
+            // VENDOR HUB: Use the local Vendor ID as the TargetId. The Client will translate it upon pull.
+            payload.put('TargetId', localTicketId);
+        }
+        
         item.PayloadTxt__c = JSON.serialize(payload);
         return item;
     }
