@@ -1,6 +1,7 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
  * Runs in System Mode (without sharing) to bypass FLS restrictions during Sync.
+ * Handles namespace resolution for both Object Types and Fields automatically.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -10,6 +11,11 @@ public without sharing class DeliverySyncItemIngestor {
         return String.isBlank(ns) ? '' : ns + '__';
     }
 
+    /**
+     * @description Main entry point for inbound data.
+     * @param objectType The API name (e.g., Ticket__c)
+     * @param payload The JSON map received from the sender
+     */
     public static void processInboundItem(String objectType, Map<String, Object> payload) {
         SyncEngine.setSyncContext();
 
@@ -28,6 +34,7 @@ public without sharing class DeliverySyncItemIngestor {
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
             Id localParentId = findLocalTicketId(targetId);
             if (localParentId != null) {
+                // Directly set the parent ID bypassing mapFields to avoid mapping errors
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
         }
@@ -48,12 +55,14 @@ public without sharing class DeliverySyncItemIngestor {
 
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
+        
+        // Special handling for Tickets via the Request bridge table
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            // Check for Request bridge first
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
-            // FIX: Safely remove namespace from start, leaving __c suffix intact
+            // FIX: Safely remove namespace from start, leaving __c suffix intact.
+            // This ensures we look up "Ticket_Comment__c" instead of "c".
             String cleanName = objName.removeStartIgnoreCase(getNamespacePrefix());
             
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
@@ -72,6 +81,7 @@ public without sharing class DeliverySyncItemIngestor {
         item.StatusPk__c = 'Synced';
         
         // FIX: Ensure restricted picklist receives "Ticket__c" not "c"
+        // We strip the namespace prefix if it exists.
         String cleanType = objType.removeStartIgnoreCase(getNamespacePrefix());
         
         item.ObjectTypePk__c = cleanType;
@@ -102,7 +112,7 @@ public without sharing class DeliverySyncItemIngestor {
             String searchKey = key.toLowerCase();
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
-                // System Mode - No isUpdateable() check needed for Sync
+                // System Mode - No isUpdateable() check needed for Sync process
                 Object val = payload.get(key);
                 Schema.DisplayType dtype = field.getDescribe().getType();
                 
