@@ -4,11 +4,17 @@
  */
 public without sharing class DeliveryHubPoller {
 
+    // Helper to get the Org's namespace prefix
+    private static String getNamespacePrefix() {
+        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
+    }
+
     @AuraEnabled
     public static String pollUpdates() {
         try {
-            // FIX: Using Static SOQL ensures the compiler handles the namespace
-            // and the 'without sharing' context grants field visibility.
+            // FIX: Use STATIC SOQL. The compiler handles the namespace automatically.
+            // 'without sharing' ensures we bypass FLS for these specific fields.
             List<Network_Entity__c> vendors = [
                 SELECT Id, 
                        IntegrationEndpointUrlTxt__c, 
@@ -46,7 +52,8 @@ public without sharing class DeliveryHubPoller {
             HttpResponse res = new Http().send(req);
             
             if (res.getStatusCode() == 200) {
-                return handleSuccess(res.getBody(), vendor);
+                // Pass namespace prefix to helper for dynamic updates if needed
+                return handleSuccess(res.getBody(), vendor, getNamespacePrefix());
             } else {
                 return 'Error: HTTP ' + res.getStatusCode() + ' ' + res.getBody();
             }
@@ -56,7 +63,7 @@ public without sharing class DeliveryHubPoller {
         }
     }
 
-    private static String handleSuccess(String responseBody, Network_Entity__c vendor) {
+    private static String handleSuccess(String responseBody, Network_Entity__c vendor, String ns) {
         Map<String, Object> response = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
         List<Object> events = (List<Object>) response.get('events');
         
@@ -64,7 +71,6 @@ public without sharing class DeliveryHubPoller {
         if (events != null) {
             for (Object itemObj : events) {
                 Map<String, Object> item = (Map<String, Object>) itemObj;
-                // Delegate to the robust ingestor we fixed previously
                 DeliverySyncItemIngestor.processInboundItem(
                     (String) item.get('objectType'), 
                     (Map<String, Object>) item.get('payload')
@@ -76,7 +82,11 @@ public without sharing class DeliveryHubPoller {
         String serverTimeStr = (String) response.get('latestServerTime');
         if (serverTimeStr != null) {
             DateTime dt = (DateTime) JSON.deserialize('"' + serverTimeStr + '"', DateTime.class);
-            vendor.LastInboundSyncDateTime__c = dt;
+            
+            // Use put() with namespaced field name for dynamic update safety
+            // or just simple assignment since we have the concrete object
+            vendor.LastInboundSyncDateTime__c = dt; 
+            
             update as system vendor;
         }
         return 'Success: Synced ' + successCount + ' items.';
