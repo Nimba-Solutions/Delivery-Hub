@@ -5,6 +5,11 @@
  */
 public without sharing class DeliverySyncItemIngestor {
 
+    private static String getNamespacePrefix() {
+        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
+    }
+
     private static String stripNamespace(String apiName) {
         if (String.isNotBlank(apiName) && apiName.countMatches('__') > 1) {
             return apiName.substringAfter('__');
@@ -29,23 +34,17 @@ public without sharing class DeliverySyncItemIngestor {
         // Handle Parenting (Comments)
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
             Id localParentId = null;
-            
-            // 1. Try to use targetId directly as a local ID (Sender pre-translated it)
             try {
                 Id castId = (Id) targetId;
                 if (castId.getSobjectType().getDescribe().getName().endsWith('Ticket__c')) {
                     localParentId = castId;
                 }
-            } catch (Exception e) {
-                // Not a valid local ID string, ignore and fallback to lookup
-            }
+            } catch (Exception e) {}
 
-            // 2. Fallback: Lookup via Request__c bridge
             if (localParentId == null) {
                 localParentId = findLocalTicketId(targetId);
             }
 
-            // 3. Apply the resolved ID
             if (localParentId != null) {
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
@@ -60,6 +59,30 @@ public without sharing class DeliverySyncItemIngestor {
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
             createLedgerEntry(objectType, sourceId, recordToUpsert.Id);
+            
+            // --- FIX: Bridge the Request Record for the Pull Architecture ---
+            if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
+                String ns = getNamespacePrefix();
+                String query = 'SELECT Id FROM ' + ns + 'Request__c WHERE ' + ns + 'TicketId__c = \'' + recordToUpsert.Id + '\'';
+                List<SObject> existingReqs = Database.query(query);
+                
+                if (existingReqs.isEmpty()) {
+                    // Create a routing record so SyncEngine can queue Outbound items
+                    SObject req = (SObject) Type.forName(ns + 'Request__c').newInstance();
+                    req.put(ns + 'TicketId__c', recordToUpsert.Id);
+                    req.put(ns + 'RemoteTicketIdTxt__c', sourceId); // Save the Client's Ticket ID!
+                    req.put(ns + 'StatusPk__c', 'Active');
+                    // We purposefully leave DeliveryEntityId__c NULL so the Vendor does not attempt to push
+                    Database.insert(req, AccessLevel.SYSTEM_MODE);
+                } else {
+                    // If the trigger auto-created one, fix it by stripping the Vendor and adding the Remote ID
+                    for (SObject req : existingReqs) {
+                        req.put(ns + 'RemoteTicketIdTxt__c', sourceId);
+                        req.put(ns + 'DeliveryEntityId__c', null); // Stop the push!
+                    }
+                    Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
+                }
+            }
         }
     }
 
