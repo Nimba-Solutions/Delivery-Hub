@@ -95,7 +95,7 @@ private class DeliveryHubSyncServiceTest {
             'TargetId' => remoteTicketId, 
             'SourceId' => sourceId,
             'AuthorTxt__c' => uniqueAuthor,
-            'BodyTxt__c' => 'Service Tester Comment'
+            'BodyTxt__c' => 'Service Test Comment'
         };
 
         RestRequest req = new RestRequest();
