@@ -20,9 +20,27 @@ export default class DeliveryTicketChat extends LightningElement {
     
     wiredResult;
     _hasScrolled = false;
+    _pollingInterval; // Used to hold the interval ID
 
     // --- LIFECYCLE HOOKS ---
     
+    connectedCallback() {
+        // Start polling every 5 seconds (5000 milliseconds)
+        // Adjust the time as needed (e.g., 10000 for 10 seconds)
+        this._pollingInterval = setInterval(() => {
+            if (this.wiredResult) {
+                refreshApex(this.wiredResult);
+            }
+        }, 5000);
+    }
+
+    disconnectedCallback() {
+        // Prevent memory leaks by destroying the interval when the user leaves the page
+        if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+        }
+    }
+
     // Called whenever the component finishes rendering (initial load + updates)
     renderedCallback() {
         if (!this._hasScrolled && this.comments.data.length > 0) {
@@ -49,6 +67,9 @@ export default class DeliveryTicketChat extends LightningElement {
         const { data, error } = result;
 
         if (data) {
+            // Check if we actually got NEW data so we can scroll down
+            const isNewData = this.comments.data.length !== data.length;
+
             this.comments.data = data.map(record => {
                 // Helper to safely get field value regardless of namespace
                 const getValue = (rec, fieldName) => {
@@ -96,8 +117,10 @@ export default class DeliveryTicketChat extends LightningElement {
                 };
             });
 
-            // Auto-scroll when new data arrives
-            this.scrollToBottom();
+            // If the poll brought in a new message, force a scroll to the bottom
+            if (isNewData) {
+                this.scrollToBottom();
+            }
 
         } else if (error) {
             console.error('Error loading comments', error);
