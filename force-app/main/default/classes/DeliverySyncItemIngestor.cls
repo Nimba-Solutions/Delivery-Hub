@@ -5,10 +5,6 @@
  */
 public without sharing class DeliverySyncItemIngestor {
 
-    /**
-     * @description Dynamically strips the namespace prefix from any API name (Object or Field).
-     * Works in scratch orgs, packaging orgs, and installed subscriber orgs.
-     */
     private static String stripNamespace(String apiName) {
         if (String.isNotBlank(apiName) && apiName.countMatches('__') > 1) {
             return apiName.substringAfter('__');
@@ -32,7 +28,24 @@ public without sharing class DeliverySyncItemIngestor {
         
         // Handle Parenting (Comments)
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
-            Id localParentId = findLocalTicketId(targetId);
+            Id localParentId = null;
+            
+            // 1. Try to use targetId directly as a local ID (Sender pre-translated it)
+            try {
+                Id castId = (Id) targetId;
+                if (castId.getSobjectType().getDescribe().getName().endsWith('Ticket__c')) {
+                    localParentId = castId;
+                }
+            } catch (Exception e) {
+                // Not a valid local ID string, ignore and fallback to lookup
+            }
+
+            // 2. Fallback: Lookup via Request__c bridge
+            if (localParentId == null) {
+                localParentId = findLocalTicketId(targetId);
+            }
+
+            // 3. Apply the resolved ID
             if (localParentId != null) {
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
@@ -55,7 +68,6 @@ public without sharing class DeliverySyncItemIngestor {
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
         
-        // Special handling for Tickets via the Request bridge table
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
@@ -85,14 +97,12 @@ public without sharing class DeliverySyncItemIngestor {
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
         
-        // 1. Build Index: Clean Name (lowercase) -> Actual SObjectField
         Map<String, SObjectField> cleanNameIndex = new Map<String, SObjectField>();
         for (String fieldApi : fieldMap.keySet()) {
             String clean = stripNamespace(fieldApi).toLowerCase();
             cleanNameIndex.put(clean, fieldMap.get(fieldApi));
         }
 
-        // 2. Iterate Payload
         for (String key : payload.keySet()) {
             String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {
