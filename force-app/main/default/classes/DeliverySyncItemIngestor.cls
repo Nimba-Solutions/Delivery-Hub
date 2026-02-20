@@ -31,8 +31,6 @@ public without sharing class DeliverySyncItemIngestor {
         Id localRecordId = findLocalId(targetType, sourceId);
         
         // --- FIX 1: HUB TICKET UPDATES ---
-        // If we are receiving a Ticket and don't have a ledger entry, but the payload has a TargetId,
-        // check if that TargetId is our own local Ticket ID to prevent duplicate inserts.
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
             try {
                 Id castId = (Id) targetId;
@@ -50,16 +48,12 @@ public without sharing class DeliverySyncItemIngestor {
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             
-            // 1. PULL ARCHITECTURE: Check the routing bridge FIRST. 
-            // The TargetId is likely a Remote Vendor ID that we need to translate to a Local ID.
             localParentId = findLocalTicketId(targetId);
 
-            // 2. PUSH ARCHITECTURE FALLBACK: If not in the bridge, see if the Sender passed us a valid local ID.
             if (localParentId == null) {
                 try {
                     Id castId = (Id) targetId;
                     if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('Ticket__c')) {
-                        // Prevent cross-org prefix collisions by ensuring the ID actually exists locally
                         String query = 'SELECT Id FROM ' + castId.getSobjectType().getDescribe().getName() + ' WHERE Id = \'' + castId + '\' LIMIT 1';
                         if (!Database.query(query).isEmpty()) {
                             localParentId = castId;
@@ -70,7 +64,6 @@ public without sharing class DeliverySyncItemIngestor {
                 }
             }
 
-            // Parent the Comment directly (Files are parented differently below)
             if (localParentId != null && objectType.containsIgnoreCase('Ticket_Comment__c')) {
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
@@ -78,8 +71,8 @@ public without sharing class DeliverySyncItemIngestor {
 
         mapFields(recordToUpsert, payload, targetType);
         
-        // Only set SourcePk__c on custom objects, standard ContentVersion doesn't have it
-        if (!objectType.equalsIgnoreCase('ContentVersion')) {
+        // --- NEW FIX: Check if SourcePk__c exists before setting it ---
+        if (hasField(targetType, 'SourcePk__c')) {
             putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
         }
 
@@ -102,7 +95,6 @@ public without sharing class DeliverySyncItemIngestor {
                 Database.insert(cdl, AccessLevel.SYSTEM_MODE);
             }
             
-            // If the Client just inserted a Ticket, we MUST stamp the Vendor's ID onto the auto-created Request
             if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
                 String ns = getNamespacePrefix();
                 String query = 'SELECT Id FROM ' + ns + 'Request__c WHERE ' + ns + 'TicketId__c = \'' + recordToUpsert.Id + '\'';
@@ -110,7 +102,7 @@ public without sharing class DeliverySyncItemIngestor {
                 
                 if (!existingReqs.isEmpty()) {
                     for (SObject req : existingReqs) {
-                        req.put(ns + 'RemoteTicketIdTxt__c', sourceId); // The Vendor's Ticket ID
+                        req.put(ns + 'RemoteTicketIdTxt__c', sourceId); 
                     }
                     Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
                 }
@@ -119,6 +111,17 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     // --- HELPERS ---
+
+    private static Boolean hasField(Schema.SObjectType type, String fieldName) {
+        Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
+        String target = stripNamespace(fieldName).toLowerCase();
+        for (String fieldApi : fieldMap.keySet()) {
+            if (stripNamespace(fieldApi).toLowerCase() == target) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
@@ -175,7 +178,6 @@ public without sharing class DeliverySyncItemIngestor {
                     } else if (dtype == Schema.DisplayType.DATETIME) {
                         record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
                     } else if (dtype == Schema.DisplayType.BASE64) {
-                        // --- FIX 4: DECODE BASE64 BLOBS (FILES) ---
                         record.put(field, EncodingUtil.base64Decode((String)val));
                     } else {
                         record.put(field, val);
