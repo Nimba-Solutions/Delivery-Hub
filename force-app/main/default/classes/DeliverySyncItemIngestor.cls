@@ -39,7 +39,9 @@ public without sharing class DeliverySyncItemIngestor {
                 if (castId.getSobjectType() == targetType) {
                     localRecordId = castId;
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                System.debug(LoggingLevel.FINE, 'TargetId is not a valid local ID: ' + e.getMessage());
+            }
         }
 
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
@@ -64,7 +66,7 @@ public without sharing class DeliverySyncItemIngestor {
                         }
                     }
                 } catch (Exception e) {
-                    // Not a valid ID string, safely ignore
+                    System.debug(LoggingLevel.FINE, 'TargetId fallback failed: ' + e.getMessage());
                 }
             }
 
@@ -157,7 +159,9 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         for (String key : payload.keySet()) {
-            if (key == 'SourceId' || key == 'TargetId') continue;
+            if (key == 'SourceId' || key == 'TargetId') {
+                continue;
+            }
 
             String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {

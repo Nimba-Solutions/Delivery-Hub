@@ -3,17 +3,18 @@
  * Evaluates files attached to Tickets and creates Outbound Ledger entries (Sync_Item__c)
  * feeding them into the Unified Sync Architecture.
  */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class ContentDocumentLinkTriggerHandler {
 
     public static void handleAfterInsert(List<ContentDocumentLink> newLinks) {
         
         // --- 1. JIRA INTEGRATION ZONE ---
         // (Preserved functionality: Keep Jira file sync separate from Delivery Hub)
-        try {
-            // Example: JiraAttachmentHandler.handleAfterInsert(newLinks);
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Jira Sync Error: ' + e.getMessage());
-        }
+        // try {
+        //     JiraAttachmentHandler.handleAfterInsert(newLinks);
+        // } catch (Exception e) {
+        //     System.debug(LoggingLevel.ERROR, 'Jira Sync Error: ' + e.getMessage());
+        // }
 
         // --- 2. DELIVERY HUB UNIFIED LEDGER ---
         Map<Id, Id> docToTicketMap = new Map<Id, Id>();
@@ -37,6 +38,7 @@ public without sharing class ContentDocumentLinkTriggerHandler {
             FROM ContentVersion
             WHERE ContentDocumentId IN :docToTicketMap.keySet()
             AND IsLatest = true
+            WITH SYSTEM_MODE
         ];
 
         if (cvs.isEmpty()) {
