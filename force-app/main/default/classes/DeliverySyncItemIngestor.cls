@@ -29,20 +29,34 @@ public without sharing class DeliverySyncItemIngestor {
         String targetId = (String) payload.get('TargetId'); 
         
         Id localRecordId = findLocalId(targetType, sourceId);
+        
+        // --- FIX 1: HUB TICKET UPDATES ---
+        // If we are receiving a Ticket and don't have a ledger entry, but the payload has a TargetId,
+        // check if that TargetId is our own local Ticket ID to prevent duplicate inserts.
+        if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
+            try {
+                Id castId = (Id) targetId;
+                if (castId.getSobjectType() == targetType) {
+                    localRecordId = castId;
+                }
+            } catch (Exception e) {}
+        }
+
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
         
-        // Handle Parenting (Comments)
-        if (localRecordId == null && String.isNotBlank(targetId) && objectType.contains('Ticket_Comment__c')) {
+        // --- FIX 2: PARENTING FOR COMMENTS AND FILES ---
+        Id localParentId = null;
+        if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             
-            // 1. PULL ARCHITECTURE: Always check the routing bridge FIRST. 
+            // 1. PULL ARCHITECTURE: Check the routing bridge FIRST. 
             // The TargetId is likely a Remote Vendor ID that we need to translate to a Local ID.
-            Id localParentId = findLocalTicketId(targetId);
+            localParentId = findLocalTicketId(targetId);
 
             // 2. PUSH ARCHITECTURE FALLBACK: If not in the bridge, see if the Sender passed us a valid local ID.
             if (localParentId == null) {
                 try {
                     Id castId = (Id) targetId;
-                    if (castId.getSobjectType().getDescribe().getName().endsWith('Ticket__c')) {
+                    if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('Ticket__c')) {
                         // Prevent cross-org prefix collisions by ensuring the ID actually exists locally
                         String query = 'SELECT Id FROM ' + castId.getSobjectType().getDescribe().getName() + ' WHERE Id = \'' + castId + '\' LIMIT 1';
                         if (!Database.query(query).isEmpty()) {
@@ -54,13 +68,18 @@ public without sharing class DeliverySyncItemIngestor {
                 }
             }
 
-            if (localParentId != null) {
+            // Parent the Comment directly (Files are parented differently below)
+            if (localParentId != null && objectType.containsIgnoreCase('Ticket_Comment__c')) {
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
         }
 
         mapFields(recordToUpsert, payload, targetType);
-        putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
+        
+        // Only set SourcePk__c on custom objects, standard ContentVersion doesn't have it
+        if (!objectType.equalsIgnoreCase('ContentVersion')) {
+            putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
+        }
 
         // Execute DML in System Mode
         if (recordToUpsert.Id != null) {
@@ -68,6 +87,18 @@ public without sharing class DeliverySyncItemIngestor {
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
             createLedgerEntry(objectType, sourceId, recordToUpsert.Id);
+            
+            // --- FIX 3: ATTACH FILES TO TICKETS ---
+            if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
+                Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
+                ContentDocumentLink cdl = new ContentDocumentLink(
+                    ContentDocumentId = contentDocId,
+                    LinkedEntityId = localParentId,
+                    ShareType = 'V',
+                    Visibility = 'AllUsers'
+                );
+                Database.insert(cdl, AccessLevel.SYSTEM_MODE);
+            }
             
             // If the Client just inserted a Ticket, we MUST stamp the Vendor's ID onto the auto-created Request
             if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
@@ -126,6 +157,8 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         for (String key : payload.keySet()) {
+            if (key == 'SourceId' || key == 'TargetId') continue;
+
             String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
@@ -137,11 +170,16 @@ public without sharing class DeliverySyncItemIngestor {
                         record.put(field, Date.valueOf((String)val));
                     } else if (dtype == Schema.DisplayType.DATETIME) {
                         record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
+                    } else if (dtype == Schema.DisplayType.BASE64) {
+                        // --- FIX 4: DECODE BASE64 BLOBS (FILES) ---
+                        record.put(field, EncodingUtil.base64Decode((String)val));
                     } else {
                         record.put(field, val);
                     }
                 } else {
-                    record.put(field, null);
+                    if (field.getDescribe().isNillable() && field.getDescribe().isCustom()) {
+                        record.put(field, null);
+                    }
                 }
             }
         }
