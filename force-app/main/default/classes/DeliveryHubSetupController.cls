@@ -90,17 +90,17 @@ public without sharing class DeliveryHubSetupController {
         }
 
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
-        String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/intake';
+        
+        String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/sync/Network_Entity__c';
 
-        // Construct Packet for Mothership registration
+        // --- FIX: Construct Packet using standard Ingestor formatting ---
         Map<String, Object> packet = new Map<String, Object>{
-            'companyName' => UserInfo.getOrganizationName(),
-            'orgId' => UserInfo.getOrganizationId(),
-            'instanceUrl' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
-            'registeredBy' => UserInfo.getName(),
-            'title' => 'New Org Connection',
-            'briefSummary' => 'Connection Established Successfully.',
-            'entityId' => localEntityId 
+            'SourceId' => localEntityId, // Required by Ingestor
+            'Name' => UserInfo.getOrganizationName(), // Standard Field
+            'OrgIdTxt__c' => UserInfo.getOrganizationId(),
+            'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
+            'EntityTypePk__c' => 'Client',
+            'StatusPk__c' => 'Active'
         };
 
         HttpRequest req = new HttpRequest();
@@ -114,26 +114,16 @@ public without sharing class DeliveryHubSetupController {
         HttpResponse res = http.send(req);
 
         if (res.getStatusCode() >= 400) {
-            throw new AuraHandledException('Connection Failed: ' + res.getBody());
+            throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
         }
 
         // 1. EXTRACT DATA FROM RESPONSE
-        Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-        String remoteEntityId = (String) responseMap.get('entityId');
-        String remoteOrgId = (String) responseMap.get('orgId');
-        String remoteTicketId = (String) responseMap.get('ticketId'); 
-
-        // 2. UPDATE LOCAL ENTITY
-        Network_Entity__c mothership = new Network_Entity__c(
-            Id = localEntityId,
-            OrgIdTxt__c = remoteOrgId,
-            RemoteExternalIdTxt__c = remoteEntityId
-        );
-        update mothership;
-
-        initializeDefaultSettings();
+        // Because the Vendor uses the generic Ingestor now, it just returns {"status":"Success"}.
+        // It DOES NOT return the remoteTicketId anymore! We must generate a generic Ticket.
         
-        // 3. CREATE LOCAL TICKET & REQUEST (The Ledger Bridge)
+        // 2. CREATE LOCAL TICKET & REQUEST (The Ledger Bridge)
+        // Since we don't have the Vendor's Ticket ID yet, we leave it blank. 
+        // The Vendor will receive the new Ticket we create below via the standard SyncEngine!
         List<Ticket__c> existingTickets = [
             SELECT Id FROM Ticket__c 
             WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.' 
@@ -146,26 +136,22 @@ public without sharing class DeliveryHubSetupController {
                 StageNamePk__c = 'Backlog'
             );
             
-            // Disable trigger to prevent outbound loop during initial setup
-            Boolean originalState = TicketTriggerHandler.triggerDisabled;
-            TicketTriggerHandler.triggerDisabled = true;
-            try {
-                insert newTicket;
+            // We DO NOT disable the trigger here anymore! 
+            // We WANT the SyncEngine to fire and push this Ticket to the Vendor.
+            insert newTicket;
 
-                // 4. CREATE REQUEST BRIDGE
-                Request__c newRequest = new Request__c(
-                    TicketId__c = newTicket.Id,
-                    DeliveryEntityId__c = localEntityId, 
-                    StatusPk__c = 'Active',
-                    RemoteTicketIdTxt__c = remoteTicketId 
-                );
-                insert newRequest;
-
-            } finally {
-                TicketTriggerHandler.triggerDisabled = originalState;
-            }
+            // 3. CREATE REQUEST BRIDGE
+            Request__c newRequest = new Request__c(
+                TicketId__c = newTicket.Id,
+                DeliveryEntityId__c = localEntityId, 
+                StatusPk__c = 'Active'
+                // RemoteTicketIdTxt__c is left blank. The Vendor will receive the ticket, 
+                // insert it, and send an update back with its ID later.
+            );
+            insert newRequest;
         }
-        
+
+        initializeDefaultSettings();
         scheduleSyncJobs();
     }
 
