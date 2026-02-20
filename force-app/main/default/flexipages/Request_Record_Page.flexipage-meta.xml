@@ -124,12 +124,6 @@
                 <identifier>c_manageDeliveryRequest</identifier>
             </componentInstance>
         </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryFileSender</componentName>
-                <identifier>c_deliveryFileSender</identifier>
-            </componentInstance>
-        </itemInstances>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>

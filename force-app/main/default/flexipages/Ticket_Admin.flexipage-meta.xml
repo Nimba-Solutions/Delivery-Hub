@@ -31,12 +31,6 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryFileSender</componentName>
-                <identifier>c_deliveryFileSender</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentInstanceProperties>
                     <name>hideHeader</name>
                     <value>false</value>
