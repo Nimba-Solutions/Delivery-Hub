@@ -1,49 +1,132 @@
 /**
  * @description Handler for ContentDocumentLinkTrigger.
- * Filters for files attached to Tickets and offloads sync to @Future method to allow callouts.
+ * Evaluates files attached to Tickets and creates Outbound Ledger entries (Sync_Item__c)
+ * feeding them into the Unified Sync Architecture.
  */
-public inherited sharing class ContentDocumentLinkTriggerHandler {
+@SuppressWarnings('PMD.ApexCRUDViolation')
+public without sharing class ContentDocumentLinkTriggerHandler {
 
-    /**
-     * @description Entry point for After Insert.
-     * @param newLinks List of new ContentDocumentLink records.
-     */
     public static void handleAfterInsert(List<ContentDocumentLink> newLinks) {
-        // Map<ContentDocumentId, TicketId>
-        Map<Id, Id> filesToSend = new Map<Id, Id>();
+        
+        // --- 1. JIRA INTEGRATION ZONE ---
+        // (Preserved functionality: Keep Jira file sync separate from Delivery Hub)
+        // try {
+        //     JiraAttachmentHandler.handleAfterInsert(newLinks);
+        // } catch (Exception e) {
+        //     System.debug(LoggingLevel.ERROR, 'Jira Sync Error: ' + e.getMessage());
+        // }
+
+        // --- 2. DELIVERY HUB UNIFIED LEDGER ---
+        Map<Id, Id> docToTicketMap = new Map<Id, Id>();
 
         for (ContentDocumentLink cdl : newLinks) {
-            // 1. Check if attached to a Ticket
-            if (cdl.LinkedEntityId != null && 
-                cdl.LinkedEntityId.getSObjectType() == Ticket__c.SObjectType) {
-                
-                // 2. Filter out Org/User specific visibility if needed
-                // (Optional: ignore 'Internal' only files if you have that requirement)
-                filesToSend.put(cdl.ContentDocumentId, cdl.LinkedEntityId);
+            if (cdl.LinkedEntityId != null) {
+                String sObjName = cdl.LinkedEntityId.getSObjectType().getDescribe().getName();
+                if (sObjName.endsWithIgnoreCase('Ticket__c')) {
+                    docToTicketMap.put(cdl.ContentDocumentId, cdl.LinkedEntityId);
+                }
             }
         }
 
-        if (!filesToSend.isEmpty()) {
-            // 3. Call Async Method (Allows Callouts)
-            sendFilesAsync(filesToSend);
+        if (docToTicketMap.isEmpty()) {
+            return;
+        }
+
+        // 3. Query the actual File Data
+        List<ContentVersion> cvs = [
+            SELECT Id, ContentDocumentId, Title, VersionData, PathOnClient, FileExtension, FileType
+            FROM ContentVersion
+            WHERE ContentDocumentId IN :docToTicketMap.keySet()
+            AND IsLatest = true
+            WITH SYSTEM_MODE
+        ];
+
+        if (cvs.isEmpty()) {
+            return;
+        }
+
+        // 4. Query Routes (Request__c Bridge) exactly like SyncEngine
+        Set<Id> ticketIds = new Set<Id>(docToTicketMap.values());
+        List<Request__c> connections = [
+            SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
+            FROM Request__c 
+            WHERE TicketId__c IN :ticketIds AND StatusPk__c != 'Inactive'
+            WITH SYSTEM_MODE
+        ];
+
+        Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
+        for (Request__c r : connections) {
+            Id tId = (Id) r.get('TicketId__c'); // Dynamic get for namespace safety
+            if (!routes.containsKey(tId)) {
+                routes.put(tId, new List<Request__c>());
+            }
+            routes.get(tId).add(r);
+        }
+
+        // 5. Generate Sync_Item__c Payloads
+        List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
+
+        for (ContentVersion cv : cvs) {
+            Id tId = docToTicketMap.get(cv.ContentDocumentId);
+            List<Request__c> reqs = routes.get(tId);
+
+            // Build base payload
+            Map<String, Object> payload = new Map<String, Object>();
+            payload.put('Title', cv.Title);
+            payload.put('PathOnClient', cv.PathOnClient);
+            payload.put('SourceId', cv.Id); 
+            
+            // ARCHITECTURE WARNING: Long Text Area limits are ~131k characters. 
+            // If you get size limit errors on large file uploads, remove VersionData from this payload
+            // and instead update the SyncItemProcessor to query the blob right before the HTTP callout!
+            if (cv.VersionData != null) {
+                payload.put('VersionData', EncodingUtil.base64Encode(cv.VersionData));
+            }
+
+            if (reqs != null && !reqs.isEmpty()) {
+                Boolean routed = false;
+                // PUSH MODEL (Client Side): Generate routed items
+                for (Request__c req : reqs) {
+                    String remoteId = (String) req.get('RemoteTicketIdTxt__c');
+                    if (String.isNotBlank(remoteId)) {
+                        itemsToInsert.add(createFileItem(cv, tId, req.Id, remoteId, payload));
+                        routed = true;
+                    }
+                }
+                
+                // HUB MODEL (Vendor Hub): Fallback if routes exist but are blank
+                if (!routed) {
+                    itemsToInsert.add(createFileItem(cv, tId, null, tId, payload));
+                }
+            } else {
+                // HUB MODEL (Vendor Hub): No routes exist, create passive unrouted item
+                itemsToInsert.add(createFileItem(cv, tId, null, tId, payload));
+            }
+        }
+
+        // 6. Execute DML and Enqueue Processor
+        if (!itemsToInsert.isEmpty()) {
+            Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
+            
+            if (!System.isQueueable() && !System.isFuture()) {
+                Integer maxJobs = Test.isRunningTest() ? 1 : Limits.getLimitQueueableJobs();
+                if (Limits.getQueueableJobs() < maxJobs) {
+                    System.enqueueJob(new SyncItemProcessor());
+                }
+            }
         }
     }
 
-    /**
-     * @description Asynchronous method to handle the actual HTTP Callout.
-     * Uses @Future(callout=true) to break the transaction boundary.
-     */
-    @Future(callout=true)
-    private static void sendFilesAsync(Map<Id, Id> filesToSend) {
-        for (Id docId : filesToSend.keySet()) {
-            Id ticketId = filesToSend.get(docId);
-            try {
-                // Call your existing Sender class
-                DeliveryHubFileSender.sendFileToBroker(ticketId, docId);
-            } catch (Exception e) {
-                // Log failure but don't crash the batch (it's async anyway)
-                System.debug(LoggingLevel.ERROR, 'Async File Send Failed for ' + docId + ': ' + e.getMessage());
-            }
-        }
+    private static Sync_Item__c createFileItem(ContentVersion cv, Id ticketId, Id reqId, String targetId, Map<String, Object> basePayload) {
+        Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
+        item.LocalRecordIdTxt__c = cv.Id;
+        item.TicketId__c = ticketId;
+        item.RequestId__c = reqId;
+        item.ObjectTypePk__c = 'ContentVersion';
+        
+        Map<String, Object> payload = basePayload.clone();
+        payload.put('TargetId', targetId);
+        item.PayloadTxt__c = JSON.serialize(payload);
+        return item;
     }
 }
