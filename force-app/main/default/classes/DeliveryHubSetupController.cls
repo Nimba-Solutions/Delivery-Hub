@@ -5,19 +5,12 @@
 @SuppressWarnings('PMD.ApexSharingViolations')
 public without sharing class DeliveryHubSetupController {
 
-    /**
-     * @description DTO to represent the current connection status to the LWC.
-     */
     public class SetupStatus {
         @AuraEnabled public Boolean isConnected;
         @AuraEnabled public String requiredRemoteSite;
         @AuraEnabled public Network_Entity__c entity;
     }
 
-    /**
-     * @description Checks connection status by looking for the Cloud Nimbus Network Entity.
-     * @return SetupStatus object containing connection details.
-     */
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
@@ -45,11 +38,6 @@ public without sharing class DeliveryHubSetupController {
         return status;
     }
 
-    /**
-     * @description STEP 1: Create or Retrieve the Local Entity record.
-     * Maps configuration from Custom Metadata to a Network_Entity record.
-     * @return The created or retrieved Network_Entity__c record.
-     */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static Network_Entity__c prepareLocalEntity() {
@@ -77,11 +65,6 @@ public without sharing class DeliveryHubSetupController {
         return mothership;
     }
 
-    /**
-     * @description STEP 2: Perform the Handshake Callout.
-     * Registers this Org with the Mothership and creates the initial Ticket/Request bridge.
-     * @param localEntityId The ID of the Network_Entity created in Step 1.
-     */
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
     public static void performHandshake(Id localEntityId) {
@@ -90,6 +73,13 @@ public without sharing class DeliveryHubSetupController {
         }
 
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
+<<<<<<< HEAD
+        String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/sync/Network_Entity__c';
+
+        Map<String, Object> packet = new Map<String, Object>{
+            'SourceId' => localEntityId, 
+            'Name' => UserInfo.getOrganizationName(), 
+=======
         
         String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/sync/Network_Entity__c';
 
@@ -97,6 +87,7 @@ public without sharing class DeliveryHubSetupController {
         Map<String, Object> packet = new Map<String, Object>{
             'SourceId' => localEntityId, // Required by Ingestor
             'Name' => UserInfo.getOrganizationName(), // Standard Field
+>>>>>>> 81a01aa12810e94d7ae4a5251a15c2176655fee0
             'OrgIdTxt__c' => UserInfo.getOrganizationId(),
             'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
             'EntityTypePk__c' => 'Client',
@@ -117,6 +108,13 @@ public without sharing class DeliveryHubSetupController {
             throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
         }
 
+<<<<<<< HEAD
+        // --- NEW BEHAVIOR: We no longer expect synchronous IDs in the response. 
+        // We just verify it was successful, initialize settings, and create the Ticket. ---
+
+        initializeDefaultSettings();
+        
+=======
         // 1. EXTRACT DATA FROM RESPONSE
         // Because the Vendor uses the generic Ingestor now, it just returns {"status":"Success"}.
         // It DOES NOT return the remoteTicketId anymore! We must generate a generic Ticket.
@@ -124,6 +122,7 @@ public without sharing class DeliveryHubSetupController {
         // 2. CREATE LOCAL TICKET & REQUEST (The Ledger Bridge)
         // Since we don't have the Vendor's Ticket ID yet, we leave it blank. 
         // The Vendor will receive the new Ticket we create below via the standard SyncEngine!
+>>>>>>> 81a01aa12810e94d7ae4a5251a15c2176655fee0
         List<Ticket__c> existingTickets = [
             SELECT Id FROM Ticket__c 
             WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.' 
@@ -136,28 +135,36 @@ public without sharing class DeliveryHubSetupController {
                 StageNamePk__c = 'Backlog'
             );
             
+<<<<<<< HEAD
+            insert newTicket;
+
+=======
             // We DO NOT disable the trigger here anymore! 
             // We WANT the SyncEngine to fire and push this Ticket to the Vendor.
             insert newTicket;
 
             // 3. CREATE REQUEST BRIDGE
+>>>>>>> 81a01aa12810e94d7ae4a5251a15c2176655fee0
             Request__c newRequest = new Request__c(
                 TicketId__c = newTicket.Id,
                 DeliveryEntityId__c = localEntityId, 
                 StatusPk__c = 'Active'
+<<<<<<< HEAD
+=======
                 // RemoteTicketIdTxt__c is left blank. The Vendor will receive the ticket, 
                 // insert it, and send an update back with its ID later.
+>>>>>>> 81a01aa12810e94d7ae4a5251a15c2176655fee0
             );
             insert newRequest;
         }
 
+<<<<<<< HEAD
+=======
         initializeDefaultSettings();
+>>>>>>> 81a01aa12810e94d7ae4a5251a15c2176655fee0
         scheduleSyncJobs();
     }
 
-    /**
-     * @description Initializes Org-wide sync settings if they do not exist.
-     */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static void initializeDefaultSettings() {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
@@ -176,9 +183,6 @@ public without sharing class DeliveryHubSetupController {
         }
     }
 
-    /**
-     * @description Schedules the recurring polling jobs to run every 15 minutes.
-     */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static void scheduleSyncJobs() {
         List<CronTrigger> jobs = [SELECT Id FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'];
