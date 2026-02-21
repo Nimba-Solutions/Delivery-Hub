@@ -14,7 +14,7 @@ private class SyncEngineTest {
             Name = 'M', 
             EntityTypePk__c = 'Vendor', 
             StatusPk__c = 'Active', 
-            IntegrationEndpointUrlTxt__c = 'https://f.com'
+            IntegrationEndpointUrlTxt__c = 'https://fa.com'
         );
         insert vendor;
 
