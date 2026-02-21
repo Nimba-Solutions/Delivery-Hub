@@ -19,6 +19,7 @@ private class DeliveryHubSetupControllerTest {
 
     @IsTest
     static void testPerformHandshakeSuccess() {
+        // Prevent continuous loop queues
         SyncEngine.setSyncContext();
         
         Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
@@ -28,6 +29,11 @@ private class DeliveryHubSetupControllerTest {
         DeliveryHubSetupController.performHandshake(entity.Id);
         Test.stopTest();
         
+        // Assert local entity was updated with remote info from mock response
+        Network_Entity__c updatedEntity = [SELECT RemoteExternalIdTxt__c, OrgIdTxt__c FROM Network_Entity__c WHERE Id = :entity.Id];
+        System.assertEquals('a0Afj000005lMdJEAU', updatedEntity.RemoteExternalIdTxt__c, 'Remote External ID should be mapped from payload');
+        System.assertEquals('00DcU000007VHF3UAO', updatedEntity.OrgIdTxt__c, 'Org ID should be mapped from payload');
+
         // Assert Ticket and Request bridge were created
         List<Ticket__c> tickets = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.'];
         System.assertEquals(1, tickets.size(), 'Initial ticket should be created');
@@ -60,7 +66,8 @@ private class DeliveryHubSetupControllerTest {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
-            res.setBody('{"status":"Success"}');
+            // Updated to return the new generic response structure
+            res.setBody('{"status":"Success", "processedId":"a0Afj000005lMdJEAU", "orgId":"00DcU000007VHF3UAO"}');
             return res;
         }
     }
