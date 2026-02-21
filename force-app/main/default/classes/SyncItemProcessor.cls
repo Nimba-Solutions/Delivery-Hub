@@ -33,7 +33,7 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                     item.StatusPk__c = 'Failed';
                     item.ErrorLogTxt__c = 'Configuration Error: Linked Network Entity is missing Integration Endpoint URL.';
                 } else {
-                    // --- NATIVE HTTP CALLOUT (Replaces legacy DeliveryHubSender) ---
+                    // --- NATIVE HTTP CALLOUT ---
                     String baseUrl = endpointUrl.removeEnd('/');
                     String finalEndpoint;
                     
@@ -41,9 +41,15 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                     if (baseUrl.endsWithIgnoreCase('/sync')) {
                         finalEndpoint = baseUrl + '/' + item.ObjectTypePk__c;
                     } else if (baseUrl.containsIgnoreCase('/deliveryhub/v1')) {
-                        finalEndpoint = baseUrl.substringBeforeIgnoreCase('/deliveryhub/v1') + '/sync/' + item.ObjectTypePk__c;
+                        // FIX: Changed substringBeforeIgnoreCase to substringBefore
+                        String lowerBase = baseUrl.toLowerCase();
+                        if(lowerBase.contains('/deliveryhub/v1')) {
+                            finalEndpoint = baseUrl.substringBefore('/deliveryhub/v1') + '/deliveryhub/v1/sync/' + item.ObjectTypePk__c;
+                        } else {
+                            finalEndpoint = baseUrl + '/sync/' + item.ObjectTypePk__c;
+                        }
                     } else {
-                        finalEndpoint = baseUrl + '/services/apexrest/delivery/sync/' + item.ObjectTypePk__c;
+                        finalEndpoint = baseUrl + '/services/apexrest/delivery/deliveryhub/v1/sync/' + item.ObjectTypePk__c;
                     }
 
                     HttpRequest req = new HttpRequest();
