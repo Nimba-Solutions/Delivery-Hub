@@ -1,6 +1,7 @@
 /**
  * @description Queueable Worker that processes 'Outbound' Sync Items.
- * It reads the specific Endpoint from the linked Request and pushes the payload natively.
+ * It reads the specific Endpoint from the linked Request, pushes the payload natively,
+ * and extracts the response ID to close the bridge loop.
  */
 public inherited sharing class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
@@ -8,7 +9,7 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
         
         // 1. Query Queued Outbound Items linked to a valid Request route
         List<Sync_Item__c> items = [
-            SELECT Id, ObjectTypePk__c, PayloadTxt__c, 
+            SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c,
                    RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
             FROM Sync_Item__c 
             WHERE StatusPk__c = 'Queued' 
@@ -23,6 +24,7 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
         }
 
         List<Sync_Item__c> itemsToUpdate = new List<Sync_Item__c>();
+        Map<Id, Request__c> requestsToUpdate = new Map<Id, Request__c>();
 
         for (Sync_Item__c item : items) {
             try {
@@ -41,9 +43,8 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                     if (baseUrl.endsWithIgnoreCase('/sync')) {
                         finalEndpoint = baseUrl + '/' + item.ObjectTypePk__c;
                     } else if (baseUrl.containsIgnoreCase('/deliveryhub/v1')) {
-                        // FIX: Changed substringBeforeIgnoreCase to substringBefore
                         String lowerBase = baseUrl.toLowerCase();
-                        if(lowerBase.contains('/deliveryhub/v1')) {
+                        if (lowerBase.contains('/deliveryhub/v1')) {
                             finalEndpoint = baseUrl.substringBefore('/deliveryhub/v1') + '/deliveryhub/v1/sync/' + item.ObjectTypePk__c;
                         } else {
                             finalEndpoint = baseUrl + '/sync/' + item.ObjectTypePk__c;
@@ -68,6 +69,30 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                     
                     item.StatusPk__c = 'Synced';
                     item.ErrorLogTxt__c = null;
+
+                    // --- FIX: EXTRACT RESPONSE & UPDATE BRIDGE (Handshake Flow) ---
+                    if (String.isNotBlank(res.getBody())) {
+                        try {
+                            Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+                            
+                            String remoteId = null;
+                            if (responseMap.containsKey('processedId')) {
+                                remoteId = (String) responseMap.get('processedId');
+                            } else if (responseMap.containsKey('remoteId')) {
+                                remoteId = (String) responseMap.get('remoteId'); // Fallback
+                            }
+
+                            // If we pushed a Ticket, map the Vendor's new ID to our Request bridge
+                            if (String.isNotBlank(remoteId) && item.ObjectTypePk__c.endsWithIgnoreCase('Ticket__c') && item.RequestId__c != null) {
+                                requestsToUpdate.put(item.RequestId__c, new Request__c(
+                                    Id = item.RequestId__c,
+                                    RemoteTicketIdTxt__c = remoteId
+                                ));
+                            }
+                        } catch (Exception parseEx) {
+                            System.debug(LoggingLevel.WARN, 'Could not parse sync response: ' + parseEx.getMessage());
+                        }
+                    }
                 }
 
             } catch (Exception e) {
@@ -79,8 +104,13 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
             itemsToUpdate.add(item);
         }
 
+        // Execute DML
         if (!itemsToUpdate.isEmpty()) {
             Database.update(itemsToUpdate, AccessLevel.SYSTEM_MODE);
+        }
+        
+        if (!requestsToUpdate.isEmpty()) {
+            Database.update(requestsToUpdate.values(), AccessLevel.SYSTEM_MODE);
         }
 
         // Chain Job if more outbound work exists
