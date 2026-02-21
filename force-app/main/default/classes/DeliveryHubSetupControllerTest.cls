@@ -19,6 +19,7 @@ private class DeliveryHubSetupControllerTest {
 
     @IsTest
     static void testPerformHandshakeSuccess() {
+        // Prevent continuous loop queues
         SyncEngine.setSyncContext();
         
         Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
@@ -28,6 +29,13 @@ private class DeliveryHubSetupControllerTest {
         DeliveryHubSetupController.performHandshake(entity.Id);
         Test.stopTest();
         
+        // Assert local entity was updated with remote info from mock response
+        Network_Entity__c updatedEntity = [SELECT RemoteExternalIdTxt__c, OrgIdTxt__c FROM Network_Entity__c WHERE Id = :entity.Id];
+        
+        // --- FIX: Use generic strings instead of 18-char IDs to pass PMD ---
+        System.assertEquals('MOCK_PROCESSED_ID', updatedEntity.RemoteExternalIdTxt__c, 'Remote External ID should be mapped from payload');
+        System.assertEquals('MOCK_ORG_ID', updatedEntity.OrgIdTxt__c, 'Org ID should be mapped from payload');
+
         // Assert Ticket and Request bridge were created
         List<Ticket__c> tickets = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.'];
         System.assertEquals(1, tickets.size(), 'Initial ticket should be created');
@@ -60,7 +68,8 @@ private class DeliveryHubSetupControllerTest {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
-            res.setBody('{"status":"Success"}');
+            // --- FIX: Use generic strings instead of 18-char IDs to pass PMD ---
+            res.setBody('{"status":"Success", "processedId":"MOCK_PROCESSED_ID", "orgId":"MOCK_ORG_ID"}');
             return res;
         }
     }

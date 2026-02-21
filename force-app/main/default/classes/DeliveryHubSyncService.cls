@@ -31,11 +31,14 @@ global without sharing class DeliveryHubSyncService {
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
 
             // 3. Hand off to Ingestor (Referencing the renamed Ledger Pattern class)
-            DeliverySyncItemIngestor.processInboundItem(objectType, payload);
+            // --- FIX: Capture the ID returned by the Ingestor ---
+            Id processedId = DeliverySyncItemIngestor.processInboundItem(objectType, payload);
 
             // 4. Respond
+            // --- FIX: Return the ID and Org ID back to the sender ---
             res.statusCode = 200;
-            res.responseBody = Blob.valueOf('{"status":"Success"}');
+            String jsonResponse = '{"status":"Success", "processedId":"' + processedId + '", "orgId":"' + UserInfo.getOrganizationId() + '"}';
+            res.responseBody = Blob.valueOf(jsonResponse);
 
         } catch (Exception e) {
             // Updated to provide standard internal server error response
