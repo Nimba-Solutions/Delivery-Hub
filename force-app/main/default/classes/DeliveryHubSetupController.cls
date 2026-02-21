@@ -77,6 +77,7 @@ public without sharing class DeliveryHubSetupController {
 
         Map<String, Object> packet = new Map<String, Object>{
             'SourceId' => localEntityId, 
+            'RemoteExternalIdTxt__c' => localEntityId, 
             'Name' => UserInfo.getOrganizationName(), 
             'OrgIdTxt__c' => UserInfo.getOrganizationId(),
             'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
@@ -98,6 +99,19 @@ public without sharing class DeliveryHubSetupController {
             throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
         }
 
+        Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+        String remoteEntityId = (String) responseMap.get('processedId');
+        String remoteOrgId = (String) responseMap.get('orgId');
+        
+        if (String.isNotBlank(remoteEntityId) || String.isNotBlank(remoteOrgId)) {
+            Network_Entity__c mothershipToUpdate = new Network_Entity__c(
+                Id = localEntityId,
+                OrgIdTxt__c = remoteOrgId,
+                RemoteExternalIdTxt__c = remoteEntityId
+            );
+            update mothershipToUpdate;
+        }
+
         initializeDefaultSettings();
         
         List<Ticket__c> existingTickets = [
@@ -112,8 +126,6 @@ public without sharing class DeliveryHubSetupController {
                 StageNamePk__c = 'Backlog'
             );
             
-            // Inserting the ticket will automatically fire the trigger, creating the Sync_Item__c
-            // AND automatically creating the Request__c bridge because of the settings initialized above.
             insert newTicket;
         }
 
