@@ -1,6 +1,6 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Fully compliant with PMD Security (SOQL Injection) and Style (Braces) rules.
+ * Refactored to use Static SOQL and required braces to satisfy GitHub/PMD security scans.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -31,7 +31,7 @@ public without sharing class DeliverySyncItemIngestor {
         
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
             try {
-                Id castId = (Id) String.escapeSingleQuotes(targetId);
+                Id castId = (Id) targetId;
                 if (castId.getSobjectType() == targetType) {
                     localRecordId = castId;
                 }
@@ -45,9 +45,10 @@ public without sharing class DeliverySyncItemIngestor {
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             localParentId = findLocalTicketId(targetId);
+
             if (localParentId == null) {
                 try {
-                    Id castId = (Id) String.escapeSingleQuotes(targetId);
+                    Id castId = (Id) targetId;
                     if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('Ticket__c')) {
                         localParentId = castId;
                     }
@@ -55,6 +56,7 @@ public without sharing class DeliverySyncItemIngestor {
                     System.debug(LoggingLevel.FINE, 'Parent resolution failed: ' + e.getMessage());
                 }
             }
+
             if (localParentId != null && objectType.containsIgnoreCase('Ticket_Comment__c')) {
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
@@ -80,24 +82,20 @@ public without sharing class DeliverySyncItemIngestor {
             }
             
             if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
-                String ns = getNamespacePrefix();
-                Id recId = recordToUpsert.Id;
-                // Using bind variable and explicit string sanitization for dynamic query
-                String safeRecId = String.escapeSingleQuotes((String)recId);
-                String query = 'SELECT Id FROM ' + ns + 'Request__c WHERE ' + ns + 'TicketId__c = \'' + safeRecId + '\'';
-                List<SObject> existingReqs = Database.query(query);
+                // FIXED: Replaced Dynamic SOQL with Static SOQL for Security Bot
+                List<Request__c> existingReqs = [SELECT Id FROM Request__c WHERE TicketId__c = :recordToUpsert.Id WITH SYSTEM_MODE];
                 
                 if (!existingReqs.isEmpty()) {
-                    for (SObject req : existingReqs) {
-                        req.put(ns + 'RemoteTicketIdTxt__c', sourceId); 
+                    for (Request__c req : existingReqs) {
+                        req.RemoteTicketIdTxt__c = sourceId; 
                     }
                     Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
                 } else {
-                    SObject newReq = Schema.getGlobalDescribe().get(ns + 'Request__c').newSObject();
-                    newReq.put(ns + 'TicketId__c', recordToUpsert.Id);
-                    newReq.put(ns + 'RemoteTicketIdTxt__c', sourceId);
-                    newReq.put(ns + 'StatusPk__c', 'Accepted');
-                    Database.insert(newReq, AccessLevel.SYSTEM_MODE);
+                    Database.insert(new Request__c(
+                        TicketId__c = recordToUpsert.Id,
+                        RemoteTicketIdTxt__c = sourceId,
+                        StatusPk__c = 'Accepted'
+                    ), AccessLevel.SYSTEM_MODE);
                 }
             }
         }
@@ -107,11 +105,9 @@ public without sharing class DeliverySyncItemIngestor {
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            String ns = getNamespacePrefix();
-            String safeRemoteId = String.escapeSingleQuotes(remoteId);
-            String query = 'SELECT ' + ns + 'TicketId__c FROM ' + ns + 'Request__c WHERE ' + ns + 'RemoteTicketIdTxt__c = \'' + safeRemoteId + '\' LIMIT 1';
-            List<SObject> reqs = Database.query(query);
-            return reqs.isEmpty() ? null : (Id)reqs[0].get(ns + 'TicketId__c');
+            // FIXED: Replaced Dynamic SOQL with Static SOQL for Security Bot
+            List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
+            return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
             String cleanName = stripNamespace(objName);
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
@@ -120,26 +116,9 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static Id findLocalTicketId(String remoteTicketId) {
-        String ns = getNamespacePrefix();
-        String safeRemoteId = String.escapeSingleQuotes(remoteTicketId);
-        String query = 'SELECT ' + ns + 'TicketId__c FROM ' + ns + 'Request__c WHERE ' + ns + 'RemoteTicketIdTxt__c = \'' + safeRemoteId + '\' LIMIT 1';
-        List<SObject> reqs = Database.query(query);
-        return reqs.isEmpty() ? null : (Id)reqs[0].get(ns + 'TicketId__c');
-    }
-
-    private static Schema.SObjectType findSObjectType(String apiName) {
-        if (String.isBlank(apiName)) { return null; }
-        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) { return gd.get(apiName); }
-        if (gd.containsKey('delivery__' + apiName)) { return gd.get('delivery__' + apiName); }
-        
-        String target = stripNamespace(apiName).toLowerCase();
-        for (String key : gd.keySet()) {
-            if (stripNamespace(key).toLowerCase() == target) {
-                return gd.get(key);
-            }
-        }
-        return null;
+        // FIXED: Replaced Dynamic SOQL with Static SOQL for Security Bot
+        List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
+        return reqs.isEmpty() ? null : reqs[0].TicketId__c;
     }
 
     private static void createLedgerEntry(String objType, String remoteId, Id localId) {
@@ -155,6 +134,7 @@ public without sharing class DeliverySyncItemIngestor {
         for (String fieldApi : fieldMap.keySet()) {
             cleanNameIndex.put(stripNamespace(fieldApi).toLowerCase(), fieldMap.get(fieldApi));
         }
+
         for (String key : payload.keySet()) {
             if (key == 'SourceId' || key == 'TargetId') { continue; }
             String searchKey = stripNamespace(key).toLowerCase(); 
@@ -196,5 +176,20 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
         return false;
+    }
+
+    private static Schema.SObjectType findSObjectType(String apiName) {
+        if (String.isBlank(apiName)) { return null; }
+        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
+        if (gd.containsKey(apiName)) { return gd.get(apiName); }
+        if (gd.containsKey('delivery__' + apiName)) { return gd.get('delivery__' + apiName); }
+        
+        String target = stripNamespace(apiName).toLowerCase();
+        for (String key : gd.keySet()) {
+            if (stripNamespace(key).toLowerCase() == target) {
+                return gd.get(key);
+            }
+        }
+        return null;
     }
 }
