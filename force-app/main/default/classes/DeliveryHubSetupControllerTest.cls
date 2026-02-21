@@ -19,7 +19,6 @@ private class DeliveryHubSetupControllerTest {
 
     @IsTest
     static void testPerformHandshakeSuccess() {
-        // Prevent continuous loop queues
         SyncEngine.setSyncContext();
         
         Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
@@ -34,7 +33,7 @@ private class DeliveryHubSetupControllerTest {
         System.assertEquals(1, tickets.size(), 'Initial ticket should be created');
         
         List<Request__c> requests = [SELECT Id FROM Request__c WHERE TicketId__c = :tickets[0].Id];
-        System.assertEquals(1, requests.size(), 'Bridge request should be created');
+        System.assertEquals(1, requests.size(), 'Bridge request should be created automatically by the trigger');
         
         // Assert settings were initialized
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
@@ -51,7 +50,8 @@ private class DeliveryHubSetupControllerTest {
             DeliveryHubSetupController.performHandshake(entity.Id);
             System.assert(false, 'Should have thrown an exception on 500 error');
         } catch (Exception e) {
-            System.assert(e.getMessage().contains('Connection Failed'), 'Error message should indicate failure');
+            // AuraHandledException hides its message in test context, so we check the type instead
+            System.assertEquals('System.AuraHandledException', e.getTypeName(), 'Should throw AuraHandledException on failure');
         }
         Test.stopTest();
     }
