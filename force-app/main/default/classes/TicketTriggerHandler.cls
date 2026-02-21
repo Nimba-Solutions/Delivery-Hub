@@ -36,7 +36,7 @@ public without sharing class TicketTriggerHandler {
         // ============================================================================
         // Define the fields the Mothership needs to track (Allowlist).
         Set<String> syncFields = new Set<String>{
-            'WorkItemNameTxt__c', // Changed 'Name' to API Name assuming it's custom or standard Name
+            'WorkItemNameTxt__c', 
             'BriefDescriptionTxt__c', 
             'DetailsTxt__c', 
             'StageNamePk__c', 
@@ -64,7 +64,6 @@ public without sharing class TicketTriggerHandler {
         Set<Id> toUpdate = new Set<Id>();
 
         if (isInsert){
-            // Jira Logic
             for (Ticket__c row : newRows){
                 if (String.isBlank(row.JiraTicketKeyTxt__c)){
                     toCreate.add(row.Id);
@@ -90,10 +89,6 @@ public without sharing class TicketTriggerHandler {
                 }
             }
         }
-        
-        // Enqueue Jira Jobs (Assuming existing workers handle these sets)
-        // if (!toCreate.isEmpty()) { ... }
-        // if (!toUpdate.isEmpty()) { ... }
     }
 
     /**
@@ -117,8 +112,6 @@ public without sharing class TicketTriggerHandler {
         }
 
         // 2. Determine entity for Request creation
-        // Removed LIMIT 1 to potentially support multiple active vendors if architecture allows,
-        // though logic below currently picks the first one found or ClientNetworkEntityId__c.
         List<Network_Entity__c> vendors = [
             SELECT Id FROM Network_Entity__c
             WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'
@@ -156,44 +149,9 @@ public without sharing class TicketTriggerHandler {
 
         SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, newRequests);
         insert decision.getRecords();
-
-        // 3. Check "Auto-Send" Setting
-        Boolean shouldAutoSend = true;
-        if (settings.Id != null) {
-            Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
-            if (populatedFields.containsKey('AutoSyncNetworkEntityBool__c')) {
-                shouldAutoSend = settings.AutoSyncNetworkEntityBool__c;
-            }
-        }
-
-        // 4. Enqueue Job if Auto-Send is ON and Entity is 'Vendor'
-        if (shouldAutoSend) {
-            List<Request__c> insertedRequests = (List<Request__c>)decision.getRecords();
-            Set<Id> entityIds = new Set<Id>();
-
-            for (Request__c req : insertedRequests) {
-                if (req.DeliveryEntityId__c != null) {
-                    entityIds.add(req.DeliveryEntityId__c);
-                }
-            }
-
-            // Identify which target entities are Vendors to satisfy the 'Vendor-only' auto-send requirement
-            Map<Id, Network_Entity__c> vendorCheckMap = new Map<Id, Network_Entity__c>([
-                SELECT Id FROM Network_Entity__c 
-                WHERE Id IN :entityIds AND EntityTypePk__c = 'Vendor'
-            ]);
-
-            List<Id> requestsToEnqueue = new List<Id>();
-            for (Request__c req : insertedRequests) {
-                if (vendorCheckMap.containsKey(req.DeliveryEntityId__c)) {
-                    requestsToEnqueue.add(req.Id);
-                }
-            }
-
-            if (!requestsToEnqueue.isEmpty()) {
-                System.enqueueJob(new DeliveryHubRequestSenderQueueable(requestsToEnqueue));
-            }
-        }
+        
+        // --- FIX: Legacy Queueable Invocation Removed ---
+        // SyncEngine natively handles pushing the Ticket to the Vendor based on this Request bridge!
     }
     
     /**
