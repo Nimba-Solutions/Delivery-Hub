@@ -1,7 +1,7 @@
 /**
  * @description Core engine for handling outbound synchronization.
  * Implements Push/Pull Architecture with Smart Routing and Allowlist Filtering.
- * Refactored with braces and static SOQL to pass strict security scans.
+ * Refactored to enforce downstream-only routing edges and dynamic lookup resolution.
  */
 public without sharing class SyncEngine {
 
@@ -40,8 +40,10 @@ public without sharing class SyncEngine {
                 return;
             }
 
+            // Query strictly for downstream routing edges
             List<Request__c> connections = [
-                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, StatusPk__c 
+                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, 
+                       DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, StatusPk__c 
                 FROM Request__c 
                 WHERE TicketId__c IN :ticketIds AND StatusPk__c != 'Inactive'
                 WITH SYSTEM_MODE
@@ -70,22 +72,22 @@ public without sharing class SyncEngine {
                 if (reqs != null && !reqs.isEmpty()) {
                     for (Request__c req : reqs) {
                         String remoteId = req.RemoteTicketIdTxt__c;
+                        
+                        // Echo Suppression
                         if (String.isNotBlank(remoteId) && blockedOrigins.contains(remoteId.trim())) {
                             isBlocked = true;
                             continue;
                         } 
                         
-                        // FIX: Only treat as Pushable if there is an actual Endpoint configuration!
-                        if (req.StatusPk__c != 'Inactive') {
-                            if (req.DeliveryEntityId__c != null) {
-                                itemsToInsert.add(createSyncItem(rec, req, allowedFields));
-                                hasPushableRoute = true;
-                            }
+                        // Enforce Downstream Routing: Only push if a valid downstream entity exists
+                        if (req.StatusPk__c != 'Inactive' && req.DeliveryEntityId__c != null) {
+                            itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                            hasPushableRoute = true;
                         }
                     }
                 }
 
-                // HUB MODE: If no explicit push routes, leave RequestId null for the Poller to grab.
+                // Passive Hub Mode: Stage for upstream Poller if no downstream push occurred
                 if (!hasPushableRoute && !isBlocked) {
                     itemsToInsert.add(createSyncItem(rec, null, allowedFields));
                 }
@@ -144,16 +146,7 @@ public without sharing class SyncEngine {
         String cleanName = fullApiName.replace('delivery__', '');
         item.ObjectTypePk__c = cleanName;
 
-        // FIX: Added System.debug to satisfy PMD EmptyCatchBlock rule
-        try {
-            item.put(fullApiName, rec.Id);
-        } catch (Exception e1) {
-            try {
-                item.put(cleanName, rec.Id);
-            } catch (Exception e2) {
-                System.debug(LoggingLevel.FINE, 'Lookup field mapping skipped for ' + cleanName + ': ' + e2.getMessage());
-            }
-        }
+        populateLookupField(item, cleanName, rec.Id);
 
         Map<String, Object> payload = new Map<String, Object>();
         for (String f : allowedFields) { 
@@ -162,13 +155,34 @@ public without sharing class SyncEngine {
         payload.put('SourceId', rec.Id); 
         
         if (req != null) {
+            // Push Mode: Target downstream node's ID
             item.RequestId__c = req.Id; 
             payload.put('TargetId', req.RemoteTicketIdTxt__c); 
         } else {
+            // Hub Mode: Stage local ID for upstream Poller translation
             payload.put('TargetId', item.TicketId__c);
         }
         
         item.PayloadTxt__c = JSON.serialize(payload);
         return item;
+    }
+
+    private static void populateLookupField(SObject item, String cleanName, Id recordId) {
+        String lookupField;
+        if (cleanName.endsWithIgnoreCase('__c')) {
+            lookupField = cleanName.substringBeforeLast('__c').replace('_', '') + 'Id__c';
+        } else {
+            lookupField = cleanName + 'Id__c';
+        }
+        
+        try {
+            item.put(lookupField, recordId);
+        } catch (Exception e1) {
+            try {
+                item.put('delivery__' + lookupField, recordId);
+            } catch (Exception e2) {
+                System.debug(LoggingLevel.FINE, 'Lookup field mapping skipped for ' + cleanName + ': ' + e2.getMessage());
+            }
+        }
     }
 }
