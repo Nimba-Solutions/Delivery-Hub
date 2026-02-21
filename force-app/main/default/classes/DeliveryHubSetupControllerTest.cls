@@ -31,8 +31,10 @@ private class DeliveryHubSetupControllerTest {
         
         // Assert local entity was updated with remote info from mock response
         Network_Entity__c updatedEntity = [SELECT RemoteExternalIdTxt__c, OrgIdTxt__c FROM Network_Entity__c WHERE Id = :entity.Id];
-        System.assertEquals('a0Afj000005lMdJEAU', updatedEntity.RemoteExternalIdTxt__c, 'Remote External ID should be mapped from payload');
-        System.assertEquals('00DcU000007VHF3UAO', updatedEntity.OrgIdTxt__c, 'Org ID should be mapped from payload');
+        
+        // --- FIX: Use generic strings instead of 18-char IDs to pass PMD ---
+        System.assertEquals('MOCK_PROCESSED_ID', updatedEntity.RemoteExternalIdTxt__c, 'Remote External ID should be mapped from payload');
+        System.assertEquals('MOCK_ORG_ID', updatedEntity.OrgIdTxt__c, 'Org ID should be mapped from payload');
 
         // Assert Ticket and Request bridge were created
         List<Ticket__c> tickets = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.'];
@@ -66,8 +68,8 @@ private class DeliveryHubSetupControllerTest {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
-            // Updated to return the new generic response structure
-            res.setBody('{"status":"Success", "processedId":"a0Afj000005lMdJEAU", "orgId":"00DcU000007VHF3UAO"}');
+            // --- FIX: Use generic strings instead of 18-char IDs to pass PMD ---
+            res.setBody('{"status":"Success", "processedId":"MOCK_PROCESSED_ID", "orgId":"MOCK_ORG_ID"}');
             return res;
         }
     }
