@@ -76,7 +76,6 @@ public without sharing class SyncEngine {
                         } 
                         
                         // FIX: Only treat as Pushable if there is an actual Endpoint configuration!
-                        // Otherwise, the Vendor gracefully ignores this block and falls to Hub Mode.
                         if (req.StatusPk__c != 'Inactive') {
                             if (req.DeliveryEntityId__c != null) {
                                 itemsToInsert.add(createSyncItem(rec, req, allowedFields));
@@ -145,14 +144,14 @@ public without sharing class SyncEngine {
         String cleanName = fullApiName.replace('delivery__', '');
         item.ObjectTypePk__c = cleanName;
 
-        // FIX: Dynamically map the specific SObject lookup field (e.g., Ticket_Comment__c)
+        // FIX: Added System.debug to satisfy PMD EmptyCatchBlock rule
         try {
             item.put(fullApiName, rec.Id);
         } catch (Exception e1) {
             try {
                 item.put(cleanName, rec.Id);
             } catch (Exception e2) {
-                // Safely ignore if the lookup field doesn't exist
+                System.debug(LoggingLevel.FINE, 'Lookup field mapping skipped for ' + cleanName + ': ' + e2.getMessage());
             }
         }
 
