@@ -1,6 +1,6 @@
 /**
  * @description Queueable Worker that processes 'Outbound' Sync Items.
- * It reads the specific Endpoint from the linked Request and pushes the payload.
+ * It reads the specific Endpoint from the linked Request and pushes the payload natively.
  */
 public inherited sharing class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
@@ -33,13 +33,32 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                     item.StatusPk__c = 'Failed';
                     item.ErrorLogTxt__c = 'Configuration Error: Linked Network Entity is missing Integration Endpoint URL.';
                 } else {
-                    // --- TRANSMISSION ---
-                    // The Payload is already fully formed by SyncEngine (including SourceId/TargetId)
-                    DeliveryHubSender.sendSyncPayload(
-                        endpointUrl, 
-                        item.ObjectTypePk__c, 
-                        item.PayloadTxt__c
-                    );
+                    // --- NATIVE HTTP CALLOUT (Replaces legacy DeliveryHubSender) ---
+                    String baseUrl = endpointUrl.removeEnd('/');
+                    String finalEndpoint;
+                    
+                    // Safely construct universal endpoint regardless of how URL was saved
+                    if (baseUrl.endsWithIgnoreCase('/sync')) {
+                        finalEndpoint = baseUrl + '/' + item.ObjectTypePk__c;
+                    } else if (baseUrl.containsIgnoreCase('/deliveryhub/v1')) {
+                        finalEndpoint = baseUrl.substringBeforeIgnoreCase('/deliveryhub/v1') + '/sync/' + item.ObjectTypePk__c;
+                    } else {
+                        finalEndpoint = baseUrl + '/services/apexrest/delivery/sync/' + item.ObjectTypePk__c;
+                    }
+
+                    HttpRequest req = new HttpRequest();
+                    req.setEndpoint(finalEndpoint);
+                    req.setMethod('POST');
+                    req.setHeader('Content-Type', 'application/json');
+                    req.setBody(item.PayloadTxt__c);
+                    req.setTimeout(60000); 
+
+                    Http http = new Http();
+                    HttpResponse res = http.send(req);
+
+                    if (res.getStatusCode() >= 400) {
+                        throw new CalloutException('Sync Failed (' + res.getStatusCode() + '): ' + res.getBody());
+                    }
                     
                     item.StatusPk__c = 'Synced';
                     item.ErrorLogTxt__c = null;
