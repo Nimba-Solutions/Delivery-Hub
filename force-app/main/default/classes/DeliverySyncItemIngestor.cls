@@ -1,6 +1,6 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Refactored to use Static SOQL and required braces to satisfy GitHub/PMD security scans.
+ * Fully compliant with PMD Security (SOQL Injection) and Style (Braces) rules.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -64,9 +64,7 @@ public without sharing class DeliverySyncItemIngestor {
 
         mapFields(recordToUpsert, payload, targetType);
         
-        if (hasField(targetType, 'SourcePk__c')) {
-            putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
-        }
+        // FIX: Removed the hardcoded SourcePk__c override so the Client's source designation remains intact!
 
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
@@ -82,7 +80,6 @@ public without sharing class DeliverySyncItemIngestor {
             }
             
             if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
-                // FIXED: Replaced Dynamic SOQL with Static SOQL for Security Bot
                 List<Request__c> existingReqs = [SELECT Id FROM Request__c WHERE TicketId__c = :recordToUpsert.Id WITH SYSTEM_MODE];
                 
                 if (!existingReqs.isEmpty()) {
@@ -105,7 +102,6 @@ public without sharing class DeliverySyncItemIngestor {
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            // FIXED: Replaced Dynamic SOQL with Static SOQL for Security Bot
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
             return reqs.isEmpty() ? null : reqs[0].TicketId__c;
         } else {
@@ -116,16 +112,29 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static Id findLocalTicketId(String remoteTicketId) {
-        // FIXED: Replaced Dynamic SOQL with Static SOQL for Security Bot
         List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
         return reqs.isEmpty() ? null : reqs[0].TicketId__c;
     }
 
     private static void createLedgerEntry(String objType, String remoteId, Id localId) {
-        Database.insert(new Sync_Item__c(
-            DirectionPk__c = 'Inbound', StatusPk__c = 'Synced', ObjectTypePk__c = stripNamespace(objType),
+        String cleanName = stripNamespace(objType);
+        Sync_Item__c ledger = new Sync_Item__c(
+            DirectionPk__c = 'Inbound', StatusPk__c = 'Synced', ObjectTypePk__c = cleanName,
             RemoteExternalIdTxt__c = remoteId, LocalRecordIdTxt__c = (String)localId, PayloadTxt__c = 'Ledger Mapping Created'
-        ), AccessLevel.SYSTEM_MODE);
+        );
+        
+        // FIX: Dynamically populate specific lookup field (e.g. Ticket_Comment__c) for Inbound items
+        try {
+            ledger.put(objType, localId);
+        } catch (Exception e1) {
+            try {
+                ledger.put(cleanName, localId);
+            } catch (Exception e2) {
+                // Safely ignore if field doesn't exist
+            }
+        }
+        
+        Database.insert(ledger, AccessLevel.SYSTEM_MODE);
     }
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {

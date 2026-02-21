@@ -40,7 +40,6 @@ public without sharing class SyncEngine {
                 return;
             }
 
-            // FIXED: Using Static SOQL instead of dynamic to satisfy security bot
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, StatusPk__c 
                 FROM Request__c 
@@ -76,14 +75,18 @@ public without sharing class SyncEngine {
                             continue;
                         } 
                         
-                        // Push EVERYTHING unless the route is specifically 'Inactive'
+                        // FIX: Only treat as Pushable if there is an actual Endpoint configuration!
+                        // Otherwise, the Vendor gracefully ignores this block and falls to Hub Mode.
                         if (req.StatusPk__c != 'Inactive') {
-                            itemsToInsert.add(createSyncItem(rec, req, allowedFields));
-                            hasPushableRoute = true;
+                            if (req.DeliveryEntityId__c != null) {
+                                itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                                hasPushableRoute = true;
+                            }
                         }
                     }
                 }
 
+                // HUB MODE: If no explicit push routes, leave RequestId null for the Poller to grab.
                 if (!hasPushableRoute && !isBlocked) {
                     itemsToInsert.add(createSyncItem(rec, null, allowedFields));
                 }
@@ -91,7 +94,6 @@ public without sharing class SyncEngine {
 
             if (!itemsToInsert.isEmpty()) {
                 Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
-                // Prevent recursive queueing or double-firing
                 if (Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
                     System.enqueueJob(new SyncItemProcessor());
                 }
@@ -140,7 +142,19 @@ public without sharing class SyncEngine {
         item.TicketId__c = getTicketId(rec);
 
         String fullApiName = rec.getSObjectType().getDescribe().getName();
-        item.ObjectTypePk__c = fullApiName.replace('delivery__', '');
+        String cleanName = fullApiName.replace('delivery__', '');
+        item.ObjectTypePk__c = cleanName;
+
+        // FIX: Dynamically map the specific SObject lookup field (e.g., Ticket_Comment__c)
+        try {
+            item.put(fullApiName, rec.Id);
+        } catch (Exception e1) {
+            try {
+                item.put(cleanName, rec.Id);
+            } catch (Exception e2) {
+                // Safely ignore if the lookup field doesn't exist
+            }
+        }
 
         Map<String, Object> payload = new Map<String, Object>();
         for (String f : allowedFields) { 
