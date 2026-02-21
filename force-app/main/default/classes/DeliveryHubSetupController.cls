@@ -98,9 +98,6 @@ public without sharing class DeliveryHubSetupController {
             throw new AuraHandledException('Connection Failed (' + res.getStatusCode() + '): ' + res.getBody());
         }
 
-        // --- NEW BEHAVIOR: We no longer expect synchronous IDs in the response. 
-        // We just verify it was successful, initialize settings, and create the Ticket. ---
-
         initializeDefaultSettings();
         
         List<Ticket__c> existingTickets = [
@@ -115,14 +112,9 @@ public without sharing class DeliveryHubSetupController {
                 StageNamePk__c = 'Backlog'
             );
             
+            // Inserting the ticket will automatically fire the trigger, creating the Sync_Item__c
+            // AND automatically creating the Request__c bridge because of the settings initialized above.
             insert newTicket;
-
-            Request__c newRequest = new Request__c(
-                TicketId__c = newTicket.Id,
-                DeliveryEntityId__c = localEntityId, 
-                StatusPk__c = 'Active'
-            );
-            insert newRequest;
         }
 
         scheduleSyncJobs();
