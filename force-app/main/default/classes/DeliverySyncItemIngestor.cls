@@ -209,8 +209,14 @@ public without sharing class DeliverySyncItemIngestor {
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        String target = stripNamespace(apiName).toLowerCase();
         
+        // --- FAST PATH: Try an exact match first! (Case-insensitive) ---
+        if (gd.containsKey(apiName)) {
+            return gd.get(apiName);
+        }
+        
+        // --- FALLBACK: If not found (e.g. namespace issues), do the loop ---
+        String target = stripNamespace(apiName).toLowerCase();
         for (String key : gd.keySet()) {
             if (stripNamespace(key).toLowerCase() == target) {
                 return gd.get(key);
