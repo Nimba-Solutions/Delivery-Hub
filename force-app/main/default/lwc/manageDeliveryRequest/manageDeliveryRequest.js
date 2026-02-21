@@ -1,10 +1,11 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import sendRequestToVendor from '@salesforce/apex/DeliveryHubSender.sendRequestToVendor';
-import checkRequestStatus from '@salesforce/apex/DeliveryHubSender.checkRequestStatus';
 
-// Update these to match your EXACT API Names
+// --- FIX: Import from the new Controller ---
+import sendRequestToVendor from '@salesforce/apex/ManageDeliveryRequestController.sendRequestToVendor';
+import checkRequestStatus from '@salesforce/apex/ManageDeliveryRequestController.checkRequestStatus';
+
 import STATUS_FIELD from '@salesforce/schema/Request__c.StatusPk__c';
 import REMOTE_ID_FIELD from '@salesforce/schema/Request__c.RemoteTicketIdTxt__c';
 
@@ -38,10 +39,8 @@ export default class ManageDeliveryRequest extends LightningElement {
     handleSend() {
         this.isLoading = true;
         sendRequestToVendor({ requestId: this.recordId })
-            // FIX: Removed unused 'result' parameter and used empty parenthesis ()
             .then(() => {
-                this.showToast('Success', 'Offer sent successfully!', 'success');
-                // Refresh data (handled automatically by wire in most cases, or use notifyRecordUpdate)
+                this.showToast('Success', 'Offer activated! The Sync Engine will push it to the vendor momentarily.', 'success');
             })
             .catch(error => {
                 this.showToast('Error', error.body ? error.body.message : error.message, 'error');
