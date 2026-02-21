@@ -208,14 +208,22 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static Schema.SObjectType findSObjectType(String apiName) {
+        if (String.isBlank(apiName)) return null;
+
+        // --- FAST PATH (No more looping!) ---
+        // This checks for the name directly, with and without your namespace.
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
         
-        // --- FAST PATH: Try an exact match first! (Case-insensitive) ---
-        if (gd.containsKey(apiName)) {
-            return gd.get(apiName);
-        }
+        // 1. Try exact match (e.g., "Ticket__c")
+        if (gd.containsKey(apiName)) return gd.get(apiName);
         
-        // --- FALLBACK: If not found (e.g. namespace issues), do the loop ---
+        // 2. Try lowercase match
+        if (gd.containsKey(apiName.toLowerCase())) return gd.get(apiName.toLowerCase());
+        
+        // 3. Try with namespace if applicable
+        if (gd.containsKey('delivery__' + apiName)) return gd.get('delivery__' + apiName);
+
+        // --- FALLBACK (Only if the above fails) ---
         String target = stripNamespace(apiName).toLowerCase();
         for (String key : gd.keySet()) {
             if (stripNamespace(key).toLowerCase() == target) {
