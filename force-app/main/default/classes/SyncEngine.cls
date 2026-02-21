@@ -35,8 +35,11 @@ public without sharing class SyncEngine {
                 }
             }
 
-            if (ticketIds.isEmpty()) return;
+            if (ticketIds.isEmpty()) {
+                return;
+            }
 
+            // Query Requests that are NOT Inactive
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, StatusPk__c 
                 FROM Request__c 
@@ -72,9 +75,12 @@ public without sharing class SyncEngine {
                             isBlocked = true;
                             continue;
                         } 
-                        // PUSH if not Inactive
-                        itemsToInsert.add(createSyncItem(rec, req, allowedFields));
-                        hasPushableRoute = true;
+                        
+                        // Push EVERYTHING unless the route is specifically 'Inactive'
+                        if (req.StatusPk__c != 'Inactive') {
+                            itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                            hasPushableRoute = true;
+                        }
                     }
                 }
 
@@ -85,10 +91,8 @@ public without sharing class SyncEngine {
 
             if (!itemsToInsert.isEmpty()) {
                 Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
-                if (!System.isQueueable() && !System.isFuture()) {
-                    if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs()) {
-                        System.enqueueJob(new SyncItemProcessor());
-                    }
+                if (Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
+                    System.enqueueJob(new SyncItemProcessor());
                 }
             }
         } catch (Exception e) {
@@ -97,24 +101,34 @@ public without sharing class SyncEngine {
     }
 
     private static Boolean hasSignificantChange(SObject rec, SObject oldRec, Set<String> allowedFields) {
-        if (oldRec == null) return true; 
+        if (oldRec == null) {
+            return true;
+        }
         for (String field : allowedFields) {
-            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) return true; 
+            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) {
+                return true;
+            }
         }
         return false;
     }
 
     private static Id getTicketId(SObject rec) {
         String name = rec.getSObjectType().getDescribe().getName();
-        if (name.endsWithIgnoreCase('Ticket__c') && !name.endsWithIgnoreCase('Ticket_Comment__c')) return rec.Id; 
+        if (name.endsWithIgnoreCase('Ticket__c') && !name.endsWithIgnoreCase('Ticket_Comment__c')) {
+            return rec.Id;
+        }
         return (Id) getSafeValue(rec, 'TicketId__c');
     }
 
     private static Object getSafeValue(SObject rec, String field) {
         Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
-        if (fields.containsKey(field)) return fields.get(field); 
-        for(String key : fields.keySet()) {
-            if(key.endsWithIgnoreCase('__' + field)) return fields.get(key);
+        if (fields.containsKey(field)) {
+            return fields.get(field);
+        }
+        for (String key : fields.keySet()) {
+            if (key.endsWithIgnoreCase('__' + field)) {
+                return fields.get(key);
+            }
         }
         return null;
     }
@@ -124,7 +138,6 @@ public without sharing class SyncEngine {
         item.LocalRecordIdTxt__c = (String)rec.Id;
         item.TicketId__c = getTicketId(rec);
 
-        // --- FIXED LOGIC: Correctly identifies object name for URL ---
         String fullApiName = rec.getSObjectType().getDescribe().getName();
         item.ObjectTypePk__c = fullApiName.replace('delivery__', '');
 

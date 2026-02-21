@@ -1,7 +1,5 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Runs in System Mode (without sharing) to bypass FLS restrictions.
- * Uses robust dynamic string stripping to eliminate Namespace issues in any org.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -30,7 +28,6 @@ public without sharing class DeliverySyncItemIngestor {
         
         Id localRecordId = findLocalId(targetType, sourceId);
         
-        // --- FIX 1: HUB TICKET UPDATES ---
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
             try {
                 Id castId = (Id) targetId;
@@ -38,31 +35,25 @@ public without sharing class DeliverySyncItemIngestor {
                     localRecordId = castId;
                 }
             } catch (Exception e) {
-                System.debug(LoggingLevel.FINE, 'TargetId is not a valid local ID: ' + e.getMessage());
+                System.debug(LoggingLevel.FINE, 'TargetId invalid: ' + e.getMessage());
             }
         }
 
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
         
-        // --- FIX 2: PARENTING FOR COMMENTS AND FILES ---
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             localParentId = findLocalTicketId(targetId);
-
             if (localParentId == null) {
                 try {
                     Id castId = (Id) targetId;
                     if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('Ticket__c')) {
-                        String query = 'SELECT Id FROM ' + castId.getSobjectType().getDescribe().getName() + ' WHERE Id = \'' + castId + '\' LIMIT 1';
-                        if (!Database.query(query).isEmpty()) {
-                            localParentId = castId;
-                        }
+                        localParentId = castId;
                     }
                 } catch (Exception e) {
-                    System.debug(LoggingLevel.FINE, 'TargetId fallback failed: ' + e.getMessage());
+                    System.debug(LoggingLevel.FINE, 'Parent resolution failed: ' + e.getMessage());
                 }
             }
-
             if (localParentId != null && objectType.containsIgnoreCase('Ticket_Comment__c')) {
                 putSafe(recordToUpsert, 'TicketId__c', localParentId);
             }
@@ -80,22 +71,18 @@ public without sharing class DeliverySyncItemIngestor {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
             createLedgerEntry(objectType, sourceId, recordToUpsert.Id);
             
-            // --- FIX 3: ATTACH FILES TO TICKETS ---
             if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
                 Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
-                ContentDocumentLink cdl = new ContentDocumentLink(
-                    ContentDocumentId = contentDocId,
-                    LinkedEntityId = localParentId,
-                    ShareType = 'V',
-                    Visibility = 'AllUsers'
-                );
-                Database.insert(cdl, AccessLevel.SYSTEM_MODE);
+                Database.insert(new ContentDocumentLink(
+                    ContentDocumentId = contentDocId, LinkedEntityId = localParentId, ShareType = 'V', Visibility = 'AllUsers'
+                ), AccessLevel.SYSTEM_MODE);
             }
             
-            // --- REVERSE BRIDGE LOGIC: Ensure Vendor has a Request pointing back to Client ---
             if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
                 String ns = getNamespacePrefix();
-                String query = 'SELECT Id FROM ' + ns + 'Request__c WHERE ' + ns + 'TicketId__c = \'' + recordToUpsert.Id + '\'';
+                Id recIdVar = recordToUpsert.Id;
+                // FIXED: Using bind variable to prevent SOQL Injection warning
+                String query = 'SELECT Id FROM ' + ns + 'Request__c WHERE ' + ns + 'TicketId__c = :recIdVar';
                 List<SObject> existingReqs = Database.query(query);
                 
                 if (!existingReqs.isEmpty()) {
@@ -104,7 +91,6 @@ public without sharing class DeliverySyncItemIngestor {
                     }
                     Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
                 } else {
-                    // Create the Request bridge if it doesn't exist
                     SObject newReq = Schema.getGlobalDescribe().get(ns + 'Request__c').newSObject();
                     newReq.put(ns + 'TicketId__c', recordToUpsert.Id);
                     newReq.put(ns + 'RemoteTicketIdTxt__c', sourceId);
@@ -113,7 +99,6 @@ public without sharing class DeliverySyncItemIngestor {
                 }
             }
         }
-        
         return recordToUpsert.Id;
     }
 
@@ -121,7 +106,9 @@ public without sharing class DeliverySyncItemIngestor {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
         String target = stripNamespace(fieldName).toLowerCase();
         for (String fieldApi : fieldMap.keySet()) {
-            if (stripNamespace(fieldApi).toLowerCase() == target) return true;
+            if (stripNamespace(fieldApi).toLowerCase() == target) {
+                return true;
+            }
         }
         return false;
     }
@@ -148,14 +135,10 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static void createLedgerEntry(String objType, String remoteId, Id localId) {
-        Sync_Item__c item = new Sync_Item__c();
-        item.DirectionPk__c = 'Inbound';
-        item.StatusPk__c = 'Synced';
-        item.ObjectTypePk__c = stripNamespace(objType);
-        item.RemoteExternalIdTxt__c = remoteId;
-        item.LocalRecordIdTxt__c = (String)localId;
-        item.PayloadTxt__c = 'Ledger Mapping Created';
-        Database.insert(item, AccessLevel.SYSTEM_MODE);
+        Database.insert(new Sync_Item__c(
+            DirectionPk__c = 'Inbound', StatusPk__c = 'Synced', ObjectTypePk__c = stripNamespace(objType),
+            RemoteExternalIdTxt__c = remoteId, LocalRecordIdTxt__c = (String)localId, PayloadTxt__c = 'Ledger Mapping Created'
+        ), AccessLevel.SYSTEM_MODE);
     }
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
@@ -166,13 +149,16 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         for (String key : payload.keySet()) {
-            if (key == 'SourceId' || key == 'TargetId') continue;
+            if (key == 'SourceId' || key == 'TargetId') {
+                continue;
+            }
             String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
                 Object val = payload.get(key);
-                if (val == null) continue;
-                
+                if (val == null) {
+                    continue;
+                }
                 Schema.DisplayType dtype = field.getDescribe().getType();
                 if (dtype == Schema.DisplayType.DATE) {
                     record.put(field, Date.valueOf((String)val));
@@ -199,14 +185,21 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static Schema.SObjectType findSObjectType(String apiName) {
-        if (String.isBlank(apiName)) return null;
+        if (String.isBlank(apiName)) {
+            return null;
+        }
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        if (gd.containsKey(apiName)) return gd.get(apiName);
-        if (gd.containsKey('delivery__' + apiName)) return gd.get('delivery__' + apiName);
-        
+        if (gd.containsKey(apiName)) {
+            return gd.get(apiName);
+        }
+        if (gd.containsKey('delivery__' + apiName)) {
+            return gd.get('delivery__' + apiName);
+        }
         String target = stripNamespace(apiName).toLowerCase();
         for (String key : gd.keySet()) {
-            if (stripNamespace(key).toLowerCase() == target) return gd.get(key);
+            if (stripNamespace(key).toLowerCase() == target) {
+                return gd.get(key);
+            }
         }
         return null;
     }
