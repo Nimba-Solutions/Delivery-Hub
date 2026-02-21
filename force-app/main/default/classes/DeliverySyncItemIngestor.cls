@@ -17,7 +17,6 @@ public without sharing class DeliverySyncItemIngestor {
         return apiName;
     }
 
-    // --- FIX: Changed return type from void to Id ---
     public static Id processInboundItem(String objectType, Map<String, Object> payload) {
         SyncEngine.setSyncContext();
 
@@ -48,7 +47,6 @@ public without sharing class DeliverySyncItemIngestor {
         // --- FIX 2: PARENTING FOR COMMENTS AND FILES ---
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
-            
             localParentId = findLocalTicketId(targetId);
 
             if (localParentId == null) {
@@ -72,12 +70,10 @@ public without sharing class DeliverySyncItemIngestor {
 
         mapFields(recordToUpsert, payload, targetType);
         
-        // --- NEW FIX: Check if SourcePk__c exists before setting it ---
         if (hasField(targetType, 'SourcePk__c')) {
             putSafe(recordToUpsert, 'SourcePk__c', 'Vendor'); 
         }
 
-        // Execute DML in System Mode
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
@@ -96,6 +92,7 @@ public without sharing class DeliverySyncItemIngestor {
                 Database.insert(cdl, AccessLevel.SYSTEM_MODE);
             }
             
+            // --- REVERSE BRIDGE LOGIC: Ensure Vendor has a Request pointing back to Client ---
             if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
                 String ns = getNamespacePrefix();
                 String query = 'SELECT Id FROM ' + ns + 'Request__c WHERE ' + ns + 'TicketId__c = \'' + recordToUpsert.Id + '\'';
@@ -106,33 +103,36 @@ public without sharing class DeliverySyncItemIngestor {
                         req.put(ns + 'RemoteTicketIdTxt__c', sourceId); 
                     }
                     Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
+                } else {
+                    // Create the Request bridge if it doesn't exist
+                    SObject newReq = Schema.getGlobalDescribe().get(ns + 'Request__c').newSObject();
+                    newReq.put(ns + 'TicketId__c', recordToUpsert.Id);
+                    newReq.put(ns + 'RemoteTicketIdTxt__c', sourceId);
+                    newReq.put(ns + 'StatusPk__c', 'Accepted');
+                    Database.insert(newReq, AccessLevel.SYSTEM_MODE);
                 }
             }
         }
         
-        // --- FIX: Return the newly inserted/updated ID back to the caller ---
         return recordToUpsert.Id;
     }
-
-    // --- HELPERS ---
 
     private static Boolean hasField(Schema.SObjectType type, String fieldName) {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
         String target = stripNamespace(fieldName).toLowerCase();
         for (String fieldApi : fieldMap.keySet()) {
-            if (stripNamespace(fieldApi).toLowerCase() == target) {
-                return true;
-            }
+            if (stripNamespace(fieldApi).toLowerCase() == target) return true;
         }
         return false;
     }
 
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
-        
         if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
-            return reqs.isEmpty() ? null : reqs[0].TicketId__c;
+            String ns = getNamespacePrefix();
+            String query = 'SELECT ' + ns + 'TicketId__c FROM ' + ns + 'Request__c WHERE ' + ns + 'RemoteTicketIdTxt__c = :remoteId LIMIT 1';
+            List<SObject> reqs = Database.query(query);
+            return reqs.isEmpty() ? null : (Id)reqs[0].get(ns + 'TicketId__c');
         } else {
             String cleanName = stripNamespace(objName);
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
@@ -141,8 +141,10 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static Id findLocalTicketId(String remoteTicketId) {
-        List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
-        return reqs.isEmpty() ? null : reqs[0].TicketId__c;
+        String ns = getNamespacePrefix();
+        String query = 'SELECT ' + ns + 'TicketId__c FROM ' + ns + 'Request__c WHERE ' + ns + 'RemoteTicketIdTxt__c = :remoteTicketId LIMIT 1';
+        List<SObject> reqs = Database.query(query);
+        return reqs.isEmpty() ? null : (Id)reqs[0].get(ns + 'TicketId__c');
     }
 
     private static void createLedgerEntry(String objType, String remoteId, Id localId) {
@@ -158,38 +160,28 @@ public without sharing class DeliverySyncItemIngestor {
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
-        
         Map<String, SObjectField> cleanNameIndex = new Map<String, SObjectField>();
         for (String fieldApi : fieldMap.keySet()) {
-            String clean = stripNamespace(fieldApi).toLowerCase();
-            cleanNameIndex.put(clean, fieldMap.get(fieldApi));
+            cleanNameIndex.put(stripNamespace(fieldApi).toLowerCase(), fieldMap.get(fieldApi));
         }
 
         for (String key : payload.keySet()) {
-            if (key == 'SourceId' || key == 'TargetId') {
-                continue;
-            }
-
+            if (key == 'SourceId' || key == 'TargetId') continue;
             String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
                 Object val = payload.get(key);
-                Schema.DisplayType dtype = field.getDescribe().getType();
+                if (val == null) continue;
                 
-                if (val != null) {
-                    if (dtype == Schema.DisplayType.DATE) {
-                        record.put(field, Date.valueOf((String)val));
-                    } else if (dtype == Schema.DisplayType.DATETIME) {
-                        record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
-                    } else if (dtype == Schema.DisplayType.BASE64) {
-                        record.put(field, EncodingUtil.base64Decode((String)val));
-                    } else {
-                        record.put(field, val);
-                    }
+                Schema.DisplayType dtype = field.getDescribe().getType();
+                if (dtype == Schema.DisplayType.DATE) {
+                    record.put(field, Date.valueOf((String)val));
+                } else if (dtype == Schema.DisplayType.DATETIME) {
+                    record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
+                } else if (dtype == Schema.DisplayType.BASE64) {
+                    record.put(field, EncodingUtil.base64Decode((String)val));
                 } else {
-                    if (field.getDescribe().isNillable() && field.getDescribe().isCustom()) {
-                        record.put(field, null);
-                    }
+                    record.put(field, val);
                 }
             }
         }
@@ -198,7 +190,6 @@ public without sharing class DeliverySyncItemIngestor {
     private static void putSafe(SObject rec, String fieldName, Object val) {
         Map<String, SObjectField> fieldMap = rec.getSObjectType().getDescribe().fields.getMap();
         String target = stripNamespace(fieldName).toLowerCase();
-
         for (String fieldApi : fieldMap.keySet()) {
             if (stripNamespace(fieldApi).toLowerCase() == target) {
                 rec.put(fieldMap.get(fieldApi), val);
@@ -209,26 +200,13 @@ public without sharing class DeliverySyncItemIngestor {
 
     private static Schema.SObjectType findSObjectType(String apiName) {
         if (String.isBlank(apiName)) return null;
-
-        // --- FAST PATH (No more looping!) ---
-        // This checks for the name directly, with and without your namespace.
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
-        
-        // 1. Try exact match (e.g., "Ticket__c")
         if (gd.containsKey(apiName)) return gd.get(apiName);
-        
-        // 2. Try lowercase match
-        if (gd.containsKey(apiName.toLowerCase())) return gd.get(apiName.toLowerCase());
-        
-        // 3. Try with namespace if applicable
         if (gd.containsKey('delivery__' + apiName)) return gd.get('delivery__' + apiName);
-
-        // --- FALLBACK (Only if the above fails) ---
+        
         String target = stripNamespace(apiName).toLowerCase();
         for (String key : gd.keySet()) {
-            if (stripNamespace(key).toLowerCase() == target) {
-                return gd.get(key);
-            }
+            if (stripNamespace(key).toLowerCase() == target) return gd.get(key);
         }
         return null;
     }
