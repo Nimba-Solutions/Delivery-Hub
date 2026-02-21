@@ -63,8 +63,6 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         mapFields(recordToUpsert, payload, targetType);
-        
-        // FIX: Removed the hardcoded SourcePk__c override so the Client's source designation remains intact!
 
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
@@ -123,14 +121,14 @@ public without sharing class DeliverySyncItemIngestor {
             RemoteExternalIdTxt__c = remoteId, LocalRecordIdTxt__c = (String)localId, PayloadTxt__c = 'Ledger Mapping Created'
         );
         
-        // FIX: Dynamically populate specific lookup field (e.g. Ticket_Comment__c) for Inbound items
+        // FIX: Added System.debug to satisfy PMD EmptyCatchBlock rule
         try {
             ledger.put(objType, localId);
         } catch (Exception e1) {
             try {
                 ledger.put(cleanName, localId);
             } catch (Exception e2) {
-                // Safely ignore if field doesn't exist
+                System.debug(LoggingLevel.FINE, 'Ledger mapping skipped for ' + cleanName + ': ' + e2.getMessage());
             }
         }
         
