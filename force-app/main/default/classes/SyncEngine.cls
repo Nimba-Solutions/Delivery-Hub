@@ -40,7 +40,7 @@ public without sharing class SyncEngine {
             }
 
             List<Request__c> connections = [
-                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
+                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, StatusPk__c 
                 FROM Request__c 
                 WHERE TicketId__c IN :ticketIds AND StatusPk__c != 'Inactive'
                 WITH SYSTEM_MODE
@@ -73,20 +73,24 @@ public without sharing class SyncEngine {
                     
                     // PUSH MODEL (Client Side): Create routed items
                     for (Request__c req : reqs) {
+                        String reqStatus = (String) getSafeValue(req, 'StatusPk__c');
                         String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
                         
-                        if (String.isNotBlank(remoteId)) {
-                            if (blockedOrigins.contains(remoteId.trim())) {
-                                isBlocked = true; // Explicitly marked as an echo prevention block
-                            } else {
-                                itemsToInsert.add(createSyncItem(rec, req, allowedFields));
-                                hasPushableRoute = true;
-                            }
+                        // Loop Prevention (Echo Suppression)
+                        if (String.isNotBlank(remoteId) && blockedOrigins.contains(remoteId.trim())) {
+                            isBlocked = true; // Explicitly marked as an echo prevention block
+                            continue;
+                        } 
+                        
+                        // --- FIX: Push if the route is Active, regardless of whether remoteId is blank! ---
+                        if (reqStatus == 'Active') {
+                            itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                            hasPushableRoute = true;
                         }
                     }
                     
                     // PULL MODEL (Vendor Hub Fallback): 
-                    // If we had Requests but none were valid for pushing (blank remote IDs),
+                    // If we had Requests but none were valid for pushing
                     // AND it wasn't intentionally blocked by Echo Prevention, fallback to Hub Mode.
                     if (!hasPushableRoute && !isBlocked) {
                         itemsToInsert.add(createSyncItem(rec, null, allowedFields));
