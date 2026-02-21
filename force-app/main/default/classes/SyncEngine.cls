@@ -35,12 +35,13 @@ public without sharing class SyncEngine {
                 }
             }
 
-            if (ticketIds.isEmpty()) { 
-                return; 
+            if (ticketIds.isEmpty()) {
+                return;
             }
 
+            // Query Requests that are NOT Inactive
             List<Request__c> connections = [
-                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
+                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, StatusPk__c 
                 FROM Request__c 
                 WHERE TicketId__c IN :ticketIds AND StatusPk__c != 'Inactive'
                 WITH SYSTEM_MODE
@@ -48,10 +49,7 @@ public without sharing class SyncEngine {
 
             Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
             for (Request__c r : connections) {
-                Id rTicketId = (Id) getSafeValue(r, 'TicketId__c');
-                if (rTicketId == null) { 
-                    continue; 
-                }
+                Id rTicketId = r.TicketId__c;
                 if (!routes.containsKey(rTicketId)) {
                     routes.put(rTicketId, new List<Request__c>());
                 }
@@ -67,45 +65,34 @@ public without sharing class SyncEngine {
                 Id tId = recordToTicketId.get(rec.Id);
                 List<Request__c> reqs = routes.get(tId);
                 
+                Boolean hasPushableRoute = false;
+                Boolean isBlocked = false;
+
                 if (reqs != null && !reqs.isEmpty()) {
-                    Boolean hasPushableRoute = false;
-                    Boolean isBlocked = false;
-                    
-                    // PUSH MODEL (Client Side): Create routed items
                     for (Request__c req : reqs) {
-                        String remoteId = (String) getSafeValue(req, 'RemoteTicketIdTxt__c');
+                        String remoteId = req.RemoteTicketIdTxt__c;
+                        if (String.isNotBlank(remoteId) && blockedOrigins.contains(remoteId.trim())) {
+                            isBlocked = true;
+                            continue;
+                        } 
                         
-                        if (String.isNotBlank(remoteId)) {
-                            if (blockedOrigins.contains(remoteId.trim())) {
-                                isBlocked = true; // Explicitly marked as an echo prevention block
-                            } else {
-                                itemsToInsert.add(createSyncItem(rec, req, allowedFields));
-                                hasPushableRoute = true;
-                            }
+                        // Push EVERYTHING unless the route is specifically 'Inactive'
+                        if (req.StatusPk__c != 'Inactive') {
+                            itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                            hasPushableRoute = true;
                         }
                     }
-                    
-                    // PULL MODEL (Vendor Hub Fallback): 
-                    // If we had Requests but none were valid for pushing (blank remote IDs),
-                    // AND it wasn't intentionally blocked by Echo Prevention, fallback to Hub Mode.
-                    if (!hasPushableRoute && !isBlocked) {
-                        itemsToInsert.add(createSyncItem(rec, null, allowedFields));
-                    }
-                    
-                } else {
-                    // PULL MODEL (Vendor Hub): No routing records exist. Create an unrouted item!
+                }
+
+                if (!hasPushableRoute && !isBlocked) {
                     itemsToInsert.add(createSyncItem(rec, null, allowedFields));
                 }
             }
 
             if (!itemsToInsert.isEmpty()) {
                 Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
-                
-                // Enqueue the processor if we are within limits
-                if (!System.isQueueable() && !System.isFuture()) {
-                    if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs()) {
-                        System.enqueueJob(new SyncItemProcessor());
-                    }
+                if (Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
+                    System.enqueueJob(new SyncItemProcessor());
                 }
             }
         } catch (Exception e) {
@@ -114,32 +101,34 @@ public without sharing class SyncEngine {
     }
 
     private static Boolean hasSignificantChange(SObject rec, SObject oldRec, Set<String> allowedFields) {
-        if (oldRec == null || allowedFields == null || allowedFields.isEmpty()) { 
-            return true; 
+        if (oldRec == null) {
+            return true;
         }
         for (String field : allowedFields) {
-            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) { 
-                return true; 
+            if (getSafeValue(rec, field) != getSafeValue(oldRec, field)) {
+                return true;
             }
         }
         return false;
     }
 
     private static Id getTicketId(SObject rec) {
-        String objName = rec.getSObjectType().getDescribe().getName();
-        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) { 
-            return (Id) rec.Id; 
-        } 
+        String name = rec.getSObjectType().getDescribe().getName();
+        if (name.endsWithIgnoreCase('Ticket__c') && !name.endsWithIgnoreCase('Ticket_Comment__c')) {
+            return rec.Id;
+        }
         return (Id) getSafeValue(rec, 'TicketId__c');
     }
 
     private static Object getSafeValue(SObject rec, String field) {
         Map<String, Object> fields = rec.getPopulatedFieldsAsMap();
-        if (fields.containsKey(field)) { 
-            return fields.get(field); 
+        if (fields.containsKey(field)) {
+            return fields.get(field);
         }
-        if (fields.containsKey('delivery__' + field)) { 
-            return fields.get('delivery__' + field); 
+        for (String key : fields.keySet()) {
+            if (key.endsWithIgnoreCase('__' + field)) {
+                return fields.get(key);
+            }
         }
         return null;
     }
@@ -147,28 +136,22 @@ public without sharing class SyncEngine {
     private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields) {
         Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        
-        Id localTicketId = getTicketId(rec);
-        item.TicketId__c = localTicketId;
-        item.ObjectTypePk__c = rec.getSObjectType().getDescribe().getName().replace('delivery__', '');
+        item.TicketId__c = getTicketId(rec);
+
+        String fullApiName = rec.getSObjectType().getDescribe().getName();
+        item.ObjectTypePk__c = fullApiName.replace('delivery__', '');
 
         Map<String, Object> payload = new Map<String, Object>();
-        if (allowedFields != null) {
-            for (String f : allowedFields) { 
-                payload.put(f, getSafeValue(rec, f)); 
-            }
-        } else {
-            payload = rec.getPopulatedFieldsAsMap().clone();
+        for (String f : allowedFields) { 
+            payload.put(f, getSafeValue(rec, f)); 
         }
-        
         payload.put('SourceId', rec.Id); 
         
         if (req != null) {
             item.RequestId__c = req.Id; 
-            payload.put('TargetId', getSafeValue(req, 'RemoteTicketIdTxt__c')); 
+            payload.put('TargetId', req.RemoteTicketIdTxt__c); 
         } else {
-            // VENDOR HUB: Use the local Vendor ID as the TargetId. The Client will translate it upon pull.
-            payload.put('TargetId', localTicketId);
+            payload.put('TargetId', item.TicketId__c);
         }
         
         item.PayloadTxt__c = JSON.serialize(payload);

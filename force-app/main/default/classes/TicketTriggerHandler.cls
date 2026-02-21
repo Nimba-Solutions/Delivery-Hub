@@ -126,7 +126,7 @@ public without sharing class TicketTriggerHandler {
                 newRequests.add(new Request__c(
                     TicketId__c = t.Id,
                     DeliveryEntityId__c = vendor.Id,
-                    StatusPk__c = 'Draft',
+                    StatusPk__c = 'Draft', // Open for bids
                     PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
                 ));
             }
@@ -136,7 +136,7 @@ public without sharing class TicketTriggerHandler {
                     newRequests.add(new Request__c(
                         TicketId__c = t.Id,
                         DeliveryEntityId__c = t.ClientNetworkEntityId__c,
-                        StatusPk__c = 'Draft',
+                        StatusPk__c = 'Draft', // Open for bids
                         PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
                     ));
                 }
@@ -150,7 +150,7 @@ public without sharing class TicketTriggerHandler {
         SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, newRequests);
         insert decision.getRecords();
         
-        // --- FIX: Legacy Queueable Invocation Removed ---
+        // Legacy Queueable Invocation Removed.
         // SyncEngine natively handles pushing the Ticket to the Vendor based on this Request bridge!
     }
     
