@@ -26,6 +26,11 @@
                 <default>false</default>
                 <label>Ticket__c</label>
             </value>
+            <value>
+                <fullName>Network_Entity__c</fullName>
+                <default>false</default>
+                <label>Network_Entity__c</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

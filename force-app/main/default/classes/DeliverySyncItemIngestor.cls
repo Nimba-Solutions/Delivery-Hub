@@ -17,7 +17,8 @@ public without sharing class DeliverySyncItemIngestor {
         return apiName;
     }
 
-    public static void processInboundItem(String objectType, Map<String, Object> payload) {
+    // --- FIX: Changed return type from void to Id ---
+    public static Id processInboundItem(String objectType, Map<String, Object> payload) {
         SyncEngine.setSyncContext();
 
         Schema.SObjectType targetType = findSObjectType(objectType);
@@ -108,6 +109,9 @@ public without sharing class DeliverySyncItemIngestor {
                 }
             }
         }
+        
+        // --- FIX: Return the newly inserted/updated ID back to the caller ---
+        return recordToUpsert.Id;
     }
 
     // --- HELPERS ---
