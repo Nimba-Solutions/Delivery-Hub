@@ -132,6 +132,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>syncPollerButton</componentName>
+                <identifier>c_syncPollerButton</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryTicketChat</componentName>
                 <identifier>c_deliveryTicketChat</identifier>
             </componentInstance>
