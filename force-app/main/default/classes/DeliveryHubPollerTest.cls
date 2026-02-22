@@ -1,6 +1,7 @@
 /**
  * @description Test class for DeliveryHubPoller.
  * Uses dynamic field population to ensure data is created correctly in namespaced environments.
+ * V2 Architecture: Uses direct JSON array parsing and stringified payload processing.
  */
 @IsTest
 private class DeliveryHubPollerTest {
@@ -71,20 +72,16 @@ private class DeliveryHubPollerTest {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
             
-            // Payload matches the "Ticket__c" object type expected by the Ingestor
-            String jsonBody = '{' +
-                '"status": "Success",' +
-                '"latestServerTime": "2026-02-18T12:00:00.000Z",' +
-                '"events": [' +
-                    '{' +
-                        '"objectType": "Ticket__c",' +
-                        '"payload": {' +
-                            '"SourceId": "MOTHERSHIP-TKT-001",' +
-                            '"StageNamePk__c": "In Development"' +
-                        '}' +
-                    '}' +
-                ']' +
-            '}';
+            // V2 ARCHITECTURE: Payload is now a direct JSON array.
+            // Notice the inner "payload" value is escaped as a string, matching the Vendor's database storage format.
+            String jsonBody = '[' +
+                '{' +
+                    '"objectType": "Ticket__c",' +
+                    '"payload": "{\\"SourceId\\": \\"MOTHERSHIP-TKT-001\\", \\"StageNamePk__c\\": \\"In Development\\"}",' +
+                    '"syncItemId": "a0D000000000000EAA",' +
+                    '"createdDate": "2026-02-18T12:00:00.000Z"' +
+                '}' +
+            ']';
             
             res.setBody(jsonBody);
             return res;

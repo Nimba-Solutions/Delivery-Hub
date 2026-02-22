@@ -45,14 +45,25 @@ private class DeliveryHubSchedulerTest {
      */
     public class MockResponse implements HttpCalloutMock {
         /**
-         * @description Respond with a valid sync payload.
+         * @description Respond with a valid V2 sync payload.
          * @param req The HTTP request.
          * @return HttpResponse The mock response.
          */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
-            res.setBody('{"status":"Success","events":[],"latestServerTime":"2026-02-18T12:00:00.000Z"}');
+            
+            // V2 ARCHITECTURE: Must return a JSON Array, simulating a pulled update
+            String jsonBody = '[' +
+                '{' +
+                    '"objectType": "Ticket__c",' +
+                    '"payload": "{\\"SourceId\\": \\"REMOTE-123\\"}",' +
+                    '"syncItemId": "a0D000000000000EAA",' +
+                    '"createdDate": "2026-02-18T12:00:00.000Z"' +
+                '}' +
+            ']';
+            
+            res.setBody(jsonBody);
             return res;
         }
     }

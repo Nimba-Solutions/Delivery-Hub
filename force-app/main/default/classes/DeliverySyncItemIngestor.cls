@@ -1,6 +1,7 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Fully compliant with PMD Security (SOQL Injection) and Style (Braces) rules.
+ * Strictly enforces DAG topology (no reverse-bridges) and maintains PMD compliance.
+ * Captures routing origins to explicitly prevent echo loops.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -27,8 +28,20 @@ public without sharing class DeliverySyncItemIngestor {
         String sourceId = (String) payload.get('SourceId'); 
         String targetId = (String) payload.get('TargetId'); 
         
+        // We will store the RequestId if we find it so we can link the Inbound Sync Item to it
+        Id localRequestId = null;
+        
         Id localRecordId = findLocalId(targetType, sourceId);
         
+        // If it's a Ticket, try to find the Request Bridge (Downstream Origin)
+        if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
+            Request__c bridge = findTicketBridge(sourceId);
+            if (bridge != null) {
+                localRecordId = bridge.TicketId__c;
+                localRequestId = bridge.Id;
+            }
+        }
+
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
             try {
                 Id castId = (Id) targetId;
@@ -44,8 +57,23 @@ public without sharing class DeliverySyncItemIngestor {
         
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
-            localParentId = findLocalTicketId(targetId);
+            
+            // 1. Try to find parent via Request Bridge (Downstream Origin)
+            Request__c parentBridge = findTicketBridge(targetId);
+            if (parentBridge != null) {
+                localParentId = parentBridge.TicketId__c;
+                localRequestId = parentBridge.Id; // Capture the Request ID
+            }
 
+            // 2. Try to find parent via the Ledger (Upstream Origin)
+            if (localParentId == null) {
+                List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :targetId AND ObjectTypePk__c = 'Ticket__c' WITH SYSTEM_MODE LIMIT 1];
+                if (!ledger.isEmpty()) {
+                    localParentId = (Id)ledger[0].LocalRecordIdTxt__c;
+                }
+            }
+
+            // 3. Fallback: Check if targetId is actually a local ID
             if (localParentId == null) {
                 try {
                     Id castId = (Id) targetId;
@@ -68,7 +96,9 @@ public without sharing class DeliverySyncItemIngestor {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
-            createLedgerEntry(objectType, sourceId, recordToUpsert.Id);
+            
+            // Pass the localRequestId down to link the Sync Item
+            createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId);
             
             if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
                 Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
@@ -76,63 +106,94 @@ public without sharing class DeliverySyncItemIngestor {
                     ContentDocumentId = contentDocId, LinkedEntityId = localParentId, ShareType = 'V', Visibility = 'AllUsers'
                 ), AccessLevel.SYSTEM_MODE);
             }
+        }
+
+        // ==========================================
+        // ECHO SUPPRESSION: REGISTER ORIGIN ROUTE
+        // ==========================================
+        if (localRequestId != null) {
+            // Origin was a Downstream Vendor via Request__c
+            SyncEngine.ignoreOrigin(localRequestId);
+        } else {
+            // No Request found. Origin must be the Upstream Client.
+            Id parentTicketId = (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) ? recordToUpsert.Id : localParentId;
             
-            if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
-                List<Request__c> existingReqs = [SELECT Id FROM Request__c WHERE TicketId__c = :recordToUpsert.Id WITH SYSTEM_MODE];
-                
-                if (!existingReqs.isEmpty()) {
-                    for (Request__c req : existingReqs) {
-                        req.RemoteTicketIdTxt__c = sourceId; 
+            if (parentTicketId != null) {
+                try {
+                    // Look up the ClientNetworkEntityId__c of the target Ticket
+                    String query = 'SELECT ClientNetworkEntityId__c FROM Ticket__c WHERE Id = :parentTicketId LIMIT 1';
+                    if (String.isNotBlank(getNamespacePrefix())) {
+                        query = query.replace('Ticket__c', getNamespacePrefix() + 'Ticket__c')
+                                     .replace('ClientNetworkEntityId__c', getNamespacePrefix() + 'ClientNetworkEntityId__c');
                     }
-                    Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
-                } else {
-                    Database.insert(new Request__c(
-                        TicketId__c = recordToUpsert.Id,
-                        RemoteTicketIdTxt__c = sourceId,
-                        StatusPk__c = 'Accepted'
-                    ), AccessLevel.SYSTEM_MODE);
+                    
+                    List<SObject> tix = Database.query(query); // NOPMD
+                    if (!tix.isEmpty()) {
+                        Id clientId = (Id)tix[0].get(tix[0].getSObjectType().getDescribe().fields.getMap().containsKey('ClientNetworkEntityId__c') ? 'ClientNetworkEntityId__c' : getNamespacePrefix() + 'ClientNetworkEntityId__c');
+                        if (clientId != null) {
+                            SyncEngine.ignoreOrigin(clientId);
+                        }
+                    }
+                } catch (Exception e) {
+                    System.debug(LoggingLevel.FINE, 'Failed to resolve Upstream Client entity for Echo Suppression: ' + e.getMessage());
                 }
             }
         }
+
         return recordToUpsert.Id;
     }
 
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
-        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
-            List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
-            return reqs.isEmpty() ? null : reqs[0].TicketId__c;
-        } else {
-            String cleanName = stripNamespace(objName);
+        String cleanName = stripNamespace(objName);
+        
+        if (!cleanName.endsWithIgnoreCase('Ticket__c') || cleanName.endsWithIgnoreCase('Ticket_Comment__c')) {
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
+        return null;
     }
 
-    private static Id findLocalTicketId(String remoteTicketId) {
-        List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
-        return reqs.isEmpty() ? null : reqs[0].TicketId__c;
+    // Helper to grab both the Ticket ID and the Request ID
+    private static Request__c findTicketBridge(String remoteTicketId) {
+        List<Request__c> reqs = [SELECT Id, TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
+        return reqs.isEmpty() ? null : reqs[0];
     }
 
-    private static void createLedgerEntry(String objType, String remoteId, Id localId) {
+    // Updated to accept the requestId
+    private static void createLedgerEntry(String objType, String remoteId, Id localId, Id requestId) {
         String cleanName = stripNamespace(objType);
         Sync_Item__c ledger = new Sync_Item__c(
-            DirectionPk__c = 'Inbound', StatusPk__c = 'Synced', ObjectTypePk__c = cleanName,
-            RemoteExternalIdTxt__c = remoteId, LocalRecordIdTxt__c = (String)localId, PayloadTxt__c = 'Ledger Mapping Created'
+            DirectionPk__c = 'Inbound', 
+            StatusPk__c = 'Synced', 
+            ObjectTypePk__c = cleanName,
+            RemoteExternalIdTxt__c = remoteId, 
+            LocalRecordIdTxt__c = (String)localId, 
+            PayloadTxt__c = 'Ledger Mapping Created',
+            RequestId__c = requestId // FIX: Stamps the Request ID on the Inbound Item!
         );
         
-        // FIX: Added System.debug to satisfy PMD EmptyCatchBlock rule
+        populateLookupField(ledger, cleanName, localId);
+        Database.insert(ledger, AccessLevel.SYSTEM_MODE);
+    }
+
+    private static void populateLookupField(SObject item, String cleanName, Id recordId) {
+        String lookupField;
+        if (cleanName.endsWithIgnoreCase('__c')) {
+            lookupField = cleanName.substringBeforeLast('__c').replace('_', '') + 'Id__c';
+        } else {
+            lookupField = cleanName + 'Id__c';
+        }
+        
         try {
-            ledger.put(objType, localId);
+            item.put(lookupField, recordId);
         } catch (Exception e1) {
             try {
-                ledger.put(cleanName, localId);
+                item.put('delivery__' + lookupField, recordId);
             } catch (Exception e2) {
                 System.debug(LoggingLevel.FINE, 'Ledger mapping skipped for ' + cleanName + ': ' + e2.getMessage());
             }
         }
-        
-        Database.insert(ledger, AccessLevel.SYSTEM_MODE);
     }
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
