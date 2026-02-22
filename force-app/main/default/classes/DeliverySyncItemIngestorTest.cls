@@ -105,4 +105,40 @@ private class DeliverySyncItemIngestorTest {
         System.assertEquals(null, ledger.RequestId__c, 'V2 DAG Rule: RequestId__c must be NULL since this came from an upstream Client Ledger translation.');
         System.assert(SyncEngine.blockedOrigins.size() > 0, 'The ClientNetworkEntityId__c must have been passed to memory to block upstream echoes.');
     }
+
+    @IsTest
+    static void testProcessInboundTicketAutoParentsClient() {
+        // 1. Setup a Client Network Entity with a simulated Org ID
+        String simulatedOrgId = '00D_MOCK_ORG_ID';
+        Network_Entity__c clientEntity = new Network_Entity__c(
+            Name = 'Simulated Upstream Client',
+            EntityTypePk__c = 'Client',
+            StatusPk__c = 'Active',
+            RemoteExternalIdTxt__c = simulatedOrgId // This is what the Ingestor will look for
+        );
+        insert clientEntity;
+
+        // 2. Create an inbound payload simulating a brand new ticket pushed from the Client
+        Map<String, Object> payload = new Map<String, Object>{
+            'SourceId' => 'REMOTE-TICKET-999',
+            'BriefDescriptionTxt__c' => 'Testing Auto-Parenting',
+            'SenderOrgId' => simulatedOrgId // The new Identity Injection!
+        };
+
+        Test.startTest();
+        // 3. Process the inbound item
+        DeliverySyncItemIngestor.processInboundItem('Ticket__c', payload);
+        Test.stopTest();
+
+        // 4. Verify the Ticket was inserted AND automatically parented to the Client
+        Ticket__c insertedTicket = [
+            SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c 
+            FROM Ticket__c 
+            WHERE BriefDescriptionTxt__c = 'Testing Auto-Parenting' 
+            LIMIT 1
+        ];
+        
+        System.assertNotEquals(null, insertedTicket, 'Ticket should have been created successfully.');
+        System.assertEquals(clientEntity.Id, insertedTicket.ClientNetworkEntityId__c, 'The Ingestor should have automatically stamped the ClientNetworkEntityId__c based on the SenderOrgId in the payload.');
+    }
 }
