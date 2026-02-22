@@ -1,15 +1,16 @@
 /**
  * @description Queueable Worker that processes 'Outbound' Sync Items.
  * It reads the specific Endpoint from the linked Request, pushes the payload natively,
- * and extracts the response ID to close the bridge loop.
+ * passes the Global Traceability ID, and extracts the response ID to close the bridge loop.
  */
 public inherited sharing class SyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
     public void execute(QueueableContext context) {
         
         // 1. Query Queued Outbound Items linked to a valid Request route
+        // NEW: Added GlobalSourceIdTxt__c to the query for header injection
         List<Sync_Item__c> items = [
-            SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c,
+            SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
             FROM Sync_Item__c 
             WHERE StatusPk__c = 'Queued' 
@@ -57,6 +58,12 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                     req.setEndpoint(finalEndpoint);
                     req.setMethod('POST');
                     req.setHeader('Content-Type', 'application/json');
+                    
+                    // NEW: Inject the Global Traceability ID as an HTTP Header for Gateway-level loop prevention
+                    if (String.isNotBlank(item.GlobalSourceIdTxt__c)) {
+                        req.setHeader('X-Global-Source-Id', item.GlobalSourceIdTxt__c);
+                    }
+                    
                     req.setBody(item.PayloadTxt__c);
                     req.setTimeout(60000); 
 
@@ -70,7 +77,7 @@ public inherited sharing class SyncItemProcessor implements Queueable, Database.
                     item.StatusPk__c = 'Synced';
                     item.ErrorLogTxt__c = null;
 
-                    // --- FIX: EXTRACT RESPONSE & UPDATE BRIDGE (Handshake Flow) ---
+                    // --- EXTRACT RESPONSE & UPDATE BRIDGE (Handshake Flow) ---
                     if (String.isNotBlank(res.getBody())) {
                         try {
                             Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());

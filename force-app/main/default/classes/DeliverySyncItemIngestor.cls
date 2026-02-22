@@ -1,7 +1,7 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
  * Strictly enforces DAG topology (no reverse-bridges) and maintains PMD compliance.
- * Captures routing origins to explicitly prevent echo loops.
+ * Captures routing origins and Global Traceability IDs to explicitly prevent echo loops.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -27,6 +27,9 @@ public without sharing class DeliverySyncItemIngestor {
 
         String sourceId = (String) payload.get('SourceId'); 
         String targetId = (String) payload.get('TargetId'); 
+        
+        // NEW: Extract the Global Traceability ID from the incoming payload
+        String globalSourceId = (String) payload.get('GlobalSourceId'); 
         
         // We will store the RequestId if we find it so we can link the Inbound Sync Item to it
         Id localRequestId = null;
@@ -97,8 +100,8 @@ public without sharing class DeliverySyncItemIngestor {
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
             
-            // Pass the localRequestId down to link the Sync Item
-            createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId);
+            // FIX: Pass the localRequestId and globalSourceId down to link the Sync Item
+            createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
             
             if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
                 Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
@@ -160,8 +163,8 @@ public without sharing class DeliverySyncItemIngestor {
         return reqs.isEmpty() ? null : reqs[0];
     }
 
-    // Updated to accept the requestId
-    private static void createLedgerEntry(String objType, String remoteId, Id localId, Id requestId) {
+    // Updated to accept the requestId and the globalSourceId
+    private static void createLedgerEntry(String objType, String remoteId, Id localId, Id requestId, String globalSourceId) {
         String cleanName = stripNamespace(objType);
         Sync_Item__c ledger = new Sync_Item__c(
             DirectionPk__c = 'Inbound', 
@@ -170,7 +173,8 @@ public without sharing class DeliverySyncItemIngestor {
             RemoteExternalIdTxt__c = remoteId, 
             LocalRecordIdTxt__c = (String)localId, 
             PayloadTxt__c = 'Ledger Mapping Created',
-            RequestId__c = requestId // FIX: Stamps the Request ID on the Inbound Item!
+            RequestId__c = requestId,
+            GlobalSourceIdTxt__c = globalSourceId // Stamps the trace ID!
         );
         
         populateLookupField(ledger, cleanName, localId);
@@ -204,7 +208,9 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         for (String key : payload.keySet()) {
-            if (key == 'SourceId' || key == 'TargetId') { continue; }
+            // FIX: Ensure the new GlobalSourceId is ignored during standard field mapping
+            if (key == 'SourceId' || key == 'TargetId' || key == 'GlobalSourceId') { continue; }
+            
             String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
