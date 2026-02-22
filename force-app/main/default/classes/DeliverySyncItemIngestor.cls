@@ -1,6 +1,7 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
  * Strictly enforces DAG topology (no reverse-bridges) and maintains PMD compliance.
+ * Captures routing origins to explicitly prevent echo loops.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -32,7 +33,7 @@ public without sharing class DeliverySyncItemIngestor {
         
         Id localRecordId = findLocalId(targetType, sourceId);
         
-        // If it's a Ticket, try to find the Request Bridge
+        // If it's a Ticket, try to find the Request Bridge (Downstream Origin)
         if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
             Request__c bridge = findTicketBridge(sourceId);
             if (bridge != null) {
@@ -57,7 +58,7 @@ public without sharing class DeliverySyncItemIngestor {
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             
-            // If it's a child record, find the parent ticket via the Request Bridge
+            // If it's a child record, find the parent ticket via the Request Bridge (Downstream Origin)
             Request__c parentBridge = findTicketBridge(targetId);
             if (parentBridge != null) {
                 localParentId = parentBridge.TicketId__c;
@@ -97,6 +98,39 @@ public without sharing class DeliverySyncItemIngestor {
                 ), AccessLevel.SYSTEM_MODE);
             }
         }
+
+        // ==========================================
+        // ECHO SUPPRESSION: REGISTER ORIGIN ROUTE
+        // ==========================================
+        if (localRequestId != null) {
+            // Origin was a Downstream Vendor via Request__c
+            SyncEngine.ignoreOrigin(localRequestId);
+        } else {
+            // No Request found. Origin must be the Upstream Client.
+            Id parentTicketId = (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) ? recordToUpsert.Id : localParentId;
+            
+            if (parentTicketId != null) {
+                try {
+                    // Look up the ClientNetworkEntityId__c of the target Ticket
+                    String query = 'SELECT ClientNetworkEntityId__c FROM Ticket__c WHERE Id = :parentTicketId LIMIT 1';
+                    if (String.isNotBlank(getNamespacePrefix())) {
+                        query = query.replace('Ticket__c', getNamespacePrefix() + 'Ticket__c')
+                                     .replace('ClientNetworkEntityId__c', getNamespacePrefix() + 'ClientNetworkEntityId__c');
+                    }
+                    
+                    List<SObject> tix = Database.query(query); // NOPMD
+                    if (!tix.isEmpty()) {
+                        Id clientId = (Id)tix[0].get(tix[0].getSObjectType().getDescribe().fields.getMap().containsKey('ClientNetworkEntityId__c') ? 'ClientNetworkEntityId__c' : getNamespacePrefix() + 'ClientNetworkEntityId__c');
+                        if (clientId != null) {
+                            SyncEngine.ignoreOrigin(clientId);
+                        }
+                    }
+                } catch (Exception e) {
+                    System.debug(LoggingLevel.FINE, 'Failed to resolve Upstream Client entity for Echo Suppression: ' + e.getMessage());
+                }
+            }
+        }
+
         return recordToUpsert.Id;
     }
 

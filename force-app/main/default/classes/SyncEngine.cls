@@ -1,7 +1,7 @@
 /**
  * @description Core engine for handling outbound synchronization.
- * Implements Push/Pull Architecture with Smart Routing and Allowlist Filtering.
- * Refactored to enforce downstream-only routing edges and dynamic lookup resolution.
+ * Implements Push/Pull Architecture with DAG Routing, Entity Type Enforcement, 
+ * and Origin-Based Echo Suppression.
  */
 public without sharing class SyncEngine {
 
@@ -12,9 +12,10 @@ public without sharing class SyncEngine {
         isSyncContext = true;
     }
     
-    public static void ignoreOrigin(String remoteId) {
-        if (String.isNotBlank(remoteId)) {
-            blockedOrigins.add(remoteId.trim());
+    // Stores the Request ID (Downstream) or Network Entity ID (Upstream) to prevent echo loops
+    public static void ignoreOrigin(String originId) {
+        if (String.isNotBlank(originId)) {
+            blockedOrigins.add(originId.trim());
         }
     }
 
@@ -40,12 +41,24 @@ public without sharing class SyncEngine {
                 return;
             }
 
-            // Query strictly for downstream routing edges
+            // 1. Evaluate Upstream Routing Edges (The Parent Tickets)
+            Map<Id, Ticket__c> parentTickets = new Map<Id, Ticket__c>([
+                SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c 
+                FROM Ticket__c 
+                WHERE Id IN :ticketIds
+                WITH SYSTEM_MODE
+            ]);
+
+            // 2. Evaluate Downstream Routing Edges (Active, Typed Requests)
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, 
-                       DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, StatusPk__c 
+                       DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
+                       DeliveryEntityId__r.EntityTypePk__c, StatusPk__c 
                 FROM Request__c 
-                WHERE TicketId__c IN :ticketIds AND StatusPk__c != 'Inactive'
+                WHERE TicketId__c IN :ticketIds 
+                  AND StatusPk__c != 'Inactive' 
+                  AND DeliveryEntityId__c != NULL 
+                  AND DeliveryEntityId__r.EntityTypePk__c IN ('Vendor', 'Both')
                 WITH SYSTEM_MODE
             ];
 
@@ -64,32 +77,36 @@ public without sharing class SyncEngine {
                 }
 
                 Id tId = recordToTicketId.get(rec.Id);
+                Ticket__c parentTicket = parentTickets.get(tId);
                 List<Request__c> reqs = routes.get(tId);
-                
-                Boolean hasPushableRoute = false;
-                Boolean isBlocked = false;
 
+                // ==========================================
+                // FAN OUT DOWNSTREAM (Push to Sub-Vendors)
+                // ==========================================
                 if (reqs != null && !reqs.isEmpty()) {
                     for (Request__c req : reqs) {
-                        String remoteId = req.RemoteTicketIdTxt__c;
-                        
-                        // Echo Suppression
-                        if (String.isNotBlank(remoteId) && blockedOrigins.contains(remoteId.trim())) {
-                            isBlocked = true;
+                        // Echo Suppression: Do not bounce back down the edge it arrived on
+                        if (blockedOrigins.contains((String)req.Id)) {
                             continue;
                         } 
-                        
-                        // Enforce Downstream Routing: Only push if a valid downstream entity exists
-                        if (req.StatusPk__c != 'Inactive' && req.DeliveryEntityId__c != null) {
-                            itemsToInsert.add(createSyncItem(rec, req, allowedFields));
-                            hasPushableRoute = true;
-                        }
+                        itemsToInsert.add(createSyncItem(rec, req, allowedFields));
                     }
                 }
 
-                // Passive Hub Mode: Stage for upstream Poller if no downstream push occurred
-                if (!hasPushableRoute && !isBlocked) {
-                    itemsToInsert.add(createSyncItem(rec, null, allowedFields));
+                // ==========================================
+                // FAN OUT UPSTREAM (Stage for Client Poller)
+                // ==========================================
+                if (parentTicket != null && parentTicket.ClientNetworkEntityId__c != null) {
+                    String entityType = parentTicket.ClientNetworkEntityId__r.EntityTypePk__c;
+                    
+                    if (entityType == 'Client' || entityType == 'Both') {
+                        // Echo Suppression: Do not stage for the Client if they just pushed this to us
+                        if (blockedOrigins.contains((String)parentTicket.ClientNetworkEntityId__c)) {
+                            continue;
+                        }
+                        
+                        itemsToInsert.add(createSyncItem(rec, null, allowedFields));
+                    }
                 }
             }
 
@@ -140,7 +157,7 @@ public without sharing class SyncEngine {
     private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields) {
         Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        item.TicketId__c = getTicketId(rec);
+        item.TicketId__c = getTicketId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
 
         String fullApiName = rec.getSObjectType().getDescribe().getName();
         String cleanName = fullApiName.replace('delivery__', '');
@@ -155,11 +172,11 @@ public without sharing class SyncEngine {
         payload.put('SourceId', rec.Id); 
         
         if (req != null) {
-            // Push Mode: Target downstream node's ID
+            // Push Mode: Explicit Downstream Route
             item.RequestId__c = req.Id; 
             payload.put('TargetId', req.RemoteTicketIdTxt__c); 
         } else {
-            // Hub Mode: Stage local ID for upstream Poller translation
+            // Hub Mode: Upstream Stage
             payload.put('TargetId', item.TicketId__c);
         }
         
