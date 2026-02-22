@@ -58,13 +58,22 @@ public without sharing class DeliverySyncItemIngestor {
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             
-            // If it's a child record, find the parent ticket via the Request Bridge (Downstream Origin)
+            // 1. Try to find parent via Request Bridge (Downstream Origin)
             Request__c parentBridge = findTicketBridge(targetId);
             if (parentBridge != null) {
                 localParentId = parentBridge.TicketId__c;
-                localRequestId = parentBridge.Id; // Capture the Request ID to link the Sync Item
+                localRequestId = parentBridge.Id; // Capture the Request ID
             }
 
+            // 2. Try to find parent via the Ledger (Upstream Origin)
+            if (localParentId == null) {
+                List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :targetId AND ObjectTypePk__c = 'Ticket__c' WITH SYSTEM_MODE LIMIT 1];
+                if (!ledger.isEmpty()) {
+                    localParentId = (Id)ledger[0].LocalRecordIdTxt__c;
+                }
+            }
+
+            // 3. Fallback: Check if targetId is actually a local ID
             if (localParentId == null) {
                 try {
                     Id castId = (Id) targetId;

@@ -42,7 +42,7 @@ private class DeliverySyncItemIngestorTest {
     }
 
     @IsTest
-    static void testProcessInboundTicketUpdate_DownstreamEdge() {
+    static void testProcessInboundTicketUpdateDownstreamEdge() {
         Map<String, Object> payload = new Map<String, Object>{
             'SourceId' => 'REMOTE-123',
             'BriefDescriptionTxt__c' => 'Updated via Inbound Sync'
@@ -60,7 +60,7 @@ private class DeliverySyncItemIngestorTest {
     }
 
     @IsTest
-    static void testProcessInboundCommentInsert_DownstreamEdge() {
+    static void testProcessInboundCommentInsertDownstreamEdge() {
         Map<String, Object> payload = new Map<String, Object>{
             'SourceId' => 'REMOTE-COMM-456',
             'TargetId' => 'REMOTE-123', // Matches the Request Bridge
@@ -83,7 +83,7 @@ private class DeliverySyncItemIngestorTest {
     }
     
     @IsTest
-    static void testProcessInboundCommentInsert_UpstreamEdge() {
+    static void testProcessInboundCommentInsertUpstreamEdge() {
         // TargetId points to the Client's remote ID stored in the Ledger (no Request__c bridge exists for this)
         Map<String, Object> payload = new Map<String, Object>{
             'SourceId' => 'REMOTE-COMM-789',
