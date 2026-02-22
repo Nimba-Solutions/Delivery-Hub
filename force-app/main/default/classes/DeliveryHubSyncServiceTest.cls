@@ -144,7 +144,7 @@ private class DeliveryHubSyncServiceTest {
     // ==========================================
 
     @IsTest
-    static void testHttpGetChanges_Success() {
+    static void testHttpGetChangesSuccess() {
         Network_Entity__c client = [SELECT Id FROM Network_Entity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
         
         RestRequest req = new RestRequest();
@@ -168,7 +168,7 @@ private class DeliveryHubSyncServiceTest {
     }
 
     @IsTest
-    static void testHttpGetChanges_MissingClientId() {
+    static void testHttpGetChangesMissingClientId() {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
         
@@ -188,7 +188,7 @@ private class DeliveryHubSyncServiceTest {
     }
 
     @IsTest
-    static void testHttpGetChanges_WrongEndpoint() {
+    static void testHttpGetChangesWrongEndpoint() {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
         
