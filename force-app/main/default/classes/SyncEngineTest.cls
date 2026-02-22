@@ -81,8 +81,8 @@ private class SyncEngineTest {
                 hubCount++;
             }
         }
-        System.assertEquals(1, pushCount, 'One item should be targeted downstream (Push)');
-        System.assertEquals(1, hubCount, 'One item should be staged upstream (Hub/Pull)');
+        System.assertEquals(1, pushCount, 'One item should be targeted downstream (Push).');
+        System.assertEquals(1, hubCount, 'One item should be staged upstream (Hub/Pull).');
     }
     
     @IsTest
