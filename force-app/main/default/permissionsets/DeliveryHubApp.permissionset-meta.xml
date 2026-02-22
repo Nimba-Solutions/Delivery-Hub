@@ -117,6 +117,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Sync_Item__c.GlobalSourceIdTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Sync_Item__c.LocalRecordIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
