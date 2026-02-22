@@ -1,3 +1,8 @@
+/**
+ * @description Test class for SyncEngine.
+ * V2 Architecture: Tests bidirectional DAG routing and echo suppression.
+ * Uses Apex-level filtering to isolate assertions from async trigger noise, bypassing SOQL Long Text limits.
+ */
 @IsTest
 private class SyncEngineTest {
 
@@ -42,7 +47,7 @@ private class SyncEngineTest {
     }
 
     @IsTest
-    static void testCaptureChangesUpdate_FansOutBidirectionally() {
+    static void testCaptureChangesUpdateFansOutBidirectionally() {
         Ticket__c t = [SELECT Id, BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
         delete [SELECT Id FROM Sync_Item__c]; // Clear setup trigger noise
 
@@ -51,7 +56,14 @@ private class SyncEngineTest {
         update t; // Should trigger captureChanges
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id, RequestId__c FROM Sync_Item__c];
+        // STRICT APEX FILTER: Long Text Areas cannot be filtered in SOQL.
+        List<Sync_Item__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM Sync_Item__c];
+        List<Sync_Item__c> items = new List<Sync_Item__c>();
+        for (Sync_Item__c si : allItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('New Desc')) {
+                items.add(si);
+            }
+        }
         
         // V2 Expects 2 items: 1 downstream (Push), 1 upstream (Hub stage)
         System.assertEquals(2, items.size(), 'Should create two sync items: one upstream, one downstream.');
@@ -70,7 +82,7 @@ private class SyncEngineTest {
     }
     
     @IsTest
-    static void testSmartRouting_BlocksDownstreamEcho() {
+    static void testSmartRoutingBlocksDownstreamEcho() {
         Ticket__c t = [SELECT Id, BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
         Request__c req = [SELECT Id FROM Request__c WHERE TicketId__c = :t.Id LIMIT 1];
         
@@ -88,14 +100,21 @@ private class SyncEngineTest {
         );
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id, RequestId__c FROM Sync_Item__c];
+        // STRICT APEX FILTER
+        List<Sync_Item__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM Sync_Item__c];
+        List<Sync_Item__c> items = new List<Sync_Item__c>();
+        for (Sync_Item__c si : allItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Downstream Echo Update')) {
+                items.add(si);
+            }
+        }
         
         System.assertEquals(1, items.size(), 'Engine should have blocked the downstream route and only staged the upstream one.');
         System.assertEquals(null, items[0].RequestId__c, 'The created item should be the upstream Hub item (RequestId == null).');
     }
 
     @IsTest
-    static void testSmartRouting_BlocksUpstreamEcho() {
+    static void testSmartRoutingBlocksUpstreamEcho() {
         Ticket__c t = [SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c FROM Ticket__c LIMIT 1];
         
         delete [SELECT Id FROM Sync_Item__c]; // Clear setup noise
@@ -112,7 +131,14 @@ private class SyncEngineTest {
         );
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id, RequestId__c FROM Sync_Item__c];
+        // STRICT APEX FILTER
+        List<Sync_Item__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM Sync_Item__c];
+        List<Sync_Item__c> items = new List<Sync_Item__c>();
+        for (Sync_Item__c si : allItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Upstream Echo Update')) {
+                items.add(si);
+            }
+        }
         
         System.assertEquals(1, items.size(), 'Engine should have blocked the upstream route and only created the downstream push.');
         System.assertNotEquals(null, items[0].RequestId__c, 'The created item should be the downstream Push item (RequestId != null).');
