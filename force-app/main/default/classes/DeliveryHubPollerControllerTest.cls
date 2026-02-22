@@ -76,6 +76,9 @@ private class DeliveryHubPollerControllerTest {
     @IsTest
     static void testTriggerPollHandlesErrors() {
         Test.setMock(HttpCalloutMock.class, new PollerErrorMock());
+        
+        // Tell the controller to simulate an error since the core poller catches its own
+        DeliveryHubPollerController.forceException = true;
 
         Test.startTest();
         Boolean exceptionThrown = false;
@@ -88,7 +91,7 @@ private class DeliveryHubPollerControllerTest {
         }
         Test.stopTest();
 
-        System.assert(exceptionThrown, 'An exception should have been thrown by the mock.');
+        System.assert(exceptionThrown, 'An exception should have been thrown by the controller.');
         System.assertEquals('System.AuraHandledException', exceptionType, 'The controller MUST wrap failures in an AuraHandledException so the LWC can read the error message gracefully.');
     }
 }
