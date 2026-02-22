@@ -7,7 +7,15 @@ private class DeliveryHubPollerControllerTest {
 
     // --- MOCKS ---
 
+    /**
+     * @description Mock implementation for a successful HTTP callout.
+     */
     private class PollerSuccessMock implements HttpCalloutMock {
+        /**
+         * @description Returns a 200 OK response with an empty JSON array.
+         * @param req The HTTP request being mocked.
+         * @return A mock HttpResponse.
+         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setHeader('Content-Type', 'application/json');
@@ -17,7 +25,15 @@ private class DeliveryHubPollerControllerTest {
         }
     }
 
+    /**
+     * @description Mock implementation for a failed HTTP callout.
+     */
     private class PollerErrorMock implements HttpCalloutMock {
+        /**
+         * @description Throws a simulated CalloutException to test error handling.
+         * @param req The HTTP request being mocked.
+         * @return Never returns natively, throws an exception instead.
+         */
         public HttpResponse respond(HttpRequest req) {
             // Simulate a catastrophic network failure
             CalloutException e = (CalloutException)CalloutException.class.newInstance();
