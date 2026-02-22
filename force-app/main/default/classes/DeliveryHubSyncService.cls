@@ -1,6 +1,7 @@
 /**
  * @description REST Resource for receiving inbound synchronization payloads from the Mothership.
  * This class acts as the public entry point for the Delivery Hub integration.
+ * V2 Architecture: Supports DAG routing and multi-tenant data segregation.
  */
 @RestResource(urlMapping='/deliveryhub/v1/sync/*')
 global without sharing class DeliveryHubSyncService {
@@ -45,7 +46,8 @@ global without sharing class DeliveryHubSyncService {
 
     /**
      * @description Handles incoming HTTP GET requests for the Pull Flow (Passive Hub).
-     * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/changes?since=1900-01-01+00:00:00
+     * Enforces Multi-Tenant Data Segregation via the clientId parameter.
+     * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/changes?since=1900-01-01+00:00:00&clientId=a03di00000abcde
      */
     @HttpGet
     global static void handleOutgoingSync() {
@@ -59,6 +61,14 @@ global without sharing class DeliveryHubSyncService {
             if (path.toLowerCase() != 'changes') {
                 res.statusCode = 404;
                 res.responseBody = Blob.valueOf('{"error":"Endpoint not found. Please use /sync/changes"}');
+                return;
+            }
+
+            // Extract the 'clientId' parameter (CRITICAL FOR MULTI-TENANCY)
+            String clientId = req.params.get('clientId');
+            if (String.isBlank(clientId)) {
+                res.statusCode = 400;
+                res.responseBody = Blob.valueOf('{"error":"Missing required parameter: clientId. Cannot authorize data retrieval without identity."}');
                 return;
             }
 
@@ -78,13 +88,14 @@ global without sharing class DeliveryHubSyncService {
             }
 
             // Query Unrouted Outbound Items (Passive Hub Mode)
-            // Architecture Rule: "SyncEngine creates a Sync_Item__c with RequestId__c = null. It waits in the database."
+            // V2 Architecture Rule: Must strictly filter by TicketId__r.ClientNetworkEntityId__c
             List<Sync_Item__c> items = [
                 SELECT Id, ObjectTypePk__c, PayloadTxt__c, CreatedDate
                 FROM Sync_Item__c
                 WHERE DirectionPk__c = 'Outbound'
                 AND RequestId__c = NULL
                 AND CreatedDate > :sinceDate
+                AND TicketId__r.ClientNetworkEntityId__c = :clientId
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate ASC
                 LIMIT 200
