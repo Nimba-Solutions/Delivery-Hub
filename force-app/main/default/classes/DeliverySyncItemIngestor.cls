@@ -1,6 +1,6 @@
 /**
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
- * Fully compliant with PMD Security (SOQL Injection) and Style (Braces) rules.
+ * Strictly enforces DAG topology (no reverse-bridges) and maintains PMD compliance.
  */
 public without sharing class DeliverySyncItemIngestor {
 
@@ -77,41 +77,38 @@ public without sharing class DeliverySyncItemIngestor {
                 ), AccessLevel.SYSTEM_MODE);
             }
             
-            if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
-                List<Request__c> existingReqs = [SELECT Id FROM Request__c WHERE TicketId__c = :recordToUpsert.Id WITH SYSTEM_MODE];
-                
-                if (!existingReqs.isEmpty()) {
-                    for (Request__c req : existingReqs) {
-                        req.RemoteTicketIdTxt__c = sourceId; 
-                    }
-                    Database.update(existingReqs, AccessLevel.SYSTEM_MODE);
-                } else {
-                    Database.insert(new Request__c(
-                        TicketId__c = recordToUpsert.Id,
-                        RemoteTicketIdTxt__c = sourceId,
-                        StatusPk__c = 'Accepted'
-                    ), AccessLevel.SYSTEM_MODE);
-                }
-            }
+            // EXCISION COMPLETE: Malformed Request__c generation removed to enforce DAG topology.
         }
         return recordToUpsert.Id;
     }
 
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         String objName = type.getDescribe().getName();
-        if (objName.endsWith('Ticket__c') && !objName.endsWith('Ticket_Comment__c')) {
+        String cleanName = stripNamespace(objName);
+        
+        // 1. Traverse Downstream Edge (Request Bridge)
+        if (cleanName.endsWithIgnoreCase('Ticket__c') && !cleanName.endsWithIgnoreCase('Ticket_Comment__c')) {
             List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
-            return reqs.isEmpty() ? null : reqs[0].TicketId__c;
-        } else {
-            String cleanName = stripNamespace(objName);
-            List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
-            return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
-        }
+            if (!reqs.isEmpty()) {
+                return reqs[0].TicketId__c;
+            }
+        } 
+        
+        // 2. Traverse Upstream Edge (Ledger)
+        List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
+        return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
     }
 
     private static Id findLocalTicketId(String remoteTicketId) {
+        // 1. Traverse Downstream Edge (Request Bridge)
         List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
-        return reqs.isEmpty() ? null : reqs[0].TicketId__c;
+        if (!reqs.isEmpty()) {
+            return reqs[0].TicketId__c;
+        }
+        
+        // 2. Traverse Upstream Edge (Ledger)
+        List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteTicketId AND ObjectTypePk__c = 'Ticket__c' WITH SYSTEM_MODE LIMIT 1];
+        return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
     }
 
     private static void createLedgerEntry(String objType, String remoteId, Id localId) {
@@ -121,18 +118,27 @@ public without sharing class DeliverySyncItemIngestor {
             RemoteExternalIdTxt__c = remoteId, LocalRecordIdTxt__c = (String)localId, PayloadTxt__c = 'Ledger Mapping Created'
         );
         
-        // FIX: Added System.debug to satisfy PMD EmptyCatchBlock rule
+        populateLookupField(ledger, cleanName, localId);
+        Database.insert(ledger, AccessLevel.SYSTEM_MODE);
+    }
+
+    private static void populateLookupField(SObject item, String cleanName, Id recordId) {
+        String lookupField;
+        if (cleanName.endsWithIgnoreCase('__c')) {
+            lookupField = cleanName.substringBeforeLast('__c').replace('_', '') + 'Id__c';
+        } else {
+            lookupField = cleanName + 'Id__c';
+        }
+        
         try {
-            ledger.put(objType, localId);
+            item.put(lookupField, recordId);
         } catch (Exception e1) {
             try {
-                ledger.put(cleanName, localId);
+                item.put('delivery__' + lookupField, recordId);
             } catch (Exception e2) {
                 System.debug(LoggingLevel.FINE, 'Ledger mapping skipped for ' + cleanName + ': ' + e2.getMessage());
             }
         }
-        
-        Database.insert(ledger, AccessLevel.SYSTEM_MODE);
     }
 
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
