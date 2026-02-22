@@ -4,6 +4,9 @@
  */
 public with sharing class DeliveryHubPollerController {
     
+    @TestVisible 
+    private static Boolean forceException = false;
+    
     /**
      * @description Triggers the polling process to fetch updates from the Vendor.
      * Wraps standard exceptions in an AuraHandledException for the LWC to display gracefully.
@@ -11,8 +14,14 @@ public with sharing class DeliveryHubPollerController {
     @AuraEnabled
     public static void triggerPoll() {
         try {
+            // Used strictly to test the AuraHandledException wrapping
+            if (forceException) {
+                throw new CalloutException('Simulated UI Error');
+            }
+            
             // Fires your existing logic!
             DeliveryHubPoller.pollUpdates();
+            
         } catch (Exception e) {
             throw new AuraHandledException('Polling failed: ' + e.getMessage());
         }
