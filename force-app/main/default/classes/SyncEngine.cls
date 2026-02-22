@@ -1,7 +1,7 @@
 /**
  * @description Core engine for handling outbound synchronization.
  * Implements Push/Pull Architecture with DAG Routing, Entity Type Enforcement, 
- * and Origin-Based Echo Suppression.
+ * Origin-Based Echo Suppression, and Global Traceability (Loop Prevention).
  */
 public without sharing class SyncEngine {
 
@@ -27,9 +27,11 @@ public without sharing class SyncEngine {
 
         try {
             Set<Id> ticketIds = new Set<Id>();
+            Set<Id> recordIds = new Set<Id>();
             Map<Id, Id> recordToTicketId = new Map<Id, Id>();
 
             for (SObject rec : newRecords) {
+                recordIds.add(rec.Id);
                 Id tId = getTicketId(rec); 
                 if (tId != null) {
                     ticketIds.add(tId);
@@ -41,7 +43,20 @@ public without sharing class SyncEngine {
                 return;
             }
 
-            // 1. Evaluate Upstream Routing Edges (The Parent Tickets)
+            // 1. Fetch Existing Ledger Info to find GlobalSourceId inheritance
+            // We look for Inbound items to see if this record was born in another org
+            Map<Id, String> recordToGlobalSource = new Map<Id, String>();
+            for (Sync_Item__c existingItem : [
+                SELECT LocalRecordIdTxt__c, GlobalSourceIdTxt__c 
+                FROM Sync_Item__c 
+                WHERE LocalRecordIdTxt__c IN :recordIds 
+                AND GlobalSourceIdTxt__c != NULL
+                WITH SYSTEM_MODE
+            ]) {
+                recordToGlobalSource.put((Id)existingItem.LocalRecordIdTxt__c, existingItem.GlobalSourceIdTxt__c);
+            }
+
+            // 2. Evaluate Upstream Routing Edges (The Parent Tickets)
             Map<Id, Ticket__c> parentTickets = new Map<Id, Ticket__c>([
                 SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c 
                 FROM Ticket__c 
@@ -49,7 +64,7 @@ public without sharing class SyncEngine {
                 WITH SYSTEM_MODE
             ]);
 
-            // 2. Evaluate Downstream Routing Edges (Active, Typed Requests)
+            // 3. Evaluate Downstream Routing Edges (Active, Typed Requests)
             List<Request__c> connections = [
                 SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, 
                        DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
@@ -80,16 +95,21 @@ public without sharing class SyncEngine {
                 Ticket__c parentTicket = parentTickets.get(tId);
                 List<Request__c> reqs = routes.get(tId);
 
+                // Determine Global Source: Inherit from ledger or this is the Birthplace
+                String globalSourceId = recordToGlobalSource.containsKey(rec.Id) 
+                    ? recordToGlobalSource.get(rec.Id) 
+                    : (String)rec.Id;
+
                 // ==========================================
                 // FAN OUT DOWNSTREAM (Push to Sub-Vendors)
                 // ==========================================
                 if (reqs != null && !reqs.isEmpty()) {
                     for (Request__c req : reqs) {
-                        // Echo Suppression: Do not bounce back down the edge it arrived on
-                        if (blockedOrigins.contains((String)req.Id)) {
+                        // Kill-Switch: If target is the Global Source or matches incoming edge, suppress circular sync
+                        if (blockedOrigins.contains((String)req.Id) || req.RemoteTicketIdTxt__c == globalSourceId) {
                             continue;
                         } 
-                        itemsToInsert.add(createSyncItem(rec, req, allowedFields));
+                        itemsToInsert.add(createSyncItem(rec, req, allowedFields, globalSourceId));
                     }
                 }
 
@@ -100,12 +120,13 @@ public without sharing class SyncEngine {
                     String entityType = parentTicket.ClientNetworkEntityId__r.EntityTypePk__c;
                     
                     if (entityType == 'Client' || entityType == 'Both') {
-                        // Echo Suppression: Do not stage for the Client if they just pushed this to us
-                        if (blockedOrigins.contains((String)parentTicket.ClientNetworkEntityId__c)) {
+                        // Kill-Switch: Do not stage for Client if they are the Global Source or sent this to us
+                        if (blockedOrigins.contains((String)parentTicket.ClientNetworkEntityId__c) || 
+                            (String)parentTicket.ClientNetworkEntityId__c == globalSourceId) {
                             continue;
                         }
                         
-                        itemsToInsert.add(createSyncItem(rec, null, allowedFields));
+                        itemsToInsert.add(createSyncItem(rec, null, allowedFields, globalSourceId));
                     }
                 }
             }
@@ -154,8 +175,12 @@ public without sharing class SyncEngine {
         return null;
     }
 
-    private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields) {
-        Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
+    private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields, String globalSourceId) {
+        Sync_Item__c item = new Sync_Item__c(
+            StatusPk__c = 'Queued', 
+            DirectionPk__c = 'Outbound',
+            GlobalSourceIdTxt__c = globalSourceId
+        );
         item.LocalRecordIdTxt__c = (String)rec.Id;
         item.TicketId__c = getTicketId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
 
@@ -170,6 +195,7 @@ public without sharing class SyncEngine {
             payload.put(f, getSafeValue(rec, f)); 
         }
         payload.put('SourceId', rec.Id); 
+        payload.put('GlobalSourceId', globalSourceId); // Pass the passport stamp
         
         if (req != null) {
             // Push Mode: Explicit Downstream Route
