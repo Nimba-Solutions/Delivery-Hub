@@ -27,8 +27,20 @@ public without sharing class DeliverySyncItemIngestor {
         String sourceId = (String) payload.get('SourceId'); 
         String targetId = (String) payload.get('TargetId'); 
         
+        // We will store the RequestId if we find it so we can link the Inbound Sync Item to it
+        Id localRequestId = null;
+        
         Id localRecordId = findLocalId(targetType, sourceId);
         
+        // If it's a Ticket, try to find the Request Bridge
+        if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
+            Request__c bridge = findTicketBridge(sourceId);
+            if (bridge != null) {
+                localRecordId = bridge.TicketId__c;
+                localRequestId = bridge.Id;
+            }
+        }
+
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
             try {
                 Id castId = (Id) targetId;
@@ -44,7 +56,13 @@ public without sharing class DeliverySyncItemIngestor {
         
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
-            localParentId = findLocalTicketId(targetId);
+            
+            // If it's a child record, find the parent ticket via the Request Bridge
+            Request__c parentBridge = findTicketBridge(targetId);
+            if (parentBridge != null) {
+                localParentId = parentBridge.TicketId__c;
+                localRequestId = parentBridge.Id; // Capture the Request ID to link the Sync Item
+            }
 
             if (localParentId == null) {
                 try {
@@ -68,7 +86,9 @@ public without sharing class DeliverySyncItemIngestor {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
-            createLedgerEntry(objectType, sourceId, recordToUpsert.Id);
+            
+            // Pass the localRequestId down to link the Sync Item
+            createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId);
             
             if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
                 Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
@@ -76,8 +96,6 @@ public without sharing class DeliverySyncItemIngestor {
                     ContentDocumentId = contentDocId, LinkedEntityId = localParentId, ShareType = 'V', Visibility = 'AllUsers'
                 ), AccessLevel.SYSTEM_MODE);
             }
-            
-            // EXCISION COMPLETE: Malformed Request__c generation removed to enforce DAG topology.
         }
         return recordToUpsert.Id;
     }
@@ -86,36 +104,30 @@ public without sharing class DeliverySyncItemIngestor {
         String objName = type.getDescribe().getName();
         String cleanName = stripNamespace(objName);
         
-        // 1. Traverse Downstream Edge (Request Bridge)
-        if (cleanName.endsWithIgnoreCase('Ticket__c') && !cleanName.endsWithIgnoreCase('Ticket_Comment__c')) {
-            List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteId WITH SYSTEM_MODE LIMIT 1];
-            if (!reqs.isEmpty()) {
-                return reqs[0].TicketId__c;
-            }
-        } 
-        
-        // 2. Traverse Upstream Edge (Ledger)
-        List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
-        return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
-    }
-
-    private static Id findLocalTicketId(String remoteTicketId) {
-        // 1. Traverse Downstream Edge (Request Bridge)
-        List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
-        if (!reqs.isEmpty()) {
-            return reqs[0].TicketId__c;
+        if (!cleanName.endsWithIgnoreCase('Ticket__c') || cleanName.endsWithIgnoreCase('Ticket_Comment__c')) {
+            List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
+            return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
-        
-        // 2. Traverse Upstream Edge (Ledger)
-        List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteTicketId AND ObjectTypePk__c = 'Ticket__c' WITH SYSTEM_MODE LIMIT 1];
-        return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
+        return null;
     }
 
-    private static void createLedgerEntry(String objType, String remoteId, Id localId) {
+    // Helper to grab both the Ticket ID and the Request ID
+    private static Request__c findTicketBridge(String remoteTicketId) {
+        List<Request__c> reqs = [SELECT Id, TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
+        return reqs.isEmpty() ? null : reqs[0];
+    }
+
+    // Updated to accept the requestId
+    private static void createLedgerEntry(String objType, String remoteId, Id localId, Id requestId) {
         String cleanName = stripNamespace(objType);
         Sync_Item__c ledger = new Sync_Item__c(
-            DirectionPk__c = 'Inbound', StatusPk__c = 'Synced', ObjectTypePk__c = cleanName,
-            RemoteExternalIdTxt__c = remoteId, LocalRecordIdTxt__c = (String)localId, PayloadTxt__c = 'Ledger Mapping Created'
+            DirectionPk__c = 'Inbound', 
+            StatusPk__c = 'Synced', 
+            ObjectTypePk__c = cleanName,
+            RemoteExternalIdTxt__c = remoteId, 
+            LocalRecordIdTxt__c = (String)localId, 
+            PayloadTxt__c = 'Ledger Mapping Created',
+            RequestId__c = requestId // FIX: Stamps the Request ID on the Inbound Item!
         );
         
         populateLookupField(ledger, cleanName, localId);
