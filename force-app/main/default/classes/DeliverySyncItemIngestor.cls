@@ -28,12 +28,11 @@ public without sharing class DeliverySyncItemIngestor {
         String sourceId = (String) payload.get('SourceId'); 
         String targetId = (String) payload.get('TargetId'); 
         
-        // NEW: Extract the Global Traceability ID from the incoming payload
+        // Extract Traceability & Identity IDs from the incoming payload
         String globalSourceId = (String) payload.get('GlobalSourceId'); 
+        String senderOrgId = (String) payload.get('SenderOrgId'); 
         
-        // We will store the RequestId if we find it so we can link the Inbound Sync Item to it
         Id localRequestId = null;
-        
         Id localRecordId = findLocalId(targetType, sourceId);
         
         // If it's a Ticket, try to find the Request Bridge (Downstream Origin)
@@ -65,7 +64,7 @@ public without sharing class DeliverySyncItemIngestor {
             Request__c parentBridge = findTicketBridge(targetId);
             if (parentBridge != null) {
                 localParentId = parentBridge.TicketId__c;
-                localRequestId = parentBridge.Id; // Capture the Request ID
+                localRequestId = parentBridge.Id; 
             }
 
             // 2. Try to find parent via the Ledger (Upstream Origin)
@@ -95,12 +94,38 @@ public without sharing class DeliverySyncItemIngestor {
 
         mapFields(recordToUpsert, payload, targetType);
 
+        // ==========================================
+        // NEW: AUTO-PARENTING THE UPSTREAM CLIENT
+        // ==========================================
+        if (String.isNotBlank(senderOrgId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
+            try {
+                String query = 'SELECT Id, EntityTypePk__c FROM Network_Entity__c WHERE RemoteExternalIdTxt__c = :senderOrgId LIMIT 1';
+                if (String.isNotBlank(getNamespacePrefix())) {
+                    query = query.replace('Network_Entity__c', getNamespacePrefix() + 'Network_Entity__c')
+                                 .replace('RemoteExternalIdTxt__c', getNamespacePrefix() + 'RemoteExternalIdTxt__c')
+                                 .replace('EntityTypePk__c', getNamespacePrefix() + 'EntityTypePk__c');
+                }
+                
+                List<SObject> entities = Database.query(query); // NOPMD
+                if (!entities.isEmpty()) {
+                    String eType = (String)entities[0].get(entities[0].getSObjectType().getDescribe().fields.getMap().containsKey('EntityTypePk__c') ? 'EntityTypePk__c' : getNamespacePrefix() + 'EntityTypePk__c');
+                    
+                    // If the sender is registered as a Client in our org, lock them in as the Client for this Ticket
+                    if (eType == 'Client' || eType == 'Both') {
+                        putSafe(recordToUpsert, 'ClientNetworkEntityId__c', (Id)entities[0].get('Id'));
+                    }
+                }
+            } catch (Exception e) {
+                System.debug(LoggingLevel.FINE, 'Failed to resolve Sender Network Entity for Auto-Parenting: ' + e.getMessage());
+            }
+        }
+
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
             
-            // FIX: Pass the localRequestId and globalSourceId down to link the Sync Item
+            // Pass the localRequestId and globalSourceId down to link the Sync Item
             createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
             
             if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
@@ -123,7 +148,7 @@ public without sharing class DeliverySyncItemIngestor {
             
             if (parentTicketId != null) {
                 try {
-                    // Look up the ClientNetworkEntityId__c of the target Ticket
+                    // Look up the ClientNetworkEntityId__c of the target Ticket (which we just stamped!)
                     String query = 'SELECT ClientNetworkEntityId__c FROM Ticket__c WHERE Id = :parentTicketId LIMIT 1';
                     if (String.isNotBlank(getNamespacePrefix())) {
                         query = query.replace('Ticket__c', getNamespacePrefix() + 'Ticket__c')
@@ -208,8 +233,8 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         for (String key : payload.keySet()) {
-            // FIX: Ensure the new GlobalSourceId is ignored during standard field mapping
-            if (key == 'SourceId' || key == 'TargetId' || key == 'GlobalSourceId') { continue; }
+            // Ensure the system fields are ignored during standard field mapping
+            if (key == 'SourceId' || key == 'TargetId' || key == 'GlobalSourceId' || key == 'SenderOrgId') { continue; }
             
             String searchKey = stripNamespace(key).toLowerCase(); 
             if (cleanNameIndex.containsKey(searchKey)) {

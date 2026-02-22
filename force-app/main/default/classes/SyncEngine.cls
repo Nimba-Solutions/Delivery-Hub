@@ -197,6 +197,9 @@ public without sharing class SyncEngine {
         payload.put('SourceId', rec.Id); 
         payload.put('GlobalSourceId', globalSourceId); // Pass the passport stamp
         
+        // NEW: Inject the Sender Identity so the receiver knows exactly who pushed this payload
+        payload.put('SenderOrgId', UserInfo.getOrganizationId()); 
+        
         if (req != null) {
             // Push Mode: Explicit Downstream Route
             item.RequestId__c = req.Id; 
