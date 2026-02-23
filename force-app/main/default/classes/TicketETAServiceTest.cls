@@ -23,8 +23,7 @@ private class TicketETAServiceTest {
                 TimeZoneSidKey = 'America/Los_Angeles',
                 EmailEncodingKey = 'UTF-8',
                 LanguageLocaleKey = 'en_US',
-                LocaleSidKey = 'en_US',
-                IsDeveloperBool__c = true
+                LocaleSidKey = 'en_US'
             ));
         }
         insert devs;
@@ -121,29 +120,4 @@ private class TicketETAServiceTest {
        // System.assertEquals(null, calculator.addBusinessDays(null, 5), 'Null date should return null.');
     }
 
-    // @isTest
-    // static void testErrorHandling_NoConfig() {
-    //     // (Assuming Kanban_Configuration__mdt is deleted or not present for this test)
-    //     Test.startTest();
-    //     TicketETAService.ETACalculator calculator = new TicketETAService.ETACalculator(null);
-    //     calculator.execute();
-    //     Test.stopTest();
-
-    //     List<Ticket__c> processed = [SELECT Id FROM Ticket__c WHERE Projected_UAT_Ready_Date__c != null];
-    //    // System.assertEquals(0, processed.size(), 'No tickets should be processed if config is missing.');
-    // }
-
-    @isTest
-    static void testNoDevelopersAvailable() {
-        List<User> devs = [SELECT Id, IsActive FROM User WHERE IsDeveloperBool__c = true];
-        for(User u : devs){ u.IsActive = false; }
-        update devs;
-
-        Test.startTest();
-        TicketETAService.getTicketETAsWithPriority(0, new List<Id>());
-        Test.stopTest();
-
-        List<Ticket__c> processed = [SELECT Id FROM Ticket__c WHERE ProjectedUATReadyDate__c != null];
-       // System.assertEquals(0, processed.size(), 'No tickets should be processed if there are no active developers.');
-    }
 }
