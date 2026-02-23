@@ -9,5 +9,5 @@
     <columns>StatusPk__c</columns>
     <columns>LastInboundSyncDateTime__c</columns>
     <filterScope>Everything</filterScope>
-    <label>Network Entities</label>
+    <label>All Network Entities</label>
 </ListView>

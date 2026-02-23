@@ -20,12 +20,12 @@ public with sharing class KanbanSettingsController {
      */
     @AuraEnabled(cacheable=true)
     public static SettingsWrapper getSettings() {
-        // getInstance() automatically gets the settings for the current user/profile/org
-        Kanban_App_Settings__c settings = Kanban_App_Settings__c.getInstance();
+        // SWAPPED: Using the new Delivery_Hub_Settings__c
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
         
         if (settings == null) { 
             // Return defaults if no settings record exists yet
-            settings = Kanban_App_Settings__c.getOrgDefaults();
+            settings = Delivery_Hub_Settings__c.getOrgDefaults();
         }
 
         SettingsWrapper wrapper = new SettingsWrapper();
@@ -51,10 +51,10 @@ public with sharing class KanbanSettingsController {
     public static void saveSettings(String settingsJson) {
         SettingsWrapper wrapper = (SettingsWrapper) JSON.deserialize(settingsJson, SettingsWrapper.class);
 
-        // Upsert the org-wide settings record
-        Kanban_App_Settings__c settings = Kanban_App_Settings__c.getOrgDefaults();
+        // SWAPPED: Upsert the new Delivery_Hub_Settings__c org-wide settings record
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings == null) {
-            settings = new Kanban_App_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
+            settings = new Delivery_Hub_Settings__c(SetupOwnerId = UserInfo.getOrganizationId());
         }
         
         settings.AISuggestionsEnabledBool__c = wrapper.aiSuggestionsEnabled;
