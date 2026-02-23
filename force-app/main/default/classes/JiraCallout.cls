@@ -22,21 +22,21 @@ public with sharing class JiraCallout {
         // UPDATED: Skip sync flag operations in test context UNLESS forced by test hook
         if (!Test.isRunningTest() || forceSyncLogic) {
             try {
-                Sync_In_Propgress__c setting = Sync_In_Propgress__c.getOrgDefaults();
+                Sync_In_Progress__c setting = Sync_In_Progress__c.getOrgDefaults();
                 if (setting == null) {
-                    setting = new Sync_In_Propgress__c(SalesforceToJiraBool__c = true);
+                    setting = new Sync_In_Progress__c(SalesforceToJiraBool__c = true);
                 }
                 if (setting.SalesforceToJiraBool__c != true) {
                     setting.SalesforceToJiraBool__c = true;
                     
                     // FIXED: Check CRUD permissions before upserting to satisfy PMD ApexCRUDViolation
-                    if (Schema.sObjectType.Sync_In_Propgress__c.isCreateable() && 
-                        Schema.sObjectType.Sync_In_Propgress__c.isUpdateable()) {
+                    if (Schema.sObjectType.Sync_In_Progress__c.isCreateable() && 
+                        Schema.sObjectType.Sync_In_Progress__c.isUpdateable()) {
                         
                         upsert setting;
                         System.debug(LoggingLevel.DEBUG, 'Salesforce-to-Jira sync flag set to TRUE.');
                     } else {
-                        System.debug(LoggingLevel.WARN, 'Insufficient permissions to update Sync_In_Propgress__c');
+                        System.debug(LoggingLevel.WARN, 'Insufficient permissions to update Sync_In_Progress__c');
                     }
                 }
             } catch (Exception e) {

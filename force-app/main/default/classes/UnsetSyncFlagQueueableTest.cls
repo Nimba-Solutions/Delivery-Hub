@@ -8,7 +8,7 @@ private class UnsetSyncFlagQueueableTest {
     static void testUnsetFlagWhenTrue() {
         // 1. Setup: Create the custom setting with the sync flag set to true.
         // Custom settings must be inserted in a test context.
-        Sync_In_Propgress__c setting = new Sync_In_Propgress__c(
+        Sync_In_Progress__c setting = new Sync_In_Progress__c(
             Name = 'SyncSetting', // A name is required for list custom settings
             SalesforceToJiraBool__c = true
         );
@@ -21,7 +21,7 @@ private class UnsetSyncFlagQueueableTest {
         Test.stopTest();
 
         // 3. Assert: Verify that the flag has been updated to false.
-        Sync_In_Propgress__c resultSetting = Sync_In_Propgress__c.getOrgDefaults();
+        Sync_In_Progress__c resultSetting = Sync_In_Progress__c.getOrgDefaults();
         System.assertNotEquals(null, resultSetting, 'The custom setting should exist.');
         System.assertEquals(false, resultSetting.SalesforceToJiraBool__c, 'The sync flag should have been unset to false.');
     }
@@ -32,7 +32,7 @@ private class UnsetSyncFlagQueueableTest {
     @isTest
     static void testUnsetFlagWhenAlreadyFalse() {
         // 1. Setup: Create the custom setting with the sync flag already set to false.
-        Sync_In_Propgress__c setting = new Sync_In_Propgress__c(
+        Sync_In_Progress__c setting = new Sync_In_Progress__c(
             Name = 'SyncSetting',
             SalesforceToJiraBool__c = false
         );
@@ -44,7 +44,7 @@ private class UnsetSyncFlagQueueableTest {
         Test.stopTest();
 
         // 3. Assert: Verify that the flag remains false.
-        Sync_In_Propgress__c resultSetting = Sync_In_Propgress__c.getOrgDefaults();
+        Sync_In_Progress__c resultSetting = Sync_In_Progress__c.getOrgDefaults();
         System.assertNotEquals(null, resultSetting, 'The custom setting should exist.');
         System.assertEquals(false, resultSetting.SalesforceToJiraBool__c, 'The sync flag should remain false.');
     }
@@ -64,7 +64,7 @@ private class UnsetSyncFlagQueueableTest {
 
         // 3. Assert: Verify that no setting was created and no errors were thrown.
         // The main assertion is that the code runs without throwing an exception.
-        Sync_In_Propgress__c resultSetting = Sync_In_Propgress__c.getOrgDefaults();
+        Sync_In_Progress__c resultSetting = Sync_In_Progress__c.getOrgDefaults();
         //System.assertEquals(null, resultSetting, 'No custom setting should have been created.');
     }
 }
