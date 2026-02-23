@@ -99,9 +99,15 @@ public without sharing class DeliverySyncItemIngestor {
         // ==========================================
         if (String.isNotBlank(senderOrgId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
             try {
-                String query = 'SELECT Id, EntityTypePk__c FROM Network_Entity__c WHERE RemoteExternalIdTxt__c = :senderOrgId LIMIT 1';
+                // Grab the 15-char base ID to prevent 18-char mismatch failures on Text fields
+                String baseOrgId = senderOrgId.length() >= 15 ? senderOrgId.substring(0, 15) + '%' : senderOrgId;
+                
+                // FIX: Look at BOTH OrgIdTxt__c and RemoteExternalIdTxt__c
+                String query = 'SELECT Id, EntityTypePk__c FROM Network_Entity__c WHERE (OrgIdTxt__c LIKE :baseOrgId OR RemoteExternalIdTxt__c LIKE :baseOrgId) LIMIT 1';
+                
                 if (String.isNotBlank(getNamespacePrefix())) {
                     query = query.replace('Network_Entity__c', getNamespacePrefix() + 'Network_Entity__c')
+                                 .replace('OrgIdTxt__c', getNamespacePrefix() + 'OrgIdTxt__c')
                                  .replace('RemoteExternalIdTxt__c', getNamespacePrefix() + 'RemoteExternalIdTxt__c')
                                  .replace('EntityTypePk__c', getNamespacePrefix() + 'EntityTypePk__c');
                 }
