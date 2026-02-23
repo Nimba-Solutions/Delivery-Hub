@@ -204,9 +204,9 @@ public with sharing class TicketController {
         try {
             return callOpenAI(currentTitle, currentDescription);
         } catch (Exception e) {
-            // Log the error for debugging
-            System.debug('AI Enhancement Error: ' + e.getMessage());
-            System.debug('AI Enhancement Stack Trace: ' + e.getStackTraceString());
+            // Log the error for debugging (Fixed PMD issue here)
+            System.debug(LoggingLevel.ERROR, 'AI Enhancement Error: ' + e.getMessage());
+            System.debug(LoggingLevel.ERROR, 'AI Enhancement Stack Trace: ' + e.getStackTraceString());
             
             // Fallback to mock suggestions if OpenAI fails
             return getFallbackSuggestions(currentTitle, currentDescription);
@@ -342,8 +342,9 @@ public with sharing class TicketController {
             return suggestions;
 
         } catch (Exception e) {
-            System.debug('Error parsing OpenAI response: ' + e.getMessage());
-            System.debug('Response body: ' + responseBody);
+            // Fixed PMD issue here
+            System.debug(LoggingLevel.ERROR, 'Error parsing OpenAI response: ' + e.getMessage());
+            System.debug(LoggingLevel.DEBUG, 'Response body: ' + responseBody);
             throw new AuraHandledException('Failed to parse AI response: ' + e.getMessage());
         }
     }
@@ -376,7 +377,8 @@ public with sharing class TicketController {
         
         // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
         if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
-            System.debug('Giving custom setttngs api key');
+            // Fixed PMD issue here
+            System.debug(LoggingLevel.INFO, 'Giving custom setttngs api key');
             return settings.OpenAIApiKeyTxt__c;
         }
 
@@ -393,7 +395,8 @@ public with sharing class TicketController {
         
 
     } catch (Exception e) {
-        System.debug('Error retrieving OpenAI API key: ' + e.getMessage());
+        // Fixed PMD issue here
+        System.debug(LoggingLevel.ERROR, 'Error retrieving OpenAI API key: ' + e.getMessage());
     }
 
         // Return null if no valid and tested key is found
