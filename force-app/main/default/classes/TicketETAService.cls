@@ -215,7 +215,7 @@ public with sharing class TicketETAService {
                 Decimal effort = wrapper.ticket.DeveloperDaysSizeNumber__c == null ? 0 : wrapper.ticket.DeveloperDaysSizeNumber__c;
                 System.debug('Effort in days: ' + effort);
                 Date completionDate = addBusinessDays(startDate, Integer.valueOf(effort));
-                wrapper.ticket.EstimatedDevCompletionDate__c = completionDate;
+                wrapper.ticket.EstimatedEndDevDate__c = completionDate;
                 System.debug('Calculated completion date: ' + completionDate);
 
                 // d. Update Developer's Schedule for the next ticket
@@ -246,7 +246,7 @@ public with sharing class TicketETAService {
                     ticketsToUpdate.add(new Ticket__c(
                         Id = ticket.Id,
                         EstimatedDevStartDate__c = null,
-                        EstimatedDevCompletionDate__c = null,
+                        EstimatedEndDevDate__c = null,
                         ProjectedUATReadyDate__c = null
                     ));
                     nulledCount++;
