@@ -7,8 +7,7 @@ export default class SettingsContainer extends LightningElement {
         return [
             { label: 'General', value: 'general' },
             { label: 'AI Features', value: 'ai' },
-            { label: 'OpenAI', value: 'openai' },
-            { label: 'JIRA Integration', value: 'jira' }
+            { label: 'OpenAI', value: 'openai' }
         ];
     }
 
@@ -22,10 +21,6 @@ export default class SettingsContainer extends LightningElement {
 
     get isOpenaiActive() {
         return this.activeTab === 'openai';
-    }
-
-    get isJiraActive() {
-        return this.activeTab === 'jira';
     }
 
     handleTabChange(event) {
