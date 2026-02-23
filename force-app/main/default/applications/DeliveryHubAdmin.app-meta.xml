@@ -98,6 +98,9 @@
     <tabs>Ticket_Board</tabs>
     <tabs>Network_Entity__c</tabs>
     <tabs>Request__c</tabs>
+    <tabs>Ticket_Comment__c</tabs>
+    <tabs>Sync_Item__c</tabs>
+    <tabs>Delivery_Hub_Settings</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubAdmin_UtilityBar</utilityBar>
 </CustomApplication>
