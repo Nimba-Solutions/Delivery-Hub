@@ -369,37 +369,6 @@ public with sharing class TicketController {
         return content.substring(startIndex, endIndex + 1);
     }
 
-    /**
-     * @description Gets OpenAI API key from custom metadata or settings
-     * @return String The API key
-     */
-    // private static String getOpenAIApiKey() {
-    //     try {
-    //         // Try to get from custom metadata first
-    //         List<OpenAI_Configuration__mdt> configs = [
-    //             SELECT API_Key__c 
-    //             FROM OpenAI_Configuration__mdt 
-    //             WHERE DeveloperName = 'Default_Config' 
-    //             LIMIT 1
-    //         ];
-            
-    //         if (!configs.isEmpty() && String.isNotBlank(configs[0].API_Key__c)) {
-    //             return configs[0].API_Key__c;
-    //         }
-
-    //         // Fallback: try custom settings
-    //         OpenAI_Settings__c settings = OpenAI_Settings__c.getOrgDefaults();
-    //         if (settings != null && String.isNotBlank(settings.API_Key__c)) {
-    //             return settings.API_Key__c;
-    //         }
-
-    //     } catch (Exception e) {
-    //         System.debug('Error retrieving OpenAI API key: ' + e.getMessage());
-    //     }
-
-    //     return null;
-    // }
-
     private static String getOpenAIApiKey() {
     try {
 
@@ -427,9 +396,9 @@ public with sharing class TicketController {
         System.debug('Error retrieving OpenAI API key: ' + e.getMessage());
     }
 
-    // Return null if no valid and tested key is found
-    return null;
-}
+        // Return null if no valid and tested key is found
+        return null;
+    }
 
 
     /**
