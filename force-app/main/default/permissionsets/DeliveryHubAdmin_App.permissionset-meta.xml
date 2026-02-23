@@ -302,11 +302,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.EstimatedDevStartDate__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Ticket__c.EstimatedEndDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
