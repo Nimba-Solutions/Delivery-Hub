@@ -22,8 +22,8 @@ public with sharing class TicketController {
                 SortOrderNumber__c,
                 Epic__c,
                 Tags__c,
-                TotalLoggedHoursNumber__c, // <--- ADDED
-                EstimatedHoursNumber__c,   // <--- ADDED
+                TotalLoggedHoursNumber__c, 
+                EstimatedHoursNumber__c,   
                 (SELECT Id, Blocking_Ticket__c, Blocking_Ticket__r.Name FROM Ticket_Dependency1__r),
                 (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r) 
             FROM Ticket__c
@@ -107,6 +107,11 @@ public with sharing class TicketController {
     @AuraEnabled(cacheable=true)
     public static Boolean isMarketingEnabled() {
         try {
+            // PMD FIX: Explicitly check CRUD permissions before querying
+            if (!Schema.sObjectType.Cloud_Nimbus_LLC_Marketing__mdt.isAccessible()) {
+                return false;
+            }
+
             Cloud_Nimbus_LLC_Marketing__mdt m = [
                 SELECT EnabledBool__c
                 FROM Cloud_Nimbus_LLC_Marketing__mdt
@@ -158,6 +163,11 @@ public with sharing class TicketController {
 
      @AuraEnabled(cacheable=true)
     public static List<String> getRequiredFieldsForStage(String targetStage) {
+        // PMD FIX: Explicitly check CRUD permissions before querying
+        if (!Schema.sObjectType.Kanban_Stage_Field_Requirement__mdt.isAccessible()) {
+            return new List<String>();
+        }
+
         // Query the active Kanban Stage Field Requirement metadata record for the target stage.
         List<Kanban_Stage_Field_Requirement__mdt> requirements = [
             SELECT RequiredFieldsTxt__c
@@ -371,33 +381,36 @@ public with sharing class TicketController {
     }
 
     private static String getOpenAIApiKey() {
-    try {
+        try {
+            Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+            
+            // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
+            if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
+                // Fixed PMD issue here
+                System.debug(LoggingLevel.INFO, 'Giving custom setttngs api key');
+                return settings.OpenAIApiKeyTxt__c;
+            }
 
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
-        
-        // MODIFICATION: Return key only if it's not blank and the API connection has been tested successfully.
-        if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
+            // PMD FIX: Explicitly check CRUD permissions before querying
+            if (!Schema.sObjectType.OpenAI_Configuration__mdt.isAccessible()) {
+                return null;
+            }
+
+            List<OpenAI_Configuration__mdt> configs = [
+                SELECT API_Key__c 
+                FROM OpenAI_Configuration__mdt 
+                WHERE DeveloperName = 'OpenAI' 
+                LIMIT 1
+            ];
+            
+            if (!configs.isEmpty() && String.isNotBlank(configs[0].API_Key__c)) {
+                return configs[0].API_Key__c;
+            }
+            
+        } catch (Exception e) {
             // Fixed PMD issue here
-            System.debug(LoggingLevel.INFO, 'Giving custom setttngs api key');
-            return settings.OpenAIApiKeyTxt__c;
+            System.debug(LoggingLevel.ERROR, 'Error retrieving OpenAI API key: ' + e.getMessage());
         }
-
-        List<OpenAI_Configuration__mdt> configs = [
-            SELECT API_Key__c 
-            FROM OpenAI_Configuration__mdt 
-            WHERE DeveloperName = 'OpenAI' 
-            LIMIT 1
-        ];
-        
-        if (!configs.isEmpty() && String.isNotBlank(configs[0].API_Key__c)) {
-            return configs[0].API_Key__c;
-        }
-        
-
-    } catch (Exception e) {
-        // Fixed PMD issue here
-        System.debug(LoggingLevel.ERROR, 'Error retrieving OpenAI API key: ' + e.getMessage());
-    }
 
         // Return null if no valid and tested key is found
         return null;
