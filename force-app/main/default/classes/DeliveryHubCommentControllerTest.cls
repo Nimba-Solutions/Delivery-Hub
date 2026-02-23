@@ -1,3 +1,7 @@
+/**
+ * @description Test class for DeliveryHubCommentController.
+ * Verifies comment retrieval and posting logic without Jira dependencies.
+ */
 @IsTest
 private class DeliveryHubCommentControllerTest {
 
@@ -30,8 +34,8 @@ private class DeliveryHubCommentControllerTest {
         Ticket_Comment__c c1 = new Ticket_Comment__c(
             TicketId__c = t.Id,
             BodyTxt__c = 'First Comment',
-            AuthorTxt__c = 'Test User',
-            JiraSyncStatusTxt__c = 'Synced' // Simulate existing comment
+            AuthorTxt__c = 'Test User'
+            // Removed JiraSyncStatusTxt__c
         );
         insert c1;
     }
@@ -44,7 +48,6 @@ private class DeliveryHubCommentControllerTest {
         Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
 
         Test.startTest();
-        // Updated to return List<Ticket_Comment__c> instead of Wrapper
         List<Ticket_Comment__c> result = DeliveryHubCommentController.getLiveComments(t.Id);
         Test.stopTest();
 
@@ -60,7 +63,6 @@ private class DeliveryHubCommentControllerTest {
         Request__c req = [SELECT Id FROM Request__c LIMIT 1];
 
         Test.startTest();
-        // The controller should find the parent Ticket via the Request
         List<Ticket_Comment__c> result = DeliveryHubCommentController.getLiveComments(req.Id);
         Test.stopTest();
 
@@ -80,7 +82,7 @@ private class DeliveryHubCommentControllerTest {
         Test.stopTest();
 
         List<Ticket_Comment__c> comments = [
-            SELECT Id, BodyTxt__c, JiraSyncStatusTxt__c 
+            SELECT Id, BodyTxt__c 
             FROM Ticket_Comment__c 
             WHERE TicketId__c = :t.Id 
             ORDER BY CreatedDate ASC
@@ -88,6 +90,5 @@ private class DeliveryHubCommentControllerTest {
         
         System.assertEquals(2, comments.size(), 'Should have 2 comments total');
         System.assertEquals('New Reply', comments[1].BodyTxt__c);
-        System.assertEquals('Pending', comments[1].JiraSyncStatusTxt__c, 'Status should be Pending for Trigger pickup');
     }
 }
