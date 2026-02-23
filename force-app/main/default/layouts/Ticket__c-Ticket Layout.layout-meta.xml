@@ -132,10 +132,6 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>JiraTicketKeyTxt__c</field>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
                 <field>JiraSyncStatusTxt__c</field>
             </layoutItems>
             <layoutItems>

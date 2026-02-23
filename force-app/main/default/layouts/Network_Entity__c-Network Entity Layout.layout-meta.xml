@@ -106,7 +106,6 @@
         <fields>ClientPreApprovedHoursNumber__c</fields>
         <fields>CalculatedETADate__c</fields>
         <fields>EstimatedHoursNumber__c</fields>
-        <fields>JiraTicketKeyTxt__c</fields>
         <fields>SortOrderNumber__c</fields>
         <fields>StatusPk__c</fields>
         <fields>StageNamePk__c</fields>
