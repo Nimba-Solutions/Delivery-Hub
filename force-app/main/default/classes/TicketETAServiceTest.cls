@@ -23,8 +23,7 @@ private class TicketETAServiceTest {
                 TimeZoneSidKey = 'America/Los_Angeles',
                 EmailEncodingKey = 'UTF-8',
                 LanguageLocaleKey = 'en_US',
-                LocaleSidKey = 'en_US',
-                IsDeveloperBool__c = true
+                LocaleSidKey = 'en_US'
             ));
         }
         insert devs;
@@ -135,7 +134,7 @@ private class TicketETAServiceTest {
 
     @isTest
     static void testNoDevelopersAvailable() {
-        List<User> devs = [SELECT Id, IsActive FROM User WHERE IsDeveloperBool__c = true];
+        List<User> devs = [SELECT Id, IsActive FROM User];
         for(User u : devs){ u.IsActive = false; }
         update devs;
 
