@@ -106,7 +106,7 @@ public inherited sharing class DeliveryHubSubscriptionService {
                     TicketId__c = localTicketId,
                     BodyTxt__c = (String) data.get('body'),
                     AuthorTxt__c = (String) data.get('author'),
-                    JiraSyncStatusTxt__c = 'Synced', 
+                    // REMOVED JiraSyncStatusTxt__c assignment here
                     SourcePk__c = (String) data.get('source')
                 );
                 newCommentsToInsert.add(c);

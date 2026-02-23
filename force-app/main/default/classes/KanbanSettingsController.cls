@@ -7,11 +7,6 @@ public with sharing class KanbanSettingsController {
         @AuraEnabled public Boolean aiEstimationEnabled { get; set; }
         @AuraEnabled public String openaiApiKey { get; set; }
         @AuraEnabled public String openaiModel { get; set; }
-        @AuraEnabled public Boolean jiraEnabled { get; set; }
-        @AuraEnabled public String jiraUrl { get; set; }
-        @AuraEnabled public String jiraUsername { get; set; }
-        @AuraEnabled public String jiraApiToken { get; set; }
-        @AuraEnabled public String jiraProjectKey { get; set; }
     }
 
     /**
@@ -34,11 +29,6 @@ public with sharing class KanbanSettingsController {
         wrapper.aiEstimationEnabled = settings.AIEstimationEnabledBool__c;
         wrapper.openaiApiKey = settings.OpenAIApiKeyTxt__c;
         wrapper.openaiModel = settings.OpenAIModelTxt__c;
-        wrapper.jiraEnabled = settings.JIRAEnabledBool__c;
-        wrapper.jiraUrl = settings.JIRAInstanceUrl__c;
-        wrapper.jiraUsername = settings.JIRAUsernameTxt__c;
-        wrapper.jiraApiToken = settings.JIRAApiTokenTxt__c;
-        wrapper.jiraProjectKey = settings.JIRAProjectKeyTxt__c;
 
         return wrapper;
     }
@@ -62,11 +52,6 @@ public with sharing class KanbanSettingsController {
         settings.AIEstimationEnabledBool__c = wrapper.aiEstimationEnabled;
         settings.OpenAIApiKeyTxt__c = wrapper.openaiApiKey;
         settings.OpenAIModelTxt__c = wrapper.openaiModel;
-        settings.JIRAEnabledBool__c = wrapper.jiraEnabled;
-        settings.JIRAInstanceUrl__c = wrapper.jiraUrl;
-        settings.JIRAUsernameTxt__c = wrapper.jiraUsername;
-        settings.JIRAApiTokenTxt__c = wrapper.jiraApiToken;
-        settings.JIRAProjectKeyTxt__c = wrapper.jiraProjectKey;
 
         upsert settings;
     }

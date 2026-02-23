@@ -1,5 +1,5 @@
 /**
- * @description Aggregates Ticket rows that need a Jira *create* or *update*,
+ * @description Aggregates Ticket rows that need a SyncEngine update,
  * then enqueues worker jobs. Also handles Network Entity Sync and High-Water Mark Sync.
  */
 public without sharing class TicketTriggerHandler {
@@ -55,40 +55,8 @@ public without sharing class TicketTriggerHandler {
         // Capture changes and queue JSON payload
         // Now that Requests exist (from Step 1), SyncEngine will correctly route new Tickets.
         SyncEngine.captureChanges(newRows, oldMap, syncFields);
-
-        // ============================================================================
-        // 3. JIRA & LEGACY MODULES
-        // ============================================================================
         
-        Set<Id> toCreate = new Set<Id>();
-        Set<Id> toUpdate = new Set<Id>();
-
-        if (isInsert){
-            for (Ticket__c row : newRows){
-                if (String.isBlank(row.JiraTicketKeyTxt__c)){
-                    toCreate.add(row.Id);
-                }
-            }
-        }
-
-        if (isUpdate){
-            for (Ticket__c row : newRows){
-                Ticket__c oldRow = oldMap.get(row.Id);
-                
-                if (String.isBlank(row.JiraTicketKeyTxt__c)) {
-                    toCreate.add(row.Id);
-                    continue; 
-                }
-
-                if (
-                    row.BriefDescriptionTxt__c != oldRow.BriefDescriptionTxt__c ||
-                    row.DetailsTxt__c          != oldRow.DetailsTxt__c ||
-                    row.StageNamePk__c         != oldRow.StageNamePk__c
-                ){
-                    toUpdate.add(row.Id);
-                }
-            }
-        }
+        // Removed legacy Jira module that checked for JiraTicketKeyTxt__c
     }
 
     /**
