@@ -208,14 +208,14 @@ public with sharing class TicketETAService {
                 // b. Find Start Date (cannot be in the past)
                 Date devAvailableDate = devNextAvailableDate.get(assignedDevId);
                 Date startDate = (Date.today() > devAvailableDate) ? Date.today() : devAvailableDate;
-                wrapper.ticket.EstimatedDevStartDate__c = startDate;
+                wrapper.ticket.EstimatedStartDevDate__c = startDate;
                 System.debug('Calculated start date: ' + startDate + ' for developer: ' + assignedDevId);
 
                 // c. Calculate Work Duration
                 Decimal effort = wrapper.ticket.DeveloperDaysSizeNumber__c == null ? 0 : wrapper.ticket.DeveloperDaysSizeNumber__c;
                 System.debug('Effort in days: ' + effort);
                 Date completionDate = addBusinessDays(startDate, Integer.valueOf(effort));
-                wrapper.ticket.EstimatedDevCompletionDate__c = completionDate;
+                wrapper.ticket.EstimatedEndDevDate__c = completionDate;
                 System.debug('Calculated completion date: ' + completionDate);
 
                 // d. Update Developer's Schedule for the next ticket
@@ -245,8 +245,8 @@ public with sharing class TicketETAService {
                 if (!this.processedTicketIds.contains(ticket.Id)) {
                     ticketsToUpdate.add(new Ticket__c(
                         Id = ticket.Id,
-                        EstimatedDevStartDate__c = null,
-                        EstimatedDevCompletionDate__c = null,
+                        EstimatedStartDevDate__c = null,
+                        EstimatedEndDevDate__c = null,
                         ProjectedUATReadyDate__c = null
                     ));
                     nulledCount++;
