@@ -17,7 +17,7 @@ private class AttachmentSyncServiceTest {
             LocaleSidKey = 'en_US',
             ProfileId = p.Id,
             TimeZoneSidKey = 'America/Los_Angeles',
-            UserName = 'test.user.for.attachmentsync@example.com' + System.currentTimeMillis()
+            UserName = 'test.user.for.attachmentsync@test.com' + System.currentTimeMillis()
         );
         insert testUser;
 
