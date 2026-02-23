@@ -174,12 +174,24 @@ public with sharing class TicketController {
         return new List<String>();
     }
 
+    /**
+     * @description Wrapper class to structure the AI suggestion data returned to the LWC.
+     */
     public class AISuggestionWrapper {
+        /** @description The AI-suggested title for the ticket */
         @AuraEnabled public String title { get; set; }
+        /** @description The AI-suggested description with technical requirements */
         @AuraEnabled public String description { get; set; }
+        /** @description The AI-suggested development time estimate in days */
         @AuraEnabled public Integer estimatedDays { get; set; }
     }
 
+    /**
+     * @description Calls OpenAI GPT-4o mini to enhance a ticket's title and description.
+     * @param currentTitle The user-entered title.
+     * @param currentDescription The user-entered description.
+     * @return AISuggestionWrapper An object containing the enhanced details.
+     */
     @AuraEnabled
     public static AISuggestionWrapper getAiEnhancedTicketDetails(String currentTitle, String currentDescription) {
         if (String.isBlank(currentTitle) && String.isBlank(currentDescription)) {
@@ -195,6 +207,13 @@ public with sharing class TicketController {
         }
     }
 
+    /**
+     * @description Makes HTTP callout to OpenAI GPT-4o mini API
+     * @param currentTitle The user-entered title
+     * @param currentDescription The user-entered description
+     * @return AISuggestionWrapper Enhanced suggestions from OpenAI
+     */
+    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
     private static AISuggestionWrapper callOpenAI(String currentTitle, String currentDescription) {
         String apiKey = getOpenAIApiKey();
         if (String.isBlank(apiKey)) {
