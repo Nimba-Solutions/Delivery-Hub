@@ -3,7 +3,6 @@
  * Replaces the deleted DeliveryHubCommentSender.
  * Uses standard DML so the SyncEngine Trigger picks it up automatically.
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
 
     /**
@@ -16,10 +15,12 @@ public with sharing class DeliveryHubCommentController {
         try {
             Id ticketId = resolveTicketId(requestId);
             
+            // Fix: Removed JiraSyncStatusTxt__c and added WITH USER_MODE
             return [
-                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, JiraSyncStatusTxt__c, SourcePk__c
+                SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c
                 FROM Ticket_Comment__c
                 WHERE TicketId__c = :ticketId
+                WITH USER_MODE
                 ORDER BY CreatedDate ASC
             ];
         } catch (Exception e) {
@@ -38,17 +39,16 @@ public with sharing class DeliveryHubCommentController {
         try {
             Id ticketId = resolveTicketId(requestId);
             
+            // Fix: Removed JiraSyncStatusTxt__c assignment
             Ticket_Comment__c comment = new Ticket_Comment__c(
                 TicketId__c = ticketId,
                 BodyTxt__c = body,
                 AuthorTxt__c = UserInfo.getName(),
-                SourcePk__c = 'Client',            
-                JiraSyncStatusTxt__c = 'Pending'   
+                SourcePk__c = 'Client'
             );
             
-            // FIX: Removed 'as user' to prevent FLS failures in strict package build environments.
-            // 'with sharing' class declaration still enforces record-level sharing.
-            insert comment; 
+            // Fix: Re-instated 'insert as user' for modern security standards
+            insert as user comment; 
             
         } catch (Exception e) {
             throw new AuraHandledException('Failed to post comment: ' + e.getMessage());
@@ -61,20 +61,19 @@ public with sharing class DeliveryHubCommentController {
      * @return Id The resolved Ticket ID
      */
     private static Id resolveTicketId(Id recordId) {
-        // FIX: Use SObjectType tokens instead of Strings to handle Namespaces automatically
         SObjectType type = recordId.getSobjectType();
         
         if (type == Ticket__c.SObjectType) {
             return recordId;
         } 
         else if (type == Request__c.SObjectType) {
-            List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE Id = :recordId LIMIT 1];
+            // Fix: Added WITH USER_MODE
+            List<Request__c> reqs = [SELECT TicketId__c FROM Request__c WHERE Id = :recordId WITH USER_MODE LIMIT 1];
             if (!reqs.isEmpty()) {
                 return reqs[0].TicketId__c;
             }
         }
         
-        // Only throws if it truly doesn't match known types
         throw new AuraHandledException('Unsupported Object or Ticket not found: ' + type.getDescribe().getName());
     }
 }
