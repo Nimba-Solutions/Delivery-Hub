@@ -8,23 +8,22 @@
     <allowStandardLookups>false</allowStandardLookups>
     <allowStandardPortalPages>true</allowStandardPortalPages>
     <allowStandardSearch>false</allowStandardSearch>
-    <authorizationRequiredPage>Unauthorized</authorizationRequiredPage>
-    <bandwidthExceededPage>BandwidthExceeded</bandwidthExceededPage>
+    <authorizationRequiredPage>%%%NAMESPACED_ORG%%%DeliveryHubSite</authorizationRequiredPage>
+    <bandwidthExceededPage>%%%NAMESPACED_ORG%%%DeliveryHubSite</bandwidthExceededPage>
     <browserXssProtection>true</browserXssProtection>
     <cachePublicVisualforcePagesInProxyServers>true</cachePublicVisualforcePagesInProxyServers>
     <clickjackProtectionLevel>AllowAllFraming</clickjackProtectionLevel>
     <contentSniffingProtection>true</contentSniffingProtection>
     <enableAuraRequests>true</enableAuraRequests>
-    <fileNotFoundPage>FileNotFound</fileNotFoundPage>
-    <genericErrorPage>Exception</genericErrorPage>
-    <inMaintenancePage>%%%NAMESPACED_ORG%%%InMaintenance</inMaintenancePage>
-    <inactiveIndexPage>%%%NAMESPACED_ORG%%%InMaintenance</inactiveIndexPage>
-    <indexPage>%%%NAMESPACED_ORG%%%InMaintenance</indexPage>
+    <fileNotFoundPage>%%%NAMESPACED_ORG%%%DeliveryHubSite</fileNotFoundPage>
+    <genericErrorPage>%%%NAMESPACED_ORG%%%DeliveryHubSite</genericErrorPage>
+    <inMaintenancePage>%%%NAMESPACED_ORG%%%DeliveryHubSite</inMaintenancePage>
+    <inactiveIndexPage>%%%NAMESPACED_ORG%%%DeliveryHubSite</inactiveIndexPage>
+    <indexPage>%%%NAMESPACED_ORG%%%DeliveryHubSite</indexPage>
     <masterLabel>Delivery Hub</masterLabel>
     <redirectToCustomDomain>true</redirectToCustomDomain>
     <referrerPolicyOriginWhenCrossOrigin>true</referrerPolicyOriginWhenCrossOrigin>
     <siteAdmin>%%%CURRENT_USER%%%</siteAdmin>
     <siteGuestRecordDefaultOwner>%%%CURRENT_USER%%%</siteGuestRecordDefaultOwner>
-    <siteTemplate>SiteTemplate</siteTemplate>
     <siteType>Visualforce</siteType>
 </CustomSite>

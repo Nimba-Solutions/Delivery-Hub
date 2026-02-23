@@ -1,0 +1,3 @@
+<apex:page showHeader="false" sidebar="false">
+    <h1>Delivery Hub API Active</h1>
+</apex:page>
