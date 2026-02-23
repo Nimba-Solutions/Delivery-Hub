@@ -1,3 +1,7 @@
+/**
+ * @description Test class for KanbanSettingsController.
+ * Verifies the retrieval, saving, and connection testing of Kanban settings.
+ */
 @isTest
 private class KanbanSettingsControllerTest {
 
@@ -5,6 +9,9 @@ private class KanbanSettingsControllerTest {
     // SECTION 1: getSettings() and saveSettings() Tests
     // =================================================================================
 
+    /**
+     * @description Verifies that getSettings returns org defaults when no record exists.
+     */
     @isTest
     static void testGetSettings_NoExistingRecord() {
         Test.startTest();
@@ -17,6 +24,9 @@ private class KanbanSettingsControllerTest {
         System.assertEquals(false, settings.aiSuggestionsEnabled, 'Default for AI Suggestions should be false.');
     }
 
+    /**
+     * @description Verifies the full cycle of saving and then retrieving settings via JSON.
+     */
     @isTest
     static void testGetAndSaveSettings_FullCycle() {
         // ARRANGE: Create a wrapper object with all properties set.
@@ -49,6 +59,9 @@ private class KanbanSettingsControllerTest {
     // SECTION 2: testOpenAIConnection() Callout Tests
     // =================================================================================
 
+    /**
+     * @description Verifies successful OpenAI connection response.
+     */
     @isTest
     static void testOpenAIConnection_Success() {
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'Success', '{"id":"...","choices":[{"message":{"content":"Test successful."}}]}'));
@@ -60,6 +73,9 @@ private class KanbanSettingsControllerTest {
         System.assertEquals('Success', result, 'The connection test should return "Success" on a 200 response.');
     }
 
+    /**
+     * @description Verifies OpenAI connection failure handling for API errors.
+     */
     @isTest
     static void testOpenAIConnection_ApiError() {
         String errorBody = '{"error":{"message":"Incorrect API key provided."}}';
@@ -77,12 +93,21 @@ private class KanbanSettingsControllerTest {
     // SECTION 3: HTTP Mock Implementation
     // =================================================================================
 
+    /**
+     * @description Mock class to simulate responses from the OpenAI API.
+     */
     private class OpenAIMock implements HttpCalloutMock {
         private Integer statusCode;
         private String status;
         private String body;
         private Boolean throwException;
 
+        /**
+         * @description Constructor for standard responses.
+         * @param statusCode HTTP Status Code.
+         * @param status HTTP Status String.
+         * @param body Response body string.
+         */
         public OpenAIMock(Integer statusCode, String status, String body) {
             this.statusCode = statusCode;
             this.status = status;
@@ -90,10 +115,19 @@ private class KanbanSettingsControllerTest {
             this.throwException = false;
         }
 
+        /**
+         * @description Constructor to simulate a system-level exception.
+         * @param throwEx Whether to throw a CalloutException.
+         */
         public OpenAIMock(Boolean throwEx) {
             this.throwException = throwEx;
         }
 
+        /**
+         * @description Required respond method for HttpCalloutMock.
+         * @param req The HTTP Request.
+         * @return The Mocked Response.
+         */
         public HttpResponse respond(HttpRequest req) {
             if (this.throwException) {
                 throw new CalloutException('Callout failed');
