@@ -59,6 +59,9 @@ export default class DeliveryTicketActionCenter extends LightningElement {
         "Ready for Client Approval":         ["In Client Approval",                                                                                                                                              "Ready for Development"],
         "In Client Approval":                [                                                                                                                                                                   "Ready for Development"],
 
+        "Ready for Final Approval":          ["Final Approving"],
+        "Final Approving":                   ["Ready for Development"],
+
         // --- PHASE 4: DEVELOPMENT ---
         "Ready for Development":             ["In Development"],
         "In Development":                    ["Dev Clarification Requested",     "Dev Blocked",     "Ready for Scratch Test",    "Ready for QA",    "Ready for Deployment"],
@@ -107,6 +110,8 @@ export default class DeliveryTicketActionCenter extends LightningElement {
         "Tech Reviewing":                    ["Ready for Tech Review", "Cancelled"],
         "Ready for Client Approval":         ["Tech Reviewing", "Ready for Tech Review", "Drafting Proposal", "Sizing Underway", "Cancelled"],
         "In Client Approval":                ["Ready for Client Approval", "Cancelled"],
+        "Ready for Final Approval":          ["Ready for Tech Review", "Cancelled"],
+        "Final Approving":                   ["Ready for Final Approval", "Cancelled"],
         "Ready for Development":             ["In Client Approval", "Ready for Client Approval", "Tech Reviewing", "Prioritizing", "Cancelled"],
         "In Development":                    ["Ready for Development", "Cancelled"],
         "Dev Clarification Requested":       ["In Development", "Cancelled"],

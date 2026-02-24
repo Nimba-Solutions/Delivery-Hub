@@ -16,7 +16,12 @@ export default class DeliveryCommentStream extends LightningElement {
     loadComments() {
         getLiveComments({ requestId: this.recordId })
             .then(result => {
-                this.comments = result;
+                this.comments = result.map(record => ({
+                    id: record.Id,
+                    author: record.AuthorTxt__c || 'Unknown',
+                    timestamp: record.CreatedDate,
+                    body: record.BodyTxt__c
+                }));
             })
             .catch(error => {
                 console.error('Error loading comments', error);
