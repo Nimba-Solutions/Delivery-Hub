@@ -4,7 +4,7 @@
  * feeding them into the Unified Sync Architecture.
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public without sharing class DeliveryContentDocumentLinkTriggerHandler {
+public without sharing class DeliveryContentDocLinkTriggerHandler {
 
     public static void handleAfterInsert(List<ContentDocumentLink> newLinks) {
         

@@ -1,5 +1,5 @@
 @IsTest
-private class DeliveryContentDocumentLinkTriggerHandlerTest {
+private class DeliveryContentDocLinkTriggerHandlerTest {
 
     @IsTest
     static void testHandleAfterInsertWithTicket() {
