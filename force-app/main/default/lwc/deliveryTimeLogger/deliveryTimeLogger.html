@@ -34,6 +34,17 @@
                 variant="label-stacked">
             </lightning-input>
 
+            <!-- Optional notes -->
+            <lightning-textarea
+                label="Notes (optional)"
+                placeholder="What did you work on?"
+                value={notesValue}
+                onchange={handleNotesChange}
+                max-length="500"
+                rows="2"
+                class="slds-m-top_small">
+            </lightning-textarea>
+
             <!-- Submit button -->
             <div class="tl-submit-row">
                 <lightning-button

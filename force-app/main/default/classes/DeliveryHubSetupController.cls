@@ -50,7 +50,7 @@ public without sharing class DeliveryHubSetupController {
         Network_Entity__c mothership = !existingEntities.isEmpty() ? existingEntities[0] : new Network_Entity__c();
         
         if (mothership.Id == null) {
-            mothership.Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
+            mothership.Name = 'Cloud Nimbus LLC';
             mothership.EntityTypePk__c = 'Vendor';
         }
         

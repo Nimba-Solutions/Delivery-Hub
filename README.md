@@ -2,7 +2,18 @@
 
 **The fastest way to run a real software delivery operation — entirely inside Salesforce.**
 
-Delivery Hub turns your Salesforce org into a fully operational dev shop command center. Whether you're managing an internal development team or sending work out to an external vendor like [Nimba Solutions](https://nimbasolutions.com), every ticket, comment, file, and status update lives in one place, syncs in real-time between orgs, and requires zero manual coordination overhead.
+Delivery Hub turns your Salesforce org into a fully operational dev shop command center. Whether you're managing an internal development team or sending work out to an external vendor like [Cloud Nimbus LLC](https://cloudnimbusllc.com), every ticket, comment, file, and status update lives in one place, syncs in real-time between orgs, and requires zero manual coordination overhead.
+
+---
+
+## Install
+
+| Environment | Action |
+|---|---|
+| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04t) |
+| **Sandbox / Test** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04t) |
+
+> The latest `04t...` package version ID is always listed in the [**GitHub Releases**](https://github.com/Nimba-Solutions/Delivery-Hub/releases/latest) page. Replace `04t` in the links above with the full version ID from the release notes to install.
 
 ---
 
@@ -41,8 +52,8 @@ If you're a client sending work to an external dev team, you click a button and 
 ## How It Works
 
 ```
-Your Org (Client)                        Nimba's Org (Vendor)
-─────────────────                        ────────────────────
+Your Org (Client)                        Cloud Nimbus's Org (Vendor)
+─────────────────                        ───────────────────────────
 Ticket created           ──── sync ────► Request ingested
   └─ Stage updated       ◄─── sync ────   └─ Developer assigned
   └─ Comment posted      ──── sync ────►  └─ Comment synced back
@@ -71,6 +82,7 @@ The sync engine is headless, retry-aware (up to 3 attempts with automatic re-que
 | Multi-Vendor | Route to multiple vendors simultaneously |
 | Chat | Real-time polling chat on every ticket, with file attachment indicators |
 | File Rollup | Aggregates files from ticket + comments + requests into one panel |
+| Time Logger | Quick-log hours against a ticket; creates WorkLog entries with optional notes |
 | Ghost Recorder | Floating or card-mode issue/feature submission form with keyboard shortcut |
 | AI Estimation | OpenAI-powered hours estimate and description generation |
 | ETA Engine | Calculates projected UAT-ready date from velocity and queue depth |
@@ -83,7 +95,7 @@ The sync engine is headless, retry-aware (up to 3 attempts with automatic re-que
 
 ### As a Client Org
 
-1. Install the Delivery Hub package into your Salesforce org
+1. Install the Delivery Hub package (see **Install** section above)
 2. Open the **Delivery Hub** Lightning App
 3. On the Home tab, click **Quickstart Connection** — this registers your org, configures default settings, and schedules the sync jobs automatically
 4. Create your first ticket on the **Ticket Board** tab
@@ -114,12 +126,14 @@ force-app/main/default/
 │   ├── DeliveryHubDashboardController  # Home page metrics + client dashboard
 │   ├── DeliveryHubFilesController      # Rolled-up file queries
 │   ├── DeliveryHubCommentController    # Chat: get/post comments + file indicators
+│   ├── DeliveryTimeLoggerController    # Time logging against tickets (WorkLog__c)
 │   └── DeliveryHubSetupController      # Quickstart wizard + handshake
 ├── lwc/
 │   ├── deliveryHubBoard/               # Main Kanban board (drag-drop, column config)
 │   ├── deliveryTicketActionCenter/     # Stage transition buttons with gate logic
 │   ├── deliveryTicketChat/             # Real-time polling chat with file indicators
 │   ├── deliveryTicketFiles/            # Rolled-up files sidebar panel
+│   ├── deliveryTimeLogger/             # Quick time logging with WorkLog__c creation
 │   ├── deliveryClientDashboard/        # Client home: attention / in-flight / recent
 │   ├── deliveryHubSetup/               # Quickstart connection wizard
 │   ├── deliveryGhostRecorder/          # Issue / feature request submission form
@@ -131,7 +145,7 @@ force-app/main/default/
 │   ├── Network_Entity__c/              # Connected org registry
 │   ├── Ticket_Comment__c/              # Chat messages
 │   ├── Ticket_Dependency__c/           # Blocking relationships
-│   └── WorkLog__c/                     # Time tracking
+│   └── WorkLog__c/                     # Time tracking entries
 └── triggers/
     ├── DeliveryTicketTrigger           # Stage changes → sync engine
     ├── DeliveryTicketCommentTrigger    # Comments → sync engine
@@ -177,10 +191,12 @@ cci flow run release_unlocked_beta --org dev
 cci flow run release_unlocked_production --org dev
 ```
 
+After promoting, copy the `04t...` package version ID from the CumulusCI output and update the install links in the [latest GitHub Release](https://github.com/Nimba-Solutions/Delivery-Hub/releases/latest).
+
 ---
 
 ## Built By
 
-**Nimba Solutions** — We build Salesforce delivery infrastructure so you can focus on your actual product.
+**Cloud Nimbus LLC** — We build Salesforce delivery infrastructure so you can focus on your actual product.
 
-Questions, issues, or partnership inquiries: open an issue or reach out at [nimbasolutions.com](https://nimbasolutions.com).
+Questions, issues, or partnership inquiries: open an issue or reach out at [cloudnimbusllc.com](https://cloudnimbusllc.com).

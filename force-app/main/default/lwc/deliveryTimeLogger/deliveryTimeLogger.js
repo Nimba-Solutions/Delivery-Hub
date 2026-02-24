@@ -1,5 +1,5 @@
 import { LightningElement, api, wire, track } from 'lwc';
-import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
+import { getRecord, getFieldValue, refreshApex } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import logHours from '@salesforce/apex/DeliveryTimeLoggerController.logHours';
 import TOTAL_LOGGED_HOURS_FIELD from '@salesforce/schema/Ticket__c.TotalLoggedHoursNumber__c';
@@ -7,14 +7,19 @@ import TOTAL_LOGGED_HOURS_FIELD from '@salesforce/schema/Ticket__c.TotalLoggedHo
 export default class DeliveryTimeLogger extends LightningElement {
     @api recordId;
     @track hoursValue = 1;
+    @track notesValue = '';
     @track selectedPreset = 1;
     @track isSubmitting = false;
 
+    wiredTicket;
+
     @wire(getRecord, { recordId: '$recordId', fields: [TOTAL_LOGGED_HOURS_FIELD] })
-    ticket;
+    wiredTicketHandler(result) {
+        this.wiredTicket = result;
+    }
 
     get currentHours() {
-        const val = getFieldValue(this.ticket && this.ticket.data, TOTAL_LOGGED_HOURS_FIELD);
+        const val = getFieldValue(this.wiredTicket && this.wiredTicket.data, TOTAL_LOGGED_HOURS_FIELD);
         return val != null ? val : 0;
     }
 
@@ -44,6 +49,10 @@ export default class DeliveryTimeLogger extends LightningElement {
         this.selectedPreset = null;
     }
 
+    handleNotesChange(event) {
+        this.notesValue = event.detail.value;
+    }
+
     async handleSubmit() {
         if (!this.hoursValue || this.hoursValue <= 0) {
             this.dispatchEvent(new ShowToastEvent({
@@ -56,14 +65,20 @@ export default class DeliveryTimeLogger extends LightningElement {
 
         this.isSubmitting = true;
         try {
-            await logHours({ ticketId: this.recordId, hours: this.hoursValue });
+            await logHours({
+                ticketId: this.recordId,
+                hours: this.hoursValue,
+                workNotes: this.notesValue || null
+            });
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Time Logged',
                 message: `${this.hoursValue}h added to this ticket.`,
                 variant: 'success'
             }));
             this.hoursValue = 1;
+            this.notesValue = '';
             this.selectedPreset = 1;
+            await refreshApex(this.wiredTicket);
         } catch (error) {
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Error Logging Time',
