@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>HourlyRateCurrency__c</fullName>
     <description>(Cost for this specific job). $/hr.</description>
+    <inlineHelpText>Agreed hourly rate for this request. Overrides the entity's default rate if set.</inlineHelpText>
     <label>Cost Rate</label>
     <precision>18</precision>
     <required>false</required>

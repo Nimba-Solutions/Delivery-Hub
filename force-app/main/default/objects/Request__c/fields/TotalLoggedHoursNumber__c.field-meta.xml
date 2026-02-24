@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>TotalLoggedHoursNumber__c</fullName>
     <description>IF(PreApprovedHoursNumber__c &gt; 0, 
+    <inlineHelpText>Sum of all WorkLog hours associated with this request. Used to track budget consumption.</inlineHelpText>
    TotalLoggedHoursNumber__c / PreApprovedHoursNumber__c, 
    0)</description>
     <label>Total Logged Hours Number</label>

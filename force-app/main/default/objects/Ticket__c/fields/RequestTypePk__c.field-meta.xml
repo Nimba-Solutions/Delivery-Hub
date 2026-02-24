@@ -3,6 +3,7 @@
     <fullName>RequestTypePk__c</fullName>
     <defaultValue>&apos;Internal&apos;</defaultValue>
     <description>The name or ID of the originating Salesforce organization. Used to group tickets by client or source implementation.</description>
+    <inlineHelpText>Classifies whether this ticket is a Bug, Feature, Change Request, or other type of work.</inlineHelpText>
     <label>Request Type</label>
     <required>false</required>
     <trackTrending>false</trackTrending>

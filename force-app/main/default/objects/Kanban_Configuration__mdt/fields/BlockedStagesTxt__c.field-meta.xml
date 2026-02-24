@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>BlockedStagesTxt__c</fullName>
     <description>A comma-separated list of stages that halt all ETA calculations for a ticket.</description>
+    <inlineHelpText>Comma-separated stage names treated as blocked (highlighted on the board and excluded from ETA).</inlineHelpText>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Blocked Stages</label>

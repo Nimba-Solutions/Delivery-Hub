@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>OpenAIApiKeyTxt__c</fullName>
     <description>API key for authenticating with OpenAI services</description>
+    <inlineHelpText>Your OpenAI secret API key. Required for AI estimation and description generation features.</inlineHelpText>
     <externalId>false</externalId>
     <label>OpenAI API Key</label>
     <length>255</length>

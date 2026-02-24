@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StagesToAutoShareWithDevTeamTxt__c</fullName>
     <description>This field is the stage names you want Tickets that automatically generate requests to automatically sync over to the Dev Team.</description>
+    <inlineHelpText>Comma-separated list of stage names. Tickets entering these stages are automatically shared with the development team.</inlineHelpText>
     <externalId>false</externalId>
     <label>Stages To Auto Share With Dev Team</label>
     <length>255</length>

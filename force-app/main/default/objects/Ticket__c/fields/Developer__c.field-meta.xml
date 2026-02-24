@@ -3,6 +3,7 @@
     <fullName>Developer__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
     <description>Assigns a ticket to a specific developer. This is critical for calculating individual workloads in the ETA calculation service.</description>
+    <inlineHelpText>The developer currently assigned to work on this ticket.</inlineHelpText>
     <label>Developer</label>
     <referenceTo>User</referenceTo>
     <relationshipLabel>Tickets (Developer)</relationshipLabel>

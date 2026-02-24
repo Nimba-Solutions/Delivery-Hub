@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>HoursVarianceNumber__c</fullName>
     <description>(Positive = Under Budget, Negative = Over Budget)</description>
+    <inlineHelpText>Estimated Hours minus Total Logged Hours. Positive means under estimate; negative means over.</inlineHelpText>
     <externalId>false</externalId>
     <formula>EstimatedHoursNumber__c - TotalLoggedHoursNumber__c</formula>
     <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>

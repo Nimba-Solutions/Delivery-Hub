@@ -55,7 +55,7 @@ private class DeliverySyncItemIngestorTest {
         System.assertEquals('Updated via Inbound Sync', updated.BriefDescriptionTxt__c, 'Ticket description should be updated via robust field mapping');
         
         // V2 Verification: Engine memory should have captured the Request ID to block echoes
-        System.assert(SyncEngine.blockedOrigins.size() > 0, 'Origin edge should be blocked for echo suppression');
+        System.assert(DeliverySyncEngine.blockedOrigins.size() > 0, 'Origin edge should be blocked for echo suppression');
     }
 
     @IsTest
@@ -102,7 +102,7 @@ private class DeliverySyncItemIngestorTest {
         // Verify V2 Ledger Routing & Upstream Echo Suppression
         Sync_Item__c ledger = [SELECT ObjectTypePk__c, RequestId__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-789' LIMIT 1];
         System.assertEquals(null, ledger.RequestId__c, 'V2 DAG Rule: RequestId__c must be NULL since this came from an upstream Client Ledger translation.');
-        System.assert(SyncEngine.blockedOrigins.size() > 0, 'The ClientNetworkEntityId__c must have been passed to memory to block upstream echoes.');
+        System.assert(DeliverySyncEngine.blockedOrigins.size() > 0, 'The ClientNetworkEntityId__c must have been passed to memory to block upstream echoes.');
     }
 
     @IsTest

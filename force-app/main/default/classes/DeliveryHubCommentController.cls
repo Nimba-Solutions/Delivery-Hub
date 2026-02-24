@@ -1,7 +1,7 @@
 /**
  * @description Controller for the Delivery Comment Stream LWC.
  * Replaces the deleted DeliveryHubCommentSender.
- * Uses standard DML so the SyncEngine Trigger picks it up automatically.
+ * Uses standard DML so the DeliverySyncEngine Trigger picks it up automatically.
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {
@@ -31,7 +31,7 @@ public with sharing class DeliveryHubCommentController {
 
     /**
      * @description Creates a new comment.
-     * The Trigger on Ticket_Comment__c will detect this insert and fire SyncEngine.
+     * The Trigger on Ticket_Comment__c will detect this insert and fire DeliverySyncEngine.
      * @param requestId The ID of the record the LWC is sitting on.
      * @param body The comment text.
      */

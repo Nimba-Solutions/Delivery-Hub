@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>PreApprovedHoursNumber__c</fullName>
     <description>Do it if it takes less than X hours.</description>
+    <inlineHelpText>Maximum hours authorised by the client. Work beyond this threshold requires a budget increase request.</inlineHelpText>
     <externalId>false</externalId>
     <label>Pre-Approved Hours</label>
     <precision>18</precision>

@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>PostDevelopmentStagesTxt__c</fullName>
     <description>A comma-separated list of stages that are considered complete from a dev perspective.</description>
+    <inlineHelpText>Comma-separated stage names that follow active development (QA, UAT, deployment stages).</inlineHelpText>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Post Development Stages</label>

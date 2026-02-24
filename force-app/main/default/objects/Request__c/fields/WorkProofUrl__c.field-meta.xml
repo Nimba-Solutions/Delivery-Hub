@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>WorkProofUrl__c</fullName>
     <description>Link to PR or Artifact.</description>
+    <inlineHelpText>URL to a PR, deployment log, or other evidence of completed work submitted by the vendor.</inlineHelpText>
     <label>Proof of Work</label>
     <required>false</required>
     <trackTrending>false</trackTrending>

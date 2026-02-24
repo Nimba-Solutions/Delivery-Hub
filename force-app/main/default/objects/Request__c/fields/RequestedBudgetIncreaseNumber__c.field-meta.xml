@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>RequestedBudgetIncreaseNumber__c</fullName>
     <description>How many ADDITIONAL hours do you need to finish this request?</description>
+    <inlineHelpText>Additional hours requested by the vendor when the original pre-approved budget is insufficient.</inlineHelpText>
     <externalId>false</externalId>
     <label>Requested Budget Increase</label>
     <precision>18</precision>

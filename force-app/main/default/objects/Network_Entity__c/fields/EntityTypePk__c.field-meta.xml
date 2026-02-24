@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>EntityTypePk__c</fullName>
     <description>Type of network entity. Values: Client, Vendor, Both.</description>
+    <inlineHelpText>Select Client, Vendor, or Both to define this entity's role in the delivery network.</inlineHelpText>
     <label>Entity Type</label>
     <required>false</required>
     <trackTrending>false</trackTrending>

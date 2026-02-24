@@ -143,6 +143,7 @@
     <allowInChatterGroups>false</allowInChatterGroups>
     <compactLayoutAssignment>Compact_Layout</compactLayoutAssignment>
     <deploymentStatus>Deployed</deploymentStatus>
+    <description>Core work item in the Delivery Hub. Tracks a unit of work from initial request through scoping, development, QA, UAT, and deployment. Each ticket moves through Kanban stages on the board and is linked to requests, comments, dependencies, and work logs.</description>
     <enableActivities>false</enableActivities>
     <enableBulkApi>true</enableBulkApi>
     <enableFeeds>false</enableFeeds>

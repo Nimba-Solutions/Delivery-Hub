@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>HoursLoggedNumber__c</fullName>
     <description>How long it took (e.g., 1.5).</description>
+    <inlineHelpText>Number of hours worked in this session (e.g., 1.5 for 90 minutes).</inlineHelpText>
     <externalId>false</externalId>
     <label>Hours Logged</label>
     <precision>6</precision>

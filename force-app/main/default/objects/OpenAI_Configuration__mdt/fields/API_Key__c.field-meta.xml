@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>API_Key__c</fullName>
     <description>OpenAI API Key for authentication</description>
+    <inlineHelpText>OpenAI API key stored in custom metadata. Used by AI estimation and description features.</inlineHelpText>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>API Key</label>

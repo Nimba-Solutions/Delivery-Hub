@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>TicketId__c</fullName>
     <description>Parent Ticket that this comment belongs to (master-detail).</description>
+    <inlineHelpText>The ticket this comment belongs to.</inlineHelpText>
     <label>Ticket</label>
     <referenceTo>Ticket__c</referenceTo>
     <relationshipLabel>Ticket Comments</relationshipLabel>

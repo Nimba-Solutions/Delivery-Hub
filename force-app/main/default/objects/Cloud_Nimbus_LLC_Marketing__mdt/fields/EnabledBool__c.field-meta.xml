@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>EnabledBool__c</fullName>
     <description>Flag to enable or disable Cloud Nimbus LLC marketing features</description>
+    <inlineHelpText>Enable or disable this Cloud Nimbus LLC marketing integration.</inlineHelpText>
     <defaultValue>false</defaultValue>
     <fieldManageability>SubscriberControlled</fieldManageability>
     <label>Enabled</label>

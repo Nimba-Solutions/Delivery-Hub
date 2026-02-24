@@ -5,7 +5,7 @@ import userId from '@salesforce/user/Id';
 
 import createTicket from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest'; 
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
-import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
+import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.linkFilesAndSync";
 
 export default class DeliveryGhostRecorder extends LightningElement {
     @api enableShortcut = false; 

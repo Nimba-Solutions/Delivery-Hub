@@ -3,6 +3,7 @@
     <fullName>SourcePk__c</fullName>
     <defaultValue>&quot;Salesforce&quot;</defaultValue>
     <description>Origin system for the comment. Values: Salesforce, Jira.</description>
+    <inlineHelpText>Indicates whether this comment originated locally or was synced from a remote org.</inlineHelpText>
     <label>Source</label>
     <required>false</required>
     <trackTrending>false</trackTrending>

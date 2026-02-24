@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ExternalRequesterEmailTxt__c</fullName>
     <description>Stores the email address of the external user submitting the request. Used for lead matching and correspondence.</description>
+    <inlineHelpText>Email address of the person who submitted this request from an external org.</inlineHelpText>
     <externalId>false</externalId>
     <label>External Requester Email</label>
     <required>false</required>

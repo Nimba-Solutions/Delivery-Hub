@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>QuotedHoursNumber__c</fullName>
     <description>How long they say it will take.</description>
+    <inlineHelpText>Hours quoted by the vendor in their proposal for this request.</inlineHelpText>
     <externalId>false</externalId>
     <label>Quoted Hours</label>
     <precision>18</precision>

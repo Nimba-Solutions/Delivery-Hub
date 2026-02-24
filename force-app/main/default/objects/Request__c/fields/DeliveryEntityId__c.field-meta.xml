@@ -3,6 +3,7 @@
     <fullName>DeliveryEntityId__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
     <description>Lookup to Network_Entity__c.</description>
+    <inlineHelpText>Lookup to the Network Entity (vendor/delivery partner) assigned to fulfil this request.</inlineHelpText>
     <label>Vendor</label>
     <referenceTo>Network_Entity__c</referenceTo>
     <relationshipLabel>Requests</relationshipLabel>

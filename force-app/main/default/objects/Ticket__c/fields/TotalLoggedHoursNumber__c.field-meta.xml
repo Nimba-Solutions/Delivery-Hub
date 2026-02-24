@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>TotalLoggedHoursNumber__c</fullName>
     <description>Sum of HoursLoggedNumber__c from the child Request object.</description>
+    <inlineHelpText>Sum of all WorkLog hours recorded against this ticket. Auto-updated by roll-up.</inlineHelpText>
     <label>Total Logged Hours</label>
     <summarizedField>Request__c.TotalLoggedHoursNumber__c</summarizedField>
     <summaryForeignKey>Request__c.TicketId__c</summaryForeignKey>

@@ -20,7 +20,7 @@ private class DeliveryHubSetupControllerTest {
     @IsTest
     static void testPerformHandshakeSuccess() {
         // Prevent continuous loop queues
-        SyncEngine.setSyncContext();
+        DeliverySyncEngine.setSyncContext();
         
         Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
         Test.setMock(HttpCalloutMock.class, new SuccessMock());

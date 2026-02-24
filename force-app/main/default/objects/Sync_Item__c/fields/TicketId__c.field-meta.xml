@@ -3,6 +3,7 @@
     <fullName>TicketId__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
     <description>Links this sync item to the main Ticket. Essential for the &quot;Project View&quot; related list.</description>
+    <inlineHelpText>Lookup to the Ticket this sync item is associated with.</inlineHelpText>
     <label>Ticket</label>
     <referenceTo>Ticket__c</referenceTo>
     <relationshipLabel>Sync Items</relationshipLabel>
