@@ -31,7 +31,7 @@ private class SyncEngineTest {
 
         // 3. Ticket (With Upstream Edge mapped)
         Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'T', 
+            BriefDescriptionTxt__c = 'T', 
             StageNamePk__c = 'Backlog', 
             BriefDescriptionTxt__c = 'Orig',
             ClientNetworkEntityId__c = client.Id // The Upstream Map

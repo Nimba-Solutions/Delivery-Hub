@@ -6,7 +6,7 @@ private class DeliveryHubDashboardControllerTest {
         // 1. Create Active Ticket
         // We do not set LoggedHoursNum__c here as the field does not exist yet
         Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Test Ticket',
+            BriefDescriptionTxt__c = 'Test Ticket',
             StageNamePk__c = 'In Progress'
         );
         insert t;

@@ -6,7 +6,7 @@ private class TicketCommentTriggerHandlerTest {
         insert new Delivery_Hub_Settings__c(AutoCreateRequestFromTicketBool__c = false);
         Network_Entity__c vendor = new Network_Entity__c(Name='M', EntityTypePk__c='Vendor', StatusPk__c='Active', IntegrationEndpointUrlTxt__c='https://f.com');
         insert vendor;
-        Ticket__c t = new Ticket__c(WorkItemNameTxt__c='T', StageNamePk__c='Backlog');
+        Ticket__c t = new Ticket__c(BriefDescriptionTxt__c='T', StageNamePk__c='Backlog');
         insert t;
         insert new Request__c(TicketId__c=t.Id, DeliveryEntityId__c=vendor.Id, StatusPk__c='Active', RemoteTicketIdTxt__c='R-101');
     }

@@ -17,7 +17,7 @@ private class DeliverySyncItemIngestorTest {
 
         // 2. Create Ticket linked to Upstream Client
         Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Base Ticket',
+            BriefDescriptionTxt__c = 'Base Ticket',
             BriefDescriptionTxt__c = 'Initial Description',
             ClientNetworkEntityId__c = client.Id
         );
