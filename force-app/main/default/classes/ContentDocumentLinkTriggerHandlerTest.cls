@@ -4,11 +4,27 @@ private class ContentDocumentLinkTriggerHandlerTest {
     @IsTest
     static void testHandleAfterInsertWithTicket() {
         // 1. Prevent infinite test queues
-        SyncEngine.setSyncContext();
+        SyncEngine.isSyncContext = false; // Ensure it's false to allow outbound sync
         
-        // 2. Setup Ticket
+        // 2. Setup Routing Data (This is what was missing!)
+        Network_Entity__c vendor = new Network_Entity__c(
+            Name = 'Test Vendor',
+            IntegrationEndpointUrlTxt__c = 'https://example.com/api',
+            StatusPk__c = 'Active',
+            EntityTypePk__c = 'Vendor'
+        );
+        insert vendor;
+
         Ticket__c ticket = new Ticket__c();
         insert ticket;
+
+        Request__c req = new Request__c(
+            TicketId__c = ticket.Id,
+            DeliveryEntityId__c = vendor.Id,
+            RemoteTicketIdTxt__c = 'REMOTE-123',
+            StatusPk__c = 'Open'
+        );
+        insert req;
 
         // 3. Setup File
         ContentVersion cv = new ContentVersion(
