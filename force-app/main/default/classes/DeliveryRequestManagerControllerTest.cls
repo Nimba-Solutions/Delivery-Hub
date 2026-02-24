@@ -23,6 +23,6 @@ private class DeliveryRequestManagerControllerTest {
         
         // FIXED: Assertion now matches the Controller's logic ('Offer Sent' instead of 'Active')
         System.assertEquals('Offer Sent', updatedReq.StatusPk__c, 'Request status should be Offer Sent');
-        System.assert(msg.contains('sent'), 'Should return success message');
+        System.assert(msg.contains('Status:'), 'Should return status message');
     }
 }

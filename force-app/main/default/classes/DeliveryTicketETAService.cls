@@ -239,7 +239,7 @@ public with sharing class DeliveryTicketETAService {
 
             // Find all dependencies where the blocker is one of these incomplete tickets
             Set<Id> allBlockedTicketIds = new Set<Id>();
-            for (Ticket_Dependency__c dep : [SELECT Blocked_Ticket__c FROM Ticket_Dependency__c WHERE Blocking_Ticket__c IN :incompleteTicketIds]) {
+            for (Ticket_Dependency__c dep : [SELECT Blocked_Ticket__c FROM Ticket_Dependency__c WHERE Blocking_Ticket__c IN :incompleteTicketIds WITH SYSTEM_MODE]) {
                 allBlockedTicketIds.add(dep.Blocked_Ticket__c);
             }
 
