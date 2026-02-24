@@ -1,0 +1,54 @@
+<template>
+    <lightning-card icon-name="utility:clock">
+        <div slot="title" class="tl-title-wrapper">
+            <span class="tl-card-title">Log Time</span>
+            <template if:true={currentHours}>
+                <span class="tl-total-badge">{currentHours}h logged</span>
+            </template>
+        </div>
+
+        <div class="slds-p-around_medium">
+
+            <!-- Quick-select preset buttons -->
+            <div class="tl-preset-row">
+                <template for:each={presetOptions} for:item="preset">
+                    <button
+                        key={preset.value}
+                        class={preset.btnClass}
+                        data-value={preset.value}
+                        onclick={handlePresetClick}>
+                        {preset.label}
+                    </button>
+                </template>
+            </div>
+
+            <!-- Custom hours input -->
+            <lightning-input
+                type="number"
+                label="Hours"
+                min="0.25"
+                step="0.25"
+                value={hoursValue}
+                onchange={handleHoursChange}
+                class="slds-m-top_small tl-hours-input"
+                variant="label-stacked">
+            </lightning-input>
+
+            <!-- Submit button -->
+            <div class="tl-submit-row">
+                <lightning-button
+                    variant="brand"
+                    label="Log Time"
+                    icon-name="utility:check"
+                    icon-position="left"
+                    onclick={handleSubmit}
+                    disabled={isSubmitting}>
+                </lightning-button>
+                <template if:true={isSubmitting}>
+                    <lightning-spinner alternative-text="Logging..." size="small" class="slds-m-left_small"></lightning-spinner>
+                </template>
+            </div>
+
+        </div>
+    </lightning-card>
+</template>

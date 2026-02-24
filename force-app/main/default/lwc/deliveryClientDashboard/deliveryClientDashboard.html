@@ -44,10 +44,13 @@
             </template>
 
             <template if:false={hasAttentionItems}>
-                <div class="slds-p-medium slds-text-align_center">
-                    <lightning-icon icon-name="utility:check" size="medium" variant="success"></lightning-icon>
-                    <p class="slds-text-color_weak slds-m-top_small">
-                        You&apos;re all caught up &mdash; nothing needs your review right now.
+                <div class="empty-state slds-p-around_large slds-text-align_center">
+                    <div class="empty-state-icon-wrapper empty-state-icon--success">
+                        <lightning-icon icon-name="utility:check" size="large" variant="success"></lightning-icon>
+                    </div>
+                    <h3 class="slds-text-heading_small slds-m-top_medium">All caught up!</h3>
+                    <p class="slds-text-body_regular slds-text-color_weak slds-m-top_x-small">
+                        Nothing is waiting on you right now.<br/>Check back after your team makes progress.
                     </p>
                 </div>
             </template>
@@ -104,8 +107,14 @@
             </template>
 
             <template if:false={hasRecentItems}>
-                <div class="slds-p-medium slds-text-align_center">
-                    <p class="slds-text-color_weak">No recent ticket activity.</p>
+                <div class="empty-state slds-p-around_large slds-text-align_center">
+                    <div class="empty-state-icon-wrapper empty-state-icon--neutral">
+                        <lightning-icon icon-name="utility:activity" size="large"></lightning-icon>
+                    </div>
+                    <h3 class="slds-text-heading_small slds-m-top_medium">No recent activity</h3>
+                    <p class="slds-text-body_regular slds-text-color_weak slds-m-top_x-small">
+                        Ticket updates will appear here once work begins.
+                    </p>
                 </div>
             </template>
         </template>

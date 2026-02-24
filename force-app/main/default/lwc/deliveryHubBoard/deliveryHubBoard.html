@@ -58,6 +58,12 @@
                 <div class="filter-group">
                     <lightning-input type="checkbox" label="Show Extended Pipeline" checked={showAllColumns} onchange={handleToggleColumns}></lightning-input>
                 </div>
+                <div class="filter-group">
+                    <button class={myWorkButtonClass} onclick={handleMyWorkToggle} title="Show only tickets assigned to me">
+                        <lightning-icon icon-name="utility:user" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                        My Work
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -151,9 +157,13 @@
 
                             <template if:false={col.tickets.length}>
                                 <div class="empty-column-placeholder">
-                                    <div class="placeholder-icon"></div>
-                                    <div class="placeholder-text">No tickets here</div>
-                                    <div class="placeholder-subtext">Drag tickets to this column</div>
+                                    <div class="empty-col-dots">
+                                        <span class="empty-dot"></span>
+                                        <span class="empty-dot"></span>
+                                        <span class="empty-dot"></span>
+                                    </div>
+                                    <div class="placeholder-text">Empty</div>
+                                    <div class="placeholder-subtext">Drop tickets here</div>
                                 </div>
                             </template>
                         </div>

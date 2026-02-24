@@ -1,0 +1,61 @@
+/* Title area */
+.tl-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.tl-card-title {
+    font-weight: 700;
+    font-size: 1rem;
+}
+.tl-total-badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Preset row */
+.tl-preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+}
+.tl-preset-btn {
+    background: #f1f5f9;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.tl-preset-btn:hover {
+    background: #e0e7ff;
+    border-color: #818cf8;
+    color: #3730a3;
+}
+.tl-preset-btn.is-active {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #ffffff;
+}
+
+/* Hours input — keep it compact */
+.tl-hours-input {
+    max-width: 160px;
+}
+
+/* Submit row */
+.tl-submit-row {
+    display: flex;
+    align-items: center;
+    margin-top: 1rem;
+}

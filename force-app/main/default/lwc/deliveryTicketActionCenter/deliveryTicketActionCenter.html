@@ -1,69 +1,88 @@
 <template>
-    <lightning-card icon-name="standard:flow" title="Ticket Action Center">
-        
-        <div class="slds-p-horizontal_medium">
-            <template if:true={isBlocked}>
-                <div class="slds-notify slds-notify_alert slds-theme_warning slds-m-bottom_small" role="alert">
-                    <lightning-icon icon-name="utility:warning" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
-                    <h2>To move forward, please address the following:</h2>
-                </div>
+    <lightning-card icon-name="standard:flow">
+        <div slot="title" class="ac-title-wrapper">
+            <span class="ac-card-title">Action Center</span>
+            <template if:true={currentPhaseLabel}>
+                <span class="ac-phase-chip">{currentPhaseLabel}</span>
             </template>
+        </div>
 
-            <template if:true={isFastTrack}>
-                <div class="slds-notify slds-notify_alert slds-theme_success slds-m-bottom_small" role="alert">
-                    <lightning-icon icon-name="utility:success" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
-                    <h2>🚀 Fast Track Available! Budget Approved.</h2>
-                </div>
-            </template>
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
 
-            <lightning-record-edit-form record-id={recordId} object-api-name="Ticket__c" onsuccess={handleFixSuccess}>
-                
-                <div class="fix-grid slds-grid slds-wrap slds-gutters">
-                    <template for:each={missingFields} for:item="field">
-                        <div key={field.apiName} class="slds-col slds-size_1-of-2">
-                            <div class="slds-box slds-box_x-small slds-theme_shade slds-m-bottom_small">
-                                <p class="slds-text-color_error slds-text-title_caps">{field.reason}</p>
-                                <lightning-input-field field-name={field.apiName} variant="label-hidden"></lightning-input-field>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-
-                <template if:true={hasMissingFields}>
-                    <div class="slds-align_absolute-center slds-m-bottom_medium">
-                        <lightning-button variant="brand" type="submit" label="Save & Update Requirements"></lightning-button>
+            <!-- ── Current Stage Banner ── -->
+            <div class="ac-stage-banner" style={stageBannerStyle}>
+                <div class="ac-stage-name">{currentStage}</div>
+                <template if:true={isFastTrackAvailable}>
+                    <div class="ac-fast-track-badge">
+                        <lightning-icon icon-name="utility:zap" size="xx-small" class="ac-zap-icon"></lightning-icon>
+                        Fast Track
                     </div>
                 </template>
+            </div>
 
-            </lightning-record-edit-form>
-
-            <div class="slds-border_top slds-p-top_small">
-                <div class="slds-grid slds-grid_align-spread">
-                    
-                    <div class="button-group-left">
-                        <template for:each={backtrackOptions} for:item="opt">
-                            <lightning-button key={opt.stage} label={opt.label} icon-name="utility:back" onclick={handleMove} data-stage={opt.stage} class="slds-m-right_x-small"></lightning-button>
-                        </template>
+            <!-- ── Missing Fields ── -->
+            <template if:true={hasMissingFields}>
+                <div class="ac-missing-panel">
+                    <div class="ac-missing-header">
+                        <lightning-icon icon-name="utility:warning" size="xx-small"></lightning-icon>
+                        <span class="ac-missing-title">Action Required to Advance</span>
                     </div>
+                    <lightning-record-edit-form record-id={recordId} object-api-name="Ticket__c" onsuccess={handleFixSuccess}>
+                        <div class="ac-fields-grid">
+                            <template for:each={missingFields} for:item="field">
+                                <div key={field.apiName} class="ac-field-item">
+                                    <p class="ac-field-reason">{field.reason}</p>
+                                    <lightning-input-field field-name={field.apiName} variant="label-hidden"></lightning-input-field>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="ac-save-row">
+                            <lightning-button variant="brand" type="submit" label="Save Requirements" icon-name="utility:save" icon-position="left"></lightning-button>
+                        </div>
+                    </lightning-record-edit-form>
+                </div>
+            </template>
 
-                    <div class="button-group-right">
+            <!-- ── Advance Options ── -->
+            <template if:true={advanceOptions.length}>
+                <div class="ac-section">
+                    <div class="ac-section-label">
+                        <lightning-icon icon-name="utility:forward" size="xx-small" class="ac-section-icon"></lightning-icon>
+                        Advance
+                    </div>
+                    <div class="ac-advance-grid">
                         <template for:each={advanceOptions} for:item="opt">
-                            <lightning-button 
-                                key={opt.stage} 
-                                variant={opt.variant} 
-                                label={opt.label} 
-                                icon-name="utility:forward" 
-                                icon-position="right" 
-                                onclick={handleMove} 
+                            <button
+                                key={opt.stage}
+                                class={opt.advanceBtnClass}
+                                onclick={handleMove}
                                 data-stage={opt.stage}
                                 disabled={opt.disabled}
-                                title={opt.disabledReason}
-                            ></lightning-button>
+                                title={opt.disabledReason}>
+                                <span class="ac-btn-label">{opt.label}</span>
+                                <lightning-icon icon-name="utility:chevronright" size="xx-small" class="ac-btn-arrow"></lightning-icon>
+                            </button>
                         </template>
                     </div>
-
                 </div>
-            </div>
+            </template>
+
+            <!-- ── Backtrack Options ── -->
+            <template if:true={backtrackOptions.length}>
+                <div class="ac-backtrack-section">
+                    <span class="ac-backtrack-label">
+                        <lightning-icon icon-name="utility:back" size="xx-small" class="ac-section-icon"></lightning-icon>
+                        Backtrack
+                    </span>
+                    <div class="ac-backtrack-pills">
+                        <template for:each={backtrackOptions} for:item="opt">
+                            <button key={opt.stage} class="ac-backtrack-btn" onclick={handleMove} data-stage={opt.stage}>
+                                {opt.label}
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </template>
 
         </div>
     </lightning-card>
