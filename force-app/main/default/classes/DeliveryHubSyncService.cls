@@ -28,6 +28,23 @@ global without sharing class DeliveryHubSyncService {
                 return;
             }
 
+            // Gateway-level echo suppression: if this payload originated here, suppress before running the ingestor
+            String incomingGlobalSourceId = req.headers.get('X-Global-Source-Id');
+            if (String.isNotBlank(incomingGlobalSourceId)) {
+                Integer echoCount = [
+                    SELECT Count() FROM Sync_Item__c
+                    WHERE GlobalSourceIdTxt__c = :incomingGlobalSourceId
+                    AND DirectionPk__c = 'Outbound'
+                    WITH SYSTEM_MODE
+                    LIMIT 1
+                ];
+                if (echoCount > 0) {
+                    res.statusCode = 200;
+                    res.responseBody = Blob.valueOf('{"status":"Echo suppressed", "globalSourceId":"' + incomingGlobalSourceId + '"}');
+                    return;
+                }
+            }
+
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
 
             // 3. Hand off to Ingestor 

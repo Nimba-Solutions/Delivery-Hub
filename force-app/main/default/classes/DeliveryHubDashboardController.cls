@@ -22,7 +22,12 @@ public with sharing class DeliveryHubDashboardController {
 
         Decimal activeCount = (ticketStats[0].get('total') != null) ? (Decimal)ticketStats[0].get('total') : 0;
         metrics.put('activeRequests', activeCount);
-        metrics.put('totalHours', 0); // Placeholder until field exists
+        AggregateResult[] worklogStats = [
+            SELECT Sum(HoursLoggedNumber__c) total
+            FROM WorkLog__c
+        ];
+        Decimal totalHours = (worklogStats[0].get('total') != null) ? (Decimal)worklogStats[0].get('total') : 0;
+        metrics.put('totalHours', totalHours);
 
         // 2. Last Entry Logic (Find most recent activity on tickets)
         List<Ticket__c> lastActivity = [
@@ -35,8 +40,8 @@ public with sharing class DeliveryHubDashboardController {
 
         if (!lastActivity.isEmpty()) {
             // Format to EST (America/New_York)
-            String formattedDate = lastActivity[0].LastModifiedDate.format('MM/dd h:mm a', 'America/New_York');
-            metrics.put('lastEntry', formattedDate + ' EST');
+            String formattedDate = lastActivity[0].LastModifiedDate.format('MM/dd h:mm a', UserInfo.getTimeZone().getId());
+            metrics.put('lastEntry', formattedDate);
         } else {
             metrics.put('lastEntry', '--');
         }
