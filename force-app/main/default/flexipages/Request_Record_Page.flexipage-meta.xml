@@ -124,6 +124,12 @@
                 <identifier>c_deliveryManageRequest</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketChat</componentName>
+                <identifier>c_deliveryTicketChat</identifier>
+            </componentInstance>
+        </itemInstances>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>

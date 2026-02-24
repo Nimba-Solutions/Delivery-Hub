@@ -95,6 +95,7 @@
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
     <tabs>Ticket_Board</tabs>
+    <tabs>Request__c</tabs>
     <tabs>Ticket__c</tabs>
     <tabs>Ticket_Comment__c</tabs>
     <uiType>Lightning</uiType>

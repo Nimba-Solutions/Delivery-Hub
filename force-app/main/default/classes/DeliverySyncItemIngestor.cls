@@ -246,7 +246,10 @@ public without sharing class DeliverySyncItemIngestor {
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
                 Object val = payload.get(key);
-                if (val == null) { continue; }
+                if (val == null) {
+                    record.put(field, null);
+                    continue;
+                }
                 Schema.DisplayType dtype = field.getDescribe().getType();
                 if (dtype == Schema.DisplayType.DATE) {
                     record.put(field, Date.valueOf((String)val));
