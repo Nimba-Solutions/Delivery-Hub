@@ -8,15 +8,15 @@ public without sharing class ContentDocumentLinkTriggerHandler {
 
     public static void handleAfterInsert(List<ContentDocumentLink> newLinks) {
         
-        // --- 1. JIRA INTEGRATION ZONE ---
-        // (Preserved functionality: Keep Jira file sync separate from Delivery Hub)
-        // try {
-        //     JiraAttachmentHandler.handleAfterInsert(newLinks);
-        // } catch (Exception e) {
-        //     System.debug(LoggingLevel.ERROR, 'Jira Sync Error: ' + e.getMessage());
-        // }
+        // ==========================================
+        // ECHO SUPPRESSION: Abort if Downloading
+        // ==========================================
+        if (SyncEngine.isSyncContext) {
+            System.debug(LoggingLevel.INFO, 'CDLTrigger: Sync Context active. Suppressing outbound file echo.');
+            return;
+        }
 
-        // --- 2. DELIVERY HUB UNIFIED LEDGER ---
+        // --- DELIVERY HUB UNIFIED LEDGER ---
         Map<Id, Id> docToTicketMap = new Map<Id, Id>();
 
         for (ContentDocumentLink cdl : newLinks) {
@@ -77,8 +77,6 @@ public without sharing class ContentDocumentLinkTriggerHandler {
             payload.put('SourceId', cv.Id); 
             
             // ARCHITECTURE WARNING: Long Text Area limits are ~131k characters. 
-            // If you get size limit errors on large file uploads, remove VersionData from this payload
-            // and instead update the SyncItemProcessor to query the blob right before the HTTP callout!
             if (cv.VersionData != null) {
                 payload.put('VersionData', EncodingUtil.base64Encode(cv.VersionData));
             }
@@ -124,8 +122,14 @@ public without sharing class ContentDocumentLinkTriggerHandler {
         item.RequestId__c = reqId;
         item.ObjectTypePk__c = 'ContentVersion';
         
+        // FIX: Inject Global Traceability to prevent downstream loop failures
+        item.GlobalSourceIdTxt__c = cv.Id; 
+        
         Map<String, Object> payload = basePayload.clone();
         payload.put('TargetId', targetId);
+        payload.put('GlobalSourceId', cv.Id);
+        payload.put('SenderOrgId', UserInfo.getOrganizationId());
+        
         item.PayloadTxt__c = JSON.serialize(payload);
         return item;
     }

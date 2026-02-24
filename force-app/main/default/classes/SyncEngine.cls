@@ -5,7 +5,7 @@
  */
 public without sharing class SyncEngine {
 
-    private static Boolean isSyncContext = false;
+    public static Boolean isSyncContext = false;
     @TestVisible private static Set<String> blockedOrigins = new Set<String>();
 
     public static void setSyncContext() {
