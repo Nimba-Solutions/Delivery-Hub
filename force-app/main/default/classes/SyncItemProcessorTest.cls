@@ -22,7 +22,7 @@ private class SyncItemProcessorTest {
 
         // 2. Setup Ticket
         Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Test Ticket',
+            BriefDescriptionTxt__c = 'Test Ticket',
             StageNamePk__c = 'Backlog'
         );
         insert t;

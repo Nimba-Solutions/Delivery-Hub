@@ -46,7 +46,6 @@ public with sharing class DeliveryGhostController {
 
             // 4. Create Ticket
             Ticket__c t = new Ticket__c();
-            t.WorkItemNameTxt__c = (fullSubject.length() > 80) ? fullSubject.substring(0, 80) : fullSubject;
             t.BriefDescriptionTxt__c = briefDesc; 
             t.DetailsTxt__c = fullDescription;
             t.PriorityPk__c = priority;

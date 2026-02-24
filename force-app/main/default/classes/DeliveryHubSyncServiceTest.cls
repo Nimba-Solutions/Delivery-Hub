@@ -29,9 +29,8 @@ private class DeliveryHubSyncServiceTest {
 
         // 3. Create Ticket (Explicitly linked to the Client)
         Ticket__c t = new Ticket__c(
-            WorkItemNameTxt__c = 'Original Name',
+            BriefDescriptionTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog',
-            BriefDescriptionTxt__c = 'Original Description',
             ClientNetworkEntityId__c = client.Id
         );
         insert t;

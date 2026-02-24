@@ -28,9 +28,9 @@ private class DeliveryGhostControllerTest {
         Test.stopTest();
 
         // 3. Verify Ticket Created
-        Ticket__c t = [SELECT WorkItemNameTxt__c, DetailsTxt__c, PriorityPk__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
+        Ticket__c t = [SELECT BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c FROM Ticket__c WHERE Id = :ticketId LIMIT 1];
         
-        System.assertEquals('[Bug] Test Issue', t.WorkItemNameTxt__c, 'Work Item Name should include [Bug] prefix');
+        System.assertEquals('[Bug] Test Issue', t.BriefDescriptionTxt__c, 'Work Item Name should include [Bug] prefix');
         System.assertEquals('High', t.PriorityPk__c, 'Priority should match');
         System.assert(t.DetailsTxt__c.contains('Auto-Captured Context'), 'Details should contain context header');
     }

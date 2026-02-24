@@ -34,7 +34,7 @@ private class DeliveryHubPollerTest {
 
         // 3. Setup local Ticket
         SObject t = (SObject) Type.forName(ns + 'Ticket__c').newInstance();
-        t.put(ns + 'WorkItemNameTxt__c', 'Poll Test Ticket');
+        t.put(ns + 'BriefDescriptionTxt__c', 'Poll Test Ticket');
         t.put(ns + 'StageNamePk__c', 'Backlog');
         insert t;
 
