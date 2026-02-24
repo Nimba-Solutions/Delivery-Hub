@@ -1,0 +1,52 @@
+<template>
+    <lightning-card title="All Files" icon-name="standard:file">
+        <lightning-button-icon
+            icon-name="utility:refresh"
+            slot="actions"
+            variant="border-filled"
+            onclick={handleRefresh}
+            alternative-text="Refresh Files">
+        </lightning-button-icon>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <template if:true={isLoading}>
+                <div class="slds-text-align_center slds-p-medium">
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <template if:false={isLoading}>
+                <template if:true={hasFiles}>
+                    <ul class="slds-list_dotted">
+                        <template for:each={files} for:item="file">
+                            <li key={file.documentId} class="slds-p-vertical_xx-small">
+                                <div class="slds-grid slds-grid_vertical-align-center slds-gutters_x-small">
+                                    <div class="slds-col slds-no-flex">
+                                        <lightning-icon
+                                            icon-name={file.iconName}
+                                            size="x-small">
+                                        </lightning-icon>
+                                    </div>
+                                    <div class="slds-col slds-truncate">
+                                        <a href={file.downloadUrl} target="_blank" class="slds-text-link">
+                                            {file.title}
+                                        </a>
+                                        <div class="slds-text-body_small slds-text-color_weak">
+                                            {file.linkedEntityType} &bull; {file.formattedSize}
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
+
+                <template if:false={hasFiles}>
+                    <div class="slds-text-align_center slds-p-medium">
+                        <p class="slds-text-color_weak">No files attached to this ticket, its comments, or related requests.</p>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>

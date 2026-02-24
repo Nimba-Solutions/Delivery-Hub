@@ -8,11 +8,19 @@
                             <div class={msg.bubbleClass}>
                                 <lightning-formatted-text value={msg.body}></lightning-formatted-text>
                             </div>
+                            <template if:true={msg.files}>
+                                <template for:each={msg.files} for:item="fileName">
+                                    <div key={fileName} class="chat-file-indicator">
+                                        <lightning-icon icon-name="doctype:attachment" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        <span class="slds-text-body_small">{fileName}</span>
+                                    </div>
+                                </template>
+                            </template>
                             <div class={msg.metaClass}>
-                                {msg.author} &bull; 
-                                <lightning-formatted-date-time 
-                                    value={msg.createdDate} 
-                                    hour="2-digit" 
+                                {msg.author} &bull;
+                                <lightning-formatted-date-time
+                                    value={msg.createdDate}
+                                    hour="2-digit"
                                     minute="2-digit"
                                     class="slds-m-left_xx-small">
                                 </lightning-formatted-date-time>

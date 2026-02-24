@@ -1,6 +1,7 @@
 import { LightningElement, wire, api, track } from 'lwc';
 import getLiveComments from '@salesforce/apex/DeliveryHubCommentController.getLiveComments';
 import postLiveComment from '@salesforce/apex/DeliveryHubCommentController.postLiveComment';
+import getCommentFiles from '@salesforce/apex/DeliveryHubCommentController.getCommentFiles';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
@@ -120,6 +121,18 @@ export default class DeliveryTicketChat extends LightningElement {
             // If the poll brought in a new message, force a scroll to the bottom
             if (isNewData) {
                 this.scrollToBottom();
+                // Fetch file attachments for the new comment set
+                const ids = data.map(r => r.Id);
+                if (ids.length > 0) {
+                    getCommentFiles({ commentIds: ids })
+                        .then(filesMap => {
+                            this.comments.data = this.comments.data.map(msg => ({
+                                ...msg,
+                                files: filesMap[msg.Id] || []
+                            }));
+                        })
+                        .catch(() => {});
+                }
             }
 
         } else if (error) {

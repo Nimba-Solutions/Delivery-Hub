@@ -73,3 +73,16 @@
 .chat-input {
     --slds-c-textarea-text-color: #000000;
 }
+
+/* --- 7. FILE ATTACHMENTS IN CHAT --- */
+.chat-file-indicator {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #3e3e3c;
+    margin-top: 0.25rem;
+    padding: 0.2rem 0.4rem;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 0.25rem;
+    max-width: fit-content;
+}

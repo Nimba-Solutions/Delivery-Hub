@@ -1,0 +1,66 @@
+.phase-tile {
+    min-height: 4.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 4px;
+}
+
+.phase-tile--active {
+    border-color: #0070d2;
+    background-color: #f3f8ff;
+}
+
+.phase-tile--empty {
+    background-color: #f8f8f8;
+    opacity: 0.6;
+}
+
+.phase-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6e757b;
+    margin-top: 2px;
+}
+
+.ticket-link {
+    text-align: left;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+}
+
+.attention-item:last-child,
+.recent-item:last-child {
+    border-bottom: none;
+}
+
+.stage-badge {
+    font-size: 0.65rem;
+    white-space: nowrap;
+}
+
+.stage-badge--approval {
+    background-color: #e8f4fb;
+    color: #0070d2;
+}
+
+.stage-badge--uat {
+    background-color: #e8f9f1;
+    color: #028422;
+}
+
+.stage-badge--signoff {
+    background-color: #fff3cd;
+    color: #8a6800;
+}
+
+.recent-time {
+    font-size: 0.75rem;
+    min-width: 4.5rem;
+}
