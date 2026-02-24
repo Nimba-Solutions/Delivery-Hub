@@ -120,8 +120,8 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>manageDeliveryRequest</componentName>
-                <identifier>c_manageDeliveryRequest</identifier>
+                <componentName>deliveryManageRequest</componentName>
+                <identifier>c_deliveryManageRequest</identifier>
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>

@@ -1,0 +1,32 @@
+<template>
+    <div class="slds-card">
+        <div class="slds-card__header slds-grid">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="utility:settings" alternative-text="Settings" size="medium"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span>Application Settings</span>
+                    </h2>
+                </div>
+            </header>
+        </div>
+        
+        <div class="slds-card__body slds-card__body_inner">
+            <lightning-tabset active-tab-value={activeTab} onactive={handleTabChange}>
+                <lightning-tab label="General" value="general">
+                    <c-delivery-general-settings-card></c-delivery-general-settings-card>
+                </lightning-tab>
+                
+                <lightning-tab label="AI Features" value="ai">
+                    <c-delivery-ai-settings-card></c-delivery-ai-settings-card>
+                </lightning-tab>
+                
+                <lightning-tab label="OpenAI" value="openai">
+                    <c-delivery-open-ai-settings-card></c-delivery-open-ai-settings-card>
+                </lightning-tab>
+            </lightning-tabset>
+        </div>
+    </div>
+</template>

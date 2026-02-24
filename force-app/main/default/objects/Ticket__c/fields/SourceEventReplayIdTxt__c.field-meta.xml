@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>SourceEventReplayIdTxt__c</fullName>
     <description>ReplayId of the platform event for deduplication</description>
+    <inlineHelpText>Platform event replay ID used to detect and deduplicate duplicate inbound sync events.</inlineHelpText>
     <externalId>false</externalId>
     <label>Source Event Replay Id</label>
     <length>18</length>

@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>IsActiveBool__c</fullName>
     <description>Flag indicating whether this field requirement is currently active</description>
+    <inlineHelpText>Uncheck to disable this requirement without deleting the record.</inlineHelpText>
     <defaultValue>false</defaultValue>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>

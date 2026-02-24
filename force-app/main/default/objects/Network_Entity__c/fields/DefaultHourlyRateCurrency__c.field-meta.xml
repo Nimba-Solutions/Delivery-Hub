@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>DefaultHourlyRateCurrency__c</fullName>
     <description>Default Hourly Rate For This Network Entity</description>
+    <inlineHelpText>Default billing rate applied to this entity's work logs when no override is specified on a request.</inlineHelpText>
     <label>Default Rate</label>
     <precision>18</precision>
     <required>false</required>

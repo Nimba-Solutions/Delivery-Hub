@@ -3,7 +3,7 @@ public class DeliveryHubBoardControllerTest {
 
     @testSetup
     static void setup() {
-        TriggerControl.disableAfterLogic();
+        DeliveryTriggerControl.disableAfterLogic();
 
         List<Ticket__c> tickets = new List<Ticket__c>{
             new Ticket__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
@@ -21,7 +21,7 @@ public class DeliveryHubBoardControllerTest {
         );
         insert dep;
 
-        TriggerControl.enableAfterLogic();
+        DeliveryTriggerControl.enableAfterLogic();
     }
 
     @isTest

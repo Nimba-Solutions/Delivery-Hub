@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>DefaultDevCountNumber__c</fullName>
     <description>The number of unassigned developers available for the general queue.</description>
+    <inlineHelpText>Default number of developers used when no team-specific count is configured.</inlineHelpText>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Default Dev Count</label>

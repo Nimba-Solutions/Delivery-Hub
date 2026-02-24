@@ -13,8 +13,8 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>syncPollerButton</componentName>
-                <identifier>c_syncPollerButton</identifier>
+                <componentName>deliverySyncPollerButton</componentName>
+                <identifier>c_deliverySyncPollerButton</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>

@@ -12,17 +12,17 @@ import USER_NAME_FIELD from "@salesforce/schema/User.Name";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
 // --- Apex Imports ---
-import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getTickets";
-import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.linkFilesAndSync";
-import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getAiEnhancedTicketDetails";
-import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%TicketETAService.getTicketETAsWithPriority";
+import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getTickets";
+import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.linkFilesAndSync";
+import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getAiEnhancedTicketDetails";
+import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketETAService.getTicketETAsWithPriority";
 import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateTicketStage";
 // UPDATED: Using new reorder method instead of updateTicketSortOrder
 import reorderTicket from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.reorderTicket";
 import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.createDependency";
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
-import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%TicketController.getRequiredFieldsForStage';
+import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getRequiredFieldsForStage';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
 
 // --- NAMESPACE BRIDGE ---

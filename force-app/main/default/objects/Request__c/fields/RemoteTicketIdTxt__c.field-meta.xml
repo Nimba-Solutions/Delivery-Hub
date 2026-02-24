@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>RemoteTicketIdTxt__c</fullName>
     <description>The ID of the record in their Salesforce org.</description>
+    <inlineHelpText>ID of the corresponding ticket in the vendor's remote Salesforce org, used for cross-org sync.</inlineHelpText>
     <externalId>true</externalId>
     <label>Remote ID</label>
     <length>255</length>

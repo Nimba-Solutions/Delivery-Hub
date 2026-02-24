@@ -3,6 +3,7 @@
     <fullName>TicketId__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
     <description>Links this log to the parent Ticket.</description>
+    <inlineHelpText>The Ticket this work log is associated with.</inlineHelpText>
     <label>Ticket</label>
     <referenceTo>Ticket__c</referenceTo>
     <relationshipLabel>Work Logs</relationshipLabel>

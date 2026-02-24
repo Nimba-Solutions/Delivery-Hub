@@ -3,6 +3,7 @@
     <fullName>TicketCommentId__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
     <description>(Optional) Populated if this sync item is for a specific comment.</description>
+    <inlineHelpText>Lookup to the Ticket Comment this sync item represents, if the payload is a comment event.</inlineHelpText>
     <label>Ticket Comment</label>
     <referenceTo>Ticket_Comment__c</referenceTo>
     <relationshipLabel>Sync Items</relationshipLabel>

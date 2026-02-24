@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
     <label>Delivery Hub Settings</label>
-    <lwcComponent>settingsContainer</lwcComponent>
+    <lwcComponent>deliverySettingsContainer</lwcComponent>
     <motif>Custom32: Factory</motif>
 </CustomTab>

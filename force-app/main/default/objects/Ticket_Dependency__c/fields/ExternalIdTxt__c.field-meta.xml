@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ExternalIdTxt__c</fullName>
     <description>External identifier for the ticket dependency, typically from Jira</description>
+    <inlineHelpText>External identifier for this dependency record, used for cross-org sync deduplication.</inlineHelpText>
     <externalId>false</externalId>
     <label>External ID</label>
     <length>255</length>

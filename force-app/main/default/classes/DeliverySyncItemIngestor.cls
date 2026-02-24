@@ -18,7 +18,7 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     public static Id processInboundItem(String objectType, Map<String, Object> payload) {
-        SyncEngine.setSyncContext();
+        DeliverySyncEngine.setSyncContext();
 
         Schema.SObjectType targetType = findSObjectType(objectType);
         if (targetType == null) {
@@ -147,7 +147,7 @@ public without sharing class DeliverySyncItemIngestor {
         // ==========================================
         if (localRequestId != null) {
             // Origin was a Downstream Vendor via Request__c
-            SyncEngine.ignoreOrigin(localRequestId);
+            DeliverySyncEngine.ignoreOrigin(localRequestId);
         } else {
             // No Request found. Origin must be the Upstream Client.
             Id parentTicketId = (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) ? recordToUpsert.Id : localParentId;
@@ -165,7 +165,7 @@ public without sharing class DeliverySyncItemIngestor {
                     if (!tix.isEmpty()) {
                         Id clientId = (Id)tix[0].get(tix[0].getSObjectType().getDescribe().fields.getMap().containsKey('ClientNetworkEntityId__c') ? 'ClientNetworkEntityId__c' : getNamespacePrefix() + 'ClientNetworkEntityId__c');
                         if (clientId != null) {
-                            SyncEngine.ignoreOrigin(clientId);
+                            DeliverySyncEngine.ignoreOrigin(clientId);
                         }
                     }
                 } catch (Exception e) {

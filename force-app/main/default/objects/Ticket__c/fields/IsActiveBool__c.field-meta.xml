@@ -3,6 +3,7 @@
     <fullName>IsActiveBool__c</fullName>
     <defaultValue>false</defaultValue>
     <description>Indicates whether this ticket is active and should be displayed on the board</description>
+    <inlineHelpText>Uncheck to soft-delete this ticket from board views without permanently removing the record.</inlineHelpText>
     <label>Is Active</label>
     <trackTrending>false</trackTrending>
     <type>Checkbox</type>

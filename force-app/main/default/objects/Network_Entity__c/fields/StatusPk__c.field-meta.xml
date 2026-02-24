@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StatusPk__c</fullName>
     <description>Partner Status of Network Entity</description>
+    <inlineHelpText>Active entities participate in sync and routing. Inactive entities are excluded from all automated processes.</inlineHelpText>
     <label>Status</label>
     <required>false</required>
     <trackTrending>false</trackTrending>

@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>UATBufferDaysNumber__c</fullName>
     <description>The number of business days to add after dev completion to calculate the final ETA for UAT.</description>
+    <inlineHelpText>Number of buffer days added to ETA calculations to account for UAT review time.</inlineHelpText>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>UAT Buffer Days</label>

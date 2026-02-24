@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StandDownReasonTxt__c</fullName>
     <description>Why are you requesting more time? (e.g., Database corruption, Scope creep).</description>
+    <inlineHelpText>Reason provided when the request is paused or cancelled. Required when status is set to Inactive.</inlineHelpText>
     <externalId>false</externalId>
     <label>Stand Down Reason</label>
     <length>255</length>

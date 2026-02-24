@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>WorkDescriptionTxt__c</fullName>
     <description>What did they do? (e.g., &quot;Updated test class&quot;).</description>
+    <inlineHelpText>Brief description of what was done during this work session.</inlineHelpText>
     <externalId>false</externalId>
     <label>Description</label>
     <length>255</length>

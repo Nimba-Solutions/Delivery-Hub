@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>DescriptionTxt__c</fullName>
     <description>Description of the field requirement for the specific Kanban stage</description>
+    <inlineHelpText>Human-readable description of why these fields are required at this stage.</inlineHelpText>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Description</label>

@@ -3,6 +3,7 @@
     <fullName>AutoCreateRequestFromTicketBool__c</fullName>
     <defaultValue>false</defaultValue>
     <description>If enabled, automatically creates a Request for a new Ticket if only one active Vendor exists.</description>
+    <inlineHelpText>When enabled, a delivery Request is automatically created whenever a new Ticket is saved.</inlineHelpText>
     <label>Auto Create Request From Ticket</label>
     <trackTrending>false</trackTrending>
     <type>Checkbox</type>

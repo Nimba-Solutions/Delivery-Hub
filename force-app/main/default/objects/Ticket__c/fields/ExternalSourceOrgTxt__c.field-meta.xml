@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ExternalSourceOrgTxt__c</fullName>
     <description>The name or ID of the originating Salesforce organization. Used to group tickets by client or source implementation.</description>
+    <inlineHelpText>Salesforce org ID or name of the client org that originated this ticket via cross-org sync.</inlineHelpText>
     <externalId>false</externalId>
     <label>External Source Org</label>
     <length>255</length>
