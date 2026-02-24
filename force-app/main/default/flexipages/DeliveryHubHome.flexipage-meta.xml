@@ -17,8 +17,14 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryBudgetSummary</componentName>
-                <identifier>c_deliveryBudgetSummary</identifier>
+                <componentName>deliveryHubSetup</componentName>
+                <identifier>c_deliveryHubSetup</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryClientDashboard</componentName>
+                <identifier>c_deliveryClientDashboard</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>

@@ -1,64 +1,186 @@
-# Standard-Unlocked
+# Delivery Hub
 
-Notes for draganddroplwc https://www.salesforcetroop.com/kanban-board-lwc-project
+**The fastest way to run a real software delivery operation — entirely inside Salesforce.**
 
-This repository contains everything you need to realize enterprise-grade Salesforce CICD practices without making an enterprise-grade investment. 
-
-The included [Github Actions](.github/workflows) provide a standardized (and mostly automated!) framework for building, testing, and delivering solutions in a consistent and repeatable manner. 
-
-We strongly advocate adhering to a "Release Train" development methodology for Salesforce development. When applied with discipline, this approach consistently balances business demands, development rigor, and the unique constraints of working with Salesforce metadata significantly better than other popular methodologies (e.g. Scrum).
-
-## Salesforce Release Train Development Cadence
-
-![image](https://github.com/user-attachments/assets/6b7d1dc8-30cb-4740-964e-8cd55f54a847)
-[Image Credit: CumulusCI Documentation](https://cumulusci.readthedocs.io/en/stable/cumulusci-flow.html)
-
-## Getting Started
-
-1. Fork this repository.
-2. Make a _new_ Repository in your organization and select your fork as the `Repository Template`
-3. Modify the `name` and `name_managed` fields in [cumulusci.yml](cumulusci.yml)<sup>1</sup>
-4. Follow the [`Initial Setup` instructions](https://github.com/Nimba-Solutions/Standard-Unlocked/blob/main/.github/workflows/README.md#initial-setup) to configure the included CICD for this project.
-
-> [!NOTE]
-> 1. As you explore this project, you may notice a large number of tokens such as     `__PROJECT_LABEL__` and `__PROJECT_NAME__`. These correspond to the `name_managed` and `name` attributes in [cumulusci.yml](cumulusci.yml), and will be automatically exchanged via *token injection* when running CCI commands.
-
-## Development
-
-1. [Set up CumulusCI](https://cumulusci.readthedocs.io/en/latest/tutorial.html) in your preferred development environnment.
-2. Run `cci flow run dev_org --org dev` to deploy this project.
-3. Run `cci org browser dev` to open the org in your browser.
-4. Build your solution, periodically run `cci task run retrieve_changes --org dev`, and commit your changes to a `feature/**` branch using your preferred git tooling.
-7. When you're ready, run `git push` to send your changes to GitHub.
-8. Submit a PR.
-9. Monitor for Success/Failure
-
-----
-
-## Releases
-
-### [Recommended] Release this project using the Built-in CICD Actions
-
-Follow the provided [`Release` instructions](https://github.com/Nimba-Solutions/Standard-Unlocked/blob/main/.github/workflows/README.md#releases).
-
+Delivery Hub turns your Salesforce org into a fully operational dev shop command center. Whether you're managing an internal development team or sending work out to an external vendor like [Nimba Solutions](https://nimbasolutions.com), every ticket, comment, file, and status update lives in one place, syncs in real-time between orgs, and requires zero manual coordination overhead.
 
 ---
 
-### [Advanced] Release this project using your CLI
+## Why Delivery Hub Exists
 
-#### To release a new `beta` version of this package:
+Most Salesforce teams manage development work in Jira, Slack, email, or a spreadsheet no one trusts. None of those tools know anything about your Salesforce data. Delivery Hub fixes that — it lives where your business already lives, speaks Salesforce natively, and keeps your clients, your developers, and your delivery pipeline in permanent sync without any manual handoffs.
 
-1. Run `git checkout main` to switch to the main branch.
-2. Run `git pull` to download the latest changes from Github.
-3. Run `cci flow run dependencies --org dev` to prepare a scratch org for the process of packaging.
-4. Run `cci flow run release_unlocked_beta --org dev` to release a new beta version of this package.
-5. [Optional] Run `cci org browser dev` to open the org in your browser.
+If you're a client sending work to an external dev team, you click a button and the ticket appears on their board. If you're a dev team, incoming requests auto-create tickets, stage changes sync back to the client, and nothing falls through the cracks. It is the delivery loop that closes itself.
 
-#### To release a new `production` version of this package:
+---
 
-1. Run `git checkout main` to switch to the main branch.
-2. Run `git pull` to download the latest changes from Github.
-3. Run `cci flow run release_unlocked_production --org dev --debug` to release a new beta version of this package.
-4. Run `cci org browser dev` to open the org in your browser.
-5. [OPTIONAL] Run `cci flow run install_prod --org <target-org-alias>` to install the package and _all of its dependencies_ in `<target-org-alias>`.
- 
+## What It Does
+
+### For Clients
+- **See your tickets** — a live Kanban view of every item in flight, broken down by stage
+- **Know what needs your attention** — the home page surfaces anything sitting in Client Approval, Client UAT, or UAT Sign-off waiting on you specifically
+- **Chat directly with the dev team** — real-time messaging on every ticket, with file attachments rolling up automatically so nothing gets buried
+- **Report issues and request features** — one-click Ghost Recorder form from anywhere in the app
+- **Self-service onboarding** — a one-click Quickstart Connection wizard on the home page that sets up the entire integration without admin involvement
+
+### For Development Teams
+- **Manage a full delivery pipeline** — 40+ stages from Backlog to Deployed to Prod, with configurable stage gate requirements that prevent bad transitions
+- **Multi-vendor routing** — sync outbound to multiple external vendors simultaneously; each vendor gets its own queue, retries on failure, and independent status tracking
+- **AI-assisted sizing** — optional OpenAI integration that estimates hours, generates ticket descriptions, and drafts acceptance criteria from a brief summary
+- **Automated ETA calculation** — based on dev velocity, team calendar, and current queue depth
+- **Full file rollup** — every file attached to a ticket, its comments, or its related requests visible in one panel on the ticket record
+
+### For Everyone
+- **Cross-org real-time sync** — bidirectional sync via REST between any two Salesforce orgs. Comments, stage changes, file attachments, and field updates replicate within seconds
+- **Echo suppression** — smart deduplication prevents sync loops when both orgs update the same record
+- **Audit trail** — every sync item tracked in a ledger with status, retry count, and payload
+- **Dependency tracking** — mark tickets as blocking each other; the board surfaces blocked tickets and warns before invalid transitions
+
+---
+
+## How It Works
+
+```
+Your Org (Client)                        Nimba's Org (Vendor)
+─────────────────                        ────────────────────
+Ticket created           ──── sync ────► Request ingested
+  └─ Stage updated       ◄─── sync ────   └─ Developer assigned
+  └─ Comment posted      ──── sync ────►  └─ Comment synced back
+  └─ File attached       ──── sync ────►  └─ Status progressed
+  └─ Stage updated       ◄─── sync ────   └─ Deployed to Prod
+```
+
+1. **You create a ticket** in your org's Kanban board. A `Request__c` sync record is queued.
+2. **Delivery Hub's scheduler** (runs every 15 minutes, or on-demand) picks up the queue and POSTs to the vendor's REST endpoint.
+3. **The vendor's org ingests** the payload, creates or updates their matching ticket, and syncs back any response fields.
+4. **Both orgs stay in lock-step** — every stage change, comment, and file attachment triggers another sync cycle automatically.
+5. **Echo suppression** on both sides ensures a change originating from Org A doesn't bounce back from Org B as a new sync event.
+
+The sync engine is headless, retry-aware (up to 3 attempts with automatic re-queue), and handles namespace translation for managed package deployments.
+
+---
+
+## Key Features at a Glance
+
+| Feature | Details |
+|---|---|
+| Kanban Board | Drag-and-drop, 40+ stages, configurable column order |
+| Stage Gate Warnings | Block moves when required fields (developer, criteria, estimate) are missing |
+| Fast Track | Highlights the path to dev when estimate fits within pre-approved budget |
+| Cross-Org Sync | Bidirectional REST sync with retry, echo suppression, and ledger |
+| Multi-Vendor | Route to multiple vendors simultaneously |
+| Chat | Real-time polling chat on every ticket, with file attachment indicators |
+| File Rollup | Aggregates files from ticket + comments + requests into one panel |
+| Ghost Recorder | Floating or card-mode issue/feature submission form with keyboard shortcut |
+| AI Estimation | OpenAI-powered hours estimate and description generation |
+| ETA Engine | Calculates projected UAT-ready date from velocity and queue depth |
+| Client Dashboard | Home page shows attention items, in-flight phase counts, recent activity |
+| Setup Wizard | One-click connection to vendor org with automatic scheduler provisioning |
+
+---
+
+## Getting Started in 3 Minutes
+
+### As a Client Org
+
+1. Install the Delivery Hub package into your Salesforce org
+2. Open the **Delivery Hub** Lightning App
+3. On the Home tab, click **Quickstart Connection** — this registers your org, configures default settings, and schedules the sync jobs automatically
+4. Create your first ticket on the **Ticket Board** tab
+5. Watch it appear on your vendor's board within seconds
+
+### As a Vendor Org (Self-Hosted)
+
+1. Clone this repository
+2. Run `cci flow run dev_org --org dev` to spin up a scratch org
+3. Run `cci org browser dev` to open it
+4. Configure your `Cloud_Nimbus_LLC_Marketing__mdt` custom metadata with your org's endpoint URL
+5. Client orgs can now connect to you via Quickstart
+
+---
+
+## Architecture
+
+```
+force-app/main/default/
+├── classes/
+│   ├── DeliverySyncEngine.cls          # Core fan-out engine (outbound + inbound routing)
+│   ├── DeliverySyncItemProcessor.cls   # Queueable: processes outbound sync queue
+│   ├── DeliveryHubScheduler.cls        # Schedulable: re-queues failures + triggers sync
+│   ├── DeliveryHubPoller.cls           # Polls all active vendors for inbound items
+│   ├── DeliverySyncItemIngestor.cls    # Maps inbound payloads to sObject fields
+│   ├── DeliveryHubSyncService.cls      # REST endpoint (/delivery/sync)
+│   ├── DeliveryTicketETAService.cls    # ETA calculation engine
+│   ├── DeliveryHubDashboardController  # Home page metrics + client dashboard
+│   ├── DeliveryHubFilesController      # Rolled-up file queries
+│   ├── DeliveryHubCommentController    # Chat: get/post comments + file indicators
+│   └── DeliveryHubSetupController      # Quickstart wizard + handshake
+├── lwc/
+│   ├── deliveryHubBoard/               # Main Kanban board (drag-drop, column config)
+│   ├── deliveryTicketActionCenter/     # Stage transition buttons with gate logic
+│   ├── deliveryTicketChat/             # Real-time polling chat with file indicators
+│   ├── deliveryTicketFiles/            # Rolled-up files sidebar panel
+│   ├── deliveryClientDashboard/        # Client home: attention / in-flight / recent
+│   ├── deliveryHubSetup/               # Quickstart connection wizard
+│   ├── deliveryGhostRecorder/          # Issue / feature request submission form
+│   └── deliveryTicketRefiner/          # AI description and sizing assistant
+├── objects/
+│   ├── Ticket__c/                      # Core work item
+│   ├── Request__c/                     # Sync bridge (client ↔ vendor)
+│   ├── Sync_Item__c/                   # Outbound sync ledger
+│   ├── Network_Entity__c/              # Connected org registry
+│   ├── Ticket_Comment__c/              # Chat messages
+│   ├── Ticket_Dependency__c/           # Blocking relationships
+│   └── WorkLog__c/                     # Time tracking
+└── triggers/
+    ├── DeliveryTicketTrigger           # Stage changes → sync engine
+    ├── DeliveryTicketCommentTrigger    # Comments → sync engine
+    └── DeliveryContentDocumentLinkTrigger  # File attachments → sync engine
+```
+
+---
+
+## CI/CD
+
+This project uses [CumulusCI](https://cumulusci.readthedocs.io/) with GitHub Actions for a fully automated release pipeline.
+
+Every pull request:
+1. Spins up a namespaced scratch org
+2. Deploys the full package
+3. Runs all Apex tests (74+ tests, 75%+ coverage enforced)
+4. Runs PMD static analysis with custom rules
+5. Tears down the scratch org
+
+### Developer Workflow
+
+```bash
+# Set up CumulusCI
+cci flow run dev_org --org dev
+
+# Open your scratch org
+cci org browser dev
+
+# Retrieve your changes
+cci task run retrieve_changes --org dev
+
+# Push a feature branch and open a PR
+git push origin feature/your-feature
+```
+
+### Releasing
+
+```bash
+# Beta package
+cci flow run release_unlocked_beta --org dev
+
+# Production package
+cci flow run release_unlocked_production --org dev
+```
+
+---
+
+## Built By
+
+**Nimba Solutions** — We build Salesforce delivery infrastructure so you can focus on your actual product.
+
+Questions, issues, or partnership inquiries: open an issue or reach out at [nimbasolutions.com](https://nimbasolutions.com).

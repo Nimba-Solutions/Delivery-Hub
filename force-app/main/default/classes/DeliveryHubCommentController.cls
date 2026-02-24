@@ -56,6 +56,38 @@ public with sharing class DeliveryHubCommentController {
     }
 
     /**
+     * @description Returns file attachments for a list of comment IDs, keyed by comment ID.
+     * Used by the chat LWC to show file indicators on messages that have attachments.
+     * @param commentIds List of Ticket_Comment__c IDs to check for attachments.
+     * @return Map of comment Id (String) → list of file name strings.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Map<String, List<String>> getCommentFiles(List<Id> commentIds) {
+        Map<String, List<String>> result = new Map<String, List<String>>();
+        if (commentIds == null || commentIds.isEmpty()) {
+            return result;
+        }
+
+        List<ContentDocumentLink> links = [
+            SELECT LinkedEntityId, ContentDocument.Title
+            FROM ContentDocumentLink
+            WHERE LinkedEntityId IN :commentIds
+            WITH SYSTEM_MODE
+            ORDER BY ContentDocument.LastModifiedDate DESC
+        ];
+
+        for (ContentDocumentLink link : links) {
+            String cid = String.valueOf(link.LinkedEntityId);
+            if (!result.containsKey(cid)) {
+                result.put(cid, new List<String>());
+            }
+            result.get(cid).add(link.ContentDocument.Title);
+        }
+
+        return result;
+    }
+
+    /**
      * @description Helper to find the Ticket ID regardless of where the LWC is placed.
      * @param recordId The ID of the current record context
      * @return Id The resolved Ticket ID

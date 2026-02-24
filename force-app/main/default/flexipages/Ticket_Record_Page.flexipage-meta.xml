@@ -126,6 +126,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryTicketFiles</componentName>
+                <identifier>c_deliveryTicketFiles</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryTicketStageGateWarning</componentName>
                 <identifier>c_deliveryTicketStageGateWarning</identifier>
             </componentInstance>

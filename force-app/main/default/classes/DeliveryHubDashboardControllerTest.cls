@@ -48,4 +48,35 @@ private class DeliveryHubDashboardControllerTest {
         System.assertNotEquals(null, lastEntry, 'Last Entry should not be null');
         System.assertNotEquals('--', lastEntry, 'Last Entry should have a formatted date value');
     }
+
+    @IsTest
+    static void testGetClientDashboard() {
+        List<Ticket__c> tickets = new List<Ticket__c>{
+            new Ticket__c(BriefDescriptionTxt__c = 'Backlog Ticket',    StageNamePk__c = 'Backlog'),
+            new Ticket__c(BriefDescriptionTxt__c = 'Dev Ticket',        StageNamePk__c = 'In Development'),
+            new Ticket__c(BriefDescriptionTxt__c = 'Attention Ticket',  StageNamePk__c = 'In Client Approval')
+        };
+        insert tickets;
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard();
+        Test.stopTest();
+
+        System.assert(result.containsKey('attentionTickets'), 'Should return attentionTickets key');
+        System.assert(result.containsKey('phases'), 'Should return phases key');
+        System.assert(result.containsKey('recentTickets'), 'Should return recentTickets key');
+
+        List<DeliveryHubDashboardController.TicketItem> attention =
+            (List<DeliveryHubDashboardController.TicketItem>)result.get('attentionTickets');
+        System.assertEquals(1, attention.size(), 'Should return 1 attention ticket');
+        System.assertEquals('In Client Approval', attention[0].stage, 'Attention ticket stage should match');
+
+        List<DeliveryHubDashboardController.PhaseItem> phases =
+            (List<DeliveryHubDashboardController.PhaseItem>)result.get('phases');
+        System.assertEquals(6, phases.size(), 'Should return all 6 phase buckets');
+
+        List<DeliveryHubDashboardController.TicketItem> recent =
+            (List<DeliveryHubDashboardController.TicketItem>)result.get('recentTickets');
+        System.assert(recent.size() > 0, 'Should return at least one recent ticket');
+    }
 }
