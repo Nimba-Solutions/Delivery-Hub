@@ -31,7 +31,6 @@ private class DeliveryHubSyncServiceTest {
         Ticket__c t = new Ticket__c(
             BriefDescriptionTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog',
-            BriefDescriptionTxt__c = 'Original Description',
             ClientNetworkEntityId__c = client.Id
         );
         insert t;

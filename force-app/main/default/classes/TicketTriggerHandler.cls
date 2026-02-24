@@ -123,7 +123,7 @@ public without sharing class TicketTriggerHandler {
         if (!ticketsToCheck.isEmpty()) {
             // Fix: Added WITH USER_MODE to satisfy PMD ApexCRUDViolation
             List<Ticket_Dependency__c> unresolvedBlockers = [
-                SELECT Blocked_Ticket__c, Blocking_Ticket__r.BriefDescriptionTxt__c Blocking_Ticket__r.StageNamePk__c
+                SELECT Blocked_Ticket__c, Blocking_Ticket__r.BriefDescriptionTxt__c, Blocking_Ticket__r.StageNamePk__c
                 FROM Ticket_Dependency__c
                 WHERE Blocked_Ticket__c IN :ticketsToCheck
                 AND Blocking_Ticket__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')

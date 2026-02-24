@@ -33,7 +33,6 @@ private class SyncEngineTest {
         Ticket__c t = new Ticket__c(
             BriefDescriptionTxt__c = 'T', 
             StageNamePk__c = 'Backlog', 
-            BriefDescriptionTxt__c = 'Orig',
             ClientNetworkEntityId__c = client.Id // The Upstream Map
         );
         insert t;
