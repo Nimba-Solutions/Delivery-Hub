@@ -14,7 +14,6 @@
         </div>
         
         <div class="slds-card__body slds-card__body_inner">
-            <!-- Tab Navigation -->
             <lightning-tabset active-tab-value={activeTab} onactive={handleTabChange}>
                 <lightning-tab label="General" value="general">
                     <c-general-settings-card></c-general-settings-card>
@@ -26,10 +25,6 @@
                 
                 <lightning-tab label="OpenAI" value="openai">
                     <c-open-a-i-settings-card></c-open-a-i-settings-card>
-                </lightning-tab>
-                
-                <lightning-tab label="JIRA Integration" value="jira">
-                    <c-jira-settings-card></c-jira-settings-card>
                 </lightning-tab>
             </lightning-tabset>
         </div>

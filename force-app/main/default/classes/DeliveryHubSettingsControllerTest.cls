@@ -17,12 +17,6 @@ private class DeliveryHubSettingsControllerTest {
             AIEstimationEnabledBool__c = true,
             OpenAIApiKeyTxt__c = 'test-key',
             OpenAIModelTxt__c = 'gpt-4o',
-            JIRAEnabledBool__c = true,
-            JIRAInstanceUrl__c = 'https://example.atlassian.net',
-            JIRAUsernameTxt__c = 'jirauser@example.com',
-            JIRAApiTokenTxt__c = 'test-token',
-            JIRAProjectKeyTxt__c = 'ABC',
-            JIraApiTestedBool__c = true,
             OpenAiApiTestedBool__c = true
         );
         insert settings;
@@ -37,7 +31,7 @@ private class DeliveryHubSettingsControllerTest {
         System.assertNotEquals(null, dto, 'Settings DTO should not be null');
         System.assertEquals(true, dto.enableNotifications, 'Notifications should be enabled');
         
-        // FIX: Check the new DTO field names
+        // Check the new DTO field names
         System.assertEquals(true, dto.autoCreateRequest, 'Auto Create Request should be true');
         System.assertEquals(true, dto.autoSendRequest, 'Auto Send Request should be true');
         
@@ -48,7 +42,7 @@ private class DeliveryHubSettingsControllerTest {
     @isTest
     static void testSaveGeneralSettings() {
         Test.startTest();
-        // FIX: Pass 3 arguments: (Notifications, AutoCreate, AutoSend)
+        // Pass 3 arguments: (Notifications, AutoCreate, AutoSend)
         DeliveryHubSettingsController.saveGeneralSettings(false, false, false);
         Test.stopTest();
 
@@ -84,54 +78,11 @@ private class DeliveryHubSettingsControllerTest {
     }
 
     @isTest
-    static void testSaveJiraSettings() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveJiraSettings(
-            'https://myjira.com',
-            'user@jira.com',
-            'new-token',
-            'XYZ',
-            true
-        );
-        Test.stopTest();
-
-        Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
-        System.assertEquals('https://myjira.com', s.JIRAInstanceUrl__c, 'JIRA URL should be updated');
-        System.assertEquals('user@jira.com', s.JIRAUsernameTxt__c, 'JIRA Username should be updated');
-        System.assertEquals('new-token', s.JIRAApiTokenTxt__c, 'JIRA API Token should be updated');
-        System.assertEquals('XYZ', s.JIRAProjectKeyTxt__c, 'JIRA Project Key should be updated');
-        System.assertEquals(true, s.JIraApiTestedBool__c, 'JIRA API should be marked as tested');
-    }
-
-    @isTest
-    static void testSaveJiraEnabledState() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveJiraEnabledState(false);
-        Test.stopTest();
-
-        Delivery_Hub_Settings__c s = Delivery_Hub_Settings__c.getOrgDefaults();
-        System.assertEquals(false, s.JIRAEnabledBool__c, 'JIRA should be disabled');
-    }
-
-    @isTest
     static void testTestOpenAIConnectionMock() {
         Test.setMock(HttpCalloutMock.class, new MockOpenAIResponse());
         
         Test.startTest();
         String result = DeliveryHubSettingsController.testOpenAIConnection('test-api-key');
-        Test.stopTest();
-
-        System.assertNotEquals(null, result, 'Result should not be null');
-    }
-
-    @isTest
-    static void testTestJiraConnectionMock() {
-        Test.setMock(HttpCalloutMock.class, new MockJiraResponse());
-        
-        Test.startTest();
-        String result = DeliveryHubSettingsController.testJiraConnection(
-            'https://example.atlassian.net', 'user@example.com', 'token', 'ABC'
-        );
         Test.stopTest();
 
         System.assertNotEquals(null, result, 'Result should not be null');
@@ -149,20 +100,6 @@ private class DeliveryHubSettingsControllerTest {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
             res.setBody('{"id":"chatcmpl-123"}');
-            return res;
-        }
-    }
-
-    /** @description Mock response for JIRA */
-    public class MockJiraResponse implements HttpCalloutMock {
-        /** * @description Responds to HTTP request
-         * @param req The request
-         * @return HTTPResponse
-         */
-        public HTTPResponse respond(HTTPRequest req) {
-            HttpResponse res = new HttpResponse();
-            res.setStatusCode(200);
-            res.setBody('{"key": "ABC"}');
             return res;
         }
     }

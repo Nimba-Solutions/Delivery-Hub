@@ -1,6 +1,6 @@
 /**
  * @description Controller class for managing Delivery Hub application settings
- * Handles General, AI, and JIRA configuration via Custom Settings.
+ * Handles General and AI configuration via Custom Settings.
  */
 public with sharing class DeliveryHubSettingsController {
 
@@ -34,24 +34,6 @@ public with sharing class DeliveryHubSettingsController {
         
         /** @description OpenAI API tested status */
         @AuraEnabled public Boolean openAiApiTested { get; set; }
-        
-        /** @description JIRA integration enabled setting */
-        @AuraEnabled public Boolean jiraEnabled { get; set; }
-        
-        /** @description JIRA instance URL */
-        @AuraEnabled public String jiraInstanceUrl { get; set; }
-        
-        /** @description JIRA username */
-        @AuraEnabled public String jiraUsername { get; set; }
-        
-        /** @description JIRA API token */
-        @AuraEnabled public String jiraApiToken { get; set; }
-        
-        /** @description JIRA project key */
-        @AuraEnabled public String jiraProjectKey { get; set; }
-        
-        /** @description JIRA API tested status */
-        @AuraEnabled public Boolean jiraApiTested { get; set; }
     }
 
     /**
@@ -77,12 +59,6 @@ public with sharing class DeliveryHubSettingsController {
             dto.openaiApiKey = settings.OpenAIApiKeyTxt__c;
             dto.openaiModel = settings.OpenAIModelTxt__c;
             dto.openAiApiTested = settings.OpenAiApiTestedBool__c;
-            dto.jiraEnabled = settings.JIRAEnabledBool__c;
-            dto.jiraInstanceUrl = settings.JIRAInstanceUrl__c;
-            dto.jiraUsername = settings.JIRAUsernameTxt__c;
-            dto.jiraApiToken = settings.JIRAApiTokenTxt__c;
-            dto.jiraProjectKey = settings.JIRAProjectKeyTxt__c;
-            dto.jiraApiTested = settings.JIraApiTestedBool__c;
         } else {
             // Fresh Install Defaults
             dto.autoCreateRequest = true;
@@ -162,44 +138,6 @@ public with sharing class DeliveryHubSettingsController {
     }
 
     /**
-     * @description Saves JIRA connection settings
-     * @param url JIRA URL
-     * @param username JIRA Username
-     * @param token JIRA API Token
-     * @param projectKey JIRA Project Key
-     * @param isVerified Whether connection is verified
-     */
-    @SuppressWarnings('PMD.ExcessiveParameterList')
-    @AuraEnabled
-    public static void saveJiraSettings(String url, String username, String token, String projectKey, Boolean isVerified) {
-        Delivery_Hub_Settings__c settings = getOrCreateSettings();
-        
-        settings.JIRAInstanceUrl__c = url;
-        settings.JIRAUsernameTxt__c = username;
-        settings.JIRAApiTokenTxt__c = token;
-        settings.JIRAProjectKeyTxt__c = projectKey;
-        settings.JIraApiTestedBool__c = isVerified;
-
-        SObjectAccessDecision decision = Security.stripInaccessible(
-            AccessType.UPSERTABLE, new List<Delivery_Hub_Settings__c>{settings});
-        upsert decision.getRecords();
-    }
-
-    /**
-     * @description Saves just the JIRA Enabled toggle state
-     * @param enabled Whether JIRA is enabled
-     */
-    @AuraEnabled
-    public static void saveJiraEnabledState(Boolean enabled) {
-        Delivery_Hub_Settings__c settings = getOrCreateSettings();
-        settings.JIRAEnabledBool__c = enabled;
-        
-        SObjectAccessDecision decision = Security.stripInaccessible(
-            AccessType.UPSERTABLE, new List<Delivery_Hub_Settings__c>{settings});
-        upsert decision.getRecords();
-    }
-
-    /**
      * @description Tests the provided OpenAI API key.
      * @param apiKey The API key to test
      * @return String result message
@@ -223,53 +161,6 @@ public with sharing class DeliveryHubSettingsController {
             }
         } catch (Exception e) {
             return 'Error: ' + e.getMessage();
-        }
-    }
-
-    /**
-     * @description Tests JIRA connection with provided credentials.
-     * @param jiraUrl JIRA URL
-     * @param username JIRA Username
-     * @param apiToken JIRA API Token
-     * @param projectKey JIRA Project Key
-     * @return String result message
-     */
-    @SuppressWarnings('PMD.ExcessiveParameterList, PMD.ApexSuggestUsingNamedCred')
-    @AuraEnabled
-    public static String testJiraConnection(String jiraUrl, String username, String apiToken, String projectKey) {
-        try {
-            HttpRequest req = new HttpRequest();
-            String endpoint = jiraUrl.removeEnd('/') + '/rest/api/2/project/' + projectKey;
-            
-            req.setEndpoint(endpoint);
-            req.setMethod('GET');
-            
-            String credentials = username + ':' + apiToken;
-            String encodedCredentials = EncodingUtil.base64Encode(Blob.valueOf(credentials));
-            req.setHeader('Authorization', 'Basic ' + encodedCredentials);
-            req.setHeader('Content-Type', 'application/json');
-            req.setTimeout(30000); 
-
-            HttpResponse res = new Http().send(req);
-            
-            if (res.getStatusCode() == 200) {
-                Map<String, Object> projectData = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-                String returnedKey = (String) projectData.get('key');
-                
-                if (returnedKey != null && returnedKey.equalsIgnoreCase(projectKey)) {
-                    return 'Success';
-                } else {
-                    return 'Project key mismatch. Expected: ' + projectKey + ', Found: ' + returnedKey;
-                }
-            } else if (res.getStatusCode() == 401) {
-                return 'Authentication failed. Please check your username and API token.';
-            } else if (res.getStatusCode() == 404) {
-                return 'Project not found. Please check the project key: ' + projectKey;
-            } else {
-                return 'Failed: ' + res.getStatusCode() + ' - ' + res.getStatus();
-            }
-        } catch (Exception e) {
-            return 'Connection error: ' + e.getMessage();
         }
     }
 }

@@ -3,7 +3,6 @@
     <fullName>In_Flight</fullName>
     <columns>NAME</columns>
     <columns>SortOrderNumber__c</columns>
-    <columns>JiraTicketKeyTxt__c</columns>
     <columns>CalculatedETADate__c</columns>
     <columns>StageNamePk__c</columns>
     <columns>BriefDescriptionTxt__c</columns>

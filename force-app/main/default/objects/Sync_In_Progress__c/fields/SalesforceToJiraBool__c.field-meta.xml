@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>SalesforceToJiraBool__c</fullName>
-    <description>This checkbox acts as a flag to indicate that a synchronization process from Salesforce to Jira is in progress.</description>
-    <defaultValue>false</defaultValue>
-    <label>Salesforce to jira</label>
-    <trackTrending>false</trackTrending>
-    <type>Checkbox</type>
-</CustomField>

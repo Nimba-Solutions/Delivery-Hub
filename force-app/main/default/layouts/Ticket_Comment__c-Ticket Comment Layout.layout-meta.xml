@@ -37,17 +37,7 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Readonly</behavior>
-                <field>JiraSyncStatusTxt__c</field>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Readonly</behavior>
                 <field>SyncedDateTime__c</field>
-            </layoutItems>
-        </layoutColumns>
-        <layoutColumns>
-             <layoutItems>
-                <behavior>Readonly</behavior>
-                <field>JiraCommentIdTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsLeftToRight</style>

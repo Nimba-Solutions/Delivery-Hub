@@ -149,8 +149,7 @@ public with sharing class TicketController {
                 AccessType.CREATABLE, links);
             insert decision.getRecords();
         }
-
-        AttachmentSyncService.syncFilesToJira(ticketId, contentDocumentIds);
+        // Removed the AttachmentSyncService Jira callout here so it is strictly local Salesforce logic now
     }
 
     @AuraEnabled(cacheable=true)
@@ -401,10 +400,22 @@ public with sharing class TicketController {
         return suggestions;
     }
 
+    /**
+     * @description Exposes the private parseOpenAIResponse method for test coverage.
+     * @param responseBody The JSON response from OpenAI
+     * @return AISuggestionWrapper The parsed suggestions
+     */
+    @SuppressWarnings('PMD.MethodNamingConventions')
     public static AISuggestionWrapper test_parseOpenAIResponse(String responseBody) {
         return parseOpenAIResponse(responseBody);
     }
 
+    /**
+     * @description Exposes the private extractJsonFromContent method for test coverage.
+     * @param content The content string that may contain JSON
+     * @return String The extracted JSON string
+     */
+    @SuppressWarnings('PMD.MethodNamingConventions')
     public static String test_extractJsonFromContent(String content) {
         return extractJsonFromContent(content);
     }
