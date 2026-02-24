@@ -4,6 +4,7 @@
  */
 public with sharing class DeliveryHubFilesController {
 
+    /** @description Represents a single file attachment linked to a ticket or its related records. */
     public class FileItem {
         @AuraEnabled public String documentId;
         @AuraEnabled public String title;
@@ -14,6 +15,12 @@ public with sharing class DeliveryHubFilesController {
         @AuraEnabled public DateTime lastModifiedDate;
     }
 
+    /**
+     * @description Aggregates all ContentDocumentLinks from the ticket, its comments, and its requests.
+     * Deduplicates by ContentDocumentId so a file shared across multiple records appears once.
+     * @param ticketId The Ticket__c record Id to aggregate files for.
+     * @return List of FileItem wrappers with document metadata.
+     */
     @AuraEnabled(cacheable=true)
     public static List<FileItem> getTicketFiles(Id ticketId) {
         // 1. Collect all entity IDs: ticket + comments + requests

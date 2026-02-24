@@ -4,8 +4,7 @@
  */
 public with sharing class DeliveryHubDashboardController {
 
-    // --- Inner classes for getClientDashboard ---
-
+    /** @description Wrapper for a ticket summary row used in the client dashboard. */
     public class TicketItem {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
@@ -14,6 +13,7 @@ public with sharing class DeliveryHubDashboardController {
         @AuraEnabled public String lastModified;
     }
 
+    /** @description Wrapper for a phase bucket count used in the client dashboard. */
     public class PhaseItem {
         @AuraEnabled public String label;
         @AuraEnabled public Integer count;
@@ -31,7 +31,7 @@ public with sharing class DeliveryHubDashboardController {
         // 1. Ticket Metrics (Active Count)
         AggregateResult[] ticketStats = [
             SELECT Count(Id) total
-            FROM Ticket__c 
+            FROM Ticket__c
             WHERE StageNamePk__c NOT IN ('Closed', 'Done')
         ];
 
@@ -46,15 +46,14 @@ public with sharing class DeliveryHubDashboardController {
 
         // 2. Last Entry Logic (Find most recent activity on tickets)
         List<Ticket__c> lastActivity = [
-            SELECT LastModifiedDate 
-            FROM Ticket__c 
-            WHERE StageNamePk__c != 'Closed' 
-            ORDER BY LastModifiedDate DESC 
+            SELECT LastModifiedDate
+            FROM Ticket__c
+            WHERE StageNamePk__c != 'Closed'
+            ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
 
         if (!lastActivity.isEmpty()) {
-            // Format to EST (America/New_York)
             String formattedDate = lastActivity[0].LastModifiedDate.format('MM/dd h:mm a', UserInfo.getTimeZone().getId());
             metrics.put('lastEntry', formattedDate);
         } else {
@@ -64,8 +63,8 @@ public with sharing class DeliveryHubDashboardController {
         // 3. Sync Health Metrics
         // FIX: Alias 'StatusPk__c' to 'val' to prevent "Invalid field" errors in AggregateResult
         AggregateResult[] syncStats = [
-            SELECT StatusPk__c val, Count(Id) cnt 
-            FROM Sync_Item__c 
+            SELECT StatusPk__c val, Count(Id) cnt
+            FROM Sync_Item__c
             WHERE StatusPk__c IN ('Synced', 'Failed')
             GROUP BY StatusPk__c
         ];
@@ -75,9 +74,9 @@ public with sharing class DeliveryHubDashboardController {
 
         for (AggregateResult ar : syncStats) {
             // Use the alias 'val'
-            String status = (String)ar.get('val'); 
+            String status = (String)ar.get('val');
             Decimal count = (Decimal)ar.get('cnt');
-            
+
             if (status == 'Synced') {
                 success = count;
             } else if (status == 'Failed') {
@@ -99,15 +98,24 @@ public with sharing class DeliveryHubDashboardController {
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getClientDashboard() {
         Map<String, Object> result = new Map<String, Object>();
+        result.put('attentionTickets', fetchAttentionTickets());
+        result.put('phases', fetchPhaseList());
+        result.put('recentTickets', fetchRecentTickets());
+        return result;
+    }
 
-        // --- 1. Tickets needing client attention ---
+    // -------------------------------------------------------------------------
+    // Private helpers — keep getClientDashboard complexity at 1
+    // -------------------------------------------------------------------------
+
+    private static List<TicketItem> fetchAttentionTickets() {
         Set<String> clientStages = new Set<String>{
             'Ready for Client Approval', 'In Client Approval',
             'Ready for Client UAT', 'In Client UAT',
             'Ready for UAT Sign-off'
         };
 
-        List<Ticket__c> attentionRecs = [
+        List<Ticket__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c
             FROM Ticket__c
             WHERE StageNamePk__c IN :clientStages
@@ -116,57 +124,35 @@ public with sharing class DeliveryHubDashboardController {
             LIMIT 20
         ];
 
-        List<TicketItem> attentionList = new List<TicketItem>();
-        for (Ticket__c t : attentionRecs) {
+        List<TicketItem> items = new List<TicketItem>();
+        for (Ticket__c t : recs) {
             TicketItem item = new TicketItem();
             item.id = t.Id;
             item.name = t.Name;
             item.title = t.BriefDescriptionTxt__c;
             item.stage = t.StageNamePk__c;
-            attentionList.add(item);
+            items.add(item);
         }
-        result.put('attentionTickets', attentionList);
+        return items;
+    }
 
-        // --- 2. Phase counts ---
-        Map<String, String> stageToPhase = new Map<String, String>();
-        for (String s : new List<String>{'Backlog', 'Scoping In Progress', 'Clarification Requested (Pre-Dev)', 'Providing Clarification', 'Ready for Sizing', 'Sizing Underway', 'Ready for Prioritization', 'Prioritizing', 'Proposal Requested', 'Drafting Proposal'}) {
-            stageToPhase.put(s, 'Planning');
-        }
-        for (String s : new List<String>{'Ready for Tech Review', 'Tech Reviewing', 'Ready for Client Approval', 'In Client Approval', 'Ready for Final Approval', 'Final Approving'}) {
-            stageToPhase.put(s, 'Approval');
-        }
-        for (String s : new List<String>{'Ready for Development', 'In Development', 'Dev Clarification Requested', 'Providing Dev Clarification', 'Dev Blocked', 'Back For Development'}) {
-            stageToPhase.put(s, 'Development');
-        }
-        for (String s : new List<String>{'Ready for Scratch Test', 'Scratch Testing', 'Ready for QA', 'QA In Progress', 'Ready for Internal UAT', 'Internal UAT'}) {
-            stageToPhase.put(s, 'Testing');
-        }
-        for (String s : new List<String>{'Ready for Client UAT', 'In Client UAT', 'Ready for UAT Sign-off', 'Processing Sign-off'}) {
-            stageToPhase.put(s, 'UAT');
-        }
-        for (String s : new List<String>{'Ready for Merge', 'Merging', 'Ready for Deployment', 'Deploying'}) {
-            stageToPhase.put(s, 'Deployment');
-        }
-
+    private static List<PhaseItem> fetchPhaseList() {
+        Map<String, String> stageToPhase = buildStagePhaseMap();
         Map<String, Integer> phaseCounts = new Map<String, Integer>{
             'Planning' => 0, 'Approval' => 0, 'Development' => 0,
             'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
         };
 
-        AggregateResult[] stageCounts = [
+        for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM Ticket__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled', 'Deployed to Prod')
             WITH USER_MODE
             GROUP BY StageNamePk__c
-        ];
-
-        for (AggregateResult ar : stageCounts) {
-            String stage = (String)ar.get('stage');
-            Integer cnt = ((Decimal)ar.get('cnt')).intValue();
-            String phase = stageToPhase.get(stage);
+        ]) {
+            String phase = stageToPhase.get((String)ar.get('stage'));
             if (phase != null) {
-                phaseCounts.put(phase, phaseCounts.get(phase) + cnt);
+                phaseCounts.put(phase, phaseCounts.get(phase) + ((Decimal)ar.get('cnt')).intValue());
             }
         }
 
@@ -177,10 +163,11 @@ public with sharing class DeliveryHubDashboardController {
             pi.count = phaseCounts.get(ph);
             phaseList.add(pi);
         }
-        result.put('phases', phaseList);
+        return phaseList;
+    }
 
-        // --- 3. Recently updated tickets ---
-        List<Ticket__c> recentRecs = [
+    private static List<TicketItem> fetchRecentTickets() {
+        List<Ticket__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM Ticket__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled')
@@ -189,18 +176,57 @@ public with sharing class DeliveryHubDashboardController {
             LIMIT 5
         ];
 
-        List<TicketItem> recentList = new List<TicketItem>();
-        for (Ticket__c t : recentRecs) {
+        List<TicketItem> items = new List<TicketItem>();
+        for (Ticket__c t : recs) {
             TicketItem item = new TicketItem();
             item.id = t.Id;
             item.name = t.Name;
             item.title = t.BriefDescriptionTxt__c;
             item.stage = t.StageNamePk__c;
             item.lastModified = t.LastModifiedDate.format('MM/dd h:mm a', UserInfo.getTimeZone().getId());
-            recentList.add(item);
+            items.add(item);
         }
-        result.put('recentTickets', recentList);
+        return items;
+    }
 
-        return result;
+    private static Map<String, String> buildStagePhaseMap() {
+        return new Map<String, String>{
+            'Backlog' => 'Planning',
+            'Scoping In Progress' => 'Planning',
+            'Clarification Requested (Pre-Dev)' => 'Planning',
+            'Providing Clarification' => 'Planning',
+            'Ready for Sizing' => 'Planning',
+            'Sizing Underway' => 'Planning',
+            'Ready for Prioritization' => 'Planning',
+            'Prioritizing' => 'Planning',
+            'Proposal Requested' => 'Planning',
+            'Drafting Proposal' => 'Planning',
+            'Ready for Tech Review' => 'Approval',
+            'Tech Reviewing' => 'Approval',
+            'Ready for Client Approval' => 'Approval',
+            'In Client Approval' => 'Approval',
+            'Ready for Final Approval' => 'Approval',
+            'Final Approving' => 'Approval',
+            'Ready for Development' => 'Development',
+            'In Development' => 'Development',
+            'Dev Clarification Requested' => 'Development',
+            'Providing Dev Clarification' => 'Development',
+            'Dev Blocked' => 'Development',
+            'Back For Development' => 'Development',
+            'Ready for Scratch Test' => 'Testing',
+            'Scratch Testing' => 'Testing',
+            'Ready for QA' => 'Testing',
+            'QA In Progress' => 'Testing',
+            'Ready for Internal UAT' => 'Testing',
+            'Internal UAT' => 'Testing',
+            'Ready for Client UAT' => 'UAT',
+            'In Client UAT' => 'UAT',
+            'Ready for UAT Sign-off' => 'UAT',
+            'Processing Sign-off' => 'UAT',
+            'Ready for Merge' => 'Deployment',
+            'Merging' => 'Deployment',
+            'Ready for Deployment' => 'Deployment',
+            'Deploying' => 'Deployment'
+        };
     }
 }
