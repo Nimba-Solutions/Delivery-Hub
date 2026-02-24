@@ -67,7 +67,7 @@ private class DeliveryHubCommentControllerTest {
     }
 
     @IsTest
-    static void testGetCommentFiles_emptyInput() {
+    static void testGetCommentFilesEmptyInput() {
         Test.startTest();
         Map<String, List<String>> result = DeliveryHubCommentController.getCommentFiles(new List<Id>());
         Test.stopTest();

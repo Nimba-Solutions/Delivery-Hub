@@ -2,7 +2,7 @@
 private class DeliveryHubFilesControllerTest {
 
     @IsTest
-    static void testGetTicketFiles_ticketFile() {
+    static void testGetTicketFilesOnTicket() {
         Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Test Ticket');
         insert ticket;
 
@@ -30,7 +30,7 @@ private class DeliveryHubFilesControllerTest {
     }
 
     @IsTest
-    static void testGetTicketFiles_commentFile() {
+    static void testGetTicketFilesOnComment() {
         Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Comment File Ticket');
         insert ticket;
 
@@ -65,7 +65,7 @@ private class DeliveryHubFilesControllerTest {
     }
 
     @IsTest
-    static void testGetTicketFiles_deduplication() {
+    static void testGetTicketFilesDeduplication() {
         Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Dedup Ticket');
         insert ticket;
 
@@ -105,7 +105,7 @@ private class DeliveryHubFilesControllerTest {
     }
 
     @IsTest
-    static void testGetTicketFiles_noFiles() {
+    static void testGetTicketFilesEmpty() {
         Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Empty Ticket');
         insert ticket;
 
