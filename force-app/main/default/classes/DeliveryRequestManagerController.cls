@@ -33,7 +33,22 @@ public without sharing class DeliveryRequestManagerController {
 
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
-        // The background scheduled job (DeliveryHubScheduler) handles this.
-        return 'Status check request has been sent to the background poller (runs every 15 minutes). Please refresh the page shortly.';
+        List<Request__c> reqs = [
+            SELECT Id, StatusPk__c, RemoteTicketIdTxt__c, LastModifiedDate
+            FROM Request__c
+            WHERE Id = :requestId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (reqs.isEmpty()) {
+            return 'Error: Request not found.';
+        }
+        Request__c req = reqs[0];
+        String info = 'Status: ' + req.StatusPk__c;
+        if (String.isNotBlank(req.RemoteTicketIdTxt__c)) {
+            info += ' | Remote Ticket ID: ' + req.RemoteTicketIdTxt__c;
+        }
+        info += ' | Last Updated: ' + req.LastModifiedDate.format();
+        return info;
     }
 }

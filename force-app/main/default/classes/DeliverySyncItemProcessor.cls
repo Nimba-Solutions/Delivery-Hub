@@ -11,7 +11,7 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         // NEW: Added GlobalSourceIdTxt__c to the query for header injection
         List<Sync_Item__c> items = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
-                   RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
+                   RetryCountNumber__c, RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
             FROM Sync_Item__c 
             WHERE StatusPk__c = 'Queued' 
             AND DirectionPk__c = 'Outbound'
@@ -35,6 +35,7 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                 if (String.isBlank(endpointUrl)) {
                     item.StatusPk__c = 'Failed';
                     item.ErrorLogTxt__c = 'Configuration Error: Linked Network Entity is missing Integration Endpoint URL.';
+                    item.RetryCountNumber__c = (item.RetryCountNumber__c == null ? 0 : item.RetryCountNumber__c) + 1;
                 } else {
                     // --- NATIVE HTTP CALLOUT ---
                     String baseUrl = endpointUrl.removeEnd('/');
@@ -106,6 +107,7 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                 // Handle HTTP or System Errors
                 item.StatusPk__c = 'Failed';
                 item.ErrorLogTxt__c = e.getMessage();
+                item.RetryCountNumber__c = (item.RetryCountNumber__c == null ? 0 : item.RetryCountNumber__c) + 1;
                 System.debug(LoggingLevel.ERROR, 'DeliverySyncItemProcessor Error: ' + e.getMessage());
             }
             itemsToUpdate.add(item);
