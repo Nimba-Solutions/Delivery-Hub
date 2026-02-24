@@ -47,7 +47,7 @@
                 <p>The Delivery Hub API and Unified Sync services are currently active.</p>
                 <p>If you are seeing this page, you have reached a system routing endpoint. Please interact with Delivery Hub through the Salesforce UI or the REST API.</p>
                 <div class="footer">
-                    &copy; {!YEAR(TODAY())} Cloud Nimbus LLC. All rights reserved.
+                    &copy; {!YEAR(TODAY())} Nimba Solutions. All rights reserved.
                 </div>
             </div>
         </body>
