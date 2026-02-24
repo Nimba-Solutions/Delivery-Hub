@@ -7,31 +7,6 @@
     <description>This permission set provides access to the &quot;Delivery Hub Admin&quot; Lightning App</description>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Attachment_Sync_Log__c.ErrorDetailsTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Attachment_Sync_Log__c.FilenameTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Attachment_Sync_Log__c.SalesforceContentDocumentIdTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Attachment_Sync_Log__c.SyncDirectionPk__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Attachment_Sync_Log__c.SyncStatusPk__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Network_Entity__c.DefaultHourlyRateCurrency__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -437,15 +412,6 @@
     </fieldPermissions>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub Admin App</label>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
-        <object>Attachment_Sync_Log__c</object>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>true</allowDelete>
