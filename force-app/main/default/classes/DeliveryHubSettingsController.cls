@@ -35,6 +35,9 @@ public with sharing class DeliveryHubSettingsController {
         
         /** @description OpenAI API tested status */
         @AuraEnabled public Boolean openAiApiTested { get; set; }
+
+        /** @description Slack Incoming Webhook URL */
+        @AuraEnabled public String slackWebhookUrl { get; set; }
     }
 
     /**
@@ -60,6 +63,7 @@ public with sharing class DeliveryHubSettingsController {
             dto.openaiApiKey = settings.OpenAIApiKeyTxt__c;
             dto.openaiModel = settings.OpenAIModelTxt__c;
             dto.openAiApiTested = settings.OpenAiApiTestedBool__c;
+            dto.slackWebhookUrl = settings.SlackWebhookUrl__c;
         } else {
             // Fresh Install Defaults
             dto.autoCreateRequest = true;
@@ -133,6 +137,19 @@ public with sharing class DeliveryHubSettingsController {
         settings.OpenAIModelTxt__c = model;
         settings.OpenAiApiTestedBool__c = tested;
 
+        SObjectAccessDecision decision = Security.stripInaccessible(
+            AccessType.UPSERTABLE, new List<Delivery_Hub_Settings__c>{settings});
+        upsert decision.getRecords();
+    }
+
+    /**
+     * @description Saves the Slack Incoming Webhook URL to Custom Settings.
+     * @param webhookUrl The Slack webhook URL (or blank to clear)
+     */
+    @AuraEnabled
+    public static void saveSlackWebhookUrl(String webhookUrl) {
+        Delivery_Hub_Settings__c settings = getOrCreateSettings();
+        settings.SlackWebhookUrl__c = webhookUrl;
         SObjectAccessDecision decision = Security.stripInaccessible(
             AccessType.UPSERTABLE, new List<Delivery_Hub_Settings__c>{settings});
         upsert decision.getRecords();

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SlackWebhookUrl__c</fullName>
+    <description>Incoming webhook URL for posting stage-change notifications to a Slack channel. Leave blank to disable Slack notifications.</description>
+    <inlineHelpText>Paste the Incoming Webhook URL from your Slack App configuration (e.g. https://hooks.slack.com/services/...).</inlineHelpText>
+    <label>Slack Webhook URL</label>
+    <length>500</length>
+    <type>Text</type>
+</CustomField>

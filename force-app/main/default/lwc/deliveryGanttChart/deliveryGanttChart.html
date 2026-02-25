@@ -1,0 +1,93 @@
+<template>
+    <div class="gantt-card">
+
+        <!-- Header -->
+        <div class="gantt-header">
+            <div class="gantt-header-left">
+                <lightning-icon icon-name="utility:date_time" alternative-text="Timeline" size="small" class="gantt-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="gantt-title">Delivery Timeline</h2>
+                    <p class="gantt-subtitle">Active tickets with projected UAT dates &bull; {windowLabel}</p>
+                </div>
+            </div>
+            <div class="gantt-header-right">
+                <lightning-button-group>
+                    <lightning-button label="30d" variant={btn30Variant} onclick={handleWindow30}></lightning-button>
+                    <lightning-button label="60d" variant={btn60Variant} onclick={handleWindow60}></lightning-button>
+                    <lightning-button label="90d" variant={btn90Variant} onclick={handleWindow90}></lightning-button>
+                </lightning-button-group>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="gantt-loading">
+                <lightning-spinner alternative-text="Loading timeline..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={hasError}>
+            <div class="gantt-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <!-- Empty state -->
+        <template lwc:if={isEmpty}>
+            <div class="gantt-empty">
+                <lightning-icon icon-name="utility:date_time" size="medium" class="gantt-empty-icon"></lightning-icon>
+                <p>No active tickets with a Projected UAT date found.</p>
+                <p class="gantt-empty-sub">Set a Projected UAT Ready Date on your tickets to see them here.</p>
+            </div>
+        </template>
+
+        <!-- Chart -->
+        <template lwc:if={hasRows}>
+            <div class="gantt-body">
+
+                <!-- Date axis labels -->
+                <div class="gantt-axis">
+                    <div class="gantt-label-col"></div>
+                    <div class="gantt-track-col">
+                        <div class="gantt-date-row">
+                            <template for:each={dateLabels} for:item="dl">
+                                <span key={dl.key} class="gantt-date-label" style={dl.style}>{dl.label}</span>
+                            </template>
+                        </div>
+                        <!-- Today line -->
+                        <div class="gantt-today-line" style={todayLineStyle} title="Today"></div>
+                    </div>
+                </div>
+
+                <!-- Ticket rows -->
+                <template for:each={ganttRows} for:item="row">
+                    <div key={row.ticketId} class="gantt-row">
+                        <div class="gantt-label-col">
+                            <a href={row.recordUrl} target="_blank" class="gantt-ticket-name" title={row.description}>
+                                {row.name}
+                            </a>
+                            <span class={row.stageBadgeClass}>{row.stage}</span>
+                        </div>
+                        <div class="gantt-track-col">
+                            <div class="gantt-track">
+                                <div class={row.barClass} style={row.barStyle} title={row.barTooltip}></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+
+            <!-- Legend -->
+            <div class="gantt-legend">
+                <span class="legend-item"><span class="legend-dot legend-dot--normal"></span>On track</span>
+                <span class="legend-item"><span class="legend-dot legend-dot--warning"></span>Due &lt; 7 days</span>
+                <span class="legend-item"><span class="legend-dot legend-dot--overdue"></span>Overdue</span>
+                <span class="legend-item"><span class="legend-dot legend-dot--future"></span>Starts after window</span>
+            </div>
+        </template>
+
+    </div>
+</template>

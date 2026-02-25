@@ -1,7 +1,7 @@
 /**
  * @description Test class for DeliveryAiController.
  *              Covers draftStatusUpdate (7 cases), suggestAcceptanceCriteria (2 cases),
- *              and draftBoardSummary (2 cases).
+ *              draftBoardSummary (2 cases), and draftReleaseNotes (2 cases).
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -25,8 +25,7 @@ private class DeliveryAiControllerTest {
             BriefDescriptionTxt__c = 'Add dark mode to the dashboard',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
-            EstimatedHoursNumber__c = 8,
-            TotalLoggedHoursNumber__c = 3
+            EstimatedHoursNumber__c = 8
         );
         insert t;
         return t;
@@ -259,6 +258,48 @@ private class DeliveryAiControllerTest {
         Test.stopTest();
 
         System.assert(threw, 'Should throw when no active tickets exist.');
+    }
+
+    /**
+     * @description draftReleaseNotes: tickets completed in last 30 days — returns notes.
+     */
+    @IsTest
+    static void testDraftReleaseNotesSuccess() {
+        createSettings(true, 'sk-test-key-123');
+        Ticket__c ticket = new Ticket__c(
+            BriefDescriptionTxt__c = 'Export tickets to CSV',
+            StageNamePk__c = 'Done',
+            PriorityPk__c = 'High'
+        );
+        insert ticket;
+        String body = '{"choices":[{"message":{"content":"This release includes the following improvements:\\n- Export to CSV is now available."}}]}';
+        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
+
+        Test.startTest();
+        String result = DeliveryAiController.draftReleaseNotes();
+        Test.stopTest();
+
+        System.assertNotEquals(null, result, 'Result should not be null.');
+        System.assert(result.length() > 5, 'Result should contain release notes text.');
+    }
+
+    /**
+     * @description draftReleaseNotes: no recently completed tickets — should throw.
+     */
+    @IsTest
+    static void testDraftReleaseNotesNoTickets() {
+        createSettings(true, 'sk-test-key-123');
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryAiController.draftReleaseNotes();
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw, 'Should throw when no recently completed tickets exist.');
     }
 
     // ── Mock ─────────────────────────────────────────────────────────────────

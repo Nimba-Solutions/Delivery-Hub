@@ -5,11 +5,16 @@ import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 import saveGeneralSettings from '@salesforce/apex/DeliveryHubSettingsController.saveGeneralSettings';
+import saveSlackWebhookUrl from '@salesforce/apex/DeliveryHubSettingsController.saveSlackWebhookUrl';
+import testWebhook from '@salesforce/apex/DeliverySlackService.testWebhook';
 
 export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track notifications = false;
     @track autoSyncNetworkEntity = true; // Default to true
-    
+    @track slackWebhookUrl = '';
+    @track slackTestResult = '';
+    @track isSlackTesting = false;
+
     isLoading = true;
 
     // 1. REPLACED @wire WITH IMPERATIVE CALL
@@ -24,11 +29,12 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
             
             if (data) {
                 this.notifications = data.enableNotifications || false;
-                
+
                 // Explicit check for undefined/null to respect 'false' values
                 if (data.autoSyncNetworkEntity !== undefined && data.autoSyncNetworkEntity !== null) {
                     this.autoSyncNetworkEntity = data.autoSyncNetworkEntity;
                 }
+                this.slackWebhookUrl = data.slackWebhookUrl || '';
             }
         } catch (error) {
             this.showToast('Error Loading Settings', error.body ? error.body.message : error.message, 'error');
@@ -64,6 +70,45 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
             this.showToast('Error Saving Settings', error.body ? error.body.message : error.message, 'error');
             // Revert toggle on error if needed
         }
+    }
+
+    // ── Slack handlers ─────────────────────────────────────────────────────
+
+    handleSlackUrlChange(event) {
+        this.slackWebhookUrl = event.target.value;
+        this.slackTestResult = '';
+    }
+
+    async handleSlackUrlSave() {
+        try {
+            await saveSlackWebhookUrl({ webhookUrl: this.slackWebhookUrl });
+        } catch (error) {
+            this.showToast('Error Saving Slack URL', error.body ? error.body.message : error.message, 'error');
+        }
+    }
+
+    async handleSlackTest() {
+        this.isSlackTesting = true;
+        this.slackTestResult = '';
+        try {
+            const result = await testWebhook({ webhookUrl: this.slackWebhookUrl });
+            this.slackTestResult = result === 'Success'
+                ? 'Connected! Check your Slack channel for a confirmation message.'
+                : result;
+        } catch (error) {
+            this.slackTestResult = error.body ? error.body.message : error.message;
+        } finally {
+            this.isSlackTesting = false;
+        }
+    }
+
+    get slackTestLabel() {
+        return this.isSlackTesting ? 'Testing...' : 'Test';
+    }
+
+    get slackResultClass() {
+        const isSuccess = this.slackTestResult && this.slackTestResult.startsWith('Connected');
+        return isSuccess ? 'slack-result slack-result--success' : 'slack-result slack-result--error';
     }
 
     showToast(title, message, variant) {

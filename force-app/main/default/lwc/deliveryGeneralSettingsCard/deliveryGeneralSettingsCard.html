@@ -63,5 +63,45 @@
             </div>
 
         </div>
+
+            <div class="section-divider"></div>
+
+            <div class="form-section">
+                <div class="slack-group">
+                    <div class="toggle-label-wrapper" style="margin-bottom: 0.5rem;">
+                        <lightning-icon icon-name="utility:chat" alternative-text="Slack" size="x-small"></lightning-icon>
+                        <label class="toggle-label">Slack Notifications</label>
+                    </div>
+                    <p class="toggle-help" style="margin-bottom: 0.75rem;">
+                        Post stage-change alerts to a Slack channel using an Incoming Webhook.
+                        Leave blank to disable.
+                    </p>
+                    <div class="slack-input-row">
+                        <lightning-input
+                            type="text"
+                            label="Webhook URL"
+                            placeholder="https://hooks.slack.com/services/..."
+                            value={slackWebhookUrl}
+                            onchange={handleSlackUrlChange}
+                            onblur={handleSlackUrlSave}
+                            class="slack-url-input">
+                        </lightning-input>
+                        <lightning-button
+                            label={slackTestLabel}
+                            variant="neutral"
+                            onclick={handleSlackTest}
+                            disabled={isSlackTesting}
+                            class="slack-test-btn">
+                        </lightning-button>
+                    </div>
+                    <template lwc:if={slackTestResult}>
+                        <div class={slackResultClass}>
+                            {slackTestResult}
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+        </div>
     </div>
 </template>

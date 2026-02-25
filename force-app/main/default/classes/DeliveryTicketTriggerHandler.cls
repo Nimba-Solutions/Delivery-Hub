@@ -118,6 +118,7 @@ public without sharing class DeliveryTicketTriggerHandler {
      * @description Publishes a Delivery_Ticket_Change__e Platform Event for every ticket
      *              whose StageNamePk__c changed in this transaction, enabling real-time
      *              board refresh via the EMP API without polling.
+     *              Also schedules an async Slack notification for the same changes.
      * @param newRows List of updated Ticket__c records
      * @param oldMap  Map of pre-update Ticket__c records
      */
@@ -126,6 +127,8 @@ public without sharing class DeliveryTicketTriggerHandler {
         Map<Id, Ticket__c> oldMap
     ) {
         List<Delivery_Ticket_Change__e> events = new List<Delivery_Ticket_Change__e>();
+        Map<String, String> slackChanges = new Map<String, String>();
+
         for (Ticket__c t : newRows) {
             Ticket__c old = oldMap.get(t.Id);
             if (old != null && t.StageNamePk__c != old.StageNamePk__c) {
@@ -134,10 +137,16 @@ public without sharing class DeliveryTicketTriggerHandler {
                     ChangeType__c = 'stage_change',
                     NewStage__c   = t.StageNamePk__c
                 ));
+                slackChanges.put(t.Name, t.StageNamePk__c);
             }
         }
+
         if (!events.isEmpty()) {
             EventBus.publish(events);
+        }
+
+        if (!slackChanges.isEmpty()) {
+            DeliverySlackService.postStageChanges(slackChanges);
         }
     }
 

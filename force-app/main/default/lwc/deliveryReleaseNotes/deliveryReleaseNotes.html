@@ -1,0 +1,55 @@
+<template>
+    <div class="rn-card">
+        <div class="rn-header">
+            <div class="rn-header-left">
+                <lightning-icon icon-name="utility:note" alternative-text="Release Notes" size="small" class="rn-icon"></lightning-icon>
+                <div class="rn-header-text">
+                    <h2 class="rn-title">AI Release Notes</h2>
+                    <p class="rn-subtitle">Generate a client-facing changelog from recently completed tickets</p>
+                </div>
+            </div>
+            <lightning-button
+                label={draftLabel}
+                variant="brand"
+                icon-name="utility:einstein"
+                onclick={handleDraft}
+                disabled={isLoading}>
+            </lightning-button>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="rn-loading">
+                <lightning-spinner alternative-text="Generating release notes..." size="small"></lightning-spinner>
+                <span class="rn-loading-text">Drafting release notes with AI...</span>
+            </div>
+        </template>
+
+        <template lwc:if={errorMessage}>
+            <div class="rn-error" role="alert">
+                <lightning-icon icon-name="utility:error" size="x-small" class="rn-error-icon"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={releaseNotes}>
+            <div class="rn-output">
+                <div class="rn-output-header">
+                    <span class="rn-output-label">Last 30 Days &mdash; Completed Tickets</span>
+                    <lightning-button
+                        label={copyLabel}
+                        variant="neutral"
+                        icon-name="utility:copy"
+                        onclick={handleCopy}
+                        class="rn-copy-btn">
+                    </lightning-button>
+                </div>
+                <textarea
+                    class="rn-textarea"
+                    value={releaseNotes}
+                    onchange={handleTextChange}
+                    rows="14">
+                </textarea>
+            </div>
+        </template>
+    </div>
+</template>
