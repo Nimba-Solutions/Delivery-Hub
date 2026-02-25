@@ -18,39 +18,18 @@
     <columns>
         <field>TotalLoggedHoursNumber__c</field>
     </columns>
-    <columns>
-        <field>HoursVarianceNumber__c</field>
-    </columns>
-    <columns>
-        <field>CalculatedETADate__c</field>
-    </columns>
-    <description>Tickets currently in active delivery stages. Client-friendly view showing progress, hours used, and estimated completion date.</description>
+    <description>Successfully delivered tickets. Clients use this to review completed work; admins use it to report on throughput.</description>
     <filter>
-        <booleanFilter>1 AND 2 AND 3</booleanFilter>
         <criterias>
             <column>StageNamePk__c</column>
             <filterType>fieldValue</filterType>
             <isFixed>false</isFixed>
-            <operator>notEqual</operator>
+            <operator>equals</operator>
             <value>Done</value>
-        </criterias>
-        <criterias>
-            <column>StageNamePk__c</column>
-            <filterType>fieldValue</filterType>
-            <isFixed>false</isFixed>
-            <operator>notEqual</operator>
-            <value>Cancelled</value>
-        </criterias>
-        <criterias>
-            <column>StageNamePk__c</column>
-            <filterType>fieldValue</filterType>
-            <isFixed>false</isFixed>
-            <operator>notEqual</operator>
-            <value>Backlog</value>
         </criterias>
     </filter>
     <format>Tabular</format>
-    <name>Active Deliveries</name>
+    <name>Completed Deliveries</name>
     <reportType>Ticket__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>

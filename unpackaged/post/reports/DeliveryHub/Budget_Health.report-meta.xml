@@ -23,7 +23,6 @@
     </columns>
     <description>Budget usage for active tickets. Shows estimated vs logged hours and variance for admin visibility into budget overruns before they escalate.</description>
     <filter>
-        <booleanFilter>1 AND 2</booleanFilter>
         <criterias>
             <column>StageNamePk__c</column>
             <filterType>fieldValue</filterType>
@@ -38,6 +37,7 @@
             <operator>notEqual</operator>
             <value>Cancelled</value>
         </criterias>
+        <booleanFilter>1 AND 2</booleanFilter>
     </filter>
     <format>Tabular</format>
     <name>Budget Health — Active Tickets</name>
