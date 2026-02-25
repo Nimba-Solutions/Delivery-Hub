@@ -13,7 +13,6 @@ public with sharing class DeliveryAiController {
      * @return String The drafted status update text.
      */
     @AuraEnabled
-    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
     public static String draftStatusUpdate(Id ticketId) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
 
@@ -47,11 +46,25 @@ public with sharing class DeliveryAiController {
             : 'gpt-3.5-turbo';
 
         String prompt = buildPrompt(tickets[0]);
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, prompt);
+    }
 
+    // ── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * @description Sends a prompt to the OpenAI chat completions endpoint and returns
+     *              the text content of the first choice.
+     * @param apiKey  The OpenAI API key (Bearer token).
+     * @param model   The OpenAI model identifier (e.g. gpt-3.5-turbo).
+     * @param prompt  The user message to send.
+     * @return String The trimmed response text.
+     */
+    @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
+    private static String callOpenAi(String apiKey, String model, String prompt) {
         HttpRequest req = new HttpRequest();
         req.setEndpoint('https://api.openai.com/v1/chat/completions');
         req.setMethod('POST');
-        req.setHeader('Authorization', 'Bearer ' + settings.OpenAIApiKeyTxt__c);
+        req.setHeader('Authorization', 'Bearer ' + apiKey);
         req.setHeader('Content-Type', 'application/json');
         req.setBody(JSON.serialize(new Map<String, Object>{
             'model'       => model,
@@ -84,8 +97,6 @@ public with sharing class DeliveryAiController {
             (Map<String, Object>) ((Map<String, Object>) choices[0]).get('message');
         return ((String) msg.get('content')).trim();
     }
-
-    // ── Private helpers ──────────────────────────────────────────────────────
 
     private static String buildPrompt(Ticket__c t) {
         String brief = String.isNotBlank(t.BriefDescriptionTxt__c)

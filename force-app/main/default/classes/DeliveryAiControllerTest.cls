@@ -34,8 +34,8 @@ private class DeliveryAiControllerTest {
     }
 
     private static String successBody() {
-        return '{"choices":[{"message":{"content":"Work on this ticket is progressing well. '
-             + 'The team is currently in active development and on track for UAT next week."}}]}';
+        return '{\"choices\":[{\"message\":{\"content\":\"Work on this ticket is progressing well. '
+             + 'The team is currently in active development and on track for UAT next week.\"}}]}';
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ private class DeliveryAiControllerTest {
      *              OpenAI returns a valid choice. Should return the draft text.
      */
     @IsTest
-    static void testDraftStatusUpdate_Success() {
+    static void testDraftStatusUpdateSuccess() {
         createSettings(true, 'sk-test-key-123');
         Ticket__c ticket = createTicket();
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', successBody()));
@@ -62,7 +62,7 @@ private class DeliveryAiControllerTest {
      * @description AI suggestions toggle is disabled — should throw before making any callout.
      */
     @IsTest
-    static void testDraftStatusUpdate_AiDisabled() {
+    static void testDraftStatusUpdateAiDisabled() {
         createSettings(false, 'sk-test-key-123');
         Ticket__c ticket = createTicket();
 
@@ -82,7 +82,7 @@ private class DeliveryAiControllerTest {
      * @description AI is enabled but the API key is blank — should throw before callout.
      */
     @IsTest
-    static void testDraftStatusUpdate_NoApiKey() {
+    static void testDraftStatusUpdateNoApiKey() {
         createSettings(true, '');
         Ticket__c ticket = createTicket();
 
@@ -103,7 +103,7 @@ private class DeliveryAiControllerTest {
      *              a record with null fields, so AI is treated as disabled.
      */
     @IsTest
-    static void testDraftStatusUpdate_NoSettingsRecord() {
+    static void testDraftStatusUpdateNoSettingsRecord() {
         Ticket__c ticket = createTicket();
 
         Boolean threw = false;
@@ -123,7 +123,7 @@ private class DeliveryAiControllerTest {
      *              the record no longer exists. Controller should throw 'Ticket not found.'
      */
     @IsTest
-    static void testDraftStatusUpdate_TicketNotFound() {
+    static void testDraftStatusUpdateTicketNotFound() {
         createSettings(true, 'sk-test-key-123');
         Ticket__c ticket = createTicket();
         Id ticketId = ticket.Id;
@@ -146,11 +146,11 @@ private class DeliveryAiControllerTest {
      *              with an error message referencing the status code.
      */
     @IsTest
-    static void testDraftStatusUpdate_ApiError() {
+    static void testDraftStatusUpdateApiError() {
         createSettings(true, 'sk-test-key-123');
         Ticket__c ticket = createTicket();
         Test.setMock(HttpCalloutMock.class,
-            new OpenAIMock(401, 'Unauthorized', '{"error":{"message":"Invalid API key."}}'));
+            new OpenAIMock(401, 'Unauthorized', '{\"error\":{\"message\":\"Invalid API key.\"}}'));
 
         Boolean threw = false;
         Test.startTest();
@@ -168,10 +168,10 @@ private class DeliveryAiControllerTest {
      * @description OpenAI returns 200 but with an empty choices array — should throw.
      */
     @IsTest
-    static void testDraftStatusUpdate_EmptyChoices() {
+    static void testDraftStatusUpdateEmptyChoices() {
         createSettings(true, 'sk-test-key-123');
         Ticket__c ticket = createTicket();
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', '{"choices":[]}'));
+        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', '{\"choices\":[]}'));
 
         Boolean threw = false;
         Test.startTest();
@@ -192,12 +192,24 @@ private class DeliveryAiControllerTest {
         private String status;
         private String body;
 
+        /**
+         * @description Constructs a mock HTTP response for OpenAI callout tests.
+         * @param statusCode The HTTP status code to return.
+         * @param status     The HTTP status string (e.g. 'OK', 'Unauthorized').
+         * @param body       The response body JSON string.
+         */
         public OpenAIMock(Integer statusCode, String status, String body) {
             this.statusCode = statusCode;
             this.status     = status;
             this.body       = body;
         }
 
+        /**
+         * @description Returns a pre-configured HttpResponse for any inbound request,
+         *              asserting that the request targets the OpenAI API via POST.
+         * @param req The outbound HttpRequest being intercepted.
+         * @return HttpResponse The configured mock response.
+         */
         public HttpResponse respond(HttpRequest req) {
             System.assertEquals('POST', req.getMethod(), 'AI callout should be a POST.');
             System.assert(req.getEndpoint().contains('openai.com'), 'Should target the OpenAI API.');
