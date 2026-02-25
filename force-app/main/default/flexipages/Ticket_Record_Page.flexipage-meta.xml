@@ -175,6 +175,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryAiDraftPanel</componentName>
+                <identifier>c_deliveryAiDraftPanel</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryTicketChat</componentName>
                 <identifier>c_deliveryTicketChat</identifier>
             </componentInstance>

@@ -1,0 +1,75 @@
+<template>
+    <lightning-card icon-name="utility:einstein" class="ai-card">
+        <span slot="title">AI Client Update</span>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <!-- Draft button row -->
+            <template if:false={hasDraft}>
+                <div class="ai-cta">
+                    <p class="ai-cta-desc">
+                        Generate a professional status update ready to share with your client.
+                    </p>
+                    <lightning-button
+                        variant="brand"
+                        icon-name="utility:einstein"
+                        label="Draft Client Update"
+                        onclick={handleDraft}
+                        disabled={isLoading}>
+                    </lightning-button>
+                </div>
+            </template>
+
+            <!-- Loading -->
+            <template if:true={isLoading}>
+                <div class="ai-loading">
+                    <lightning-spinner alternative-text="Generating..." size="small"></lightning-spinner>
+                    <span class="ai-loading-text">Drafting your update&hellip;</span>
+                </div>
+            </template>
+
+            <!-- Error -->
+            <template if:true={hasError}>
+                <div class="ai-error">
+                    <lightning-icon icon-name="utility:error" size="x-small" class="ai-error-icon"></lightning-icon>
+                    <span class="ai-error-text">{errorMessage}</span>
+                </div>
+                <div class="slds-m-top_small">
+                    <lightning-button
+                        label="Try Again"
+                        size="small"
+                        onclick={handleDraft}>
+                    </lightning-button>
+                </div>
+            </template>
+
+            <!-- Result -->
+            <template if:true={hasDraft}>
+                <lightning-textarea
+                    label="Drafted Update"
+                    value={draft}
+                    onchange={handleDraftChange}
+                    class="ai-textarea"
+                    max-length="2000">
+                </lightning-textarea>
+
+                <div class="ai-actions slds-m-top_small">
+                    <lightning-button
+                        label={copyLabel}
+                        icon-name={copyIcon}
+                        onclick={handleCopy}
+                        variant="neutral">
+                    </lightning-button>
+                    <lightning-button
+                        label="Regenerate"
+                        icon-name="utility:refresh"
+                        onclick={handleDraft}
+                        disabled={isLoading}
+                        variant="neutral">
+                    </lightning-button>
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>
