@@ -15,41 +15,69 @@ import REQ_TICKET_ID from '@salesforce/schema/Request__c.TicketId__c';
 import REQ_PREAPPROVED from '@salesforce/schema/Request__c.PreApprovedHoursNumber__c';
 import REQ_STATUS from '@salesforce/schema/Request__c.StatusPk__c';
 
+import suggestAcceptanceCriteria from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryAiController.suggestAcceptanceCriteria';
+
 // Load the Ticket fields so we have the data ready to copy
 const FIELDS = [TICKET_HOURS];
 
-export default class TicketRefiner extends NavigationMixin(LightningElement) {
+export default class DeliveryTicketRefiner extends NavigationMixin(LightningElement) {
     @api recordId;
     @track isProcessing = false;
     @track isRequestCreated = false;
     @track newRequestId;
+
+    // AI suggestion state
+    @track isSuggesting = false;
+    @track suggestedCriteria = '';
+    @track criteriaError = '';
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
     ticket;
 
     // Called when the "Save Definition" button finishes
     handleTicketSave() {
-        this.dispatchEvent(new ShowToastEvent({ 
-            title: 'Success', 
-            message: 'Ticket Definition Updated', 
-            variant: 'success' 
+        this.dispatchEvent(new ShowToastEvent({
+            title: 'Success',
+            message: 'Ticket Definition Updated',
+            variant: 'success'
         }));
+    }
+
+    handleSuggestCriteria() {
+        this.isSuggesting = true;
+        this.suggestedCriteria = '';
+        this.criteriaError = '';
+        suggestAcceptanceCriteria({ ticketId: this.recordId })
+            .then(result => { this.suggestedCriteria = result; })
+            .catch(error => {
+                this.criteriaError = error.body ? error.body.message : error.message;
+            })
+            .finally(() => { this.isSuggesting = false; });
+    }
+
+    handleApplyCriteria() {
+        const field = this.template.querySelector(
+            'lightning-input-field[field-name="AcceptanceCriteriaTxt__c"]'
+        );
+        if (field) {
+            field.value = this.suggestedCriteria;
+        }
+        this.suggestedCriteria = '';
+        this.criteriaError = '';
     }
 
     // Called when "Create Vendor Request" is clicked
     handleCreateRequest() {
         this.isProcessing = true;
         const fields = {};
-        
+
         // 1. Link to Parent Ticket
         fields[REQ_TICKET_ID.fieldApiName] = this.recordId;
-        
-        // 2. Set Status (Ensure 'Draft' exists in your Request Status Picklist)
-        fields[REQ_STATUS.fieldApiName] = 'Draft'; 
 
-        // 3. COPY THE HOURS (The Broker Logic)
-        // We take the hours the Client approved and put them on the Vendor Request.
-        // You can edit this on the Request later if you want to keep a "Spread".
+        // 2. Set Status
+        fields[REQ_STATUS.fieldApiName] = 'Draft';
+
+        // 3. Copy the client-approved hours onto the vendor request
         const clientHours = getFieldValue(this.ticket.data, TICKET_HOURS);
         fields[REQ_PREAPPROVED.fieldApiName] = clientHours;
 
@@ -59,17 +87,17 @@ export default class TicketRefiner extends NavigationMixin(LightningElement) {
             .then(request => {
                 this.newRequestId = request.id;
                 this.isRequestCreated = true;
-                this.dispatchEvent(new ShowToastEvent({ 
-                    title: 'Success', 
-                    message: 'Vendor Request Created', 
-                    variant: 'success' 
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Success',
+                    message: 'Vendor Request Created',
+                    variant: 'success'
                 }));
             })
             .catch(error => {
-                this.dispatchEvent(new ShowToastEvent({ 
-                    title: 'Error creating request', 
-                    message: error.body ? error.body.message : error.message, 
-                    variant: 'error' 
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Error creating request',
+                    message: error.body ? error.body.message : error.message,
+                    variant: 'error'
                 }));
             })
             .finally(() => {

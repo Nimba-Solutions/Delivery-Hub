@@ -1,8 +1,7 @@
 /**
  * @description Test class for DeliveryAiController.
- *              Covers all branches of draftStatusUpdate: success, AI disabled,
- *              missing API key, no settings record, ticket not found, API error,
- *              and empty choices response.
+ *              Covers draftStatusUpdate (7 cases), suggestAcceptanceCriteria (2 cases),
+ *              and draftBoardSummary (2 cases).
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -183,6 +182,83 @@ private class DeliveryAiControllerTest {
         Test.stopTest();
 
         System.assert(threw, 'Should throw AuraHandledException when choices array is empty.');
+    }
+
+    /**
+     * @description suggestAcceptanceCriteria: AI enabled, valid ticket — returns suggestion.
+     */
+    @IsTest
+    static void testSuggestAcceptanceCriteriaSuccess() {
+        createSettings(true, 'sk-test-key-123');
+        Ticket__c ticket = createTicket();
+        String body = '{"choices":[{"message":{"content":"- The dashboard supports dark mode\\n- Toggle persists on refresh"}}]}';
+        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
+
+        Test.startTest();
+        String result = DeliveryAiController.suggestAcceptanceCriteria(ticket.Id);
+        Test.stopTest();
+
+        System.assertNotEquals(null, result, 'Result should not be null.');
+        System.assert(result.length() > 5, 'Result should contain criteria text.');
+    }
+
+    /**
+     * @description suggestAcceptanceCriteria: ticket deleted — should throw.
+     */
+    @IsTest
+    static void testSuggestAcceptanceCriteriaTicketNotFound() {
+        createSettings(true, 'sk-test-key-123');
+        Ticket__c ticket = createTicket();
+        Id ticketId = ticket.Id;
+        delete ticket;
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryAiController.suggestAcceptanceCriteria(ticketId);
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw, 'Should throw when ticket does not exist.');
+    }
+
+    /**
+     * @description draftBoardSummary: active tickets exist — returns summary text.
+     */
+    @IsTest
+    static void testDraftBoardSummarySuccess() {
+        createSettings(true, 'sk-test-key-123');
+        createTicket();
+        String body = '{"choices":[{"message":{"content":"The team is making great progress this week."}}]}';
+        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
+
+        Test.startTest();
+        String result = DeliveryAiController.draftBoardSummary();
+        Test.stopTest();
+
+        System.assertNotEquals(null, result, 'Result should not be null.');
+        System.assert(result.length() > 5, 'Result should contain summary text.');
+    }
+
+    /**
+     * @description draftBoardSummary: no active tickets — should throw.
+     */
+    @IsTest
+    static void testDraftBoardSummaryNoTickets() {
+        createSettings(true, 'sk-test-key-123');
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryAiController.draftBoardSummary();
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw, 'Should throw when no active tickets exist.');
     }
 
     // ── Mock ─────────────────────────────────────────────────────────────────

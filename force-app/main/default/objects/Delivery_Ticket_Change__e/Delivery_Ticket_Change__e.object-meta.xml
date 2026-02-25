@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Published whenever a Ticket__c record changes stage, enabling real-time Kanban board refresh without polling.</description>
+    <eventType>HighVolume</eventType>
+    <label>Delivery Ticket Change</label>
+    <pluralLabel>Delivery Ticket Changes</pluralLabel>
+</CustomObject>

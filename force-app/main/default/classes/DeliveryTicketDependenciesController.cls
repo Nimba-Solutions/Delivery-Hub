@@ -35,7 +35,7 @@ public with sharing class DeliveryTicketDependenciesController {
                    TypePk__c
             FROM Ticket_Dependency__c
             WHERE Blocking_Ticket__c = :ticketId
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY Blocked_Ticket__r.Name ASC
             LIMIT 20
         ]) {
@@ -58,7 +58,7 @@ public with sharing class DeliveryTicketDependenciesController {
                    TypePk__c
             FROM Ticket_Dependency__c
             WHERE Blocked_Ticket__c = :ticketId
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY Blocking_Ticket__r.Name ASC
             LIMIT 20
         ]) {

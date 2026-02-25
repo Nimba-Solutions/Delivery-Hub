@@ -1,31 +1,23 @@
 /**
- * @description Handles AI-powered features for Delivery Hub, including drafting
- *              client-facing status updates via the OpenAI API.
+ * @description Handles AI-powered features for Delivery Hub:
+ *              - draftStatusUpdate: drafts a client-facing status update for a single ticket
+ *              - suggestAcceptanceCriteria: proposes testable acceptance criteria for a ticket
+ *              - draftBoardSummary: generates a weekly status summary across all active tickets
  * @author Cloud Nimbus LLC
  */
+// Complexity is distributed across many small, focused helper methods — aggregate is expected.
+@SuppressWarnings('PMD.CyclomaticComplexity')
 public with sharing class DeliveryAiController {
 
     /**
      * @description Generates a professional client-facing status update for a ticket
-     *              using the OpenAI API. Reads the org-level AI settings; throws a
-     *              user-friendly AuraHandledException if AI is not configured.
+     *              using the OpenAI API. Throws AuraHandledException if AI is not configured.
      * @param ticketId The Id of the Ticket__c record to draft an update for.
      * @return String The drafted status update text.
      */
     @AuraEnabled
     public static String draftStatusUpdate(Id ticketId) {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
-
-        if (settings == null || settings.AISuggestionsEnabledBool__c != true) {
-            throw new AuraHandledException(
-                'AI features are not enabled. Turn them on in Delivery Hub \u2192 AI Settings.'
-            );
-        }
-        if (String.isBlank(settings.OpenAIApiKeyTxt__c)) {
-            throw new AuraHandledException(
-                'No OpenAI API key found. Add and test your key in Delivery Hub \u2192 AI Settings.'
-            );
-        }
+        Delivery_Hub_Settings__c settings = getValidatedSettings();
 
         List<Ticket__c> tickets = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
@@ -41,15 +33,93 @@ public with sharing class DeliveryAiController {
             throw new AuraHandledException('Ticket not found.');
         }
 
-        String model = String.isNotBlank(settings.OpenAIModelTxt__c)
-            ? settings.OpenAIModelTxt__c
-            : 'gpt-3.5-turbo';
+        String model = getModel(settings);
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildStatusPrompt(tickets[0]));
+    }
 
-        String prompt = buildPrompt(tickets[0]);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, prompt);
+    /**
+     * @description Suggests 3-5 testable acceptance criteria for a ticket
+     *              based on its title and details, using the OpenAI API.
+     * @param ticketId The Id of the Ticket__c to generate criteria for.
+     * @return String Bulleted acceptance criteria text.
+     */
+    @AuraEnabled
+    public static String suggestAcceptanceCriteria(Id ticketId) {
+        Delivery_Hub_Settings__c settings = getValidatedSettings();
+
+        List<Ticket__c> tickets = [
+            SELECT BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c
+            FROM Ticket__c
+            WHERE Id = :ticketId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        if (tickets.isEmpty()) {
+            throw new AuraHandledException('Ticket not found.');
+        }
+
+        String model = getModel(settings);
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildCriteriaPrompt(tickets[0]));
+    }
+
+    /**
+     * @description Generates a weekly board-level status summary across all active tickets,
+     *              grouped by stage. Suitable for a client-facing weekly update email.
+     * @return String The generated weekly status text.
+     */
+    @AuraEnabled
+    public static String draftBoardSummary() {
+        Delivery_Hub_Settings__c settings = getValidatedSettings();
+
+        List<Ticket__c> tickets = [
+            SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
+            FROM Ticket__c
+            WHERE IsActiveBool__c = true
+            WITH SYSTEM_MODE
+            ORDER BY StageNamePk__c, SortOrderNumber__c
+        ];
+
+        if (tickets.isEmpty()) {
+            throw new AuraHandledException('No active tickets found to summarise.');
+        }
+
+        String model = getModel(settings);
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildBoardSummaryPrompt(tickets));
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * @description Reads and validates org AI settings. Throws if AI is not enabled
+     *              or the API key is missing.
+     * @return Delivery_Hub_Settings__c The validated settings record.
+     */
+    private static Delivery_Hub_Settings__c getValidatedSettings() {
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        if (settings == null || settings.AISuggestionsEnabledBool__c != true) {
+            throw new AuraHandledException(
+                'AI features are not enabled. Turn them on in Delivery Hub \u2192 AI Settings.'
+            );
+        }
+        if (String.isBlank(settings.OpenAIApiKeyTxt__c)) {
+            throw new AuraHandledException(
+                'No OpenAI API key found. Add and test your key in Delivery Hub \u2192 AI Settings.'
+            );
+        }
+        return settings;
+    }
+
+    /**
+     * @description Returns the configured model, falling back to gpt-3.5-turbo.
+     * @param settings The Delivery_Hub_Settings__c record.
+     * @return String Model identifier string.
+     */
+    private static String getModel(Delivery_Hub_Settings__c settings) {
+        return String.isNotBlank(settings.OpenAIModelTxt__c)
+            ? settings.OpenAIModelTxt__c
+            : 'gpt-3.5-turbo';
+    }
 
     /**
      * @description Sends a prompt to the OpenAI chat completions endpoint and returns
@@ -71,7 +141,7 @@ public with sharing class DeliveryAiController {
             'messages'    => new List<Object>{
                 new Map<String, Object>{ 'role' => 'user', 'content' => prompt }
             },
-            'max_tokens'  => 200,
+            'max_tokens'  => 600,
             'temperature' => 0.7
         }));
         req.setTimeout(30000);
@@ -98,7 +168,7 @@ public with sharing class DeliveryAiController {
         return ((String) msg.get('content')).trim();
     }
 
-    private static String buildPrompt(Ticket__c t) {
+    private static String buildStatusPrompt(Ticket__c t) {
         String brief = String.isNotBlank(t.BriefDescriptionTxt__c)
             ? t.BriefDescriptionTxt__c : 'No title provided';
 
@@ -130,6 +200,53 @@ public with sharing class DeliveryAiController {
            + 'Do not include ticket IDs, greetings, sign-offs, or subject lines. '
            + 'Return ONLY the status update text.';
 
+        return p;
+    }
+
+    private static String buildCriteriaPrompt(Ticket__c t) {
+        String brief = String.isNotBlank(t.BriefDescriptionTxt__c)
+            ? t.BriefDescriptionTxt__c : 'No title provided';
+        String details = String.isNotBlank(t.DetailsTxt__c) ? stripHtml(t.DetailsTxt__c) : '';
+
+        String p = 'You are a software business analyst. Based on the following ticket, '
+            + 'write 3-5 clear, testable acceptance criteria.\n\n'
+            + 'Ticket: ' + brief + '\n';
+        if (String.isNotBlank(details)) {
+            p += 'Details: ' + details + '\n';
+        }
+        p += '\nUse simple bullet points starting with "- ". '
+           + 'Each criterion should be specific and verifiable. '
+           + 'Return ONLY the bulleted list, no preamble or sign-off.';
+        return p;
+    }
+
+    private static String buildBoardSummaryPrompt(List<Ticket__c> tickets) {
+        Map<String, List<String>> byStage = new Map<String, List<String>>();
+        for (Ticket__c t : tickets) {
+            String stage = t.StageNamePk__c != null ? t.StageNamePk__c : 'Unknown';
+            if (!byStage.containsKey(stage)) {
+                byStage.put(stage, new List<String>());
+            }
+            String title = String.isNotBlank(t.BriefDescriptionTxt__c)
+                ? t.BriefDescriptionTxt__c : t.Name;
+            byStage.get(stage).add(title);
+        }
+
+        String p = 'You are a software delivery manager. Write a concise weekly status update '
+            + 'for a non-technical client, covering all active work grouped by stage.\n\n'
+            + 'Active Tickets by Stage:\n';
+
+        for (String stage : byStage.keySet()) {
+            p += '\n[' + stage + ']\n';
+            for (String title : byStage.get(stage)) {
+                p += '- ' + title + '\n';
+            }
+        }
+
+        p += '\nWrite 2-4 short paragraphs in plain English. Translate stage names (e.g. '
+           + '"In Development" → "actively being built"). Highlight what is wrapping up and '
+           + 'what is coming next. Be professional and encouraging. '
+           + 'Return ONLY the status update text.';
         return p;
     }
 
