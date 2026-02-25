@@ -31,7 +31,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             FROM Ticket__c
             WHERE Id IN :ticketIds
             AND ClientNetworkEntityId__c != null
-            WITH USER_MODE
+            WITH SYSTEM_MODE
         ]);
 
         if (clientTickets.isEmpty()) {

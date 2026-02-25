@@ -21,7 +21,7 @@ public with sharing class DeliveryTimeLoggerController {
             SELECT Id FROM Request__c
             WHERE TicketId__c = :ticketId
             AND StatusPk__c IN ('Accepted', 'In Progress')
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
