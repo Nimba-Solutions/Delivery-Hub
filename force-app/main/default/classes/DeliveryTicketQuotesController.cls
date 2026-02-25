@@ -35,7 +35,7 @@ public with sharing class DeliveryTicketQuotesController {
             FROM Request__c
             WHERE TicketId__c = :ticketId
             AND QuotedHoursNumber__c != null
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
         ]) {
             QuoteRow row       = new QuoteRow();
@@ -66,7 +66,7 @@ public with sharing class DeliveryTicketQuotesController {
             SELECT Id, StatusPk__c
             FROM Request__c
             WHERE TicketId__c = :ticketId
-            WITH USER_MODE
+            WITH SYSTEM_MODE
         ];
         List<Request__c> toUpdate = new List<Request__c>();
         for (Request__c req : allRequests) {

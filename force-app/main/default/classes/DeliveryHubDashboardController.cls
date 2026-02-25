@@ -111,7 +111,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT COUNT()
             FROM Ticket__c
             WHERE StageNamePk__c IN :clientStages
-            WITH USER_MODE
+            WITH SYSTEM_MODE
         ];
     }
 
@@ -140,7 +140,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c
             FROM Ticket__c
             WHERE StageNamePk__c IN :clientStages
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 20
         ];
@@ -168,7 +168,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM Ticket__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled', 'Deployed to Prod')
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
         ]) {
             String phase = stageToPhase.get((String)ar.get('stage'));
@@ -192,7 +192,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM Ticket__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled')
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 5
         ];
@@ -216,7 +216,7 @@ public with sharing class DeliveryHubDashboardController {
             FROM Network_Entity__c
             WHERE EntityTypePk__c = 'Vendor'
             AND StatusPk__c = 'Active'
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY Name ASC
         ];
         List<String> texts = new List<String>();
