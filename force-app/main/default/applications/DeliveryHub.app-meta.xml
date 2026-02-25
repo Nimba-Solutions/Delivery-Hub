@@ -81,8 +81,8 @@
         <pageOrSobjectType>standard-home</pageOrSobjectType>
     </actionOverrides>
     <brand>
-        <headerColor>#0070D2</headerColor>
-        <shouldOverrideOrgTheme>false</shouldOverrideOrgTheme>
+        <headerColor>#1A2D4A</headerColor>
+        <shouldOverrideOrgTheme>true</shouldOverrideOrgTheme>
     </brand>
     <description>This Lightning App provides a streamlined interface to access and manage core functionality of the Delivery Hub package.</description>
     <formFactors>Small</formFactors>

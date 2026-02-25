@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>NAME</field>
+    </columns>
+    <columns>
+        <field>BriefDescriptionTxt__c</field>
+    </columns>
+    <columns>
+        <field>StageNamePk__c</field>
+    </columns>
+    <columns>
+        <field>ClientNetworkEntityId__c</field>
+    </columns>
+    <columns>
+        <field>EstimatedHoursNumber__c</field>
+    </columns>
+    <columns>
+        <field>TotalLoggedHoursNumber__c</field>
+    </columns>
+    <description>Successfully delivered tickets. Clients use this to review completed work; Joe uses it to report on throughput.</description>
+    <filter>
+        <criterias>
+            <column>StageNamePk__c</column>
+            <filterType>fieldValue</filterType>
+            <isFixed>false</isFixed>
+            <operator>equals</operator>
+            <value>Done</value>
+        </criterias>
+    </filter>
+    <format>Tabular</format>
+    <name>Completed Deliveries</name>
+    <reportType>Ticket__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+</Report>

@@ -64,6 +64,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
             SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c, TicketId__c
             FROM Sync_Item__c
             WHERE TicketId__c = :ticket.Id
+            AND ObjectTypePk__c = 'WorkLog__c'
         ];
         System.assertEquals(1, items.size(), 'Should create 1 sync item for client-linked ticket');
         System.assertEquals('WorkLog__c', items[0].ObjectTypePk__c);
@@ -86,7 +87,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         );
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE TicketId__c = :ticket.Id];
+        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE TicketId__c = :ticket.Id AND ObjectTypePk__c = 'WorkLog__c'];
         System.assertEquals(0, items.size(), 'Should not create sync items for tickets without a client');
     }
 
@@ -109,7 +110,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
 
         DeliveryTriggerControl.enableAfterLogic();
 
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE TicketId__c = :ticket.Id];
+        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE TicketId__c = :ticket.Id AND ObjectTypePk__c = 'WorkLog__c'];
         System.assertEquals(0, items.size(), 'Should not create sync items when trigger control is disabled');
     }
 }

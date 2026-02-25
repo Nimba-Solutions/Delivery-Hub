@@ -4,7 +4,10 @@
         <name>header</name>
         <type>Region</type>
     </flexiPageRegions>
-    <!-- Sidebar tab content facets — no Replace mode (standalone page, no parent) -->
+
+    <!-- ── Sidebar tab content facets (no Replace mode — standalone page, no parent) ── -->
+
+    <!-- Tab 1: Tools — immediate admin actions -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -18,15 +21,11 @@
                 <identifier>c_deliveryTicketStageGateWarning</identifier>
             </componentInstance>
         </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliverySyncPollerButton</componentName>
-                <identifier>c_deliverySyncPollerButton</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>adminActionsContent</name>
+        <name>adminToolsContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- Tab 2: Chat & Sync — comms, AI, and sync poller grouped together -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -36,13 +35,21 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliverySyncPollerButton</componentName>
+                <identifier>c_deliverySyncPollerButton</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryTicketRefiner</componentName>
                 <identifier>c_deliveryTicketRefiner</identifier>
             </componentInstance>
         </itemInstances>
-        <name>adminAiContent</name>
+        <name>adminChatSyncContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- Tab 3: Data — related list review -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -246,6 +253,8 @@
         <name>adminDataContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- Tab list facet -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -255,28 +264,28 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>adminActionsContent</value>
+                    <value>adminToolsContent</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>title</name>
-                    <value>Actions</value>
+                    <value>Tools</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
-                <identifier>adminActionsTab</identifier>
+                <identifier>adminToolsTab</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>adminAiContent</value>
+                    <value>adminChatSyncContent</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>title</name>
-                    <value>AI Tools</value>
+                    <value>Chat &amp; Sync</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
-                <identifier>adminAiTab</identifier>
+                <identifier>adminChatSyncTab</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
@@ -296,6 +305,8 @@
         <name>adminSidebarTabList</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- Sidebar region: tabset only -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -310,6 +321,8 @@
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- Main: record detail fields -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -320,6 +333,7 @@
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
+
     <masterLabel>Ticket Admin</masterLabel>
     <sobjectType>Ticket__c</sobjectType>
     <template>

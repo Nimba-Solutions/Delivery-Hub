@@ -33,12 +33,6 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryBudgetSummary</componentName>
-                <identifier>c_deliveryBudgetSummary</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentInstanceProperties>
                     <name>displayMode</name>
                     <value>Card</value>

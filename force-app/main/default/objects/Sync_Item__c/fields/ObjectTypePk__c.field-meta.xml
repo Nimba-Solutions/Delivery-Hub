@@ -31,6 +31,11 @@
                 <default>false</default>
                 <label>Network_Entity__c</label>
             </value>
+            <value>
+                <fullName>WorkLog__c</fullName>
+                <default>false</default>
+                <label>WorkLog__c</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
