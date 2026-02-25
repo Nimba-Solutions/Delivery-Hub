@@ -38,12 +38,21 @@ public with sharing class DeliveryHubDashboardController {
 
         Decimal activeCount = (ticketStats[0].get('total') != null) ? (Decimal)ticketStats[0].get('total') : 0;
         metrics.put('activeRequests', activeCount);
-        AggregateResult[] worklogStats = [
-            SELECT Sum(HoursLoggedNumber__c) total
-            FROM WorkLog__c
+        Date firstOfMonth = Date.today().toStartOfMonth();
+        Date firstOfLastMonth = firstOfMonth.addMonths(-1);
+
+        AggregateResult[] mtdStats = [
+            SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
+            WHERE WorkDateDate__c >= :firstOfMonth WITH SYSTEM_MODE
         ];
-        Decimal totalHours = (worklogStats[0].get('total') != null) ? (Decimal)worklogStats[0].get('total') : 0;
-        metrics.put('totalHours', totalHours);
+        metrics.put('hoursThisMonth', mtdStats[0].get('total') != null ? (Decimal)mtdStats[0].get('total') : 0);
+
+        AggregateResult[] lastMonthStats = [
+            SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
+            WHERE WorkDateDate__c >= :firstOfLastMonth
+            AND WorkDateDate__c < :firstOfMonth WITH SYSTEM_MODE
+        ];
+        metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
 
         // 2. Last Entry Logic (Find most recent activity on tickets)
         List<Ticket__c> lastActivity = [

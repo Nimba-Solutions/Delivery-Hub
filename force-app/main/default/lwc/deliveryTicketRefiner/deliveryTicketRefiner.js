@@ -68,6 +68,15 @@ export default class DeliveryTicketRefiner extends NavigationMixin(LightningElem
 
     // Called when "Create Vendor Request" is clicked
     handleCreateRequest() {
+        const clientHoursCheck = getFieldValue(this.ticket.data, TICKET_HOURS);
+        if (!clientHoursCheck) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Missing Client Hours',
+                message: 'Please set Client Pre-Approved Hours before creating a Vendor Request.',
+                variant: 'error'
+            }));
+            return;
+        }
         this.isProcessing = true;
         const fields = {};
 

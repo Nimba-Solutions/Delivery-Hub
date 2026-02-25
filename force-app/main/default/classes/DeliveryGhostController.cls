@@ -47,11 +47,13 @@ public with sharing class DeliveryGhostController {
 
             // 4. Create Ticket
             Ticket__c t = new Ticket__c();
-            t.BriefDescriptionTxt__c = briefDesc; 
+            t.BriefDescriptionTxt__c = briefDesc;
             t.DetailsTxt__c = fullDescription;
             t.PriorityPk__c = priority;
-            t.StageNamePk__c = 'Backlog'; 
-            
+            t.StageNamePk__c = 'Backlog';
+            t.IsActiveBool__c = true;
+            t.StatusPk__c = 'New';
+
             if (Schema.sObjectType.Ticket__c.isCreateable()) {
                 insert t;
             } else {

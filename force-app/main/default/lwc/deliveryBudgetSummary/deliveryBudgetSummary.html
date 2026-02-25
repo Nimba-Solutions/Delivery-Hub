@@ -34,11 +34,11 @@
                         </div>
                         <div class="slds-media__body">
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
-                                <strong>{metrics.totalHours}</strong>
+                                <strong>{metrics.hoursThisMonth}</strong>
                             </div>
-                            <div class="slds-text-title_caps slds-text-color_weak">Hours Booked</div>
-                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small" if:true={metrics.lastEntry}>
-                                Last: {metrics.lastEntry}
+                            <div class="slds-text-title_caps slds-text-color_weak">Hours This Month</div>
+                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                                Last Month: {metrics.hoursLastMonth} hrs
                             </div>
                         </div>
                     </div>

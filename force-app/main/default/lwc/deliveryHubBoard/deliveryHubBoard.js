@@ -41,7 +41,8 @@ const FIELDS = {
     STAGE: `%%%NAMESPACED_ORG%%%StageNamePk__c`,
     PRIORITY: `%%%NAMESPACED_ORG%%%PriorityPk__c`,
     SORT_ORDER: `%%%NAMESPACED_ORG%%%SortOrderNumber__c`,
-    IS_ACTIVE: `%%%NAMESPACED_ORG%%%IsActiveBool__c`,
+    IS_ACTIVE:  `%%%NAMESPACED_ORG%%%IsActiveBool__c`,
+    STATUS_PK:  `%%%NAMESPACED_ORG%%%StatusPk__c`,
     TAGS: `%%%NAMESPACED_ORG%%%Tags__c`,
     EPIC: `%%%NAMESPACED_ORG%%%Epic__c`,
     INTENTION: `%%%NAMESPACED_ORG%%%ClientIntentionPk__c`,
@@ -642,10 +643,11 @@ transitionMap = {
 
     get createDefaults() {
         return {
-            [FIELDS.STAGE]: "Backlog",
+            [FIELDS.STAGE]:     'Backlog',
             [FIELDS.SORT_ORDER]: this.nextSortOrder,
-            [FIELDS.PRIORITY]: "Medium",
+            [FIELDS.PRIORITY]:  'Medium',
             [FIELDS.IS_ACTIVE]: true,
+            [FIELDS.STATUS_PK]: 'New',
         };
     }
 
@@ -1299,7 +1301,8 @@ transitionMap = {
         const fields = event.detail.fields;
         
         // Force defaults (namespaced keys)
-        fields[FIELDS.IS_ACTIVE] = true;
+        fields[FIELDS.IS_ACTIVE]  = true;
+        fields[FIELDS.STATUS_PK]  = 'New';
         if (!fields[FIELDS.PRIORITY]) {
             fields[FIELDS.PRIORITY] = 'Medium';
         }

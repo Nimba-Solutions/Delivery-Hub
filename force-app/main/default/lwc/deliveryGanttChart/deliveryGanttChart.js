@@ -88,17 +88,30 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
             let stageBadgeClass = 'gantt-stage-badge';
             if (uatMs < todayMs) { stageBadgeClass += ' badge--overdue'; }
 
+            const desc = r.description || '';
+            const descShort = desc.length > 45 ? desc.substring(0, 45) + '…' : desc;
+            const daysToUatRounded = Math.round(daysToUat);
+            const daysStr = daysToUat >= 0
+                ? `${daysToUatRounded} day${daysToUatRounded === 1 ? '' : 's'} remaining`
+                : `${Math.abs(daysToUatRounded)} day${Math.abs(daysToUatRounded) === 1 ? '' : 's'} overdue`;
+            const barTooltip = [
+                desc || r.name,
+                `Stage: ${r.stage}${r.priority ? ' | Priority: ' + r.priority : ''}`,
+                `UAT: ${r.uatDate} (${daysStr})`
+            ].join('\n');
+
             return {
                 ticketId:       r.ticketId,
                 name:           r.name,
-                description:    r.description || r.name,
+                description:    desc,
+                descShort,
                 stage:          r.stage,
                 priority:       r.priority,
                 uatDate:        r.uatDate,
                 barClass,
                 barStyle,
                 stageBadgeClass,
-                barTooltip:     `${r.name}: ${r.stage} — UAT ${r.uatDate}`,
+                barTooltip,
                 recordUrl:      `/lightning/r/Ticket__c/${r.ticketId}/view`
             };
         });

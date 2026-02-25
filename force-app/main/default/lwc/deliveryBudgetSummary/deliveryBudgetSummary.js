@@ -12,10 +12,11 @@ export default class DeliveryBudgetSummary extends LightningElement {
         return !this.hideConnectionHealth;
     }
 
-    @track metrics = { 
-        totalHours: 0, 
-        activeRequests: 0, 
-        succeededSyncs: 0, 
+    @track metrics = {
+        hoursThisMonth: 0,
+        hoursLastMonth: 0,
+        activeRequests: 0,
+        succeededSyncs: 0,
         failedSyncs: 0,
         lastEntry: '--'
     };

@@ -9,7 +9,7 @@
     --gantt-red:     #ef4444;
     --gantt-gray:    #9ca3af;
     --gantt-warning: #f59e0b;
-    --gantt-label-w: 11rem;
+    --gantt-label-w: 13rem;
 }
 
 /* Card shell */
@@ -152,8 +152,20 @@
 .gantt-row {
     display: flex;
     align-items: center;
-    padding: 0.3rem 0;
+    padding: 0.4rem 0;
     border-bottom: 1px solid #f3f4f6;
+}
+
+.gantt-desc-short {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(var(--gantt-label-w) - 0.75rem);
+    margin-top: 0.05rem;
+    margin-bottom: 0.1rem;
+    cursor: default;
 }
 
 .gantt-row:last-child {

@@ -65,9 +65,12 @@
                 <template for:each={ganttRows} for:item="row">
                     <div key={row.ticketId} class="gantt-row">
                         <div class="gantt-label-col">
-                            <a href={row.recordUrl} target="_blank" class="gantt-ticket-name" title={row.description}>
+                            <a href={row.recordUrl} target="_blank" class="gantt-ticket-name">
                                 {row.name}
                             </a>
+                            <template if:true={row.descShort}>
+                                <div class="gantt-desc-short" title={row.description}>{row.descShort}</div>
+                            </template>
                             <span class={row.stageBadgeClass}>{row.stage}</span>
                         </div>
                         <div class="gantt-track-col">

@@ -73,7 +73,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>enableShortcut</name>
-                    <value>false</value>
+                    <value>true</value>
                 </componentInstanceProperties>
                 <componentName>deliveryGhostRecorder</componentName>
                 <identifier>c_deliveryGhostRecorder</identifier>
