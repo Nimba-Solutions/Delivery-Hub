@@ -43,7 +43,8 @@
                 </div>
             </template>
 
-            <!-- ── Advance Options ── -->
+            <!-- ── Advance Options (hidden when required actions exist) ── -->
+            <template if:true={showMoveOptions}>
             <template if:true={advanceOptions.length}>
                 <div class="ac-section">
                     <div class="ac-section-label">
@@ -67,7 +68,7 @@
                 </div>
             </template>
 
-            <!-- ── Backtrack Options ── -->
+            <!-- ── Backtrack Options (hidden when required actions exist) ── -->
             <template if:true={backtrackOptions.length}>
                 <div class="ac-backtrack-section">
                     <span class="ac-backtrack-label">
@@ -83,6 +84,7 @@
                     </div>
                 </div>
             </template>
+            </template><!-- end showMoveOptions -->
 
         </div>
     </lightning-card>

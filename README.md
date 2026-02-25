@@ -1,8 +1,8 @@
 # Delivery Hub
 
-**The fastest way to run a real software delivery operation — entirely inside Salesforce.**
+**Your Salesforce org was built for your business. Now make it run your software delivery too.**
 
-Delivery Hub turns your Salesforce org into a fully operational dev shop command center. Whether you're managing an internal development team or sending work out to an external vendor like [Cloud Nimbus LLC](https://cloudnimbusllc.com), every ticket, comment, file, and status update lives in one place, syncs in real-time between orgs, and requires zero manual coordination overhead.
+Delivery Hub is a native Salesforce managed package that turns your org into a complete software delivery command center — Kanban boards, cross-org sync, AI-powered estimation, real-time chat, and automated ETA tracking, all living exactly where your team already works. No third-party tools. No context switching. No per-seat subscription on top of Salesforce.
 
 ---
 
@@ -13,101 +13,141 @@ Delivery Hub turns your Salesforce org into a fully operational dev shop command
 | **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04t) |
 | **Sandbox / Test** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04t) |
 
-> The latest `04t...` package version ID is always listed in the [**GitHub Releases**](https://github.com/Nimba-Solutions/Delivery-Hub/releases/latest) page. Replace `04t` in the links above with the full version ID from the release notes to install.
+> The latest `04t...` package version ID is always in [**GitHub Releases**](https://github.com/Nimba-Solutions/Delivery-Hub/releases/latest). Replace `04t` in the links above with the full version ID from the release notes.
+
+Setup takes about 3 minutes. There is a one-click Quickstart wizard on the home page that configures everything — scheduled jobs, connection handshake, default settings — automatically.
 
 ---
 
-## Why Delivery Hub Exists
+## The Problem It Solves
 
-Most Salesforce teams manage development work in Jira, Slack, email, or a spreadsheet no one trusts. None of those tools know anything about your Salesforce data. Delivery Hub fixes that — it lives where your business already lives, speaks Salesforce natively, and keeps your clients, your developers, and your delivery pipeline in permanent sync without any manual handoffs.
+Most Salesforce teams manage software work in Jira, Slack threads, or shared spreadsheets. None of those tools know your clients, your pipeline, your data, or your stage requirements. Every status update is a manual handoff. Every file is in someone's email. Every estimate lives in a comment that no one can find six weeks later.
 
-If you're a client sending work to an external dev team, you click a button and the ticket appears on their board. If you're a dev team, incoming requests auto-create tickets, stage changes sync back to the client, and nothing falls through the cracks. It is the delivery loop that closes itself.
+Meanwhile your CRM — the system your clients already use, the one that knows every account, contact, and deal — sits right there, completely disconnected from the delivery work you're doing for those clients.
+
+**Delivery Hub closes that loop.** Work items, comments, files, stage changes, approvals, estimates, and sync events all live inside Salesforce, tied to the accounts and contacts they belong to, queryable in any report you already know how to build.
 
 ---
 
-## What It Does
+## What You Get
 
-### For Clients
-- **See your tickets** — a live Kanban view of every item in flight, broken down by stage
-- **Know what needs your attention** — the home page surfaces anything sitting in Client Approval, Client UAT, or UAT Sign-off waiting on you specifically
-- **Chat directly with the dev team** — real-time messaging on every ticket, with file attachments rolling up automatically so nothing gets buried
-- **Report issues and request features** — one-click Ghost Recorder form from anywhere in the app
-- **Self-service onboarding** — a one-click Quickstart Connection wizard on the home page that sets up the entire integration without admin involvement
+### A Full Kanban Delivery Pipeline
+- 40+ configurable stages from **Backlog** all the way to **Deployed to Production**
+- Drag-and-drop board with column grouping, color coding, and stage gate enforcement
+- Stage gate requirements that block bad transitions until the right fields are filled — no more tickets that skip Client Approval or UAT because someone clicked the wrong button
+- **Fast Track** mode that surfaces the direct path to development the moment a ticket qualifies based on your configured budget thresholds
 
-### For Development Teams
-- **Manage a full delivery pipeline** — 40+ stages from Backlog to Deployed to Prod, with configurable stage gate requirements that prevent bad transitions
-- **Multi-vendor routing** — sync outbound to multiple external vendors simultaneously; each vendor gets its own queue, retries on failure, and independent status tracking
-- **AI-assisted sizing** — optional OpenAI integration that estimates hours, generates ticket descriptions, and drafts acceptance criteria from a brief summary
-- **Automated ETA calculation** — based on dev velocity, team calendar, and current queue depth
-- **Full file rollup** — every file attached to a ticket, its comments, or its related requests visible in one panel on the ticket record
+### Real-Time Cross-Org Sync
+- Bidirectional REST sync between any two Salesforce orgs — your client org and your delivery org
+- Tickets created in one org appear in the other within seconds, automatically
+- Stage changes, comments, file attachments, and field updates replicate in real time, both directions
+- **Echo suppression** prevents sync loops when both orgs update the same record simultaneously
+- Multi-vendor routing: send tickets to multiple external vendors at once, each with its own queue, retry logic, and status ledger
+- Every sync event is logged — status, payload, retry count, timestamp — for full audit visibility
 
-### For Everyone
-- **Cross-org real-time sync** — bidirectional sync via REST between any two Salesforce orgs. Comments, stage changes, file attachments, and field updates replicate within seconds
-- **Echo suppression** — smart deduplication prevents sync loops when both orgs update the same record
-- **Audit trail** — every sync item tracked in a ledger with status, retry count, and payload
-- **Dependency tracking** — mark tickets as blocking each other; the board surfaces blocked tickets and warns before invalid transitions
+### AI-Powered Work Management
+- **OpenAI integration** that estimates hours, generates ticket descriptions, and drafts acceptance criteria from a one-line summary
+- **Automated ETA calculation** based on current queue depth, developer velocity, and team calendar
+- AI suggestions are surfaced in-context on the ticket record — one click to accept, easy to override
+
+### Native Collaboration Tools
+- **Real-time chat** on every ticket with polling-based updates and file attachment indicators
+- **File rollup panel** that aggregates every file from the ticket, its comments, and its related requests into a single scrollable view — no hunting through related lists
+- **Ghost Recorder** — a floating form available from anywhere in the app (with keyboard shortcut support) for instant issue or feature submission without leaving your current screen
+
+### Client-Facing Transparency
+- A home page **Client Dashboard** showing everything in flight, broken down by phase — clients see exactly where their work is without having to ask
+- **Attention Required** surfacing: anything sitting in Client Approval, UAT, or Sign-off waiting on the client is called out immediately on page load
+- System Pulse: live counts of active tickets, hours booked, and last sync activity — a real-time health check at a glance
+- **Time Logger** for quick hour tracking directly on the ticket record, creating WorkLog entries with optional notes
+
+### Zero-Friction Setup
+- One-click Quickstart Connection wizard handles registration, credential exchange, and scheduler provisioning automatically
+- No manual REST endpoint configuration, no custom settings to hunt down, no Apex scripts to run
+- Works with managed package namespace translation out of the box — install in any org, production or sandbox
+
+---
+
+## Why It Belongs in Salesforce
+
+| Other Tools | Delivery Hub |
+|---|---|
+| Another per-seat subscription | Included in your Salesforce license footprint |
+| Disconnected from your CRM data | Native objects tied to Accounts, Contacts, and your pipeline |
+| Manual status updates via email/Slack | Automated real-time sync, both directions |
+| Files in email and shared drives | Every file attached to every related record, in one panel |
+| Estimates in spreadsheets | AI-generated in-context with one click |
+| Reports in a different tool | Native Salesforce reports and dashboards on your delivery data |
+| Admin overhead to maintain | Self-configuring setup wizard, scheduled jobs managed automatically |
+
+Your Salesforce admin can install this in an afternoon. Your team can be running a full delivery operation by end of day.
 
 ---
 
 ## How It Works
 
 ```
-Your Org (Client)                        Cloud Nimbus's Org (Vendor)
-─────────────────                        ───────────────────────────
+Your Org (Client)                        Delivery Team's Org (Vendor)
+─────────────────                        ────────────────────────────
 Ticket created           ──── sync ────► Request ingested
   └─ Stage updated       ◄─── sync ────   └─ Developer assigned
   └─ Comment posted      ──── sync ────►  └─ Comment synced back
   └─ File attached       ──── sync ────►  └─ Status progressed
-  └─ Stage updated       ◄─── sync ────   └─ Deployed to Prod
+  └─ Client approval     ──── sync ────►  └─ Deployed to Prod
 ```
 
-1. **You create a ticket** in your org's Kanban board. A `Request__c` sync record is queued.
-2. **Delivery Hub's scheduler** (runs every 15 minutes, or on-demand) picks up the queue and POSTs to the vendor's REST endpoint.
-3. **The vendor's org ingests** the payload, creates or updates their matching ticket, and syncs back any response fields.
-4. **Both orgs stay in lock-step** — every stage change, comment, and file attachment triggers another sync cycle automatically.
-5. **Echo suppression** on both sides ensures a change originating from Org A doesn't bounce back from Org B as a new sync event.
+1. **A ticket is created** on the Kanban board. A sync record queues automatically.
+2. **The sync engine** picks up the queue and POSTs to the vendor's REST endpoint — in real time or on the 15-minute scheduler cycle, whichever fires first.
+3. **The vendor's org ingests** the payload, creates or updates the matching ticket, and syncs back any response fields.
+4. **Both orgs stay in lock-step** — every stage change, comment, and file attachment triggers the next sync automatically.
+5. **Echo suppression** on both sides ensures a change from Org A doesn't bounce back from Org B as a new sync event.
 
-The sync engine is headless, retry-aware (up to 3 attempts with automatic re-queue), and handles namespace translation for managed package deployments.
+The sync engine is headless, retry-aware (up to 3 attempts with automatic re-queue on failure), and handles namespace translation for managed package deployments.
 
 ---
 
-## Key Features at a Glance
+## Feature Summary
 
 | Feature | Details |
 |---|---|
-| Kanban Board | Drag-and-drop, 40+ stages, configurable column order |
-| Stage Gate Warnings | Block moves when required fields (developer, criteria, estimate) are missing |
-| Fast Track | Highlights the path to dev when estimate fits within pre-approved budget |
-| Cross-Org Sync | Bidirectional REST sync with retry, echo suppression, and ledger |
-| Multi-Vendor | Route to multiple vendors simultaneously |
-| Chat | Real-time polling chat on every ticket, with file attachment indicators |
-| File Rollup | Aggregates files from ticket + comments + requests into one panel |
-| Time Logger | Quick-log hours against a ticket; creates WorkLog entries with optional notes |
-| Ghost Recorder | Floating or card-mode issue/feature submission form with keyboard shortcut |
-| AI Estimation | OpenAI-powered hours estimate and description generation |
-| ETA Engine | Calculates projected UAT-ready date from velocity and queue depth |
-| Client Dashboard | Home page shows attention items, in-flight phase counts, recent activity |
+| Kanban Board | Drag-and-drop, 40+ stages, configurable column order and color |
+| Stage Gate Enforcement | Block moves when required fields are missing; warns before invalid transitions |
+| Fast Track | Highlights the approval-free path to dev when estimate fits pre-approved budget |
+| Cross-Org Sync | Bidirectional REST sync with retry, echo suppression, and full audit ledger |
+| Multi-Vendor Routing | Send to multiple external orgs simultaneously, each independently tracked |
+| AI Estimation | OpenAI-powered hours estimate, description generation, acceptance criteria drafting |
+| ETA Engine | Projected UAT-ready date from developer velocity and current queue depth |
+| Real-Time Chat | Polling-based ticket chat with file attachment indicators |
+| File Rollup | All files from ticket + comments + requests in one sidebar panel |
+| Time Logger | Quick hour logging directly on the ticket, creates WorkLog entries |
+| Ghost Recorder | Floating issue/feature submission form with keyboard shortcut, available anywhere |
+| Client Dashboard | Home page phase counts, attention items, and recent activity |
+| System Pulse | Live active tickets, hours booked, sync health, and last entry time |
+| Dependency Tracking | Mark tickets as blocking each other; board surfaces blocked tickets visually |
 | Setup Wizard | One-click connection to vendor org with automatic scheduler provisioning |
+| Native Reports | Full Salesforce report and dashboard support on all delivery data |
 
 ---
 
-## Getting Started in 3 Minutes
+## Getting Started
 
-### As a Client Org
+### Install in 3 Minutes
 
-1. Install the Delivery Hub package (see **Install** section above)
+1. Click the **Install in Production** or **Install in Sandbox** button above (use the latest `04t...` ID from [Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases/latest))
 2. Open the **Delivery Hub** Lightning App
-3. On the Home tab, click **Quickstart Connection** — this registers your org, configures default settings, and schedules the sync jobs automatically
+3. On the Home tab, click **Quickstart Connection** — this registers your org, configures default settings, and schedules sync jobs automatically
 4. Create your first ticket on the **Ticket Board** tab
-5. Watch it appear on your vendor's board within seconds
+5. Invite your delivery team or connect to an external vendor org
 
-### As a Vendor Org (Self-Hosted)
+### For Development Teams Running Their Own Instance
 
-1. Clone this repository
-2. Run `cci flow run dev_org --org dev` to spin up a scratch org
-3. Run `cci org browser dev` to open it
-4. Configure your `Cloud_Nimbus_LLC_Marketing__mdt` custom metadata with your org's endpoint URL
-5. Client orgs can now connect to you via Quickstart
+```bash
+git clone https://github.com/Nimba-Solutions/Delivery-Hub
+cci flow run dev_org --org dev
+cci org browser dev
+```
+
+Configure your `Cloud_Nimbus_LLC_Marketing__mdt` custom metadata with your org's endpoint URL and client orgs can connect via Quickstart immediately.
 
 ---
 
@@ -135,6 +175,7 @@ force-app/main/default/
 │   ├── deliveryTicketFiles/            # Rolled-up files sidebar panel
 │   ├── deliveryTimeLogger/             # Quick time logging with WorkLog__c creation
 │   ├── deliveryClientDashboard/        # Client home: attention / in-flight / recent
+│   ├── deliveryBudgetSummary/          # System pulse: active tickets, hours, sync health
 │   ├── deliveryHubSetup/               # Quickstart connection wizard
 │   ├── deliveryGhostRecorder/          # Issue / feature request submission form
 │   └── deliveryTicketRefiner/          # AI description and sizing assistant
@@ -162,32 +203,22 @@ Every pull request:
 1. Spins up a namespaced scratch org
 2. Deploys the full package
 3. Runs all Apex tests (74+ tests, 75%+ coverage enforced)
-4. Runs PMD static analysis with custom rules
+4. Runs PMD static analysis
 5. Tears down the scratch org
 
 ### Developer Workflow
 
 ```bash
-# Set up CumulusCI
 cci flow run dev_org --org dev
-
-# Open your scratch org
 cci org browser dev
-
-# Retrieve your changes
 cci task run retrieve_changes --org dev
-
-# Push a feature branch and open a PR
 git push origin feature/your-feature
 ```
 
 ### Releasing
 
 ```bash
-# Beta package
 cci flow run release_unlocked_beta --org dev
-
-# Production package
 cci flow run release_unlocked_production --org dev
 ```
 
@@ -199,4 +230,4 @@ After promoting, copy the `04t...` package version ID from the CumulusCI output 
 
 **Cloud Nimbus LLC** — We build Salesforce delivery infrastructure so you can focus on your actual product.
 
-Questions, issues, or partnership inquiries: open an issue or reach out at [cloudnimbusllc.com](https://cloudnimbusllc.com).
+Questions, partnership inquiries, or enterprise licensing: open an issue or reach out at [cloudnimbusllc.com](https://cloudnimbusllc.com).

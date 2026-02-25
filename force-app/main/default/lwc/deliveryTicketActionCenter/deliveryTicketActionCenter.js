@@ -158,6 +158,10 @@ export default class DeliveryTicketActionCenter extends LightningElement {
         return this.missingFields && this.missingFields.length > 0;
     }
 
+    get showMoveOptions() {
+        return !this.hasMissingFields;
+    }
+
     evaluateState() {
         this.missingFields = [];
         const stage = getFieldValue(this.ticket, STAGE_FIELD);

@@ -13,12 +13,6 @@
                 <identifier>c_deliveryHubSetup</identifier>
             </componentInstance>
         </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryClientDashboard</componentName>
-                <identifier>c_deliveryClientDashboard</identifier>
-            </componentInstance>
-        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>
@@ -31,6 +25,22 @@
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>showConnectionHealth</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentName>deliveryBudgetSummary</componentName>
+                <identifier>c_deliveryBudgetSummary</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryClientDashboard</componentName>
+                <identifier>c_deliveryClientDashboard</identifier>
+            </componentInstance>
+        </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>

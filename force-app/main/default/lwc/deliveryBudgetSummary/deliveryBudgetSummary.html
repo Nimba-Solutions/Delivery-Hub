@@ -44,6 +44,7 @@
                     </div>
                 </div>
 
+                <template if:true={shouldShowConnectionHealth}>
                 <div class="slds-col slds-size_1-of-1 slds-m-vertical_small">
                     <div class="slds-border_bottom"></div>
                 </div>
@@ -75,6 +76,7 @@
                         <div class="slds-text-body_small slds-text-color_weak">Failed</div>
                     </div>
                 </div>
+                </template>
 
             </div>
         </div>
