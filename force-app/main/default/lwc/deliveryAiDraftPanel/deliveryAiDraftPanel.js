@@ -61,9 +61,7 @@ export default class DeliveryAiDraftPanel extends LightningElement {
                     message: 'Update copied to clipboard.',
                     variant: 'success'
                 }));
-                // Reset label after 3 seconds
-                // eslint-disable-next-line @lwc/lwc/no-async-operation
-                setTimeout(() => { this.copied = false; }, 3000);
+                setTimeout(() => { this.copied = false; }, 3000); // reset label
             })
             .catch(() => {
                 this.dispatchEvent(new ShowToastEvent({
