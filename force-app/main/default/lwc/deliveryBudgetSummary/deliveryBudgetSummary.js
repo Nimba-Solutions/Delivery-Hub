@@ -6,10 +6,10 @@ import getBudgetMetrics from '@salesforce/apex/DeliveryHubDashboardController.ge
 import { refreshApex } from '@salesforce/apex';
 
 export default class DeliveryBudgetSummary extends LightningElement {
-    @api showConnectionHealth = true;
+    @api hideConnectionHealth = false;
 
     get shouldShowConnectionHealth() {
-        return this.showConnectionHealth !== false && this.showConnectionHealth !== 'false';
+        return !this.hideConnectionHealth;
     }
 
     @track metrics = { 
