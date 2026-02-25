@@ -76,9 +76,9 @@ public without sharing class DeliveryHubSetupController {
         String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/sync/Network_Entity__c';
 
         Map<String, Object> packet = new Map<String, Object>{
-            'SourceId' => localEntityId, 
-            'RemoteExternalIdTxt__c' => localEntityId, 
-            'Name' => UserInfo.getOrganizationName(), 
+            'SourceId' => localEntityId,
+            'RemoteExternalIdTxt__c' => localEntityId,
+            'Name' => buildOrgDisplayName(),
             'OrgIdTxt__c' => UserInfo.getOrganizationId(),
             'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
             'EntityTypePk__c' => 'Client',
@@ -130,6 +130,12 @@ public without sharing class DeliveryHubSetupController {
         }
 
         scheduleSyncJobs();
+    }
+
+    private static String buildOrgDisplayName() {
+        List<Organization> orgs = [SELECT IsSandbox FROM Organization LIMIT 1];
+        String baseName = UserInfo.getOrganizationName();
+        return (!orgs.isEmpty() && orgs[0].IsSandbox) ? baseName + ' (Sandbox)' : baseName;
     }
 
     @SuppressWarnings('PMD.ApexCRUDViolation')

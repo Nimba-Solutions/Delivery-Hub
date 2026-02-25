@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>VendorAnnouncementTxt__c</fullName>
+    <description>Optional pinned message from the vendor displayed as a highlighted banner on the client home page. Leave blank to hide the banner.</description>
+    <inlineHelpText>Enter a short message (up to 500 characters) to pin as a banner on your client&apos;s home page. Clear this field to remove the banner.</inlineHelpText>
+    <label>Vendor Announcement</label>
+    <length>500</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

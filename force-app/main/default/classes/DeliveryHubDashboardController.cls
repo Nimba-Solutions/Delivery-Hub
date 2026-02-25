@@ -101,6 +101,7 @@ public with sharing class DeliveryHubDashboardController {
         result.put('attentionTickets', fetchAttentionTickets());
         result.put('phases', fetchPhaseList());
         result.put('recentTickets', fetchRecentTickets());
+        result.put('announcements', fetchVendorAnnouncements());
         return result;
     }
 
@@ -187,6 +188,23 @@ public with sharing class DeliveryHubDashboardController {
             items.add(item);
         }
         return items;
+    }
+
+    private static List<String> fetchVendorAnnouncements() {
+        List<Network_Entity__c> vendors = [
+            SELECT VendorAnnouncementTxt__c, Name
+            FROM Network_Entity__c
+            WHERE EntityTypePk__c = 'Vendor'
+            AND StatusPk__c = 'Active'
+            AND VendorAnnouncementTxt__c != null
+            WITH USER_MODE
+            ORDER BY Name ASC
+        ];
+        List<String> texts = new List<String>();
+        for (Network_Entity__c v : vendors) {
+            texts.add(v.VendorAnnouncementTxt__c);
+        }
+        return texts;
     }
 
     private static Map<String, String> buildStagePhaseMap() {
