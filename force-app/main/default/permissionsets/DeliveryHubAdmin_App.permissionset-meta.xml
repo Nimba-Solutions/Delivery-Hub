@@ -183,11 +183,6 @@
 
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Comment__c.TicketId__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Ticket_Comment__c.AuthorTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -379,11 +374,6 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>WorkLog__c.HoursLoggedNumber__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>WorkLog__c.RequestId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
