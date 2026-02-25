@@ -8,6 +8,6 @@
         <target>lightning__RecordPage</target>
         <target>lightning__Tab</target>
     </targets>
-    <masterLabel>Settings Container</masterLabel>
+    <masterLabel>Delivery Settings Container</masterLabel>
     <description>Container component for application settings with tabbed interface</description>
 </LightningComponentBundle>
