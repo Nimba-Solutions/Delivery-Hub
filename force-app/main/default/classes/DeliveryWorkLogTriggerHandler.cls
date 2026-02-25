@@ -37,8 +37,21 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
 
-        List<Sync_Item__c> syncItems = new List<Sync_Item__c>();
-        for (WorkLog__c wl : newLogs) {
+        List<Sync_Item__c> syncItems = buildSyncItems(newLogs, clientTickets);
+        if (!syncItems.isEmpty()) {
+            insert AS USER syncItems;
+        }
+    }
+
+    /**
+     * @description Builds the list of Sync_Item__c records for WorkLogs on client-linked tickets.
+     * @param logs The WorkLog records to evaluate.
+     * @param clientTickets Map of ticket Ids that have a client entity linked.
+     * @return List of Sync_Item__c records ready for insert.
+     */
+    private static List<Sync_Item__c> buildSyncItems(List<WorkLog__c> logs, Map<Id, Ticket__c> clientTickets) {
+        List<Sync_Item__c> items = new List<Sync_Item__c>();
+        for (WorkLog__c wl : logs) {
             if (!clientTickets.containsKey(wl.TicketId__c)) {
                 continue;
             }
@@ -48,7 +61,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
                 'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
                 'WorkDescriptionTxt__c'  => wl.WorkDescriptionTxt__c
             };
-            syncItems.add(new Sync_Item__c(
+            items.add(new Sync_Item__c(
                 ObjectTypePk__c         = 'WorkLog__c',
                 LocalRecordIdTxt__c     = wl.Id,
                 TicketId__c             = wl.TicketId__c,
@@ -57,9 +70,6 @@ public with sharing class DeliveryWorkLogTriggerHandler {
                 PayloadTxt__c           = JSON.serialize(payload)
             ));
         }
-
-        if (!syncItems.isEmpty()) {
-            insert AS USER syncItems;
-        }
+        return items;
     }
 }

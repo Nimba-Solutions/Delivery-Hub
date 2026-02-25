@@ -3,7 +3,7 @@
  *              Initialises org-level default settings so administrators do not need to
  *              trigger the setup wizard before the package is functional.
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier')
 global class DeliveryHubInstallHandler implements InstallHandler {
 
     /**
