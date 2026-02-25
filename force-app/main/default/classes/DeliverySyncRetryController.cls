@@ -24,7 +24,7 @@ public with sharing class DeliverySyncRetryController {
         result.put('failedCount', [
             SELECT COUNT() FROM Sync_Item__c
             WHERE StatusPk__c = 'Failed'
-            WITH USER_MODE
+            WITH SYSTEM_MODE
         ]);
 
         List<FailedSyncRow> rows = new List<FailedSyncRow>();
@@ -32,7 +32,7 @@ public with sharing class DeliverySyncRetryController {
             SELECT Id, ObjectTypePk__c, ErrorLogTxt__c, LastModifiedDate
             FROM Sync_Item__c
             WHERE StatusPk__c = 'Failed'
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 10
         ]) {
@@ -56,7 +56,7 @@ public with sharing class DeliverySyncRetryController {
             SELECT Id
             FROM Sync_Item__c
             WHERE StatusPk__c = 'Failed'
-            WITH USER_MODE
+            WITH SYSTEM_MODE
         ];
         List<Sync_Item__c> toRetry = new List<Sync_Item__c>();
         for (Sync_Item__c si : failed) {

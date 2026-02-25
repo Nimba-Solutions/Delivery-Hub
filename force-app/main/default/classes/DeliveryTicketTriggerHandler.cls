@@ -29,7 +29,12 @@ public without sharing class DeliveryTicketTriggerHandler {
             handleNetworkEntitySync(newRows);
         }
 
-        // 2. UNIFIED SYNC ENGINE (High-Water Mark)
+        // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
+        if (isUpdate) {
+            publishStageChangeEvents(newRows, oldMap);
+        }
+
+        // 3. UNIFIED SYNC ENGINE (High-Water Mark)
         Set<String> syncFields = new Set<String>{
             'BriefDescriptionTxt__c', 
             'DetailsTxt__c', 
@@ -109,6 +114,33 @@ public without sharing class DeliveryTicketTriggerHandler {
         Database.insert(newRequests, AccessLevel.SYSTEM_MODE);
     }
     
+    /**
+     * @description Publishes a Delivery_Ticket_Change__e Platform Event for every ticket
+     *              whose StageNamePk__c changed in this transaction, enabling real-time
+     *              board refresh via the EMP API without polling.
+     * @param newRows List of updated Ticket__c records
+     * @param oldMap  Map of pre-update Ticket__c records
+     */
+    private static void publishStageChangeEvents(
+        List<Ticket__c> newRows,
+        Map<Id, Ticket__c> oldMap
+    ) {
+        List<Delivery_Ticket_Change__e> events = new List<Delivery_Ticket_Change__e>();
+        for (Ticket__c t : newRows) {
+            Ticket__c old = oldMap.get(t.Id);
+            if (old != null && t.StageNamePk__c != old.StageNamePk__c) {
+                events.add(new Delivery_Ticket_Change__e(
+                    TicketId__c   = t.Id,
+                    ChangeType__c = 'stage_change',
+                    NewStage__c   = t.StageNamePk__c
+                ));
+            }
+        }
+        if (!events.isEmpty()) {
+            EventBus.publish(events);
+        }
+    }
+
     /**
      * @description Logic to handle Before Update events (Blocking logic)
      */

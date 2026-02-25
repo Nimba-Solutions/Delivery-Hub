@@ -30,7 +30,7 @@ public with sharing class DeliveryHubFilesController {
         List<Ticket_Comment__c> comments = [
             SELECT Id FROM Ticket_Comment__c
             WHERE TicketId__c = :ticketId
-            WITH USER_MODE
+            WITH SYSTEM_MODE
         ];
         for (Ticket_Comment__c c : comments) {
             entityIds.add(c.Id);
@@ -39,7 +39,7 @@ public with sharing class DeliveryHubFilesController {
         List<Request__c> requests = [
             SELECT Id FROM Request__c
             WHERE TicketId__c = :ticketId
-            WITH USER_MODE
+            WITH SYSTEM_MODE
         ];
         for (Request__c r : requests) {
             entityIds.add(r.Id);
@@ -52,7 +52,7 @@ public with sharing class DeliveryHubFilesController {
                    ContentDocument.ContentSize, ContentDocument.LastModifiedDate
             FROM ContentDocumentLink
             WHERE LinkedEntityId IN :entityIds
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             ORDER BY ContentDocument.LastModifiedDate DESC
         ];
 

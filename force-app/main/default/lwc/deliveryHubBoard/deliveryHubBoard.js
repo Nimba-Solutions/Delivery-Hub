@@ -13,6 +13,10 @@ import USER_ID from "@salesforce/user/Id";
 import USER_NAME_FIELD from "@salesforce/schema/User.Name";
 
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
+import { subscribe, unsubscribe, onError } from 'lightning/empApi';
+import draftBoardSummary from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryAiController.draftBoardSummary';
+
+const TICKET_CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%Delivery_Ticket_Change__e';
 
 // --- Apex Imports ---
 import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getTickets";
@@ -100,7 +104,15 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     @track hasValidOpenAIKey = false;
     @track myWorkOnly = false;
 
+    // Weekly AI summary modal
+    @track showWeeklyModal = false;
+    @track weeklyUpdate = '';
+    @track isWeeklyLoading = false;
+    @track weeklyError = '';
+    @track weeklyCopied = false;
+
     ticketsWire;
+    _empSubscription = {};
 
     @wire(getRecord, { recordId: USER_ID, fields: [USER_NAME_FIELD] })
     currentUser;
@@ -111,6 +123,64 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     connectedCallback() {
         this.loadSettings();
+        this.subscribeToTicketChanges();
+    }
+
+    disconnectedCallback() {
+        unsubscribe(this._empSubscription, () => {});
+    }
+
+    subscribeToTicketChanges() {
+        subscribe(TICKET_CHANGE_CHANNEL, -1, () => {
+            refreshApex(this.ticketsWire);
+        }).then(response => {
+            this._empSubscription = response;
+        });
+        onError(error => {
+            console.error('[DeliveryHubBoard] EMP API error:', JSON.stringify(error));
+        });
+    }
+
+    get weeklyCopyLabel() {
+        return this.weeklyCopied ? 'Copied!' : 'Copy';
+    }
+
+    handleWeeklyUpdate() {
+        this.showWeeklyModal = true;
+        this.weeklyUpdate = '';
+        this.weeklyError = '';
+        this.weeklyCopied = false;
+        this.isWeeklyLoading = true;
+        draftBoardSummary()
+            .then(result => { this.weeklyUpdate = result; })
+            .catch(error => {
+                this.weeklyError = error.body ? error.body.message : error.message;
+            })
+            .finally(() => { this.isWeeklyLoading = false; });
+    }
+
+    closeWeeklyModal() {
+        this.showWeeklyModal = false;
+    }
+
+    handleWeeklyCopy() {
+        navigator.clipboard.writeText(this.weeklyUpdate)
+            .then(() => {
+                this.weeklyCopied = true;
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Copied',
+                    message: 'Weekly update copied to clipboard.',
+                    variant: 'success'
+                }));
+                setTimeout(() => { this.weeklyCopied = false; }, 3000); // reset label
+            })
+            .catch(() => {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Copy failed',
+                    message: 'Select the text manually and copy.',
+                    variant: 'warning'
+                }));
+            });
     }
 
     async loadSettings() {

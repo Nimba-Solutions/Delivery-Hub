@@ -27,6 +27,12 @@
                         <lightning-icon icon-name="utility:add" size="x-small" class="slds-m-right_x-small"></lightning-icon>
                         New Ticket
                     </button>
+                    <template if:true={AiEnhancementEnabled}>
+                        <button class="new-ticket-button" onclick={handleWeeklyUpdate} title="Generate AI weekly status summary">
+                            <lightning-icon icon-name="utility:sparkle" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                            Weekly Update
+                        </button>
+                    </template>
                 </div>
             </div>
             
@@ -304,6 +310,63 @@
         <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
     
+    <!-- Weekly AI Summary Modal -->
+    <template if:true={showWeeklyModal}>
+        <section class="slds-modal slds-fade-in-open" tabindex="-1">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-modal__close" onclick={closeWeeklyModal} title="Close">
+                        <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium">
+                        <lightning-icon icon-name="utility:sparkle" size="small" class="slds-m-right_x-small"></lightning-icon>
+                        Weekly Status Update
+                    </h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <template if:true={isWeeklyLoading}>
+                        <div class="slds-align_absolute-center slds-p-around_large">
+                            <lightning-spinner alternative-text="Generating summary..." size="medium"></lightning-spinner>
+                            <p class="slds-m-top_medium slds-text-color_weak">Summarising your board with AI…</p>
+                        </div>
+                    </template>
+                    <template if:true={weeklyError}>
+                        <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                            <lightning-icon icon-name="utility:error" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                            <p>{weeklyError}</p>
+                        </div>
+                    </template>
+                    <template if:false={isWeeklyLoading}>
+                        <template if:true={weeklyUpdate}>
+                            <lightning-textarea
+                                value={weeklyUpdate}
+                                label="Generated Weekly Update"
+                                rows="10"
+                                class="slds-m-bottom_small">
+                            </lightning-textarea>
+                            <p class="slds-text-body_small slds-text-color_weak">
+                                Review and edit before sending. Copy to paste into email or Slack.
+                            </p>
+                        </template>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button variant="neutral" label="Close" onclick={closeWeeklyModal}></lightning-button>
+                    <template if:true={weeklyUpdate}>
+                        <lightning-button
+                            variant="brand"
+                            label={weeklyCopyLabel}
+                            icon-name="utility:copy"
+                            onclick={handleWeeklyCopy}
+                            class="slds-m-left_x-small">
+                        </lightning-button>
+                    </template>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
     <template if:true={isModalOpen}>
         <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
             <div class="slds-modal__container">
