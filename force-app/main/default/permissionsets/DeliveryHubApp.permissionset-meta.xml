@@ -212,16 +212,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Dependency__c.Blocked_Ticket__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Ticket_Dependency__c.Blocking_Ticket__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Ticket__c.AcceptanceCriteriaTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
