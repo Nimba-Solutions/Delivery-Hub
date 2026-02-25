@@ -1,11 +1,17 @@
 /**
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, track, wire } from 'lwc';
+import { LightningElement, api, track, wire } from 'lwc';
 import getBudgetMetrics from '@salesforce/apex/DeliveryHubDashboardController.getBudgetMetrics';
 import { refreshApex } from '@salesforce/apex';
 
 export default class DeliveryBudgetSummary extends LightningElement {
+    @api hideConnectionHealth = false;
+
+    get shouldShowConnectionHealth() {
+        return !this.hideConnectionHealth;
+    }
+
     @track metrics = { 
         totalHours: 0, 
         activeRequests: 0, 

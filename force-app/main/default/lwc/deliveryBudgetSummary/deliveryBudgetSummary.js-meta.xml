@@ -7,4 +7,9 @@
         <target>lightning__RecordPage</target>
         <target>lightning__AppPage</target>
     </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__HomePage,lightning__RecordPage,lightning__AppPage">
+            <property name="hideConnectionHealth" type="Boolean" default="false" label="Hide Connection Health" description="When true, hides the Connection Health progress bar and sync counters." />
+        </targetConfig>
+    </targetConfigs>
 </LightningComponentBundle>
