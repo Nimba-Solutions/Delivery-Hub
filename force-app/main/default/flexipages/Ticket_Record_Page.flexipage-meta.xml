@@ -123,7 +123,7 @@
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
-    <!-- Sidebar tab content facets -->
+    <!-- Sidebar tab content facets — custom regions, no Replace mode -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -143,7 +143,6 @@
                 <identifier>c_deliveryTicketStageGateWarning</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>sidebarActionsContent</name>
         <type>Facet</type>
     </flexiPageRegions>
@@ -160,7 +159,6 @@
                 <identifier>c_deliveryTicketQuotes</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>sidebarContextContent</name>
         <type>Facet</type>
     </flexiPageRegions>
@@ -183,11 +181,9 @@
                 <identifier>c_deliveryTicketRefiner</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>sidebarFilesContent</name>
         <type>Facet</type>
     </flexiPageRegions>
-    <!-- Sidebar tab list -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -235,11 +231,9 @@
                 <identifier>sidebarFilesTab</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>sidebarTabList</name>
         <type>Facet</type>
     </flexiPageRegions>
-    <!-- Sidebar region -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>

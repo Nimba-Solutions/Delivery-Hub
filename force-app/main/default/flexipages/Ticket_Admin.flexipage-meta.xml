@@ -4,7 +4,7 @@
         <name>header</name>
         <type>Region</type>
     </flexiPageRegions>
-    <!-- Admin sidebar tab content facets -->
+    <!-- Sidebar tab content facets — no Replace mode (standalone page, no parent) -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -24,7 +24,6 @@
                 <identifier>c_deliverySyncPollerButton</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>adminActionsContent</name>
         <type>Facet</type>
     </flexiPageRegions>
@@ -41,7 +40,6 @@
                 <identifier>c_deliveryTicketRefiner</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>adminAiContent</name>
         <type>Facet</type>
     </flexiPageRegions>
@@ -245,11 +243,9 @@
                 <identifier>lst_dynamicRelatedList2</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>adminDataContent</name>
         <type>Facet</type>
     </flexiPageRegions>
-    <!-- Admin sidebar tab list -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -297,11 +293,9 @@
                 <identifier>adminDataTab</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>adminSidebarTabList</name>
         <type>Facet</type>
     </flexiPageRegions>
-    <!-- Admin sidebar region -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
