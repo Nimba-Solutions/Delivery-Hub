@@ -4,6 +4,6 @@
     <description>Incoming webhook URL for posting stage-change notifications to a Slack channel. Leave blank to disable Slack notifications.</description>
     <inlineHelpText>Paste the Incoming Webhook URL from your Slack App configuration (e.g. https://hooks.slack.com/services/...).</inlineHelpText>
     <label>Slack Webhook URL</label>
-    <length>500</length>
+    <length>255</length>
     <type>Text</type>
 </CustomField>
