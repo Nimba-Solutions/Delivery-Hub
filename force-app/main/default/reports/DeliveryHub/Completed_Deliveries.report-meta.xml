@@ -18,7 +18,7 @@
     <columns>
         <field>TotalLoggedHoursNumber__c</field>
     </columns>
-    <description>Successfully delivered tickets. Clients use this to review completed work; Joe uses it to report on throughput.</description>
+    <description>Successfully delivered tickets. Clients use this to review completed work; Admins use it to report on throughput.</description>
     <filter>
         <criterias>
             <column>StageNamePk__c</column>
