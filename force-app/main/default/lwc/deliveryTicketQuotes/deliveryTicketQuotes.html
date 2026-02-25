@@ -1,0 +1,62 @@
+<template>
+    <lightning-card title="Vendor Quotes" icon-name="utility:currency">
+        <template if:true={isLoading}>
+            <div class="slds-p-medium slds-text-align_center">
+                <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template if:false={isLoading}>
+            <template if:true={hasQuotes}>
+                <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+                    <template for:each={quotes} for:item="quote">
+                        <div key={quote.id} class={quote.cardClass}>
+                            <div class="q-vendor-row">
+                                <span class="q-vendor-name">{quote.vendorName}</span>
+                                <span class={quote.statusClass}>{quote.status}</span>
+                            </div>
+                            <div class="q-metrics">
+                                <div class="q-metric">
+                                    <span class="q-metric-value">{quote.quotedHoursDisplay}</span>
+                                    <span class="q-metric-label">Quoted Hrs</span>
+                                </div>
+                                <div class="q-metric">
+                                    <span class="q-metric-value">{quote.hourlyRateDisplay}</span>
+                                    <span class="q-metric-label">Rate/Hr</span>
+                                </div>
+                                <div class="q-metric q-metric--highlight">
+                                    <span class="q-metric-value">{quote.projectedCostDisplay}</span>
+                                    <span class="q-metric-label">Est. Cost</span>
+                                </div>
+                            </div>
+                            <template if:false={quote.isAccepted}>
+                                <div class="q-accept-row">
+                                    <lightning-button
+                                        label="Accept This Quote"
+                                        variant="brand"
+                                        size="small"
+                                        data-id={quote.id}
+                                        onclick={handleAccept}
+                                        disabled={isAccepting}>
+                                    </lightning-button>
+                                </div>
+                            </template>
+                            <template if:true={quote.isAccepted}>
+                                <div class="q-accepted-badge">
+                                    <lightning-icon icon-name="utility:check" size="xx-small" class="q-accepted-icon"></lightning-icon>
+                                    <span>Quote accepted</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <template if:false={hasQuotes}>
+                <div class="slds-p-around_medium slds-text-align_center q-empty">
+                    <p>No quotes yet. Quotes appear here when vendors submit a bid.</p>
+                </div>
+            </template>
+        </template>
+    </lightning-card>
+</template>

@@ -4,7 +4,7 @@
     <fields>Name</fields>
     <fields>StageNamePk__c</fields>
     <fields>BriefDescriptionTxt__c</fields>
-    <fields>DeveloperDaysSizeNumber__c</fields>
+    <fields>PriorityPk__c</fields>
     <fields>CalculatedETADate__c</fields>
     <label>Compact Layout</label>
 </CompactLayout>

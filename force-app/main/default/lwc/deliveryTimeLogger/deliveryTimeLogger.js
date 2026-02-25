@@ -3,6 +3,9 @@ import { getRecord, getFieldValue, refreshApex } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import logHours from '@salesforce/apex/DeliveryTimeLoggerController.logHours';
 import TOTAL_LOGGED_HOURS_FIELD from '@salesforce/schema/Ticket__c.TotalLoggedHoursNumber__c';
+import CLIENT_ENTITY_FIELD from '@salesforce/schema/Ticket__c.ClientNetworkEntityId__c';
+
+const FIELDS = [TOTAL_LOGGED_HOURS_FIELD, CLIENT_ENTITY_FIELD];
 
 export default class DeliveryTimeLogger extends LightningElement {
     @api recordId;
@@ -13,9 +16,14 @@ export default class DeliveryTimeLogger extends LightningElement {
 
     wiredTicket;
 
-    @wire(getRecord, { recordId: '$recordId', fields: [TOTAL_LOGGED_HOURS_FIELD] })
+    @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
     wiredTicketHandler(result) {
         this.wiredTicket = result;
+    }
+
+    get hasClientEntity() {
+        const val = getFieldValue(this.wiredTicket && this.wiredTicket.data, CLIENT_ENTITY_FIELD);
+        return !!val;
     }
 
     get currentHours() {

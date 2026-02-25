@@ -95,6 +95,25 @@ public with sharing class DeliveryHubDashboardController {
      * @description Returns client-facing dashboard data: attention items, phase counts, recent tickets.
      * @return Map containing attentionTickets, phases, and recentTickets lists.
      */
+    /**
+     * @description Returns the count of tickets currently waiting on client action.
+     * @return Integer count of attention-requiring tickets.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Integer getAttentionCount() {
+        Set<String> clientStages = new Set<String>{
+            'Ready for Client Approval', 'In Client Approval',
+            'Ready for Client UAT', 'In Client UAT',
+            'Ready for UAT Sign-off'
+        };
+        return [
+            SELECT COUNT()
+            FROM Ticket__c
+            WHERE StageNamePk__c IN :clientStages
+            WITH USER_MODE
+        ];
+    }
+
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getClientDashboard() {
         Map<String, Object> result = new Map<String, Object>();

@@ -1,0 +1,69 @@
+<template>
+    <lightning-card title="Sync Health" icon-name="utility:sync">
+        <lightning-button-icon
+            icon-name="utility:refresh"
+            slot="actions"
+            variant="border-filled"
+            onclick={handleRefresh}
+            alternative-text="Refresh">
+        </lightning-button-icon>
+
+        <template if:true={isLoading}>
+            <div class="slds-p-medium slds-text-align_center">
+                <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template if:false={isLoading}>
+            <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+                <!-- Health summary row -->
+                <div class="srp-summary">
+                    <template if:true={hasFailures}>
+                        <div class="srp-badge srp-badge--error">
+                            <lightning-icon icon-name="utility:error" size="x-small" class="srp-badge-icon"></lightning-icon>
+                            <span>{failedCount} failed sync{pluralSuffix}</span>
+                        </div>
+                        <lightning-button
+                            label="Retry All"
+                            variant="destructive-text"
+                            size="small"
+                            onclick={handleRetry}
+                            disabled={isRetrying}
+                            class="srp-retry-btn">
+                        </lightning-button>
+                    </template>
+                    <template if:false={hasFailures}>
+                        <div class="srp-badge srp-badge--ok">
+                            <lightning-icon icon-name="utility:check" size="x-small" class="srp-badge-icon"></lightning-icon>
+                            <span>All syncs healthy</span>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Recent errors table -->
+                <template if:true={hasErrors}>
+                    <table class="srp-table">
+                        <thead>
+                            <tr>
+                                <th>Object</th>
+                                <th>Error</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={recentErrors} for:item="err">
+                                <tr key={err.id}>
+                                    <td class="srp-obj">{err.objectType}</td>
+                                    <td class="srp-err">{err.errorLog}</td>
+                                    <td class="srp-time">{err.lastModified}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+
+            </div>
+        </template>
+    </lightning-card>
+</template>

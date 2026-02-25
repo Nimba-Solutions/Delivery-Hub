@@ -3,9 +3,10 @@ import { CurrentPageReference } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import userId from '@salesforce/user/Id';
 
-import createTicket from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest'; 
+import createTicket from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.linkFilesAndSync";
+import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
 
 export default class DeliveryGhostRecorder extends LightningElement {
     @api enableShortcut = false; 
@@ -20,7 +21,23 @@ export default class DeliveryGhostRecorder extends LightningElement {
     @track uploadedFileIds = [];
     
     currentPageRef;
-    currentUserId = userId; 
+    currentUserId = userId;
+
+    @wire(getAttentionCount)
+    wiredAttentionCount;
+
+    get attentionCount() {
+        return this.wiredAttentionCount.data || 0;
+    }
+
+    get hasAttentionItems() {
+        return this.attentionCount > 0;
+    }
+
+    get attentionLabel() {
+        const n = this.attentionCount;
+        return `${n} item${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} your attention`;
+    }
 
     // --- GETTERS FOR DYNAMIC UI ---
     get isCardMode() { return this.displayMode === 'Card'; }

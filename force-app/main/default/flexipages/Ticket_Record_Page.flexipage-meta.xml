@@ -138,6 +138,18 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryTicketDependencies</componentName>
+                <identifier>c_deliveryTicketDependencies</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketQuotes</componentName>
+                <identifier>c_deliveryTicketQuotes</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryTicketFiles</componentName>
                 <identifier>c_deliveryTicketFiles</identifier>
             </componentInstance>

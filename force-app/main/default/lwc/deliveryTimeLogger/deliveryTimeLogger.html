@@ -1,4 +1,5 @@
 <template>
+    <template if:true={hasClientEntity}>
     <lightning-card icon-name="utility:clock">
         <div slot="title" class="tl-title-wrapper">
             <span class="tl-card-title">Log Time</span>
@@ -62,4 +63,5 @@
 
         </div>
     </lightning-card>
+    </template>
 </template>
