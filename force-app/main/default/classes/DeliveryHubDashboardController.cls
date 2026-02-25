@@ -196,13 +196,14 @@ public with sharing class DeliveryHubDashboardController {
             FROM Network_Entity__c
             WHERE EntityTypePk__c = 'Vendor'
             AND StatusPk__c = 'Active'
-            AND VendorAnnouncementTxt__c != null
             WITH USER_MODE
             ORDER BY Name ASC
         ];
         List<String> texts = new List<String>();
         for (Network_Entity__c v : vendors) {
-            texts.add(v.VendorAnnouncementTxt__c);
+            if (String.isNotBlank(v.VendorAnnouncementTxt__c)) {
+                texts.add(v.VendorAnnouncementTxt__c);
+            }
         }
         return texts;
     }

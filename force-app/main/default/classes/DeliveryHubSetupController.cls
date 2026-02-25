@@ -132,6 +132,7 @@ public without sharing class DeliveryHubSetupController {
         scheduleSyncJobs();
     }
 
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     private static String buildOrgDisplayName() {
         List<Organization> orgs = [SELECT IsSandbox FROM Organization LIMIT 1];
         String baseName = UserInfo.getOrganizationName();

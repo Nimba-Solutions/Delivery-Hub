@@ -1,8 +1,10 @@
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
+import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import getClientDashboard from '@salesforce/apex/DeliveryHubDashboardController.getClientDashboard';
-import FIRST_NAME from '@salesforce/user/FirstName';
+import USER_ID from '@salesforce/user/Id';
+import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 
 const PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
 
@@ -22,6 +24,9 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @track announcements = [];
 
     _wiredResult;
+
+    @wire(getRecord, { recordId: USER_ID, fields: [FIRST_NAME_FIELD] })
+    wiredUser;
 
     @wire(getClientDashboard)
     wiredDashboard(result) {
@@ -109,7 +114,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     get firstName() {
-        return FIRST_NAME || '';
+        return getFieldValue(this.wiredUser && this.wiredUser.data, FIRST_NAME_FIELD) || '';
     }
 
     get greetingLine() {
