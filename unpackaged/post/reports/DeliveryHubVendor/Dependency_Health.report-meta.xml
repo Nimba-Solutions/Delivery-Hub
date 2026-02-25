@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>Ticket_Dependency__c.Blocked_Ticket__c</field>
+    </columns>
+    <columns>
+        <field>Ticket_Dependency__c.Blocking_Ticket__c</field>
+    </columns>
+    <columns>
+        <field>Ticket_Dependency__c.TypePk__c</field>
+    </columns>
+    <description>All ticket dependencies — shows which tickets are blocked and what is blocking them. Use to identify critical path risks and unresolved blockers.</description>
+    <format>Tabular</format>
+    <name>Dependency Health</name>
+    <reportType>CustomEntity$Ticket_Dependency__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>false</showGrandTotal>
+    <sortColumn>Ticket_Dependency__c.Blocked_Ticket__c</sortColumn>
+    <sortOrder>Asc</sortOrder>
+</Report>

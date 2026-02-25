@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>CUST_NAME</field>
+    </columns>
+    <columns>
+        <field>Ticket__c.BriefDescriptionTxt__c</field>
+    </columns>
+    <columns>
+        <field>Ticket__c.ClientNetworkEntityId__c</field>
+    </columns>
+    <description>Tickets completed (moved to Done) grouped by week. Shows delivery cadence and burn rate over time. Uses Last Modified Date as the completion date proxy — adjust the date filter window as needed.</description>
+    <filter>
+        <criteriaItems>
+            <column>Ticket__c.StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value>Done</value>
+        </criteriaItems>
+    </filter>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Week</dateGranularity>
+        <field>Ticket__c.LastModifiedDate</field>
+        <sortOrder>Desc</sortOrder>
+    </groupingsDown>
+    <name>Velocity — Tickets Completed by Week</name>
+    <reportType>CustomEntity$Ticket__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <showSubTotals>true</showSubTotals>
+</Report>

@@ -476,6 +476,10 @@
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
+        <tab>Ticket_Board</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
         <tab>Ticket_Comment__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>

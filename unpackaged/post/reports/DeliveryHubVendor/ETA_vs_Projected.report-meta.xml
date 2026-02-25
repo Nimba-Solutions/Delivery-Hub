@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>CUST_NAME</field>
+    </columns>
+    <columns>
+        <field>Ticket__c.BriefDescriptionTxt__c</field>
+    </columns>
+    <columns>
+        <field>Ticket__c.ClientNetworkEntityId__c</field>
+    </columns>
+    <columns>
+        <field>Ticket__c.StageNamePk__c</field>
+    </columns>
+    <columns>
+        <field>Ticket__c.CalculatedETADate__c</field>
+    </columns>
+    <columns>
+        <field>Ticket__c.ProjectedUATReadyDate__c</field>
+    </columns>
+    <description>Side-by-side view of system-calculated ETA vs. projected UAT-ready date. Use to identify tickets where the timeline has slipped or the estimate is no longer realistic.</description>
+    <filter>
+        <booleanFilter>1 AND 2</booleanFilter>
+        <criteriaItems>
+            <column>Ticket__c.StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value>Done</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>Ticket__c.StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value>Cancelled</value>
+        </criteriaItems>
+    </filter>
+    <format>Tabular</format>
+    <name>ETA vs Projected — Active Tickets</name>
+    <reportType>CustomEntity$Ticket__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>false</showGrandTotal>
+    <sortColumn>Ticket__c.ProjectedUATReadyDate__c</sortColumn>
+    <sortOrder>Asc</sortOrder>
+</Report>
