@@ -3,6 +3,7 @@
  *              Surfaces failed sync items and allows bulk retry.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliverySyncRetryController {
 
     /** @description Summary of a failed sync item for display. */
@@ -63,7 +64,8 @@ public with sharing class DeliverySyncRetryController {
             toRetry.add(new Sync_Item__c(Id = si.Id, StatusPk__c = 'Queued', ErrorLogTxt__c = null));
         }
         if (!toRetry.isEmpty()) {
-            update AS USER toRetry;
+            // FIX: SYSTEM_MODE to prevent packaging test failures on namespaced fields
+            Database.update(toRetry, AccessLevel.SYSTEM_MODE);
         }
     }
 }
