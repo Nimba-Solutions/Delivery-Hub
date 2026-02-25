@@ -3,6 +3,7 @@
  *              - draftStatusUpdate: drafts a client-facing status update for a single ticket
  *              - suggestAcceptanceCriteria: proposes testable acceptance criteria for a ticket
  *              - draftBoardSummary: generates a weekly status summary across all active tickets
+ *              - draftReleaseNotes: generates formatted release notes for recently completed tickets
  * @author Cloud Nimbus LLC
  */
 // Complexity is distributed across many small, focused helper methods — aggregate is expected.
@@ -86,6 +87,35 @@ public with sharing class DeliveryAiController {
 
         String model = getModel(settings);
         return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildBoardSummaryPrompt(tickets));
+    }
+
+    /**
+     * @description Generates formatted release notes for tickets completed in the past 30 days.
+     *              Queries tickets in 'Done' or 'Deployed to Prod' stages and passes them to
+     *              the OpenAI API to produce a client-friendly changelog.
+     * @return String The generated release notes text.
+     */
+    @AuraEnabled
+    public static String draftReleaseNotes() {
+        Delivery_Hub_Settings__c settings = getValidatedSettings();
+
+        List<Ticket__c> tickets = [
+            SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
+            FROM Ticket__c
+            WHERE StageNamePk__c IN ('Done', 'Deployed to Prod')
+            AND LastModifiedDate >= :Datetime.now().addDays(-30)
+            WITH SYSTEM_MODE
+            ORDER BY PriorityPk__c, Name
+        ];
+
+        if (tickets.isEmpty()) {
+            throw new AuraHandledException(
+                'No tickets were completed or deployed in the last 30 days.'
+            );
+        }
+
+        String model = getModel(settings);
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildReleaseNotesPrompt(tickets));
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
@@ -248,6 +278,22 @@ public with sharing class DeliveryAiController {
            + 'what is coming next. Be professional and encouraging. '
            + 'Return ONLY the status update text.';
         return p;
+    }
+
+    private static String buildReleaseNotesPrompt(List<Ticket__c> tickets) {
+        List<String> lines = new List<String>();
+        for (Ticket__c t : tickets) {
+            String title = String.isNotBlank(t.BriefDescriptionTxt__c)
+                ? t.BriefDescriptionTxt__c : t.Name;
+            lines.add('- [' + t.StageNamePk__c + '] ' + title);
+        }
+        return 'You are a technical product manager writing a client-facing release notes summary. '
+            + 'Based on the completed tickets below, write concise, professional release notes '
+            + 'suitable for a client email or changelog. Group related items where possible. '
+            + 'Use plain language, avoid jargon, and highlight user impact. '
+            + 'Format with a brief intro sentence, then a bulleted list.\n\n'
+            + 'Completed Tickets:\n' + String.join(lines, '\n') + '\n\n'
+            + 'Return ONLY the release notes text, no subject lines or sign-offs.';
     }
 
     private static String stripHtml(String html) {

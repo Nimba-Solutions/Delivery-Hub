@@ -1,0 +1,268 @@
+:host {
+    display: block;
+    --gantt-blue:    #3b82f6;
+    --gantt-indigo:  #6366f1;
+    --gantt-purple:  #a855f7;
+    --gantt-teal:    #14b8a6;
+    --gantt-green:   #22c55e;
+    --gantt-emerald: #10b981;
+    --gantt-red:     #ef4444;
+    --gantt-gray:    #9ca3af;
+    --gantt-warning: #f59e0b;
+    --gantt-label-w: 11rem;
+}
+
+/* Card shell */
+.gantt-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    overflow: hidden;
+    font-size: 0.8125rem;
+}
+
+/* Header */
+.gantt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.125rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.gantt-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.gantt-header-icon {
+    color: #3b82f6;
+}
+
+.gantt-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.15rem 0;
+}
+
+.gantt-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Loading / Error / Empty */
+.gantt-loading {
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.gantt-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.gantt-empty {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.gantt-empty-icon {
+    color: #d1d5db;
+    margin-bottom: 0.75rem;
+}
+
+.gantt-empty-sub {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+}
+
+/* Body */
+.gantt-body {
+    padding: 1rem 1.25rem 0.5rem;
+    position: relative;
+    overflow-x: auto;
+}
+
+/* Axis row */
+.gantt-axis {
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 0.25rem;
+    height: 1.75rem;
+}
+
+.gantt-date-row {
+    position: relative;
+    height: 100%;
+    width: 100%;
+}
+
+.gantt-date-label {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 0.6875rem;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+/* Today line */
+.gantt-today-line {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #ef4444;
+    opacity: 0.7;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Columns layout */
+.gantt-label-col {
+    width: var(--gantt-label-w);
+    min-width: var(--gantt-label-w);
+    padding-right: 0.75rem;
+    flex-shrink: 0;
+}
+
+.gantt-track-col {
+    flex: 1;
+    position: relative;
+    min-width: 18rem;
+}
+
+/* Ticket rows */
+.gantt-row {
+    display: flex;
+    align-items: center;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.gantt-row:last-child {
+    border-bottom: none;
+}
+
+.gantt-ticket-name {
+    display: block;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #1f2937;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(var(--gantt-label-w) - 0.75rem);
+}
+
+.gantt-ticket-name:hover {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+.gantt-stage-badge {
+    display: inline-block;
+    margin-top: 0.15rem;
+    font-size: 0.625rem;
+    font-weight: 500;
+    padding: 0.1rem 0.35rem;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.gantt-stage-badge.badge--overdue {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Track & bars */
+.gantt-track {
+    position: relative;
+    height: 1.5rem;
+    background: #f3f4f6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    width: 100%;
+}
+
+.gantt-bar {
+    position: absolute;
+    height: 100%;
+    border-radius: 0.375rem;
+    opacity: 0.85;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.gantt-bar:hover {
+    opacity: 1;
+    transform: scaleY(1.15);
+}
+
+.gantt-bar--overdue {
+    background: var(--gantt-red) !important;
+    opacity: 1;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 4px,
+        rgba(255,255,255,0.2) 4px,
+        rgba(255,255,255,0.2) 8px
+    );
+}
+
+.gantt-bar--warning {
+    background: var(--gantt-warning) !important;
+}
+
+.gantt-bar--future {
+    opacity: 0.4;
+}
+
+/* Legend */
+.gantt-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.6875rem;
+    color: #6b7280;
+}
+
+.legend-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-dot--normal  { background: var(--gantt-blue); }
+.legend-dot--warning { background: var(--gantt-warning); }
+.legend-dot--overdue { background: var(--gantt-red); }
+.legend-dot--future  { background: var(--gantt-gray); opacity: 0.4; }

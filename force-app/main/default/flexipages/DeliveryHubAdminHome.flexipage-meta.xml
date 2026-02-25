@@ -21,10 +21,22 @@
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryGanttChart</componentName>
+                <identifier>c_deliveryGanttChart</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>bottomLeft</name>
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryReleaseNotes</componentName>
+                <identifier>c_deliveryReleaseNotes</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>bottomRight</name>
         <type>Region</type>
     </flexiPageRegions>
