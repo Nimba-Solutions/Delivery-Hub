@@ -1,6 +1,7 @@
 /**
  * @description Aggregates Ticket rows that need a DeliverySyncEngine update,
  * then enqueues worker jobs. Also handles Network Entity Sync and High-Water Mark Sync.
+ * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class DeliveryTicketTriggerHandler {

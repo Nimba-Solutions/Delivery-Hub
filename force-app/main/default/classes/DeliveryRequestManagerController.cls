@@ -2,6 +2,7 @@
  * @description Controller for the ManageDeliveryRequest LWC.
  * Aligned with Bidding Architecture. Uses System Mode to ensure 
  * status updates succeed regardless of UI user FLS.
+ * @author Cloud Nimbus LLC
  */
 // Changed to without sharing to ensure the process can complete in any org
 public without sharing class DeliveryRequestManagerController {

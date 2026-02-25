@@ -1,6 +1,7 @@
 /**
  * @description Controller for the Delivery Hub Setup LWC.
  * Handles the initial handshake with the Mothership and manages connection status.
+ * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexSharingViolations')
 public without sharing class DeliveryHubSetupController {

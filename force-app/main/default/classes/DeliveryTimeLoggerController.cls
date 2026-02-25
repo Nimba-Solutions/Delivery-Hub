@@ -2,6 +2,7 @@
  * @description Controller for the deliveryTimeLogger LWC. Creates a WorkLog__c
  *              entry against a Ticket, which the roll-up summary on
  *              TotalLoggedHoursNumber__c then reflects automatically.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryTimeLoggerController {
 

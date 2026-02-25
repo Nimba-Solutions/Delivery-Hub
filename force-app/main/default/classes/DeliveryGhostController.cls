@@ -1,6 +1,7 @@
 /**
  * @description Controller for the Delivery Ghost Recorder LWC.
  * Logs user activity and creates quick tickets.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryGhostController {
 

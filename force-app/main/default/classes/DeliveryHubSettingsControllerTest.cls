@@ -1,6 +1,7 @@
 /**
  * @description Test class for DeliveryHubSettingsController.
  * Verifies DTO mapping, saving of settings, and mock API callouts.
+ * @author Cloud Nimbus LLC
  */
 @isTest
 private class DeliveryHubSettingsControllerTest {

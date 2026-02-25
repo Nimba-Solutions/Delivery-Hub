@@ -1,6 +1,7 @@
 /**
  * @description Test class for DeliverySyncItemProcessor.
  * Verifies outbound transmission logic and status updates.
+ * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliverySyncItemProcessorTest {

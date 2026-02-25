@@ -1,6 +1,7 @@
 /**
  * @description Controller for the deliverySyncRetryPanel LWC admin component.
  *              Surfaces failed sync items and allows bulk retry.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliverySyncRetryController {
 

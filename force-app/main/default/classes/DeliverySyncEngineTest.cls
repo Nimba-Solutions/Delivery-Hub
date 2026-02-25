@@ -2,6 +2,7 @@
  * @description Test class for DeliverySyncEngine.
  * V2 Architecture: Tests bidirectional DAG routing and echo suppression.
  * Uses Apex-level filtering to isolate assertions from async trigger noise, bypassing SOQL Long Text limits.
+ * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliverySyncEngineTest {

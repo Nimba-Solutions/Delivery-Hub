@@ -2,6 +2,7 @@
  * @description Runs automatically when the Delivery Hub package is installed or upgraded.
  *              Initialises org-level default settings so administrators do not need to
  *              trigger the setup wizard before the package is functional.
+ * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier')
 global class DeliveryHubInstallHandler implements InstallHandler {

@@ -1,6 +1,7 @@
 /**
  * @description Controller for the Delivery Hub Dashboard LWC.
  * Returns System Pulse metrics and client-facing dashboard data.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryHubDashboardController {
 

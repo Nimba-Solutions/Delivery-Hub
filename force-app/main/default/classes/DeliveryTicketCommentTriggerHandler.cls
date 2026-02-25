@@ -1,6 +1,7 @@
 /**
  * @description Dispatcher class to orchestrate trigger logic for Ticket Comments.
  * Consolidates Delivery Hub logic to satisfy PMD and Best Practices.
+ * @author Cloud Nimbus LLC
  */
 public inherited sharing class DeliveryTicketCommentTriggerHandler {
 

@@ -1,6 +1,7 @@
 /**
  * @description Test class for the DeliveryHubPollerController.
  * Ensures the LWC endpoint successfully triggers the poller and formats exceptions correctly.
+ * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliveryHubPollerControllerTest {

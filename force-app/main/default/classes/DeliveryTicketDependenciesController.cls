@@ -1,6 +1,7 @@
 /**
  * @description Controller for the deliveryTicketDependencies LWC.
  *              Returns blocking and blocked-by ticket relationships for a given ticket.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryTicketDependenciesController {
 

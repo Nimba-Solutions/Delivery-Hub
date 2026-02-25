@@ -1,5 +1,6 @@
 /**
  * @description Tests for DeliveryHubInstallHandler.
+ * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliveryHubInstallHandlerTest {

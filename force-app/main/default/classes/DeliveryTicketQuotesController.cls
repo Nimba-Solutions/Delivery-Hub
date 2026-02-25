@@ -1,6 +1,7 @@
 /**
  * @description Controller for the deliveryTicketQuotes LWC.
  *              Returns all Request__c quotes linked to a ticket and supports bid acceptance.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryTicketQuotesController {
 

@@ -2,6 +2,7 @@
  * @description Queueable Worker that processes 'Outbound' Sync Items.
  * It reads the specific Endpoint from the linked Request, pushes the payload natively,
  * passes the Global Traceability ID, and extracts the response ID to close the bridge loop.
+ * @author Cloud Nimbus LLC
  */
 public inherited sharing class DeliverySyncItemProcessor implements Queueable, Database.AllowsCallouts {
 

@@ -3,6 +3,7 @@
  *              for each WorkLog whose parent Ticket has a client Network Entity linked.
  *              This seeds the sync queue so the scheduled processor can push logged hours
  *              to the client org once the sync pipeline supports WorkLog payloads.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryWorkLogTriggerHandler {
 

@@ -2,6 +2,7 @@
  * @description Test class for DeliveryHubPoller.
  * Uses dynamic field population to ensure data is created correctly in namespaced environments.
  * V2 Architecture: Uses direct JSON array parsing and stringified payload processing.
+ * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliveryHubPollerTest {

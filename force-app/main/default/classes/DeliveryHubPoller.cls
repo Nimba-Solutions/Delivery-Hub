@@ -3,6 +3,7 @@
  * Uses Static SOQL to guarantee field visibility in namespaced tests.
  * V2 Architecture: Appends identity parameters for secure Hub multi-tenancy.
  * V3: Polls all active vendors, not just the first one.
+ * @author Cloud Nimbus LLC
  */
 public without sharing class DeliveryHubPoller {
 

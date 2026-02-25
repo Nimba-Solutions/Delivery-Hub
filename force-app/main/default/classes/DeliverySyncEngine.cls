@@ -2,6 +2,7 @@
  * @description Core engine for handling outbound synchronization.
  * Implements Push/Pull Architecture with DAG Routing, Entity Type Enforcement, 
  * Origin-Based Echo Suppression, and Global Traceability (Loop Prevention).
+ * @author Cloud Nimbus LLC
  */
 public without sharing class DeliverySyncEngine {
 
