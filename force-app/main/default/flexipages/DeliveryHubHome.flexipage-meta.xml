@@ -19,6 +19,18 @@
                 <identifier>c_deliveryClientDashboard</identifier>
             </componentInstance>
         </itemInstances>
+        <name>top</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <name>bottomLeft</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <name>bottomRight</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
@@ -33,12 +45,12 @@
                 <identifier>c_deliveryGhostRecorder</identifier>
             </componentInstance>
         </itemInstances>
-        <name>main</name>
+        <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
     <masterLabel>Home</masterLabel>
     <template>
-        <name>industries_common:homeTemplateOneRegion</name>
+        <name>home:desktopTemplate</name>
     </template>
     <type>HomePage</type>
 </FlexiPage>
