@@ -107,11 +107,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.TicketId__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Request__c.WorkProofUrl__c</field>
         <readable>true</readable>
     </fieldPermissions>
