@@ -25,7 +25,8 @@ private class DeliveryAiControllerTest {
             BriefDescriptionTxt__c = 'Add dark mode to the dashboard',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
-            EstimatedHoursNumber__c = 8
+            EstimatedHoursNumber__c = 8,
+            IsActiveBool__c = true
         );
         insert t;
         return t;
