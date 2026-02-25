@@ -1,58 +1,107 @@
 <template>
-    <template if:true={isMothership}>
-        <lightning-card title="Delivery Hub Mothership" icon-name="standard:service_territory_member">
-            <div class="slds-p-around_medium slds-text-align_center">
-                <lightning-icon icon-name="utility:success" variant="success" size="small" class="slds-m-right_small"></lightning-icon>
-                <span class="slds-text-heading_small">This is the Host Org</span>
-            </div>
-        </lightning-card>
-    </template>
+    <template if:true={isVisible}>
 
-    <template if:false={isMothership}>
-        <template if:false={status.isConnected}>
-            <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
-                <div class="slds-p-around_medium">
-
-                    <div if:true={isLoading}>
-                        <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
-                    </div>
-
-                    <div class="slds-illustration slds-illustration_small">
-                        <div class="slds-text-longform">
-                            <h3 class="slds-text-heading_medium">Quickstart Setup</h3>
-                            <p class="slds-text-body_regular">
-                                Establish a secure connection to Cloud Nimbus LLC.
-                                This will configure your default settings and automatically register this org
-                                so you can start sending requests immediately.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="slds-box slds-theme_warning slds-m-vertical_medium">
-                        <div class="slds-media slds-media_center">
-                            <div class="slds-media__figure">
-                                <lightning-icon icon-name="utility:warning" size="small"></lightning-icon>
-                            </div>
-                            <div class="slds-media__body">
-                                <p><strong>Admin Action Required:</strong></p>
-                                <p>Ensure this URL is in <strong>Remote Site Settings</strong> before connecting:</p>
-                                <code class="slds-text-color_error">{status.requiredRemoteSite}</code>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="slds-align_absolute-center slds-m-top_large">
-                        <lightning-button
-                            variant="brand"
-                            label="Quickstart Connection"
-                            icon-name="utility:link"
-                            onclick={handleConnect}
-                            class="slds-p-horizontal_large">
-                        </lightning-button>
-                    </div>
-
+        <!-- ── Mothership: this org is the Cloud Nimbus host ── -->
+        <template if:true={status.isMothership}>
+            <lightning-card title="Delivery Hub" icon-name="standard:service_territory_member">
+                <div class="slds-p-around_medium slds-text-align_center">
+                    <lightning-icon icon-name="utility:success" variant="success" size="small" class="slds-m-right_x-small"></lightning-icon>
+                    <span class="slds-text-heading_small">This is the Host Org</span>
                 </div>
             </lightning-card>
         </template>
+
+        <template if:false={status.isMothership}>
+
+            <!-- ── Loading ── -->
+            <template if:true={isLoading}>
+                <div class="slds-p-around_large slds-text-align_center">
+                    <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <template if:false={isLoading}>
+
+                <!-- ── Not connected: Quickstart ── -->
+                <template if:false={status.isConnected}>
+                    <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
+                        <div class="slds-p-around_medium">
+
+                            <div class="slds-text-longform slds-m-bottom_medium">
+                                <h3 class="slds-text-heading_medium">Quickstart Setup</h3>
+                                <p class="slds-text-body_regular">
+                                    Establish a secure connection to Cloud Nimbus LLC.
+                                    This will configure your default settings and automatically register
+                                    this org so you can start sending requests immediately.
+                                </p>
+                            </div>
+
+                            <div class="slds-box slds-theme_warning slds-m-bottom_medium">
+                                <div class="slds-media slds-media_center">
+                                    <div class="slds-media__figure">
+                                        <lightning-icon icon-name="utility:warning" size="small"></lightning-icon>
+                                    </div>
+                                    <div class="slds-media__body">
+                                        <p><strong>Admin Action Required:</strong></p>
+                                        <p>Ensure this URL is in <strong>Remote Site Settings</strong> before connecting:</p>
+                                        <code class="slds-text-color_error">{status.requiredRemoteSite}</code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="slds-align_absolute-center">
+                                <lightning-button
+                                    variant="brand"
+                                    label="Quickstart Connection"
+                                    icon-name="utility:link"
+                                    onclick={handleConnect}
+                                    disabled={isConnecting}>
+                                </lightning-button>
+                            </div>
+
+                            <template if:true={isConnecting}>
+                                <div class="slds-m-top_medium slds-text-align_center">
+                                    <lightning-spinner alternative-text="Connecting..." size="small"></lightning-spinner>
+                                    <p class="slds-text-body_small slds-text-color_weak slds-m-top_small">{connectingStep}</p>
+                                </div>
+                            </template>
+
+                        </div>
+                    </lightning-card>
+                </template>
+
+                <!-- ── Connected: status card (admin home only) ── -->
+                <template if:true={status.isConnected}>
+                    <lightning-card icon-name="utility:connected_apps">
+                        <span slot="title">Delivery Hub</span>
+                        <div class="slds-p-around_medium">
+
+                            <div class="hs-connected-banner">
+                                <lightning-icon icon-name="utility:success" variant="success" size="x-small" class="hs-connected-icon"></lightning-icon>
+                                <span class="hs-connected-label">Connected to Cloud Nimbus LLC</span>
+                            </div>
+
+                            <div class="hs-detail-grid slds-m-top_small">
+                                <div class="hs-detail-row">
+                                    <span class="hs-detail-key">Vendor</span>
+                                    <span class="hs-detail-val">{status.entity.Name}</span>
+                                </div>
+                                <div class="hs-detail-row">
+                                    <span class="hs-detail-key">Status</span>
+                                    <span class="hs-detail-val">{entityStatus}</span>
+                                </div>
+                                <div class="hs-detail-row">
+                                    <span class="hs-detail-key">Sync</span>
+                                    <span class="hs-detail-val">Every 15 min</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </lightning-card>
+                </template>
+
+            </template>
+        </template>
+
     </template>
 </template>
