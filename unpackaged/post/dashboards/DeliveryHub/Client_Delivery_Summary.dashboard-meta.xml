@@ -6,7 +6,6 @@
     <dashboardType>LoggedInUser</dashboardType>
     <description>Client-facing summary showing what is actively being delivered and what has already been completed.</description>
     <isGridLayout>false</isGridLayout>
-    <leftSize>Large</leftSize>
     <leftComponents>
         <componentType>Table</componentType>
         <dashboardTableColumn>

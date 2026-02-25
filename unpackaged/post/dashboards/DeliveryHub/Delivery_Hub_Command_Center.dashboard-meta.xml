@@ -6,7 +6,6 @@
     <dashboardType>LoggedInUser</dashboardType>
     <description>Admin command center showing pipeline flow, budget health, client workload distribution, and high priority items at a glance.</description>
     <isGridLayout>false</isGridLayout>
-    <leftSize>Medium</leftSize>
     <leftComponents>
         <chartAxisRange>Auto</chartAxisRange>
         <componentType>Column</componentType>
@@ -31,7 +30,6 @@
         <reportName>DeliveryHub/Tickets_by_Client</reportName>
         <title>Tickets by Client</title>
     </leftComponents>
-    <middleSize>Medium</middleSize>
     <middleComponents>
         <componentType>Table</componentType>
         <dashboardTableColumn>
