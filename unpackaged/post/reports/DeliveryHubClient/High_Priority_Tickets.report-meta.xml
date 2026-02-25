@@ -18,7 +18,7 @@
     <columns>
         <field>Ticket__c.TotalLoggedHoursNumber__c</field>
     </columns>
-    <description>All high priority tickets regardless of stage. Admin view of what needs immediate attention across all clients.</description>
+    <description>All high priority tickets regardless of stage. See what needs immediate attention.</description>
     <filter>
         <criteriaItems>
             <column>Ticket__c.PriorityPk__c</column>
