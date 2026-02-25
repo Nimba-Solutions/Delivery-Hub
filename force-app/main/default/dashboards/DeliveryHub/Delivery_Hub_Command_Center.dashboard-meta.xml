@@ -15,7 +15,7 @@
             <rowSpan>4</rowSpan>
             <dashboardComponent>
                 <chartAxisRange>Auto</chartAxisRange>
-                <componentType>BarVertical</componentType>
+                <componentType>Column</componentType>
                 <dashboardTableColumn>
                     <column>RowCount</column>
                     <showTotal>false</showTotal>
