@@ -68,6 +68,20 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="gs-footer">
+                    <lightning-button
+                        label="Check Connection"
+                        icon-name="utility:connected_apps"
+                        variant="neutral"
+                        size="small"
+                        onclick={handleCheckConnection}
+                        disabled={isCheckingConnection}>
+                    </lightning-button>
+                    <template if:true={isCheckingConnection}>
+                        <lightning-spinner size="x-small" alternative-text="Checking…" class="gs-spinner"></lightning-spinner>
+                    </template>
+                </div>
             </div>
         </template>
     </div>

@@ -71,10 +71,9 @@ export default class DeliveryGhostRecorder extends LightningElement {
 
     get priorityOptions() {
         return [
-            { label: 'Low', value: 'Low' },
+            { label: 'Low',    value: 'Low' },
             { label: 'Medium', value: 'Medium' },
-            { label: 'High', value: 'High' },
-            { label: 'Critical', value: 'Critical' },
+            { label: 'High',   value: 'High' },
         ];
     }
 
@@ -184,7 +183,14 @@ export default class DeliveryGhostRecorder extends LightningElement {
                 linkFilesAndSync({
                     ticketId: ticketId,
                     contentDocumentIds: this.uploadedFileIds
-                }).catch(error => console.error("Error linking files:", error));
+                }).catch(() => {
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'File Attachment Failed',
+                        message: 'Ticket was created but attached files could not be linked. Please attach them from the ticket record.',
+                        variant: 'warning',
+                        mode: 'sticky'
+                    }));
+                });
             }
 
             this.dispatchEvent(new ShowToastEvent({

@@ -100,6 +100,19 @@
     color: #c2410c;
 }
 
+/* ── Footer ── */
+.gs-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+}
+.gs-spinner {
+    --lwc-spinnerSize: 1rem;
+}
+
 /* ── Step content ── */
 .gs-step-content {
     flex: 1;

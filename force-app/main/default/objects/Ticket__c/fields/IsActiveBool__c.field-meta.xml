@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>IsActiveBool__c</fullName>
-    <defaultValue>false</defaultValue>
+    <defaultValue>true</defaultValue>
     <description>Indicates whether this ticket is active and should be displayed on the board</description>
     <inlineHelpText>Uncheck to soft-delete this ticket from board views without permanently removing the record.</inlineHelpText>
     <label>Is Active</label>

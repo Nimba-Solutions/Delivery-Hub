@@ -1,3 +1,10 @@
+/* ── Keyboard shortcut hint ── */
+.gr-shortcut-hint {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    margin-right: auto;
+}
+
 /* ── Attention banner ── */
 .gr-attention-banner {
     display: flex;

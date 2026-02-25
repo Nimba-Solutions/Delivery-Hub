@@ -101,6 +101,7 @@
     <tabs>Ticket_Comment__c</tabs>
     <tabs>Sync_Item__c</tabs>
     <tabs>Delivery_Hub_Settings</tabs>
+    <tabs>standard-report</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubAdmin_UtilityBar</utilityBar>
 </CustomApplication>
