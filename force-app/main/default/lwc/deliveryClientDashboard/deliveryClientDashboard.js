@@ -11,6 +11,15 @@ import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 
 const PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
 
+const PHASE_LIST_VIEWS = {
+    'Planning':    'Tickets_Planning',
+    'Approval':    'Tickets_Approval',
+    'Development': 'Tickets_Development',
+    'Testing':     'Tickets_Testing',
+    'UAT':         'Tickets_UAT',
+    'Deployment':  'Tickets_Deployment'
+};
+
 const STAGE_BADGE_CLASSES = {
     'In Client Approval':       'slds-badge slds-badge_lightest stage-badge stage-badge--approval',
     'Ready for Client Approval':'slds-badge slds-badge_lightest stage-badge stage-badge--approval',
@@ -67,7 +76,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
                 label,
                 count,
                 tileClass: [
-                    'phase-tile slds-box slds-box_x-small slds-text-align_center',
+                    'phase-tile phase-tile--btn slds-box slds-box_x-small slds-text-align_center',
                     count > 0 ? 'phase-tile--active' : 'phase-tile--empty',
                     largePhase ? 'phase-tile--large' : ''
                 ].join(' ').trim(),
@@ -152,6 +161,20 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
                 objectApiName: 'Ticket__c',
                 actionName: 'view'
             }
+        });
+    }
+
+    handlePhaseClick(event) {
+        const phase = event.currentTarget.dataset.phase;
+        const listView = PHASE_LIST_VIEWS[phase];
+        if (!listView) return;
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: {
+                objectApiName: 'Ticket__c',
+                actionName: 'list'
+            },
+            state: { filterName: listView }
         });
     }
 

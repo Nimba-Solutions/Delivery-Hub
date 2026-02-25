@@ -81,6 +81,20 @@
 }
 
 /* ── Phase tiles ── */
+.phase-tile--btn {
+    width: 100%;
+    font-family: inherit;
+    cursor: pointer;
+}
+.phase-tile--btn:hover {
+    box-shadow: 0 2px 8px rgba(0, 112, 210, 0.18);
+    transform: translateY(-1px);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+.phase-tile--empty.phase-tile--btn:hover {
+    opacity: 0.85;
+}
+
 .phase-tile {
     min-height: 4.5rem;
     display: flex;
