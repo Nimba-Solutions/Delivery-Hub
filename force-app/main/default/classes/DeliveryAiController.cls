@@ -5,6 +5,8 @@
  *              - draftBoardSummary: generates a weekly status summary across all active tickets
  * @author Cloud Nimbus LLC
  */
+// Complexity is distributed across many small, focused helper methods — aggregate is expected.
+@SuppressWarnings('PMD.CyclomaticComplexity')
 public with sharing class DeliveryAiController {
 
     /**
