@@ -38,6 +38,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @track recentTickets = [];
     @track isLoading = true;
     @track announcements = [];
+    @track inFlightCollapsed = false;
+    @track recentCollapsed = false;
 
     _wiredResult;
 
@@ -154,7 +156,13 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         return this.hasAttentionItems ? 'cd-greeting cd-greeting--attention' : 'cd-greeting cd-greeting--clean';
     }
 
+    get inFlightChevronIcon() { return this.inFlightCollapsed ? 'utility:chevronright' : 'utility:chevrondown'; }
+    get recentChevronIcon()   { return this.recentCollapsed   ? 'utility:chevronright' : 'utility:chevrondown'; }
+
     // ── Handlers ──
+
+    toggleInFlight() { this.inFlightCollapsed = !this.inFlightCollapsed; }
+    toggleRecent()   { this.recentCollapsed   = !this.recentCollapsed;   }
 
     handleTicketClick(event) {
         const recordId = event.currentTarget.dataset.id;
@@ -173,12 +181,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         const listView = PHASE_LIST_VIEWS[phase];
         if (!listView) return;
         this[NavigationMixin.Navigate]({
-            type: 'standard__objectPage',
-            attributes: {
-                objectApiName: 'Ticket__c',
-                actionName: 'list'
-            },
-            state: { filterName: listView }
+            type: 'standard__listView',
+            attributes: { objectApiName: 'Ticket__c', listViewApiName: listView }
         });
     }
 

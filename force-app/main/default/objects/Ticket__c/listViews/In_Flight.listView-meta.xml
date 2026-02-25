@@ -9,6 +9,7 @@
     <columns>EstimatedHoursNumber__c</columns>
     <columns>TotalLoggedHoursNumber__c</columns>
     <columns>HoursVarianceNumber__c</columns>
+    <columns>IsActiveBool__c</columns>
     <filterScope>Everything</filterScope>
     <filters>
         <field>IsActiveBool__c</field>
