@@ -1,7 +1,7 @@
 /**
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, wire, track } from 'lwc';
+import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
@@ -29,6 +29,10 @@ const STAGE_BADGE_CLASSES = {
 };
 
 export default class DeliveryClientDashboard extends NavigationMixin(LightningElement) {
+    @api hideAttentionSection = false;
+    @api hideInFlightSection = false;
+    @api hideRecentSection = false;
+
     @track attentionTickets = [];
     @track phases = [];
     @track recentTickets = [];

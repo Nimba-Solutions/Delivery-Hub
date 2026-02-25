@@ -13,6 +13,16 @@
                 <identifier>c_deliveryHubSetup</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>hideAttentionSection</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentName>deliveryClientDashboard</componentName>
+                <identifier>c_deliveryClientDashboard_main</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>
@@ -37,6 +47,14 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentInstanceProperties>
+                    <name>hideInFlightSection</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>hideRecentSection</name>
+                    <value>true</value>
+                </componentInstanceProperties>
                 <componentName>deliveryClientDashboard</componentName>
                 <identifier>c_deliveryClientDashboard</identifier>
             </componentInstance>
