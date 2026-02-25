@@ -87,10 +87,10 @@
             <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
                 <template for:each={phases} for:item="phase">
                     <div key={phase.label} class={phase.colClass}>
-                        <div class={phase.tileClass}>
+                        <button class={phase.tileClass} onclick={handlePhaseClick} data-phase={phase.label} title="View {phase.label} tickets">
                             <div class="phase-count"><strong>{phase.count}</strong></div>
                             <div class="phase-label">{phase.label}</div>
-                        </div>
+                        </button>
                     </div>
                 </template>
             </div>
