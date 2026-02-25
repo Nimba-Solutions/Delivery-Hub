@@ -1,0 +1,54 @@
+/* ── CTA state ── */
+.ai-cta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+.ai-cta-desc {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* ── Loading state ── */
+.ai-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+}
+.ai-loading-text {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* ── Error state ── */
+.ai-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+}
+.ai-error-icon {
+    --lwc-colorTextIconDefault: #dc2626;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.ai-error-text {
+    font-size: 0.8rem;
+    color: #991b1b;
+    line-height: 1.4;
+}
+
+/* ── Result state ── */
+.ai-textarea {
+    --lwc-fontSize3: 0.82rem;
+}
+.ai-actions {
+    display: flex;
+    gap: 0.5rem;
+}
