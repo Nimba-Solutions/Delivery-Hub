@@ -1,28 +1,29 @@
 /**
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, track, wire } from 'lwc';
+import { LightningElement, api, track, wire } from 'lwc';
 import getSetupStatus from '@salesforce/apex/DeliveryHubSetupController.getSetupStatus';
-// Updated imports to support the two-step transaction flow
 import prepareLocalEntity from '@salesforce/apex/DeliveryHubSetupController.prepareLocalEntity';
 import performHandshake from '@salesforce/apex/DeliveryHubSetupController.performHandshake';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import { NavigationMixin } from 'lightning/navigation';
-import { refreshApex } from '@salesforce/apex'; 
+import { refreshApex } from '@salesforce/apex';
 
-export default class DeliveryHubSetup extends NavigationMixin(LightningElement) {
-    @track status = { isConnected: false, requiredRemoteSite: '', entity: {} };
+export default class DeliveryHubSetup extends LightningElement {
+    /** When true, shows a persistent connected-state card after setup completes.
+     *  Set to true on the admin home; leave false on the client home so the
+     *  component disappears silently once the org is connected. */
+    @api showConnectedState = false;
+
+    @track status = { isConnected: false, isMothership: false, requiredRemoteSite: '', entity: {} };
     @track isLoading = true;
-    
-    wiredStatusResult;
+    @track isConnecting = false;
+    @track connectingStep = '';
 
-    get isMothership() {
-        return window.location.hostname.includes('orgfarm-928a77dfd6-dev-ed');
-    }
+    _wiredStatusResult;
 
     @wire(getSetupStatus)
     wiredStatus(result) {
-        this.wiredStatusResult = result; 
+        this._wiredStatusResult = result;
         const { data, error } = result;
         this.isLoading = false;
         if (data) {
@@ -32,41 +33,40 @@ export default class DeliveryHubSetup extends NavigationMixin(LightningElement) 
         }
     }
 
-    /**
-     * Handshake logic split into two steps to bypass "Uncommitted Work Pending" 
-     * and ensure the Local Entity ID exists before the Mothership receives the packet.
-     */
-    handleConnect() {
-        if (this.isLoading) return;
+    get isVisible() {
+        if (this.status.isConnected && !this.showConnectedState) return false;
+        return true;
+    }
 
-        this.isLoading = true;
-        
-        // STEP 1: Create/Upsert the local record and get the ID (Transaction 1)
+    get entityStatus() {
+        return this.status.entity && this.status.entity.StatusPk__c
+            ? this.status.entity.StatusPk__c
+            : 'Active';
+    }
+
+    handleConnect() {
+        if (this.isConnecting) return;
+        this.isConnecting = true;
+        this.connectingStep = 'Registering your org\u2026';
+
         prepareLocalEntity()
             .then(entity => {
-                // STEP 2: Use that ID to perform the handshake callout (Transaction 2)
+                this.connectingStep = 'Establishing connection\u2026';
                 return performHandshake({ localEntityId: entity.Id });
             })
             .then(() => {
-                this.showToast('Success', 'Connection established!', 'success');
-                // Refresh the @wire data to show the connected status and IDs
-                return refreshApex(this.wiredStatusResult); 
+                this.connectingStep = '';
+                this.showToast('Connected!', 'Your org is now linked to Cloud Nimbus LLC.', 'success');
+                return refreshApex(this._wiredStatusResult);
             })
             .catch(error => {
-                console.error('Handshake Error:', error);
                 const message = error.body ? error.body.message : error.message;
                 this.showToast('Connection Failed', message, 'error');
             })
             .finally(() => {
-                this.isLoading = false;
+                this.isConnecting = false;
+                this.connectingStep = '';
             });
-    }
-
-    navigateToTickets() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__navItemPage',
-            attributes: { apiName: 'draganddroplwc' }
-        });
     }
 
     showToast(title, message, variant) {

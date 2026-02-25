@@ -8,6 +8,7 @@ public without sharing class DeliveryHubSetupController {
 
     public class SetupStatus {
         @AuraEnabled public Boolean isConnected;
+        @AuraEnabled public Boolean isMothership;
         @AuraEnabled public String requiredRemoteSite;
         @AuraEnabled public Network_Entity__c entity;
     }
@@ -16,17 +17,24 @@ public without sharing class DeliveryHubSetupController {
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
         Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
-        
+
         if (config != null && String.isNotBlank(config.CloudNimbusLlcEndpointTxt__c)) {
             status.requiredRemoteSite = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
         } else {
-            status.requiredRemoteSite = ''; 
+            status.requiredRemoteSite = '';
         }
 
+        // Dynamically detect if this org IS the mothership by comparing the
+        // org's domain prefix against the configured endpoint URL.
+        String orgHost = Url.getOrgDomainUrl().getHost();
+        String orgPrefix = orgHost.split('\\.')[0];
+        status.isMothership = String.isNotBlank(status.requiredRemoteSite) &&
+                              status.requiredRemoteSite.contains(orgPrefix);
+
         List<Network_Entity__c> entities = [
-            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c 
-            FROM Network_Entity__c 
-            WHERE Name LIKE 'Cloud Nimbus LLC%' 
+            SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c
+            FROM Network_Entity__c
+            WHERE Name LIKE 'Cloud Nimbus LLC%'
             LIMIT 1
         ];
 

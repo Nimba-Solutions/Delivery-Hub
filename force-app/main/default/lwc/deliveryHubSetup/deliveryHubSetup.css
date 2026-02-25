@@ -1,0 +1,41 @@
+/* ── Connected banner ── */
+.hs-connected-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    padding: 0.5rem 0.875rem;
+}
+.hs-connected-icon {
+    --lwc-colorTextIconDefault: #059669;
+    flex-shrink: 0;
+}
+.hs-connected-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #065f46;
+}
+
+/* ── Detail rows ── */
+.hs-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.hs-detail-row {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+.hs-detail-key {
+    color: #64748b;
+    min-width: 3.5rem;
+    flex-shrink: 0;
+}
+.hs-detail-val {
+    color: #1e293b;
+    font-weight: 500;
+}

@@ -3,6 +3,10 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentInstanceProperties>
+                    <name>showConnectedState</name>
+                    <value>true</value>
+                </componentInstanceProperties>
                 <componentName>deliveryHubSetup</componentName>
                 <identifier>c_deliveryHubSetup</identifier>
             </componentInstance>
