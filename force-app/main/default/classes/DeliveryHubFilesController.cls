@@ -1,6 +1,7 @@
 /**
  * @description Controller for the Delivery Ticket Files LWC.
  * Returns all files linked to a Ticket and its related Comments and Requests.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryHubFilesController {
 

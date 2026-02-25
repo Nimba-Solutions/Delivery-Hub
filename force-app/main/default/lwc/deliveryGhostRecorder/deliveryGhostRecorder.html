@@ -1,6 +1,12 @@
 <template>
     <template if:true={isCardMode}>
         <lightning-card title={cardTitle} icon-name={cardIcon}>
+            <template if:true={hasAttentionItems}>
+                <div class="gr-attention-banner">
+                    <lightning-icon icon-name="utility:warning" size="x-small" class="gr-attention-icon"></lightning-icon>
+                    <span class="gr-attention-text">{attentionLabel}</span>
+                </div>
+            </template>
             <div class="slds-p-horizontal_medium">
                 
                 <div class="slds-m-bottom_medium slds-text-align_center">
@@ -82,7 +88,12 @@
                         <h2 class="slds-text-heading_medium">{cardTitle}</h2>
                     </header>
                     <div class="slds-modal__content slds-p-around_medium">
-                        
+                        <template if:true={hasAttentionItems}>
+                            <div class="gr-attention-banner slds-m-bottom_small">
+                                <lightning-icon icon-name="utility:warning" size="x-small" class="gr-attention-icon"></lightning-icon>
+                                <span class="gr-attention-text">{attentionLabel}</span>
+                            </div>
+                        </template>
                         <div class="slds-m-bottom_medium slds-text-align_center">
                             <lightning-radio-group 
                                 name="requestTypeFloat"

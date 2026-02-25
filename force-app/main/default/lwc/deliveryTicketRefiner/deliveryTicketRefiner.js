@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, api, track, wire } from 'lwc';
 import { getRecord, getFieldValue, createRecord } from 'lightning/uiRecordApi';
 import { NavigationMixin } from 'lightning/navigation';

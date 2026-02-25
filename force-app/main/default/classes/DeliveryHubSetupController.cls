@@ -1,6 +1,7 @@
 /**
  * @description Controller for the Delivery Hub Setup LWC.
  * Handles the initial handshake with the Mothership and manages connection status.
+ * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexSharingViolations')
 public without sharing class DeliveryHubSetupController {
@@ -50,7 +51,7 @@ public without sharing class DeliveryHubSetupController {
         Network_Entity__c mothership = !existingEntities.isEmpty() ? existingEntities[0] : new Network_Entity__c();
         
         if (mothership.Id == null) {
-            mothership.Name = 'Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team)';
+            mothership.Name = 'Cloud Nimbus LLC';
             mothership.EntityTypePk__c = 'Vendor';
         }
         
@@ -76,9 +77,9 @@ public without sharing class DeliveryHubSetupController {
         String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/sync/Network_Entity__c';
 
         Map<String, Object> packet = new Map<String, Object>{
-            'SourceId' => localEntityId, 
-            'RemoteExternalIdTxt__c' => localEntityId, 
-            'Name' => UserInfo.getOrganizationName(), 
+            'SourceId' => localEntityId,
+            'RemoteExternalIdTxt__c' => localEntityId,
+            'Name' => buildOrgDisplayName(),
             'OrgIdTxt__c' => UserInfo.getOrganizationId(),
             'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
             'EntityTypePk__c' => 'Client',
@@ -130,6 +131,13 @@ public without sharing class DeliveryHubSetupController {
         }
 
         scheduleSyncJobs();
+    }
+
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private static String buildOrgDisplayName() {
+        List<Organization> orgs = [SELECT IsSandbox FROM Organization LIMIT 1];
+        String baseName = UserInfo.getOrganizationName();
+        return (!orgs.isEmpty() && orgs[0].IsSandbox) ? baseName + ' (Sandbox)' : baseName;
     }
 
     @SuppressWarnings('PMD.ApexCRUDViolation')

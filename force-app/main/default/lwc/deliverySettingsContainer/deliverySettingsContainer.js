@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, track } from 'lwc';
 
 export default class DeliverySettingsContainer extends LightningElement {

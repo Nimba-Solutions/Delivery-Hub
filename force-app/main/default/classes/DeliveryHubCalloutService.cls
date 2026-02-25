@@ -1,6 +1,7 @@
 /**
  * @description Centralized service for handling Delivery Hub HTTP callouts.
  * FIXED: Removed Named Credential dependency. Now relies strictly on the provided URL.
+ * @author Cloud Nimbus LLC
  */
 public inherited sharing class DeliveryHubCalloutService {
 

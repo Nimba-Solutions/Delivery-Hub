@@ -2,6 +2,7 @@
  * @description Test class for DeliveryHubSyncService.
  * Verifies the REST entry point for both Push (POST) and Pull (GET) flows,
  * ensuring namespace awareness and strict V2 multi-tenant data segregation.
+ * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliveryHubSyncServiceTest {

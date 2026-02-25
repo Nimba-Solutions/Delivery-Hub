@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 @IsTest
 private class DeliveryHubDashboardControllerTest {
     
@@ -78,5 +81,38 @@ private class DeliveryHubDashboardControllerTest {
         List<DeliveryHubDashboardController.TicketItem> recent =
             (List<DeliveryHubDashboardController.TicketItem>)result.get('recentTickets');
         System.assert(recent.size() > 0, 'Should return at least one recent ticket');
+    }
+
+    @IsTest
+    static void testGetAttentionCount() {
+        insert new List<Ticket__c>{
+            new Ticket__c(BriefDescriptionTxt__c = 'UAT Ticket',      StageNamePk__c = 'In Client UAT'),
+            new Ticket__c(BriefDescriptionTxt__c = 'Approval Ticket', StageNamePk__c = 'Ready for Client Approval'),
+            new Ticket__c(BriefDescriptionTxt__c = 'Dev Ticket',      StageNamePk__c = 'In Development')
+        };
+
+        Test.startTest();
+        Integer count = DeliveryHubDashboardController.getAttentionCount();
+        Test.stopTest();
+
+        System.assertEquals(2, count, 'Should count tickets in client-facing stages only');
+    }
+
+    @IsTest
+    static void testVendorAnnouncementIncludedInDashboard() {
+        insert new Network_Entity__c(
+            Name                      = 'Announcing Vendor',
+            EntityTypePk__c           = 'Vendor',
+            StatusPk__c               = 'Active',
+            VendorAnnouncementTxt__c  = 'Scheduled maintenance this weekend.'
+        );
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard();
+        Test.stopTest();
+
+        List<Object> announcements = (List<Object>) result.get('announcements');
+        System.assertEquals(1, announcements.size(), 'Should include vendor announcement in dashboard');
+        System.assertEquals('Scheduled maintenance this weekend.', (String) announcements[0]);
     }
 }

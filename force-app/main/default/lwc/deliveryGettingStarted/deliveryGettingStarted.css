@@ -1,0 +1,119 @@
+/* ── Root ── */
+.gs-root {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+.gs-root--expanded {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Header / toggle row ── */
+.gs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    background: #f8fafc;
+    border-bottom: 1px solid transparent;
+    transition: background 0.12s;
+    user-select: none;
+}
+.gs-header:hover {
+    background: #f1f5f9;
+}
+.gs-root--expanded .gs-header {
+    border-bottom-color: #e2e8f0;
+}
+.gs-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.gs-icon {
+    --lwc-colorTextIconDefault: #64748b;
+    flex-shrink: 0;
+}
+.gs-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.02em;
+}
+.gs-chevron {
+    --lwc-colorTextIconDefault: #94a3b8;
+}
+
+/* ── Body ── */
+.gs-body {
+    padding: 1rem 1.25rem 1.25rem;
+}
+.gs-intro {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin: 0 0 1rem;
+}
+
+/* ── Step grid ── */
+.gs-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.gs-step {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+}
+
+/* ── Step number bubbles ── */
+.gs-step-num {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-top: 0.05rem;
+}
+.gs-step-num--approval {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.gs-step-num--uat {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+.gs-step-num--signoff {
+    background: #d1fae5;
+    color: #065f46;
+}
+.gs-step-num--comms {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+/* ── Step content ── */
+.gs-step-content {
+    flex: 1;
+    min-width: 0;
+}
+.gs-step-title {
+    font-size: 0.82rem;
+    color: #1e293b;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+.gs-step-desc {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}

@@ -1,6 +1,7 @@
 /**
  * @description Controller for the Kanban Settings LWC.
  * Manages retrieval and persistence of AI and OpenAI configurations.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryKanbanSettingsController {
 

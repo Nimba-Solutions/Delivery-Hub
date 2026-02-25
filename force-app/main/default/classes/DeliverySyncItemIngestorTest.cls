@@ -1,6 +1,7 @@
 /**
  * @description Verifies inbound ingestion logic with namespace awareness.
  * V2 Architecture: Tests both Downstream (Request) and Upstream (Ledger) DAG traversal.
+ * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliverySyncItemIngestorTest {

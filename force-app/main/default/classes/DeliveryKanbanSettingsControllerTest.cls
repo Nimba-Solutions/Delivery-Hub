@@ -1,6 +1,7 @@
 /**
  * @description Test class for DeliveryKanbanSettingsController.
  * Verifies the retrieval, saving, and connection testing of Kanban settings.
+ * @author Cloud Nimbus LLC
  */
 @isTest
 private class DeliveryKanbanSettingsControllerTest {

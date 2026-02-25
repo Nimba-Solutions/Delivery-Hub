@@ -1,3 +1,86 @@
+/* ── Announcement banner ── */
+.cd-announcement {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 0.65rem 1rem;
+    margin-bottom: 0.75rem;
+}
+.cd-announcement-icon {
+    --lwc-colorTextIconDefault: #b45309;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.cd-announcement-text {
+    font-size: 0.82rem;
+    color: #78350f;
+    line-height: 1.5;
+}
+
+/* ── Greeting header ── */
+.cd-greeting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+}
+.cd-greeting--clean {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+.cd-greeting--attention {
+    background: #fefce8;
+    border: 1px solid #fde68a;
+}
+.cd-greeting-content {
+    flex: 1;
+    min-width: 0;
+}
+.cd-greeting-line {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.3;
+}
+.cd-greeting-sub {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+.cd-refresh-btn {
+    flex-shrink: 0;
+}
+
+/* ── Caught-up slim pill ── */
+.cd-caught-up-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 9999px;
+    padding: 0.35rem 1rem;
+    margin-bottom: 0.75rem;
+    width: fit-content;
+    --lwc-colorTextIconDefault: #059669;
+}
+.cd-caught-up-icon {
+    flex-shrink: 0;
+}
+.cd-caught-up-text {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #065f46;
+    white-space: nowrap;
+}
+
+/* ── Phase tiles ── */
 .phase-tile {
     min-height: 4.5rem;
     display: flex;
@@ -6,16 +89,30 @@
     justify-content: center;
     padding: 0.5rem 0.25rem;
     border-radius: 4px;
+    transition: min-height 0.2s, box-shadow 0.15s;
 }
-
+.phase-tile--large {
+    min-height: 6.5rem;
+}
+.phase-tile--large .phase-count {
+    font-size: 1.75rem;
+}
 .phase-tile--active {
     border-color: #0070d2;
     background-color: #f3f8ff;
 }
-
+.phase-tile--active.phase-tile--large {
+    box-shadow: 0 2px 6px rgba(0, 112, 210, 0.12);
+}
 .phase-tile--empty {
     background-color: #f8f8f8;
     opacity: 0.6;
+}
+
+.phase-count {
+    font-size: 1.25rem;
+    line-height: 1;
+    color: #1e293b;
 }
 
 .phase-label {
@@ -23,9 +120,10 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #6e757b;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
+/* ── Ticket links ── */
 .ticket-link {
     text-align: left;
     max-width: 100%;
@@ -40,21 +138,19 @@
     border-bottom: none;
 }
 
+/* ── Stage badges ── */
 .stage-badge {
     font-size: 0.65rem;
     white-space: nowrap;
 }
-
 .stage-badge--approval {
     background-color: #e8f4fb;
     color: #0070d2;
 }
-
 .stage-badge--uat {
     background-color: #e8f9f1;
     color: #028422;
 }
-
 .stage-badge--signoff {
     background-color: #fff3cd;
     color: #8a6800;
@@ -63,4 +159,23 @@
 .recent-time {
     font-size: 0.75rem;
     min-width: 4.5rem;
+}
+
+/* ── Empty States ── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.empty-state-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+}
+.empty-state-icon--neutral {
+    background: #f1f5f9;
+    --lwc-colorTextIconDefault: #94a3b8;
 }

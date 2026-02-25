@@ -11,6 +11,11 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
+        <editable>false</editable>
+        <field>Network_Entity__c.VendorAnnouncementTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>true</editable>
         <field>Network_Entity__c.EntityTypePk__c</field>
         <readable>true</readable>

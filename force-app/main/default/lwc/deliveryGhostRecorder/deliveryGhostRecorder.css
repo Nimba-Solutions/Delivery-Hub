@@ -1,3 +1,19 @@
+/* ── Attention banner ── */
+.gr-attention-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    padding: 0.45rem 1rem;
+    --lwc-colorTextIconDefault: #b45309;
+}
+.gr-attention-text {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #78350f;
+}
+
 /* Card Layout Polish */
 .upload-container {
     background-color: #f3f4f6; /* Gray-100 */

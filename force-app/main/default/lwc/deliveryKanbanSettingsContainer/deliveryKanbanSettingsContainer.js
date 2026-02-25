@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, track, wire } from 'lwc';
 import getSettings from '@salesforce/apex/DeliveryKanbanSettingsController.getSettings';
 import saveSettings from '@salesforce/apex/DeliveryKanbanSettingsController.saveSettings';

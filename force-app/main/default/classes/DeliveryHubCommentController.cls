@@ -2,6 +2,7 @@
  * @description Controller for the Delivery Comment Stream LWC.
  * Replaces the deleted DeliveryHubCommentSender.
  * Uses standard DML so the DeliverySyncEngine Trigger picks it up automatically.
+ * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryHubCommentController {

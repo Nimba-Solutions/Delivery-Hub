@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, track, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import { NavigationMixin } from "lightning/navigation";
@@ -95,6 +98,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     @track searchResults = [];
     @track isSearching = false;
     @track hasValidOpenAIKey = false;
+    @track myWorkOnly = false;
 
     ticketsWire;
 
@@ -576,6 +580,16 @@ transitionMap = {
     }
 
     // [Getter options]
+    handleMyWorkToggle() {
+        this.myWorkOnly = !this.myWorkOnly;
+    }
+
+    get myWorkButtonClass() {
+        return this.myWorkOnly
+            ? 'toolbar-button active my-work-btn'
+            : 'toolbar-button my-work-btn';
+    }
+
     get personaOptions() { return Object.keys(this.personaColumnStatusMap).map((p) => ({ label: p, value: p })); }
     get sizeModeOptions() { return [{ label: "Equal Sized", value: "equalSized" }, { label: "Ticket Sized", value: "ticketSize" }]; }
     get hasRecentComments() { return (this.recentComments || []).length > 0; }
@@ -708,20 +722,22 @@ transitionMap = {
             return {
                 ...rec,
                 uiId: rec.Id,
-                uiTitle: briefDesc, 
+                uiTitle: briefDesc,
                 uiDescription: details,
                 uiSize: size || "--",
-                uiHours: hoursDisplay, 
-                uiUat: displayUAT,      
-                uiStage: stage, 
-                uiIntention: intention, 
+                uiHours: hoursDisplay,
+                uiUat: displayUAT,
+                uiStage: stage,
+                uiIntention: intention,
                 uiPriority: priority,
-                calculatedETA: displayDate, // Now includes "Jan 21, 2026 (-8d)"
+                calculatedETA: displayDate,
                 dateTooltip: dateLabel,
                 isBlockedBy: isBlockedBy,
                 isBlocking: isBlocking,
                 isCurrentlyBlocked: isBlockedBy.length > 0,
-                OwnerName: rec.Owner?.Name, 
+                OwnerName: rec.Owner?.Name,
+                uiOwnerId: rec.OwnerId || '',
+                uiDeveloperId: getValue(rec, FIELDS.DEVELOPER) || '',
                 isHighPriority: priority?.toLowerCase() === "high",
                 tags: getTagsArray(tags),
                 cardClasses: `ticket-card`,
@@ -753,11 +769,17 @@ transitionMap = {
             const headerStyle = `background:${config.bg};color:${config.color};`;
 
             const columnTickets = enriched
-                .filter((t) => (statusMap[colName] || []).includes(t.uiStage)) 
+                .filter((t) => (statusMap[colName] || []).includes(t.uiStage))
                 .filter((t) => {
                     if (this.intentionFilter === "all") return true;
                     const intention = (t.uiIntention || "").trim().toLowerCase();
                     return intention === this.intentionFilter.toLowerCase();
+                })
+                .filter((t) => {
+                    if (!this.myWorkOnly) return true;
+                    const uid = (USER_ID || '').substring(0, 15);
+                    return (t.uiOwnerId || '').substring(0, 15) === uid ||
+                           (t.uiDeveloperId || '').substring(0, 15) === uid;
                 })
                 .map((ticket) => ({
                     ...ticket,

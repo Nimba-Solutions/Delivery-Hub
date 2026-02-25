@@ -1,0 +1,69 @@
+<template>
+    <lightning-card title="Dependencies" icon-name="utility:hierarchy">
+        <template if:true={isLoading}>
+            <div class="slds-p-medium slds-text-align_center">
+                <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template if:false={isLoading}>
+            <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+                <!-- Blocked By -->
+                <div class="dep-section">
+                    <div class="dep-section-header dep-section-header--blocked">
+                        <lightning-icon icon-name="utility:lock" size="xx-small" class="dep-header-icon"></lightning-icon>
+                        <span class="dep-section-title">Blocked By</span>
+                        <span class="dep-count">{blockedByCount}</span>
+                    </div>
+                    <template if:true={hasBlockedBy}>
+                        <ul class="dep-list">
+                            <template for:each={blockedBy} for:item="dep">
+                                <li key={dep.id} class="dep-row">
+                                    <button class="slds-button slds-button_reset dep-link" onclick={handleTicketClick} data-id={dep.id}>
+                                        <strong>{dep.name}</strong>
+                                        <template if:true={dep.title}>
+                                            <span class="dep-title">&mdash; {dep.title}</span>
+                                        </template>
+                                    </button>
+                                    <span class="dep-stage">{dep.stage}</span>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template if:false={hasBlockedBy}>
+                        <p class="dep-empty">No blockers</p>
+                    </template>
+                </div>
+
+                <!-- Blocking -->
+                <div class="dep-section slds-m-top_small">
+                    <div class="dep-section-header dep-section-header--blocking">
+                        <lightning-icon icon-name="utility:warning" size="xx-small" class="dep-header-icon"></lightning-icon>
+                        <span class="dep-section-title">Blocking</span>
+                        <span class="dep-count">{blockingCount}</span>
+                    </div>
+                    <template if:true={hasBlocking}>
+                        <ul class="dep-list">
+                            <template for:each={blocking} for:item="dep">
+                                <li key={dep.id} class="dep-row">
+                                    <button class="slds-button slds-button_reset dep-link" onclick={handleTicketClick} data-id={dep.id}>
+                                        <strong>{dep.name}</strong>
+                                        <template if:true={dep.title}>
+                                            <span class="dep-title">&mdash; {dep.title}</span>
+                                        </template>
+                                    </button>
+                                    <span class="dep-stage">{dep.stage}</span>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template if:false={hasBlocking}>
+                        <p class="dep-empty">Not blocking anything</p>
+                    </template>
+                </div>
+
+            </div>
+        </template>
+    </lightning-card>
+</template>

@@ -383,6 +383,35 @@
     font-size: 14px;
 }
 
+.my-work-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.35rem 0.75rem;
+    border: 1.5px solid var(--gray-200, #e5e7eb);
+    border-radius: 6px;
+    background: var(--white, #fff);
+    color: var(--gray-500, #6b7280);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+    --lwc-colorTextIconDefault: #9ca3af;
+}
+.my-work-btn:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    --lwc-colorTextIconDefault: #3b82f6;
+}
+.my-work-btn.active {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    color: #1d4ed8;
+    font-weight: 700;
+    --lwc-colorTextIconDefault: #1d4ed8;
+}
+
 /* --- Ticket Card Action Button --- */
 .ticket-action-button {
     background: none;
@@ -571,6 +600,21 @@
     color: var(--gray-400);
     min-height: 150px; /* Give it some height */
 }
+
+.empty-col-dots {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 0.75rem;
+}
+.empty-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--gray-300, #d1d5db);
+    opacity: 0.5;
+}
+.empty-col-dots .empty-dot:nth-child(2) { opacity: 0.35; }
+.empty-col-dots .empty-dot:nth-child(3) { opacity: 0.2; }
 
 .placeholder-icon {
     width: 40px;

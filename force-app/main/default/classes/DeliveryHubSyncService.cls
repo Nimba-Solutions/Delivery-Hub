@@ -2,6 +2,7 @@
  * @description REST Resource for receiving inbound synchronization payloads from the Mothership.
  * This class acts as the public entry point for the Delivery Hub integration.
  * V2 Architecture: Supports DAG routing and multi-tenant data segregation.
+ * @author Cloud Nimbus LLC
  */
 @RestResource(urlMapping='/deliveryhub/v1/sync/*')
 global without sharing class DeliveryHubSyncService {

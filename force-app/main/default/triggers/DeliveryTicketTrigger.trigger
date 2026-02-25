@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 trigger DeliveryTicketTrigger on Ticket__c (after insert, after update, before update) {
     
     if (DeliveryTicketTriggerHandler.triggerDisabled) {

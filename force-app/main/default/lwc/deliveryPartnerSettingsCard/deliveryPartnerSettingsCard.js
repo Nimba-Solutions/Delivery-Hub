@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 

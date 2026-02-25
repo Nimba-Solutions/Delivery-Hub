@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 public class DeliveryTriggerControl {
 
     // This is the switch. When true, the async logic runs. When false, it's skipped.

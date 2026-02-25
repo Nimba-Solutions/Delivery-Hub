@@ -1,6 +1,7 @@
 /**
  * @description Controller for the Delivery Hub Dashboard LWC.
  * Returns System Pulse metrics and client-facing dashboard data.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryHubDashboardController {
 
@@ -95,12 +96,32 @@ public with sharing class DeliveryHubDashboardController {
      * @description Returns client-facing dashboard data: attention items, phase counts, recent tickets.
      * @return Map containing attentionTickets, phases, and recentTickets lists.
      */
+    /**
+     * @description Returns the count of tickets currently waiting on client action.
+     * @return Integer count of attention-requiring tickets.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Integer getAttentionCount() {
+        Set<String> clientStages = new Set<String>{
+            'Ready for Client Approval', 'In Client Approval',
+            'Ready for Client UAT', 'In Client UAT',
+            'Ready for UAT Sign-off'
+        };
+        return [
+            SELECT COUNT()
+            FROM Ticket__c
+            WHERE StageNamePk__c IN :clientStages
+            WITH USER_MODE
+        ];
+    }
+
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getClientDashboard() {
         Map<String, Object> result = new Map<String, Object>();
         result.put('attentionTickets', fetchAttentionTickets());
         result.put('phases', fetchPhaseList());
         result.put('recentTickets', fetchRecentTickets());
+        result.put('announcements', fetchVendorAnnouncements());
         return result;
     }
 
@@ -187,6 +208,24 @@ public with sharing class DeliveryHubDashboardController {
             items.add(item);
         }
         return items;
+    }
+
+    private static List<String> fetchVendorAnnouncements() {
+        List<Network_Entity__c> vendors = [
+            SELECT VendorAnnouncementTxt__c, Name
+            FROM Network_Entity__c
+            WHERE EntityTypePk__c = 'Vendor'
+            AND StatusPk__c = 'Active'
+            WITH USER_MODE
+            ORDER BY Name ASC
+        ];
+        List<String> texts = new List<String>();
+        for (Network_Entity__c v : vendors) {
+            if (String.isNotBlank(v.VendorAnnouncementTxt__c)) {
+                texts.add(v.VendorAnnouncementTxt__c);
+            }
+        }
+        return texts;
     }
 
     private static Map<String, String> buildStagePhaseMap() {

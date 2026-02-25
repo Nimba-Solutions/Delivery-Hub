@@ -9,34 +9,20 @@
     </template>
 
     <template if:false={isMothership}>
-        <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
-            <div class="slds-p-around_medium">
-                
-                <div if:true={isLoading}>
-                    <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
-                </div>
+        <template if:false={status.isConnected}>
+            <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
+                <div class="slds-p-around_medium">
 
-                <template if:true={status.isConnected}>
-                    <div class="slds-text-align_center slds-theme_success slds-p-around_medium slds-m-bottom_medium slds-box">
-                        <lightning-icon icon-name="action:approval" size="small" variant="inverse"></lightning-icon>
-                        <h2 class="slds-text-heading_medium slds-m-top_small">Connected</h2>
-                        <p>This org is linked to <strong>{status.entity.Name}</strong>.</p>
+                    <div if:true={isLoading}>
+                        <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
                     </div>
-                    <div class="slds-text-align_center">
-                        <p>You are ready to go.</p>
-                        <p class="slds-m-top_small">
-                            <lightning-button label="Go to the Ticket Board" onclick={navigateToTickets} variant="neutral"></lightning-button>
-                        </p>
-                    </div>
-                </template>
 
-                <template if:false={status.isConnected}>
                     <div class="slds-illustration slds-illustration_small">
                         <div class="slds-text-longform">
                             <h3 class="slds-text-heading_medium">Quickstart Setup</h3>
                             <p class="slds-text-body_regular">
-                                Establish a secure connection to the Cloud Nimbus LLC (Nimba Solutions Partner Portal Dev Team). 
-                                This will configure your default settings and automatically register this org 
+                                Establish a secure connection to Cloud Nimbus LLC.
+                                This will configure your default settings and automatically register this org
                                 so you can start sending requests immediately.
                             </p>
                         </div>
@@ -56,17 +42,17 @@
                     </div>
 
                     <div class="slds-align_absolute-center slds-m-top_large">
-                        <lightning-button 
-                            variant="brand" 
-                            label="Quickstart Connection" 
-                            icon-name="utility:link" 
-                            onclick={handleConnect} 
+                        <lightning-button
+                            variant="brand"
+                            label="Quickstart Connection"
+                            icon-name="utility:link"
+                            onclick={handleConnect}
                             class="slds-p-horizontal_large">
                         </lightning-button>
                     </div>
-                </template>
 
-            </div>
-        </lightning-card>
+                </div>
+            </lightning-card>
+        </template>
     </template>
 </template>

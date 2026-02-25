@@ -1,6 +1,7 @@
 /**
  * @description Schedulable class to trigger the Delivery Hub Poller.
  * Runs in the background to keep the Client Org in sync with the Mothership.
+ * @author Cloud Nimbus LLC
  */
 public class DeliveryHubScheduler implements Schedulable {
 

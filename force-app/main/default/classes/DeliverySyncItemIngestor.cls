@@ -2,6 +2,7 @@
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
  * Strictly enforces DAG topology (no reverse-bridges) and maintains PMD compliance.
  * Captures routing origins and Global Traceability IDs to explicitly prevent echo loops.
+ * @author Cloud Nimbus LLC
  */
 public without sharing class DeliverySyncItemIngestor {
 

@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, api, track } from "lwc";
 import testOpenAIConnection from "@salesforce/apex/DeliveryKanbanSettingsController.testOpenAIConnection";
 export default class DeliveryKanbanOpenAiSettings extends LightningElement {

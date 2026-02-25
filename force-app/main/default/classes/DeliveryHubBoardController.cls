@@ -1,5 +1,6 @@
 /**
  * @description Controller for the Delivery Hub Board LWC.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryHubBoardController {
 

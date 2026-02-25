@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- ── Header ── -->
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketProgress</componentName>
+                <identifier>c_deliveryTicketProgress</identifier>
+            </componentInstance>
+        </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
@@ -27,16 +34,12 @@
                 <identifier>force_highlightsPanel</identifier>
             </componentInstance>
         </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryTicketActionCenter</componentName>
-                <identifier>c_deliveryTicketActionCenter</identifier>
-            </componentInstance>
-        </itemInstances>
         <mode>Replace</mode>
         <name>header</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ── Main body tab content facets ── -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -123,17 +126,57 @@
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ── Sidebar tab content facets (no Replace mode — custom regions) ── -->
+
+    <!-- Tab 1: Actions — things the user does -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryTicketFiles</componentName>
-                <identifier>c_deliveryTicketFiles</identifier>
+                <componentName>deliveryTicketActionCenter</componentName>
+                <identifier>c_deliveryTicketActionCenter</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTimeLogger</componentName>
+                <identifier>c_deliveryTimeLogger</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentName>deliveryTicketStageGateWarning</componentName>
                 <identifier>c_deliveryTicketStageGateWarning</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>sidebarActionsContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Tab 2: Context — read-only situational info -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketDependencies</componentName>
+                <identifier>c_deliveryTicketDependencies</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketQuotes</componentName>
+                <identifier>c_deliveryTicketQuotes</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>sidebarContextContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Tab 3: Chat & Sync — comms, AI, file access, and sync poller grouped together -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryTicketChat</componentName>
+                <identifier>c_deliveryTicketChat</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
@@ -144,38 +187,89 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryTicketChat</componentName>
-                <identifier>c_deliveryTicketChat</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentName>deliveryTicketRefiner</componentName>
                 <identifier>c_deliveryTicketRefiner</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryTicketFiles</componentName>
+                <identifier>c_deliveryTicketFiles</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>sidebarChatSyncContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Tab list facet -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
                 <componentInstanceProperties>
-                    <name>relatedListComponentOverride</name>
-                    <value>NONE</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>rowsToDisplay</name>
-                    <value>10</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>showActionBar</name>
+                    <name>active</name>
                     <value>true</value>
                 </componentInstanceProperties>
-                <componentName>force:relatedListContainer</componentName>
-                <identifier>force_relatedListContainer2</identifier>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>sidebarActionsContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Actions</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>sidebarActionsTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>sidebarContextContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Context</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>sidebarContextTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>sidebarChatSyncContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Chat &amp; Sync</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>sidebarChatSyncTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>sidebarTabList</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Sidebar region: tabset only — no floating components below -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>tabs</name>
+                    <value>sidebarTabList</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tabset</componentName>
+                <identifier>sidebarTabset</identifier>
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
+
     <masterLabel>Ticket Record Page</masterLabel>
     <parentFlexiPage>flexipage__default_rec_L</parentFlexiPage>
     <sobjectType>Ticket__c</sobjectType>

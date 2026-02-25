@@ -1,6 +1,7 @@
 /**
  * @description Controller class for managing Delivery Hub application settings
  * Handles General and AI configuration via Custom Settings.
+ * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryHubSettingsController {
 

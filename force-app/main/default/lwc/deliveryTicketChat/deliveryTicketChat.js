@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, wire, api, track } from 'lwc';
 import getLiveComments from '@salesforce/apex/DeliveryHubCommentController.getLiveComments';
 import postLiveComment from '@salesforce/apex/DeliveryHubCommentController.postLiveComment';

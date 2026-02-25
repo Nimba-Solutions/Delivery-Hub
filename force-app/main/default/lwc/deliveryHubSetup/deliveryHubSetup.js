@@ -1,3 +1,6 @@
+/**
+ * @author Cloud Nimbus LLC
+ */
 import { LightningElement, track, wire } from 'lwc';
 import getSetupStatus from '@salesforce/apex/DeliveryHubSetupController.getSetupStatus';
 // Updated imports to support the two-step transaction flow

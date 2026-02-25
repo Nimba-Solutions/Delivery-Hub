@@ -2,6 +2,7 @@
  * @description Handler for ContentDocumentLinkTrigger.
  * Evaluates files attached to Tickets and creates Outbound Ledger entries (Sync_Item__c)
  * feeding them into the Unified Sync Architecture.
+ * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class DeliveryContentDocLinkTriggerHandler {

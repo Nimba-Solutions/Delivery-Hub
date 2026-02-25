@@ -1,0 +1,176 @@
+/* ── Root container ── */
+.tp-root {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 0.75rem 1.25rem 0.5rem;
+}
+
+/* ── Phase track ── */
+.tp-track {
+    display: flex;
+    align-items: flex-start;
+}
+
+/* ── Individual phase wrapper ── */
+.tp-phase-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Dot row ── */
+.tp-node-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+/* ── Connector lines ── */
+.tp-conn {
+    flex: 1;
+    height: 2px;
+    background: #e5e7eb;
+    transition: background 0.2s;
+}
+.tp-conn--done {
+    background: #94A3B8;
+}
+.tp-conn--hidden {
+    visibility: hidden;
+}
+
+/* ── Phase dots ── */
+.tp-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.15s;
+}
+.tp-dot--future {
+    background: #e5e7eb;
+    border: 2px solid #d1d5db;
+}
+.tp-dot--done {
+    /* background set by inline style (phase color) */
+    border: none;
+}
+.tp-dot--current {
+    width: 18px;
+    height: 18px;
+    /* background + box-shadow set by inline style */
+    border: none;
+}
+
+/* Check icon inside completed dot */
+.tp-check-icon {
+    --lwc-colorTextIconDefault: #ffffff;
+    line-height: 1;
+}
+
+/* Inner pip that pulses on the current dot */
+.tp-current-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    /* color set by inline style */
+    animation: tp-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes tp-pulse {
+    0%, 100% { transform: scale(1);   opacity: 0.8; }
+    50%       { transform: scale(1.4); opacity: 0.4; }
+}
+
+/* ── Labels below dots ── */
+.tp-label-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 6px;
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+}
+
+.tp-phase-name {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    /* color + font-weight overridden by inline style for current */
+}
+
+/* Current stage chip */
+.tp-stage-chip {
+    display: inline-block;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border-radius: 9999px;
+    padding: 1px 7px;
+    margin-top: 3px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* background + color + border set by inline style */
+}
+
+/* ── Done badge (trailing element after all phases) ── */
+.tp-done-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 0px;
+    padding-left: 0.5rem;
+    flex-shrink: 0;
+    --lwc-colorTextIconDefault: #059669;
+}
+.tp-done-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #059669;
+    margin-top: 6px;
+}
+
+/* ── Cancelled banner ── */
+.tp-cancelled-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0;
+    --lwc-colorTextIconDefault: #b91c1c;
+}
+.tp-cancelled-text {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #b91c1c;
+}
+
+/* ── Root state variants ── */
+.tp-root--done {
+    background: #f0fdf4;
+    border-bottom-color: #bbf7d0;
+}
+.tp-root--cancelled {
+    background: #fff1f2;
+    border-bottom-color: #fecdd3;
+}
