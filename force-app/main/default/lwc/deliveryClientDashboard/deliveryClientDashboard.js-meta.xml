@@ -5,4 +5,11 @@
     <targets>
         <target>lightning__HomePage</target>
     </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__HomePage">
+            <property name="hideAttentionSection" type="Boolean" default="false" label="Hide Attention Section" description="Hides the greeting, announcements, and Needs Your Attention list." />
+            <property name="hideInFlightSection" type="Boolean" default="false" label="Hide In-Flight Section" description="Hides the What's In Flight phase count tiles." />
+            <property name="hideRecentSection" type="Boolean" default="false" label="Hide Recent Section" description="Hides the Recently Updated ticket list." />
+        </targetConfig>
+    </targetConfigs>
 </LightningComponentBundle>

@@ -1,145 +1,142 @@
 <template>
 
     <!-- ============================================================ -->
-    <!-- ANNOUNCEMENT BANNERS (one per active vendor with a message)  -->
+    <!-- SECTION 1: Greeting + Announcements + Needs Your Attention  -->
     <!-- ============================================================ -->
-    <template if:true={hasAnnouncements}>
-        <template for:each={announcements} for:item="ann">
-            <div key={ann.key} class="cd-announcement">
-                <lightning-icon icon-name="utility:announcement" size="x-small" class="cd-announcement-icon"></lightning-icon>
-                <span class="cd-announcement-text">{ann.text}</span>
+    <template if:false={hideAttentionSection}>
+
+        <template if:true={hasAnnouncements}>
+            <template for:each={announcements} for:item="ann">
+                <div key={ann.key} class="cd-announcement">
+                    <lightning-icon icon-name="utility:announcement" size="x-small" class="cd-announcement-icon"></lightning-icon>
+                    <span class="cd-announcement-text">{ann.text}</span>
+                </div>
+            </template>
+        </template>
+
+        <div class={greetingClass}>
+            <div class="cd-greeting-content">
+                <div class="cd-greeting-line">{greetingLine}</div>
+                <div class="cd-greeting-sub">{greetingSubtext}</div>
+            </div>
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="border-filled"
+                size="small"
+                onclick={handleRefresh}
+                alternative-text="Refresh"
+                class="cd-refresh-btn">
+            </lightning-button-icon>
+        </div>
+
+        <template if:false={isLoading}>
+            <template if:true={hasAttentionItems}>
+                <lightning-card title="Needs Your Attention" icon-name="standard:task" class="slds-m-bottom_small">
+                    <ul class="slds-p-horizontal_medium slds-p-bottom_small attention-list">
+                        <template for:each={attentionTickets} for:item="ticket">
+                            <li key={ticket.id} class="slds-p-vertical_x-small slds-border_bottom attention-item">
+                                <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                    <div class="slds-col slds-truncate">
+                                        <button
+                                            class="slds-button slds-button_reset slds-text-link ticket-link"
+                                            onclick={handleTicketClick}
+                                            data-id={ticket.id}>
+                                            <strong>{ticket.name}</strong>
+                                            <template if:true={ticket.title}>
+                                                <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {ticket.title}</span>
+                                            </template>
+                                        </button>
+                                    </div>
+                                    <div class="slds-col slds-shrink slds-m-left_x-small">
+                                        <span class={ticket.badgeClass}>{ticket.stage}</span>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </lightning-card>
+            </template>
+            <template if:false={hasAttentionItems}>
+                <div class="cd-caught-up-pill">
+                    <lightning-icon icon-name="utility:check" size="x-small" class="cd-caught-up-icon"></lightning-icon>
+                    <span class="cd-caught-up-text">All caught up &mdash; nothing is waiting on you</span>
+                </div>
+            </template>
+        </template>
+
+        <template if:true={isLoading}>
+            <div class="slds-p-medium slds-text-align_center">
+                <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
             </div>
         </template>
-    </template>
 
-    <!-- ============================================================ -->
-    <!-- GREETING HEADER                                              -->
-    <!-- ============================================================ -->
-    <div class={greetingClass}>
-        <div class="cd-greeting-content">
-            <div class="cd-greeting-line">{greetingLine}</div>
-            <div class="cd-greeting-sub">{greetingSubtext}</div>
-        </div>
-        <lightning-button-icon
-            icon-name="utility:refresh"
-            variant="border-filled"
-            size="small"
-            onclick={handleRefresh}
-            alternative-text="Refresh"
-            class="cd-refresh-btn">
-        </lightning-button-icon>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- SECTION 1: Needs Your Attention                             -->
-    <!-- ============================================================ -->
-    <template if:false={isLoading}>
-
-        <!-- Items present: full list card -->
-        <template if:true={hasAttentionItems}>
-            <lightning-card title="Needs Your Attention" icon-name="standard:task" class="slds-m-bottom_small">
-                <ul class="slds-p-horizontal_medium slds-p-bottom_small attention-list">
-                    <template for:each={attentionTickets} for:item="ticket">
-                        <li key={ticket.id} class="slds-p-vertical_x-small slds-border_bottom attention-item">
-                            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
-                                <div class="slds-col slds-truncate">
-                                    <button
-                                        class="slds-button slds-button_reset slds-text-link ticket-link"
-                                        onclick={handleTicketClick}
-                                        data-id={ticket.id}>
-                                        <strong>{ticket.name}</strong>
-                                        <template if:true={ticket.title}>
-                                            <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {ticket.title}</span>
-                                        </template>
-                                    </button>
-                                </div>
-                                <div class="slds-col slds-shrink slds-m-left_x-small">
-                                    <span class={ticket.badgeClass}>{ticket.stage}</span>
-                                </div>
-                            </div>
-                        </li>
-                    </template>
-                </ul>
-            </lightning-card>
-        </template>
-
-        <!-- All caught up: slim pill row -->
-        <template if:false={hasAttentionItems}>
-            <div class="cd-caught-up-pill">
-                <lightning-icon icon-name="utility:check" size="x-small" class="cd-caught-up-icon"></lightning-icon>
-                <span class="cd-caught-up-text">All caught up &mdash; nothing is waiting on you</span>
-            </div>
-        </template>
-
-    </template>
-
-    <template if:true={isLoading}>
-        <div class="slds-p-medium slds-text-align_center">
-            <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
-        </div>
     </template>
 
     <!-- ============================================================ -->
     <!-- SECTION 2: What's In Flight                                  -->
     <!-- ============================================================ -->
-    <lightning-card title="What&apos;s In Flight" icon-name="standard:kanban" class="slds-m-bottom_small">
-        <template if:false={isLoading}>
-            <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
-                <template for:each={phases} for:item="phase">
-                    <div key={phase.label} class={phase.colClass}>
-                        <button class={phase.tileClass} onclick={handlePhaseClick} data-phase={phase.label} title="View {phase.label} tickets">
-                            <div class="phase-count"><strong>{phase.count}</strong></div>
-                            <div class="phase-label">{phase.label}</div>
-                        </button>
-                    </div>
-                </template>
-            </div>
-        </template>
-    </lightning-card>
+    <template if:false={hideInFlightSection}>
+        <lightning-card title="What&apos;s In Flight" icon-name="standard:kanban" class="slds-m-bottom_small">
+            <template if:false={isLoading}>
+                <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
+                    <template for:each={phases} for:item="phase">
+                        <div key={phase.label} class={phase.colClass}>
+                            <button class={phase.tileClass} onclick={handlePhaseClick} data-phase={phase.label} title="View {phase.label} tickets">
+                                <div class="phase-count"><strong>{phase.count}</strong></div>
+                                <div class="phase-label">{phase.label}</div>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </lightning-card>
+    </template>
 
     <!-- ============================================================ -->
     <!-- SECTION 3: Recently Updated                                  -->
     <!-- ============================================================ -->
-    <lightning-card title="Recently Updated" icon-name="utility:clock">
-        <template if:false={isLoading}>
-            <template if:true={hasRecentItems}>
-                <ul class="slds-p-horizontal_medium slds-p-bottom_small">
-                    <template for:each={recentTickets} for:item="ticket">
-                        <li key={ticket.id} class="slds-p-vertical_x-small slds-border_bottom recent-item">
-                            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
-                                <div class="slds-col slds-truncate">
-                                    <button
-                                        class="slds-button slds-button_reset slds-text-link ticket-link"
-                                        onclick={handleTicketClick}
-                                        data-id={ticket.id}>
-                                        <strong>{ticket.name}</strong>
-                                        <template if:true={ticket.title}>
-                                            <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {ticket.title}</span>
-                                        </template>
-                                    </button>
-                                    <div class="slds-text-body_small slds-text-color_weak">{ticket.stage}</div>
+    <template if:false={hideRecentSection}>
+        <lightning-card title="Recently Updated" icon-name="utility:clock">
+            <template if:false={isLoading}>
+                <template if:true={hasRecentItems}>
+                    <ul class="slds-p-horizontal_medium slds-p-bottom_small">
+                        <template for:each={recentTickets} for:item="ticket">
+                            <li key={ticket.id} class="slds-p-vertical_x-small slds-border_bottom recent-item">
+                                <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                    <div class="slds-col slds-truncate">
+                                        <button
+                                            class="slds-button slds-button_reset slds-text-link ticket-link"
+                                            onclick={handleTicketClick}
+                                            data-id={ticket.id}>
+                                            <strong>{ticket.name}</strong>
+                                            <template if:true={ticket.title}>
+                                                <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {ticket.title}</span>
+                                            </template>
+                                        </button>
+                                        <div class="slds-text-body_small slds-text-color_weak">{ticket.stage}</div>
+                                    </div>
+                                    <div class="slds-col slds-shrink slds-text-body_small slds-text-color_weak slds-text-align_right recent-time">
+                                        {ticket.lastModified}
+                                    </div>
                                 </div>
-                                <div class="slds-col slds-shrink slds-text-body_small slds-text-color_weak slds-text-align_right recent-time">
-                                    {ticket.lastModified}
-                                </div>
-                            </div>
-                        </li>
-                    </template>
-                </ul>
-            </template>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
 
-            <template if:false={hasRecentItems}>
-                <div class="empty-state slds-p-around_large slds-text-align_center">
-                    <div class="empty-state-icon-wrapper empty-state-icon--neutral">
-                        <lightning-icon icon-name="utility:activity" size="large"></lightning-icon>
+                <template if:false={hasRecentItems}>
+                    <div class="empty-state slds-p-around_large slds-text-align_center">
+                        <div class="empty-state-icon-wrapper empty-state-icon--neutral">
+                            <lightning-icon icon-name="utility:activity" size="large"></lightning-icon>
+                        </div>
+                        <h3 class="slds-text-heading_small slds-m-top_medium">No recent activity</h3>
+                        <p class="slds-text-body_regular slds-text-color_weak slds-m-top_x-small">
+                            Ticket updates will appear here once work begins.
+                        </p>
                     </div>
-                    <h3 class="slds-text-heading_small slds-m-top_medium">No recent activity</h3>
-                    <p class="slds-text-body_regular slds-text-color_weak slds-m-top_x-small">
-                        Ticket updates will appear here once work begins.
-                    </p>
-                </div>
+                </template>
             </template>
-        </template>
-    </lightning-card>
+        </lightning-card>
+    </template>
 
 </template>
