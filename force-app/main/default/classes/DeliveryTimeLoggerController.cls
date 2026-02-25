@@ -16,7 +16,19 @@ public with sharing class DeliveryTimeLoggerController {
      */
     @AuraEnabled
     public static void logHours(Id ticketId, Decimal hours, String workNotes) {
+        List<Request__c> activeReqs = [
+            SELECT Id FROM Request__c
+            WHERE TicketId__c = :ticketId
+            AND StatusPk__c IN ('Accepted', 'In Progress')
+            WITH USER_MODE
+            ORDER BY LastModifiedDate DESC
+            LIMIT 1
+        ];
+        if (activeReqs.isEmpty()) {
+            throw new AuraHandledException('No accepted request found for this ticket. Please accept a vendor quote before logging time.');
+        }
         WorkLog__c entry = new WorkLog__c(
+            RequestId__c          = activeReqs[0].Id,
             TicketId__c           = ticketId,
             HoursLoggedNumber__c  = hours,
             WorkDateDate__c       = Date.today(),

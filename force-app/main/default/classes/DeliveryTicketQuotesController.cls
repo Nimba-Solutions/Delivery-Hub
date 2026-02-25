@@ -33,6 +33,7 @@ public with sharing class DeliveryTicketQuotesController {
                    StatusPk__c, WorkProofUrl__c
             FROM Request__c
             WHERE TicketId__c = :ticketId
+            AND QuotedHoursNumber__c != null
             WITH USER_MODE
             ORDER BY CreatedDate ASC
         ]) {

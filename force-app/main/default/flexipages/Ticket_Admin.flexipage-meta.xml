@@ -4,6 +4,7 @@
         <name>header</name>
         <type>Region</type>
     </flexiPageRegions>
+    <!-- Admin sidebar tab content facets -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -13,16 +14,21 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliverySyncPollerButton</componentName>
-                <identifier>c_deliverySyncPollerButton</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentName>deliveryTicketStageGateWarning</componentName>
                 <identifier>c_deliveryTicketStageGateWarning</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliverySyncPollerButton</componentName>
+                <identifier>c_deliverySyncPollerButton</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>adminActionsContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
         <itemInstances>
             <componentInstance>
                 <componentName>deliveryTicketChat</componentName>
@@ -35,6 +41,11 @@
                 <identifier>c_deliveryTicketRefiner</identifier>
             </componentInstance>
         </itemInstances>
+        <mode>Replace</mode>
+        <name>adminAiContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
@@ -232,6 +243,74 @@
                 </componentInstanceProperties>
                 <componentName>lst:dynamicRelatedList</componentName>
                 <identifier>lst_dynamicRelatedList2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>adminDataContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <!-- Admin sidebar tab list -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>active</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>adminActionsContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Actions</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>adminActionsTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>adminAiContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>AI Tools</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>adminAiTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>adminDataContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Data</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>adminDataTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>adminSidebarTabList</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <!-- Admin sidebar region -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>tabs</name>
+                    <value>adminSidebarTabList</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tabset</componentName>
+                <identifier>adminSidebarTabset</identifier>
             </componentInstance>
         </itemInstances>
         <name>sidebar</name>
