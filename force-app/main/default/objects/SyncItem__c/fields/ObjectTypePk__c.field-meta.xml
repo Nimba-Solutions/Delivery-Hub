@@ -36,6 +36,11 @@
                 <default>false</default>
                 <label>WorkLog__c</label>
             </value>
+            <value>
+                <fullName>UsageAnalytics</fullName>
+                <default>false</default>
+                <label>UsageAnalytics</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
