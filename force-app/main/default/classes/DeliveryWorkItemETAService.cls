@@ -304,7 +304,7 @@ public with sharing class DeliveryWorkItemETAService {
 		@TestVisible
         private Date addBusinessDays(Date inputDate, Integer daysToAdd) {
             Date resultDate = inputDate;
-            if(inputDate == null || daysToAdd == null || daysToAdd <= 0) return inputDate;
+            if (inputDate == null || daysToAdd == null || daysToAdd <= 0) { return inputDate; }
 
             Integer daysAdded = 0;
             while (daysAdded < daysToAdd) {
@@ -348,7 +348,7 @@ public with sharing class DeliveryWorkItemETAService {
             this.stageCategory = activeDev.contains(stage) ? 1 : 2;
 
             this.priorityWeight = priorityWeights.get(t.PriorityPk__c);
-            if (this.priorityWeight == null) this.priorityWeight = 999;
+            if (this.priorityWeight == null) { this.priorityWeight = 999; }
         }
 
         public Integer compareTo(Object compareTo) {
