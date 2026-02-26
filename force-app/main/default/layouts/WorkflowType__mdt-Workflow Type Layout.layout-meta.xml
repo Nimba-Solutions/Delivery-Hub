@@ -73,29 +73,6 @@
         <layoutColumns/>
         <style>CustomLinks</style>
     </layoutSections>
-    <relatedLists>
-        <fields>MasterLabel</fields>
-        <fields>DeveloperName</fields>
-        <fields>ApiValue__c</fields>
-        <fields>Phase__c</fields>
-        <fields>OwnerPersona__c</fields>
-        <fields>SortOrderNumber__c</fields>
-        <fields>IsTerminalBool__c</fields>
-        <relatedList>WorkflowStages</relatedList>
-        <sortField>SortOrderNumber__c</sortField>
-        <sortOrder>Asc</sortOrder>
-    </relatedLists>
-    <relatedLists>
-        <fields>MasterLabel</fields>
-        <fields>DeveloperName</fields>
-        <fields>PersonaName__c</fields>
-        <fields>ColumnName__c</fields>
-        <fields>SortOrderNumber__c</fields>
-        <fields>IsExtendedColumnBool__c</fields>
-        <relatedList>PersonaViews</relatedList>
-        <sortField>SortOrderNumber__c</sortField>
-        <sortOrder>Asc</sortOrder>
-    </relatedLists>
     <showEmailCheckbox>false</showEmailCheckbox>
     <showHighlightsPanel>false</showHighlightsPanel>
     <showInteractionLogPanel>false</showInteractionLogPanel>
