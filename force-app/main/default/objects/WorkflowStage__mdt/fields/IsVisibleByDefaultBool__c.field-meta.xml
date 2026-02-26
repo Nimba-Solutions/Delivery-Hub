@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsVisibleByDefaultBool__c</fullName>
+    <description>If checked, this stage is included in the board view without requiring the Show All Columns toggle. Column-level extension visibility is managed by WorkflowPersonaView__mdt.IsExtendedColumn__c.</description>
+    <defaultValue>true</defaultValue>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Is Visible By Default</label>
+    <type>Checkbox</type>
+</CustomField>

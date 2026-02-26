@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsBlockedStateBool__c</fullName>
+    <description>If checked, tickets in this stage display the striped blocker pattern on the board card.</description>
+    <defaultValue>false</defaultValue>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Is Blocked State</label>
+    <type>Checkbox</type>
+</CustomField>

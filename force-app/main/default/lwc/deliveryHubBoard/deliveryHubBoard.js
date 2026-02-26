@@ -31,6 +31,8 @@ import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoa
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
 import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getRequiredFieldsForStage';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
+import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowTypes';
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
 
 // --- NAMESPACE BRIDGE ---
 const FIELDS = {
@@ -60,7 +62,8 @@ const FIELDS = {
     DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%Ticket_Dependency1__r`,
     DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%Ticket_Dependency__r`,
     BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%Blocking_Ticket__c`,
-    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_Ticket__c`
+    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_Ticket__c`,
+    WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`
 };
 
 export default class DeliveryHubBoard extends NavigationMixin(LightningElement) {
@@ -104,6 +107,11 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     @track isSearching = false;
     @track hasValidOpenAIKey = false;
     @track myWorkOnly = false;
+
+    // --- CMT-DRIVEN WORKFLOW STATE ---
+    @track activeWorkflowType = 'Software_Delivery';
+    @track workflowTypes = [];
+    @track workflowConfig = null;
 
     // Weekly AI summary modal
     @track showWeeklyModal = false;
@@ -227,365 +235,34 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    // --- CONFIGURATION MAPS ---
-    statusColorMap = {
-        "Backlog": "#F3F4F6", "Scoping In Progress": "#FEF3C7", 
-        "Clarification Requested (Pre-Dev)": "#E0F2FE", "Providing Clarification": "#DBEAFE", 
-        "Ready for Sizing": "#E0F2FE", "Sizing Underway": "#FFEDD5", 
-        "Ready for Prioritization": "#E0F2FE", "Prioritizing": "#DBEAFE", 
-        "Proposal Requested": "#E0F2FE", "Drafting Proposal": "#FFEDD5", 
-        "Ready for Tech Review": "#E0F2FE", "Tech Reviewing": "#FEF3C7", 
-        "Ready for Client Approval": "#E0F2FE", "In Client Approval": "#DBEAFE", 
-        "Ready for Development": "#DCFCE7", "In Development": "#FF9100", 
-        "Dev Clarification Requested": "#FEE2E2", "Providing Dev Clarification": "#DBEAFE", 
-        "Back For Development": "#EF4444", "Dev Blocked": "#EF4444", 
-        "Ready for Scratch Test": "#E0F2FE", "Scratch Testing": "#22C55E", 
-        "Ready for QA": "#E0F2FE", "QA In Progress": "#22C55E", 
-        "Ready for Internal UAT": "#E0F2FE", "Internal UAT": "#1D4ED8", 
-        "Ready for Client UAT": "#E0F2FE", "In Client UAT": "#2563EB", 
-        "Ready for UAT Sign-off": "#E0F2FE", "Processing Sign-off": "#DBEAFE", 
-        "Ready for Merge": "#F3E8FF", "Merging": "#7C3AED", 
-        "Ready for Deployment": "#F3E8FF", "Deploying": "#7C3AED", 
-        "Deployed to Prod": "#059669", "Done": "#374151", "Cancelled": "#9CA3AF"
-    };
-
-    columnHeaderStyleMap = {
-        "Backlog": { bg: "rgba(243, 244, 246, 0.8)", color: "#1F2937" },
-        "Scoping": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "Clarification Requested": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
-        "Providing Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
-        "Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
-        "Ready for Sizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
-        "Sizing Underway": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
-        "Estimation": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
-        "Ready for Prioritization": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
-        "Prioritizing": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
-        "Prioritization": { bg: "rgba(224, 242, 254, 0.5)", color: "#0284C7" },
-        "Proposal Requested": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
-        "Drafting Proposal": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
-        "Proposal": { bg: "rgba(255, 237, 213, 0.5)", color: "#EA580C" },
-        "Ready for Dev Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "Dev Approving": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "Dev Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "Ready for Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "In Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "Client Approval": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "Approvals": { bg: "rgba(254, 243, 199, 0.5)", color: "#D97706" },
-        "Ready for Dev": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" },
-        "In Development": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" },
-        "Dev Queue": { bg: "rgba(220, 252, 231, 0.5)", color: "#16A34A" },
-        "Dev Work": { bg: "rgba(255, 145, 0, 0.3)", color: "#C2410C" },
-        "Rework": { bg: "rgba(254, 202, 202, 0.6)", color: "#991B1B" },
-        "Blocked": { bg: "rgba(254, 202, 202, 0.6)", color: "#991B1B" },
-        "Dev Clarification Requested": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
-        "Providing Dev Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
-        "Dev Clarification": { bg: "rgba(254, 226, 226, 0.5)", color: "#DC2626" },
-        "Ready for Scratch Test": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-        "Scratch Testing": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-        "Ready for QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-        "QA In Progress": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
-        "Ready for Internal UAT": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-        "Internal UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#1D4ED8" },
-        "QA & Review": { bg: "rgba(219, 234, 254, 0.5)", color: "#1D4ED8" },
-        "QA": { bg: "rgba(219, 234, 254, 0.5)", color: "#1E40AF" },
-        "Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-        "UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-        "Ready for Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-        "In Client UAT": { bg: "rgba(191, 219, 254, 0.5)", color: "#2563EB" },
-        "Ready for UAT Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
-        "Processing Sign-off": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
-        "Deployment Prep": { bg: "rgba(221, 214, 254, 0.5)", color: "#7C3AED" },
-        "Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-        "Ready for Merge": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-        "Merging": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-        "Ready for Deployment": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-        "Deploying": { bg: "rgba(237, 233, 254, 0.5)", color: "#6D28D9" },
-        "Deployed": { bg: "rgba(209, 250, 229, 0.5)", color: "#059669" },
-        "Done": { bg: "rgba(229, 231, 235, 0.5)", color: "#374151" },
-        "Cancelled": { bg: "rgba(229, 231, 235, 0.5)", color: "#6B7280" }
-    };
-
-    statusOwnerMap = {
-        "Backlog": "Consultant", "Scoping In Progress": "Consultant",
-        "Clarification Requested (Pre-Dev)": "Client", "Providing Clarification": "Client",
-        "Ready for Sizing": "Developer", "Sizing Underway": "Developer",
-        "Ready for Prioritization": "Client", "Prioritizing": "Client",
-        "Proposal Requested": "Developer", "Drafting Proposal": "Developer",
-        "Ready for Tech Review": "Consultant", "Tech Reviewing": "Consultant",
-        "Ready for Client Approval": "Client", "In Client Approval": "Client",
-        "Ready for Development": "Developer", "In Development": "Developer",
-        "Dev Clarification Requested": "Client", "Providing Dev Clarification": "Client",
-        "Back For Development": "Developer", "Dev Blocked": "Developer",
-        "Ready for Scratch Test": "QA", "Scratch Testing": "QA",
-        "Ready for QA": "QA", "QA In Progress": "QA",
-        "Ready for Internal UAT": "Consultant", "Internal UAT": "Consultant",
-        "Ready for Client UAT": "Client", "In Client UAT": "Client",
-        "Ready for UAT Sign-off": "Client", "Processing Sign-off": "Client",
-        "Ready for Merge": "Consultant", "Merging": "Consultant",
-        "Ready for Deployment": "Consultant", "Deploying": "Consultant",
-        "Deployed to Prod": "System", "Done": "All", "Cancelled": "All"
-    };
-
-    ownerColorMap = { Client: "#2196F3", Consultant: "#FFD600", Developer: "#FF9100", QA: "#00C853", System: "#9E9E9E", Default: "#BDBDBD" };
-
-    columnDisplayNames = {
-        "Backlog": "Backlog", "Scoping": "Scoping",
-        "Clarification Requested (Pre-Dev)": "Clarification Requested", "Providing Clarification": "Providing Clarification", "Clarification": "Clarification",
-        "Estimation": "Estimation", "Ready for Sizing": "Ready for Sizing", "Sizing Underway": "Sizing Underway", "Sizing": "Sizing",
-        "Prioritization": "Prioritization", "Ready for Prioritization": "Ready for Prioritization", "Prioritizing": "Prioritizing",
-        "Proposal Requested": "Proposal Requested", "Drafting Proposal": "Drafting Proposal", "Proposal": "Proposal",
-        "Dev Approval": "Dev Approval", "Ready for Tech Review": "Ready for Tech Review", "Tech Reviewing": "Tech Reviewing",
-        "Client Approval": "Client Approval", "Ready for Client Approval": "Ready for Client Approval", "In Client Approval": "In Client Approval", "Approvals": "Approvals",
-        "In Development": "In Development", "Dev Queue": "Dev Queue", "Dev Work": "Active Dev", "Rework": "Rework", "Blocked": "⛔ Blocked", "Ready for Dev": "Ready for Dev",
-        "Dev Clarification Requested": "Dev Clarification Requested", "Providing Dev Clarification": "Providing Dev Clarification", "Clarification (In-Dev)": "Dev Clarification", "Dev Clarification": "Dev Clarification",
-        "QA & Review": "QA & Review", "QA": "QA", "Ready for Scratch Test": "Ready for Scratch Test", "Scratch Testing": "Scratch Testing", "Ready for QA": "Ready for QA",
-        "QA In Progress": "QA In Progress", "Ready for Internal UAT": "Ready for Internal UAT", "Internal UAT": "Internal UAT",
-        "Client UAT": "Client UAT", "UAT": "UAT", "Ready for Client UAT": "Ready for Client UAT", "In Client UAT": "In Client UAT",
-        "Ready for UAT Sign-off": "Ready for UAT Sign-off", "Processing Sign-off": "Processing Sign-off",
-        "Deployment Prep": "Deployment Prep", "Deployment": "Deployment", "Ready for Merge": "Ready for Merge", "Merging": "Merging",
-        "Ready for Deployment": "Ready for Deployment", "Deploying": "Deploying", "Deployed": "Deployed", "Done": "Done", "Cancelled": "Cancelled",
-        "Intake": "Intake Queue", "Scoping In Progress": "Active Scoping", "Ready for Development": "Dev Queue", "Back For Development": "Rework", "Dev Blocked": "Blocked",
-        "Pending Tech Approval": "Tech Approval", "Pending Client Approval": "Client Approval"
-    };
-
-    personaColumnStatusMap = {
-        Client: {
-            "Backlog": ["Backlog"], "Scoping": ["Scoping In Progress"],
-            "Clarification Requested (Pre-Dev)": ["Clarification Requested (Pre-Dev)"], "Providing Clarification": ["Providing Clarification"],
-            "Estimation": ["Ready for Sizing", "Sizing Underway"],
-            "Ready for Prioritization": ["Ready for Prioritization"], "Prioritizing": ["Prioritizing"],
-            "Proposal": ["Proposal Requested", "Drafting Proposal"], "Dev Approval": ["Ready for Tech Review", "Tech Reviewing"],
-            "Ready for Client Approval": ["Ready for Client Approval"], "In Client Approval": ["In Client Approval"],
-            "In Development": ["Ready for Development", "In Development", "Back For Development", "Dev Blocked", "Dev Clarification Requested", "Providing Dev Clarification"],
-            "QA & Review": ["Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT"],
-            "Ready for Client UAT": ["Ready for Client UAT"], "In Client UAT": ["In Client UAT"],
-            "Deployment Prep": ["Ready for UAT Sign-off", "Processing Sign-off", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying"],
-            "Deployed": ["Deployed to Prod"], "Done": ["Done", "Cancelled"]
-        },
-        Consultant: {
-            "Backlog": ["Backlog"], "Scoping In Progress": ["Scoping In Progress"],
-            "Clarification Requested (Pre-Dev)": ["Clarification Requested (Pre-Dev)"], "Providing Clarification": ["Providing Clarification"],
-            "Ready for Sizing": ["Ready for Sizing"], "Sizing Underway": ["Sizing Underway"],
-            "Ready for Prioritization": ["Ready for Prioritization"], "Prioritizing": ["Prioritizing"],
-            "Proposal Requested": ["Proposal Requested"], "Drafting Proposal": ["Drafting Proposal"],
-            "Ready for Tech Review": ["Ready for Tech Review"], "Tech Reviewing": ["Tech Reviewing"],
-            "Client Approval": ["Ready for Client Approval", "In Client Approval"],
-            "Dev Queue": ["Ready for Development"], "Dev Work": ["In Development"], "Rework": ["Back For Development"],
-            "Blocked": ["Dev Blocked"], "Dev Clarification": ["Dev Clarification Requested", "Providing Dev Clarification"],
-            "Ready for Scratch Test": ["Ready for Scratch Test"], "Scratch Testing": ["Scratch Testing"],
-            "Ready for QA": ["Ready for QA"], "QA In Progress": ["QA In Progress"],
-            "Ready for Internal UAT": ["Ready for Internal UAT"], "Internal UAT": ["Internal UAT"],
-            "Client UAT": ["Ready for Client UAT", "In Client UAT"],
-            "Ready for UAT Sign-off": ["Ready for UAT Sign-off"], "Processing Sign-off": ["Processing Sign-off"],
-            "Ready for Merge": ["Ready for Merge"], "Merging": ["Merging"],
-            "Ready for Deployment": ["Ready for Deployment"], "Deploying": ["Deploying"],
-            "Deployed": ["Deployed to Prod"], "Done": ["Done", "Cancelled"]
-        },
-        Developer: {
-            "Backlog": ["Backlog", "Scoping In Progress"], "Clarification": ["Clarification Requested (Pre-Dev)"], "Providing Clarification": ["Providing Clarification"],
-            "Ready for Sizing": ["Ready for Sizing"], "Sizing Underway": ["Sizing Underway"],
-            "Prioritization": ["Ready for Prioritization", "Prioritizing"], "Proposal Requested": ["Proposal Requested"], "Drafting Proposal": ["Drafting Proposal"],
-            "Ready for Tech Review": ["Ready for Tech Review"], "Tech Reviewing": ["Tech Reviewing"],
-            "Client Approval": ["Ready for Client Approval", "In Client Approval"],
-            "Dev Queue": ["Ready for Development"], "Dev Work": ["In Development"], "Rework": ["Back For Development"],
-            "Blocked": ["Dev Blocked"], "Dev Clarification": ["Dev Clarification Requested", "Providing Dev Clarification"],
-            "QA": ["Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT"],
-            "UAT": ["Ready for Client UAT", "In Client UAT", "Ready for UAT Sign-off", "Processing Sign-off"],
-            "Deployment": ["Ready for Merge", "Merging", "Ready for Deployment", "Deploying"],
-            "Deployed": ["Deployed to Prod"], "Done": ["Done", "Cancelled"]
-        },
-        QA: {
-            "Backlog": ["Backlog", "Scoping In Progress"], "Clarification": ["Clarification Requested (Pre-Dev)", "Providing Clarification"],
-            "Sizing": ["Ready for Sizing", "Sizing Underway"], "Prioritization": ["Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
-            "Dev Approval": ["Ready for Tech Review", "Tech Reviewing"], "Client Approval": ["Ready for Client Approval", "In Client Approval"],
-            "Dev Queue": ["Ready for Development"], "Dev Work": ["In Development", "Back For Development", "Dev Blocked", "Dev Clarification Requested", "Providing Dev Clarification"],
-            "Ready for Scratch Test": ["Ready for Scratch Test"], "Scratch Testing": ["Scratch Testing"],
-            "Ready for QA": ["Ready for QA"], "QA In Progress": ["QA In Progress"],
-            "Ready for Internal UAT": ["Ready for Internal UAT"], "Internal UAT": ["Internal UAT"],
-            "UAT": ["Ready for Client UAT", "In Client UAT", "Ready for UAT Sign-off", "Processing Sign-off"],
-            "Deployment": ["Ready for Merge", "Merging", "Ready for Deployment", "Deploying"],
-            "Deployed": ["Deployed to Prod"], "Done": ["Done", "Cancelled"]
-        }
-    };
-
-    personaColumnExtensionMap = {
-        Client: {
-            "Backlog": false, "Scoping": false, "Clarification Requested (Pre-Dev)": false, "Providing Clarification": false,
-            "Estimation": true, "Ready for Prioritization": false, "Prioritizing": false, "Proposal": true, "Dev Approval": true,
-            "Ready for Client Approval": false, "In Client Approval": false, "In Development": false, "QA & Review": true,
-            "Ready for Client UAT": false, "In Client UAT": false, "Deployment Prep": true, "Deployed": false, "Done": true, "Cancelled": true
-        },
-        Consultant: {
-            "Backlog": false, "Scoping In Progress": false, "Clarification Requested (Pre-Dev)": false, "Providing Clarification": false,
-            "Ready for Sizing": false, "Sizing Underway": false, "Ready for Prioritization": false, "Prioritizing": false,
-            "Proposal Requested": false, "Drafting Proposal": false, "Ready for Tech Review": false, "Tech Reviewing": false,
-            "Client Approval": true, "Dev Queue": false, "Dev Work": false, "Rework": false, "Blocked": false, "Dev Clarification": false,
-            "Ready for Scratch Test": false, "Scratch Testing": false, "Ready for QA": false, "QA In Progress": false,
-            "Ready for Internal UAT": false, "Internal UAT": false, "Client UAT": true, "Ready for UAT Sign-off": true,
-            "Processing Sign-off": true, "Ready for Merge": true, "Merging": true, "Ready for Deployment": true, "Deploying": true,
-            "Deployed": false, "Done": false
-        },
-        Developer: {
-            "Backlog": true, "Clarification": true, "Ready for Sizing": false, "Sizing Underway": false,
-            "Prioritization": true, "Proposal Requested": false, "Drafting Proposal": false, "Ready for Tech Review": false,
-            "Tech Reviewing": false, "Client Approval": true, "Dev Queue": false, "Dev Work": false, "Rework": false,
-            "Blocked": false, "Dev Clarification": false, "QA": true, "UAT": true, "Deployment": true, "Deployed": true, "Done": true
-        },
-        QA: {
-            "Backlog": true, "Clarification": true, "Sizing": true, "Prioritization": true, "Dev Approval": true,
-            "Client Approval": true, "Dev Queue": false, "Dev Work": false, "Ready for Scratch Test": false,
-            "Scratch Testing": false, "Ready for QA": false, "QA In Progress": false, "Ready for Internal UAT": false,
-            "Internal UAT": false, "UAT": true, "Deployment": true, "Deployed": true, "Done": true
-        }
-    };
-
-    personaBoardViews = {
-        Client: {
-            all: ["Backlog", "Scoping", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Estimation", "Ready for Prioritization", "Prioritizing", "Proposal", "Dev Approval", "Ready for Client Approval", "In Client Approval", "In Development", "QA & Review", "Ready for Client UAT", "In Client UAT", "Deployment Prep", "Deployed", "Done"],
-            predev: ["Backlog", "Scoping", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Estimation", "Ready for Prioritization", "Prioritizing", "Proposal"],
-            indev: ["Dev Approval", "Ready for Client Approval", "In Client Approval", "In Development", "QA & Review"],
-            deployed: ["Ready for Client UAT", "In Client UAT", "Deployment Prep", "Deployed", "Done"]
-        },
-        Consultant: {
-            all: ["Backlog", "Scoping In Progress", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Ready for Sizing", "Sizing Underway", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal", "Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT", "Client UAT", "Ready for UAT Sign-off", "Processing Sign-off", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying", "Deployed", "Done"],
-            predev: ["Backlog", "Scoping In Progress", "Clarification Requested (Pre-Dev)", "Providing Clarification", "Ready for Sizing", "Sizing Underway", "Ready for Prioritization", "Prioritizing", "Proposal Requested", "Drafting Proposal"],
-            indev: ["Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress"],
-            deployed: ["Ready for Internal UAT", "Internal UAT", "Client UAT", "Ready for UAT Sign-off", "Processing Sign-off", "Ready for Merge", "Merging", "Ready for Deployment", "Deploying", "Deployed", "Done"]
-        },
-        Developer: {
-            all: ["Backlog", "Clarification", "Ready for Sizing", "Sizing Underway", "Prioritization", "Proposal Requested", "Drafting Proposal", "Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification", "QA", "UAT", "Deployment", "Deployed", "Done"],
-            predev: ["Backlog", "Clarification", "Ready for Sizing", "Sizing Underway", "Prioritization", "Proposal Requested", "Drafting Proposal"],
-            indev: ["Ready for Tech Review", "Tech Reviewing", "Client Approval", "Dev Queue", "Dev Work", "Rework", "Blocked", "Dev Clarification"],
-            deployed: ["QA", "UAT", "Deployment", "Deployed", "Done"]
-        },
-        QA: {
-            all: ["Backlog", "Clarification", "Sizing", "Prioritization", "Dev Approval", "Client Approval", "Dev Queue", "Dev Work", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress", "Ready for Internal UAT", "Internal UAT", "UAT", "Deployment", "Deployed", "Done"],
-            predev: ["Backlog", "Clarification", "Sizing", "Prioritization", "Dev Approval", "Client Approval"],
-            indev: ["Dev Queue", "Dev Work", "Ready for Scratch Test", "Scratch Testing", "Ready for QA", "QA In Progress"],
-            deployed: ["Ready for Internal UAT", "Internal UAT", "UAT", "Deployment", "Deployed", "Done"]
-        }
-    };
-transitionMap = {
-        // --- PHASE 1: DEFINITION & SCOPING ---
-        "Backlog":                           ["Scoping In Progress",             "Clarification Requested (Pre-Dev)",    "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-        "Scoping In Progress":               ["Clarification Requested (Pre-Dev)",                                       "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-        "Clarification Requested (Pre-Dev)": ["Providing Clarification",                                                 "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-        "Providing Clarification":           [                                                                           "Ready for Sizing",    "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-
-        // --- PHASE 2: ESTIMATION & PRIORITIZATION ---
-        "Ready for Sizing":                  ["Sizing Underway",                                                         "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-        "Sizing Underway":                   [                                                                           "Ready for Prioritization",    "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-        "Ready for Prioritization":          ["Prioritizing",                                                                                           "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-        "Prioritizing":                      [                                                                                                          "Proposal Requested",    "Ready for Tech Review",    "Ready for Client Approval"],
-        "Proposal Requested":                ["Drafting Proposal",                                                                                                               "Ready for Tech Review",    "Ready for Client Approval"],
-        "Drafting Proposal":                 [                                                                                                                                   "Ready for Tech Review",    "Ready for Client Approval"],
-
-        // --- PHASE 3: TECHNICAL & CLIENT APPROVAL ---
-        "Ready for Tech Review":             ["Tech Reviewing",                                                                                                                  "Ready for Client Approval",    "Ready for Development"],
-        "Tech Reviewing":                    [                                                                                                                                   "Ready for Client Approval",    "Ready for Development"],
-        "Ready for Client Approval":         ["In Client Approval",                                                                                                                                              "Ready for Development"],
-        "In Client Approval":                [                                                                                                                                                                   "Ready for Development"],
-
-        // --- PHASE 4: DEVELOPMENT ---
-        "Ready for Development":             ["In Development"],
-        "In Development":                    ["Dev Clarification Requested",     "Dev Blocked",     "Ready for Scratch Test",    "Ready for QA",    "Ready for Deployment"],
-        "Dev Clarification Requested":       ["Providing Dev Clarification"],
-        "Providing Dev Clarification":       ["Back For Development"],
-        "Dev Blocked":                       ["In Development",                  "Providing Dev Clarification"],
-        "Back For Development":              ["In Development"],
-
-        // --- PHASE 5: TESTING (QA & INTERNAL) ---
-        "Ready for Scratch Test":            ["Scratch Testing",                 "Ready for QA",              "Ready for Internal UAT",    "Ready for Client UAT"],
-        "Scratch Testing":                   ["Ready for QA",                    "Ready for Internal UAT",    "Ready for Client UAT",      "Back For Development"],
-        "Ready for QA":                      ["QA In Progress",                  "Ready for Internal UAT",    "Ready for Client UAT"],
-        "QA In Progress":                    ["Ready for Internal UAT",          "Ready for Client UAT",      "Back For Development"],
-        "Ready for Internal UAT":            ["Internal UAT",                    "Ready for Client UAT"],
-        "Internal UAT":                      ["Ready for Client UAT",            "Back For Development"],
-
-        // --- PHASE 6: CLIENT UAT ---
-        "Ready for Client UAT":              ["In Client UAT",                   "Ready for UAT Sign-off",    "Ready for Merge",           "Ready for Deployment"],
-        "In Client UAT":                     ["Ready for UAT Sign-off",          "Ready for Merge",           "Ready for Deployment",      "Back For Development"],
-        "Ready for UAT Sign-off":            ["Processing Sign-off",             "Ready for Merge",           "Ready for Deployment"],
-        "Processing Sign-off":               ["Ready for Merge",                 "Ready for Deployment",      "Back For Development"],
-
-        // --- PHASE 7: DEPLOYMENT ---
-        "Ready for Merge":                   ["Merging",                         "Ready for Deployment"],
-        "Merging":                           ["Ready for Deployment"],
-        "Ready for Deployment":              ["Deploying"],
-        "Deploying":                         ["Deployed to Prod"],
-        "Deployed to Prod":                  ["Done"],
-        
-        // --- PHASE 8: END STATES ---
-        "Done":                              [],
-        "Cancelled":                         ["Backlog", "Ready for Sizing"]
-    };
-
-    backtrackMap = {
-        // --- PHASE 1: DEFINITION & SCOPING ---
-        "Scoping In Progress":               ["Backlog",                                                                                                                                                                                                                                                                                                                                                                                                                                                  "Cancelled"],
-        "Clarification Requested (Pre-Dev)": ["Scoping In Progress",               "Backlog",                                                                                                                                                                                                                                                                                                                                                                                                                 "Cancelled"],
-        "Providing Clarification":           ["Clarification Requested (Pre-Dev)", "Scoping In Progress",               "Backlog",                                                                                                                                                                                                                                                                                                                                                                                "Cancelled"],
-
-        // --- PHASE 2: ESTIMATION & PRIORITIZATION ---
-        "Ready for Sizing":                  ["Providing Clarification",           "Clarification Requested (Pre-Dev)", "Scoping In Progress",               "Backlog",                                                                                                                                                                                                                                                                                                                                       "Cancelled"],
-        "Sizing Underway":                   ["Ready for Sizing",                                                                                                                                                                                                                                                                                                                                                                                                                                                 "Cancelled"],
-        "Ready for Prioritization":          ["Sizing Underway",                   "Ready for Sizing",                  "Providing Clarification",                                                                                                                                                                                                                                                                                                                                                                "Cancelled"],
-        "Prioritizing":                      ["Ready for Prioritization",                                                                                                                                                                                                                                                                                                                                                                                                                                         "Cancelled"],
-        "Proposal Requested":                ["Prioritizing",                      "Ready for Prioritization",          "Sizing Underway",                                                                                                                                                                                                                                                                                                                                                                        "Cancelled"],
-        "Drafting Proposal":                 ["Proposal Requested",                                                                                                                                                                                                                                                                                                                                                                                                                                               "Cancelled"],
-
-        // --- PHASE 3: TECHNICAL & CLIENT APPROVAL ---
-        "Ready for Tech Review":             ["Drafting Proposal",                 "Proposal Requested",                "Sizing Underway",                   "Ready for Prioritization",                                                                                                                                                                                                                                                                                                                          "Cancelled"],
-        "Tech Reviewing":                    ["Ready for Tech Review",                                                                                                                                                                                                                                                                                                                                                                                                                                            "Cancelled"],
-        "Ready for Client Approval":         ["Tech Reviewing",                    "Ready for Tech Review",             "Drafting Proposal",                 "Sizing Underway",                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
-        "In Client Approval":                ["Ready for Client Approval",                                                                                                                                                                                                                                                                                                                                                                                                                                        "Cancelled"],
-
-        // --- PHASE 4: DEVELOPMENT ---
-        "Ready for Development":             ["In Client Approval",                "Ready for Client Approval",         "Tech Reviewing",                    "Prioritizing",                                                                                                                                                                                                                                                                                                                                      "Cancelled"],
-        "In Development":                    ["Ready for Development",                                                                                                                                                                                                                                                                                                                                                                                                                                            "Cancelled"],
-        "Dev Clarification Requested":       ["In Development",                                                                                                                                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
-        "Providing Dev Clarification":       ["Dev Clarification Requested",                                                                                                                                                                                                                                                                                                                                                                                                                                      "Cancelled"],
-        "Dev Blocked":                       ["In Development",                                                                                                                                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
-        "Back For Development":              ["Dev Clarification Requested",       "In Development",                                                                                                                                                                                                                                                                                                                                                                                                                  "Cancelled"],
-
-        // --- PHASE 5: TESTING (QA & INTERNAL) ---
-        "Ready for Scratch Test":            ["In Development",                                                                                                                                                                                                                                                                                                                                                                                                                                                   "Cancelled"],
-        "Scratch Testing":                   ["Ready for Scratch Test",                                                                                                                                                                                                                                                                                                                                                                                                                                           "Cancelled"],
-        "Ready for QA":                      ["Scratch Testing",                   "Ready for Scratch Test",            "In Development",                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
-        "QA In Progress":                    ["Ready for QA",                                                                                                                                                                                                                                                                                                                                                                                                                                                     "Cancelled"],
-        "Ready for Internal UAT":            ["QA In Progress",                    "Ready for QA",                                                                                                                                                                                                                                                                                                                                                                                                                    "Cancelled"],
-        "Internal UAT":                      ["Ready for Internal UAT",                                                                                                                                                                                                                                                                                                                                                                                                                                           "Cancelled"],
-
-        // --- PHASE 6: CLIENT UAT ---
-        "Ready for Client UAT":              ["Internal UAT",                      "Ready for Internal UAT",            "QA In Progress",                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
-        "In Client UAT":                     ["Ready for Client UAT",                                                                                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
-        "Ready for UAT Sign-off":            ["In Client UAT",                                                                                                                                                                                                                                                                                                                                                                                                                                                    "Cancelled"],
-        "Processing Sign-off":               ["Ready for UAT Sign-off",                                                                                                                                                                                                                                                                                                                                                                                                                                           "Cancelled"],
-
-        // --- PHASE 7: DEPLOYMENT ---
-        "Ready for Merge":                   ["Processing Sign-off",               "Ready for UAT Sign-off",            "In Client UAT",                                                                                                                                                                                                                                                                                                                                                                              "Cancelled"],
-        "Merging":                           ["Ready for Merge",                                                                                                                                                                                                                                                                                                                                                                                                                                                  "Cancelled"],
-        "Ready for Deployment":              ["Merging",                           "Ready for Merge",                   "Processing Sign-off",                                                                                                                                                                                                                                                                                                                                                                        "Cancelled"],
-        "Deploying":                         ["Ready for Deployment",                                                                                                                                                                                                                                                                                                                                                                                                                                             "Cancelled"],
-        "Deployed to Prod":                  ["Deploying",                         "Ready for Deployment",                                                                                                                                                                                                                                                                                                                                                                                                            "Cancelled"],
-        
-        // --- PHASE 8: END STATES ---
-        "Done":                              ["Deployed to Prod",                                                                                                                                                                                                                                                                                                                                                                                                                                                 "Cancelled"],
-        "Backlog":                           [                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "Cancelled"],
-        "Cancelled":                         ["Backlog",                           "Ready for Sizing",                  "Ready for Development"] 
-    };
+    // --- CONFIGURATION MAPS REMOVED ---
+    // statusColorMap, columnHeaderStyleMap, statusOwnerMap, ownerColorMap, columnDisplayNames,
+    // personaColumnStatusMap, personaColumnExtensionMap, personaBoardViews,
+    // transitionMap, backtrackMap are all now CMT-driven via workflowConfig.
 
     intentionColor = { "Will Do": "#2196F3", "Sizing Only": "#FFD54F" };
     personaAdvanceOverrides = {};
     personaBacktrackOverrides = {};
 
-    @wire(getTickets)
+    @wire(getWorkflowTypes)
+    wiredTypes({ data, error }) {
+        if (data) { this.workflowTypes = data; }
+        else if (error) { console.error('[DeliveryHubBoard] getWorkflowTypes error:', error); }
+    }
+
+    @wire(getWorkflowConfig, { workflowTypeName: '$activeWorkflowType' })
+    wiredConfig({ data, error }) {
+        if (data) { this.workflowConfig = data; }
+        else if (error) { console.error('[DeliveryHubBoard] getWorkflowConfig error:', error); }
+    }
+
+    @wire(getTickets, { workflowType: '$activeWorkflowType' })
     wiredTickets(result) {
-        this.ticketsWire = result; 
+        this.ticketsWire = result;
         const { data, error } = result;
         if (data) {
-            this.realRecords = [...data]; 
-            this.loadETAs(); 
+            this.realRecords = [...data];
+            this.loadETAs();
         } else if (error) {
             console.error("Ticket wire error", error);
         }
@@ -662,7 +339,11 @@ transitionMap = {
             : 'toolbar-button my-work-btn';
     }
 
-    get personaOptions() { return Object.keys(this.personaColumnStatusMap).map((p) => ({ label: p, value: p })); }
+    get personaOptions() {
+        const views = this.workflowConfig?.personaViews;
+        if (views) return Object.keys(views).map(p => ({ label: p, value: p }));
+        return ['Client', 'Consultant', 'Developer', 'QA'].map(p => ({ label: p, value: p }));
+    }
     get sizeModeOptions() { return [{ label: "Equal Sized", value: "equalSized" }, { label: "Ticket Sized", value: "ticketSize" }]; }
     get hasRecentComments() { return (this.recentComments || []).length > 0; }
     get displayModeOptions() { return [{ label: "Kanban", value: "kanban" }, { label: "Compact", value: "compact" }, { label: "Table", value: "table" }]; }
@@ -818,127 +499,136 @@ transitionMap = {
         });
     }
 
-    // ... [Getters for columns and other options remain unchanged] ...
-    // Paste stageColumns, getClientColumnHeaderColor, etc. here
+    // -----------------------------------------------------------------------
+    // CMT helper: stage lookup map keyed by apiValue
+    // -----------------------------------------------------------------------
+    get _stageMap() {
+        if (!this.workflowConfig?.stages) return {};
+        const map = {};
+        this.workflowConfig.stages.forEach(s => { map[s.apiValue] = s; });
+        return map;
+    }
+
+    // -----------------------------------------------------------------------
+    // stageColumns — CMT-driven, replaces all hardcoded persona/color maps
+    // -----------------------------------------------------------------------
     get stageColumns() {
-        // (Use the version I gave you previously, it works fine)
-        const persona = this.persona;
-        const boardViews = this.personaBoardViews?.[persona] || {};
-        let colNames = boardViews?.[this.overallFilter] || [];
-        const statusMap = this.personaColumnStatusMap?.[persona] || {};
+        if (!this.workflowConfig) return [];
+
+        const { type, stages, personaViews } = this.workflowConfig;
+        const stageMap = this._stageMap;
         const enriched = this.enrichedTickets || [];
-        const extMap = this.personaColumnExtensionMap?.[persona] || {};
 
-        if (!this.showAllColumns) {
-            colNames = colNames.filter((col) => {
-                const isExtended = extMap[col]; 
-                return !isExtended; 
-            });
-        }
+        // Phase-group filters for overallFilter
+        const PREDEV_PHASES  = new Set(['Planning', 'Approval']);
+        const INDEV_PHASES   = new Set(['Development', 'Testing']);
+        const DEPLOYED_PHASES = new Set(['UAT', 'Deployment', 'Done']);
 
-        let columns = colNames.map((colName) => {
-            const config = this.columnHeaderStyleMap[colName] || { bg: "#ffffff", color: "#11182c" };
-            const headerStyle = `background:${config.bg};color:${config.color};`;
-
-            const columnTickets = enriched
-                .filter((t) => (statusMap[colName] || []).includes(t.uiStage))
-                .filter((t) => {
-                    if (this.intentionFilter === "all") return true;
-                    const intention = (t.uiIntention || "").trim().toLowerCase();
-                    return intention === this.intentionFilter.toLowerCase();
+        const applyTicketFilters = (tickets, headerBg) =>
+            tickets
+                .filter(t => {
+                    if (this.intentionFilter === 'all') return true;
+                    return (t.uiIntention || '').trim().toLowerCase() === this.intentionFilter.toLowerCase();
                 })
-                .filter((t) => {
+                .filter(t => {
                     if (!this.myWorkOnly) return true;
                     const uid = (USER_ID || '').substring(0, 15);
                     return (t.uiOwnerId || '').substring(0, 15) === uid ||
                            (t.uiDeveloperId || '').substring(0, 15) === uid;
                 })
-                .map((ticket) => ({
-                    ...ticket,
-                    cardStyle: `border-left-color: ${config.bg} !important;`,
-                }));
+                .map(ticket => ({ ...ticket, cardStyle: `border-left-color: ${headerBg} !important;` }));
 
-            return {
-                stage: colName,
-                displayName: this.columnDisplayNames[colName] || colName,
-                headerStyle,
-                tickets: columnTickets,
-                bodyClasses: `kanban-column-body ${columnTickets.length > 0 ? "has-tickets" : "is-empty"}`,
-            };
-        });
+        let columns;
 
-        return this.showMode === "active" ? columns.filter((col) => col.tickets.length > 0) : columns;
+        if (type?.useSimplifiedView) {
+            // SIMPLIFIED WORKFLOW (e.g. Loan Approval) — each stage is its own column
+            columns = stages
+                .filter(s => this.showAllColumns ? true : s.isVisibleByDefault)
+                .map(s => {
+                    const bg = s.headerBgColor || '#ffffff';
+                    const color = s.headerTextColor || '#111827';
+                    const columnTickets = applyTicketFilters(enriched.filter(t => t.uiStage === s.apiValue), bg);
+                    return {
+                        stage: s.apiValue,
+                        displayName: s.displayName || s.apiValue,
+                        headerStyle: `background:${bg};color:${color};`,
+                        tickets: columnTickets,
+                        bodyClasses: `kanban-column-body ${columnTickets.length > 0 ? 'has-tickets' : 'is-empty'}`
+                    };
+                });
+        } else {
+            // FULL WORKFLOW (e.g. Software Delivery) — use persona views
+            const personaView = (personaViews || {})[this.persona] || [];
+
+            columns = personaView
+                .filter(col => {
+                    if (!this.showAllColumns && col.isExtended) return false;
+                    if (this.overallFilter === 'all') return true;
+                    const colPhases = (col.stages || []).map(sv => stageMap[sv]?.phase).filter(Boolean);
+                    if (this.overallFilter === 'predev')   return colPhases.some(p => PREDEV_PHASES.has(p));
+                    if (this.overallFilter === 'indev')    return colPhases.some(p => INDEV_PHASES.has(p));
+                    if (this.overallFilter === 'deployed') return colPhases.some(p => DEPLOYED_PHASES.has(p));
+                    return true;
+                })
+                .map(col => {
+                    const colStages = col.stages || [];
+                    // Use header style from the first stage in this column
+                    const firstStage = colStages.length > 0 ? stageMap[colStages[0]] : null;
+                    const bg = firstStage?.headerBgColor || '#ffffff';
+                    const color = firstStage?.headerTextColor || '#111827';
+                    const columnTickets = applyTicketFilters(
+                        enriched.filter(t => colStages.includes(t.uiStage)), bg
+                    );
+                    return {
+                        stage: col.columnName,
+                        displayName: col.columnName,
+                        headerStyle: `background:${bg};color:${color};`,
+                        tickets: columnTickets,
+                        bodyClasses: `kanban-column-body ${columnTickets.length > 0 ? 'has-tickets' : 'is-empty'}`
+                    };
+                });
+        }
+
+        return this.showMode === 'active' ? columns.filter(col => col.tickets.length > 0) : columns;
     }
-    
-    getColumnDisplayName(colKey) { return this.columnDisplayNames?.[colKey] || colKey; }
-    
-    // [Client Header Colors and Card Colors]
-    getClientColumnHeaderColor(colName) {
-        const yellowCols = ["Quick Estimate", "Proposal Needed", "Pending Development Approval", "Ready for Development"];
-        const orangeCols = ["In Development", "In Review", "Ready for UAT (Client)"];
-        const blueCols = ["Deployed to Prod", "Done"];
-        if (yellowCols.includes(colName)) return "#FFE082";
-        if (orangeCols.includes(colName)) return "#FF9100";
-        if (blueCols.includes(colName)) return "#e3f2fd";
-        if (colName === "Backlog" || colName === "Active Scoping") return "#e3f2fd";
-        return "#2196F3"; 
+
+    getClientCardColor(status) {
+        return this._stageMap[status]?.cardColor || '#eee';
     }
-    getClientCardColor(status) { return this.statusColorMap[status] || "#eee"; }
 
     get advanceOptions() {
-        if (!this.selectedRecord) return [];
-        // FIX: Use uiStage which is already normalized
-        const currStage = this.enrichedTickets.find(t => t.Id === this.selectedRecord.Id)?.uiStage; 
+        if (!this.selectedRecord || !this.workflowConfig) return [];
+        const currStage = this.enrichedTickets.find(t => t.Id === this.selectedRecord.Id)?.uiStage;
         if (!currStage) return [];
 
-        const persona = this.persona;
-        const nextStages = this.transitionMap[currStage] || [];
+        const stageMap = this._stageMap;
+        const stageData = stageMap[currStage];
+        const nextStages = stageData?.forwardTransitions || [];
 
-        return nextStages.filter((tgt) => tgt !== currStage).map((tgt) => {
-            const override = this.personaAdvanceOverrides?.[persona]?.[currStage]?.[tgt] || {};
-            let style = "";
-            if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
-                const { bg, color } = this.columnHeaderStyleMap[tgt];
-                style = `background:${bg};color:${color};`;
-            } else { style = "background:#e0e0e0;color:#222;"; }
-            let icon = override.icon || "➡️";
-            if (tgt === "Active Scoping") icon = "🚀";
-            if (tgt === "Cancelled") icon = "🛑";
-            return { value: tgt, label: override.label || tgt, icon, style, autofocus: override.autofocus || false };
+        return nextStages.filter(tgt => tgt !== currStage).map(tgt => {
+            const tgtData = stageMap[tgt];
+            const bg = tgtData?.headerBgColor || '#e0e0e0';
+            const color = tgtData?.headerTextColor || '#222';
+            const icon = tgt === 'Cancelled' ? '🛑' : '➡️';
+            return { value: tgt, label: tgt, icon, style: `background:${bg};color:${color};`, autofocus: false };
         });
     }
 
     get backtrackOptions() {
-        if (!this.selectedRecord) return [];
-        // FIX: Use uiStage
+        if (!this.selectedRecord || !this.workflowConfig) return [];
         const currStage = this.enrichedTickets.find(t => t.Id === this.selectedRecord.Id)?.uiStage;
         if (!currStage) return [];
 
-        const persona = this.persona;
-        let targets = [];
-        if (this.personaBacktrackOverrides?.[persona]?.[currStage]) {
-            const custom = this.personaBacktrackOverrides[persona][currStage];
-            targets = Object.keys(custom).map((tgt) => {
-                const override = custom[tgt];
-                let style = "";
-                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
-                    const { bg, color } = this.columnHeaderStyleMap[tgt];
-                    style = `background:${bg};color:${color};`;
-                } else { style = "background:#e0e0e0;color:#222;"; }
-                return { value: tgt, label: override.label || tgt, icon: override.icon || "🔙", style };
-            });
-        } else {
-            const prevStages = this.backtrackMap[currStage] || [];
-            targets = prevStages.map((tgt) => {
-                let style = "";
-                if (this.columnHeaderStyleMap && this.columnHeaderStyleMap[tgt]) {
-                    const { bg, color } = this.columnHeaderStyleMap[tgt];
-                    style = `background:${bg};color:${color};`;
-                } else { style = "background:#e0e0e0;color:#222;"; }
-                return { value: tgt, label: tgt, icon: "⬅️", style };
-            });
-        }
-        return targets;
+        const stageMap = this._stageMap;
+        const stageData = stageMap[currStage];
+        const prevStages = stageData?.backtrackTransitions || [];
+
+        return prevStages.map(tgt => {
+            const tgtData = stageMap[tgt];
+            const bg = tgtData?.headerBgColor || '#e0e0e0';
+            const color = tgtData?.headerTextColor || '#222';
+            return { value: tgt, label: tgt, icon: '⬅️', style: `background:${bg};color:${color};` };
+        });
     }
 
     // [Filter Options]
@@ -948,7 +638,12 @@ transitionMap = {
     handleIntentionFilterChange(e) { this.intentionFilter = e.detail ? e.detail.value : e.target.value; }
     handleOverallFilterChange(e) { this.overallFilter = e.detail ? e.detail.value : e.target.value; }
     handleToggleColumns(e) { this.showAllColumns = e.target.checked; this.logBoardState(); }
-    columnOwner(colName) { const personaMap = this.personaColumnStatusMap[this.persona] || {}; const statuses = personaMap[colName] || []; const firstStatus = statuses[0]; return this.statusOwnerMap[firstStatus] || "Default"; }
+    columnOwner(colName) {
+        const personaView = (this.workflowConfig?.personaViews || {})[this.persona] || [];
+        const col = personaView.find(c => c.columnName === colName);
+        const firstStageApiValue = (col?.stages || [])[0];
+        return this._stageMap[firstStageApiValue]?.ownerPersona || 'Default';
+    }
     
     // --- LOAD ETAS ---
     handleNumDevsChange(e) { this.numDevs = parseInt(e.target.value, 10) || 1; this.loadETAs(); }
@@ -1223,8 +918,10 @@ transitionMap = {
 
         const targetColumnStage = dropColumnEl.dataset.stage;
 
-        // 1. Get the internal Salesforce Picklist value for this column
-        const newInternalStage = (this.personaColumnStatusMap[this.persona][targetColumnStage] || [])[0];
+        // 1. Get the internal Salesforce Picklist value for this column (via CMT persona views)
+        const personaView = (this.workflowConfig?.personaViews || {})[this.persona] || [];
+        const col = personaView.find(c => c.columnName === targetColumnStage);
+        const newInternalStage = (col?.stages || [])[0];
         if (!newInternalStage) {
             this.handleDragEnd();
             this.showToast('Error', 'Invalid target stage.', 'error');
@@ -1301,8 +998,9 @@ transitionMap = {
         const fields = event.detail.fields;
         
         // Force defaults (namespaced keys)
-        fields[FIELDS.IS_ACTIVE]  = true;
-        fields[FIELDS.STATUS_PK]  = 'New';
+        fields[FIELDS.IS_ACTIVE]     = true;
+        fields[FIELDS.STATUS_PK]     = 'New';
+        fields[FIELDS.WORKFLOW_TYPE] = this.activeWorkflowType;
         if (!fields[FIELDS.PRIORITY]) {
             fields[FIELDS.PRIORITY] = 'Medium';
         }
@@ -1483,7 +1181,8 @@ transitionMap = {
             this.searchResults = await searchForPotentialBlockers({
                 searchTerm: this.searchTerm,
                 currentTicketId: this.selectedTicket.Id,
-                existingDependencyIds: existingDependencyIds
+                existingDependencyIds: existingDependencyIds,
+                workflowType: this.activeWorkflowType
             });
         } catch (error) { 
             console.error('Search error:', error);
@@ -1521,6 +1220,13 @@ transitionMap = {
         if (this.selectedTicket) {
             this.isModalOpen = true;
         }
+    }
+
+    // --- WORKFLOW TYPE TOGGLE ---
+    get hasMultipleWorkflows() { return (this.workflowTypes || []).length > 1; }
+
+    handleWorkflowTypeChange(event) {
+        this.activeWorkflowType = event.currentTarget.dataset.type;
     }
 
     showToast(title, message, variant) {

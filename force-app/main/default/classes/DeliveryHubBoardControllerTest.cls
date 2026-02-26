@@ -99,12 +99,13 @@ public class DeliveryHubBoardControllerTest {
         
         Test.startTest();
         List<Ticket__c> results = DeliveryHubBoardController.searchForPotentialBlockers(
-            'Search Target', 
-            currentTicket.Id, 
-            new List<Id>()
+            'Search Target',
+            currentTicket.Id,
+            new List<Id>(),
+            'Software_Delivery'
         );
         Test.stopTest();
-        
+
         System.assertEquals(1, results.size());
         System.assertEquals('Search Target', results[0].BriefDescriptionTxt__c);
     }

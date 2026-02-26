@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>SD - Ready for Deployment</label>
+    <protected>false</protected>
+    <values>
+        <field>WorkflowType__c</field>
+        <value xsi:type="xsd:string">Software_Delivery</value>
+    </values>
+    <values>
+        <field>ApiValue__c</field>
+        <value xsi:type="xsd:string">Ready for Deployment</value>
+    </values>
+    <values>
+        <field>SortOrderNumber__c</field>
+        <value xsi:type="xsd:double">33</value>
+    </values>
+    <values>
+        <field>CardColor__c</field>
+        <value xsi:type="xsd:string">#F3E8FF</value>
+    </values>
+    <values>
+        <field>HeaderBgColor__c</field>
+        <value xsi:type="xsd:string">rgba(237,233,254,0.5)</value>
+    </values>
+    <values>
+        <field>HeaderTextColor__c</field>
+        <value xsi:type="xsd:string">#6D28D9</value>
+    </values>
+    <values>
+        <field>OwnerPersona__c</field>
+        <value xsi:type="xsd:string">Consultant</value>
+    </values>
+    <values>
+        <field>Phase__c</field>
+        <value xsi:type="xsd:string">Deployment</value>
+    </values>
+    <values>
+        <field>IsTerminalBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsBlockedStateBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsAttentionStateBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsVisibleByDefaultBool__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>AllowedForwardTransitionsTxt__c</field>
+        <value xsi:type="xsd:string">Deploying</value>
+    </values>
+    <values>
+        <field>AllowedBacktrackTransitionsTxt__c</field>
+        <value xsi:type="xsd:string">Merging,Ready for Merge,Processing Sign-off,Cancelled</value>
+    </values>
+</CustomMetadata>

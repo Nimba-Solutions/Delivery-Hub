@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkflowType__c</fullName>
+    <description>The workflow type this persona view belongs to.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Workflow Type</label>
+    <referenceTo>WorkflowType__mdt</referenceTo>
+    <relationshipName>PersonaViews</relationshipName>
+    <type>MetadataRelationship</type>
+</CustomField>

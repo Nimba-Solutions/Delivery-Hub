@@ -6,10 +6,12 @@ import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import getClientDashboard from '@salesforce/apex/DeliveryHubDashboardController.getClientDashboard';
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
 import USER_ID from '@salesforce/user/Id';
 import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 
-const PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
+// Fallback phase order used when CMT config is not yet loaded
+const FALLBACK_PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
 
 const PHASE_LIST_VIEWS = {
     'Planning':    'Tickets_Planning',
@@ -20,12 +22,11 @@ const PHASE_LIST_VIEWS = {
     'Deployment':  'Tickets_Deployment'
 };
 
-const STAGE_BADGE_CLASSES = {
-    'In Client Approval':       'slds-badge slds-badge_lightest stage-badge stage-badge--approval',
-    'Ready for Client Approval':'slds-badge slds-badge_lightest stage-badge stage-badge--approval',
-    'Ready for Client UAT':     'slds-badge slds-badge_lightest stage-badge stage-badge--uat',
-    'In Client UAT':            'slds-badge slds-badge_lightest stage-badge stage-badge--uat',
-    'Ready for UAT Sign-off':   'slds-badge slds-badge_lightest stage-badge stage-badge--signoff'
+// Maps phase name → badge CSS modifier (for attention ticket styling)
+const PHASE_BADGE_SUFFIX = {
+    'Approval':   'approval',
+    'UAT':        'uat',
+    'Deployment': 'signoff'
 };
 
 export default class DeliveryClientDashboard extends NavigationMixin(LightningElement) {
@@ -40,23 +41,66 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @track announcements = [];
     @track inFlightCollapsed = false;
     @track recentCollapsed = false;
+    @track workflowConfig = null;
 
     _wiredResult;
+    _pendingData = null; // holds dashboard data until config is ready
 
     @wire(getRecord, { recordId: USER_ID, fields: [FIRST_NAME_FIELD] })
     wiredUser;
+
+    @wire(getWorkflowConfig, { workflowTypeName: 'Software_Delivery' })
+    wiredConfig({ data, error }) {
+        if (data) {
+            this.workflowConfig = data;
+            // If dashboard data arrived before config, process it now
+            if (this._pendingData) {
+                this._processData(this._pendingData);
+                this._pendingData = null;
+            }
+        } else if (error) {
+            console.error('[DeliveryClientDashboard] getWorkflowConfig error:', error);
+        }
+    }
 
     @wire(getClientDashboard)
     wiredDashboard(result) {
         this._wiredResult = result;
         const { data, error } = result;
         if (data) {
-            this._processData(data);
+            if (this.workflowConfig) {
+                this._processData(data);
+            } else {
+                this._pendingData = data; // wait for config
+            }
             this.isLoading = false;
         } else if (error) {
             console.error('Error loading client dashboard', error);
             this.isLoading = false;
         }
+    }
+
+    // CMT-driven badge class for a given stage
+    _getBadgeClass(stage) {
+        const stageData = (this.workflowConfig?.stages || []).find(s => s.apiValue === stage);
+        const phase = stageData?.phase;
+        const suffix = PHASE_BADGE_SUFFIX[phase] || null;
+        const base = 'slds-badge slds-badge_lightest stage-badge';
+        return suffix ? `${base} stage-badge--${suffix}` : base;
+    }
+
+    // CMT-driven phase order (distinct non-terminal phases in CMT sort order)
+    get _phaseOrder() {
+        if (!this.workflowConfig?.stages) return FALLBACK_PHASE_ORDER;
+        const seen = new Set();
+        const order = [];
+        this.workflowConfig.stages.forEach(s => {
+            if (!s.isTerminal && s.phase && !seen.has(s.phase)) {
+                seen.add(s.phase);
+                order.push(s.phase);
+            }
+        });
+        return order.length > 0 ? order : FALLBACK_PHASE_ORDER;
     }
 
     _processData(data) {
@@ -66,7 +110,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             name: t.name,
             title: t.title || null,
             stage: t.stage,
-            badgeClass: STAGE_BADGE_CLASSES[t.stage] || 'slds-badge slds-badge_lightest stage-badge'
+            badgeClass: this._getBadgeClass(t.stage)
         }));
 
         // Phase counts
@@ -76,7 +120,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         });
 
         const largePhase = !this.hasAttentionItems;
-        this.phases = PHASE_ORDER.map(label => {
+        this.phases = this._phaseOrder.map(label => {
             const count = phaseCounts[label] || 0;
             return {
                 label,

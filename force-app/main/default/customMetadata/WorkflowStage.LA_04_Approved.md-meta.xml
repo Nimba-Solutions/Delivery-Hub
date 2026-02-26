@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>LA - Approved</label>
+    <protected>false</protected>
+    <values>
+        <field>WorkflowType__c</field>
+        <value xsi:type="xsd:string">Loan_Approval</value>
+    </values>
+    <values>
+        <field>ApiValue__c</field>
+        <value xsi:type="xsd:string">Approved</value>
+    </values>
+    <values>
+        <field>SortOrderNumber__c</field>
+        <value xsi:type="xsd:double">4</value>
+    </values>
+    <values>
+        <field>CardColor__c</field>
+        <value xsi:type="xsd:string">#DCFCE7</value>
+    </values>
+    <values>
+        <field>HeaderBgColor__c</field>
+        <value xsi:type="xsd:string">rgba(220,252,231,0.5)</value>
+    </values>
+    <values>
+        <field>HeaderTextColor__c</field>
+        <value xsi:type="xsd:string">#16A34A</value>
+    </values>
+    <values>
+        <field>OwnerPersona__c</field>
+        <value xsi:type="xsd:string">System</value>
+    </values>
+    <values>
+        <field>Phase__c</field>
+        <value xsi:type="xsd:string">Approved</value>
+    </values>
+    <values>
+        <field>IsTerminalBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsBlockedStateBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsAttentionStateBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsVisibleByDefaultBool__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>AllowedForwardTransitionsTxt__c</field>
+        <value xsi:type="xsd:string">Ready in Valley</value>
+    </values>
+    <values>
+        <field>AllowedBacktrackTransitionsTxt__c</field>
+        <value xsi:type="xsd:string">Submit For Approval</value>
+    </values>
+</CustomMetadata>

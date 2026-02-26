@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsTerminalBool__c</fullName>
+    <description>If checked, this is a terminal stage (Done, Cancelled, Paid, Denied). Terminal stages are excluded from blocker searches and active counts.</description>
+    <defaultValue>false</defaultValue>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Is Terminal</label>
+    <type>Checkbox</type>
+</CustomField>

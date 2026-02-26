@@ -5,13 +5,39 @@
 public with sharing class DeliveryTicketController {
 
     /**
-     * @description Returns all active Ticket__c records, ordered by SortOrderNumber__c.
+     * @description Returns active Ticket__c records, ordered by SortOrderNumber__c.
+     * @param workflowType Optional DeveloperName of a WorkflowType__mdt record.
+     *                     When provided, only returns tickets in that workflow type.
+     *                     When blank/null, returns all active tickets (backward-compatible).
      */
     @AuraEnabled(cacheable=true)
-    public static List<Ticket__c> getTickets() {
+    public static List<Ticket__c> getTickets(String workflowType) {
         if (!Schema.sObjectType.Ticket__c.isAccessible()
             || !Schema.sObjectType.Ticket__c.fields.StageNamePk__c.isAccessible()) {
             return new List<Ticket__c>();
+        }
+        if (String.isNotBlank(workflowType)) {
+            return [
+                SELECT Id,
+                    BriefDescriptionTxt__c,
+                    CalculatedETADate__c,
+                    DeveloperDaysSizeNumber__c,
+                    StageNamePk__c,
+                    ClientIntentionPk__c,
+                    SortOrderNumber__c,
+                    Epic__c,
+                    Tags__c,
+                    WorkflowTypeTxt__c,
+                    TotalLoggedHoursNumber__c,
+                    EstimatedHoursNumber__c,
+                    (SELECT Id, Blocking_Ticket__c, Blocking_Ticket__r.Name FROM Ticket_Dependency1__r),
+                    (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r)
+                FROM Ticket__c
+                WHERE IsActiveBool__c = true
+                AND WorkflowTypeTxt__c = :workflowType
+                WITH SYSTEM_MODE
+                ORDER BY SortOrderNumber__c
+            ];
         }
         return [
             SELECT Id,
@@ -23,10 +49,11 @@ public with sharing class DeliveryTicketController {
                 SortOrderNumber__c,
                 Epic__c,
                 Tags__c,
-                TotalLoggedHoursNumber__c, 
-                EstimatedHoursNumber__c,   
+                WorkflowTypeTxt__c,
+                TotalLoggedHoursNumber__c,
+                EstimatedHoursNumber__c,
                 (SELECT Id, Blocking_Ticket__c, Blocking_Ticket__r.Name FROM Ticket_Dependency1__r),
-                (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r) 
+                (SELECT Id, Blocked_Ticket__c, Blocked_Ticket__r.Name FROM Ticket_Dependency__r)
             FROM Ticket__c
             WHERE IsActiveBool__c = true
             ORDER BY SortOrderNumber__c

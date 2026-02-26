@@ -29,11 +29,12 @@ public with sharing class DeliveryHubDashboardController {
     public static Map<String, Object> getBudgetMetrics() {
         Map<String, Object> metrics = new Map<String, Object>();
 
-        // 1. Ticket Metrics (Active Count)
+        // 1. Ticket Metrics (Active Count) — use CMT terminal stages so no hardcoded 'Closed'
+        Set<String> terminalStages = WorkflowConfigService.getTerminalStageValues('Software_Delivery');
         AggregateResult[] ticketStats = [
             SELECT Count(Id) total
             FROM Ticket__c
-            WHERE StageNamePk__c NOT IN ('Closed', 'Done')
+            WHERE StageNamePk__c NOT IN :terminalStages
         ];
 
         Decimal activeCount = (ticketStats[0].get('total') != null) ? (Decimal)ticketStats[0].get('total') : 0;
@@ -58,7 +59,7 @@ public with sharing class DeliveryHubDashboardController {
         List<Ticket__c> lastActivity = [
             SELECT LastModifiedDate
             FROM Ticket__c
-            WHERE StageNamePk__c != 'Closed'
+            WHERE StageNamePk__c NOT IN :terminalStages
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
@@ -111,11 +112,7 @@ public with sharing class DeliveryHubDashboardController {
      */
     @AuraEnabled(cacheable=true)
     public static Integer getAttentionCount() {
-        Set<String> clientStages = new Set<String>{
-            'Ready for Client Approval', 'In Client Approval',
-            'Ready for Client UAT', 'In Client UAT',
-            'Ready for UAT Sign-off'
-        };
+        Set<String> clientStages = WorkflowConfigService.getAttentionStageValues('Software_Delivery');
         return [
             SELECT COUNT()
             FROM Ticket__c
@@ -139,11 +136,7 @@ public with sharing class DeliveryHubDashboardController {
     // -------------------------------------------------------------------------
 
     private static List<TicketItem> fetchAttentionTickets() {
-        Set<String> clientStages = new Set<String>{
-            'Ready for Client Approval', 'In Client Approval',
-            'Ready for Client UAT', 'In Client UAT',
-            'Ready for UAT Sign-off'
-        };
+        Set<String> clientStages = WorkflowConfigService.getAttentionStageValues('Software_Delivery');
 
         List<Ticket__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c
@@ -167,7 +160,7 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     private static List<PhaseItem> fetchPhaseList() {
-        Map<String, String> stageToPhase = buildStagePhaseMap();
+        Map<String, String> stageToPhase = WorkflowConfigService.getStagePhaseMap('Software_Delivery');
         Map<String, Integer> phaseCounts = new Map<String, Integer>{
             'Planning' => 0, 'Approval' => 0, 'Development' => 0,
             'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
@@ -237,44 +230,5 @@ public with sharing class DeliveryHubDashboardController {
         return texts;
     }
 
-    private static Map<String, String> buildStagePhaseMap() {
-        return new Map<String, String>{
-            'Backlog' => 'Planning',
-            'Scoping In Progress' => 'Planning',
-            'Clarification Requested (Pre-Dev)' => 'Planning',
-            'Providing Clarification' => 'Planning',
-            'Ready for Sizing' => 'Planning',
-            'Sizing Underway' => 'Planning',
-            'Ready for Prioritization' => 'Planning',
-            'Prioritizing' => 'Planning',
-            'Proposal Requested' => 'Planning',
-            'Drafting Proposal' => 'Planning',
-            'Ready for Tech Review' => 'Approval',
-            'Tech Reviewing' => 'Approval',
-            'Ready for Client Approval' => 'Approval',
-            'In Client Approval' => 'Approval',
-            'Ready for Final Approval' => 'Approval',
-            'Final Approving' => 'Approval',
-            'Ready for Development' => 'Development',
-            'In Development' => 'Development',
-            'Dev Clarification Requested' => 'Development',
-            'Providing Dev Clarification' => 'Development',
-            'Dev Blocked' => 'Development',
-            'Back For Development' => 'Development',
-            'Ready for Scratch Test' => 'Testing',
-            'Scratch Testing' => 'Testing',
-            'Ready for QA' => 'Testing',
-            'QA In Progress' => 'Testing',
-            'Ready for Internal UAT' => 'Testing',
-            'Internal UAT' => 'Testing',
-            'Ready for Client UAT' => 'UAT',
-            'In Client UAT' => 'UAT',
-            'Ready for UAT Sign-off' => 'UAT',
-            'Processing Sign-off' => 'UAT',
-            'Ready for Merge' => 'Deployment',
-            'Merging' => 'Deployment',
-            'Ready for Deployment' => 'Deployment',
-            'Deploying' => 'Deployment'
-        };
-    }
 }
+

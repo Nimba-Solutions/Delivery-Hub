@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IconName__c</fullName>
+    <description>SLDS icon name shown in the workflow toggle button (e.g. utility:settings).</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Icon Name</label>
+    <length>50</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
