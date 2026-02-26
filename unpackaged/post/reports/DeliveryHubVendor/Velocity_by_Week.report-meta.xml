@@ -9,7 +9,7 @@
     <columns>
         <field>Ticket__c.ClientNetworkEntityId__c</field>
     </columns>
-    <description>Tickets completed (moved to Done) grouped by week. Shows delivery cadence and burn rate over time. Uses Last Modified Date as the completion date proxy — adjust the date filter window as needed.</description>
+    <description>Tickets completed (Done stage) grouped by Calculated ETA date week. Shows delivery cadence and burn rate over time — adjust the date filter window as needed.</description>
     <filter>
         <criteriaItems>
             <column>Ticket__c.StageNamePk__c</column>
@@ -22,7 +22,7 @@
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Week</dateGranularity>
-        <field>Ticket__c.LastModifiedDate</field>
+        <field>Ticket__c.CalculatedETADate__c</field>
         <sortOrder>Desc</sortOrder>
     </groupingsDown>
     <name>Velocity — Tickets Completed by Week</name>
