@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Epic__c</fullName>
-    <description>Single Epic key or short name this ticket belongs to (one-to-one, not a list).</description>
-    <inlineHelpText>The parent Epic ticket this ticket belongs to. Leave blank for standalone tickets.</inlineHelpText>
+    <description>Single Epic key or short name this work item belongs to (one-to-one, not a list).</description>
+    <inlineHelpText>The parent Epic work item this work item belongs to. Leave blank for standalone tickets.</inlineHelpText>
     <externalId>false</externalId>
     <label>Epic</label>
     <length>255</length>

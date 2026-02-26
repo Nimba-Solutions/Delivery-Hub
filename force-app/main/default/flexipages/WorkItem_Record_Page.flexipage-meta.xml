@@ -276,7 +276,7 @@
         <type>Region</type>
     </flexiPageRegions>
 
-    <masterLabel>Ticket Record Page</masterLabel>
+    <masterLabel>Work Item Record Page</masterLabel>
     <parentFlexiPage>flexipage__default_rec_L</parentFlexiPage>
     <sobjectType>WorkItem__c</sobjectType>
     <template>

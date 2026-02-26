@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>AcceptanceCriteriaTxt__c</fullName>
     <description>The specific requirements, functional behavior, or conditions that must be demonstrated for this Ticket to be considered complete. Acts as the official &quot;Definition of Done.&quot;</description>
-    <inlineHelpText>What specific conditions must be met for this ticket to be considered &quot;Done&quot;?</inlineHelpText>
+    <inlineHelpText>What specific conditions must be met for this work item to be considered &quot;Done&quot;?</inlineHelpText>
     <label>Acceptance Criteria</label>
     <length>32768</length>
     <trackTrending>false</trackTrending>

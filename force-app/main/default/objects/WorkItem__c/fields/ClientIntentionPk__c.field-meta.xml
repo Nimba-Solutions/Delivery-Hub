@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ClientIntentionPk__c</fullName>
-    <description>Indicates the client's current intention for this ticket: whether they intend to proceed, want sizing only, have deferred it, or placed it on hold.</description>
+    <description>Indicates the client's current intention for this work item: whether they intend to proceed, want sizing only, have deferred it, or placed it on hold.</description>
     <inlineHelpText>Select the client's intent: Will Do, Sizing Only, Deferred, or On Hold.</inlineHelpText>
     <label>Client Intention</label>
     <required>false</required>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>BillableRateCurrency__c</fullName>
-    <description>The billable rate for this ticket.</description>
-    <inlineHelpText>Hourly rate used to calculate the projected and actual cost of this ticket.</inlineHelpText>
+    <description>The billable rate for this work item.</description>
+    <inlineHelpText>Hourly rate used to calculate the projected and actual cost of this work item.</inlineHelpText>
     <label>Billable Rate</label>
     <precision>18</precision>
     <required>false</required>

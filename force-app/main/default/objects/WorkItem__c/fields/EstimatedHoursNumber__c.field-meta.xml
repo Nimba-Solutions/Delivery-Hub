@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>EstimatedHoursNumber__c</fullName>
-    <description>The approved budget for this ticket in hours.</description>
+    <description>The approved budget for this work item in hours.</description>
     <inlineHelpText>Manually entered or AI-suggested estimate of total effort required in hours.</inlineHelpText>
     <externalId>false</externalId>
     <label>Estimated Hours</label>

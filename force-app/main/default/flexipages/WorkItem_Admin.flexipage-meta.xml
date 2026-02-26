@@ -340,7 +340,7 @@
         <type>Region</type>
     </flexiPageRegions>
 
-    <masterLabel>Ticket Admin</masterLabel>
+    <masterLabel>Work Item Admin</masterLabel>
     <sobjectType>WorkItem__c</sobjectType>
     <template>
         <name>flexipage:recordHomeLeftSidebarTemplateDesktop</name>

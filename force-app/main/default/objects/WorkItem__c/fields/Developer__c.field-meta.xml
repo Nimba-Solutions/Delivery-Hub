@@ -2,11 +2,11 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Developer__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
-    <description>Assigns a ticket to a specific developer. This is critical for calculating individual workloads in the ETA calculation service.</description>
-    <inlineHelpText>The developer currently assigned to work on this ticket.</inlineHelpText>
+    <description>Assigns a work item to a specific developer. This is critical for calculating individual workloads in the ETA calculation service.</description>
+    <inlineHelpText>The developer currently assigned to work on this work item.</inlineHelpText>
     <label>Developer</label>
     <referenceTo>User</referenceTo>
-    <relationshipLabel>Tickets (Developer)</relationshipLabel>
+    <relationshipLabel>Work Items (Developer)</relationshipLabel>
     <relationshipName>Tickets_Developer</relationshipName>
     <required>false</required>
     <trackTrending>false</trackTrending>

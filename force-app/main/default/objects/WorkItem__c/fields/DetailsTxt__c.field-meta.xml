@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>DetailsTxt__c</fullName>
     <description>Details payload from the platform event</description>
-    <inlineHelpText>Full technical and functional details of this ticket. Supports rich text formatting.</inlineHelpText>
+    <inlineHelpText>Full technical and functional details of this work item. Supports rich text formatting.</inlineHelpText>
     <label>Details</label>
     <length>100000</length>
     <trackTrending>false</trackTrending>

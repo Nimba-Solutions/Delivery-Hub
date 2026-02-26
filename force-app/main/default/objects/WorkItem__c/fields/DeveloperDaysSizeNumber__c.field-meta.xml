@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>DeveloperDaysSizeNumber__c</fullName>
-    <description>Developer days size estimation for the ticket</description>
+    <description>Developer days size estimation for the work item</description>
     <inlineHelpText>T-shirt size expressed in developer-days. Used as input for ETA calculations.</inlineHelpText>
     <externalId>false</externalId>
     <label>Developer Days Size</label>
