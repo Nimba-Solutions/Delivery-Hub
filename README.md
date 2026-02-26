@@ -34,32 +34,32 @@ Meanwhile your CRM — the system your clients already use, the one that knows e
 ### A Full Kanban Delivery Pipeline
 - 40+ configurable stages from **Backlog** all the way to **Deployed to Production**
 - Drag-and-drop board with column grouping, color coding, and stage gate enforcement
-- Stage gate requirements that block bad transitions until the right fields are filled — no more tickets that skip Client Approval or UAT because someone clicked the wrong button
-- **Fast Track** mode that surfaces the direct path to development the moment a ticket qualifies based on your configured budget thresholds
+- Stage gate requirements that block bad transitions until the right fields are filled — no more work items that skip Client Approval or UAT because someone clicked the wrong button
+- **Fast Track** mode that surfaces the direct path to development the moment a work item qualifies based on your configured budget thresholds
 
 ### Real-Time Cross-Org Sync
 - Bidirectional REST sync between any two Salesforce orgs — your client org and your delivery org
-- Tickets created in one org appear in the other within seconds, automatically
+- Work items created in one org appear in the other within seconds, automatically
 - Stage changes, comments, file attachments, and field updates replicate in real time, both directions
 - **Echo suppression** prevents sync loops when both orgs update the same record simultaneously
-- Multi-vendor routing: send tickets to multiple external vendors at once, each with its own queue, retry logic, and status ledger
+- Multi-vendor routing: send work items to multiple external vendors at once, each with its own queue, retry logic, and status ledger
 - Every sync event is logged — status, payload, retry count, timestamp — for full audit visibility
 
 ### AI-Powered Work Management
-- **OpenAI integration** that estimates hours, generates ticket descriptions, and drafts acceptance criteria from a one-line summary
+- **OpenAI integration** that estimates hours, generates work item descriptions, and drafts acceptance criteria from a one-line summary
 - **Automated ETA calculation** based on current queue depth, developer velocity, and team calendar
-- AI suggestions are surfaced in-context on the ticket record — one click to accept, easy to override
+- AI suggestions are surfaced in-context on the work item record — one click to accept, easy to override
 
 ### Native Collaboration Tools
-- **Real-time chat** on every ticket with polling-based updates and file attachment indicators
-- **File rollup panel** that aggregates every file from the ticket, its comments, and its related requests into a single scrollable view — no hunting through related lists
+- **Real-time chat** on every work item with polling-based updates and file attachment indicators
+- **File rollup panel** that aggregates every file from the work item, its comments, and its related requests into a single scrollable view — no hunting through related lists
 - **Ghost Recorder** — a floating form available from anywhere in the app (with keyboard shortcut support) for instant issue or feature submission without leaving your current screen
 
 ### Client-Facing Transparency
 - A home page **Client Dashboard** showing everything in flight, broken down by phase — clients see exactly where their work is without having to ask
 - **Attention Required** surfacing: anything sitting in Client Approval, UAT, or Sign-off waiting on the client is called out immediately on page load
-- System Pulse: live counts of active tickets, hours booked, and last sync activity — a real-time health check at a glance
-- **Time Logger** for quick hour tracking directly on the ticket record, creating WorkLog entries with optional notes
+- System Pulse: live counts of active work items, hours booked, and last sync activity — a real-time health check at a glance
+- **Time Logger** for quick hour tracking directly on the work item record, creating WorkLog entries with optional notes
 
 ### Zero-Friction Setup
 - One-click Quickstart Connection wizard handles registration, credential exchange, and scheduler provisioning automatically
@@ -89,16 +89,16 @@ Your Salesforce admin can install this in an afternoon. Your team can be running
 ```
 Your Org (Client)                        Delivery Team's Org (Vendor)
 ─────────────────                        ────────────────────────────
-Ticket created           ──── sync ────► Request ingested
+Work item created        ──── sync ────► Request ingested
   └─ Stage updated       ◄─── sync ────   └─ Developer assigned
   └─ Comment posted      ──── sync ────►  └─ Comment synced back
   └─ File attached       ──── sync ────►  └─ Status progressed
   └─ Client approval     ──── sync ────►  └─ Deployed to Prod
 ```
 
-1. **A ticket is created** on the Kanban board. A sync record queues automatically.
+1. **A work item is created** on the Kanban board. A sync record queues automatically.
 2. **The sync engine** picks up the queue and POSTs to the vendor's REST endpoint — in real time or on the 15-minute scheduler cycle, whichever fires first.
-3. **The vendor's org ingests** the payload, creates or updates the matching ticket, and syncs back any response fields.
+3. **The vendor's org ingests** the payload, creates or updates the matching work item, and syncs back any response fields.
 4. **Both orgs stay in lock-step** — every stage change, comment, and file attachment triggers the next sync automatically.
 5. **Echo suppression** on both sides ensures a change from Org A doesn't bounce back from Org B as a new sync event.
 
@@ -117,13 +117,13 @@ The sync engine is headless, retry-aware (up to 3 attempts with automatic re-que
 | Multi-Vendor Routing | Send to multiple external orgs simultaneously, each independently tracked |
 | AI Estimation | OpenAI-powered hours estimate, description generation, acceptance criteria drafting |
 | ETA Engine | Projected UAT-ready date from developer velocity and current queue depth |
-| Real-Time Chat | Polling-based ticket chat with file attachment indicators |
-| File Rollup | All files from ticket + comments + requests in one sidebar panel |
-| Time Logger | Quick hour logging directly on the ticket, creates WorkLog entries |
+| Real-Time Chat | Polling-based work item chat with file attachment indicators |
+| File Rollup | All files from work item + comments + requests in one sidebar panel |
+| Time Logger | Quick hour logging directly on the work item, creates WorkLog entries |
 | Ghost Recorder | Floating issue/feature submission form with keyboard shortcut, available anywhere |
 | Client Dashboard | Home page phase counts, attention items, and recent activity |
-| System Pulse | Live active tickets, hours booked, sync health, and last entry time |
-| Dependency Tracking | Mark tickets as blocking each other; board surfaces blocked tickets visually |
+| System Pulse | Live active work items, hours booked, sync health, and last entry time |
+| Dependency Tracking | Mark work items as blocking each other; board surfaces blocked work items visually |
 | Setup Wizard | One-click connection to vendor org with automatic scheduler provisioning |
 | Native Reports | Full Salesforce report and dashboard support on all delivery data |
 
@@ -136,7 +136,7 @@ The sync engine is headless, retry-aware (up to 3 attempts with automatic re-que
 1. Click the **Install in Production** or **Install in Sandbox** button above (use the latest `04t...` ID from [Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases/latest))
 2. Open the **Delivery Hub** Lightning App
 3. On the Home tab, click **Quickstart Connection** — this registers your org, configures default settings, and schedules sync jobs automatically
-4. Create your first ticket on the **Ticket Board** tab
+4. Create your first work item on the **Work Item Board** tab
 5. Invite your delivery team or connect to an external vendor org
 
 ### For Development Teams Running Their Own Instance
@@ -166,7 +166,7 @@ force-app/main/default/
 │   ├── DeliveryHubDashboardController  # Home page metrics + client dashboard
 │   ├── DeliveryHubFilesController      # Rolled-up file queries
 │   ├── DeliveryHubCommentController    # Chat: get/post comments + file indicators
-│   ├── DeliveryTimeLoggerController    # Time logging against tickets (WorkLog__c)
+│   ├── DeliveryTimeLoggerController    # Time logging against work items (WorkLog__c)
 │   └── DeliveryHubSetupController      # Quickstart wizard + handshake
 ├── lwc/
 │   ├── deliveryHubBoard/               # Main Kanban board (drag-drop, column config)
@@ -175,7 +175,7 @@ force-app/main/default/
 │   ├── deliveryWorkItemFiles/            # Rolled-up files sidebar panel
 │   ├── deliveryTimeLogger/             # Quick time logging with WorkLog__c creation
 │   ├── deliveryClientDashboard/        # Client home: attention / in-flight / recent
-│   ├── deliveryBudgetSummary/          # System pulse: active tickets, hours, sync health
+│   ├── deliveryBudgetSummary/          # System pulse: active work items, hours, sync health
 │   ├── deliveryHubSetup/               # Quickstart connection wizard
 │   ├── deliveryGhostRecorder/          # Issue / feature request submission form
 │   └── deliveryWorkItemRefiner/          # AI description and sizing assistant

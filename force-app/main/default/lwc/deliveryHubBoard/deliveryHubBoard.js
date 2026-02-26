@@ -60,8 +60,8 @@ const FIELDS = {
     // Relationships
     DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%BlockedByDeps__r`,
     DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%BlockingDeps__r`,
-    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%BlockingWorkItemId__c`,
-    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%BlockedWorkItemId__c`,
+    BLOCKING_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockingWorkItemId__c`,
+    BLOCKED_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockedWorkItemId__c`,
     WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`
 };
 
@@ -343,7 +343,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         if (views) return Object.keys(views).map(p => ({ label: p, value: p }));
         return ['Client', 'Consultant', 'Developer', 'QA'].map(p => ({ label: p, value: p }));
     }
-    get sizeModeOptions() { return [{ label: "Equal Sized", value: "equalSized" }, { label: "Work Item Sized", value: "ticketSize" }]; }
+    get sizeModeOptions() { return [{ label: "Equal Sized", value: "equalSized" }, { label: "Work Item Sized", value: "workItemSize" }]; }
     get hasRecentComments() { return (this.recentComments || []).length > 0; }
     get displayModeOptions() { return [{ label: "Kanban", value: "kanban" }, { label: "Compact", value: "compact" }, { label: "Table", value: "table" }]; }
     get mainBoardClass() { if (this.displayMode === "table") return "table-board"; if (this.displayMode === "compact") return "stage-columns compact"; return "stage-columns"; }
@@ -455,13 +455,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             const blockingRaw = getValue(rec, FIELDS.DEP_REL_BLOCKING) || [];
 
             const isBlockedBy = blockedByRaw.map(dep => ({
-                id: getValue(dep, FIELDS.BLOCKING_TICKET),
+                id: getValue(dep, FIELDS.BLOCKING_WORK_ITEM),
                 name: dep['BlockingWorkItemId__r']?.Name || dep['BlockingWorkItemId__r']?.Name || dep['BlockingWorkItemId__c'],
                 dependencyId: dep.Id
             }));
 
             const isBlocking = blockingRaw.map(dep => ({
-                id: getValue(dep, FIELDS.BLOCKED_TICKET),
+                id: getValue(dep, FIELDS.BLOCKED_WORK_ITEM),
                 name: dep['BlockedWorkItemId__r']?.Name || dep['BlockedWorkItemId__r']?.Name || dep['BlockedWorkItemId__c'],
                 dependencyId: dep.Id
             }));

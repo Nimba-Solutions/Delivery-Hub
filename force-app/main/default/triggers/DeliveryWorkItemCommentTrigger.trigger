@@ -1,5 +1,5 @@
 /**
- * @description Trigger for Ticket Comments. Delegates all logic to DeliveryWorkItemCommentTriggerHandler.
+ * @description Trigger for Work Item Comments. Delegates all logic to DeliveryWorkItemCommentTriggerHandler.
  * @author Cloud Nimbus LLC
  */
 trigger DeliveryWorkItemCommentTrigger on WorkItemComment__c (after insert, after update) { // NOPMD

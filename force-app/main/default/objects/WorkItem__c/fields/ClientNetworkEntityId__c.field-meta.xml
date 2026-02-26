@@ -7,7 +7,7 @@
     <label>Client Network Entity</label>
     <referenceTo>Network_Entity__c</referenceTo>
     <relationshipLabel>Work Items</relationshipLabel>
-    <relationshipName>ClientTickets</relationshipName>
+    <relationshipName>ClientWorkItems</relationshipName>
     <required>false</required>
     <trackTrending>false</trackTrending>
     <type>Lookup</type>
