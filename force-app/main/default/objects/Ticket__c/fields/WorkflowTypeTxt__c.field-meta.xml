@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkflowTypeTxt__c</fullName>
+    <description>Developer name of the WorkflowType__mdt record that governs this work item (e.g. Software_Delivery, Loan_Approval). Blank = Software_Delivery. Used to filter the board by workflow type.</description>
+    <externalId>false</externalId>
+    <defaultValue>&apos;Software_Delivery&apos;</defaultValue>
+    <label>Workflow Type</label>
+    <length>80</length>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

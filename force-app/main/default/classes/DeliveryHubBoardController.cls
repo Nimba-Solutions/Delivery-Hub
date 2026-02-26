@@ -126,7 +126,7 @@ public with sharing class DeliveryHubBoardController {
     }
     
     @AuraEnabled(cacheable=true)
-    public static List<Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds) {
+    public static List<Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds, String workflowType) {
         String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';
         Set<Id> exclusionIds = new Set<Id>();
         if (currentTicketId != null) {
@@ -135,7 +135,12 @@ public with sharing class DeliveryHubBoardController {
         if (existingDependencyIds != null) {
             exclusionIds.addAll(existingDependencyIds);
         }
-    
+
+        // Exclude terminal stages (Done, Cancelled, etc.) using CMT-driven config
+        Set<String> terminalStages = WorkflowConfigService.getTerminalStageValues(
+            String.isBlank(workflowType) ? 'Software_Delivery' : workflowType
+        );
+
         // Removed WITH SECURITY_ENFORCED to prevent build failures on FLS checks
         // Assuming sharing settings cover visibility.
         return [
@@ -143,7 +148,7 @@ public with sharing class DeliveryHubBoardController {
             FROM Ticket__c
             WHERE (Name LIKE :queryTerm OR BriefDescriptionTxt__c LIKE :queryTerm)
             AND Id NOT IN :exclusionIds
-            AND StageNamePk__c != 'Done'
+            AND StageNamePk__c NOT IN :terminalStages
             ORDER BY LastModifiedDate DESC
             LIMIT 10
         ];

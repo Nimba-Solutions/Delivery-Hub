@@ -154,13 +154,13 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>Ticket</label>
+    <label>Work Item</label>
     <nameField>
         <displayFormat>T-{0000}</displayFormat>
         <label>Ticket Number</label>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>Tickets</pluralLabel>
+    <pluralLabel>Work Items</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>

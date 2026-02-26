@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Workflow Type</label>
+    <description>Defines a workflow mode for the Delivery Hub board (e.g. Software Delivery, Loan Approval). Each record activates a distinct set of stages, transitions, and persona views.</description>
+    <pluralLabel>Workflow Types</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>
