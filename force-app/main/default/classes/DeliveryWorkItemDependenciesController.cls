@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the deliveryWorkItemDependencies LWC.
  *              Returns blocking and blocked-by work item relationships for a given work item.
  * @author Cloud Nimbus LLC

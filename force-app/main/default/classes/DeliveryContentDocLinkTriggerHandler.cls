@@ -1,6 +1,8 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Handler for ContentDocumentLinkTrigger.
- * Evaluates files attached to Work Items and creates Outbound Ledger entries (Sync_Item__c)
+ * Evaluates files attached to Work Items and creates Outbound Ledger entries (SyncItem__c)
  * feeding them into the Unified Sync Architecture.
  * @author Cloud Nimbus LLC
  */
@@ -64,8 +66,8 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
             routes.get(tId).add(r);
         }
 
-        // 5. Generate Sync_Item__c Payloads
-        List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
+        // 5. Generate SyncItem__c Payloads
+        List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
 
         for (ContentVersion cv : cvs) {
             Id tId = docToWorkItemMap.get(cv.ContentDocumentId);
@@ -116,8 +118,8 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         }
     }
 
-    private static Sync_Item__c createFileItem(ContentVersion cv, Id workItemId, Id reqId, String targetId, Map<String, Object> basePayload) {
-        Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
+    private static SyncItem__c createFileItem(ContentVersion cv, Id workItemId, Id reqId, String targetId, Map<String, Object> basePayload) {
+        SyncItem__c item = new SyncItem__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
         item.LocalRecordIdTxt__c = cv.Id;
         item.WorkItemId__c = workItemId;
         item.RequestId__c = reqId;

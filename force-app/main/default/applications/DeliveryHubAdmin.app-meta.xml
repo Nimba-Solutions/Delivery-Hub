@@ -7,7 +7,7 @@
         <formFactor>Large</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Network_Entity__c</pageOrSobjectType>
+        <pageOrSobjectType>NetworkEntity__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
@@ -16,7 +16,7 @@
         <formFactor>Small</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Network_Entity__c</pageOrSobjectType>
+        <pageOrSobjectType>NetworkEntity__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
@@ -84,7 +84,7 @@
         <headerColor>#1A2D4A</headerColor>
         <shouldOverrideOrgTheme>true</shouldOverrideOrgTheme>
     </brand>
-    <description>This Lightning App provides a streamlined interface to access and manage all functionality of the Delivery Hub package.</description>
+    <description>This Lightning App provides a streamlined interface to access and manage all functionality of the Delivery Hub package. Built by Cloud Nimbus LLC.</description>
     <formFactors>Small</formFactors>
     <formFactors>Large</formFactors>
     <isNavAutoTempTabsDisabled>false</isNavAutoTempTabsDisabled>
@@ -96,11 +96,11 @@
     <tabs>standard-home</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>Delivery_Board</tabs>
-    <tabs>Network_Entity__c</tabs>
+    <tabs>NetworkEntity__c</tabs>
     <tabs>WorkRequest__c</tabs>
     <tabs>WorkItemComment__c</tabs>
-    <tabs>Sync_Item__c</tabs>
-    <tabs>Delivery_Hub_Settings</tabs>
+    <tabs>SyncItem__c</tabs>
+    <tabs>DeliveryHubSettings</tabs>
     <tabs>standard-report</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubAdmin_UtilityBar</utilityBar>

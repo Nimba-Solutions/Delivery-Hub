@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from "lwc";
@@ -16,7 +18,7 @@ import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import { subscribe, unsubscribe, onError } from 'lightning/empApi';
 import draftBoardSummary from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryAiController.draftBoardSummary';
 
-const WORK_ITEM_CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%Delivery_WorkItem_Change__e';
+const WORK_ITEM_CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
 
 // --- Apex Imports ---
 import getWorkItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getWorkItems";

@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Core engine for handling outbound synchronization.
  * Implements Push/Pull Architecture with DAG Routing, Entity Type Enforcement, 
  * Origin-Based Echo Suppression, and Global Traceability (Loop Prevention).
@@ -47,9 +49,9 @@ public without sharing class DeliverySyncEngine {
             // 1. Fetch Existing Ledger Info to find GlobalSourceId inheritance
             // We look for Inbound items to see if this record was born in another org
             Map<Id, String> recordToGlobalSource = new Map<Id, String>();
-            for (Sync_Item__c existingItem : [
+            for (SyncItem__c existingItem : [
                 SELECT LocalRecordIdTxt__c, GlobalSourceIdTxt__c 
-                FROM Sync_Item__c 
+                FROM SyncItem__c 
                 WHERE LocalRecordIdTxt__c IN :recordIds 
                 AND GlobalSourceIdTxt__c != NULL
                 WITH SYSTEM_MODE
@@ -86,7 +88,7 @@ public without sharing class DeliverySyncEngine {
                 routes.get(r.WorkItemId__c).add(r);
             }
 
-            List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
+            List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
             for (SObject rec : newRecords) {
                 if (!hasSignificantChange(rec, (oldMap != null ? oldMap.get(rec.Id) : null), allowedFields)) {
                     continue;
@@ -176,8 +178,8 @@ public without sharing class DeliverySyncEngine {
         return null;
     }
 
-    private static Sync_Item__c createSyncItem(SObject rec, WorkRequest__c req, Set<String> allowedFields, String globalSourceId) {
-        Sync_Item__c item = new Sync_Item__c(
+    private static SyncItem__c createSyncItem(SObject rec, WorkRequest__c req, Set<String> allowedFields, String globalSourceId) {
+        SyncItem__c item = new SyncItem__c(
             StatusPk__c = 'Queued', 
             DirectionPk__c = 'Outbound',
             GlobalSourceIdTxt__c = globalSourceId

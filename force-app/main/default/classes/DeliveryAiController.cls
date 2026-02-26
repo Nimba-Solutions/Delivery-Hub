@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Handles AI-powered features for Delivery Hub:
  *              - draftStatusUpdate: drafts a client-facing status update for a single work item
  *              - suggestAcceptanceCriteria: proposes testable acceptance criteria for a work item
@@ -18,7 +20,7 @@ public with sharing class DeliveryAiController {
      */
     @AuraEnabled
     public static String draftStatusUpdate(Id workItemId) {
-        Delivery_Hub_Settings__c settings = getValidatedSettings();
+        DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
@@ -46,7 +48,7 @@ public with sharing class DeliveryAiController {
      */
     @AuraEnabled
     public static String suggestAcceptanceCriteria(Id workItemId) {
-        Delivery_Hub_Settings__c settings = getValidatedSettings();
+        DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
             SELECT BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c
@@ -71,7 +73,7 @@ public with sharing class DeliveryAiController {
      */
     @AuraEnabled
     public static String draftBoardSummary() {
-        Delivery_Hub_Settings__c settings = getValidatedSettings();
+        DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
@@ -97,7 +99,7 @@ public with sharing class DeliveryAiController {
      */
     @AuraEnabled
     public static String draftReleaseNotes() {
-        Delivery_Hub_Settings__c settings = getValidatedSettings();
+        DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
@@ -123,10 +125,10 @@ public with sharing class DeliveryAiController {
     /**
      * @description Reads and validates org AI settings. Throws if AI is not enabled
      *              or the API key is missing.
-     * @return Delivery_Hub_Settings__c The validated settings record.
+     * @return DeliveryHubSettings__c The validated settings record.
      */
-    private static Delivery_Hub_Settings__c getValidatedSettings() {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+    private static DeliveryHubSettings__c getValidatedSettings() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null || settings.AISuggestionsEnabledBool__c != true) {
             throw new AuraHandledException(
                 'AI features are not enabled. Turn them on in Delivery Hub \u2192 AI Settings.'
@@ -142,10 +144,10 @@ public with sharing class DeliveryAiController {
 
     /**
      * @description Returns the configured model, falling back to gpt-3.5-turbo.
-     * @param settings The Delivery_Hub_Settings__c record.
+     * @param settings The DeliveryHubSettings__c record.
      * @return String Model identifier string.
      */
-    private static String getModel(Delivery_Hub_Settings__c settings) {
+    private static String getModel(DeliveryHubSettings__c settings) {
         return String.isNotBlank(settings.OpenAIModelTxt__c)
             ? settings.OpenAIModelTxt__c
             : 'gpt-3.5-turbo';

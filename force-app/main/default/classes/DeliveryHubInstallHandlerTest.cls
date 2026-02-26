@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Tests for DeliveryHubInstallHandler.
  * @author Cloud Nimbus LLC
  */
@@ -9,7 +11,7 @@ private class DeliveryHubInstallHandlerTest {
     static void testInstallCreatesDefaultSettings() {
         Test.testInstall(new DeliveryHubInstallHandler(), null, false);
 
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         System.assertNotEquals(null, settings.Id, 'Settings should be created on first install');
         System.assertEquals(true, settings.EnableNotificationsBool__c, 'Notifications should be enabled by default');
         System.assertEquals(true, settings.AISuggestionsEnabledBool__c, 'AI suggestions should be enabled by default');
@@ -17,7 +19,7 @@ private class DeliveryHubInstallHandlerTest {
 
     @IsTest
     static void testInstallDoesNotOverwriteExistingSettings() {
-        Delivery_Hub_Settings__c existing = new Delivery_Hub_Settings__c(
+        DeliveryHubSettings__c existing = new DeliveryHubSettings__c(
             SetupOwnerId               = UserInfo.getOrganizationId(),
             EnableNotificationsBool__c = false
         );
@@ -25,7 +27,7 @@ private class DeliveryHubInstallHandlerTest {
 
         Test.testInstall(new DeliveryHubInstallHandler(), null, false);
 
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         System.assertEquals(false, settings.EnableNotificationsBool__c, 'Existing settings should not be overwritten');
     }
 }

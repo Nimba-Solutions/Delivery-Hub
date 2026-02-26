@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Dispatcher class to orchestrate trigger logic for Work Item Comments.
  * Consolidates Delivery Hub logic to satisfy PMD and Best Practices.
  * @author Cloud Nimbus LLC

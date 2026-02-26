@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description An advanced service to calculate and update dynamic ETAs for WorkItem__c records.
  * This service implements a simulation engine based on developer availability, work item priority, and workload.
  * It is designed to be called from LWC, Triggers (via Queueable), or on a nightly schedule.
@@ -90,6 +92,12 @@ public with sharing class DeliveryWorkItemETAService {
     }
 
 
+    // Constants moved to outer class level (Apex does not allow static in inner classes)
+    private static final Integer DEFAULT_UAT_BUFFER_DAYS = 5;
+    private static final Map<String, Decimal> DEFAULT_PRIORITY_WEIGHTS = new Map<String, Decimal>{
+        'High' => 1, 'Medium' => 2, 'Low' => 3
+    };
+
     /**
      * @description Calculates a confidence score (0-100) for an ETA estimate based on data completeness.
      * Each factor contributes 25%: developer assigned, effort estimated, active development, no blockers.
@@ -141,15 +149,19 @@ public with sharing class DeliveryWorkItemETAService {
 
     /**
      * @description Private inner class containing the main ETA simulation logic.
+     * Stage categorization is derived from WorkflowStage__mdt.PhaseTxt__c:
+     *   Planning → pre-development, Development → active development.
      */
     @TestVisible
     private class ETACalculator {
-        private Kanban_Configuration__mdt config;
+        private Set<String> preDevStages;
+        private Set<String> activeDevStages;
+        private Map<String, Decimal> priorityWeights;
+        private Integer uatBufferDays;
         private final Set<Id> prioritizedWorkItemIds;
         private Set<Id> processedWorkItemIds;
 
         public ETACalculator(List<Id> prioritizedIds) {
-            // Convert incoming List to a Set for efficient 'contains' checks.
             this.prioritizedWorkItemIds = (prioritizedIds == null) ? new Set<Id>() : new Set<Id>(prioritizedIds);
             this.processedWorkItemIds = new Set<Id>();
         }
@@ -162,16 +174,14 @@ public with sharing class DeliveryWorkItemETAService {
          * @description Main method that executes the entire ETA calculation process.
          */
         public void execute() {
-            // --- Phase 1: Initialization ---
-            if (!loadConfiguration()) {
-                return;
-            }
+            // --- Phase 1: Initialization from WorkflowStage__mdt ---
+            loadStageConfiguration();
 
             Map<Id, User> developers = loadResources();
             List<WorkItem__c> allWorkItems = loadWorkItems();
 
             Map<Id, Date> devNextAvailableDate = new Map<Id, Date>();
-            for(Id devId : developers.keySet()){
+            for (Id devId : developers.keySet()) {
                 devNextAvailableDate.put(devId, Date.today());
             }
 
@@ -181,42 +191,34 @@ public with sharing class DeliveryWorkItemETAService {
             // --- Phase 3: The Simulation Loop ---
             List<WorkItem__c> workItemsToUpdate = new List<WorkItem__c>();
 
-            for(WorkItemWrapper wrapper : masterQueue) {
-                // a. Determine the Resource
+            for (WorkItemWrapper wrapper : masterQueue) {
                 Id assignedDevId = wrapper.workItem.Developer__c;
 
                 if (assignedDevId == null || !developers.containsKey(assignedDevId)) {
                     assignedDevId = findNextAvailableDeveloper(devNextAvailableDate);
                 }
 
-                if(assignedDevId == null) {
-                    continue; // No developers available, cannot schedule.
+                if (assignedDevId == null) {
+                    continue;
                 }
 
-                // b. Find Start Date (cannot be in the past)
                 Date devAvailableDate = devNextAvailableDate.get(assignedDevId);
                 Date startDate = (Date.today() > devAvailableDate) ? Date.today() : devAvailableDate;
                 wrapper.workItem.EstimatedStartDevDate__c = startDate;
 
-                // c. Calculate Work Duration
                 Decimal effort = wrapper.workItem.DeveloperDaysSizeNumber__c == null ? 0 : wrapper.workItem.DeveloperDaysSizeNumber__c;
                 Date completionDate = addBusinessDays(startDate, Integer.valueOf(effort));
                 wrapper.workItem.EstimatedEndDevDate__c = completionDate;
 
-                // d. Update Developer's Schedule for the next work item
                 Date nextAvailable = addBusinessDays(completionDate, 1);
                 devNextAvailableDate.put(assignedDevId, nextAvailable);
 
-                // e. Calculate Final ETA with UAT Buffer
-                Decimal buffer = config.UATBufferDaysNumber__c == null ? 0 : config.UATBufferDaysNumber__c;
-                wrapper.workItem.ProjectedUATReadyDate__c = addBusinessDays(completionDate, Integer.valueOf(buffer));
+                wrapper.workItem.ProjectedUATReadyDate__c = addBusinessDays(completionDate, this.uatBufferDays);
 
-                // f. Add to list for final DML update
                 workItemsToUpdate.add(wrapper.workItem);
                 this.processedWorkItemIds.add(wrapper.workItem.Id);
             }
 
-            // Null out dates for any work items that were NOT in the queue (i.e., blocked or post-dev)
             for (WorkItem__c workItem : allWorkItems) {
                 if (!this.processedWorkItemIds.contains(workItem.Id)) {
                     workItemsToUpdate.add(new WorkItem__c(
@@ -229,9 +231,9 @@ public with sharing class DeliveryWorkItemETAService {
             }
 
             if (!workItemsToUpdate.isEmpty()) {
-                Database.SaveResult[] results = Database.update(workItemsToUpdate, false); // Use partial success for robustness
-                for(Database.SaveResult sr : results) {
-                    if(!sr.isSuccess()) {
+                Database.SaveResult[] results = Database.update(workItemsToUpdate, false);
+                for (Database.SaveResult sr : results) {
+                    if (!sr.isSuccess()) {
                         System.debug(LoggingLevel.ERROR, 'DeliveryWorkItemETAService update failed: ' + sr.getErrors());
                     }
                 }
@@ -240,19 +242,26 @@ public with sharing class DeliveryWorkItemETAService {
 
         // --- Helper Methods for the Calculator ---
 
-        private boolean loadConfiguration() {
-            List<Kanban_Configuration__mdt> configs = [
-                SELECT PreDevelopmentStagesTxt__c, ActiveDevelopmentStagesTxt__c, BlockedStagesTxt__c,
-                       PostDevelopmentStagesTxt__c, PriorityWeightsTxt__c, UATBufferDaysNumber__c
-                FROM Kanban_Configuration__mdt LIMIT 1
-            ];
+        private void loadStageConfiguration() {
+            this.preDevStages = new Set<String>();
+            this.activeDevStages = new Set<String>();
+            this.priorityWeights = DEFAULT_PRIORITY_WEIGHTS;
+            this.uatBufferDays = DEFAULT_UAT_BUFFER_DAYS;
 
-            if (configs.isEmpty()) {
-                System.debug(LoggingLevel.ERROR, 'ETA Service Error: Kanban_Configuration__mdt record not found.');
-                return false;
+            for (WorkflowStage__mdt s : [
+                SELECT ApiValueTxt__c, PhaseTxt__c
+                FROM WorkflowStage__mdt
+                WHERE WorkflowType__r.DeveloperName = 'Software_Delivery'
+                WITH SYSTEM_MODE
+            ]) {
+                if (s.ApiValueTxt__c == null || s.PhaseTxt__c == null) { continue; }
+                String apiVal = s.ApiValueTxt__c.toLowerCase().trim();
+                if (s.PhaseTxt__c == 'Planning') {
+                    this.preDevStages.add(apiVal);
+                } else if (s.PhaseTxt__c == 'Development') {
+                    this.activeDevStages.add(apiVal);
+                }
             }
-            this.config = configs[0];
-            return true;
         }
 
         private Map<Id, User> loadResources() {
@@ -272,47 +281,27 @@ public with sharing class DeliveryWorkItemETAService {
 
         private List<WorkItemWrapper> buildAndSortQueue(List<WorkItem__c> allWorkItems, Set<Id> developerIds) {
             Set<Id> incompleteWorkItemIds = new Set<Id>();
-            for(WorkItem__c t : allWorkItems) {
+            for (WorkItem__c t : allWorkItems) {
                 if (t.StageNamePk__c != 'Done' && t.StageNamePk__c != 'Deployed to Prod') {
                     incompleteWorkItemIds.add(t.Id);
                 }
             }
 
-            // Find all dependencies where the blocker is one of these incomplete work items
             Set<Id> allBlockedWorkItemIds = new Set<Id>();
             for (WorkItemDependency__c dep : [SELECT BlockedWorkItemId__c FROM WorkItemDependency__c WHERE BlockingWorkItemId__c IN :incompleteWorkItemIds WITH SYSTEM_MODE]) {
                 allBlockedWorkItemIds.add(dep.BlockedWorkItemId__c);
             }
 
-            Set<String> preDev = new Set<String>();
-            if(config.PreDevelopmentStagesTxt__c != null) {
-                preDev = new Set<String>(config.PreDevelopmentStagesTxt__c.toLowerCase().split(','));
-            }
-
-            Set<String> activeDev = new Set<String>();
-            if(config.ActiveDevelopmentStagesTxt__c != null) {
-                activeDev = new Set<String>(config.ActiveDevelopmentStagesTxt__c.toLowerCase().split(','));
-            }
-
-            Map<String, Decimal> priorityWeights = new Map<String, Decimal>();
-            if(config.PriorityWeightsTxt__c != null) {
-                try {
-                    priorityWeights = (Map<String, Decimal>)JSON.deserialize(config.PriorityWeightsTxt__c, Map<String, Decimal>.class);
-                } catch(Exception e) {
-                    System.debug(LoggingLevel.WARN, 'ETA Service: Could not parse PriorityWeightsTxt__c: ' + e.getMessage());
-                }
-            }
-
             List<WorkItemWrapper> queue = new List<WorkItemWrapper>();
 
-            for(WorkItem__c t : allWorkItems){
+            for (WorkItem__c t : allWorkItems) {
                 if (allBlockedWorkItemIds.contains(t.Id)) {
-                    continue; // Work item is blocked by an incomplete dependency
+                    continue;
                 }
                 String stage = t.StageNamePk__c == null ? '' : t.StageNamePk__c.toLowerCase().trim();
 
-                if(preDev.contains(stage) || activeDev.contains(stage)){
-                    queue.add(new WorkItemWrapper(t, config, priorityWeights, this.prioritizedWorkItemIds));
+                if (this.preDevStages.contains(stage) || this.activeDevStages.contains(stage)) {
+                    queue.add(new WorkItemWrapper(t, this.activeDevStages, this.priorityWeights, this.prioritizedWorkItemIds));
                 }
             }
 
@@ -328,9 +317,9 @@ public with sharing class DeliveryWorkItemETAService {
                 return null;
             }
 
-            for(Id devId : devSchedules.keySet()){
+            for (Id devId : devSchedules.keySet()) {
                 Date thisDate = devSchedules.get(devId);
-                if(earliestDate == null || thisDate < earliestDate){
+                if (earliestDate == null || thisDate < earliestDate) {
                     earliestDate = thisDate;
                     nextDev = devId;
                 }
@@ -338,7 +327,7 @@ public with sharing class DeliveryWorkItemETAService {
             return nextDev;
         }
 
-		@TestVisible
+        @TestVisible
         private Date addBusinessDays(Date inputDate, Integer daysToAdd) {
             Date resultDate = inputDate;
             if (inputDate == null || daysToAdd == null || daysToAdd <= 0) { return inputDate; }
@@ -346,9 +335,6 @@ public with sharing class DeliveryWorkItemETAService {
             Integer daysAdded = 0;
             while (daysAdded < daysToAdd) {
                 resultDate = resultDate.addDays(1);
-                // <<< FIX 2: Create a Datetime instance to access the more powerful format() method.
-                // 'u' returns 1 for Monday, 6 for Saturday, 7 for Sunday.
-                // We only count the day if it's a weekday (1-5).
                 Datetime tempDt = Datetime.newInstance(resultDate, Time.newInstance(0, 0, 0, 0));
                 if (Integer.valueOf(tempDt.format('u')) < 6) {
                     daysAdded++;
@@ -373,16 +359,12 @@ public with sharing class DeliveryWorkItemETAService {
         private final Decimal priorityWeight;    // Lower is better (e.g., High=1, Med=2)
         private final Boolean isPrioritizedByLWC; // Absolute highest priority
 
-        public WorkItemWrapper(WorkItem__c t, Kanban_Configuration__mdt config, Map<String, Decimal> priorityWeights, Set<Id> prioritizedIds) {
+        public WorkItemWrapper(WorkItem__c t, Set<String> activeDevStages, Map<String, Decimal> priorityWeights, Set<Id> prioritizedIds) {
             this.workItem = t;
             this.isPrioritizedByLWC = prioritizedIds.contains(t.Id);
 
-            Set<String> activeDev = new Set<String>();
-            if(config.ActiveDevelopmentStagesTxt__c != null) {
-                activeDev = new Set<String>(config.ActiveDevelopmentStagesTxt__c.toLowerCase().split(','));
-            }
             String stage = t.StageNamePk__c == null ? '' : t.StageNamePk__c.toLowerCase().trim();
-            this.stageCategory = activeDev.contains(stage) ? 1 : 2;
+            this.stageCategory = activeDevStages.contains(stage) ? 1 : 2;
 
             this.priorityWeight = priorityWeights.get(t.PriorityPk__c);
             if (this.priorityWeight == null) { this.priorityWeight = 999; }

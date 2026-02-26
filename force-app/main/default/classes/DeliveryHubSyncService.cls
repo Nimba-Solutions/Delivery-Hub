@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description REST Resource for receiving inbound synchronization payloads from the Mothership.
  * This class acts as the public entry point for the Delivery Hub integration.
  * V2 Architecture: Supports DAG routing and multi-tenant data segregation.
@@ -33,7 +35,7 @@ global without sharing class DeliveryHubSyncService {
             String incomingGlobalSourceId = req.headers.get('X-Global-Source-Id');
             if (String.isNotBlank(incomingGlobalSourceId)) {
                 Integer echoCount = [
-                    SELECT Count() FROM Sync_Item__c
+                    SELECT Count() FROM SyncItem__c
                     WHERE GlobalSourceIdTxt__c = :incomingGlobalSourceId
                     AND DirectionPk__c = 'Outbound'
                     WITH SYSTEM_MODE
@@ -107,9 +109,9 @@ global without sharing class DeliveryHubSyncService {
 
             // Query Unrouted Outbound Items (Passive Hub Mode)
             // V2 Architecture Rule: Must strictly filter by WorkItemId__r.ClientNetworkEntityId__c
-            List<Sync_Item__c> items = [
+            List<SyncItem__c> items = [
                 SELECT Id, ObjectTypePk__c, PayloadTxt__c, CreatedDate
-                FROM Sync_Item__c
+                FROM SyncItem__c
                 WHERE DirectionPk__c = 'Outbound'
                 AND RequestId__c = NULL
                 AND CreatedDate > :sinceDate
@@ -121,7 +123,7 @@ global without sharing class DeliveryHubSyncService {
 
             // Package the waiting items into a clean JSON array
             List<Map<String, Object>> responseList = new List<Map<String, Object>>();
-            for (Sync_Item__c item : items) {
+            for (SyncItem__c item : items) {
                 Map<String, Object> itemData = new Map<String, Object>();
                 itemData.put('objectType', item.ObjectTypePk__c);
                 itemData.put('payload', item.PayloadTxt__c);

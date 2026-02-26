@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliveryWorkItemETAService. 
  * Covers LWC integration, Queueable/Schedulable execution, and simulation logic.
  * @author Cloud Nimbus LLC

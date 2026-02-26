@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Unit tests for DeliverySlackService.
  *              Covers the @AuraEnabled testWebhook method and the
  *              @future postStageChanges method via a mock callout.
@@ -43,7 +45,7 @@ private class DeliverySlackServiceTest {
 
     @TestSetup
     static void makeData() {
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        DeliveryHubSettings__c settings = new DeliveryHubSettings__c(
             SetupOwnerId        = UserInfo.getOrganizationId(),
             SlackWebhookUrl__c  = 'https://hooks.slack.com/services/test'
         );
@@ -101,7 +103,7 @@ private class DeliverySlackServiceTest {
     @IsTest
     static void testPostStageChangesNoUrl() {
         // Overwrite settings with no Slack URL — should no-op
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.SlackWebhookUrl__c = null;
         update settings;
 
@@ -141,7 +143,7 @@ private class DeliverySlackServiceTest {
 
     @IsTest
     static void testPostApprovalRequestNoUrl() {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.SlackWebhookUrl__c = null;
         update settings;
 

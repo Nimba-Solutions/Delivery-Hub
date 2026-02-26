@@ -1,9 +1,11 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from 'lwc';
-import getSettings from '@salesforce/apex/DeliveryKanbanSettingsController.getSettings';
-import saveSettings from '@salesforce/apex/DeliveryKanbanSettingsController.saveSettings';
+import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
+import saveSettings from '@salesforce/apex/DeliveryHubSettingsController.saveAllAiSettings';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DeliveryKanbanSettingsContainer extends LightningElement {

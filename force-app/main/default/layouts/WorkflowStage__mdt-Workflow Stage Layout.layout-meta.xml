@@ -20,11 +20,11 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>ApiValue__c</field>
+                <field>ApiValueTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>DisplayName__c</field>
+                <field>DisplayNameTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
@@ -42,11 +42,11 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>OwnerPersona__c</field>
+                <field>OwnerPersonaTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Phase__c</field>
+                <field>PhaseTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
@@ -59,15 +59,15 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>CardColor__c</field>
+                <field>CardColorTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>HeaderBgColor__c</field>
+                <field>HeaderBgColorTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>HeaderTextColor__c</field>
+                <field>HeaderTextColorTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns/>

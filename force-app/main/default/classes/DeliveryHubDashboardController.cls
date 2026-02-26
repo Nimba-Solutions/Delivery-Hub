@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the Delivery Hub Dashboard LWC.
  * Returns System Pulse metrics and client-facing dashboard data.
  * @author Cloud Nimbus LLC
@@ -75,7 +77,7 @@ public with sharing class DeliveryHubDashboardController {
         // FIX: Alias 'StatusPk__c' to 'val' to prevent "Invalid field" errors in AggregateResult
         AggregateResult[] syncStats = [
             SELECT StatusPk__c val, Count(Id) cnt
-            FROM Sync_Item__c
+            FROM SyncItem__c
             WHERE StatusPk__c IN ('Synced', 'Failed')
             GROUP BY StatusPk__c
         ];
@@ -214,16 +216,16 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     private static List<String> fetchVendorAnnouncements() {
-        List<Network_Entity__c> vendors = [
+        List<NetworkEntity__c> vendors = [
             SELECT VendorAnnouncementTxt__c, Name
-            FROM Network_Entity__c
+            FROM NetworkEntity__c
             WHERE EntityTypePk__c = 'Vendor'
             AND StatusPk__c = 'Active'
             WITH SYSTEM_MODE
             ORDER BY Name ASC
         ];
         List<String> texts = new List<String>();
-        for (Network_Entity__c v : vendors) {
+        for (NetworkEntity__c v : vendors) {
             if (String.isNotBlank(v.VendorAnnouncementTxt__c)) {
                 texts.add(v.VendorAnnouncementTxt__c);
             }

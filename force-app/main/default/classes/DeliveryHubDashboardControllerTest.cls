@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -15,16 +17,16 @@ private class DeliveryHubDashboardControllerTest {
         insert t;
 
         // 2. Create Sync Items (1 Success, 1 Failure)
-        List<Sync_Item__c> items = new List<Sync_Item__c>();
+        List<SyncItem__c> items = new List<SyncItem__c>();
         
-        items.add(new Sync_Item__c(
+        items.add(new SyncItem__c(
             ObjectTypePk__c = 'WorkItem__c',
             StatusPk__c = 'Synced',
             PayloadTxt__c = '{}',
             WorkItemId__c = t.Id
         ));
         
-        items.add(new Sync_Item__c(
+        items.add(new SyncItem__c(
             ObjectTypePk__c = 'WorkItem__c',
             StatusPk__c = 'Failed',
             PayloadTxt__c = '{}',
@@ -107,7 +109,7 @@ private class DeliveryHubDashboardControllerTest {
 
     @IsTest
     static void testVendorAnnouncementIncludedInDashboard() {
-        insert new Network_Entity__c(
+        insert new NetworkEntity__c(
             Name                      = 'Announcing Vendor',
             EntityTypePk__c           = 'Vendor',
             StatusPk__c               = 'Active',

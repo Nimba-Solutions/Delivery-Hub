@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CardColorTxt__c</fullName>
+    <description>Hex color applied to work item cards in this stage (e.g. #FF9100).</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Card Color</label>
+    <length>20</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

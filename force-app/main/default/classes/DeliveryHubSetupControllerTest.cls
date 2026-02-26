@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -13,7 +15,7 @@ private class DeliveryHubSetupControllerTest {
     @IsTest
     static void testPrepareLocalEntity() {
         Test.startTest();
-        Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
+        NetworkEntity__c entity = DeliveryHubSetupController.prepareLocalEntity();
         Test.stopTest();
         
         System.assertNotEquals(null, entity.Id, 'Network Entity should be created');
@@ -25,7 +27,7 @@ private class DeliveryHubSetupControllerTest {
         // Prevent continuous loop queues
         DeliverySyncEngine.setSyncContext();
         
-        Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
+        NetworkEntity__c entity = DeliveryHubSetupController.prepareLocalEntity();
         Test.setMock(HttpCalloutMock.class, new SuccessMock());
         
         Test.startTest();
@@ -33,7 +35,7 @@ private class DeliveryHubSetupControllerTest {
         Test.stopTest();
         
         // Assert local entity was updated with remote info from mock response
-        Network_Entity__c updatedEntity = [SELECT RemoteExternalIdTxt__c, OrgIdTxt__c FROM Network_Entity__c WHERE Id = :entity.Id];
+        NetworkEntity__c updatedEntity = [SELECT RemoteExternalIdTxt__c, OrgIdTxt__c FROM NetworkEntity__c WHERE Id = :entity.Id];
         
         // --- FIX: Use generic strings instead of 18-char IDs to pass PMD ---
         System.assertEquals('MOCK_PROCESSED_ID', updatedEntity.RemoteExternalIdTxt__c, 'Remote External ID should be mapped from payload');
@@ -47,13 +49,13 @@ private class DeliveryHubSetupControllerTest {
         System.assertEquals(1, requests.size(), 'Bridge request should be created automatically by the trigger');
         
         // Assert settings were initialized
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         System.assertNotEquals(null, settings.Id, 'Settings should be initialized');
     }
 
     @IsTest
     static void testPerformHandshakeFailure() {
-        Network_Entity__c entity = DeliveryHubSetupController.prepareLocalEntity();
+        NetworkEntity__c entity = DeliveryHubSetupController.prepareLocalEntity();
         Test.setMock(HttpCalloutMock.class, new FailureMock());
         
         Test.startTest();

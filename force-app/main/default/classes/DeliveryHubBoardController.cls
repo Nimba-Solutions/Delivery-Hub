@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the Delivery Hub Board LWC.
  * @author Cloud Nimbus LLC
  */

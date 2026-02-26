@@ -20,7 +20,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>PersonaName__c</field>
+                <field>PersonaNameTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
@@ -34,7 +34,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>ColumnName__c</field>
+                <field>ColumnNameTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

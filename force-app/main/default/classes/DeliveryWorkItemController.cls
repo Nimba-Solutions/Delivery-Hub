@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for retrieving and seeding demo WorkItem__c records.
  * @author Cloud Nimbus LLC
  */
@@ -137,10 +139,10 @@ public with sharing class DeliveryWorkItemController {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static Boolean isMarketingEnabled() {
         try {
-            Cloud_Nimbus_LLC_Marketing__mdt m = [
+            CloudNimbusGlobalSettings__mdt m = [
                 SELECT EnabledBool__c
-                FROM Cloud_Nimbus_LLC_Marketing__mdt
-                WHERE DeveloperName = 'Cloud_Nimbus_LLC_Marketing_Enabled'
+                FROM CloudNimbusGlobalSettings__mdt
+                WHERE DeveloperName = 'Default'
                 LIMIT 1
             ];
             return m != null && m.EnabledBool__c;
@@ -369,22 +371,22 @@ public with sharing class DeliveryWorkItemController {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static String getOpenAIApiKey() {
         try {
-            Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
             
             if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
                 System.debug(LoggingLevel.INFO, 'Giving custom setttngs api key');
                 return settings.OpenAIApiKeyTxt__c;
             }
 
-            List<OpenAI_Configuration__mdt> configs = [
-                SELECT API_Key__c 
-                FROM OpenAI_Configuration__mdt 
+            List<OpenAIConfiguration__mdt> configs = [
+                SELECT ApiKeyTxt__c 
+                FROM OpenAIConfiguration__mdt 
                 WHERE DeveloperName = 'OpenAI' 
                 LIMIT 1
             ];
             
-            if (!configs.isEmpty() && String.isNotBlank(configs[0].API_Key__c)) {
-                return configs[0].API_Key__c;
+            if (!configs.isEmpty() && String.isNotBlank(configs[0].ApiKeyTxt__c)) {
+                return configs[0].ApiKeyTxt__c;
             }
             
         } catch (Exception e) {

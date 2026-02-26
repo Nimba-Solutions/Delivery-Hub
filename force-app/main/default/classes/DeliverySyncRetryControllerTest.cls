@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Tests for DeliverySyncRetryController.
  * @author Cloud Nimbus LLC
  */
@@ -10,8 +12,8 @@ private class DeliverySyncRetryControllerTest {
         WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Test Work Item', StageNamePk__c = 'Backlog');
         insert workItem;
 
-        List<Sync_Item__c> items = new List<Sync_Item__c>{
-            new Sync_Item__c(
+        List<SyncItem__c> items = new List<SyncItem__c>{
+            new SyncItem__c(
                 ObjectTypePk__c     = 'WorkItem__c',
                 LocalRecordIdTxt__c = workItem.Id,
                 WorkItemId__c         = workItem.Id,
@@ -19,7 +21,7 @@ private class DeliverySyncRetryControllerTest {
                 StatusPk__c         = 'Failed',
                 ErrorLogTxt__c      = 'Connection timeout'
             ),
-            new Sync_Item__c(
+            new SyncItem__c(
                 ObjectTypePk__c     = 'WorkItem__c',
                 LocalRecordIdTxt__c = workItem.Id,
                 WorkItemId__c         = workItem.Id,
@@ -27,7 +29,7 @@ private class DeliverySyncRetryControllerTest {
                 StatusPk__c         = 'Failed',
                 ErrorLogTxt__c      = 'Auth error'
             ),
-            new Sync_Item__c(
+            new SyncItem__c(
                 ObjectTypePk__c     = 'WorkItem__c',
                 LocalRecordIdTxt__c = workItem.Id,
                 WorkItemId__c         = workItem.Id,
@@ -54,16 +56,16 @@ private class DeliverySyncRetryControllerTest {
     static void testRetryFailed() {
         DeliverySyncRetryController.retryFailed();
 
-        List<Sync_Item__c> stillFailed = [
-            SELECT Id FROM Sync_Item__c WHERE StatusPk__c = 'Failed'
+        List<SyncItem__c> stillFailed = [
+            SELECT Id FROM SyncItem__c WHERE StatusPk__c = 'Failed'
         ];
         System.assertEquals(0, stillFailed.size(), 'No items should remain in Failed status');
 
-        List<Sync_Item__c> queued = [
-            SELECT Id, ErrorLogTxt__c FROM Sync_Item__c WHERE StatusPk__c = 'Queued'
+        List<SyncItem__c> queued = [
+            SELECT Id, ErrorLogTxt__c FROM SyncItem__c WHERE StatusPk__c = 'Queued'
         ];
         System.assertEquals(2, queued.size(), 'Both failed items should be reset to Queued');
-        for (Sync_Item__c si : queued) {
+        for (SyncItem__c si : queued) {
             System.assertEquals(null, si.ErrorLogTxt__c, 'Error log should be cleared on retry');
         }
     }
@@ -71,8 +73,8 @@ private class DeliverySyncRetryControllerTest {
     @IsTest
     static void testGetSyncHealthNoFailures() {
         // Reset all to Synced
-        List<Sync_Item__c> all = [SELECT Id FROM Sync_Item__c WHERE StatusPk__c = 'Failed'];
-        for (Sync_Item__c si : all) { si.StatusPk__c = 'Synced'; }
+        List<SyncItem__c> all = [SELECT Id FROM SyncItem__c WHERE StatusPk__c = 'Failed'];
+        for (SyncItem__c si : all) { si.StatusPk__c = 'Synced'; }
         update all;
 
         Map<String, Object> health = DeliverySyncRetryController.getSyncHealth();

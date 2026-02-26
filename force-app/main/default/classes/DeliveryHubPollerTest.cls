@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliveryHubPoller.
  * Uses dynamic field population to ensure data is created correctly in namespaced environments.
  * V2 Architecture: Uses direct JSON array parsing and stringified payload processing.
@@ -18,13 +20,13 @@ private class DeliveryHubPollerTest {
         String ns = getNamespace();
 
         // 1. Setup Settings (Dynamic SObject to handle namespace)
-        SObject settings = (SObject) Type.forName(ns + 'Delivery_Hub_Settings__c').newInstance();
+        SObject settings = (SObject) Type.forName(ns + 'DeliveryHubSettings__c').newInstance();
         settings.put(ns + 'AutoCreateWorkRequestBool__c', false);
         settings.put(ns + 'AutoSyncNetworkEntityBool__c', false);
         insert settings;
 
         // 2. Create Active Vendor (Mothership) - FORCED POPULATION
-        SObject vendor = (SObject) Type.forName(ns + 'Network_Entity__c').newInstance();
+        SObject vendor = (SObject) Type.forName(ns + 'NetworkEntity__c').newInstance();
         vendor.put('Name', 'Mothership HQ');
         vendor.put(ns + 'StatusPk__c', 'Active');
         vendor.put(ns + 'EntityTypePk__c', 'Vendor');

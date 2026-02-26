@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliverySyncItemProcessor.
  * Verifies outbound transmission logic and status updates.
  * @author Cloud Nimbus LLC
@@ -13,7 +15,7 @@ private class DeliverySyncItemProcessorTest {
         DeliverySyncEngine.setSyncContext();
 
         // 1. Setup Network Entity (Vendor)
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Mothership HQ',
             StatusPk__c = 'Active',
             EntityTypePk__c = 'Vendor',
@@ -38,7 +40,7 @@ private class DeliverySyncItemProcessorTest {
         insert req;
 
         // 4. Setup Outbound Sync Item
-        Sync_Item__c item = new Sync_Item__c(
+        SyncItem__c item = new SyncItem__c(
             StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
             WorkItemId__c = t.Id,
@@ -49,7 +51,7 @@ private class DeliverySyncItemProcessorTest {
         insert item;
         
         // Clean up auto-generated passive items just in case
-        delete [SELECT Id FROM Sync_Item__c WHERE RequestId__c = null];
+        delete [SELECT Id FROM SyncItem__c WHERE RequestId__c = null];
     }
 
     /**
@@ -63,7 +65,7 @@ private class DeliverySyncItemProcessorTest {
         System.enqueueJob(new DeliverySyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE RequestId__c != null LIMIT 1];
+        SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
         System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
     }
 
@@ -78,7 +80,7 @@ private class DeliverySyncItemProcessorTest {
         System.enqueueJob(new DeliverySyncItemProcessor());
         Test.stopTest();
 
-        Sync_Item__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM Sync_Item__c WHERE RequestId__c != null LIMIT 1];
+        SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
         System.assertEquals('Failed', result.StatusPk__c, 'Status should update to Failed on 500 error');
         System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
     }

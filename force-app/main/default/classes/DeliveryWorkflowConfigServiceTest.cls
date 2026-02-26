@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Tests for DeliveryWorkflowConfigService.
  * @author Cloud Nimbus LLC
  */

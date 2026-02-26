@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Unit tests for DeliveryGanttController.
  * @author Cloud Nimbus LLC
  */

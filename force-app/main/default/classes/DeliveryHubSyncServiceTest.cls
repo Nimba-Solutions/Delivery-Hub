@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliveryHubSyncService.
  * Verifies the REST entry point for both Push (POST) and Pull (GET) flows,
  * ensuring namespace awareness and strict V2 multi-tenant data segregation.
@@ -10,23 +12,23 @@ private class DeliveryHubSyncServiceTest {
     @TestSetup
     static void makeData() {
         // 1. Setup Settings
-        insert new Delivery_Hub_Settings__c(
+        insert new DeliveryHubSettings__c(
             AutoCreateWorkRequestBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 
         // 2. Create Network Entities (Vendor & Client)
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Test Vendor',
             StatusPk__c = 'Active',
             EntityTypePk__c = 'Vendor'
         );
-        Network_Entity__c client = new Network_Entity__c(
+        NetworkEntity__c client = new NetworkEntity__c(
             Name = 'Test Client',
             StatusPk__c = 'Active',
             EntityTypePk__c = 'Client'
         );
-        insert new List<Network_Entity__c>{vendor, client};
+        insert new List<NetworkEntity__c>{vendor, client};
 
         // 3. Create Work Item (Explicitly linked to the Client)
         WorkItem__c t = new WorkItem__c(
@@ -45,7 +47,7 @@ private class DeliveryHubSyncServiceTest {
         );
         
         // 5. V2 ARCHITECTURE: Stage an Outbound Hub Item for the GET tests
-        insert new Sync_Item__c(
+        insert new SyncItem__c(
             DirectionPk__c = 'Outbound',
             StatusPk__c = 'Queued',
             RequestId__c = null, // Null indicates Hub Mode
@@ -145,7 +147,7 @@ private class DeliveryHubSyncServiceTest {
 
     @IsTest
     static void testHttpGetChangesSuccess() {
-        Network_Entity__c client = [SELECT Id FROM Network_Entity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
+        NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
         
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();

@@ -147,7 +147,7 @@ cci flow run dev_org --org dev
 cci org browser dev
 ```
 
-Configure your `Cloud_Nimbus_LLC_Marketing__mdt` custom metadata with your org's endpoint URL and client orgs can connect via Quickstart immediately.
+Configure your `CloudNimbusGlobalSettings__mdt` custom metadata with your org's endpoint URL and client orgs can connect via Quickstart immediately.
 
 ---
 
@@ -182,8 +182,8 @@ force-app/main/default/
 ├── objects/
 │   ├── WorkItem__c/                      # Core work item
 │   ├── WorkRequest__c/                     # Sync bridge (client ↔ vendor)
-│   ├── Sync_Item__c/                   # Outbound sync ledger
-│   ├── Network_Entity__c/              # Connected org registry
+│   ├── SyncItem__c/                   # Outbound sync ledger
+│   ├── NetworkEntity__c/              # Connected org registry
 │   ├── WorkItemComment__c/              # Chat messages
 │   ├── WorkItemDependency__c/           # Blocking relationships
 │   └── WorkLog__c/                     # Time tracking entries

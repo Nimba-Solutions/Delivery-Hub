@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NetworkEntityId__c</fullName>
+    <description>The Network Entity (client org) this activity belongs to. Used for aggregating analytics per client for vendor sync.</description>
+    <externalId>false</externalId>
+    <label>Network Entity</label>
+    <referenceTo>NetworkEntity__c</referenceTo>
+    <relationshipLabel>Activity Logs</relationshipLabel>
+    <relationshipName>ActivityLogs</relationshipName>
+    <required>false</required>
+    <type>Lookup</type>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

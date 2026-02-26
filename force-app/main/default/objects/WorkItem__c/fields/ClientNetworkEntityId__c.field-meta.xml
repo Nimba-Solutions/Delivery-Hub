@@ -5,7 +5,7 @@
     <description>MOTHERSHIP ONLY: Specifies which Client this work item belongs to. Used to route updates when the Client pulls data.</description>
     <inlineHelpText>MOTHERSHIP ONLY: Specifies which Client this work item belongs to. Used to route updates when the Client pulls data.</inlineHelpText>
     <label>Client Network Entity</label>
-    <referenceTo>Network_Entity__c</referenceTo>
+    <referenceTo>NetworkEntity__c</referenceTo>
     <relationshipLabel>Work Items</relationshipLabel>
     <relationshipName>ClientWorkItems</relationshipName>
     <required>false</required>

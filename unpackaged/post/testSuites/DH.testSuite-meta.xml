@@ -17,7 +17,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSettingsControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSetupControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSyncServiceTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryKanbanSettingsControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityLogCleanupTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryRequestManagerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncEngineTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemIngestorTest</testClassName>

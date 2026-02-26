@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Runs automatically when the Delivery Hub package is installed or upgraded.
  *              Initialises org-level default settings so administrators do not need to
  *              trigger the setup wizard before the package is functional.
@@ -16,11 +18,11 @@ global class DeliveryHubInstallHandler implements InstallHandler {
     }
 
     private static void initializeDefaultSettings() {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings.Id != null) {
             return; // Already configured — do not overwrite existing settings
         }
-        settings = new Delivery_Hub_Settings__c(
+        settings = new DeliveryHubSettings__c(
             SetupOwnerId                      = UserInfo.getOrganizationId(),
             EnableNotificationsBool__c        = true,
             AutoCreateWorkRequestBool__c = true,

@@ -7,11 +7,11 @@
         <value xsi:type="xsd:string">Software_Delivery</value>
     </values>
     <values>
-        <field>PersonaName__c</field>
+        <field>PersonaNameTxt__c</field>
         <value xsi:type="xsd:string">Consultant</value>
     </values>
     <values>
-        <field>ColumnName__c</field>
+        <field>ColumnNameTxt__c</field>
         <value xsi:type="xsd:string">Backlog</value>
     </values>
     <values>

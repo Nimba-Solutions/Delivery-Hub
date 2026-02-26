@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 @isTest
@@ -47,7 +49,7 @@ private class DeliveryWorkItemControllerTest {
         insert workItems;
 
         // Optional: create Metadata for AI key test
-        Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
+        DeliveryHubSettings__c settings = new DeliveryHubSettings__c(
             Name = 'Default',
             OpenAIApiKeyTxt__c = 'test-api-key',
             OpenAiApiTestedBool__c = true

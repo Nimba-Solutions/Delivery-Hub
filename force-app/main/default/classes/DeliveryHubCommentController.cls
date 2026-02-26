@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the Delivery Comment Stream LWC.
  * Replaces the deleted DeliveryHubCommentSender.
  * Uses standard DML so the DeliverySyncEngine Trigger picks it up automatically.

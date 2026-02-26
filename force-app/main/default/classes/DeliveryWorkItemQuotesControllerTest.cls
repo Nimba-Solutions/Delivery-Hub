@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Tests for DeliveryWorkItemQuotesController.
  * @author Cloud Nimbus LLC
  */
@@ -10,7 +12,7 @@ private class DeliveryWorkItemQuotesControllerTest {
         WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Test Work Item', StageNamePk__c = 'Backlog');
         insert workItem;
 
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Test Vendor', EntityTypePk__c = 'Vendor', StatusPk__c = 'Active'
         );
         insert vendor;

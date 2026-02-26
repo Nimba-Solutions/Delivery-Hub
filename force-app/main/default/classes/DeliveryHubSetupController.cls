@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the Delivery Hub Setup LWC.
  * Handles the initial handshake with the Mothership and manages connection status.
  * @author Cloud Nimbus LLC
@@ -10,16 +12,16 @@ public without sharing class DeliveryHubSetupController {
         @AuraEnabled public Boolean isConnected;
         @AuraEnabled public Boolean isMothership;
         @AuraEnabled public String requiredRemoteSite;
-        @AuraEnabled public Network_Entity__c entity;
+        @AuraEnabled public NetworkEntity__c entity;
     }
 
     @AuraEnabled(cacheable=true)
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
-        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
+        CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
 
-        if (config != null && String.isNotBlank(config.CloudNimbusLlcEndpointTxt__c)) {
-            status.requiredRemoteSite = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
+        if (config != null && String.isNotBlank(config.EndpointUrlTxt__c)) {
+            status.requiredRemoteSite = config.EndpointUrlTxt__c.removeEnd('/');
         } else {
             status.requiredRemoteSite = '';
         }
@@ -31,9 +33,9 @@ public without sharing class DeliveryHubSetupController {
         status.isMothership = String.isNotBlank(status.requiredRemoteSite) &&
                               status.requiredRemoteSite.contains(orgPrefix);
 
-        List<Network_Entity__c> entities = [
+        List<NetworkEntity__c> entities = [
             SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c
-            FROM Network_Entity__c
+            FROM NetworkEntity__c
             WHERE Name LIKE 'Cloud Nimbus LLC%'
             LIMIT 1
         ];
@@ -49,23 +51,23 @@ public without sharing class DeliveryHubSetupController {
 
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static Network_Entity__c prepareLocalEntity() {
-        List<Network_Entity__c> existingEntities = [
-            SELECT Id, Name FROM Network_Entity__c 
+    public static NetworkEntity__c prepareLocalEntity() {
+        List<NetworkEntity__c> existingEntities = [
+            SELECT Id, Name FROM NetworkEntity__c 
             WHERE Name LIKE 'Cloud Nimbus LLC%' 
             LIMIT 1
         ];
 
-        Network_Entity__c mothership = !existingEntities.isEmpty() ? existingEntities[0] : new Network_Entity__c();
+        NetworkEntity__c mothership = !existingEntities.isEmpty() ? existingEntities[0] : new NetworkEntity__c();
         
         if (mothership.Id == null) {
             mothership.Name = 'Cloud Nimbus LLC';
             mothership.EntityTypePk__c = 'Vendor';
         }
         
-        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
-        if (config != null && String.isNotBlank(config.CloudNimbusLlcEndpointTxt__c)) {
-            mothership.IntegrationEndpointUrlTxt__c = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/');
+        CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
+        if (config != null && String.isNotBlank(config.EndpointUrlTxt__c)) {
+            mothership.IntegrationEndpointUrlTxt__c = config.EndpointUrlTxt__c.removeEnd('/');
         }
 
         mothership.StatusPk__c = 'Active';
@@ -81,8 +83,8 @@ public without sharing class DeliveryHubSetupController {
             throw new AuraHandledException('Setup Error: Local Entity ID missing.');
         }
 
-        Cloud_Nimbus_LLC_Marketing__mdt config = Cloud_Nimbus_LLC_Marketing__mdt.getInstance('Cloud_Nimbus_LLC_Marketing_Enabled');
-        String intakeEndpoint = config.CloudNimbusLlcEndpointTxt__c.removeEnd('/') + '/sync/Network_Entity__c';
+        CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
+        String intakeEndpoint = config.EndpointUrlTxt__c.removeEnd('/') + '/sync/NetworkEntity__c';
 
         Map<String, Object> packet = new Map<String, Object>{
             'SourceId' => localEntityId,
@@ -113,7 +115,7 @@ public without sharing class DeliveryHubSetupController {
         String remoteOrgId = (String) responseMap.get('orgId');
         
         if (String.isNotBlank(remoteEntityId) || String.isNotBlank(remoteOrgId)) {
-            Network_Entity__c mothershipToUpdate = new Network_Entity__c(
+            NetworkEntity__c mothershipToUpdate = new NetworkEntity__c(
                 Id = localEntityId,
                 OrgIdTxt__c = remoteOrgId,
                 RemoteExternalIdTxt__c = remoteEntityId
@@ -150,9 +152,9 @@ public without sharing class DeliveryHubSetupController {
 
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static void initializeDefaultSettings() {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings.Id == null) {
-            settings = new Delivery_Hub_Settings__c(
+            settings = new DeliveryHubSettings__c(
                 SetupOwnerId = UserInfo.getOrganizationId(),
                 EnableNotificationsBool__c = true,
                 AutoCreateWorkRequestBool__c = true,

@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliveryHubScheduler. 
  * Verifies that the scheduler executes the poller logic and updates timestamps.
  * @author Cloud Nimbus LLC
@@ -9,12 +11,12 @@ private class DeliveryHubSchedulerTest {
     @TestSetup
     static void makeData() {
         // Setup required settings for the Poller logic
-        insert new Delivery_Hub_Settings__c(
+        insert new DeliveryHubSettings__c(
             AutoCreateWorkRequestBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Mothership',
             StatusPk__c = 'Active',
             EntityTypePk__c = 'Vendor',
@@ -37,7 +39,7 @@ private class DeliveryHubSchedulerTest {
         Test.stopTest();
 
         // Verify the Vendor timestamp was updated by the Poller logic
-        Network_Entity__c vendor = [SELECT LastInboundSyncDateTime__c FROM Network_Entity__c LIMIT 1];
+        NetworkEntity__c vendor = [SELECT LastInboundSyncDateTime__c FROM NetworkEntity__c LIMIT 1];
         System.assertNotEquals(null, vendor.LastInboundSyncDateTime__c, 'Poller should have updated the sync timestamp.');
     }
     

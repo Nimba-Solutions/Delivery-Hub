@@ -7,82 +7,82 @@
     <description>This permission set provides access to the &quot;Delivery Hub&quot; Lightning App</description>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Activity_Log__c.ActionTypePk__c</field>
+        <field>ActivityLog__c.ActionTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Activity_Log__c.ComponentNameTxt__c</field>
+        <field>ActivityLog__c.ComponentNameTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Activity_Log__c.ContextDataTxt__c</field>
+        <field>ActivityLog__c.ContextDataTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Activity_Log__c.NetworkEntityId__c</field>
+        <field>ActivityLog__c.NetworkEntityId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Activity_Log__c.SessionIdTxt__c</field>
+        <field>ActivityLog__c.SessionIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Activity_Log__c.UserIdTxt__c</field>
+        <field>ActivityLog__c.UserIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.DefaultHourlyRateCurrency__c</field>
+        <field>NetworkEntity__c.DefaultHourlyRateCurrency__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Network_Entity__c.UsageAnalyticsJsonTxt__c</field>
+        <field>NetworkEntity__c.UsageAnalyticsJsonTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Network_Entity__c.VendorAnnouncementTxt__c</field>
+        <field>NetworkEntity__c.VendorAnnouncementTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.EntityTypePk__c</field>
+        <field>NetworkEntity__c.EntityTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.GithubUsernameTxt__c</field>
+        <field>NetworkEntity__c.GithubUsernameTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.IntegrationEndpointUrlTxt__c</field>
+        <field>NetworkEntity__c.IntegrationEndpointUrlTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.LastInboundSyncDateTime__c</field>
+        <field>NetworkEntity__c.LastInboundSyncDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.OrgIdTxt__c</field>
+        <field>NetworkEntity__c.OrgIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.RemoteExternalIdTxt__c</field>
+        <field>NetworkEntity__c.RemoteExternalIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Network_Entity__c.StatusPk__c</field>
+        <field>NetworkEntity__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -147,72 +147,72 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.DirectionPk__c</field>
+        <field>SyncItem__c.DirectionPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.ErrorLogTxt__c</field>
+        <field>SyncItem__c.ErrorLogTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.GlobalSourceIdTxt__c</field>
+        <field>SyncItem__c.GlobalSourceIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.LocalRecordIdTxt__c</field>
+        <field>SyncItem__c.LocalRecordIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.ObjectTypePk__c</field>
+        <field>SyncItem__c.ObjectTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.PayloadContextTxt__c</field>
+        <field>SyncItem__c.PayloadContextTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.PayloadTxt__c</field>
+        <field>SyncItem__c.PayloadTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.RemoteExternalIDTxt__c</field>
+        <field>SyncItem__c.RemoteExternalIDTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.RequestId__c</field>
+        <field>SyncItem__c.RequestId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.RetryCountNumber__c</field>
+        <field>SyncItem__c.RetryCountNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.SourceEventTimestampDateTime__c</field>
+        <field>SyncItem__c.SourceEventTimestampDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.StatusPk__c</field>
+        <field>SyncItem__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.WorkItemCommentId__c</field>
+        <field>SyncItem__c.WorkItemCommentId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.WorkItemId__c</field>
+        <field>SyncItem__c.WorkItemId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -428,7 +428,7 @@
         <allowEdit>false</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
-        <object>Activity_Log__c</object>
+        <object>ActivityLog__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -437,7 +437,7 @@
         <allowEdit>false</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
-        <object>Network_Entity__c</object>
+        <object>NetworkEntity__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -455,7 +455,7 @@
         <allowEdit>false</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
-        <object>Sync_Item__c</object>
+        <object>SyncItem__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -495,7 +495,7 @@
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <tabSettings>
-        <tab>Sync_Item__c</tab>
+        <tab>SyncItem__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>

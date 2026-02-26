@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the deliverySyncRetryPanel LWC admin component.
  *              Surfaces failed sync items and allows bulk retry.
  * @author Cloud Nimbus LLC
@@ -23,15 +25,15 @@ public with sharing class DeliverySyncRetryController {
         Map<String, Object> result = new Map<String, Object>();
 
         result.put('failedCount', [
-            SELECT COUNT() FROM Sync_Item__c
+            SELECT COUNT() FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             WITH SYSTEM_MODE
         ]);
 
         List<FailedSyncRow> rows = new List<FailedSyncRow>();
-        for (Sync_Item__c si : [
+        for (SyncItem__c si : [
             SELECT Id, ObjectTypePk__c, ErrorLogTxt__c, LastModifiedDate
-            FROM Sync_Item__c
+            FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -49,19 +51,19 @@ public with sharing class DeliverySyncRetryController {
     }
 
     /**
-     * @description Resets all failed Sync_Item__c records to Queued so the scheduler retries them.
+     * @description Resets all failed SyncItem__c records to Queued so the scheduler retries them.
      */
     @AuraEnabled
     public static void retryFailed() {
-        List<Sync_Item__c> failed = [
+        List<SyncItem__c> failed = [
             SELECT Id
-            FROM Sync_Item__c
+            FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             WITH SYSTEM_MODE
         ];
-        List<Sync_Item__c> toRetry = new List<Sync_Item__c>();
-        for (Sync_Item__c si : failed) {
-            toRetry.add(new Sync_Item__c(Id = si.Id, StatusPk__c = 'Queued', ErrorLogTxt__c = null));
+        List<SyncItem__c> toRetry = new List<SyncItem__c>();
+        for (SyncItem__c si : failed) {
+            toRetry.add(new SyncItem__c(Id = si.Id, StatusPk__c = 'Queued', ErrorLogTxt__c = null));
         }
         if (!toRetry.isEmpty()) {
             // FIX: SYSTEM_MODE to prevent packaging test failures on namespaced fields

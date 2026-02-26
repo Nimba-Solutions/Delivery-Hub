@@ -1,14 +1,16 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 @IsTest
 private class DeliveryGhostControllerTest {
 
     /**
-     * @description Inserts org-level Delivery_Hub_Settings__c with activity logging enabled.
+     * @description Inserts org-level DeliveryHubSettings__c with activity logging enabled.
      */
     private static void enableActivityLogging() {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.EnableActivityLoggingBool__c = true;
         upsert settings;
     }
@@ -58,7 +60,7 @@ private class DeliveryGhostControllerTest {
         DeliveryGhostController.logUserActivity('Navigation', JSON.serialize(contextMap));
         Test.stopTest();
 
-        List<Activity_Log__c> logs = [SELECT Id FROM Activity_Log__c];
+        List<ActivityLog__c> logs = [SELECT Id FROM ActivityLog__c];
         System.assertEquals(0, logs.size(), 'No activity log should be created when setting is disabled');
     }
 
@@ -78,9 +80,9 @@ private class DeliveryGhostControllerTest {
         DeliveryGhostController.logUserActivity('Navigation', contextJson);
         Test.stopTest();
 
-        List<Activity_Log__c> logs = [
+        List<ActivityLog__c> logs = [
             SELECT ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c, SessionIdTxt__c, ContextDataTxt__c
-            FROM Activity_Log__c
+            FROM ActivityLog__c
         ];
         System.assertEquals(1, logs.size(), 'One activity log should be persisted');
         System.assertEquals('Navigation', logs[0].ActionTypePk__c, 'Action type should match');
@@ -97,9 +99,9 @@ private class DeliveryGhostControllerTest {
         DeliveryGhostController.logUserActivity('Error', 'not-valid-json');
         Test.stopTest();
 
-        List<Activity_Log__c> logs = [
+        List<ActivityLog__c> logs = [
             SELECT ActionTypePk__c, ContextDataTxt__c
-            FROM Activity_Log__c
+            FROM ActivityLog__c
         ];
         System.assertEquals(1, logs.size(), 'Record should still be created even with bad JSON');
         System.assertEquals('Error', logs[0].ActionTypePk__c, 'Action type should still be set');

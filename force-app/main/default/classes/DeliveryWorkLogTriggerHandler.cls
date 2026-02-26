@@ -1,5 +1,7 @@
 /**
- * @description Trigger handler for WorkLog__c. On insert, queues an outbound Sync_Item__c
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description Trigger handler for WorkLog__c. On insert, queues an outbound SyncItem__c
  *              for each WorkLog whose parent Work Item has a client Network Entity linked.
  *              This seeds the sync queue so the scheduled processor can push logged hours
  *              to the client org once the sync pipeline supports WorkLog payloads.
@@ -39,7 +41,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
 
-        List<Sync_Item__c> syncItems = buildSyncItems(newLogs, clientWorkItems);
+        List<SyncItem__c> syncItems = buildSyncItems(newLogs, clientWorkItems);
         if (!syncItems.isEmpty()) {
             // FIX: SYSTEM_MODE to prevent packaging test failures on namespaced fields
             Database.insert(syncItems, AccessLevel.SYSTEM_MODE);
@@ -47,13 +49,13 @@ public with sharing class DeliveryWorkLogTriggerHandler {
     }
 
     /**
-     * @description Builds the list of Sync_Item__c records for WorkLogs on client-linked work items.
+     * @description Builds the list of SyncItem__c records for WorkLogs on client-linked work items.
      * @param logs The WorkLog records to evaluate.
      * @param clientWorkItems Map of work item Ids that have a client entity linked.
-     * @return List of Sync_Item__c records ready for insert.
+     * @return List of SyncItem__c records ready for insert.
      */
-    private static List<Sync_Item__c> buildSyncItems(List<WorkLog__c> logs, Map<Id, WorkItem__c> clientWorkItems) {
-        List<Sync_Item__c> items = new List<Sync_Item__c>();
+    private static List<SyncItem__c> buildSyncItems(List<WorkLog__c> logs, Map<Id, WorkItem__c> clientWorkItems) {
+        List<SyncItem__c> items = new List<SyncItem__c>();
         for (WorkLog__c wl : logs) {
             if (!clientWorkItems.containsKey(wl.WorkItemId__c)) {
                 continue;
@@ -64,7 +66,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
                 'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
                 'WorkDescriptionTxt__c'  => wl.WorkDescriptionTxt__c
             };
-            items.add(new Sync_Item__c(
+            items.add(new SyncItem__c(
                 ObjectTypePk__c         = 'WorkLog__c',
                 LocalRecordIdTxt__c     = wl.Id,
                 WorkItemId__c             = wl.WorkItemId__c,

@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for the DeliveryHubPollerController.
  * Ensures the LWC endpoint successfully triggers the poller and formats exceptions correctly.
  * @author Cloud Nimbus LLC
@@ -48,7 +50,7 @@ private class DeliveryHubPollerControllerTest {
     @TestSetup
     static void setupData() {
         // Insert a basic active Vendor so the Poller has an endpoint to query
-        insert new Network_Entity__c(
+        insert new NetworkEntity__c(
             Name = 'Test Vendor for Poller',
             EntityTypePk__c = 'Vendor',
             StatusPk__c = 'Active',

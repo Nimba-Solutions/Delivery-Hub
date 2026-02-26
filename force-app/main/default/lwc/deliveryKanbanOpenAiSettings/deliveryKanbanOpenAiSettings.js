@@ -1,8 +1,10 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, track } from "lwc";
-import testOpenAIConnection from "@salesforce/apex/DeliveryKanbanSettingsController.testOpenAIConnection";
+import testOpenAIConnection from "@salesforce/apex/DeliveryHubSettingsController.testOpenAIConnection";
 export default class DeliveryKanbanOpenAiSettings extends LightningElement {
     @api settings;
 
@@ -12,8 +14,8 @@ export default class DeliveryKanbanOpenAiSettings extends LightningElement {
     @track testResultMessage = "";
 
     modelOptions = [
-        { label: "GPT-4 Turbo (Recommended)", value: "gpt-4-turbo" },
-        { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
+        { label: "GPT-4o Mini (Recommended)", value: "gpt-4o-mini" },
+        { label: "GPT-4o", value: "gpt-4o" },
     ];
 
     get apiKeyInputType() {
