@@ -11,7 +11,7 @@
         <value xsi:type="xsd:string">Needs Info/Pending</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">5</value>
     </values>
     <values>
@@ -51,11 +51,11 @@
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>AllowedForwardTransitions__c</field>
+        <field>AllowedForwardTransitionsTxt__c</field>
         <value xsi:type="xsd:string">Processing,Submit For Approval</value>
     </values>
     <values>
-        <field>AllowedBacktrackTransitions__c</field>
+        <field>AllowedBacktrackTransitionsTxt__c</field>
         <value xsi:type="xsd:string">Submit For Approval</value>
     </values>
 </CustomMetadata>

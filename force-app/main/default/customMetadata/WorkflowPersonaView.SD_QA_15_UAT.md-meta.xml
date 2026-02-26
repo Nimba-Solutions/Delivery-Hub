@@ -15,11 +15,11 @@
         <value xsi:type="xsd:string">UAT</value>
     </values>
     <values>
-        <field>StageApiValues__c</field>
+        <field>StageApiValuesTxt__c</field>
         <value xsi:type="xsd:string">Ready for Client UAT,In Client UAT,Ready for UAT Sign-off,Processing Sign-off</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">15</value>
     </values>
     <values>

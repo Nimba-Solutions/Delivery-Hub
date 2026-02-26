@@ -15,11 +15,11 @@
         <value xsi:type="xsd:string">Deployment</value>
     </values>
     <values>
-        <field>StageApiValues__c</field>
+        <field>StageApiValuesTxt__c</field>
         <value xsi:type="xsd:string">Ready for Merge,Merging,Ready for Deployment,Deploying</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">19</value>
     </values>
     <values>

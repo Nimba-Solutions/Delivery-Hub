@@ -11,7 +11,7 @@
         <value xsi:type="xsd:string">Ready for Scratch Test</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">21</value>
     </values>
     <values>
@@ -51,11 +51,11 @@
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>AllowedForwardTransitions__c</field>
+        <field>AllowedForwardTransitionsTxt__c</field>
         <value xsi:type="xsd:string">Scratch Testing,Ready for QA,Ready for Internal UAT,Ready for Client UAT</value>
     </values>
     <values>
-        <field>AllowedBacktrackTransitions__c</field>
+        <field>AllowedBacktrackTransitionsTxt__c</field>
         <value xsi:type="xsd:string">In Development,Cancelled</value>
     </values>
 </CustomMetadata>

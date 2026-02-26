@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>AllowedBacktrackTransitions__c</fullName>
-    <description>Comma-separated ApiValues this stage can move back to (backtrack transitions shown in the Move modal).</description>
+    <fullName>AllowedForwardTransitionsTxt__c</fullName>
+    <description>Comma-separated ApiValues this stage can advance to (forward transitions shown in the Move modal).</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
-    <label>Allowed Backtrack Transitions</label>
+    <label>Allowed Forward Transitions</label>
     <length>32000</length>
     <type>LongTextArea</type>
     <visibleLines>3</visibleLines>

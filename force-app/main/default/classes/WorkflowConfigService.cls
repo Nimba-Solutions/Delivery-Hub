@@ -19,15 +19,15 @@ public with sharing class WorkflowConfigService {
     public static List<Map<String,Object>> getWorkflowTypes() {
         List<Map<String,Object>> result = new List<Map<String,Object>>();
         for (WorkflowType__mdt wt : [
-            SELECT DeveloperName, Label, SortOrder__c, IconName__c, IsDefaultBool__c, UseSimplifiedViewBool__c
+            SELECT DeveloperName, Label, SortOrderNumber__c, IconName__c, IsDefaultBool__c, UseSimplifiedViewBool__c
             FROM WorkflowType__mdt
             WITH SYSTEM_MODE
-            ORDER BY SortOrder__c ASC NULLS LAST, Label ASC
+            ORDER BY SortOrderNumber__c ASC NULLS LAST, Label ASC
         ]) {
             Map<String,Object> m = new Map<String,Object>();
             m.put('developerName', wt.DeveloperName);
             m.put('label',         wt.Label);
-            m.put('sortOrder',     wt.SortOrder__c);
+            m.put('sortOrder',     wt.SortOrderNumber__c);
             m.put('iconName',      wt.IconName__c);
             m.put('isDefault',     wt.IsDefaultBool__c);
             m.put('useSimplifiedView', wt.UseSimplifiedViewBool__c);
@@ -78,16 +78,16 @@ public with sharing class WorkflowConfigService {
         // --- Load stages ---
         List<Map<String,Object>> stages = new List<Map<String,Object>>();
         for (WorkflowStage__mdt s : [
-            SELECT DeveloperName, ApiValue__c, DisplayName__c, SortOrder__c,
+            SELECT DeveloperName, ApiValue__c, DisplayName__c, SortOrderNumber__c,
                    CardColor__c, HeaderBgColor__c, HeaderTextColor__c,
                    OwnerPersona__c, Phase__c,
                    IsTerminalBool__c, IsBlockedStateBool__c, IsAttentionStateBool__c, IsVisibleByDefaultBool__c,
-                   AllowedForwardTransitions__c, AllowedBacktrackTransitions__c,
+                   AllowedForwardTransitionsTxt__c, AllowedBacktrackTransitionsTxt__c,
                    WorkflowType__r.DeveloperName
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
             WITH SYSTEM_MODE
-            ORDER BY SortOrder__c ASC NULLS LAST
+            ORDER BY SortOrderNumber__c ASC NULLS LAST
         ]) {
             Map<String,Object> sm = new Map<String,Object>();
             sm.put('apiValue',            s.ApiValue__c);
@@ -101,19 +101,19 @@ public with sharing class WorkflowConfigService {
             sm.put('isBlockedState',      s.IsBlockedStateBool__c);
             sm.put('isAttentionState',    s.IsAttentionStateBool__c);
             sm.put('isVisibleByDefault',  s.IsVisibleByDefaultBool__c);
-            sm.put('forwardTransitions',  parseCommaSep(s.AllowedForwardTransitions__c));
-            sm.put('backtrackTransitions',parseCommaSep(s.AllowedBacktrackTransitions__c));
+            sm.put('forwardTransitions',  parseCommaSep(s.AllowedForwardTransitionsTxt__c));
+            sm.put('backtrackTransitions',parseCommaSep(s.AllowedBacktrackTransitionsTxt__c));
             stages.add(sm);
         }
 
         // --- Load persona views ---
         Map<String,List<Map<String,Object>>> personaViews = new Map<String,List<Map<String,Object>>>();
         for (WorkflowPersonaView__mdt pv : [
-            SELECT PersonaName__c, ColumnName__c, StageApiValues__c, SortOrder__c, IsExtendedColumnBool__c
+            SELECT PersonaName__c, ColumnName__c, StageApiValuesTxt__c, SortOrderNumber__c, IsExtendedColumnBool__c
             FROM WorkflowPersonaView__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
             WITH SYSTEM_MODE
-            ORDER BY PersonaName__c ASC, SortOrder__c ASC NULLS LAST
+            ORDER BY PersonaName__c ASC, SortOrderNumber__c ASC NULLS LAST
         ]) {
             String persona = pv.PersonaName__c;
             if (!personaViews.containsKey(persona)) {
@@ -121,9 +121,9 @@ public with sharing class WorkflowConfigService {
             }
             Map<String,Object> col = new Map<String,Object>();
             col.put('columnName',  pv.ColumnName__c);
-            col.put('stages',      parseCommaSep(pv.StageApiValues__c));
+            col.put('stages',      parseCommaSep(pv.StageApiValuesTxt__c));
             col.put('isExtended',  pv.IsExtendedColumnBool__c);
-            col.put('sortOrder',   pv.SortOrder__c);
+            col.put('sortOrder',   pv.SortOrderNumber__c);
             personaViews.get(persona).add(col);
         }
 

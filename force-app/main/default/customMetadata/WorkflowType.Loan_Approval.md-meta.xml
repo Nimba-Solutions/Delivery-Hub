@@ -3,7 +3,7 @@
     <label>Loan Approval</label>
     <protected>false</protected>
     <values>
-        <field>Description__c</field>
+        <field>DescriptionTxt__c</field>
         <value xsi:type="xsd:string">Loan application intake through approval, funding, and payment. Simplified linear board — one column per stage, no persona groupings.</value>
     </values>
     <values>
@@ -15,7 +15,7 @@
         <value xsi:type="xsd:boolean">false</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">2</value>
     </values>
     <values>

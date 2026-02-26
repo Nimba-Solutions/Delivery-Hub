@@ -3,7 +3,7 @@
     <label>Software Delivery</label>
     <protected>false</protected>
     <values>
-        <field>Description__c</field>
+        <field>DescriptionTxt__c</field>
         <value xsi:type="xsd:string">Full software delivery lifecycle: scoping, estimation, approval, development, QA, UAT, and deployment. Four persona views (Client, Consultant, Developer, QA) with grouped columns.</value>
     </values>
     <values>
@@ -15,7 +15,7 @@
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">1</value>
     </values>
     <values>

@@ -8,7 +8,8 @@
       "Bash(head:*)",
       "Bash(node:*)",
       "Bash(cd /c/Projects/Delivery-Hub && git push -u origin feature/gb226-workflow-platform 2>&1)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(cd /c/Projects/Delivery-Hub && git push origin feature/gb226-workflow-platform 2>&1)"
     ]
   }
 }

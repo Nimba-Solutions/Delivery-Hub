@@ -15,11 +15,11 @@
         <value xsi:type="xsd:string">Proposal Requested</value>
     </values>
     <values>
-        <field>StageApiValues__c</field>
+        <field>StageApiValuesTxt__c</field>
         <value xsi:type="xsd:string">Proposal Requested</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">7</value>
     </values>
     <values>

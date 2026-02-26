@@ -11,7 +11,7 @@
         <value xsi:type="xsd:string">Ready for Tech Review</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">11</value>
     </values>
     <values>
@@ -51,11 +51,11 @@
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>AllowedForwardTransitions__c</field>
+        <field>AllowedForwardTransitionsTxt__c</field>
         <value xsi:type="xsd:string">Tech Reviewing,Ready for Client Approval,Ready for Development</value>
     </values>
     <values>
-        <field>AllowedBacktrackTransitions__c</field>
+        <field>AllowedBacktrackTransitionsTxt__c</field>
         <value xsi:type="xsd:string">Drafting Proposal,Proposal Requested,Sizing Underway,Ready for Prioritization,Cancelled</value>
     </values>
 </CustomMetadata>
