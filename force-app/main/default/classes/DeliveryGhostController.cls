@@ -1,20 +1,66 @@
 /**
  * @description Controller for the Delivery Ghost Recorder LWC.
- * Logs user activity and creates quick work items.
+ * Logs user activity to Activity_Log__c and creates quick work items.
  * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryGhostController {
 
     /**
-     * @description Logs a user navigation event (Ghost Log).
-     * @param actionType The type of action (e.g., 'Navigation').
-     * @param contextData JSON string containing browser/URL info.
+     * @description Logs a user navigation or action event to the Activity_Log__c object.
+     * Parses the contextData JSON to extract component name and populates the running
+     * user's ID automatically.
+     * @param actionType The type of action (e.g., 'Navigation', 'Button_Click', 'Feature_Use').
+     * @param contextData JSON string containing browser/URL/component info.
      */
     @AuraEnabled
     public static void logUserActivity(String actionType, String contextData) {
-        // In a real scenario, this might write to a custom object or platform event
-        // Using LoggingLevel.INFO to satisfy PMD
-        System.debug(LoggingLevel.INFO, 'Ghost Log: ' + actionType + ' | ' + contextData);
+        try {
+            // Gate: activity logging must be explicitly enabled in org settings
+            Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
+            if (settings == null || !settings.EnableActivityLoggingBool__c) {
+                return;
+            }
+
+            Activity_Log__c log = new Activity_Log__c();
+            log.ActionTypePk__c = actionType;
+            log.ContextDataTxt__c = contextData;
+            log.UserIdTxt__c = UserInfo.getUserId();
+
+            // Extract component/object name from the context JSON when available
+            if (String.isNotBlank(contextData)) {
+                try {
+                    Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextData);
+                    String objName = (String) ctx.get('objectName');
+                    if (String.isNotBlank(objName)) {
+                        log.ComponentNameTxt__c = objName;
+                    }
+                    String sessionId = (String) ctx.get('sessionId');
+                    if (String.isNotBlank(sessionId)) {
+                        log.SessionIdTxt__c = sessionId;
+                    }
+                } catch (Exception parseEx) {
+                    // Non-critical — context is best-effort
+                    System.debug(LoggingLevel.FINE, 'Context parse skipped: ' + parseEx.getMessage());
+                }
+            }
+
+            // Attempt to link to the first active Network Entity (client org identity)
+            List<Network_Entity__c> entities = [
+                SELECT Id FROM Network_Entity__c
+                WHERE StatusPk__c = 'Active'
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate ASC
+                LIMIT 1
+            ];
+            if (!entities.isEmpty()) {
+                log.NetworkEntityId__c = entities[0].Id;
+            }
+
+            insert as system log;
+        } catch (Exception e) {
+            // Activity logging must never break the user experience
+            System.debug(LoggingLevel.WARN, 'Activity log write failed: ' + e.getMessage());
+        }
     }
 
     /**
@@ -23,7 +69,7 @@ public with sharing class DeliveryGhostController {
      * @param description The detailed description.
      * @param priority The priority level.
      * @param contextData The captured browser/url context.
-     * @param workItemType 'Bug' or 'Feature' (from the new radio button).
+     * @param workItemType 'Bug' or 'Feature' (from the radio button).
      * @return Id of the created work item.
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
@@ -41,7 +87,6 @@ public with sharing class DeliveryGhostController {
             String fullSubject = prefix + subject;
 
             // 3. Generate Brief Description (Max 100 chars)
-            // Combine Subject + Description to ensure it's meaningful
             String briefSource = fullSubject + ' - ' + (String.isBlank(description) ? '' : description);
             String briefDesc = (briefSource.length() > 100) ? briefSource.substring(0, 100) : briefSource;
 

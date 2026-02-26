@@ -34,13 +34,17 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @api hideInFlightSection = false;
     @api hideRecentSection = false;
 
+    @api hideThisWeekSection = false;
+
     @track attentionWorkItems = [];
     @track phases = [];
     @track recentWorkItems = [];
+    @track thisWeek = null;
     @track isLoading = true;
     @track announcements = [];
     @track inFlightCollapsed = false;
     @track recentCollapsed = false;
+    @track thisWeekCollapsed = false;
     @track workflowConfig = null;
 
     _wiredResult;
@@ -148,6 +152,16 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             key: idx,
             text
         }));
+
+        // This Week metrics
+        if (data.thisWeek) {
+            this.thisWeek = {
+                completed: data.thisWeek.completed || 0,
+                moved: data.thisWeek.moved || 0,
+                hoursLogged: data.thisWeek.hoursLogged || 0,
+                blocked: data.thisWeek.blocked || 0
+            };
+        }
     }
 
     // ── Derived getters ──
@@ -200,13 +214,19 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         return this.hasAttentionItems ? 'cd-greeting cd-greeting--attention' : 'cd-greeting cd-greeting--clean';
     }
 
+    get hasThisWeek() {
+        return this.thisWeek != null;
+    }
+
     get inFlightChevronIcon() { return this.inFlightCollapsed ? 'utility:chevronright' : 'utility:chevrondown'; }
     get recentChevronIcon()   { return this.recentCollapsed   ? 'utility:chevronright' : 'utility:chevrondown'; }
+    get thisWeekChevronIcon() { return this.thisWeekCollapsed  ? 'utility:chevronright' : 'utility:chevrondown'; }
 
     // ── Handlers ──
 
-    toggleInFlight() { this.inFlightCollapsed = !this.inFlightCollapsed; }
-    toggleRecent()   { this.recentCollapsed   = !this.recentCollapsed;   }
+    toggleInFlight()  { this.inFlightCollapsed  = !this.inFlightCollapsed;  }
+    toggleRecent()    { this.recentCollapsed    = !this.recentCollapsed;   }
+    toggleThisWeek()  { this.thisWeekCollapsed  = !this.thisWeekCollapsed; }
 
     handleWorkItemClick(event) {
         const recordId = event.currentTarget.dataset.id;

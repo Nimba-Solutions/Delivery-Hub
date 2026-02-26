@@ -128,8 +128,11 @@
                                                 <div class="meta-item" title={wi.dateTooltip}>
                                                     <lightning-icon icon-name="utility:event" size="xx-small" class="slds-icon-text-light"></lightning-icon>
                                                     <span>ETA: {wi.calculatedETA}</span>
+                                                    <template if:true={wi.hasConfidence}>
+                                                        <span class={wi.confidenceClass} title="ETA confidence">{wi.confidenceLabel}</span>
+                                                    </template>
                                                 </div>
-                                                
+
                                                 <template if:true={wi.uiUat}>
                                                     <div class="meta-item uat-date" title="Target UAT Date">
                                                         <span>UAT: {wi.uiUat}</span>

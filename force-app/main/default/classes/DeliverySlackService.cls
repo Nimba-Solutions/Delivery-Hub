@@ -25,6 +25,23 @@ public with sharing class DeliverySlackService {
     }
 
     /**
+     * @description Asynchronously posts a rich approval-request message to Slack with
+     *              a deep link back to the work item in Salesforce.
+     *              No-ops silently if Slack is not configured.
+     *              Accepts a JSON string with keys: workItemId, workItemName, workItemTitle, newStage.
+     * @param approvalContextJson JSON containing work item approval context
+     */
+    @future(callout=true)
+    public static void postApprovalRequest(String approvalContextJson) {
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+            return;
+        }
+        Map<String, String> ctx = (Map<String, String>) JSON.deserialize(approvalContextJson, Map<String, String>.class);
+        post(settings.SlackWebhookUrl__c, buildApprovalPayload(ctx));
+    }
+
+    /**
      * @description Tests the provided Slack webhook by posting a confirmation message.
      *              Called directly from the settings LWC via user action (no DML context).
      * @param webhookUrl The Slack Incoming Webhook URL to test
@@ -90,6 +107,72 @@ public with sharing class DeliverySlackService {
                     }
                 }
             }
+        });
+    }
+
+    /**
+     * @description Builds a rich Slack Block Kit payload for client-action stages
+     *              with a deep link button back to the work item in Salesforce.
+     * @param ctx Map with keys: workItemId, workItemName, workItemTitle, newStage
+     * @return Serialised JSON string
+     */
+    private static String buildApprovalPayload(Map<String, String> ctx) {
+        String workItemId = ctx.get('workItemId');
+        String workItemName = ctx.get('workItemName');
+        String workItemTitle = ctx.get('workItemTitle');
+        String newStage = ctx.get('newStage');
+
+        String orgUrl = Url.getOrgDomainUrl().toExternalForm();
+        String recordUrl = orgUrl + '/lightning/r/WorkItem__c/' + workItemId + '/view';
+        String title = String.isNotBlank(workItemTitle) ? workItemTitle : 'Work Item';
+
+        String headerText = ':bell: *Action Required: ' + workItemName + '*';
+        String bodyText = '*' + title + '*\nThis work item has moved to `' + newStage
+            + '` and needs your review.\nPlease open it in Salesforce to approve, reject, or provide feedback.';
+
+        List<Object> blocks = new List<Object>{
+            new Map<String, Object>{
+                'type' => 'header',
+                'text' => new Map<String, Object>{
+                    'type' => 'plain_text',
+                    'text' => 'Action Required: ' + workItemName
+                }
+            },
+            new Map<String, Object>{
+                'type' => 'section',
+                'text' => new Map<String, Object>{
+                    'type' => 'mrkdwn',
+                    'text' => bodyText
+                }
+            },
+            new Map<String, Object>{
+                'type' => 'actions',
+                'elements' => new List<Object>{
+                    new Map<String, Object>{
+                        'type' => 'button',
+                        'text' => new Map<String, Object>{
+                            'type' => 'plain_text',
+                            'text' => 'Open in Salesforce'
+                        },
+                        'url' => recordUrl,
+                        'style' => 'primary'
+                    }
+                }
+            },
+            new Map<String, Object>{
+                'type' => 'context',
+                'elements' => new List<Object>{
+                    new Map<String, Object>{
+                        'type' => 'mrkdwn',
+                        'text' => ':clock3: Moved at ' + Datetime.now().format('MMM d, h:mm a')
+                    }
+                }
+            }
+        };
+
+        return JSON.serialize(new Map<String, Object>{
+            'text' => headerText,
+            'blocks' => blocks
         });
     }
 }

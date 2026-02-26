@@ -128,6 +128,7 @@ public with sharing class DeliveryHubDashboardController {
         result.put('phases', fetchPhaseList());
         result.put('recentWorkItems', fetchRecentWorkItems());
         result.put('announcements', fetchVendorAnnouncements());
+        result.put('thisWeek', fetchThisWeekMetrics());
         return result;
     }
 
@@ -228,6 +229,60 @@ public with sharing class DeliveryHubDashboardController {
             }
         }
         return texts;
+    }
+
+    private static Map<String, Object> fetchThisWeekMetrics() {
+        Map<String, Object> metrics = new Map<String, Object>();
+        Date weekStart = Date.today().toStartOfWeek();
+        Datetime weekStartDt = Datetime.newInstance(weekStart, Time.newInstance(0, 0, 0, 0));
+
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+
+        // Items completed this week
+        Integer completed = [
+            SELECT COUNT()
+            FROM WorkItem__c
+            WHERE StageNamePk__c IN :terminalStages
+            AND LastModifiedDate >= :weekStartDt
+            WITH SYSTEM_MODE
+        ];
+        metrics.put('completed', completed);
+
+        // Items modified (stage changed) this week
+        Integer moved = [
+            SELECT COUNT()
+            FROM WorkItem__c
+            WHERE LastModifiedDate >= :weekStartDt
+            AND StageNamePk__c NOT IN :terminalStages
+            WITH SYSTEM_MODE
+        ];
+        metrics.put('moved', moved);
+
+        // Hours logged this week
+        AggregateResult[] hoursAgg = [
+            SELECT SUM(HoursLoggedNumber__c) total
+            FROM WorkLog__c
+            WHERE WorkDateDate__c >= :weekStart
+            WITH SYSTEM_MODE
+        ];
+        Decimal hours = hoursAgg[0].get('total') != null ? (Decimal)hoursAgg[0].get('total') : 0;
+        metrics.put('hoursLogged', hours);
+
+        // Currently blocked items
+        Set<Id> blockedIds = new Set<Id>();
+        for (WorkItemDependency__c dep : [
+            SELECT BlockedWorkItemId__c
+            FROM WorkItemDependency__c
+            WHERE BlockingWorkItemId__c IN (
+                SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
+            )
+            WITH SYSTEM_MODE
+        ]) {
+            blockedIds.add(dep.BlockedWorkItemId__c);
+        }
+        metrics.put('blocked', blockedIds.size());
+
+        return metrics;
     }
 
 }

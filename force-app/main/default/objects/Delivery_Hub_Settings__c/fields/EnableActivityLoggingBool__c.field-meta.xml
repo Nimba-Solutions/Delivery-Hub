@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableActivityLoggingBool__c</fullName>
+    <description>When enabled, the Ghost Recorder logs page navigation and feature usage to Activity_Log__c for experience optimization analytics. Default is OFF to protect data storage in large orgs. A scheduled cleanup job purges records older than 90 days.</description>
+    <inlineHelpText>Enable activity logging to track how users navigate the app. Logs are purged after 90 days. Recommended for orgs with fewer than 500 active users.</inlineHelpText>
+    <defaultValue>false</defaultValue>
+    <externalId>false</externalId>
+    <label>Enable Activity Logging</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

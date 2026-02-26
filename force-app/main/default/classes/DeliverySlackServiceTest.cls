@@ -112,4 +112,50 @@ private class DeliverySlackServiceTest {
         Test.stopTest();
         System.assert(true, 'postStageChanges no-ops silently when no URL is configured');
     }
+
+    // ── postApprovalRequest ────────────────────────────────────────────────
+
+    @IsTest
+    static void testPostApprovalRequestSuccess() {
+        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+
+        // Create a work item to get a valid Id
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Test Approval Item',
+            StageNamePk__c = 'In Client Approval'
+        );
+        insert wi;
+
+        String ctxJson = JSON.serialize(new Map<String, String>{
+            'workItemId' => wi.Id,
+            'workItemName' => 'WI-001',
+            'workItemTitle' => 'Test Approval Item',
+            'newStage' => 'In Client Approval'
+        });
+
+        Test.startTest();
+        DeliverySlackService.postApprovalRequest(ctxJson);
+        Test.stopTest();
+        System.assert(true, 'postApprovalRequest completed without exception');
+    }
+
+    @IsTest
+    static void testPostApprovalRequestNoUrl() {
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        settings.SlackWebhookUrl__c = null;
+        update settings;
+
+        String ctxJson = JSON.serialize(new Map<String, String>{
+            'workItemId' => null,
+            'workItemName' => 'WI-001',
+            'workItemTitle' => 'Test',
+            'newStage' => 'In Client Approval'
+        });
+
+        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+        Test.startTest();
+        DeliverySlackService.postApprovalRequest(ctxJson);
+        Test.stopTest();
+        System.assert(true, 'postApprovalRequest no-ops when no webhook URL configured');
+    }
 }

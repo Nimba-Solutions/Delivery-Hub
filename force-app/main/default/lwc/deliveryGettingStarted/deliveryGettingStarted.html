@@ -4,7 +4,10 @@
         <div class="gs-header" onclick={handleToggle} role="button" tabindex="0" onkeydown={handleKeydown}>
             <div class="gs-header-left">
                 <lightning-icon icon-name="utility:knowledge_base" size="x-small" class="gs-icon"></lightning-icon>
-                <span class="gs-title">Getting Started with Delivery Hub</span>
+                <span class="gs-title">{headerTitle}</span>
+                <template if:true={isAlreadyConnected}>
+                    <span class="gs-connected-pill">Connected</span>
+                </template>
             </div>
             <lightning-icon icon-name={chevronIcon} size="x-small" class="gs-chevron"></lightning-icon>
         </div>
@@ -12,76 +15,140 @@
         <!-- Expanded body -->
         <template if:true={isExpanded}>
             <div class="gs-body">
-                <p class="gs-intro">
-                    Here&apos;s a quick overview of how your delivery workflow moves through this portal.
-                </p>
 
-                <div class="gs-steps">
-                    <!-- Step 1 -->
-                    <div class="gs-step">
-                        <div class="gs-step-num gs-step-num--approval">1</div>
-                        <div class="gs-step-content">
-                            <strong class="gs-step-title">Review &amp; Approve</strong>
-                            <p class="gs-step-desc">
-                                When a work item is scoped and estimated, it lands in <em>Client Approval</em>.
-                                You&apos;ll see it highlighted in <strong>Needs Your Attention</strong> above.
-                                Open the work item, review the details, and click <strong>Approve</strong> or send it back with a comment.
-                            </p>
+                <!-- Progress indicator -->
+                <div class="wiz-progress">
+                    <template for:each={progressSteps} for:item="step">
+                        <div key={step.index} class="wiz-step">
+                            <div class={step.stepClass}>{step.index}</div>
+                            <span class="wiz-step-label">{step.label}</span>
                         </div>
-                    </div>
-
-                    <!-- Step 2 -->
-                    <div class="gs-step">
-                        <div class="gs-step-num gs-step-num--uat">2</div>
-                        <div class="gs-step-content">
-                            <strong class="gs-step-title">UAT Testing</strong>
-                            <p class="gs-step-desc">
-                                Once development and internal QA are complete, work items move to <em>Client UAT</em>.
-                                Your team tests the feature in a sandbox or production org.
-                                Use the <strong>Chat</strong> panel on the work item to report any issues directly to the engineering team.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Step 3 -->
-                    <div class="gs-step">
-                        <div class="gs-step-num gs-step-num--signoff">3</div>
-                        <div class="gs-step-content">
-                            <strong class="gs-step-title">Sign Off</strong>
-                            <p class="gs-step-desc">
-                                Happy with the result? Move the work item to <em>UAT Sign-off</em> to confirm acceptance.
-                                This triggers the deployment pipeline — your approved change gets scheduled for production release.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Step 4 -->
-                    <div class="gs-step">
-                        <div class="gs-step-num gs-step-num--comms">4</div>
-                        <div class="gs-step-content">
-                            <strong class="gs-step-title">Stay In the Loop</strong>
-                            <p class="gs-step-desc">
-                                Watch the <strong>What&apos;s In Flight</strong> tiles to see how many work items are active in each phase.
-                                The <strong>Recently Updated</strong> list shows the last 5 changed work items so you always know where things stand.
-                                Use <strong>Report Issue / Request Feature</strong> at any time to submit new work directly to the queue.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gs-footer">
-                    <lightning-button
-                        label="Check Connection"
-                        icon-name="utility:connected_apps"
-                        variant="neutral"
-                        size="small"
-                        onclick={handleCheckConnection}
-                        disabled={isCheckingConnection}>
-                    </lightning-button>
-                    <template if:true={isCheckingConnection}>
-                        <lightning-spinner size="x-small" alternative-text="Checking…" class="gs-spinner"></lightning-spinner>
                     </template>
                 </div>
+
+                <!-- ── STEP 1: Org Type ── -->
+                <template if:true={isStep1}>
+                    <div class="wiz-content">
+                        <h3 class="wiz-heading">What type of org is this?</h3>
+                        <p class="wiz-sub">This determines how Delivery Hub connects to the network.</p>
+                        <div class="wiz-cards">
+                            <button class="wiz-card" data-type="client" onclick={handleOrgTypeSelect}
+                                    aria-pressed={isClientOrg}>
+                                <lightning-icon icon-name="standard:account" size="medium"></lightning-icon>
+                                <strong>Client Org</strong>
+                                <span class="wiz-card-desc">I receive deliverables from a consulting partner.</span>
+                                <template if:true={isClientOrg}>
+                                    <span class="wiz-card-check">
+                                        <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
+                                    </span>
+                                </template>
+                            </button>
+                            <button class="wiz-card" data-type="vendor" onclick={handleOrgTypeSelect}
+                                    aria-pressed={isVendorOrg}>
+                                <lightning-icon icon-name="standard:partners" size="medium"></lightning-icon>
+                                <strong>Vendor / Consulting Org</strong>
+                                <span class="wiz-card-desc">I deliver work to client organizations.</span>
+                                <template if:true={isVendorOrg}>
+                                    <span class="wiz-card-check">
+                                        <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
+                                    </span>
+                                </template>
+                            </button>
+                        </div>
+                        <div class="wiz-actions">
+                            <lightning-button label="Next" variant="brand" onclick={handleNext}
+                                              disabled={noOrgTypeSelected}></lightning-button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ── STEP 2: Partner Config ── -->
+                <template if:true={isStep2}>
+                    <div class="wiz-content">
+                        <template if:true={isClientOrg}>
+                            <h3 class="wiz-heading">Connect to your delivery partner</h3>
+                            <p class="wiz-sub">
+                                By default, your portal will connect to <strong>Cloud Nimbus LLC</strong> as your delivery partner.
+                                This creates a secure two-way link for work item sync, updates, and collaboration.
+                            </p>
+                            <div class="wiz-info-box">
+                                <lightning-icon icon-name="utility:connected_apps" size="x-small"></lightning-icon>
+                                <span>Default partner: <strong>Cloud Nimbus LLC</strong></span>
+                            </div>
+                        </template>
+                        <template if:true={isVendorOrg}>
+                            <h3 class="wiz-heading">Configure your vendor hub</h3>
+                            <p class="wiz-sub">
+                                As a vendor org, your Delivery Hub instance becomes the central hub.
+                                Client orgs will connect to you. Click <strong>Next</strong> to initialize your hub settings.
+                            </p>
+                            <div class="wiz-info-box">
+                                <lightning-icon icon-name="utility:world" size="x-small"></lightning-icon>
+                                <span>Your org will accept inbound connections from client organizations.</span>
+                            </div>
+                        </template>
+                        <div class="wiz-actions">
+                            <lightning-button label="Back" variant="neutral" onclick={handleBack}></lightning-button>
+                            <lightning-button label="Next" variant="brand" onclick={handleNext}></lightning-button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ── STEP 3: Test Connection ── -->
+                <template if:true={isStep3}>
+                    <div class="wiz-content">
+                        <h3 class="wiz-heading">Establish connection</h3>
+                        <template if:true={isClientOrg}>
+                            <p class="wiz-sub">Click the button below to register your org with Cloud Nimbus LLC and set up sync jobs.</p>
+                        </template>
+                        <template if:true={isVendorOrg}>
+                            <p class="wiz-sub">Click the button below to initialize default settings and schedule sync jobs.</p>
+                        </template>
+
+                        <template if:true={connectionError}>
+                            <div class="wiz-error">
+                                <lightning-icon icon-name="utility:error" size="x-small" variant="error"></lightning-icon>
+                                <span>{connectionError}</span>
+                            </div>
+                        </template>
+
+                        <div class="wiz-actions wiz-actions--center">
+                            <lightning-button label="Back" variant="neutral" onclick={handleBack}></lightning-button>
+                            <lightning-button label="Connect Now" variant="brand" onclick={handleConnect}
+                                              disabled={isConnecting}
+                                              icon-name="utility:connected_apps"></lightning-button>
+                            <template if:true={isConnecting}>
+                                <lightning-spinner size="small" alternative-text="Connecting..."></lightning-spinner>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ── STEP 4: Success ── -->
+                <template if:true={isStep4}>
+                    <div class="wiz-content wiz-content--success">
+                        <div class="wiz-success-icon">
+                            <lightning-icon icon-name="action:approval" size="large"></lightning-icon>
+                        </div>
+                        <h3 class="wiz-heading">You&apos;re all set!</h3>
+                        <template if:true={isAlreadyConnected}>
+                            <p class="wiz-sub">
+                                Your portal is connected to <strong>{connectedEntityName}</strong>.
+                                Sync jobs are running automatically to keep your work items in sync.
+                            </p>
+                        </template>
+                        <template if:false={isAlreadyConnected}>
+                            <p class="wiz-sub">Setup is complete. Your delivery workflow is ready to use.</p>
+                        </template>
+                        <div class="wiz-actions wiz-actions--center">
+                            <lightning-button label="Recheck Connection" variant="neutral"
+                                              onclick={handleRecheck}
+                                              icon-name="utility:refresh"
+                                              disabled={isCheckingStatus}></lightning-button>
+                        </div>
+                    </div>
+                </template>
+
             </div>
         </template>
     </div>

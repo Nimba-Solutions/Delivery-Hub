@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActionTypePk__c</fullName>
+    <description>Category of user action being logged.</description>
+    <externalId>false</externalId>
+    <label>Action Type</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>Navigation</fullName><default>true</default><label>Navigation</label></value>
+            <value><fullName>Button_Click</fullName><default>false</default><label>Button Click</label></value>
+            <value><fullName>Feature_Use</fullName><default>false</default><label>Feature Use</label></value>
+            <value><fullName>Stage_Change</fullName><default>false</default><label>Stage Change</label></value>
+            <value><fullName>Search</fullName><default>false</default><label>Search</label></value>
+            <value><fullName>Error</fullName><default>false</default><label>Error</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -68,6 +68,13 @@ private class DeliveryHubDashboardControllerTest {
         System.assert(result.containsKey('attentionWorkItems'), 'Should return attentionWorkItems key');
         System.assert(result.containsKey('phases'), 'Should return phases key');
         System.assert(result.containsKey('recentWorkItems'), 'Should return recentWorkItems key');
+        System.assert(result.containsKey('thisWeek'), 'Should return thisWeek key');
+
+        Map<String, Object> thisWeek = (Map<String, Object>)result.get('thisWeek');
+        System.assert(thisWeek.containsKey('completed'), 'thisWeek should contain completed metric');
+        System.assert(thisWeek.containsKey('moved'), 'thisWeek should contain moved metric');
+        System.assert(thisWeek.containsKey('hoursLogged'), 'thisWeek should contain hoursLogged metric');
+        System.assert(thisWeek.containsKey('blocked'), 'thisWeek should contain blocked metric');
 
         List<DeliveryHubDashboardController.WorkItemSummary> attention =
             (List<DeliveryHubDashboardController.WorkItemSummary>)result.get('attentionWorkItems');

@@ -102,6 +102,53 @@
     </template>
 
     <!-- ============================================================ -->
+    <!-- SECTION 2b: This Week at a Glance                           -->
+    <!-- ============================================================ -->
+    <template if:false={hideThisWeekSection}>
+        <template if:true={hasThisWeek}>
+            <lightning-card title="This Week" icon-name="utility:date_input" class="slds-m-bottom_small">
+                <lightning-button-icon
+                    slot="actions"
+                    icon-name={thisWeekChevronIcon}
+                    variant="bare"
+                    onclick={toggleThisWeek}
+                    alternative-text="Toggle">
+                </lightning-button-icon>
+                <template if:false={thisWeekCollapsed}>
+                    <template if:false={isLoading}>
+                        <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
+                            <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+                                <div class="tw-metric">
+                                    <div class="tw-metric-value tw-metric--success">{thisWeek.completed}</div>
+                                    <div class="tw-metric-label">Completed</div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+                                <div class="tw-metric">
+                                    <div class="tw-metric-value tw-metric--info">{thisWeek.moved}</div>
+                                    <div class="tw-metric-label">In Progress</div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+                                <div class="tw-metric">
+                                    <div class="tw-metric-value">{thisWeek.hoursLogged}</div>
+                                    <div class="tw-metric-label">Hours Logged</div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+                                <div class="tw-metric">
+                                    <div class="tw-metric-value tw-metric--warning">{thisWeek.blocked}</div>
+                                    <div class="tw-metric-label">Blocked</div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+            </lightning-card>
+        </template>
+    </template>
+
+    <!-- ============================================================ -->
     <!-- SECTION 3: Recently Updated                                  -->
     <!-- ============================================================ -->
     <template if:false={hideRecentSection}>

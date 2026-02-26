@@ -66,12 +66,15 @@ private class DeliveryWorkItemETAServiceTest {
         System.assertNotEquals(null, result, 'Result should not be null');
         System.assert(result.workItems.size() > 0, 'Should have calculated ETAs for workItems');
         
-        // Verify prioritized work item was processed
+        // Verify prioritized work item was processed with confidence
         Boolean foundPrioritized = false;
         for(DeliveryWorkItemETAService.WorkItemETADTO dto : result.workItems) {
             if(dto.workItemId == prioritizedWorkItemIds[0]) {
                 foundPrioritized = true;
                 System.assertNotEquals(null, dto.calculatedETA, 'Prioritized work item should have an ETA');
+                System.assertNotEquals(null, dto.confidencePercent, 'DTO should include confidence percentage');
+                System.assert(dto.confidencePercent >= 0 && dto.confidencePercent <= 100,
+                    'Confidence should be between 0 and 100, got: ' + dto.confidencePercent);
             }
         }
         System.assert(foundPrioritized, 'Prioritized work item should be in the result set');

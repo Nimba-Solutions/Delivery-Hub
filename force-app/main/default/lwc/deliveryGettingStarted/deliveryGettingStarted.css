@@ -47,86 +47,167 @@
 .gs-chevron {
     --lwc-colorTextIconDefault: #94a3b8;
 }
+.gs-connected-pill {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #065f46;
+    background: #d1fae5;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+}
 
 /* ── Body ── */
 .gs-body {
     padding: 1rem 1.25rem 1.25rem;
 }
-.gs-intro {
-    font-size: 0.82rem;
-    color: #64748b;
-    margin: 0 0 1rem;
-}
 
-/* ── Step grid ── */
-.gs-steps {
+/* ── Progress indicator ── */
+.wiz-progress {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+.wiz-step {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    align-items: center;
+    gap: 0.3rem;
 }
-.gs-step {
-    display: flex;
-    gap: 0.875rem;
-    align-items: flex-start;
-}
-
-/* ── Step number bubbles ── */
-.gs-step-num {
-    flex-shrink: 0;
-    width: 1.75rem;
-    height: 1.75rem;
+.wiz-step-dot {
+    width: 1.6rem;
+    height: 1.6rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
-    margin-top: 0.05rem;
+    background: #e2e8f0;
+    color: #94a3b8;
+    transition: all 0.2s;
 }
-.gs-step-num--approval {
-    background: #dbeafe;
-    color: #1d4ed8;
+.wiz-step-dot--active {
+    background: #4f46e5;
+    color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
-.gs-step-num--uat {
-    background: #ede9fe;
-    color: #6d28d9;
+.wiz-step-dot--done {
+    background: #059669;
+    color: #ffffff;
 }
-.gs-step-num--signoff {
-    background: #d1fae5;
-    color: #065f46;
-}
-.gs-step-num--comms {
-    background: #fff7ed;
-    color: #c2410c;
+.wiz-step-label {
+    font-size: 0.65rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
-/* ── Footer ── */
-.gs-footer {
+/* ── Content area ── */
+.wiz-content {
+    min-height: 8rem;
+}
+.wiz-content--success {
+    text-align: center;
+    padding: 1rem 0;
+}
+.wiz-heading {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.25rem;
+}
+.wiz-sub {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0 0 1rem;
+    line-height: 1.5;
+}
+
+/* ── Org type selection cards ── */
+.wiz-cards {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.wiz-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1rem 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    font-family: inherit;
+    font-size: 0.8rem;
+    color: #1e293b;
+    text-align: center;
+}
+.wiz-card:hover {
+    border-color: #a5b4fc;
+    background: #eef2ff;
+}
+.wiz-card[aria-pressed="true"] {
+    border-color: #4f46e5;
+    background: #eef2ff;
+}
+.wiz-card-desc {
+    font-size: 0.72rem;
+    color: #64748b;
+}
+.wiz-card-check {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    --lwc-colorTextIconDefault: #059669;
+}
+
+/* ── Info box ── */
+.wiz-info-box {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #e2e8f0;
-}
-.gs-spinner {
-    --lwc-spinnerSize: 1rem;
+    gap: 0.5rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    font-size: 0.78rem;
+    color: #065f46;
+    margin-bottom: 1rem;
 }
 
-/* ── Step content ── */
-.gs-step-content {
-    flex: 1;
-    min-width: 0;
-}
-.gs-step-title {
-    font-size: 0.82rem;
-    color: #1e293b;
-    display: block;
-    margin-bottom: 0.2rem;
-}
-.gs-step-desc {
+/* ── Error box ── */
+.wiz-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
     font-size: 0.78rem;
-    color: #64748b;
-    margin: 0;
-    line-height: 1.5;
+    color: #991b1b;
+    margin-bottom: 1rem;
+}
+
+/* ── Actions row ── */
+.wiz-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+}
+.wiz-actions--center {
+    justify-content: center;
+}
+
+/* ── Success icon ── */
+.wiz-success-icon {
+    margin-bottom: 0.75rem;
 }
