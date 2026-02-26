@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Delivery Activity Log</label>
+    <description>Tracks user navigation and feature usage within Delivery Hub for experience optimization analytics. Records are automatically purged after 90 days.</description>
+    <pluralLabel>Delivery Activity Logs</pluralLabel>
+    <nameField>
+        <displayFormat>DAL-{00000}</displayFormat>
+        <label>Activity Log Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>
