@@ -3,7 +3,7 @@
     <fullName>DeveloperDaysSizeNumber__c</fullName>
     <description>Developer days size estimation for the ticket</description>
     <inlineHelpText>T-shirt size expressed in developer-days. Used as input for ETA calculations.</inlineHelpText>
-    <externalId>true</externalId>
+    <externalId>false</externalId>
     <label>Developer Days Size</label>
     <precision>5</precision>
     <required>false</required>
