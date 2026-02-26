@@ -47,7 +47,7 @@ public without sharing class DeliveryRequestManagerController {
         WorkRequest__c req = reqs[0];
         String info = 'Status: ' + req.StatusPk__c;
         if (String.isNotBlank(req.RemoteTicketIdTxt__c)) {
-            info += ' | Remote Ticket ID: ' + req.RemoteTicketIdTxt__c;
+            info += ' | Remote Work Item ID: ' + req.RemoteTicketIdTxt__c;
         }
         info += ' | Last Updated: ' + req.LastModifiedDate.format();
         return info;
