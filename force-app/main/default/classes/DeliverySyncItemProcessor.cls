@@ -26,7 +26,7 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         }
 
         List<Sync_Item__c> itemsToUpdate = new List<Sync_Item__c>();
-        Map<Id, Request__c> requestsToUpdate = new Map<Id, Request__c>();
+        Map<Id, WorkRequest__c> requestsToUpdate = new Map<Id, WorkRequest__c>();
 
         for (Sync_Item__c item : items) {
             try {
@@ -92,8 +92,8 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                             }
 
                             // If we pushed a Ticket, map the Vendor's new ID to our Request bridge
-                            if (String.isNotBlank(remoteId) && item.ObjectTypePk__c.endsWithIgnoreCase('Ticket__c') && item.RequestId__c != null) {
-                                requestsToUpdate.put(item.RequestId__c, new Request__c(
+                            if (String.isNotBlank(remoteId) && item.ObjectTypePk__c.endsWithIgnoreCase('WorkItem__c') && item.RequestId__c != null) {
+                                requestsToUpdate.put(item.RequestId__c, new WorkRequest__c(
                                     Id = item.RequestId__c,
                                     RemoteTicketIdTxt__c = remoteId
                                 ));

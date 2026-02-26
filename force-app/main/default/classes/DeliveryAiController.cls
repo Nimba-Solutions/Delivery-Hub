@@ -13,25 +13,25 @@ public with sharing class DeliveryAiController {
     /**
      * @description Generates a professional client-facing status update for a ticket
      *              using the OpenAI API. Throws AuraHandledException if AI is not configured.
-     * @param ticketId The Id of the Ticket__c record to draft an update for.
+     * @param ticketId The Id of the WorkItem__c record to draft an update for.
      * @return String The drafted status update text.
      */
     @AuraEnabled
     public static String draftStatusUpdate(Id ticketId) {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<Ticket__c> tickets = [
+        List<WorkItem__c> tickets = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                    EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
                    ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE Id = :ticketId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
 
         if (tickets.isEmpty()) {
-            throw new AuraHandledException('Ticket not found.');
+            throw new AuraHandledException('Work Item not found.');
         }
 
         String model = getModel(settings);
@@ -41,23 +41,23 @@ public with sharing class DeliveryAiController {
     /**
      * @description Suggests 3-5 testable acceptance criteria for a ticket
      *              based on its title and details, using the OpenAI API.
-     * @param ticketId The Id of the Ticket__c to generate criteria for.
+     * @param ticketId The Id of the WorkItem__c to generate criteria for.
      * @return String Bulleted acceptance criteria text.
      */
     @AuraEnabled
     public static String suggestAcceptanceCriteria(Id ticketId) {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<Ticket__c> tickets = [
+        List<WorkItem__c> tickets = [
             SELECT BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE Id = :ticketId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
 
         if (tickets.isEmpty()) {
-            throw new AuraHandledException('Ticket not found.');
+            throw new AuraHandledException('Work Item not found.');
         }
 
         String model = getModel(settings);
@@ -73,16 +73,16 @@ public with sharing class DeliveryAiController {
     public static String draftBoardSummary() {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<Ticket__c> tickets = [
+        List<WorkItem__c> tickets = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE IsActiveBool__c = true
             WITH SYSTEM_MODE
             ORDER BY StageNamePk__c, SortOrderNumber__c
         ];
 
         if (tickets.isEmpty()) {
-            throw new AuraHandledException('No active tickets found to summarise.');
+            throw new AuraHandledException('No active work items found to summarise.');
         }
 
         String model = getModel(settings);
@@ -99,9 +99,9 @@ public with sharing class DeliveryAiController {
     public static String draftReleaseNotes() {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<Ticket__c> tickets = [
+        List<WorkItem__c> tickets = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE StageNamePk__c IN ('Done', 'Deployed to Prod')
             AND LastModifiedDate >= :Datetime.now().addDays(-30)
             WITH SYSTEM_MODE
@@ -110,7 +110,7 @@ public with sharing class DeliveryAiController {
 
         if (tickets.isEmpty()) {
             throw new AuraHandledException(
-                'No tickets were completed or deployed in the last 30 days.'
+                'No work items were completed or deployed in the last 30 days.'
             );
         }
 
@@ -198,13 +198,13 @@ public with sharing class DeliveryAiController {
         return ((String) msg.get('content')).trim();
     }
 
-    private static String buildStatusPrompt(Ticket__c t) {
+    private static String buildStatusPrompt(WorkItem__c t) {
         String brief = String.isNotBlank(t.BriefDescriptionTxt__c)
             ? t.BriefDescriptionTxt__c : 'No title provided';
 
         String p = 'You are a professional software delivery manager writing a brief status '
             + 'update for a non-technical client.\n\n';
-        p += 'Ticket: ' + t.Name + '\n';
+        p += 'Work Item: ' + t.Name + '\n';
         p += 'Title: '  + brief  + '\n';
         p += 'Current Stage: ' + (t.StageNamePk__c != null ? t.StageNamePk__c : 'Unknown') + '\n';
 
@@ -227,20 +227,20 @@ public with sharing class DeliveryAiController {
         p += '\nWrite a concise 2-3 sentence status update to send directly to the client. '
            + 'Be professional and focus on current progress and what comes next. '
            + 'Translate any technical stage names into plain language the client will understand. '
-           + 'Do not include ticket IDs, greetings, sign-offs, or subject lines. '
+           + 'Do not include work item IDs, greetings, sign-offs, or subject lines. '
            + 'Return ONLY the status update text.';
 
         return p;
     }
 
-    private static String buildCriteriaPrompt(Ticket__c t) {
+    private static String buildCriteriaPrompt(WorkItem__c t) {
         String brief = String.isNotBlank(t.BriefDescriptionTxt__c)
             ? t.BriefDescriptionTxt__c : 'No title provided';
         String details = String.isNotBlank(t.DetailsTxt__c) ? stripHtml(t.DetailsTxt__c) : '';
 
-        String p = 'You are a software business analyst. Based on the following ticket, '
+        String p = 'You are a software business analyst. Based on the following work item, '
             + 'write 3-5 clear, testable acceptance criteria.\n\n'
-            + 'Ticket: ' + brief + '\n';
+            + 'Work Item: ' + brief + '\n';
         if (String.isNotBlank(details)) {
             p += 'Details: ' + details + '\n';
         }
@@ -250,9 +250,9 @@ public with sharing class DeliveryAiController {
         return p;
     }
 
-    private static String buildBoardSummaryPrompt(List<Ticket__c> tickets) {
+    private static String buildBoardSummaryPrompt(List<WorkItem__c> tickets) {
         Map<String, List<String>> byStage = new Map<String, List<String>>();
-        for (Ticket__c t : tickets) {
+        for (WorkItem__c t : tickets) {
             String stage = t.StageNamePk__c != null ? t.StageNamePk__c : 'Unknown';
             if (!byStage.containsKey(stage)) {
                 byStage.put(stage, new List<String>());
@@ -264,7 +264,7 @@ public with sharing class DeliveryAiController {
 
         String p = 'You are a software delivery manager. Write a concise weekly status update '
             + 'for a non-technical client, covering all active work grouped by stage.\n\n'
-            + 'Active Tickets by Stage:\n';
+            + 'Active Work Items by Stage:\n';
 
         for (String stage : byStage.keySet()) {
             p += '\n[' + stage + ']\n';
@@ -280,19 +280,19 @@ public with sharing class DeliveryAiController {
         return p;
     }
 
-    private static String buildReleaseNotesPrompt(List<Ticket__c> tickets) {
+    private static String buildReleaseNotesPrompt(List<WorkItem__c> tickets) {
         List<String> lines = new List<String>();
-        for (Ticket__c t : tickets) {
+        for (WorkItem__c t : tickets) {
             String title = String.isNotBlank(t.BriefDescriptionTxt__c)
                 ? t.BriefDescriptionTxt__c : t.Name;
             lines.add('- [' + t.StageNamePk__c + '] ' + title);
         }
         return 'You are a technical product manager writing a client-facing release notes summary. '
-            + 'Based on the completed tickets below, write concise, professional release notes '
+            + 'Based on the completed work items below, write concise, professional release notes '
             + 'suitable for a client email or changelog. Group related items where possible. '
             + 'Use plain language, avoid jargon, and highlight user impact. '
             + 'Format with a brief intro sentence, then a bulleted list.\n\n'
-            + 'Completed Tickets:\n' + String.join(lines, '\n') + '\n\n'
+            + 'Completed Work Items:\n' + String.join(lines, '\n') + '\n\n'
             + 'Return ONLY the release notes text, no subject lines or sign-offs.';
     }
 

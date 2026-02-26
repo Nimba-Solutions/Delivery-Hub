@@ -25,7 +25,7 @@
                     </div>
                     <button class="new-ticket-button" onclick={openCreateModal}>
                         <lightning-icon icon-name="utility:add" size="x-small" class="slds-m-right_x-small"></lightning-icon>
-                        New Ticket
+                        New Work Item
                     </button>
                     <template if:true={AiEnhancementEnabled}>
                         <button class="new-ticket-button" onclick={handleWeeklyUpdate} title="Generate AI weekly status summary">
@@ -78,7 +78,7 @@
                     <lightning-input type="checkbox" label="Show Extended Pipeline" checked={showAllColumns} onchange={handleToggleColumns}></lightning-input>
                 </div>
                 <div class="filter-group">
-                    <button class={myWorkButtonClass} onclick={handleMyWorkToggle} title="Show only tickets assigned to me">
+                    <button class={myWorkButtonClass} onclick={handleMyWorkToggle} title="Show only work items assigned to me">
                         <lightning-icon icon-name="utility:user" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
                         My Work
                     </button>
@@ -151,7 +151,7 @@
                                                 <span class={ticket.priorityClasses}>{ticket.uiPriority}</span>
                                             </template>
 
-                                            <button class="ticket-action-button" title="Move Ticket" data-id={ticket.uiId} onclick={handleCardClick}>
+                                            <button class="ticket-action-button" title="Move Work Item" data-id={ticket.uiId} onclick={handleCardClick}>
                                                 <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
                                             </button>
 
@@ -167,7 +167,7 @@
                                             </template>
 
                                             <template if:true={ticket.isCurrentlyBlocked}>
-                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This ticket is blocked."></lightning-icon>
+                                                <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This work item is blocked."></lightning-icon>
                                             </template>
                                         </div>
                                     </div>
@@ -182,7 +182,7 @@
                                         <span class="empty-dot"></span>
                                     </div>
                                     <div class="placeholder-text">Empty</div>
-                                    <div class="placeholder-subtext">Drop tickets here</div>
+                                    <div class="placeholder-subtext">Drop work items here</div>
                                 </div>
                             </template>
                         </div>
@@ -199,7 +199,7 @@
                     <button class="slds-modal__close" onclick={handleCreateCancel} title="Close">
                         <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
                     </button>
-                    <h2 class="slds-text-heading_medium">Create New Ticket</h2>
+                    <h2 class="slds-text-heading_medium">Create New Work Item</h2>
                 </header>
 
                 <div class="slds-modal__content slds-p-around_medium" style="background:#fafcff;">
@@ -211,7 +211,7 @@
                     </template>
                     
                     <template if:false={isAiProcessing}>
-                        <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%Ticket__c" 
+                        <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%WorkItem__c" 
                             default-field-values={createDefaults} 
                             onsubmit={handleCreateSubmit}
                             onsuccess={handleCreateSuccess}>
@@ -298,11 +298,11 @@
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <h2 class="slds-text-heading_medium slds-hyphenate">Additional Information Required</h2>
-                    <p class="slds-m-top_x-small">Please provide the following details to move the ticket to <strong>{transitionTargetStage}</strong>.</p>
+                    <p class="slds-m-top_x-small">Please provide the following details to move the work item to <strong>{transitionTargetStage}</strong>.</p>
                 </header>
                 <div class="slds-modal__content slds-p-around_medium">
                     <lightning-record-edit-form
-                        object-api-name="Ticket__c"
+                        object-api-name="WorkItem__c"
                         record-id={transitionTicketId}
                         onsuccess={handleTransitionSuccess}
                         onerror={handleTransitionError}>
@@ -314,7 +314,7 @@
                         </div>
                         <footer class="slds-modal__footer slds-m-top_medium">
                             <lightning-button variant="neutral" label="Cancel" onclick={closeTransitionModal}></lightning-button>
-                            <lightning-button variant="brand" type="submit" label="Save & Move Ticket" class="slds-m-left_x-small"></lightning-button>
+                            <lightning-button variant="brand" type="submit" label="Save & Move Work Item" class="slds-m-left_x-small"></lightning-button>
                         </footer>
                     </lightning-record-edit-form>
                 </div>
@@ -389,7 +389,7 @@
                 <div class="slds-modal__content slds-p-around_medium">
                     <h3 class="slds-text-heading_small slds-m-bottom_small">Blocked By:</h3>
                     <template if:false={selectedTicket.isBlockedBy.length}>
-                        <p>This ticket is not blocked by any other tickets.</p>
+                        <p>This work item is not blocked by any other work items.</p>
                     </template>
                     <template for:each={selectedTicket.isBlockedBy} for:item="dep">
                         <lightning-pill key={dep.dependencyId} label={dep.name} onremove={handleRemoveDependency} data-dependency-id={dep.dependencyId}></lightning-pill>
@@ -398,7 +398,7 @@
                     <h3 class="slds-text-heading_small slds-m-bottom_small">Add a Blocker</h3>
                     <div class="slds-grid slds-gutters slds-grid_vertical-align-center">
                         <div class="slds-col slds-size_2-of-3">
-                            <lightning-input type="search" label="Search tickets" variant="label-hidden" placeholder="Search by name or description..." onchange={handleSearchTermChange} value={searchTerm}></lightning-input>
+                            <lightning-input type="search" label="Search work items" variant="label-hidden" placeholder="Search by name or description..." onchange={handleSearchTermChange} value={searchTerm}></lightning-input>
                         </div>
                         <div class="slds-col slds-size_1-of-3">
                             <lightning-button label="Search" variant="brand" onclick={handleSearch} disabled={isSearching}></lightning-button>

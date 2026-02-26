@@ -5,7 +5,7 @@
     <description>The specific Vendor/Connection this sync item is associated with.</description>
     <inlineHelpText>The Vendor or Mothership connection for this transaction.</inlineHelpText>
     <label>Request</label>
-    <referenceTo>Request__c</referenceTo>
+    <referenceTo>WorkRequest__c</referenceTo>
     <relationshipLabel>Sync Items</relationshipLabel>
     <relationshipName>Sync_Items</relationshipName>
     <required>false</required>

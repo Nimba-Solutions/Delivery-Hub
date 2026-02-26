@@ -29,7 +29,7 @@ private class DeliveryHubSyncServiceTest {
         insert new List<Network_Entity__c>{vendor, client};
 
         // 3. Create Ticket (Explicitly linked to the Client)
-        Ticket__c t = new Ticket__c(
+        WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog',
             ClientNetworkEntityId__c = client.Id
@@ -37,8 +37,8 @@ private class DeliveryHubSyncServiceTest {
         insert t;
 
         // 4. Create Request (The Ledger bridge linking Ticket to Remote ID)
-        insert new Request__c(
-            TicketId__c = t.Id,
+        insert new WorkRequest__c(
+            WorkItemId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
             RemoteTicketIdTxt__c = 'REMOTE-TICKET-123',
             StatusPk__c = 'Active'
@@ -49,8 +49,8 @@ private class DeliveryHubSyncServiceTest {
             DirectionPk__c = 'Outbound',
             StatusPk__c = 'Queued',
             RequestId__c = null, // Null indicates Hub Mode
-            TicketId__c = t.Id,  // Mandatory for routing
-            ObjectTypePk__c = 'Ticket__c',
+            WorkItemId__c = t.Id,  // Mandatory for routing
+            ObjectTypePk__c = 'WorkItem__c',
             PayloadTxt__c = '{"Test":"Payload"}'
         );
     }
@@ -84,7 +84,7 @@ private class DeliveryHubSyncServiceTest {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
         
-        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/Ticket__c';
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
             'SourceId' => remoteId,
@@ -100,7 +100,7 @@ private class DeliveryHubSyncServiceTest {
 
         System.assertEquals(200, res.statusCode, 'Should return 200 Success');
         
-        Ticket__c updatedT = [SELECT BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
+        WorkItem__c updatedT = [SELECT BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
         System.assertEquals('Updated Description', updatedT.BriefDescriptionTxt__c, 'Ticket should be updated via ledger lookup');
     }
 
@@ -120,7 +120,7 @@ private class DeliveryHubSyncServiceTest {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
         
-        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/Ticket_Comment__c';
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItemComment__c';
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serialize(payload));
         
@@ -135,7 +135,7 @@ private class DeliveryHubSyncServiceTest {
         DeliveryHubSyncService.handleIncomingSync();
         Test.stopTest();
 
-        List<Ticket_Comment__c> comments = [SELECT Id FROM Ticket_Comment__c WHERE AuthorTxt__c = :uniqueAuthor];
+        List<WorkItemComment__c> comments = [SELECT Id FROM WorkItemComment__c WHERE AuthorTxt__c = :uniqueAuthor];
         System.assertEquals(1, comments.size(), 'Should have inserted exactly 1 comment due to ledger idempotency.');
     }
 

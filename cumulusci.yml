@@ -57,6 +57,7 @@ tasks:
         options:
             preserve_tokens: "%%%CURRENT_USER%%%"
     deploy:
+        class_path: tasks.deploy.Deploy
         options:
             transforms:
                 - transform: find_replace
@@ -65,6 +66,7 @@ tasks:
                           - find: "%%%CURRENT_USER%%%"
                             inject_username: True
     deploy_post:
+        class_path: tasks.deploy.Deploy
         options:
             transforms:
                 - transform: find_replace

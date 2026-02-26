@@ -89,7 +89,7 @@
                     <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
                         <template for:each={phases} for:item="phase">
                             <div key={phase.label} class={phase.colClass}>
-                                <button class={phase.tileClass} onclick={handlePhaseClick} data-phase={phase.label} title="View {phase.label} tickets">
+                                <button class={phase.tileClass} onclick={handlePhaseClick} data-phase={phase.label} title="View {phase.label} work items">
                                     <div class="phase-count"><strong>{phase.count}</strong></div>
                                     <div class="phase-label">{phase.label}</div>
                                 </button>
@@ -148,7 +148,7 @@
                             </div>
                             <h3 class="slds-text-heading_small slds-m-top_medium">No recent activity</h3>
                             <p class="slds-text-body_regular slds-text-color_weak slds-m-top_x-small">
-                                Ticket updates will appear here once work begins.
+                                Work item updates will appear here once work begins.
                             </p>
                         </div>
                     </template>

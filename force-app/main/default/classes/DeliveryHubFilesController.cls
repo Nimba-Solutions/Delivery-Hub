@@ -19,7 +19,7 @@ public with sharing class DeliveryHubFilesController {
     /**
      * @description Aggregates all ContentDocumentLinks from the ticket, its comments, and its requests.
      * Deduplicates by ContentDocumentId so a file shared across multiple records appears once.
-     * @param ticketId The Ticket__c record Id to aggregate files for.
+     * @param ticketId The WorkItem__c record Id to aggregate files for.
      * @return List of FileItem wrappers with document metadata.
      */
     @AuraEnabled(cacheable=true)
@@ -27,21 +27,21 @@ public with sharing class DeliveryHubFilesController {
         // 1. Collect all entity IDs: ticket + comments + requests
         Set<Id> entityIds = new Set<Id>{ ticketId };
 
-        List<Ticket_Comment__c> comments = [
-            SELECT Id FROM Ticket_Comment__c
-            WHERE TicketId__c = :ticketId
+        List<WorkItemComment__c> comments = [
+            SELECT Id FROM WorkItemComment__c
+            WHERE WorkItemId__c = :ticketId
             WITH SYSTEM_MODE
         ];
-        for (Ticket_Comment__c c : comments) {
+        for (WorkItemComment__c c : comments) {
             entityIds.add(c.Id);
         }
 
-        List<Request__c> requests = [
-            SELECT Id FROM Request__c
-            WHERE TicketId__c = :ticketId
+        List<WorkRequest__c> requests = [
+            SELECT Id FROM WorkRequest__c
+            WHERE WorkItemId__c = :ticketId
             WITH SYSTEM_MODE
         ];
-        for (Request__c r : requests) {
+        for (WorkRequest__c r : requests) {
             entityIds.add(r.Id);
         }
 

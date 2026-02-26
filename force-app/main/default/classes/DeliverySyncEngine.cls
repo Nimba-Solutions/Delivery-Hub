@@ -58,32 +58,32 @@ public without sharing class DeliverySyncEngine {
             }
 
             // 2. Evaluate Upstream Routing Edges (The Parent Tickets)
-            Map<Id, Ticket__c> parentTickets = new Map<Id, Ticket__c>([
+            Map<Id, WorkItem__c> parentTickets = new Map<Id, WorkItem__c>([
                 SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c 
-                FROM Ticket__c 
+                FROM WorkItem__c 
                 WHERE Id IN :ticketIds
                 WITH SYSTEM_MODE
             ]);
 
             // 3. Evaluate Downstream Routing Edges (Active, Typed Requests)
-            List<Request__c> connections = [
-                SELECT Id, TicketId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, 
+            List<WorkRequest__c> connections = [
+                SELECT Id, WorkItemId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, 
                        DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
                        DeliveryEntityId__r.EntityTypePk__c, StatusPk__c 
-                FROM Request__c 
-                WHERE TicketId__c IN :ticketIds 
+                FROM WorkRequest__c 
+                WHERE WorkItemId__c IN :ticketIds 
                   AND StatusPk__c != 'Inactive' 
                   AND DeliveryEntityId__c != NULL 
                   AND DeliveryEntityId__r.EntityTypePk__c IN ('Vendor', 'Both')
                 WITH SYSTEM_MODE
             ];
 
-            Map<Id, List<Request__c>> routes = new Map<Id, List<Request__c>>();
-            for (Request__c r : connections) {
-                if (!routes.containsKey(r.TicketId__c)) {
-                    routes.put(r.TicketId__c, new List<Request__c>());
+            Map<Id, List<WorkRequest__c>> routes = new Map<Id, List<WorkRequest__c>>();
+            for (WorkRequest__c r : connections) {
+                if (!routes.containsKey(r.WorkItemId__c)) {
+                    routes.put(r.WorkItemId__c, new List<WorkRequest__c>());
                 }
-                routes.get(r.TicketId__c).add(r);
+                routes.get(r.WorkItemId__c).add(r);
             }
 
             List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
@@ -93,8 +93,8 @@ public without sharing class DeliverySyncEngine {
                 }
 
                 Id tId = recordToTicketId.get(rec.Id);
-                Ticket__c parentTicket = parentTickets.get(tId);
-                List<Request__c> reqs = routes.get(tId);
+                WorkItem__c parentTicket = parentTickets.get(tId);
+                List<WorkRequest__c> reqs = routes.get(tId);
 
                 // Determine Global Source: Inherit from ledger or this is the Birthplace
                 String globalSourceId = recordToGlobalSource.containsKey(rec.Id) 
@@ -105,7 +105,7 @@ public without sharing class DeliverySyncEngine {
                 // FAN OUT DOWNSTREAM (Push to Sub-Vendors)
                 // ==========================================
                 if (reqs != null && !reqs.isEmpty()) {
-                    for (Request__c req : reqs) {
+                    for (WorkRequest__c req : reqs) {
                         // Kill-Switch: If target is the Global Source or matches incoming edge, suppress circular sync
                         if (blockedOrigins.contains((String)req.Id) || req.RemoteTicketIdTxt__c == globalSourceId) {
                             continue;
@@ -157,10 +157,10 @@ public without sharing class DeliverySyncEngine {
 
     private static Id getTicketId(SObject rec) {
         String name = rec.getSObjectType().getDescribe().getName();
-        if (name.endsWithIgnoreCase('Ticket__c') && !name.endsWithIgnoreCase('Ticket_Comment__c')) {
+        if (name.endsWithIgnoreCase('WorkItem__c') && !name.endsWithIgnoreCase('WorkItemComment__c')) {
             return rec.Id;
         }
-        return (Id) getSafeValue(rec, 'TicketId__c');
+        return (Id) getSafeValue(rec, 'WorkItemId__c');
     }
 
     private static Object getSafeValue(SObject rec, String field) {
@@ -176,14 +176,14 @@ public without sharing class DeliverySyncEngine {
         return null;
     }
 
-    private static Sync_Item__c createSyncItem(SObject rec, Request__c req, Set<String> allowedFields, String globalSourceId) {
+    private static Sync_Item__c createSyncItem(SObject rec, WorkRequest__c req, Set<String> allowedFields, String globalSourceId) {
         Sync_Item__c item = new Sync_Item__c(
             StatusPk__c = 'Queued', 
             DirectionPk__c = 'Outbound',
             GlobalSourceIdTxt__c = globalSourceId
         );
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        item.TicketId__c = getTicketId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
+        item.WorkItemId__c = getTicketId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
 
         String fullApiName = rec.getSObjectType().getDescribe().getName();
         String cleanName = fullApiName.replace('delivery__', '');
@@ -207,7 +207,7 @@ public without sharing class DeliverySyncEngine {
             payload.put('TargetId', req.RemoteTicketIdTxt__c); 
         } else {
             // Hub Mode: Upstream Stage
-            payload.put('TargetId', item.TicketId__c);
+            payload.put('TargetId', item.WorkItemId__c);
         }
         
         item.PayloadTxt__c = JSON.serialize(payload);

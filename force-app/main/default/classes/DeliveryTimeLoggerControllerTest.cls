@@ -16,11 +16,11 @@ private class DeliveryTimeLoggerControllerTest {
         );
         insert vendor;
 
-        Ticket__c t = new Ticket__c(BriefDescriptionTxt__c = 'Logger Ticket', StageNamePk__c = 'In Development');
+        WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c = 'Logger Ticket', StageNamePk__c = 'In Development');
         insert t;
 
-        insert new Request__c(
-            TicketId__c           = t.Id,
+        insert new WorkRequest__c(
+            WorkItemId__c           = t.Id,
             DeliveryEntityId__c   = vendor.Id,
             QuotedHoursNumber__c  = 10,
             HourlyRateCurrency__c = 100,
@@ -34,16 +34,16 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursCreatesWorkLog() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
         Test.startTest();
         DeliveryTimeLoggerController.logHours(t.Id, 2.5, 'Test work notes');
         Test.stopTest();
 
         List<WorkLog__c> logs = [
-            SELECT HoursLoggedNumber__c, TicketId__c, WorkDateDate__c, RequestId__c
+            SELECT HoursLoggedNumber__c, WorkItemId__c, WorkDateDate__c, RequestId__c
             FROM WorkLog__c
-            WHERE TicketId__c = :t.Id
+            WHERE WorkItemId__c = :t.Id
         ];
         System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
         System.assertEquals(2.5, logs[0].HoursLoggedNumber__c, 'Expected 2.5 hours');
@@ -56,13 +56,13 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursFractional() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
         Test.startTest();
         DeliveryTimeLoggerController.logHours(t.Id, 0.25, null);
         Test.stopTest();
 
-        List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE TicketId__c = :t.Id];
+        List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
         System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
         System.assertEquals(0.25, logs[0].HoursLoggedNumber__c, 'Expected 0.25 hours');
     }
@@ -72,14 +72,14 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursMultipleEntries() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
         Test.startTest();
         DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Morning session');
         DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Afternoon session');
         Test.stopTest();
 
-        List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE TicketId__c = :t.Id];
+        List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
         System.assertEquals(2, logs.size(), 'Expected two WorkLog records');
     }
 
@@ -88,7 +88,7 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursNoRequestThrows() {
-        Ticket__c noReqTicket = new Ticket__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
+        WorkItem__c noReqTicket = new WorkItem__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
         insert noReqTicket;
 
         Test.startTest();

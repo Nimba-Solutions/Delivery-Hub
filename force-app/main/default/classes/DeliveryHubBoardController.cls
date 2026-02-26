@@ -7,14 +7,14 @@ public with sharing class DeliveryHubBoardController {
     @AuraEnabled
     public static void updateTicketStage(Id ticketId, String newStage) {
         try {
-            if (Schema.sObjectType.Ticket__c.isUpdateable()) {
-                Ticket__c ticket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
+            if (Schema.sObjectType.WorkItem__c.isUpdateable()) {
+                WorkItem__c ticket = new WorkItem__c(Id = ticketId, StageNamePk__c = newStage);
                 update ticket;
             } else {
-                throw createAuraException('Insufficient permissions to update ticket.');
+                throw createAuraException('Insufficient permissions to update work item.');
             }
         } catch (Exception e) {
-            throw createAuraException('Error updating ticket stage: ' + e.getMessage());
+            throw createAuraException('Error updating work item stage: ' + e.getMessage());
         }
     }
 
@@ -26,9 +26,9 @@ public with sharing class DeliveryHubBoardController {
         try {
             // 1. Get existing tickets in this stage (EXCLUDING the one we are moving)
             // FIX: Removed 'WITH SECURITY_ENFORCED' to prevent FLS errors on SortOrderNumber__c/IsActiveBool__c
-            List<Ticket__c> ticketsInColumn = [
+            List<WorkItem__c> ticketsInColumn = [
                 SELECT Id, SortOrderNumber__c 
-                FROM Ticket__c 
+                FROM WorkItem__c 
                 WHERE StageNamePk__c = :newStage 
                 AND Id != :ticketId
                 AND IsActiveBool__c = TRUE 
@@ -36,10 +36,10 @@ public with sharing class DeliveryHubBoardController {
             ];
 
             // 2. Prepare the moving ticket object
-            Ticket__c movingTicket = new Ticket__c(Id = ticketId, StageNamePk__c = newStage);
+            WorkItem__c movingTicket = new WorkItem__c(Id = ticketId, StageNamePk__c = newStage);
 
             // 3. SAFETY FIX: Manually build a NEW list to avoid "Index Out of Bounds"
-            List<Ticket__c> processingList = new List<Ticket__c>();
+            List<WorkItem__c> processingList = new List<WorkItem__c>();
             Boolean added = false;
             
             // Loop through existing tickets and insert ours at the right spot
@@ -57,9 +57,9 @@ public with sharing class DeliveryHubBoardController {
             }
 
             // 4. Re-index the new clean list (1, 2, 3...)
-            List<Ticket__c> toUpdate = new List<Ticket__c>();
+            List<WorkItem__c> toUpdate = new List<WorkItem__c>();
             for (Integer i = 0; i < processingList.size(); i++) {
-                Ticket__c t = processingList[i];
+                WorkItem__c t = processingList[i];
                 Decimal expectedSort = i + 1; 
                 
                 // Update if the sort order is wrong OR if it's the moving ticket (to save the new Stage)
@@ -76,10 +76,10 @@ public with sharing class DeliveryHubBoardController {
 
             if (!toUpdate.isEmpty()) {
                 // This check ensures we still have permission to Write, maintaining security
-                if (Schema.sObjectType.Ticket__c.isUpdateable()) {
+                if (Schema.sObjectType.WorkItem__c.isUpdateable()) {
                     update toUpdate;
                 } else {
-                    throw createAuraException('Insufficient permissions to reorder tickets.');
+                    throw createAuraException('Insufficient permissions to reorder work items.');
                 }
             }
         } catch (Exception e) {
@@ -89,16 +89,16 @@ public with sharing class DeliveryHubBoardController {
     }
     
     @AuraEnabled
-    public static Ticket_Dependency__c createDependency(Id blockedTicketId, Id blockingTicketId) {
+    public static WorkItemDependency__c createDependency(Id blockedTicketId, Id blockingTicketId) {
         if (blockedTicketId == blockingTicketId) {
-            throw createAuraException('A ticket cannot block itself.');
+            throw createAuraException('A work item cannot block itself.');
         }
 
         try {
-            if (Schema.sObjectType.Ticket_Dependency__c.isCreateable()) {
-                Ticket_Dependency__c newDependency = new Ticket_Dependency__c(
-                    Blocked_Ticket__c = blockedTicketId,
-                    Blocking_Ticket__c = blockingTicketId,
+            if (Schema.sObjectType.WorkItemDependency__c.isCreateable()) {
+                WorkItemDependency__c newDependency = new WorkItemDependency__c(
+                    BlockedWorkItemId__c = blockedTicketId,
+                    BlockingWorkItemId__c = blockingTicketId,
                     TypePk__c = 'Blocks'
                 );
                 insert newDependency;
@@ -114,8 +114,8 @@ public with sharing class DeliveryHubBoardController {
     @AuraEnabled
     public static void removeDependency(Id dependencyId) {
         try {
-            if (Schema.sObjectType.Ticket_Dependency__c.isDeletable()) {
-                Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c WHERE Id = :dependencyId LIMIT 1];
+            if (Schema.sObjectType.WorkItemDependency__c.isDeletable()) {
+                WorkItemDependency__c dep = [SELECT Id FROM WorkItemDependency__c WHERE Id = :dependencyId LIMIT 1];
                 delete dep;
             } else {
                 throw createAuraException('Insufficient permissions to remove dependency.');
@@ -126,7 +126,7 @@ public with sharing class DeliveryHubBoardController {
     }
     
     @AuraEnabled(cacheable=true)
-    public static List<Ticket__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds, String workflowType) {
+    public static List<WorkItem__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds, String workflowType) {
         String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';
         Set<Id> exclusionIds = new Set<Id>();
         if (currentTicketId != null) {
@@ -145,7 +145,7 @@ public with sharing class DeliveryHubBoardController {
         // Assuming sharing settings cover visibility.
         return [
             SELECT Id, Name, StageNamePk__c, BriefDescriptionTxt__c
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE (Name LIKE :queryTerm OR BriefDescriptionTxt__c LIKE :queryTerm)
             AND Id NOT IN :exclusionIds
             AND StageNamePk__c NOT IN :terminalStages

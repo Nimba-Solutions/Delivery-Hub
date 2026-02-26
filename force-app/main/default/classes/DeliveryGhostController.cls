@@ -46,7 +46,7 @@ public with sharing class DeliveryGhostController {
             String briefDesc = (briefSource.length() > 100) ? briefSource.substring(0, 100) : briefSource;
 
             // 4. Create Ticket
-            Ticket__c t = new Ticket__c();
+            WorkItem__c t = new WorkItem__c();
             t.BriefDescriptionTxt__c = briefDesc;
             t.DetailsTxt__c = fullDescription;
             t.PriorityPk__c = priority;
@@ -54,10 +54,10 @@ public with sharing class DeliveryGhostController {
             t.IsActiveBool__c = true;
             t.StatusPk__c = 'New';
 
-            if (Schema.sObjectType.Ticket__c.isCreateable()) {
+            if (Schema.sObjectType.WorkItem__c.isCreateable()) {
                 insert t;
             } else {
-                throw new AuraHandledException('Insufficient permissions to create Ticket.');
+                throw new AuraHandledException('Insufficient permissions to create Work Item.');
             }
 
             return t.Id;

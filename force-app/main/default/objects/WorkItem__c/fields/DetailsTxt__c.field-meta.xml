@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DetailsTxt__c</fullName>
+    <description>Details payload from the platform event</description>
+    <inlineHelpText>Full technical and functional details of this work item. Supports rich text formatting.</inlineHelpText>
+    <label>Details</label>
+    <length>100000</length>
+    <trackTrending>false</trackTrending>
+    <type>Html</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

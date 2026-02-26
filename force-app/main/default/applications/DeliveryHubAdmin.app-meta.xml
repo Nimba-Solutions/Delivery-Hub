@@ -21,56 +21,56 @@
     <actionOverrides>
         <actionName>View</actionName>
         <comment>Action override created by Lightning App Builder during activation.</comment>
-        <content>Request_Record_Page</content>
+        <content>WorkRequest_Record_Page</content>
         <formFactor>Large</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Request__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkRequest__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
         <comment>Action override created by Lightning App Builder during activation.</comment>
-        <content>Request_Record_Page</content>
+        <content>WorkRequest_Record_Page</content>
         <formFactor>Small</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Request__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkRequest__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
         <comment>Action override created by Lightning App Builder during activation.</comment>
-        <content>Ticket_Comment_Record_Page</content>
+        <content>WorkItemComment_Record_Page</content>
         <formFactor>Large</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket_Comment__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItemComment__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
         <comment>Action override created by Lightning App Builder during activation.</comment>
-        <content>Ticket_Comment_Record_Page</content>
+        <content>WorkItemComment_Record_Page</content>
         <formFactor>Small</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket_Comment__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItemComment__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
         <comment>Action override updated by Lightning App Builder during activation.</comment>
-        <content>Ticket_Admin</content>
+        <content>WorkItem_Admin</content>
         <formFactor>Large</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItem__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
         <comment>Action override updated by Lightning App Builder during activation.</comment>
-        <content>Ticket_Admin</content>
+        <content>WorkItem_Admin</content>
         <formFactor>Small</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItem__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>Tab</actionName>
@@ -94,11 +94,11 @@
     <label>Delivery Hub Admin</label>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
-    <tabs>Ticket__c</tabs>
-    <tabs>Ticket_Board</tabs>
+    <tabs>WorkItem__c</tabs>
+    <tabs>Delivery_Board</tabs>
     <tabs>Network_Entity__c</tabs>
-    <tabs>Request__c</tabs>
-    <tabs>Ticket_Comment__c</tabs>
+    <tabs>WorkRequest__c</tabs>
+    <tabs>WorkItemComment__c</tabs>
     <tabs>Sync_Item__c</tabs>
     <tabs>Delivery_Hub_Settings</tabs>
     <tabs>standard-report</tabs>

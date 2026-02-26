@@ -9,7 +9,9 @@
       "Bash(node:*)",
       "Bash(cd /c/Projects/Delivery-Hub && git push -u origin feature/gb226-workflow-platform 2>&1)",
       "Bash(ls:*)",
-      "Bash(cd /c/Projects/Delivery-Hub && git push origin feature/gb226-workflow-platform 2>&1)"
+      "Bash(cd /c/Projects/Delivery-Hub && git push origin feature/gb226-workflow-platform 2>&1)",
+      "Bash(wc:*)",
+      "Bash(cd /c/Projects/Delivery-Hub && git push -u origin feature/gb227-object-rename 2>&1)"
     ]
   }
 }

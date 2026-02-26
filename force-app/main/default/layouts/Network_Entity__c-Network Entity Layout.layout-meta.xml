@@ -110,7 +110,7 @@
         <fields>StatusPk__c</fields>
         <fields>StageNamePk__c</fields>
         <fields>IsActiveBool__c</fields>
-        <relatedList>Ticket__c.ClientNetworkEntityId__c</relatedList>
+        <relatedList>WorkItem__c.ClientNetworkEntityId__c</relatedList>
         <sortField>NAME</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>
@@ -118,14 +118,14 @@
         <fields>NAME</fields>
         <fields>OBJECT_ID</fields>
         <fields>StatusPk__c</fields>
-        <fields>TicketId__c</fields>
+        <fields>WorkItemId__c</fields>
         <fields>TotalLoggedHoursNumber__c</fields>
         <fields>WorkProofUrl__c</fields>
         <fields>PreApprovedHoursNumber__c</fields>
         <fields>HourlyRateCurrency__c</fields>
         <fields>BudgetUtilizationPercent__c</fields>
-        <relatedList>Request__c.DeliveryEntityId__c</relatedList>
-        <sortField>TicketId__c</sortField>
+        <relatedList>WorkRequest__c.DeliveryEntityId__c</relatedList>
+        <sortField>WorkItemId__c</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>
     <showEmailCheckbox>false</showEmailCheckbox>

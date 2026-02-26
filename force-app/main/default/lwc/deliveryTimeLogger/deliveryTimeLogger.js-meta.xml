@@ -10,7 +10,7 @@
     <targetConfigs>
         <targetConfig targets="lightning__RecordPage">
             <objects>
-                <object>Ticket__c</object>
+                <object>WorkItem__c</object>
             </objects>
         </targetConfig>
         <targetConfig targets="lightning__RecordAction">

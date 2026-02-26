@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SortOrderNumber__c</fullName>
+    <description>Numeric sort order for work items within their stage, controlling card positioning on the board</description>
+    <inlineHelpText>Manual sort position within the work item's current stage column on the Kanban board.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Sort Order</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

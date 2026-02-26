@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequestTypePk__c</fullName>
+    <defaultValue>&apos;Internal&apos;</defaultValue>
+    <description>The name or ID of the originating Salesforce organization. Used to group work items by client or source implementation.</description>
+    <inlineHelpText>Classifies whether this work item is a Bug, Feature, Change Request, or other type of work.</inlineHelpText>
+    <label>Request Type</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Internal</fullName>
+                <default>false</default>
+                <label>Internal</label>
+            </value>
+            <value>
+                <fullName>Public Lead</fullName>
+                <default>false</default>
+                <label>Public Lead</label>
+            </value>
+            <value>
+                <fullName>Partner Request</fullName>
+                <default>false</default>
+                <label>Partner Request</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

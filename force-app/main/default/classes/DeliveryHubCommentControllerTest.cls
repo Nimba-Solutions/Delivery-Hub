@@ -6,14 +6,14 @@ private class DeliveryHubCommentControllerTest {
 
     @TestSetup
     static void makeData() {
-        Ticket__c t = new Ticket__c(
+        WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Test Ticket',
             StatusPk__c = 'New'
         );
         insert t;
 
-        insert new Ticket_Comment__c(
-            TicketId__c = t.Id,
+        insert new WorkItemComment__c(
+            WorkItemId__c = t.Id,
             BodyTxt__c = 'First Comment',
             AuthorTxt__c = 'Test User'
         );
@@ -21,27 +21,27 @@ private class DeliveryHubCommentControllerTest {
 
     @IsTest
     static void testGetComments() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
         Test.startTest();
-        List<Ticket_Comment__c> result = DeliveryHubCommentController.getLiveComments(t.Id);
+        List<WorkItemComment__c> result = DeliveryHubCommentController.getLiveComments(t.Id);
         Test.stopTest();
         System.assertEquals(1, result.size(), 'Should return 1 comment');
     }
 
     @IsTest
     static void testPostComment() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
+        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
         Test.startTest();
         DeliveryHubCommentController.postLiveComment(t.Id, 'New Reply');
         Test.stopTest();
-        List<Ticket_Comment__c> comments = [SELECT Id FROM Ticket_Comment__c WHERE TicketId__c = :t.Id];
+        List<WorkItemComment__c> comments = [SELECT Id FROM WorkItemComment__c WHERE WorkItemId__c = :t.Id];
         System.assertEquals(2, comments.size());
     }
 
     @IsTest
     static void testGetCommentFiles() {
-        Ticket__c t = [SELECT Id FROM Ticket__c LIMIT 1];
-        Ticket_Comment__c comment = [SELECT Id FROM Ticket_Comment__c WHERE TicketId__c = :t.Id LIMIT 1];
+        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+        WorkItemComment__c comment = [SELECT Id FROM WorkItemComment__c WHERE WorkItemId__c = :t.Id LIMIT 1];
 
         ContentVersion cv = new ContentVersion(
             Title = 'Chat Attachment',

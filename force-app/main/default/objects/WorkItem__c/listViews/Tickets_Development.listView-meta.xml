@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Tickets_Development</fullName>
+    <columns>NAME</columns>
+    <columns>BriefDescriptionTxt__c</columns>
+    <columns>StageNamePk__c</columns>
+    <columns>PriorityPk__c</columns>
+    <columns>ClientNetworkEntityId__c</columns>
+    <columns>TotalLoggedHoursNumber__c</columns>
+    <filters>
+        <field>StageNamePk__c</field>
+        <operation>equals</operation>
+        <value>Ready for Development,In Development,Dev Clarification Requested,Providing Dev Clarification,Dev Blocked,Back For Development</value>
+    </filters>
+    <filterScope>Everything</filterScope>
+    <label>Work Items — Development</label>
+</ListView>

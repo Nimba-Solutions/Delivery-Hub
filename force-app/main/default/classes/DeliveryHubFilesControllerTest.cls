@@ -6,7 +6,7 @@ private class DeliveryHubFilesControllerTest {
 
     @IsTest
     static void testGetTicketFilesOnTicket() {
-        Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Test Ticket');
+        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Test Ticket');
         insert ticket;
 
         ContentVersion cv = new ContentVersion(
@@ -34,11 +34,11 @@ private class DeliveryHubFilesControllerTest {
 
     @IsTest
     static void testGetTicketFilesOnComment() {
-        Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Comment File Ticket');
+        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Comment File Ticket');
         insert ticket;
 
-        Ticket_Comment__c comment = new Ticket_Comment__c(
-            TicketId__c = ticket.Id,
+        WorkItemComment__c comment = new WorkItemComment__c(
+            WorkItemId__c = ticket.Id,
             BodyTxt__c = 'Test comment',
             AuthorTxt__c = 'Test User'
         );
@@ -69,11 +69,11 @@ private class DeliveryHubFilesControllerTest {
 
     @IsTest
     static void testGetTicketFilesDeduplication() {
-        Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Dedup Ticket');
+        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Dedup Ticket');
         insert ticket;
 
-        Ticket_Comment__c comment = new Ticket_Comment__c(
-            TicketId__c = ticket.Id,
+        WorkItemComment__c comment = new WorkItemComment__c(
+            WorkItemId__c = ticket.Id,
             BodyTxt__c = 'comment',
             AuthorTxt__c = 'User'
         );
@@ -109,7 +109,7 @@ private class DeliveryHubFilesControllerTest {
 
     @IsTest
     static void testGetTicketFilesEmpty() {
-        Ticket__c ticket = new Ticket__c(BriefDescriptionTxt__c = 'Empty Ticket');
+        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Empty Ticket');
         insert ticket;
 
         Test.startTest();

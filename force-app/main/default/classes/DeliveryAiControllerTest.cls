@@ -20,8 +20,8 @@ private class DeliveryAiControllerTest {
         return s;
     }
 
-    private static Ticket__c createTicket() {
-        Ticket__c t = new Ticket__c(
+    private static WorkItem__c createTicket() {
+        WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Add dark mode to the dashboard',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
@@ -46,7 +46,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateSuccess() {
         createSettings(true, 'sk-test-key-123');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', successBody()));
 
         Test.startTest();
@@ -63,7 +63,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateAiDisabled() {
         createSettings(false, 'sk-test-key-123');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
 
         Boolean threw = false;
         Test.startTest();
@@ -83,7 +83,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateNoApiKey() {
         createSettings(true, '');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
 
         Boolean threw = false;
         Test.startTest();
@@ -103,7 +103,7 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateNoSettingsRecord() {
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
 
         Boolean threw = false;
         Test.startTest();
@@ -124,7 +124,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateTicketNotFound() {
         createSettings(true, 'sk-test-key-123');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
         Id ticketId = ticket.Id;
         delete ticket;
 
@@ -147,7 +147,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateApiError() {
         createSettings(true, 'sk-test-key-123');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
         Test.setMock(HttpCalloutMock.class,
             new OpenAIMock(401, 'Unauthorized', '{\"error\":{\"message\":\"Invalid API key.\"}}'));
 
@@ -169,7 +169,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateEmptyChoices() {
         createSettings(true, 'sk-test-key-123');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', '{\"choices\":[]}'));
 
         Boolean threw = false;
@@ -190,7 +190,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testSuggestAcceptanceCriteriaSuccess() {
         createSettings(true, 'sk-test-key-123');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
         String body = '{"choices":[{"message":{"content":"- The dashboard supports dark mode\\n- Toggle persists on refresh"}}]}';
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
 
@@ -208,7 +208,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testSuggestAcceptanceCriteriaTicketNotFound() {
         createSettings(true, 'sk-test-key-123');
-        Ticket__c ticket = createTicket();
+        WorkItem__c ticket = createTicket();
         Id ticketId = ticket.Id;
         delete ticket;
 
@@ -267,7 +267,7 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftReleaseNotesSuccess() {
         createSettings(true, 'sk-test-key-123');
-        Ticket__c ticket = new Ticket__c(
+        WorkItem__c ticket = new WorkItem__c(
             BriefDescriptionTxt__c = 'Export tickets to CSV',
             StageNamePk__c = 'Done',
             PriorityPk__c = 'High'

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ProjectedUATReadyDate__c</fullName>
+    <description>The final ETA for the business user. This is typically EstimatedEndDevDate__c + a buffer for QA/UAT</description>
+    <inlineHelpText>System-calculated date when this work item is expected to be ready for UAT, including buffer days.</inlineHelpText>
+    <label>Projected UAT Ready Date</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

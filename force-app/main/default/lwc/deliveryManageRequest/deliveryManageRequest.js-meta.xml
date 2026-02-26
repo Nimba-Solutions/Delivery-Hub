@@ -9,7 +9,7 @@
     <targetConfigs>
         <targetConfig targets="lightning__RecordPage">
             <objects>
-                <object>Request__c</object>
+                <object>WorkRequest__c</object>
             </objects>
         </targetConfig>
     </targetConfigs>
