@@ -19,20 +19,19 @@ import draftBoardSummary from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryAiCon
 const WORK_ITEM_CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%Delivery_WorkItem_Change__e';
 
 // --- Apex Imports ---
-import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getTickets";
+import getWorkItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getWorkItems";
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync";
-import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getAiEnhancedTicketDetails";
-import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemETAService.getTicketETAsWithPriority";
-import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateTicketStage";
-// UPDATED: Using new reorder method instead of updateTicketSortOrder
-import reorderTicket from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.reorderTicket";
+import getAiEnhancedWorkItemDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getAiEnhancedWorkItemDetails";
+import getWorkItemETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemETAService.getWorkItemETAsWithPriority";
+import updateWorkItemStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateWorkItemStage";
+import reorderWorkItem from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.reorderWorkItem";
 import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.createDependency";
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
 import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getRequiredFieldsForStage';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
-import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowTypes';
-import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
+import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTypes';
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 
 // --- NAMESPACE BRIDGE ---
 const FIELDS = {
@@ -92,16 +91,16 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     @track AiEstimation = true;
     @track isAiProcessing = false;
     @track aiSuggestions = null;
-    @track createTicketTitle = "";
-    @track createTicketDescription = "";
+    @track createWorkItemTitle = "";
+    @track createWorkItemDescription = "";
     @track estimatedDaysValue = null;
     @track formFieldValues = {};
     @track showTransitionModal = false;
-    @track transitionTicketId = null;
+    @track transitionWorkItemId = null;
     @track transitionTargetStage = null;
     @track transitionRequiredFields = [];
     @track isModalOpen = false;
-    @track selectedTicket = {};
+    @track selectedWorkItem = {};
     @track searchTerm = '';
     @track searchResults = [];
     @track isSearching = false;
@@ -120,7 +119,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     @track weeklyError = '';
     @track weeklyCopied = false;
 
-    ticketsWire;
+    workItemsWire;
     _empSubscription = {};
 
     @wire(getRecord, { recordId: USER_ID, fields: [USER_NAME_FIELD] })
@@ -132,16 +131,16 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     connectedCallback() {
         this.loadSettings();
-        this.subscribeToTicketChanges();
+        this.subscribeToWorkItemChanges();
     }
 
     disconnectedCallback() {
         unsubscribe(this._empSubscription, () => {});
     }
 
-    subscribeToTicketChanges() {
+    subscribeToWorkItemChanges() {
         subscribe(WORK_ITEM_CHANGE_CHANNEL, -1, () => {
-            refreshApex(this.ticketsWire);
+            refreshApex(this.workItemsWire);
         }).then(response => {
             this._empSubscription = response;
         });
@@ -205,14 +204,14 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    async createStatusComment(ticketId) {
+    async createStatusComment(workItemId) {
         if (!this.moveComment || this.moveComment.trim() === "") {
             console.log('[createStatusComment] → Skipping empty comment');
-            return; 
+            return;
         }
 
         const fields = {
-            '%%%NAMESPACED_ORG%%%WorkItemId__c': ticketId,
+            '%%%NAMESPACED_ORG%%%WorkItemId__c': workItemId,
             '%%%NAMESPACED_ORG%%%BodyTxt__c': this.moveComment,
             '%%%NAMESPACED_ORG%%%SourcePk__c': 'Salesforce',
             '%%%NAMESPACED_ORG%%%AuthorTxt__c': this.currentUserName 
@@ -256,15 +255,15 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         else if (error) { console.error('[DeliveryHubBoard] getWorkflowConfig error:', error); }
     }
 
-    @wire(getTickets, { workflowType: '$activeWorkflowType' })
-    wiredTickets(result) {
-        this.ticketsWire = result;
+    @wire(getWorkItems, { workflowType: '$activeWorkflowType' })
+    wiredWorkItems(result) {
+        this.workItemsWire = result;
         const { data, error } = result;
         if (data) {
             this.realRecords = [...data];
             this.loadETAs();
         } else if (error) {
-            console.error("Ticket wire error", error);
+            console.error("Work item wire error", error);
         }
     }
 
@@ -312,10 +311,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         });
     }
 
-    refreshTickets() {
-        refreshApex(this.ticketsWire)
+    refreshWorkItems() {
+        refreshApex(this.workItemsWire)
             .then(() => this.loadETAs())
-            .catch((err) => console.error("Ticket reload error", err));
+            .catch((err) => console.error("Work item reload error", err));
     }
 
     get createDefaults() {
@@ -344,20 +343,20 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         if (views) return Object.keys(views).map(p => ({ label: p, value: p }));
         return ['Client', 'Consultant', 'Developer', 'QA'].map(p => ({ label: p, value: p }));
     }
-    get sizeModeOptions() { return [{ label: "Equal Sized", value: "equalSized" }, { label: "Ticket Sized", value: "ticketSize" }]; }
+    get sizeModeOptions() { return [{ label: "Equal Sized", value: "equalSized" }, { label: "Work Item Sized", value: "ticketSize" }]; }
     get hasRecentComments() { return (this.recentComments || []).length > 0; }
     get displayModeOptions() { return [{ label: "Kanban", value: "kanban" }, { label: "Compact", value: "compact" }, { label: "Table", value: "table" }]; }
     get mainBoardClass() { if (this.displayMode === "table") return "table-board"; if (this.displayMode === "compact") return "stage-columns compact"; return "stage-columns"; }
     get isTableMode() { return this.displayMode === "table"; }
 
-    // --- ENRICHED TICKETS (Namespace Agnostic & Sorted) ---
-    get enrichedTickets() {
+    // --- ENRICHED WORK ITEMS (Namespace Agnostic & Sorted) ---
+    get enrichedWorkItems() {
         const norm = (id) => (id || "").substring(0, 15);
 
         const etaMap = new Map(
             (this.etaResults || [])
-                .filter((dto) => !!dto.ticketId)
-                .map((dto) => [norm(dto.ticketId), dto])
+                .filter((dto) => !!dto.workItemId)
+                .map((dto) => [norm(dto.workItemId), dto])
         );
 
         // Helper to safely get field value regardless of namespace presence
@@ -493,7 +492,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 uiDeveloperId: getValue(rec, FIELDS.DEVELOPER) || '',
                 isHighPriority: priority?.toLowerCase() === "high",
                 tags: getTagsArray(tags),
-                cardClasses: `ticket-card`,
+                cardClasses: `work-item-card`,
                 priorityClasses: `priority-badge priority-${priority?.toLowerCase()}`,
             };
         });
@@ -517,15 +516,15 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
         const { type, stages, personaViews } = this.workflowConfig;
         const stageMap = this._stageMap;
-        const enriched = this.enrichedTickets || [];
+        const enriched = this.enrichedWorkItems || [];
 
         // Phase-group filters for overallFilter
         const PREDEV_PHASES  = new Set(['Planning', 'Approval']);
         const INDEV_PHASES   = new Set(['Development', 'Testing']);
         const DEPLOYED_PHASES = new Set(['UAT', 'Deployment', 'Done']);
 
-        const applyTicketFilters = (tickets, headerBg) =>
-            tickets
+        const applyWorkItemFilters = (workItems, headerBg) =>
+            workItems
                 .filter(t => {
                     if (this.intentionFilter === 'all') return true;
                     return (t.uiIntention || '').trim().toLowerCase() === this.intentionFilter.toLowerCase();
@@ -536,7 +535,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                     return (t.uiOwnerId || '').substring(0, 15) === uid ||
                            (t.uiDeveloperId || '').substring(0, 15) === uid;
                 })
-                .map(ticket => ({ ...ticket, cardStyle: `border-left-color: ${headerBg} !important;` }));
+                .map(wi => ({ ...wi, cardStyle: `border-left-color: ${headerBg} !important;` }));
 
         let columns;
 
@@ -547,13 +546,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 .map(s => {
                     const bg = s.headerBgColor || '#ffffff';
                     const color = s.headerTextColor || '#111827';
-                    const columnTickets = applyTicketFilters(enriched.filter(t => t.uiStage === s.apiValue), bg);
+                    const columnWorkItems = applyWorkItemFilters(enriched.filter(t => t.uiStage === s.apiValue), bg);
                     return {
                         stage: s.apiValue,
                         displayName: s.displayName || s.apiValue,
                         headerStyle: `background:${bg};color:${color};`,
-                        tickets: columnTickets,
-                        bodyClasses: `kanban-column-body ${columnTickets.length > 0 ? 'has-tickets' : 'is-empty'}`
+                        workItems: columnWorkItems,
+                        bodyClasses: `kanban-column-body ${columnWorkItems.length > 0 ? 'has-items' : 'is-empty'}`
                     };
                 });
         } else {
@@ -576,20 +575,20 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                     const firstStage = colStages.length > 0 ? stageMap[colStages[0]] : null;
                     const bg = firstStage?.headerBgColor || '#ffffff';
                     const color = firstStage?.headerTextColor || '#111827';
-                    const columnTickets = applyTicketFilters(
+                    const columnWorkItems = applyWorkItemFilters(
                         enriched.filter(t => colStages.includes(t.uiStage)), bg
                     );
                     return {
                         stage: col.columnName,
                         displayName: col.columnName,
                         headerStyle: `background:${bg};color:${color};`,
-                        tickets: columnTickets,
-                        bodyClasses: `kanban-column-body ${columnTickets.length > 0 ? 'has-tickets' : 'is-empty'}`
+                        workItems: columnWorkItems,
+                        bodyClasses: `kanban-column-body ${columnWorkItems.length > 0 ? 'has-items' : 'is-empty'}`
                     };
                 });
         }
 
-        return this.showMode === 'active' ? columns.filter(col => col.tickets.length > 0) : columns;
+        return this.showMode === 'active' ? columns.filter(col => col.workItems.length > 0) : columns;
     }
 
     getClientCardColor(status) {
@@ -598,7 +597,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     get advanceOptions() {
         if (!this.selectedRecord || !this.workflowConfig) return [];
-        const currStage = this.enrichedTickets.find(t => t.Id === this.selectedRecord.Id)?.uiStage;
+        const currStage = this.enrichedWorkItems.find(t => t.Id === this.selectedRecord.Id)?.uiStage;
         if (!currStage) return [];
 
         const stageMap = this._stageMap;
@@ -616,7 +615,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     get backtrackOptions() {
         if (!this.selectedRecord || !this.workflowConfig) return [];
-        const currStage = this.enrichedTickets.find(t => t.Id === this.selectedRecord.Id)?.uiStage;
+        const currStage = this.enrichedWorkItems.find(t => t.Id === this.selectedRecord.Id)?.uiStage;
         if (!currStage) return [];
 
         const stageMap = this._stageMap;
@@ -649,12 +648,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleNumDevsChange(e) { this.numDevs = parseInt(e.target.value, 10) || 1; this.loadETAs(); }
     
     loadETAs() {
-        getTicketETAsWithPriority({
+        getWorkItemETAsWithPriority({
             numberOfDevs: this.numDevs,
-            prioritizedTicketIds: null,
+            prioritizedWorkItemIds: null,
         })
         .then((result) => {
-            this.etaResults = result && result.tickets ? [...result.tickets] : [];
+            this.etaResults = result && result.workItems ? [...result.workItems] : [];
         })
         .catch((err) => {
             this.etaResults = [];
@@ -662,8 +661,8 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         });
     }
 
-    getTicketETA(ticketId) {
-        return (this.etaResults || []).find((e) => e.ticketId === ticketId) || {};
+    getWorkItemETA(workItemId) {
+        return (this.etaResults || []).find((e) => e.workItemId === workItemId) || {};
     }
 
     handlePersonaChange(e) {
@@ -704,12 +703,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     async handleAdvanceOption(e) {
         const newStage = e.currentTarget.dataset.value; // Use currentTarget
-        const ticketId = this.selectedRecord.Id;
+        const workItemId = this.selectedRecord.Id;
         try {
             const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
             if (requiredFields && requiredFields.length > 0) {
-                this.closeModal(); 
-                this.transitionTicketId = ticketId;
+                this.closeModal();
+                this.transitionWorkItemId = workItemId;
                 this.transitionTargetStage = newStage;
                 this.transitionRequiredFields = requiredFields;
                 this.showTransitionModal = true;
@@ -725,12 +724,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     async handleBacktrackOption(e) {
         const newStage = e.target.dataset.value;
-        const ticketId = this.selectedRecord.Id;
+        const workItemId = this.selectedRecord.Id;
         try {
             const requiredFields = await getRequiredFieldsForStage({ targetStage: newStage });
             if (requiredFields && requiredFields.length > 0) {
-                this.closeModal(); 
-                this.transitionTicketId = ticketId;
+                this.closeModal();
+                this.transitionWorkItemId = workItemId;
                 this.transitionTargetStage = newStage;
                 this.transitionRequiredFields = requiredFields;
                 this.showTransitionModal = true;
@@ -770,7 +769,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                         await this.createStatusComment(rec.Id);
                         commentCreated = true;
                     } catch (commentErr) {
-                        console.warn('Comment creation failed but ticket was updated', commentErr);
+                        console.warn('Comment creation failed but work item was updated', commentErr);
                     }
                 }
 
@@ -780,7 +779,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                     this.showToast("Success", "Work item moved to " + newStage + ".", "success");
                 }
 
-                this.refreshTickets(); 
+                this.refreshWorkItems(); 
                 this.closeModal(); // MOVED HERE
             })
             .catch((error) => {
@@ -794,12 +793,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     // FIX: Removed unused event param
     async handleTransitionSuccess(event) {
-        const ticketId = event.detail.id;
+        const workItemId = event.detail.id;
         let commentCreated = false;
 
         if (this.moveComment && this.moveComment.trim() !== "") {
             try {
-                await this.createStatusComment(ticketId);
+                await this.createStatusComment(workItemId);
                 commentCreated = true;
             } catch (err) {
                 console.warn('Comment failed but stage transition succeeded', err);
@@ -814,7 +813,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         this.closeTransitionModal();
-        this.refreshTickets();
+        this.refreshWorkItems();
     }
 
     handleTransitionError(event) {
@@ -825,11 +824,11 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     // [Drag Handlers]
     handleDragStart(event) {
         this.isDragging = true;
-        const ticketId = event.target.dataset.id;
-        event.dataTransfer.setData("text/plain", ticketId);
+        const workItemId = event.target.dataset.id;
+        event.dataTransfer.setData("text/plain", workItemId);
         event.dataTransfer.effectAllowed = "move";
-        // Enriched tickets is sorted, use it to find the drag item
-        this.draggedItem = this.enrichedTickets.find((t) => t.uiId === ticketId);
+        // Enriched work items are sorted; use this to find the drag item
+        this.draggedItem = this.enrichedWorkItems.find((t) => t.uiId === workItemId);
 
         this.placeholder = document.createElement("div");
         this.placeholder.className = "drag-placeholder";
@@ -893,7 +892,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll(".ticket-card:not(.is-dragging)")];
+        const draggableElements = [...container.querySelectorAll(".work-item-card:not(.is-dragging)")];
         return draggableElements.reduce((closest, child) => {
             const box = child.getBoundingClientRect();
             const offset = y - box.top - box.height / 2;
@@ -908,7 +907,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     // --- UPDATED DROP HANDLER ---
     async handleDrop(event) {
         event.preventDefault();
-        const ticketId = this.draggedItem.uiId;
+        const workItemId = this.draggedItem.uiId;
         const dropColumnEl = event.target.closest('.kanban-column');
         
         if (!dropColumnEl) {
@@ -929,23 +928,23 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         // 2. Calculate the INTEGER Index where the user dropped the card
-        const columnTickets = this.stageColumns.find(c => c.stage === targetColumnStage).tickets || [];
-        let dropIndex = columnTickets.length; // Default to end
+        const columnWorkItems = this.stageColumns.find(c => c.stage === targetColumnStage).workItems || [];
+        let dropIndex = columnWorkItems.length; // Default to end
 
         // FIX: Calculate position BEFORE calling handleDragEnd (which destroys the placeholder)
         if (this.placeholder && this.placeholder.parentNode) {
             const nextSibling = this.placeholder.nextElementSibling;
             if (nextSibling) {
                 const nextId = nextSibling.dataset.id;
-                // Find index of that ticket in the data array
-                const indexInData = columnTickets.findIndex(t => t.uiId === nextId);
-                // If we found the neighbor, put our ticket at that index. 
+                // Find index of that work item in the data array
+                const indexInData = columnWorkItems.findIndex(t => t.uiId === nextId);
+                // If we found the neighbor, put our work item at that index.
                 if (indexInData !== -1) {
                     dropIndex = indexInData;
                 }
             } else {
                 // No next sibling means we dropped at the very bottom
-                dropIndex = columnTickets.length;
+                dropIndex = columnWorkItems.length;
             }
         }
 
@@ -954,13 +953,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
         // 4. Call Apex to Reorder
         try {
-            await reorderTicket({ 
-                ticketId: ticketId, 
-                newStage: newInternalStage, 
-                newIndex: dropIndex 
+            await reorderWorkItem({
+                workItemId: workItemId,
+                newStage: newInternalStage,
+                newIndex: dropIndex
             });
             this.showToast('Success', 'Work item moved.', 'success');
-            this.refreshTickets();
+            this.refreshWorkItems();
         } catch (error) {
             const errorMessage = error.body?.message || 'An unknown error occurred.';
             this.showToast('Move Failed', errorMessage, 'error');
@@ -968,27 +967,27 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     // 3. ADD this new helper function to calculate sort order
-    calculateNewSortOrder(placeholder, columnTickets) {
+    calculateNewSortOrder(placeholder, columnWorkItems) {
         const prevSibling = placeholder.previousElementSibling;
         const nextSibling = placeholder.nextElementSibling;
 
-        // Find the corresponding ticket data for the siblings
-        const prevTicket = prevSibling
-            ? columnTickets.find((t) => t.uiId === prevSibling.dataset.id)
+        // Find the corresponding work item data for the siblings
+        const prevWorkItem = prevSibling
+            ? columnWorkItems.find((t) => t.uiId === prevSibling.dataset.id)
             : null;
-        const nextTicket = nextSibling
-            ? columnTickets.find((t) => t.uiId === nextSibling.dataset.id)
+        const nextWorkItem = nextSibling
+            ? columnWorkItems.find((t) => t.uiId === nextSibling.dataset.id)
             : null;
-        
+
         // FIX: Handle namespace for SortOrder here too using our new safe patterns or direct access
         const getSort = (t) => t[FIELDS.SORT_ORDER] || t['delivery__SortOrderNumber__c'] || t['SortOrderNumber__c'] || 0;
 
-        const sortBefore = prevTicket ? getSort(prevTicket) : 0;
+        const sortBefore = prevWorkItem ? getSort(prevWorkItem) : 0;
 
-        if (nextTicket) {
-            return (sortBefore + getSort(nextTicket)) / 2.0;
+        if (nextWorkItem) {
+            return (sortBefore + getSort(nextWorkItem)) / 2.0;
         } else {
-            return sortBefore + 1; 
+            return sortBefore + 1;
         }
     }
     
@@ -1012,32 +1011,32 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.showCreateModal = false;
         this.aiSuggestions = null;
         this.isAiProcessing = false;
-        this.createTicketTitle = "";
-        this.createTicketDescription = "";
+        this.createWorkItemTitle = "";
+        this.createWorkItemDescription = "";
         this.formFieldValues = {};
     }
 
     handleCreateSuccess(event) {
         this.showCreateModal = false;
-        const newTicketId = event.detail.id;
+        const newWorkItemId = event.detail.id;
 
         if (this.uploadedFileIds.length > 0) {
             linkFilesAndSync({
-                ticketId: newTicketId,
+                workItemId: newWorkItemId,
                 contentDocumentIds: this.uploadedFileIds,
             }).catch((error) => {
-                console.error("Error linking files and syncing to Jira:", error);
+                console.error("Error linking files:", error);
             });
             this.uploadedFileIds = [];
         }
 
         this.aiSuggestions = null;
         this.isAiProcessing = false;
-        this.createTicketTitle = "";
-        this.createTicketDescription = "";
+        this.createWorkItemTitle = "";
+        this.createWorkItemDescription = "";
         this.formFieldValues = {};
 
-        this.refreshTickets();
+        this.refreshWorkItems();
     }
     
     // ... [Search Handlers & AI Handlers (handleFieldChange, handleAiEnhance, applyAiSuggestions, setFieldValue, dismissAiSuggestions)] ...
@@ -1049,9 +1048,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.formFieldValues[fieldName] = fieldValue;
     
         if (fieldName === FIELDS.BRIEF_DESC) {
-            this.createTicketTitle = fieldValue || "";
+            this.createWorkItemTitle = fieldValue || "";
         } else if (fieldName === FIELDS.DETAILS) {
-            this.createTicketDescription = fieldValue || "";
+            this.createWorkItemDescription = fieldValue || "";
         }
     }
 
@@ -1082,11 +1081,11 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 }
             }
             
-            if (!titleValue) titleValue = this.createTicketTitle || "";
-            if (!descriptionValue) descriptionValue = this.createTicketDescription || "";
-    
-            this.createTicketTitle = titleValue;
-            this.createTicketDescription = descriptionValue;
+            if (!titleValue) titleValue = this.createWorkItemTitle || "";
+            if (!descriptionValue) descriptionValue = this.createWorkItemDescription || "";
+
+            this.createWorkItemTitle = titleValue;
+            this.createWorkItemDescription = descriptionValue;
 
             if (!titleValue.trim() && !descriptionValue.trim()) {
                 this.showToast("Input Required", "Please provide a title or description.", "warning");
@@ -1096,12 +1095,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             if (this.isAiProcessing) return;
 
             this.isAiProcessing = true;
-            this.aiSuggestions = null; 
+            this.aiSuggestions = null;
 
             const result = await Promise.race([
-                getAiEnhancedTicketDetails({
-                    currentTitle: this.createTicketTitle,
-                    currentDescription: this.createTicketDescription,
+                getAiEnhancedWorkItemDetails({
+                    currentTitle: this.createWorkItemTitle,
+                    currentDescription: this.createWorkItemDescription,
                 }),
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 30000))
             ]);
@@ -1131,11 +1130,11 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             }
             
             if (this.aiSuggestions.title) {
-                this.createTicketTitle = this.aiSuggestions.title;
+                this.createWorkItemTitle = this.aiSuggestions.title;
                 this.formFieldValues[FIELDS.BRIEF_DESC] = this.aiSuggestions.title;
             }
             if (this.aiSuggestions.description) {
-                this.createTicketDescription = this.aiSuggestions.description;
+                this.createWorkItemDescription = this.aiSuggestions.description;
                 this.formFieldValues[FIELDS.DETAILS] = this.aiSuggestions.description;
             }
             if (this.aiSuggestions.estimatedDays && this.AiEstimation) {
@@ -1174,13 +1173,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         if (this.searchTerm.length < 3) return;
         this.isSearching = true;
         const existingDependencyIds = [
-            ...this.selectedTicket.isBlockedBy.map(d => d.id),
-            ...this.selectedTicket.isBlocking.map(d => d.id)
+            ...this.selectedWorkItem.isBlockedBy.map(d => d.id),
+            ...this.selectedWorkItem.isBlocking.map(d => d.id)
         ];
         try {
             this.searchResults = await searchForPotentialBlockers({
                 searchTerm: this.searchTerm,
-                currentTicketId: this.selectedTicket.Id,
+                currentWorkItemId: this.selectedWorkItem.Id,
                 existingDependencyIds: existingDependencyIds,
                 workflowType: this.activeWorkflowType
             });
@@ -1191,12 +1190,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    async handleSelectBlockingTicket(event) {
-        const blockingTicketId = event.currentTarget.dataset.blockingId;
+    async handleSelectBlockingWorkItem(event) {
+        const blockingWorkItemId = event.currentTarget.dataset.blockingId;
         try {
-            await createDependency({ blockedTicketId: this.selectedTicket.Id, blockingTicketId: blockingTicketId });
+            await createDependency({ blockedWorkItemId: this.selectedWorkItem.Id, blockingWorkItemId: blockingWorkItemId });
             this.closeModal();
-            this.refreshTickets();
+            this.refreshWorkItems();
         } catch (error) { 
             console.error('Dependency create error:', error);
         }
@@ -1207,7 +1206,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         try {
             await removeDependency({ dependencyId: dependencyId });
             this.closeModal();
-            this.refreshTickets();
+            this.refreshWorkItems();
         } catch (error) { 
             console.error('Dependency remove error:', error);
         }
@@ -1215,9 +1214,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     // [Dependency Management & Search]
     handleManageDependenciesClick(event) {
-        const ticketId = event.currentTarget.dataset.id;
-        this.selectedTicket = this.enrichedTickets.find(t => t.uiId === ticketId);
-        if (this.selectedTicket) {
+        const workItemId = event.currentTarget.dataset.id;
+        this.selectedWorkItem = this.enrichedWorkItems.find(t => t.uiId === workItemId);
+        if (this.selectedWorkItem) {
             this.isModalOpen = true;
         }
     }
@@ -1236,7 +1235,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     // [Modal & Transition Handlers]
     closeTransitionModal() {
         this.showTransitionModal = false;
-        this.transitionTicketId = null;
+        this.transitionWorkItemId = null;
         this.transitionTargetStage = null;
         this.transitionRequiredFields = [];
     }

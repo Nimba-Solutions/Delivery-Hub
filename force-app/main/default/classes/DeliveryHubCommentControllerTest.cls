@@ -7,7 +7,7 @@ private class DeliveryHubCommentControllerTest {
     @TestSetup
     static void makeData() {
         WorkItem__c t = new WorkItem__c(
-            BriefDescriptionTxt__c = 'Test Ticket',
+            BriefDescriptionTxt__c = 'Test Work Item',
             StatusPk__c = 'New'
         );
         insert t;

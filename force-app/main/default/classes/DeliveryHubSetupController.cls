@@ -123,19 +123,19 @@ public without sharing class DeliveryHubSetupController {
 
         initializeDefaultSettings();
         
-        List<WorkItem__c> existingTickets = [
+        List<WorkItem__c> existingWorkItems = [
             SELECT Id FROM WorkItem__c 
             WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.' 
             LIMIT 1
         ];
 
-        if (existingTickets.isEmpty()) {
-            WorkItem__c newTicket = new WorkItem__c(
+        if (existingWorkItems.isEmpty()) {
+            WorkItem__c newWorkItem = new WorkItem__c(
                 BriefDescriptionTxt__c = 'Connection Established Successfully.',
                 StageNamePk__c = 'Backlog'
             );
             
-            insert newTicket;
+            insert newWorkItem;
         }
 
         scheduleSyncJobs();

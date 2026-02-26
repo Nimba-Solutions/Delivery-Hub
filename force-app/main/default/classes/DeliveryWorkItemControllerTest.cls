@@ -33,8 +33,8 @@ private class DeliveryWorkItemControllerTest {
         // --- FIX: Disable trigger logic during test data setup ---
         DeliveryTriggerControl.disableAfterLogic();
 
-        // Dummy Ticket records
-        List<WorkItem__c> tickets = new List<WorkItem__c>{
+        // Dummy Work Item records
+        List<WorkItem__c> workItems = new List<WorkItem__c>{
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Login screen issue',
                 CalculatedETADate__c = Date.today().addDays(5),
@@ -44,7 +44,7 @@ private class DeliveryWorkItemControllerTest {
                 IsActiveBool__c = true
             )
         };
-        insert tickets;
+        insert workItems;
 
         // Optional: create Metadata for AI key test
         Delivery_Hub_Settings__c settings = new Delivery_Hub_Settings__c(
@@ -60,18 +60,18 @@ private class DeliveryWorkItemControllerTest {
     }
 
     @isTest
-    static void testGetTickets() {
+    static void testGetWorkItems() {
          
         Test.startTest();
-        // Pass null to get all active tickets (backward-compatible path)
-        List<WorkItem__c> results = DeliveryWorkItemController.getTickets(null);
+        // Pass null to get all active work items (backward-compatible path)
+        List<WorkItem__c> results = DeliveryWorkItemController.getWorkItems(null);
         Test.stopTest();
-       // System.assert(!results.isEmpty(), 'Tickets should be returned');
+       // System.assert(!results.isEmpty(), 'Work items should be returned');
         
     }
 
     @isTest
-    static void testCreateDummyTickets() {
+    static void testCreateDummyWorkItems() {
          
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
@@ -80,25 +80,25 @@ private class DeliveryWorkItemControllerTest {
         
         // --- FIX: Disable trigger logic for this DML operation ---
         DeliveryTriggerControl.disableAfterLogic();
-        List<WorkItem__c> created = DeliveryWorkItemController.createDummyTickets();
+        List<WorkItem__c> created = DeliveryWorkItemController.createDummyWorkItems();
         DeliveryTriggerControl.enableAfterLogic();
         
         Test.stopTest();
-       // System.assertEquals(4, created.size(), '4 dummy tickets should be created');
+       // System.assertEquals(4, created.size(), '4 dummy work items should be created');
         }
     }
 
     @isTest
-    static void testUpdateTicketSortOrders() {
+    static void testUpdateWorkItemSortOrders() {
          
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
-        List<WorkItem__c> tickets = [SELECT Id, SortOrderNumber__c FROM WorkItem__c LIMIT 1];
+        List<WorkItem__c> workItems = [SELECT Id, SortOrderNumber__c FROM WorkItem__c LIMIT 1];
 
         List<Map<String, Object>> updates = new List<Map<String, Object>>();
         updates.add(new Map<String, Object>{
-            'Id' => tickets[0].Id,
+            'Id' => workItems[0].Id,
             '%%%NAMESPACED_ORG%%%SortOrderNumber__c' => 5
         });
 
@@ -106,18 +106,18 @@ private class DeliveryWorkItemControllerTest {
 
         // --- FIX: Disable trigger logic for this DML operation ---
         DeliveryTriggerControl.disableAfterLogic();
-        DeliveryWorkItemController.updateTicketSortOrders(updates);
+        DeliveryWorkItemController.updateWorkItemSortOrders(updates);
         DeliveryTriggerControl.enableAfterLogic();
 
         Test.stopTest();
 
-        WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :tickets[0].Id];
+        WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :workItems[0].Id];
        // System.assertEquals(5, updated.SortOrderNumber__c.intValue());\
     }
     }
 
     @isTest
-    static void testLinkFilesToTicket() {
+    static void testLinkFilesToWorkItem() {
          
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
@@ -130,13 +130,13 @@ private class DeliveryWorkItemControllerTest {
         insert cv;
 
         Id contentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId;
-        Id ticketId = [SELECT Id FROM WorkItem__c LIMIT 1].Id;
+        Id workItemId = [SELECT Id FROM WorkItem__c LIMIT 1].Id;
 
         Test.startTest();
-        DeliveryWorkItemController.linkFilesToTicket(ticketId, new List<Id>{contentDocumentId});
+        DeliveryWorkItemController.linkFilesToWorkItem(workItemId, new List<Id>{contentDocumentId});
         Test.stopTest();
 
-        List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :ticketId];
+        List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :workItemId];
         }
        // System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
     }
@@ -155,32 +155,32 @@ private class DeliveryWorkItemControllerTest {
         insert cv;
 
         Id contentDocumentId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id].ContentDocumentId;
-        Id ticketId = [SELECT Id FROM WorkItem__c LIMIT 1].Id;
+        Id workItemId = [SELECT Id FROM WorkItem__c LIMIT 1].Id;
 
         Test.startTest();
         
         // --- FIX: Disable trigger logic for this DML operation ---
         DeliveryTriggerControl.disableAfterLogic();
-        DeliveryWorkItemController.linkFilesAndSync(ticketId, new List<Id>{contentDocumentId});
+        DeliveryWorkItemController.linkFilesAndSync(workItemId, new List<Id>{contentDocumentId});
         DeliveryTriggerControl.enableAfterLogic();
 
         Test.stopTest();
 
-        List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :ticketId];
+        List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :workItemId];
         }
        // System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
     }
 
     
     @isTest
-    static void testGetAiEnhancedTicketDetails_withFallback() {
+    static void testGetAiEnhancedWorkItemDetails_withFallback() {
          
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
         // Simulate missing API key to force fallback
         Test.startTest();
-        DeliveryWorkItemController.AISuggestionWrapper result = DeliveryWorkItemController.getAiEnhancedTicketDetails('Login bug', 'User cannot log in');
+        DeliveryWorkItemController.AISuggestionWrapper result = DeliveryWorkItemController.getAiEnhancedWorkItemDetails('Login bug', 'User cannot log in');
         Test.stopTest();
 
        // System.assertNotEquals(null, result);
@@ -192,7 +192,7 @@ private class DeliveryWorkItemControllerTest {
 
     // @isTest
     // static void testTriggerExecution() {
-    //     List<WorkItem__c> tickets = new List<WorkItem__c>{
+    //     List<WorkItem__c> workItems = new List<WorkItem__c>{
     //         new WorkItem__c(
     //             BriefDescriptionTxt__c = 'Trigger Test',
     //             CalculatedETADate__c = Date.today(),
@@ -202,10 +202,10 @@ private class DeliveryWorkItemControllerTest {
     //             IsActiveBool__c = true
     //         )
     //     };
-    //     insert tickets;
+    //     insert workItems;
 
-    //     tickets[0].BriefDescriptionTxt__c = 'Updated Description';
-    //     update tickets;
+    //     workItems[0].BriefDescriptionTxt__c = 'Updated Description';
+    //     update workItems;
     // }
     
     @isTest

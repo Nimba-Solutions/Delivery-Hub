@@ -35,7 +35,7 @@ export default class DeliveryAiDraftPanel extends LightningElement {
         this.draft = '';
         this.copied = false;
 
-        draftStatusUpdate({ ticketId: this.recordId })
+        draftStatusUpdate({ workItemId: this.recordId })
             .then(result => {
                 this.draft = result;
             })

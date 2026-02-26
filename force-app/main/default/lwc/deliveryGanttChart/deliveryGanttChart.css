@@ -148,7 +148,7 @@
     min-width: 18rem;
 }
 
-/* Ticket rows */
+/* Work item rows */
 .gantt-row {
     display: flex;
     align-items: center;
@@ -172,7 +172,7 @@
     border-bottom: none;
 }
 
-.gantt-ticket-name {
+.gantt-work-item-name {
     display: block;
     font-weight: 600;
     font-size: 0.75rem;
@@ -184,7 +184,7 @@
     max-width: calc(var(--gantt-label-w) - 0.75rem);
 }
 
-.gantt-ticket-name:hover {
+.gantt-work-item-name:hover {
     color: #3b82f6;
     text-decoration: underline;
 }

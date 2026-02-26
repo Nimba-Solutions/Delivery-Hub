@@ -23,7 +23,7 @@ private class DeliveryWorkItemDepsControllerTest {
         WorkItem__c blocker = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocker' LIMIT 1];
         Map<String, Object> result = DeliveryWorkItemDependenciesController.getDependencies(blocker.Id);
         List<Object> blocking = (List<Object>) result.get('blocking');
-        System.assertEquals(1, blocking.size(), 'Should find 1 ticket being blocked');
+        System.assertEquals(1, blocking.size(), 'Should find 1 work item being blocked');
     }
 
     @IsTest

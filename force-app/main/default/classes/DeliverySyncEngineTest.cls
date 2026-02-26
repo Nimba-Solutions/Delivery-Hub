@@ -30,7 +30,7 @@ private class DeliverySyncEngineTest {
         );
         insert new List<Network_Entity__c>{vendor, client};
 
-        // 3. Ticket (With Upstream Edge mapped)
+        // 3. Work Item (With Upstream Edge mapped)
         WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'T', 
             StageNamePk__c = 'Backlog', 

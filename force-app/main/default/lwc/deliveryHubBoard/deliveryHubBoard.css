@@ -109,7 +109,7 @@
     padding: 0.25rem;
 }
 
-.new-ticket-button {
+.new-work-item-button {
     background-color: var(--brand-primary);
     color: var(--white);
     border: none;
@@ -122,10 +122,10 @@
     align-items: center;
     transition: background-color 0.2s;
 }
-.new-ticket-button:hover {
+.new-work-item-button:hover {
     background-color: #4338ca;
 }
-.new-ticket-button .slds-icon {
+.new-work-item-button .slds-icon {
     --sds-c-icon-color-foreground-default: white;
 }
 
@@ -156,7 +156,7 @@
     margin: 0;
 }
 
-.ticket-count-badge {
+.work-item-count-badge {
     font-size: 0.75rem;
     background-color: rgba(0, 0, 0, 0.05);
     padding: 0.125rem 0.5rem;
@@ -185,8 +185,8 @@
     margin-top: 0.25rem;
 }
 
-/* Ticket Card */
-.ticket-card {
+/* Work Item Card */
+.work-item-card {
     background-color: var(--white);
     border-radius: var(--radius);
     border: 1px solid var(--gray-200);
@@ -197,11 +197,11 @@
     transition: box-shadow 0.2s, transform 0.2s;
     position: relative;
 }
-.ticket-card:hover {
+.work-item-card:hover {
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
 }
-.ticket-card:active {
+.work-item-card:active {
     cursor: grabbing;
 }
 
@@ -238,7 +238,7 @@
     --sds-c-icon-color-foreground-default: var(--red-500);
 }
 
-.ticket-title-text {
+.work-item-title-text {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--gray-900);
@@ -247,7 +247,7 @@
     cursor: pointer;
 }
 
-.ticket-description {
+.work-item-description {
     font-size: 0.875rem;
     color: var(--gray-500);
     margin-bottom: 0.75rem;
@@ -259,7 +259,7 @@
 }
 
 /* UPDATED METADATA STYLES */
-.ticket-metadata-grid {
+.work-item-metadata-grid {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -300,7 +300,7 @@
     font-weight: 600;
 }
 
-.ticket-tags {
+.work-item-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
@@ -314,7 +314,7 @@
     border-radius: 9999px;
 }
 
-.ticket-footer {
+.work-item-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -412,8 +412,8 @@
     --lwc-colorTextIconDefault: #1d4ed8;
 }
 
-/* --- Ticket Card Action Button --- */
-.ticket-action-button {
+/* --- Work Item Card Action Button --- */
+.work-item-action-button {
     background: none;
     border: none;
     cursor: pointer;
@@ -428,7 +428,7 @@
     transition: opacity 0.2s;
 }
 
-.ticket-block-button {
+.work-item-block-button {
     background: none;
     border: none;
     cursor: pointer;
@@ -443,16 +443,16 @@
     transition: opacity 0.2s;
 }
 
-.ticket-card:hover .ticket-block-button {
+.work-item-card:hover .work-item-block-button {
     opacity: 1;
 }
-.ticket-block-button:hover {
+.work-item-block-button:hover {
     background-color: var(--gray-200);
 }
-.ticket-card:hover .ticket-action-button {
+.work-item-card:hover .work-item-action-button {
     opacity: 1;
 }
-.ticket-action-button:hover {
+.work-item-action-button:hover {
     background-color: var(--gray-200);
 }
 
@@ -582,8 +582,8 @@
     border: 2px dashed rgba(59, 130, 246, 0.4);
 }
 
-/* Style for the ticket being dragged */
-.ticket-card.is-dragging {
+/* Style for the work item being dragged */
+.work-item-card.is-dragging {
     opacity: 0.4;
     transform: scale(1.05) rotate(3deg);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
@@ -635,12 +635,12 @@
     margin-top: 0.25rem;
 }
 
-/* Add this to your existing ticket card styles */
-.ticket-card {
+/* Work item card additional styles */
+.work-item-card {
     transition: box-shadow 0.2s, transform 0.2s, opacity 0.2s; /* Add opacity to transition */
 }
 
-.ticket-action-button {
+.work-item-action-button {
     background: none;
     border: 1px solid transparent;
     cursor: pointer;
@@ -659,11 +659,11 @@
 }
 
 /* Show the button when hovering over the card */
-.ticket-card:hover .ticket-action-button {
+.work-item-card:hover .work-item-action-button {
     opacity: 0.6;
 }
 
-.ticket-action-button:hover {
+.work-item-action-button:hover {
     opacity: 1;
     background-color: var(--gray-200);
 }
@@ -683,7 +683,7 @@
 }
 
 /* The original card being dragged ("ghost") */
-.ticket-card.is-dragging {
+.work-item-card.is-dragging {
     opacity: 0; /* Make it invisible, browser provides its own ghost image */
     /* If you dislike the browser ghost, you can use: opacity: 0.5; transform: rotate(3deg); */
     /* but opacity: 0 is usually smoother */
@@ -698,8 +698,8 @@
 }
 
 
-/* ...but if the column has tickets, the placeholder is hidden. */
-.kanban-column-body.has-tickets .empty-column-placeholder {
+/* ...but if the column has work items, the placeholder is hidden. */
+.kanban-column-body.has-items .empty-column-placeholder {
     display: none;
 }
 

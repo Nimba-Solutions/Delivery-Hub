@@ -33,22 +33,22 @@
             <template if:true={hasAttentionItems}>
                 <lightning-card title="Needs Your Attention" icon-name="standard:task" class="slds-m-bottom_small">
                     <ul class="slds-p-horizontal_medium slds-p-bottom_small attention-list">
-                        <template for:each={attentionTickets} for:item="ticket">
-                            <li key={ticket.id} class="slds-p-vertical_x-small slds-border_bottom attention-item">
+                        <template for:each={attentionWorkItems} for:item="wi">
+                            <li key={wi.id} class="slds-p-vertical_x-small slds-border_bottom attention-item">
                                 <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
                                     <div class="slds-col slds-truncate">
                                         <button
-                                            class="slds-button slds-button_reset slds-text-link ticket-link"
-                                            onclick={handleTicketClick}
-                                            data-id={ticket.id}>
-                                            <strong>{ticket.name}</strong>
-                                            <template if:true={ticket.title}>
-                                                <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {ticket.title}</span>
+                                            class="slds-button slds-button_reset slds-text-link work-item-link"
+                                            onclick={handleWorkItemClick}
+                                            data-id={wi.id}>
+                                            <strong>{wi.name}</strong>
+                                            <template if:true={wi.title}>
+                                                <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {wi.title}</span>
                                             </template>
                                         </button>
                                     </div>
                                     <div class="slds-col slds-shrink slds-m-left_x-small">
-                                        <span class={ticket.badgeClass}>{ticket.stage}</span>
+                                        <span class={wi.badgeClass}>{wi.stage}</span>
                                     </div>
                                 </div>
                             </li>
@@ -117,23 +117,23 @@
                 <template if:false={isLoading}>
                     <template if:true={hasRecentItems}>
                         <ul class="slds-p-horizontal_medium slds-p-bottom_small">
-                            <template for:each={recentTickets} for:item="ticket">
-                                <li key={ticket.id} class="slds-p-vertical_x-small slds-border_bottom recent-item">
+                            <template for:each={recentWorkItems} for:item="wi">
+                                <li key={wi.id} class="slds-p-vertical_x-small slds-border_bottom recent-item">
                                     <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
                                         <div class="slds-col slds-truncate">
                                             <button
-                                                class="slds-button slds-button_reset slds-text-link ticket-link"
-                                                onclick={handleTicketClick}
-                                                data-id={ticket.id}>
-                                                <strong>{ticket.name}</strong>
-                                                <template if:true={ticket.title}>
-                                                    <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {ticket.title}</span>
+                                                class="slds-button slds-button_reset slds-text-link work-item-link"
+                                                onclick={handleWorkItemClick}
+                                                data-id={wi.id}>
+                                                <strong>{wi.name}</strong>
+                                                <template if:true={wi.title}>
+                                                    <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {wi.title}</span>
                                                 </template>
                                             </button>
-                                            <div class="slds-text-body_small slds-text-color_weak">{ticket.stage}</div>
+                                            <div class="slds-text-body_small slds-text-color_weak">{wi.stage}</div>
                                         </div>
                                         <div class="slds-col slds-shrink slds-text-body_small slds-text-color_weak slds-text-align_right recent-time">
-                                            {ticket.lastModified}
+                                            {wi.lastModified}
                                         </div>
                                     </div>
                                 </li>

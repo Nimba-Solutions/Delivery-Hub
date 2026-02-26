@@ -1,11 +1,11 @@
 /**
- * @description Controller for the Delivery Ticket Files LWC.
- * Returns all files linked to a Ticket and its related Comments and Requests.
+ * @description Controller for the Delivery Work Item Files LWC.
+ * Returns all files linked to a Work Item and its related Comments and Requests.
  * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryHubFilesController {
 
-    /** @description Represents a single file attachment linked to a ticket or its related records. */
+    /** @description Represents a single file attachment linked to a work item or its related records. */
     public class FileItem {
         @AuraEnabled public String documentId;
         @AuraEnabled public String title;
@@ -17,19 +17,19 @@ public with sharing class DeliveryHubFilesController {
     }
 
     /**
-     * @description Aggregates all ContentDocumentLinks from the ticket, its comments, and its requests.
+     * @description Aggregates all ContentDocumentLinks from the work item, its comments, and its requests.
      * Deduplicates by ContentDocumentId so a file shared across multiple records appears once.
-     * @param ticketId The WorkItem__c record Id to aggregate files for.
+     * @param workItemId The WorkItem__c record Id to aggregate files for.
      * @return List of FileItem wrappers with document metadata.
      */
     @AuraEnabled(cacheable=true)
-    public static List<FileItem> getTicketFiles(Id ticketId) {
-        // 1. Collect all entity IDs: ticket + comments + requests
-        Set<Id> entityIds = new Set<Id>{ ticketId };
+    public static List<FileItem> getWorkItemFiles(Id workItemId) {
+        // 1. Collect all entity IDs: work item + comments + requests
+        Set<Id> entityIds = new Set<Id>{ workItemId };
 
         List<WorkItemComment__c> comments = [
             SELECT Id FROM WorkItemComment__c
-            WHERE WorkItemId__c = :ticketId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
         ];
         for (WorkItemComment__c c : comments) {
@@ -38,7 +38,7 @@ public with sharing class DeliveryHubFilesController {
 
         List<WorkRequest__c> requests = [
             SELECT Id FROM WorkRequest__c
-            WHERE WorkItemId__c = :ticketId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
         ];
         for (WorkRequest__c r : requests) {

@@ -5,13 +5,13 @@
 private class DeliveryHubFilesControllerTest {
 
     @IsTest
-    static void testGetTicketFilesOnTicket() {
-        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Test Ticket');
-        insert ticket;
+    static void testGetWorkItemFilesOnWorkItem() {
+        WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Test Work Item');
+        insert workItem;
 
         ContentVersion cv = new ContentVersion(
-            Title = 'Ticket Doc',
-            PathOnClient = 'ticket.pdf',
+            Title = 'Work Item Doc',
+            PathOnClient = 'workItem.pdf',
             VersionData = Blob.valueOf('pdf content')
         );
         insert cv;
@@ -19,26 +19,26 @@ private class DeliveryHubFilesControllerTest {
 
         insert new ContentDocumentLink(
             ContentDocumentId = cv.ContentDocumentId,
-            LinkedEntityId = ticket.Id,
+            LinkedEntityId = workItem.Id,
             ShareType = 'V',
             Visibility = 'AllUsers'
         );
 
         Test.startTest();
-        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getTicketFiles(ticket.Id);
+        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getWorkItemFiles(workItem.Id);
         Test.stopTest();
 
-        System.assertEquals(1, files.size(), 'Should return 1 file linked to ticket');
-        System.assertEquals('Ticket Doc', files[0].title, 'File title should match');
+        System.assertEquals(1, files.size(), 'Should return 1 file linked to workItem');
+        System.assertEquals('Work Item Doc', files[0].title, 'File title should match');
     }
 
     @IsTest
-    static void testGetTicketFilesOnComment() {
-        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Comment File Ticket');
-        insert ticket;
+    static void testGetWorkItemFilesOnComment() {
+        WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Comment File Work Item');
+        insert workItem;
 
         WorkItemComment__c comment = new WorkItemComment__c(
-            WorkItemId__c = ticket.Id,
+            WorkItemId__c = workItem.Id,
             BodyTxt__c = 'Test comment',
             AuthorTxt__c = 'Test User'
         );
@@ -60,7 +60,7 @@ private class DeliveryHubFilesControllerTest {
         );
 
         Test.startTest();
-        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getTicketFiles(ticket.Id);
+        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getWorkItemFiles(workItem.Id);
         Test.stopTest();
 
         System.assertEquals(1, files.size(), 'Should return file linked to comment');
@@ -68,12 +68,12 @@ private class DeliveryHubFilesControllerTest {
     }
 
     @IsTest
-    static void testGetTicketFilesDeduplication() {
-        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Dedup Ticket');
-        insert ticket;
+    static void testGetWorkItemFilesDeduplication() {
+        WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Dedup Work Item');
+        insert workItem;
 
         WorkItemComment__c comment = new WorkItemComment__c(
-            WorkItemId__c = ticket.Id,
+            WorkItemId__c = workItem.Id,
             BodyTxt__c = 'comment',
             AuthorTxt__c = 'User'
         );
@@ -89,7 +89,7 @@ private class DeliveryHubFilesControllerTest {
 
         insert new ContentDocumentLink(
             ContentDocumentId = cv.ContentDocumentId,
-            LinkedEntityId = ticket.Id,
+            LinkedEntityId = workItem.Id,
             ShareType = 'V',
             Visibility = 'AllUsers'
         );
@@ -101,19 +101,19 @@ private class DeliveryHubFilesControllerTest {
         );
 
         Test.startTest();
-        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getTicketFiles(ticket.Id);
+        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getWorkItemFiles(workItem.Id);
         Test.stopTest();
 
         System.assertEquals(1, files.size(), 'Same document linked twice should deduplicate to 1');
     }
 
     @IsTest
-    static void testGetTicketFilesEmpty() {
-        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Empty Ticket');
-        insert ticket;
+    static void testGetWorkItemFilesEmpty() {
+        WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Empty Work Item');
+        insert workItem;
 
         Test.startTest();
-        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getTicketFiles(ticket.Id);
+        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getWorkItemFiles(workItem.Id);
         Test.stopTest();
 
         System.assertEquals(0, files.size(), 'Should return empty list when no files attached');

@@ -1,11 +1,11 @@
 /**
  * @description Controller for the deliveryWorkItemDependencies LWC.
- *              Returns blocking and blocked-by ticket relationships for a given ticket.
+ *              Returns blocking and blocked-by work item relationships for a given work item.
  * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryWorkItemDependenciesController {
 
-    /** @description Summary of a related ticket shown in the dependency view. */
+    /** @description Summary of a related work item shown in the dependency view. */
     public class DependencyRow {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
@@ -15,26 +15,26 @@ public with sharing class DeliveryWorkItemDependenciesController {
     }
 
     /**
-     * @description Returns tickets that this ticket is blocking, and tickets blocking this ticket.
-     * @param ticketId The WorkItem__c record Id.
+     * @description Returns work items that this work item is blocking, and work items blocking this work item.
+     * @param workItemId The WorkItem__c record Id.
      * @return Map with 'blocking' and 'blockedBy' lists of DependencyRow.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getDependencies(Id ticketId) {
+    public static Map<String, Object> getDependencies(Id workItemId) {
         Map<String, Object> result = new Map<String, Object>();
-        result.put('blocking',   fetchBlocking(ticketId));
-        result.put('blockedBy',  fetchBlockedBy(ticketId));
+        result.put('blocking',   fetchBlocking(workItemId));
+        result.put('blockedBy',  fetchBlockedBy(workItemId));
         return result;
     }
 
-    private static List<DependencyRow> fetchBlocking(Id ticketId) {
+    private static List<DependencyRow> fetchBlocking(Id workItemId) {
         List<DependencyRow> rows = new List<DependencyRow>();
         for (WorkItemDependency__c td : [
             SELECT BlockedWorkItemId__r.Id, BlockedWorkItemId__r.Name,
                    BlockedWorkItemId__r.BriefDescriptionTxt__c, BlockedWorkItemId__r.StageNamePk__c,
                    TypePk__c
             FROM WorkItemDependency__c
-            WHERE BlockingWorkItemId__c = :ticketId
+            WHERE BlockingWorkItemId__c = :workItemId
             WITH SYSTEM_MODE
             ORDER BY BlockedWorkItemId__r.Name ASC
             LIMIT 20
@@ -50,14 +50,14 @@ public with sharing class DeliveryWorkItemDependenciesController {
         return rows;
     }
 
-    private static List<DependencyRow> fetchBlockedBy(Id ticketId) {
+    private static List<DependencyRow> fetchBlockedBy(Id workItemId) {
         List<DependencyRow> rows = new List<DependencyRow>();
         for (WorkItemDependency__c td : [
             SELECT BlockingWorkItemId__r.Id, BlockingWorkItemId__r.Name,
                    BlockingWorkItemId__r.BriefDescriptionTxt__c, BlockingWorkItemId__r.StageNamePk__c,
                    TypePk__c
             FROM WorkItemDependency__c
-            WHERE BlockedWorkItemId__c = :ticketId
+            WHERE BlockedWorkItemId__c = :workItemId
             WITH SYSTEM_MODE
             ORDER BY BlockingWorkItemId__r.Name ASC
             LIMIT 20

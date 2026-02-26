@@ -1,6 +1,6 @@
 /**
  * @description Handler for ContentDocumentLinkTrigger.
- * Evaluates files attached to Tickets and creates Outbound Ledger entries (Sync_Item__c)
+ * Evaluates files attached to Work Items and creates Outbound Ledger entries (Sync_Item__c)
  * feeding them into the Unified Sync Architecture.
  * @author Cloud Nimbus LLC
  */
@@ -18,18 +18,18 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         }
 
         // --- DELIVERY HUB UNIFIED LEDGER ---
-        Map<Id, Id> docToTicketMap = new Map<Id, Id>();
+        Map<Id, Id> docToWorkItemMap = new Map<Id, Id>();
 
         for (ContentDocumentLink cdl : newLinks) {
             if (cdl.LinkedEntityId != null) {
                 String sObjName = cdl.LinkedEntityId.getSObjectType().getDescribe().getName();
                 if (sObjName.endsWithIgnoreCase('WorkItem__c')) {
-                    docToTicketMap.put(cdl.ContentDocumentId, cdl.LinkedEntityId);
+                    docToWorkItemMap.put(cdl.ContentDocumentId, cdl.LinkedEntityId);
                 }
             }
         }
 
-        if (docToTicketMap.isEmpty()) {
+        if (docToWorkItemMap.isEmpty()) {
             return;
         }
 
@@ -37,7 +37,7 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         List<ContentVersion> cvs = [
             SELECT Id, ContentDocumentId, Title, VersionData, PathOnClient, FileExtension, FileType
             FROM ContentVersion
-            WHERE ContentDocumentId IN :docToTicketMap.keySet()
+            WHERE ContentDocumentId IN :docToWorkItemMap.keySet()
             AND IsLatest = true
             WITH SYSTEM_MODE
         ];
@@ -47,11 +47,11 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         }
 
         // 4. Query Routes (WorkRequest__c Bridge) exactly like DeliverySyncEngine
-        Set<Id> ticketIds = new Set<Id>(docToTicketMap.values());
+        Set<Id> workItemIds = new Set<Id>(docToWorkItemMap.values());
         List<WorkRequest__c> connections = [
             SELECT Id, WorkItemId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
             FROM WorkRequest__c 
-            WHERE WorkItemId__c IN :ticketIds AND StatusPk__c != 'Inactive'
+            WHERE WorkItemId__c IN :workItemIds AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
         ];
 
@@ -68,7 +68,7 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         List<Sync_Item__c> itemsToInsert = new List<Sync_Item__c>();
 
         for (ContentVersion cv : cvs) {
-            Id tId = docToTicketMap.get(cv.ContentDocumentId);
+            Id tId = docToWorkItemMap.get(cv.ContentDocumentId);
             List<WorkRequest__c> reqs = routes.get(tId);
 
             // Build base payload
@@ -116,10 +116,10 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         }
     }
 
-    private static Sync_Item__c createFileItem(ContentVersion cv, Id ticketId, Id reqId, String targetId, Map<String, Object> basePayload) {
+    private static Sync_Item__c createFileItem(ContentVersion cv, Id workItemId, Id reqId, String targetId, Map<String, Object> basePayload) {
         Sync_Item__c item = new Sync_Item__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
         item.LocalRecordIdTxt__c = cv.Id;
-        item.WorkItemId__c = ticketId;
+        item.WorkItemId__c = workItemId;
         item.RequestId__c = reqId;
         item.ObjectTypePk__c = 'ContentVersion';
         

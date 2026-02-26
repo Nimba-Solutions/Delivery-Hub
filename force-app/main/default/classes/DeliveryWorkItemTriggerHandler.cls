@@ -1,5 +1,5 @@
 /**
- * @description Aggregates Ticket rows that need a DeliverySyncEngine update,
+ * @description Aggregates WorkItem rows that need a DeliverySyncEngine update,
  * then enqueues worker jobs. Also handles Network Entity Sync and High-Water Mark Sync.
  * @author Cloud Nimbus LLC
  */
@@ -11,8 +11,8 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
     /**
      * @description Entry point for After Insert/Update logic
-     * @param newRows List of new Ticket records
-     * @param oldMap Map of old Ticket records
+     * @param newRows List of new WorkItem records
+     * @param oldMap Map of old WorkItem records
      * @param isInsert Boolean indicating insert context
      * @param isUpdate Boolean indicating update context
      */
@@ -56,9 +56,9 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
     /**
      * @description Checks settings and auto-creates/sends a Request if configured.
-     * @param newTickets List of new tickets
+     * @param newWorkItems List of new work items
      */
-    private static void handleNetworkEntitySync(List<WorkItem__c> newTickets) {
+    private static void handleNetworkEntitySync(List<WorkItem__c> newWorkItems) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
         
         Boolean shouldCreateRequest = true;
@@ -85,7 +85,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
         if (!vendors.isEmpty()) {
             Network_Entity__c vendor = vendors[0];
-            for (WorkItem__c t : newTickets) {
+            for (WorkItem__c t : newWorkItems) {
                 newRequests.add(new WorkRequest__c(
                     WorkItemId__c = t.Id,
                     DeliveryEntityId__c = vendor.Id,
@@ -94,7 +94,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                 ));
             }
         } else {
-            for (WorkItem__c t : newTickets) {
+            for (WorkItem__c t : newWorkItems) {
                 if (t.ClientNetworkEntityId__c != null) {
                     newRequests.add(new WorkRequest__c(
                         WorkItemId__c = t.Id,
@@ -115,7 +115,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     }
     
     /**
-     * @description Publishes a Delivery_WorkItem_Change__e Platform Event for every ticket
+     * @description Publishes a Delivery_WorkItem_Change__e Platform Event for every workItem
      *              whose StageNamePk__c changed in this transaction, enabling real-time
      *              board refresh via the EMP API without polling.
      *              Also schedules an async Slack notification for the same changes.
@@ -153,29 +153,29 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     /**
      * @description Logic to handle Before Update events (Blocking logic)
      */
-    public static void handleBeforeUpdate(List<WorkItem__c> newTickets, Map<Id, WorkItem__c> oldMap) {
+    public static void handleBeforeUpdate(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
         Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'}; 
-        Set<Id> ticketsToCheck = new Set<Id>();
-        for (WorkItem__c ticket : newTickets) {
-            String oldStage = oldMap.get(ticket.Id).StageNamePk__c;
-            String newStage = ticket.StageNamePk__c;
+        Set<Id> workItemsToCheck = new Set<Id>();
+        for (WorkItem__c workItem : newWorkItems) {
+            String oldStage = oldMap.get(workItem.Id).StageNamePk__c;
+            String newStage = workItem.StageNamePk__c;
             if (activeDevStages.contains(newStage) && !activeDevStages.contains(oldStage)) {
-                ticketsToCheck.add(ticket.Id);
+                workItemsToCheck.add(workItem.Id);
             }
         }
-        if (!ticketsToCheck.isEmpty()) {
+        if (!workItemsToCheck.isEmpty()) {
             // FIX: Swapped USER_MODE for SYSTEM_MODE
             List<WorkItemDependency__c> unresolvedBlockers = [
                 SELECT BlockedWorkItemId__c, BlockingWorkItemId__r.BriefDescriptionTxt__c, BlockingWorkItemId__r.StageNamePk__c
                 FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__c IN :ticketsToCheck
+                WHERE BlockedWorkItemId__c IN :workItemsToCheck
                 AND BlockingWorkItemId__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
                 WITH SYSTEM_MODE
             ];
             for (WorkItemDependency__c dependency : unresolvedBlockers) {
-                for (WorkItem__c ticket : newTickets) {
-                    if (ticket.Id == dependency.BlockedWorkItemId__c) {
-                        ticket.addError('This work item cannot be started. It is blocked by: ' + dependency.BlockingWorkItemId__r.BriefDescriptionTxt__c);
+                for (WorkItem__c workItem : newWorkItems) {
+                    if (workItem.Id == dependency.BlockedWorkItemId__c) {
+                        workItem.addError('This work item cannot be started. It is blocked by: ' + dependency.BlockingWorkItemId__r.BriefDescriptionTxt__c);
                     }
                 }
             }

@@ -8,20 +8,20 @@
 public with sharing class DeliveryHubCommentController {
 
     /**
-     * @description Fetches comments related to the current context (Request or Ticket).
+     * @description Fetches comments related to the current context (Request or Work Item).
      * @param requestId The ID of the record the LWC is sitting on.
      * @return List of comments.
      */
     @AuraEnabled(cacheable=true)
     public static List<WorkItemComment__c> getLiveComments(Id requestId) {
         try {
-            Id ticketId = resolveTicketId(requestId);
-            
+            Id workItemId = resolveWorkItemId(requestId);
+
             // FIX: Swapped USER_MODE to SYSTEM_MODE to prevent test crash during packaging
             return [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c
                 FROM WorkItemComment__c
-                WHERE WorkItemId__c = :ticketId
+                WHERE WorkItemId__c = :workItemId
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate ASC
             ];
@@ -39,10 +39,10 @@ public with sharing class DeliveryHubCommentController {
     @AuraEnabled
     public static void postLiveComment(Id requestId, String body) {
         try {
-            Id ticketId = resolveTicketId(requestId);
-            
+            Id workItemId = resolveWorkItemId(requestId);
+
             WorkItemComment__c comment = new WorkItemComment__c(
-                WorkItemId__c = ticketId,
+                WorkItemId__c = workItemId,
                 BodyTxt__c = body,
                 AuthorTxt__c = UserInfo.getName(),
                 SourcePk__c = 'Client'
@@ -89,16 +89,16 @@ public with sharing class DeliveryHubCommentController {
     }
 
     /**
-     * @description Helper to find the Ticket ID regardless of where the LWC is placed.
+     * @description Helper to find the Work Item ID regardless of where the LWC is placed.
      * @param recordId The ID of the current record context
-     * @return Id The resolved Ticket ID
+     * @return Id The resolved Work Item ID
      */
-    private static Id resolveTicketId(Id recordId) {
+    private static Id resolveWorkItemId(Id recordId) {
         SObjectType type = recordId.getSobjectType();
-        
+
         if (type == WorkItem__c.SObjectType) {
             return recordId;
-        } 
+        }
         else if (type == WorkRequest__c.SObjectType) {
             // FIX: Swapped USER_MODE to SYSTEM_MODE
             List<WorkRequest__c> reqs = [SELECT WorkItemId__c FROM WorkRequest__c WHERE Id = :recordId WITH SYSTEM_MODE LIMIT 1];
@@ -106,7 +106,7 @@ public with sharing class DeliveryHubCommentController {
                 return reqs[0].WorkItemId__c;
             }
         }
-        
+
         throw new AuraHandledException('Unsupported object type or work item not found: ' + type.getDescribe().getName());
     }
 }

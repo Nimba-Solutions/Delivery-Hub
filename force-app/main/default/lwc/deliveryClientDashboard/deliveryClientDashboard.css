@@ -137,8 +137,8 @@
     margin-top: 4px;
 }
 
-/* ── Ticket links ── */
-.ticket-link {
+/* ── Work item links ── */
+.work-item-link {
     text-align: left;
     max-width: 100%;
     overflow: hidden;

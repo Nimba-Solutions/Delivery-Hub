@@ -16,9 +16,9 @@ private class DeliverySyncItemIngestorTest {
         );
         insert client;
 
-        // 2. Create Ticket linked to Upstream Client
+        // 2. Create Work Item linked to Upstream Client
         WorkItem__c t = new WorkItem__c(
-            BriefDescriptionTxt__c = 'Base Ticket',
+            BriefDescriptionTxt__c = 'Base Work Item',
             ClientNetworkEntityId__c = client.Id
         );
         insert t;
@@ -30,19 +30,19 @@ private class DeliverySyncItemIngestorTest {
             StatusPk__c = 'Active'
         );
         
-        // 4. Create an Upstream Ledger Entry (Simulating a ticket that came from the Client)
+        // 4. Create an Upstream Ledger Entry (Simulating a workItem that came from the Client)
         insert new Sync_Item__c(
             DirectionPk__c = 'Inbound',
             StatusPk__c = 'Synced',
             ObjectTypePk__c = 'WorkItem__c',
-            RemoteExternalIdTxt__c = 'REMOTE-CLIENT-TICKET-1',
+            RemoteExternalIdTxt__c = 'REMOTE-CLIENT-WORKITEM-1',
             LocalRecordIdTxt__c = t.Id,
             WorkItemId__c = t.Id
         );
     }
 
     @IsTest
-    static void testProcessInboundTicketUpdateDownstreamEdge() {
+    static void testProcessInboundWorkItemUpdateDownstreamEdge() {
         Map<String, Object> payload = new Map<String, Object>{
             'SourceId' => 'REMOTE-123',
             'BriefDescriptionTxt__c' => 'Updated via Inbound Sync'
@@ -53,7 +53,7 @@ private class DeliverySyncItemIngestorTest {
         Test.stopTest();
 
         WorkItem__c updated = [SELECT BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
-        System.assertEquals('Updated via Inbound Sync', updated.BriefDescriptionTxt__c, 'Ticket description should be updated via robust field mapping');
+        System.assertEquals('Updated via Inbound Sync', updated.BriefDescriptionTxt__c, 'Work item description should be updated via robust field mapping');
         
         // V2 Verification: Engine memory should have captured the Request ID to block echoes
         System.assert(DeliverySyncEngine.blockedOrigins.size() > 0, 'Origin edge should be blocked for echo suppression');
@@ -87,7 +87,7 @@ private class DeliverySyncItemIngestorTest {
         // TargetId points to the Client's remote ID stored in the Ledger (no WorkRequest__c bridge exists for this)
         Map<String, Object> payload = new Map<String, Object>{
             'SourceId' => 'REMOTE-COMM-789',
-            'TargetId' => 'REMOTE-CLIENT-TICKET-1', 
+            'TargetId' => 'REMOTE-CLIENT-WORKITEM-1', 
             'BodyTxt__c' => 'Upstream Client Comment',
             'AuthorTxt__c' => 'Client'
         };
@@ -107,7 +107,7 @@ private class DeliverySyncItemIngestorTest {
     }
 
     @IsTest
-    static void testProcessInboundTicketAutoParentsClient() {
+    static void testProcessInboundWorkItemAutoParentsClient() {
         // 1. Setup a Client Network Entity with a simulated Org ID
         String simulatedOrgId = '00D_MOCK_ORG_ID';
         Network_Entity__c clientEntity = new Network_Entity__c(
@@ -118,9 +118,9 @@ private class DeliverySyncItemIngestorTest {
         );
         insert clientEntity;
 
-        // 2. Create an inbound payload simulating a brand new ticket pushed from the Client
+        // 2. Create an inbound payload simulating a brand new workItem pushed from the Client
         Map<String, Object> payload = new Map<String, Object>{
-            'SourceId' => 'REMOTE-TICKET-999',
+            'SourceId' => 'REMOTE-WORKITEM-999',
             'BriefDescriptionTxt__c' => 'Testing Auto-Parenting',
             'SenderOrgId' => simulatedOrgId // The new Identity Injection!
         };
@@ -130,15 +130,15 @@ private class DeliverySyncItemIngestorTest {
         DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
         Test.stopTest();
 
-        // 4. Verify the Ticket was inserted AND automatically parented to the Client
-        WorkItem__c insertedTicket = [
+        // 4. Verify the Work Item was inserted AND automatically parented to the Client
+        WorkItem__c insertedWorkItem = [
             SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c 
             FROM WorkItem__c 
             WHERE BriefDescriptionTxt__c = 'Testing Auto-Parenting' 
             LIMIT 1
         ];
         
-        System.assertNotEquals(null, insertedTicket, 'Ticket should have been created successfully.');
-        System.assertEquals(clientEntity.Id, insertedTicket.ClientNetworkEntityId__c, 'The Ingestor should have automatically stamped the ClientNetworkEntityId__c based on the SenderOrgId in the payload.');
+        System.assertNotEquals(null, insertedWorkItem, 'Work item should have been created successfully.');
+        System.assertEquals(clientEntity.Id, insertedWorkItem.ClientNetworkEntityId__c, 'The Ingestor should have automatically stamped the ClientNetworkEntityId__c based on the SenderOrgId in the payload.');
     }
 }

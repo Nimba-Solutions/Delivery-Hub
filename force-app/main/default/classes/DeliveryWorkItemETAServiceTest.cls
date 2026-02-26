@@ -12,11 +12,11 @@ private class DeliveryWorkItemETAServiceTest {
         // Note: The service filters by IsActive = true. 
         // We use the current user as one developer to simplify DML.
         
-        // 2. Create Tickets with various stages and priorities
-        List<WorkItem__c> tickets = new List<WorkItem__c>();
+        // 2. Create Work Items with various stages and priorities
+        List<WorkItem__c> workItems = new List<WorkItem__c>();
         
-        // Ticket 1: Active Dev, High Priority
-        tickets.add(new WorkItem__c(
+        // Work Item 1: Active Dev, High Priority
+        workItems.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Active High Priority',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
@@ -24,8 +24,8 @@ private class DeliveryWorkItemETAServiceTest {
             SortOrderNumber__c = 1
         ));
 
-        // Ticket 2: Pre-Dev, Medium Priority
-        tickets.add(new WorkItem__c(
+        // Work Item 2: Pre-Dev, Medium Priority
+        workItems.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Pre-Dev Medium',
             StageNamePk__c = 'Backlog',
             PriorityPk__c = 'Medium',
@@ -33,20 +33,20 @@ private class DeliveryWorkItemETAServiceTest {
             SortOrderNumber__c = 2
         ));
 
-        // Ticket 3: Blocked Ticket
-        tickets.add(new WorkItem__c(
-            BriefDescriptionTxt__c = 'Blocked Ticket',
+        // Work Item 3: Blocked Work Item
+        workItems.add(new WorkItem__c(
+            BriefDescriptionTxt__c = 'Blocked Work Item',
             StageNamePk__c = 'Backlog',
             PriorityPk__c = 'Low',
             DeveloperDaysSizeNumber__c = 1
         ));
 
-        insert tickets;
+        insert workItems;
 
-        // 3. Create a Dependency (Ticket 3 is blocked by Ticket 1)
+        // 3. Create a Dependency (Work Item 3 is blocked by Work Item 1)
         insert new WorkItemDependency__c(
-            BlockedWorkItemId__c = tickets[2].Id,
-            BlockingWorkItemId__c = tickets[0].Id
+            BlockedWorkItemId__c = workItems[2].Id,
+            BlockingWorkItemId__c = workItems[0].Id
         );
     }
 
@@ -54,27 +54,27 @@ private class DeliveryWorkItemETAServiceTest {
      * @description Tests the LWC method with specific prioritization.
      */
     @IsTest
-    static void testGetTicketETAsWithPriority() {
-        List<WorkItem__c> allTickets = [SELECT Id FROM WorkItem__c];
-        List<Id> prioritizedIds = new List<Id>{allTickets[1].Id}; // Prioritize the Medium priority one
+    static void testGetWorkItemETAsWithPriority() {
+        List<WorkItem__c> allWorkItems = [SELECT Id FROM WorkItem__c];
+        List<Id> prioritizedWorkItemIds = new List<Id>{allWorkItems[1].Id}; // Prioritize the Medium priority one
 
         Test.startTest();
-        DeliveryWorkItemETAService.ETAResult result = DeliveryWorkItemETAService.getTicketETAsWithPriority(2, prioritizedIds);
+        DeliveryWorkItemETAService.ETAResult result = DeliveryWorkItemETAService.getWorkItemETAsWithPriority(2, prioritizedWorkItemIds);
         Test.stopTest();
 
         // Validate results
         System.assertNotEquals(null, result, 'Result should not be null');
-        System.assert(result.tickets.size() > 0, 'Should have calculated ETAs for tickets');
+        System.assert(result.workItems.size() > 0, 'Should have calculated ETAs for workItems');
         
-        // Verify prioritized ticket was processed
+        // Verify prioritized work item was processed
         Boolean foundPrioritized = false;
-        for(DeliveryWorkItemETAService.TicketETADTO dto : result.tickets) {
-            if(dto.ticketId == prioritizedIds[0]) {
+        for(DeliveryWorkItemETAService.WorkItemETADTO dto : result.workItems) {
+            if(dto.workItemId == prioritizedWorkItemIds[0]) {
                 foundPrioritized = true;
-                System.assertNotEquals(null, dto.calculatedETA, 'Prioritized ticket should have an ETA');
+                System.assertNotEquals(null, dto.calculatedETA, 'Prioritized work item should have an ETA');
             }
         }
-        System.assert(foundPrioritized, 'Prioritized ticket should be in the result set');
+        System.assert(foundPrioritized, 'Prioritized work item should be in the result set');
     }
 
     /**
@@ -87,8 +87,8 @@ private class DeliveryWorkItemETAServiceTest {
         Test.stopTest();
 
         // Verify database updates
-        List<WorkItem__c> updatedTickets = [SELECT Id, ProjectedUATReadyDate__c FROM WorkItem__c WHERE ProjectedUATReadyDate__c != NULL];
-        System.assert(updatedTickets.size() > 0, 'Queueable should have updated at least one ticket ETA');
+        List<WorkItem__c> updatedWorkItems = [SELECT Id, ProjectedUATReadyDate__c FROM WorkItem__c WHERE ProjectedUATReadyDate__c != NULL];
+        System.assert(updatedWorkItems.size() > 0, 'Queueable should have updated at least one work item ETA');
     }
 
     /**
@@ -131,7 +131,7 @@ private class DeliveryWorkItemETAServiceTest {
         try {
             Test.startTest();
             // Passing nulls to force the service to handle or throw an exception
-            DeliveryWorkItemETAService.getTicketETAsWithPriority(null, null);
+            DeliveryWorkItemETAService.getWorkItemETAsWithPriority(null, null);
             Test.stopTest();
         } catch (AuraHandledException e) {
             exceptionThrown = true;

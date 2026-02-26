@@ -12,7 +12,7 @@ public with sharing class DeliveryHubSettingsController {
         /** @description Enable notifications setting */
         @AuraEnabled public Boolean enableNotifications { get; set; }
         
-        /** @description Automatically create a Request record when a Ticket is created */
+        /** @description Automatically create a Request record when a Work Item is created */
         @AuraEnabled public Boolean autoCreateRequest { get; set; } 
         
         /** @description Automatically send the Request to the Vendor via API */

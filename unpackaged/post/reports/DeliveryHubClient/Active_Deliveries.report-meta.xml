@@ -24,7 +24,7 @@
     <columns>
         <field>WorkItem__c.CalculatedETADate__c</field>
     </columns>
-    <description>Tickets currently in active delivery stages. Shows progress, hours used, and estimated completion date.</description>
+    <description>Work items currently in active delivery stages. Shows progress, hours used, and estimated completion date.</description>
     <filter>
         <booleanFilter>1 AND 2 AND 3</booleanFilter>
         <criteriaItems>

@@ -17,20 +17,20 @@ export default class DeliveryTimeLogger extends LightningElement {
     @track selectedPreset = 1;
     @track isSubmitting = false;
 
-    wiredTicket;
+    wiredWorkItem;
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
-    wiredTicketHandler(result) {
-        this.wiredTicket = result;
+    wiredWorkItemHandler(result) {
+        this.wiredWorkItem = result;
     }
 
     get hasClientEntity() {
-        const val = getFieldValue(this.wiredTicket && this.wiredTicket.data, CLIENT_ENTITY_FIELD);
+        const val = getFieldValue(this.wiredWorkItem && this.wiredWorkItem.data, CLIENT_ENTITY_FIELD);
         return !!val;
     }
 
     get currentHours() {
-        const val = getFieldValue(this.wiredTicket && this.wiredTicket.data, TOTAL_LOGGED_HOURS_FIELD);
+        const val = getFieldValue(this.wiredWorkItem && this.wiredWorkItem.data, TOTAL_LOGGED_HOURS_FIELD);
         return val != null ? val : 0;
     }
 
@@ -77,19 +77,19 @@ export default class DeliveryTimeLogger extends LightningElement {
         this.isSubmitting = true;
         try {
             await logHours({
-                ticketId: this.recordId,
+                workItemId: this.recordId,
                 hours: this.hoursValue,
                 workNotes: this.notesValue || null
             });
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Time Logged',
-                message: `${this.hoursValue}h added to this ticket.`,
+                message: `${this.hoursValue}h added to this work item.`,
                 variant: 'success'
             }));
             this.hoursValue = 1;
             this.notesValue = '';
             this.selectedPreset = 1;
-            await refreshApex(this.wiredTicket);
+            await refreshApex(this.wiredWorkItem);
         } catch (error) {
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Error Logging Time',

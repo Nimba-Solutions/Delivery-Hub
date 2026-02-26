@@ -18,7 +18,7 @@
     <columns>
         <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
     </columns>
-    <description>Successfully delivered tickets. Review completed work and track delivery throughput over time.</description>
+    <description>Successfully delivered work items. Review completed work and track delivery throughput over time.</description>
     <filter>
         <criteriaItems>
             <column>WorkItem__c.StageNamePk__c</column>

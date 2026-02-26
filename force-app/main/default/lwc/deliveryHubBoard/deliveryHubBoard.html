@@ -23,12 +23,12 @@
                         <span>Active Devs:</span>
                         <input type="number" min="1" class="dev-count-input" value={numDevs} onchange={handleNumDevsChange} />
                     </div>
-                    <button class="new-ticket-button" onclick={openCreateModal}>
+                    <button class="new-work-item-button" onclick={openCreateModal}>
                         <lightning-icon icon-name="utility:add" size="x-small" class="slds-m-right_x-small"></lightning-icon>
                         New Work Item
                     </button>
                     <template if:true={AiEnhancementEnabled}>
-                        <button class="new-ticket-button" onclick={handleWeeklyUpdate} title="Generate AI weekly status summary">
+                        <button class="new-work-item-button" onclick={handleWeeklyUpdate} title="Generate AI weekly status summary">
                             <lightning-icon icon-name="utility:sparkle" size="x-small" class="slds-m-right_x-small"></lightning-icon>
                             Weekly Update
                         </button>
@@ -93,80 +93,80 @@
                         
                         <div class="kanban-column-header" style={col.headerStyle}>
                             <h2 class="column-title">{col.displayName}</h2>
-                            <span class="ticket-count-badge">{col.tickets.length}</span>
+                            <span class="work-item-count-badge">{col.workItems.length}</span>
                         </div>
 
                         <div class={col.bodyClasses}>
-                            <template if:true={col.tickets.length}>
-                                <template for:each={col.tickets} for:item="ticket">
-                                    <div key={ticket.uiId} class={ticket.cardClasses} draggable="true" style={ticket.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={ticket.uiId}>
+                            <template if:true={col.workItems.length}>
+                                <template for:each={col.workItems} for:item="wi">
+                                    <div key={wi.uiId} class={wi.cardClasses} draggable="true" style={wi.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={wi.uiId}>
                                         
-                                        <template if:true={ticket.isHighPriority}>
+                                        <template if:true={wi.isHighPriority}>
                                             <div class="priority-indicator">
                                                 <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
                                             </div>
                                         </template>
 
-                                        <h3 class="ticket-title-text" data-id={ticket.uiId} onclick={handleTitleClick}>
-                                            {ticket.uiTitle}
+                                        <h3 class="work-item-title-text" data-id={wi.uiId} onclick={handleTitleClick}>
+                                            {wi.uiTitle}
                                         </h3>
 
-                                        <p class="ticket-description">{ticket.uiDescription}</p>
+                                        <p class="work-item-description">{wi.uiDescription}</p>
 
-                                        <div class="ticket-metadata-grid">
+                                        <div class="work-item-metadata-grid">
                                             <div class="meta-row">
                                                 <div class="meta-item" title="Billed / Estimated Hours">
                                                     <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-icon-text-light"></lightning-icon>
-                                                    <span>{ticket.uiHours}</span>
+                                                    <span>{wi.uiHours}</span>
                                                 </div>
                                                 <div title="Size in Days">
-                                                    <span class="slds-badge meta-badge">{ticket.uiSize}d</span>
+                                                    <span class="slds-badge meta-badge">{wi.uiSize}d</span>
                                                 </div>
                                             </div>
 
                                             <div class="meta-row">
-                                                <div class="meta-item" title={ticket.dateTooltip}>
+                                                <div class="meta-item" title={wi.dateTooltip}>
                                                     <lightning-icon icon-name="utility:event" size="xx-small" class="slds-icon-text-light"></lightning-icon>
-                                                    <span>ETA: {ticket.calculatedETA}</span>
+                                                    <span>ETA: {wi.calculatedETA}</span>
                                                 </div>
                                                 
-                                                <template if:true={ticket.uiUat}>
+                                                <template if:true={wi.uiUat}>
                                                     <div class="meta-item uat-date" title="Target UAT Date">
-                                                        <span>UAT: {ticket.uiUat}</span>
+                                                        <span>UAT: {wi.uiUat}</span>
                                                     </div>
                                                 </template>
                                             </div>
                                         </div>
 
-                                        <template if:true={ticket.tags.length}>
-                                            <div class="ticket-tags">
-                                                <template for:each={ticket.tags} for:item="tag">
+                                        <template if:true={wi.tags.length}>
+                                            <div class="work-item-tags">
+                                                <template for:each={wi.tags} for:item="tag">
                                                     <span key={tag} class="tag-badge">{tag}</span>
                                                 </template>
                                             </div>
                                         </template>
 
-                                        <div class="ticket-footer">
-                                            <template if:true={ticket.uiPriority}>
-                                                <span class={ticket.priorityClasses}>{ticket.uiPriority}</span>
+                                        <div class="work-item-footer">
+                                            <template if:true={wi.uiPriority}>
+                                                <span class={wi.priorityClasses}>{wi.uiPriority}</span>
                                             </template>
 
-                                            <button class="ticket-action-button" title="Move Work Item" data-id={ticket.uiId} onclick={handleCardClick}>
+                                            <button class="work-item-action-button" title="Move Work Item" data-id={wi.uiId} onclick={handleCardClick}>
                                                 <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
                                             </button>
 
-                                            <button class="ticket-block-button" title="Manage Dependencies" data-id={ticket.uiId} onclick={handleManageDependenciesClick}>
+                                            <button class="work-item-block-button" title="Manage Dependencies" data-id={wi.uiId} onclick={handleManageDependenciesClick}>
                                                 <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Dependencies"></lightning-icon>
                                             </button>
 
-                                            <template if:true={ticket.OwnerName}>
+                                            <template if:true={wi.OwnerName}>
                                                 <div class="assignee">
                                                     <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
-                                                    <span>{ticket.OwnerName}</span>
+                                                    <span>{wi.OwnerName}</span>
                                                 </div>
                                             </template>
 
-                                            <template if:true={ticket.isCurrentlyBlocked}>
+                                            <template if:true={wi.isCurrentlyBlocked}>
                                                 <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This work item is blocked."></lightning-icon>
                                             </template>
                                         </div>
@@ -174,7 +174,7 @@
                                 </template>
                             </template>
 
-                            <template if:false={col.tickets.length}>
+                            <template if:false={col.workItems.length}>
                                 <div class="empty-column-placeholder">
                                     <div class="empty-col-dots">
                                         <span class="empty-dot"></span>
@@ -216,8 +216,8 @@
                             onsubmit={handleCreateSubmit}
                             onsuccess={handleCreateSuccess}>
                             
-                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c" required onchange={handleFieldChange} value={createTicketTitle}></lightning-input-field>
-                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DetailsTxt__c" onchange={handleFieldChange} value={createTicketDescription}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c" required onchange={handleFieldChange} value={createWorkItemTitle}></lightning-input-field>
+                            <lightning-input-field field-name="%%%NAMESPACED_ORG%%%DetailsTxt__c" onchange={handleFieldChange} value={createWorkItemDescription}></lightning-input-field>
                             <lightning-input-field field-name="%%%NAMESPACED_ORG%%%PriorityPk__c" value={createDefaults.PriorityPk__c}></lightning-input-field>
                             
                             <div class="slds-hide">
@@ -303,7 +303,7 @@
                 <div class="slds-modal__content slds-p-around_medium">
                     <lightning-record-edit-form
                         object-api-name="WorkItem__c"
-                        record-id={transitionTicketId}
+                        record-id={transitionWorkItemId}
                         onsuccess={handleTransitionSuccess}
                         onerror={handleTransitionError}>
                         <template for:each={transitionRequiredFields} for:item="fieldName">
@@ -384,14 +384,14 @@
         <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
-                    <h2 class="slds-modal__title slds-hyphenate">Manage Dependencies for {selectedTicket.Name}</h2>
+                    <h2 class="slds-modal__title slds-hyphenate">Manage Dependencies for {selectedWorkItem.Name}</h2>
                 </header>
                 <div class="slds-modal__content slds-p-around_medium">
                     <h3 class="slds-text-heading_small slds-m-bottom_small">Blocked By:</h3>
-                    <template if:false={selectedTicket.isBlockedBy.length}>
+                    <template if:false={selectedWorkItem.isBlockedBy.length}>
                         <p>This work item is not blocked by any other work items.</p>
                     </template>
-                    <template for:each={selectedTicket.isBlockedBy} for:item="dep">
+                    <template for:each={selectedWorkItem.isBlockedBy} for:item="dep">
                         <lightning-pill key={dep.dependencyId} label={dep.name} onremove={handleRemoveDependency} data-dependency-id={dep.dependencyId}></lightning-pill>
                     </template>
                     <hr class="slds-m-vertical_medium" />
@@ -415,7 +415,7 @@
                                     <p class="slds-text-body_small">{result.%%%NAMESPACED_ORG%%%StageNamePk__c}</p>
                                 </div>
                                 <div class="slds-col slds-no-flex">
-                                    <lightning-button label="Select" variant="neutral" data-blocking-id={result.Id} onclick={handleSelectBlockingTicket}></lightning-button>
+                                    <lightning-button label="Select" variant="neutral" data-blocking-id={result.Id} onclick={handleSelectBlockingWorkItem}></lightning-button>
                                 </div>
                             </div>
                         </template>

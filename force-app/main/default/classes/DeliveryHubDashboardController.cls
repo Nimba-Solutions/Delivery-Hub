@@ -5,8 +5,8 @@
  */
 public with sharing class DeliveryHubDashboardController {
 
-    /** @description Wrapper for a ticket summary row used in the client dashboard. */
-    public class TicketItem {
+    /** @description Wrapper for a work item summary row used in the client dashboard. */
+    public class WorkItemSummary {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
         @AuraEnabled public String title;
@@ -21,7 +21,7 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     /**
-     * @description Calculates active tickets, sync health, and last active timestamp.
+     * @description Calculates active work items, sync health, and last active timestamp.
      * @return Map<String, Object> Metrics map (Object type to support String dates).
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
@@ -29,15 +29,15 @@ public with sharing class DeliveryHubDashboardController {
     public static Map<String, Object> getBudgetMetrics() {
         Map<String, Object> metrics = new Map<String, Object>();
 
-        // 1. Ticket Metrics (Active Count) — use CMT terminal stages so no hardcoded 'Closed'
-        Set<String> terminalStages = WorkflowConfigService.getTerminalStageValues('Software_Delivery');
-        AggregateResult[] ticketStats = [
+        // 1. Work Item Metrics (Active Count) — use CMT terminal stages so no hardcoded 'Closed'
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+        AggregateResult[] workItemStats = [
             SELECT Count(Id) total
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
         ];
 
-        Decimal activeCount = (ticketStats[0].get('total') != null) ? (Decimal)ticketStats[0].get('total') : 0;
+        Decimal activeCount = (workItemStats[0].get('total') != null) ? (Decimal)workItemStats[0].get('total') : 0;
         metrics.put('activeRequests', activeCount);
         Date firstOfMonth = Date.today().toStartOfMonth();
         Date firstOfLastMonth = firstOfMonth.addMonths(-1);
@@ -55,7 +55,7 @@ public with sharing class DeliveryHubDashboardController {
         ];
         metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
 
-        // 2. Last Entry Logic (Find most recent activity on tickets)
+        // 2. Last Entry Logic (Find most recent activity on work items)
         List<WorkItem__c> lastActivity = [
             SELECT LastModifiedDate
             FROM WorkItem__c
@@ -103,16 +103,16 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     /**
-     * @description Returns client-facing dashboard data: attention items, phase counts, recent tickets.
-     * @return Map containing attentionTickets, phases, and recentTickets lists.
+     * @description Returns client-facing dashboard data: attention items, phase counts, recent work items.
+     * @return Map containing attentionWorkItems, phases, and recentWorkItems lists.
      */
     /**
-     * @description Returns the count of tickets currently waiting on client action.
-     * @return Integer count of attention-requiring tickets.
+     * @description Returns the count of work items currently waiting on client action.
+     * @return Integer count of attention-requiring work items.
      */
     @AuraEnabled(cacheable=true)
     public static Integer getAttentionCount() {
-        Set<String> clientStages = WorkflowConfigService.getAttentionStageValues('Software_Delivery');
+        Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
         return [
             SELECT COUNT()
             FROM WorkItem__c
@@ -124,9 +124,9 @@ public with sharing class DeliveryHubDashboardController {
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getClientDashboard() {
         Map<String, Object> result = new Map<String, Object>();
-        result.put('attentionTickets', fetchAttentionTickets());
+        result.put('attentionWorkItems', fetchAttentionWorkItems());
         result.put('phases', fetchPhaseList());
-        result.put('recentTickets', fetchRecentTickets());
+        result.put('recentWorkItems', fetchRecentWorkItems());
         result.put('announcements', fetchVendorAnnouncements());
         return result;
     }
@@ -135,8 +135,8 @@ public with sharing class DeliveryHubDashboardController {
     // Private helpers — keep getClientDashboard complexity at 1
     // -------------------------------------------------------------------------
 
-    private static List<TicketItem> fetchAttentionTickets() {
-        Set<String> clientStages = WorkflowConfigService.getAttentionStageValues('Software_Delivery');
+    private static List<WorkItemSummary> fetchAttentionWorkItems() {
+        Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
 
         List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c
@@ -147,9 +147,9 @@ public with sharing class DeliveryHubDashboardController {
             LIMIT 20
         ];
 
-        List<TicketItem> items = new List<TicketItem>();
+        List<WorkItemSummary> items = new List<WorkItemSummary>();
         for (WorkItem__c t : recs) {
-            TicketItem item = new TicketItem();
+            WorkItemSummary item = new WorkItemSummary();
             item.id = t.Id;
             item.name = t.Name;
             item.title = t.BriefDescriptionTxt__c;
@@ -160,7 +160,7 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     private static List<PhaseItem> fetchPhaseList() {
-        Map<String, String> stageToPhase = WorkflowConfigService.getStagePhaseMap('Software_Delivery');
+        Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
         Map<String, Integer> phaseCounts = new Map<String, Integer>{
             'Planning' => 0, 'Approval' => 0, 'Development' => 0,
             'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
@@ -189,7 +189,7 @@ public with sharing class DeliveryHubDashboardController {
         return phaseList;
     }
 
-    private static List<TicketItem> fetchRecentTickets() {
+    private static List<WorkItemSummary> fetchRecentWorkItems() {
         List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
@@ -199,9 +199,9 @@ public with sharing class DeliveryHubDashboardController {
             LIMIT 5
         ];
 
-        List<TicketItem> items = new List<TicketItem>();
+        List<WorkItemSummary> items = new List<WorkItemSummary>();
         for (WorkItem__c t : recs) {
-            TicketItem item = new TicketItem();
+            WorkItemSummary item = new WorkItemSummary();
             item.id = t.Id;
             item.name = t.Name;
             item.title = t.BriefDescriptionTxt__c;

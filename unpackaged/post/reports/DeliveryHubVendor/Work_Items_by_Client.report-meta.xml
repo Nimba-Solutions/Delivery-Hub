@@ -12,7 +12,7 @@
     <columns>
         <field>WorkItem__c.PriorityPk__c</field>
     </columns>
-    <description>Tickets grouped by client network entity. Shows each client's ticket portfolio and current status at a glance.</description>
+    <description>Work items grouped by client network entity. Shows each client's work item portfolio and current status at a glance.</description>
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>

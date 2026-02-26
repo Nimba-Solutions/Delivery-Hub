@@ -7,11 +7,11 @@ public with sharing class DeliveryWorkItemController {
     /**
      * @description Returns active WorkItem__c records, ordered by SortOrderNumber__c.
      * @param workflowType Optional DeveloperName of a WorkflowType__mdt record.
-     *                     When provided, only returns tickets in that workflow type.
-     *                     When blank/null, returns all active tickets (backward-compatible).
+     *                     When provided, only returns work items in that workflow type.
+     *                     When blank/null, returns all active work items (backward-compatible).
      */
     @AuraEnabled(cacheable=true)
-    public static List<WorkItem__c> getTickets(String workflowType) {
+    public static List<WorkItem__c> getWorkItems(String workflowType) {
         if (!Schema.sObjectType.WorkItem__c.isAccessible()
             || !Schema.sObjectType.WorkItem__c.fields.StageNamePk__c.isAccessible()) {
             return new List<WorkItem__c>();
@@ -64,7 +64,7 @@ public with sharing class DeliveryWorkItemController {
      * @description Creates demo WorkItem__c records and returns them.
      */
     @AuraEnabled
-    public static List<WorkItem__c> createDummyTickets() {
+    public static List<WorkItem__c> createDummyWorkItems() {
         List<WorkItem__c> demo = new List<WorkItem__c>{
             new WorkItem__c(
                 BriefDescriptionTxt__c='Alpha summary',
@@ -104,8 +104,8 @@ public with sharing class DeliveryWorkItemController {
     }
 
     @AuraEnabled
-    public static void updateTicketSortOrders(List<Map<String, Object>> updates) {
-        List<WorkItem__c> tickets = new List<WorkItem__c>();
+    public static void updateWorkItemSortOrders(List<Map<String, Object>> updates) {
+        List<WorkItem__c> workItems = new List<WorkItem__c>();
         for (Map<String, Object> u : updates) {
             Object sortOrderRaw = u.get('SortOrderNumber__c');
             Decimal sortOrder;
@@ -124,12 +124,12 @@ public with sharing class DeliveryWorkItemController {
             } else {
                 sortOrder = null;
             }
-            tickets.add(new WorkItem__c(
+            workItems.add(new WorkItem__c(
                 Id = (String)u.get('Id'),
                 SortOrderNumber__c = sortOrder
             ));
         }
-        update tickets;
+        update workItems;
     }
 
     @AuraEnabled(cacheable=true)
@@ -149,12 +149,12 @@ public with sharing class DeliveryWorkItemController {
     }
 
     @AuraEnabled
-    public static void linkFilesToTicket(Id ticketId, List<Id> contentDocumentIds) {
+    public static void linkFilesToWorkItem(Id workItemId, List<Id> contentDocumentIds) {
         List<ContentDocumentLink> links = new List<ContentDocumentLink>();
         for (Id docId : contentDocumentIds) {
             links.add(new ContentDocumentLink(
                 ContentDocumentId = docId,
-                LinkedEntityId = ticketId,
+                LinkedEntityId = workItemId,
                 ShareType = 'V',
                 Visibility = 'AllUsers'
             ));
@@ -163,13 +163,13 @@ public with sharing class DeliveryWorkItemController {
     }
 
     @AuraEnabled
-    public static void linkFilesAndSync(Id ticketId, List<Id> contentDocumentIds) {
+    public static void linkFilesAndSync(Id workItemId, List<Id> contentDocumentIds) {
         List<ContentDocumentLink> links = new List<ContentDocumentLink>();
         for (Id docId : contentDocumentIds) {
             links.add(new ContentDocumentLink(
                 ContentDocumentId = docId,
-                LinkedEntityId = ticketId,
-                ShareType = 'V' 
+                LinkedEntityId = workItemId,
+                ShareType = 'V'
             ));
         }
         if (!links.isEmpty()) {
@@ -205,7 +205,7 @@ public with sharing class DeliveryWorkItemController {
      * @description Wrapper class to structure the AI suggestion data returned to the LWC.
      */
     public class AISuggestionWrapper {
-        /** @description The AI-suggested title for the ticket */
+        /** @description The AI-suggested title for the work item */
         @AuraEnabled public String title { get; set; }
         /** @description The AI-suggested description with technical requirements */
         @AuraEnabled public String description { get; set; }
@@ -214,13 +214,13 @@ public with sharing class DeliveryWorkItemController {
     }
 
     /**
-     * @description Calls OpenAI GPT-4o mini to enhance a ticket's title and description.
+     * @description Calls OpenAI GPT-4o mini to enhance a work item's title and description.
      * @param currentTitle The user-entered title.
      * @param currentDescription The user-entered description.
      * @return AISuggestionWrapper An object containing the enhanced details.
      */
     @AuraEnabled
-    public static AISuggestionWrapper getAiEnhancedTicketDetails(String currentTitle, String currentDescription) {
+    public static AISuggestionWrapper getAiEnhancedWorkItemDetails(String currentTitle, String currentDescription) {
         if (String.isBlank(currentTitle) && String.isBlank(currentDescription)) {
             throw new AuraHandledException('Please provide at least a title or description for AI enhancement.');
         }
@@ -293,11 +293,11 @@ public with sharing class DeliveryWorkItemController {
     }
 
     private static String buildOpenAIPrompt(String inputText) {
-        return 'Please enhance this software development ticket by providing:\n' +
+        return 'Please enhance this software development work item by providing:\n' +
                '1. An improved, professional title\n' +
                '2. A detailed, comprehensive description with technical requirements\n' +
                '3. A realistic development time estimate in days (1-30 range)\n\n' +
-               'Input ticket:\n' + inputText + '\n\n' +
+               'Input work item:\n' + inputText + '\n\n' +
                'Please respond in this exact JSON format:\n' +
                '{\n' +
                '  "title": "Enhanced title here",\n' +

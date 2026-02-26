@@ -36,9 +36,9 @@ public without sharing class DeliverySyncItemIngestor {
         Id localRequestId = null;
         Id localRecordId = findLocalId(targetType, sourceId);
         
-        // If it's a Ticket, try to find the Request Bridge (Downstream Origin)
+        // If it's a Work Item, try to find the Request Bridge (Downstream Origin)
         if (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
-            WorkRequest__c bridge = findTicketBridge(sourceId);
+            WorkRequest__c bridge = findWorkItemBridge(sourceId);
             if (bridge != null) {
                 localRecordId = bridge.WorkItemId__c;
                 localRequestId = bridge.Id;
@@ -62,7 +62,7 @@ public without sharing class DeliverySyncItemIngestor {
         if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('WorkItemComment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             
             // 1. Try to find parent via Request Bridge (Downstream Origin)
-            WorkRequest__c parentBridge = findTicketBridge(targetId);
+            WorkRequest__c parentBridge = findWorkItemBridge(targetId);
             if (parentBridge != null) {
                 localParentId = parentBridge.WorkItemId__c;
                 localRequestId = parentBridge.Id; 
@@ -117,7 +117,7 @@ public without sharing class DeliverySyncItemIngestor {
                 if (!entities.isEmpty()) {
                     String eType = (String)entities[0].get(entities[0].getSObjectType().getDescribe().fields.getMap().containsKey('EntityTypePk__c') ? 'EntityTypePk__c' : getNamespacePrefix() + 'EntityTypePk__c');
                     
-                    // If the sender is registered as a Client in our org, lock them in as the Client for this Ticket
+                    // If the sender is registered as a Client in our org, lock them in as the Client for this Work Item
                     if (eType == 'Client' || eType == 'Both') {
                         putSafe(recordToUpsert, 'ClientNetworkEntityId__c', (Id)entities[0].get('Id'));
                     }
@@ -151,12 +151,12 @@ public without sharing class DeliverySyncItemIngestor {
             DeliverySyncEngine.ignoreOrigin(localRequestId);
         } else {
             // No Request found. Origin must be the Upstream Client.
-            Id parentTicketId = (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) ? recordToUpsert.Id : localParentId;
+            Id parentWorkItemId = (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) ? recordToUpsert.Id : localParentId;
             
-            if (parentTicketId != null) {
+            if (parentWorkItemId != null) {
                 try {
-                    // Look up the ClientNetworkEntityId__c of the target Ticket (which we just stamped!)
-                    String query = 'SELECT ClientNetworkEntityId__c FROM WorkItem__c WHERE Id = :parentTicketId LIMIT 1';
+                    // Look up the ClientNetworkEntityId__c of the target Work Item (which we just stamped!)
+                    String query = 'SELECT ClientNetworkEntityId__c FROM WorkItem__c WHERE Id = :parentWorkItemId LIMIT 1';
                     if (String.isNotBlank(getNamespacePrefix())) {
                         query = query.replace('WorkItem__c', getNamespacePrefix() + 'WorkItem__c')
                                      .replace('ClientNetworkEntityId__c', getNamespacePrefix() + 'ClientNetworkEntityId__c');
@@ -189,9 +189,9 @@ public without sharing class DeliverySyncItemIngestor {
         return null;
     }
 
-    // Helper to grab both the Ticket ID and the Request ID
-    private static WorkRequest__c findTicketBridge(String remoteTicketId) {
-        List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
+    // Helper to grab both the Work Item ID and the Request ID
+    private static WorkRequest__c findWorkItemBridge(String remoteWorkItemId) {
+        List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteTicketIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
         return reqs.isEmpty() ? null : reqs[0];
     }
 

@@ -6,7 +6,7 @@ import { CurrentPageReference } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import userId from '@salesforce/user/Id';
 
-import createTicket from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
+import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync";
 import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
@@ -161,7 +161,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
         // But the best way is to update Apex to accept 'type'.
         // Assuming current Apex is rigid, we pass it in context or modify subject slightly.
         
-        // Let's modify the Apex controller to accept 'ticketType' (See Step 3 below)
+        // Pass workItemType to distinguish intake vs. bug vs. feature
         
         let finalSubject = this.subject;
         if (!finalSubject && this.description) {
@@ -171,22 +171,22 @@ export default class DeliveryGhostRecorder extends LightningElement {
             finalSubject = (this.isBug ? 'Issue' : 'Feature') + ' on ' + (context.objectName || 'Home Page');
         }
 
-        createTicket({ 
+        createWorkItem({ 
             subject: finalSubject,
             description: this.description,
             priority: this.priority,
             contextData: JSON.stringify(context),
-            ticketType: this.requestType // NEW PARAMETER
+            workItemType: this.requestType // NEW PARAMETER
         })
-        .then(ticketId => {
+        .then(workItemId => {
             if (this.uploadedFileIds.length > 0) {
                 linkFilesAndSync({
-                    ticketId: ticketId,
+                    workItemId: workItemId,
                     contentDocumentIds: this.uploadedFileIds
                 }).catch(() => {
                     this.dispatchEvent(new ShowToastEvent({
                         title: 'File Attachment Failed',
-                        message: 'Ticket was created but attached files could not be linked. Please attach them from the ticket record.',
+                        message: 'Work item was created but attached files could not be linked. Please attach them from the work item record.',
                         variant: 'warning',
                         mode: 'sticky'
                     }));

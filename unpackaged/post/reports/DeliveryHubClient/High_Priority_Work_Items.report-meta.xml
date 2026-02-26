@@ -18,7 +18,7 @@
     <columns>
         <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
     </columns>
-    <description>All high priority tickets regardless of stage. See what needs immediate attention.</description>
+    <description>All high priority work items regardless of stage. See what needs immediate attention.</description>
     <filter>
         <criteriaItems>
             <column>WorkItem__c.PriorityPk__c</column>

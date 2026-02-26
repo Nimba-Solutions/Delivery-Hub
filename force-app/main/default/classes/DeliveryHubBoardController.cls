@@ -5,11 +5,11 @@
 public with sharing class DeliveryHubBoardController {
 
     @AuraEnabled
-    public static void updateTicketStage(Id ticketId, String newStage) {
+    public static void updateWorkItemStage(Id workItemId, String newStage) {
         try {
             if (Schema.sObjectType.WorkItem__c.isUpdateable()) {
-                WorkItem__c ticket = new WorkItem__c(Id = ticketId, StageNamePk__c = newStage);
-                update ticket;
+                WorkItem__c workItem = new WorkItem__c(Id = workItemId, StageNamePk__c = newStage);
+                update workItem;
             } else {
                 throw createAuraException('Insufficient permissions to update work item.');
             }
@@ -19,54 +19,54 @@ public with sharing class DeliveryHubBoardController {
     }
 
     /**
-     * @description Reorders a ticket using integer-based indexing.
+     * @description Reorders a work item using integer-based indexing.
      */
     @AuraEnabled
-    public static void reorderTicket(Id ticketId, String newStage, Integer newIndex) {
+    public static void reorderWorkItem(Id workItemId, String newStage, Integer newIndex) {
         try {
-            // 1. Get existing tickets in this stage (EXCLUDING the one we are moving)
+            // 1. Get existing work items in this stage (EXCLUDING the one we are moving)
             // FIX: Removed 'WITH SECURITY_ENFORCED' to prevent FLS errors on SortOrderNumber__c/IsActiveBool__c
-            List<WorkItem__c> ticketsInColumn = [
-                SELECT Id, SortOrderNumber__c 
-                FROM WorkItem__c 
-                WHERE StageNamePk__c = :newStage 
-                AND Id != :ticketId
-                AND IsActiveBool__c = TRUE 
+            List<WorkItem__c> workItemsInColumn = [
+                SELECT Id, SortOrderNumber__c
+                FROM WorkItem__c
+                WHERE StageNamePk__c = :newStage
+                AND Id != :workItemId
+                AND IsActiveBool__c = TRUE
                 ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate DESC
             ];
 
-            // 2. Prepare the moving ticket object
-            WorkItem__c movingTicket = new WorkItem__c(Id = ticketId, StageNamePk__c = newStage);
+            // 2. Prepare the moving work item object
+            WorkItem__c movingWorkItem = new WorkItem__c(Id = workItemId, StageNamePk__c = newStage);
 
             // 3. SAFETY FIX: Manually build a NEW list to avoid "Index Out of Bounds"
             List<WorkItem__c> processingList = new List<WorkItem__c>();
             Boolean added = false;
-            
-            // Loop through existing tickets and insert ours at the right spot
-            for (Integer i = 0; i < ticketsInColumn.size(); i++) {
+
+            // Loop through existing work items and insert ours at the right spot
+            for (Integer i = 0; i < workItemsInColumn.size(); i++) {
                 if (i == newIndex) {
-                    processingList.add(movingTicket);
+                    processingList.add(movingWorkItem);
                     added = true;
                 }
-                processingList.add(ticketsInColumn[i]);
+                processingList.add(workItemsInColumn[i]);
             }
-            
+
             // If we reached the end and haven't added it yet (e.g. dropped at bottom), add it now
             if (!added) {
-                processingList.add(movingTicket);
+                processingList.add(movingWorkItem);
             }
 
             // 4. Re-index the new clean list (1, 2, 3...)
             List<WorkItem__c> toUpdate = new List<WorkItem__c>();
             for (Integer i = 0; i < processingList.size(); i++) {
                 WorkItem__c t = processingList[i];
-                Decimal expectedSort = i + 1; 
-                
-                // Update if the sort order is wrong OR if it's the moving ticket (to save the new Stage)
-                if (t.Id == ticketId || t.SortOrderNumber__c != expectedSort) {
-                    if (t.Id == ticketId) {
+                Decimal expectedSort = i + 1;
+
+                // Update if the sort order is wrong OR if it's the moving work item (to save the new Stage)
+                if (t.Id == workItemId || t.SortOrderNumber__c != expectedSort) {
+                    if (t.Id == workItemId) {
                         t.SortOrderNumber__c = expectedSort;
-                        t.StageNamePk__c = newStage; 
+                        t.StageNamePk__c = newStage;
                     } else {
                         t.SortOrderNumber__c = expectedSort;
                     }
@@ -83,22 +83,22 @@ public with sharing class DeliveryHubBoardController {
                 }
             }
         } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Error in reorderTicket: ' + e.getMessage());
+            System.debug(LoggingLevel.ERROR, 'Error in reorderWorkItem: ' + e.getMessage());
             throw createAuraException(e.getMessage());
         }
     }
-    
+
     @AuraEnabled
-    public static WorkItemDependency__c createDependency(Id blockedTicketId, Id blockingTicketId) {
-        if (blockedTicketId == blockingTicketId) {
+    public static WorkItemDependency__c createDependency(Id blockedWorkItemId, Id blockingWorkItemId) {
+        if (blockedWorkItemId == blockingWorkItemId) {
             throw createAuraException('A work item cannot block itself.');
         }
 
         try {
             if (Schema.sObjectType.WorkItemDependency__c.isCreateable()) {
                 WorkItemDependency__c newDependency = new WorkItemDependency__c(
-                    BlockedWorkItemId__c = blockedTicketId,
-                    BlockingWorkItemId__c = blockingTicketId,
+                    BlockedWorkItemId__c = blockedWorkItemId,
+                    BlockingWorkItemId__c = blockingWorkItemId,
                     TypePk__c = 'Blocks'
                 );
                 insert newDependency;
@@ -126,18 +126,18 @@ public with sharing class DeliveryHubBoardController {
     }
     
     @AuraEnabled(cacheable=true)
-    public static List<WorkItem__c> searchForPotentialBlockers(String searchTerm, Id currentTicketId, List<Id> existingDependencyIds, String workflowType) {
+    public static List<WorkItem__c> searchForPotentialBlockers(String searchTerm, Id currentWorkItemId, List<Id> existingDependencyIds, String workflowType) {
         String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';
         Set<Id> exclusionIds = new Set<Id>();
-        if (currentTicketId != null) {
-            exclusionIds.add(currentTicketId);
+        if (currentWorkItemId != null) {
+            exclusionIds.add(currentWorkItemId);
         }
         if (existingDependencyIds != null) {
             exclusionIds.addAll(existingDependencyIds);
         }
 
         // Exclude terminal stages (Done, Cancelled, etc.) using CMT-driven config
-        Set<String> terminalStages = WorkflowConfigService.getTerminalStageValues(
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(
             String.isBlank(workflowType) ? 'Software_Delivery' : workflowType
         );
 

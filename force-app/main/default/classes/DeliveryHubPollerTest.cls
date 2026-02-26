@@ -33,9 +33,9 @@ private class DeliveryHubPollerTest {
         vendor.put(ns + 'RemoteExternalIdTxt__c', 'CLIENT-123');
         insert vendor;
 
-        // 3. Setup local Ticket
+        // 3. Setup local Work Item
         SObject t = (SObject) Type.forName(ns + 'WorkItem__c').newInstance();
-        t.put(ns + 'BriefDescriptionTxt__c', 'Poll Test Ticket');
+        t.put(ns + 'BriefDescriptionTxt__c', 'Poll Test Work Item');
         t.put(ns + 'StageNamePk__c', 'Backlog');
         insert t;
 
@@ -65,7 +65,7 @@ private class DeliveryHubPollerTest {
         String q = 'SELECT ' + ns + 'StageNamePk__c FROM ' + ns + 'WorkItem__c LIMIT 1';
         SObject updatedT = Database.query(q);
         
-        System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Ticket stage should have been updated by the mock payload.');
+        System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Work item stage should have been updated by the mock payload.');
     }
     
     public class MockResponseSuccess implements HttpCalloutMock {

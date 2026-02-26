@@ -6,19 +6,19 @@ import { getRecord, getFieldValue, createRecord } from 'lightning/uiRecordApi';
 import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
-// Ticket Fields to Read
-import TICKET_HOURS from '@salesforce/schema/WorkItem__c.ClientPreApprovedHoursNumber__c';
+// Work Item Fields to Read
+import WORK_ITEM_HOURS from '@salesforce/schema/WorkItem__c.ClientPreApprovedHoursNumber__c';
 
 // Request Object & Fields to Write
 import REQUEST_OBJ from '@salesforce/schema/WorkRequest__c';
-import REQ_TICKET_ID from '@salesforce/schema/WorkRequest__c.WorkItemId__c';
+import REQ_WORK_ITEM_ID from '@salesforce/schema/WorkRequest__c.WorkItemId__c';
 import REQ_PREAPPROVED from '@salesforce/schema/WorkRequest__c.PreApprovedHoursNumber__c';
 import REQ_STATUS from '@salesforce/schema/WorkRequest__c.StatusPk__c';
 
 import suggestAcceptanceCriteria from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryAiController.suggestAcceptanceCriteria';
 
-// Load the Ticket fields so we have the data ready to copy
-const FIELDS = [TICKET_HOURS];
+// Load the Work Item fields so we have the data ready to copy
+const FIELDS = [WORK_ITEM_HOURS];
 
 export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningElement) {
     @api recordId;
@@ -32,13 +32,13 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
     @track criteriaError = '';
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
-    ticket;
+    workItem;
 
     // Called when the "Save Definition" button finishes
-    handleTicketSave() {
+    handleWorkItemSave() {
         this.dispatchEvent(new ShowToastEvent({
             title: 'Success',
-            message: 'Ticket Definition Updated',
+            message: 'Work Item Definition Updated',
             variant: 'success'
         }));
     }
@@ -47,7 +47,7 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
         this.isSuggesting = true;
         this.suggestedCriteria = '';
         this.criteriaError = '';
-        suggestAcceptanceCriteria({ ticketId: this.recordId })
+        suggestAcceptanceCriteria({ workItemId: this.recordId })
             .then(result => { this.suggestedCriteria = result; })
             .catch(error => {
                 this.criteriaError = error.body ? error.body.message : error.message;
@@ -68,7 +68,7 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
 
     // Called when "Create Vendor Request" is clicked
     handleCreateRequest() {
-        const clientHoursCheck = getFieldValue(this.ticket.data, TICKET_HOURS);
+        const clientHoursCheck = getFieldValue(this.workItem.data, WORK_ITEM_HOURS);
         if (!clientHoursCheck) {
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Missing Client Hours',
@@ -80,14 +80,14 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
         this.isProcessing = true;
         const fields = {};
 
-        // 1. Link to Parent Ticket
-        fields[REQ_TICKET_ID.fieldApiName] = this.recordId;
+        // 1. Link to Parent Work Item
+        fields[REQ_WORK_ITEM_ID.fieldApiName] = this.recordId;
 
         // 2. Set Status
         fields[REQ_STATUS.fieldApiName] = 'Draft';
 
         // 3. Copy the client-approved hours onto the vendor request
-        const clientHours = getFieldValue(this.ticket.data, TICKET_HOURS);
+        const clientHours = getFieldValue(this.workItem.data, WORK_ITEM_HOURS);
         fields[REQ_PREAPPROVED.fieldApiName] = clientHours;
 
         const recordInput = { apiName: REQUEST_OBJ.objectApiName, fields };

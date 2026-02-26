@@ -28,7 +28,7 @@ private class DeliveryHubSyncServiceTest {
         );
         insert new List<Network_Entity__c>{vendor, client};
 
-        // 3. Create Ticket (Explicitly linked to the Client)
+        // 3. Create Work Item (Explicitly linked to the Client)
         WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog',
@@ -36,11 +36,11 @@ private class DeliveryHubSyncServiceTest {
         );
         insert t;
 
-        // 4. Create Request (The Ledger bridge linking Ticket to Remote ID)
+        // 4. Create Request (The Ledger bridge linking Work Item to Remote ID)
         insert new WorkRequest__c(
             WorkItemId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
-            RemoteTicketIdTxt__c = 'REMOTE-TICKET-123',
+            RemoteTicketIdTxt__c = 'REMOTE-WORKITEM-123',
             StatusPk__c = 'Active'
         );
         
@@ -79,8 +79,8 @@ private class DeliveryHubSyncServiceTest {
     }
 
     @IsTest
-    static void testTicketUpdateViaService() {
-        String remoteId = 'REMOTE-TICKET-123';
+    static void testWorkItemUpdateViaService() {
+        String remoteId = 'REMOTE-WORKITEM-123';
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
         
@@ -101,17 +101,17 @@ private class DeliveryHubSyncServiceTest {
         System.assertEquals(200, res.statusCode, 'Should return 200 Success');
         
         WorkItem__c updatedT = [SELECT BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
-        System.assertEquals('Updated Description', updatedT.BriefDescriptionTxt__c, 'Ticket should be updated via ledger lookup');
+        System.assertEquals('Updated Description', updatedT.BriefDescriptionTxt__c, 'Work item should be updated via ledger lookup');
     }
 
     @IsTest
     static void testCommentInsertWithIdempotency() {
-        String remoteTicketId = 'REMOTE-TICKET-123'; 
+        String remoteWorkItemId = 'REMOTE-WORKITEM-123'; 
         String sourceId = 'REMOTE-COMMENT-999';
         String uniqueAuthor = 'REST_TEST_AUTHOR';
 
         Map<String, Object> payload = new Map<String, Object>{
-            'TargetId' => remoteTicketId, 
+            'TargetId' => remoteWorkItemId, 
             'SourceId' => sourceId,
             'AuthorTxt__c' => uniqueAuthor,
             'BodyTxt__c' => 'Service Tester Comment'

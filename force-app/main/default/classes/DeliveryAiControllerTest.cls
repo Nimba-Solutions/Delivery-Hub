@@ -20,7 +20,7 @@ private class DeliveryAiControllerTest {
         return s;
     }
 
-    private static WorkItem__c createTicket() {
+    private static WorkItem__c createWorkItem() {
         WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Add dark mode to the dashboard',
             StageNamePk__c = 'In Development',
@@ -33,24 +33,24 @@ private class DeliveryAiControllerTest {
     }
 
     private static String successBody() {
-        return '{\"choices\":[{\"message\":{\"content\":\"Work on this ticket is progressing well. '
+        return '{\"choices\":[{\"message\":{\"content\":\"Work on this workItem is progressing well. '
              + 'The team is currently in active development and on track for UAT next week.\"}}]}';
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     /**
-     * @description Happy path: AI enabled, key present, ticket exists,
+     * @description Happy path: AI enabled, key present, workItem exists,
      *              OpenAI returns a valid choice. Should return the draft text.
      */
     @IsTest
     static void testDraftStatusUpdateSuccess() {
         createSettings(true, 'sk-test-key-123');
-        WorkItem__c ticket = createTicket();
+        WorkItem__c workItem = createWorkItem();
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', successBody()));
 
         Test.startTest();
-        String result = DeliveryAiController.draftStatusUpdate(ticket.Id);
+        String result = DeliveryAiController.draftStatusUpdate(workItem.Id);
         Test.stopTest();
 
         System.assertNotEquals(null, result, 'Result should not be null on success.');
@@ -63,12 +63,12 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateAiDisabled() {
         createSettings(false, 'sk-test-key-123');
-        WorkItem__c ticket = createTicket();
+        WorkItem__c workItem = createWorkItem();
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryAiController.draftStatusUpdate(ticket.Id);
+            DeliveryAiController.draftStatusUpdate(workItem.Id);
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -83,12 +83,12 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateNoApiKey() {
         createSettings(true, '');
-        WorkItem__c ticket = createTicket();
+        WorkItem__c workItem = createWorkItem();
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryAiController.draftStatusUpdate(ticket.Id);
+            DeliveryAiController.draftStatusUpdate(workItem.Id);
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -103,12 +103,12 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateNoSettingsRecord() {
-        WorkItem__c ticket = createTicket();
+        WorkItem__c workItem = createWorkItem();
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryAiController.draftStatusUpdate(ticket.Id);
+            DeliveryAiController.draftStatusUpdate(workItem.Id);
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -118,26 +118,26 @@ private class DeliveryAiControllerTest {
     }
 
     /**
-     * @description Ticket is inserted then deleted so the Id is valid in format but
-     *              the record no longer exists. Controller should throw 'Ticket not found.'
+     * @description Work Item is inserted then deleted so the Id is valid in format but
+     *              the record no longer exists. Controller should throw 'Work item not found.''
      */
     @IsTest
-    static void testDraftStatusUpdateTicketNotFound() {
+    static void testDraftStatusUpdateWorkItemNotFound() {
         createSettings(true, 'sk-test-key-123');
-        WorkItem__c ticket = createTicket();
-        Id ticketId = ticket.Id;
-        delete ticket;
+        WorkItem__c workItem = createWorkItem();
+        Id workItemId = workItem.Id;
+        delete workItem;
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryAiController.draftStatusUpdate(ticketId);
+            DeliveryAiController.draftStatusUpdate(workItemId);
         } catch (AuraHandledException e) {
             threw = true;
         }
         Test.stopTest();
 
-        System.assert(threw, 'Should throw AuraHandledException when ticket does not exist.');
+        System.assert(threw, 'Should throw AuraHandledException when workItem does not exist.');
     }
 
     /**
@@ -147,14 +147,14 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateApiError() {
         createSettings(true, 'sk-test-key-123');
-        WorkItem__c ticket = createTicket();
+        WorkItem__c workItem = createWorkItem();
         Test.setMock(HttpCalloutMock.class,
             new OpenAIMock(401, 'Unauthorized', '{\"error\":{\"message\":\"Invalid API key.\"}}'));
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryAiController.draftStatusUpdate(ticket.Id);
+            DeliveryAiController.draftStatusUpdate(workItem.Id);
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -169,13 +169,13 @@ private class DeliveryAiControllerTest {
     @IsTest
     static void testDraftStatusUpdateEmptyChoices() {
         createSettings(true, 'sk-test-key-123');
-        WorkItem__c ticket = createTicket();
+        WorkItem__c workItem = createWorkItem();
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', '{\"choices\":[]}'));
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryAiController.draftStatusUpdate(ticket.Id);
+            DeliveryAiController.draftStatusUpdate(workItem.Id);
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -185,17 +185,17 @@ private class DeliveryAiControllerTest {
     }
 
     /**
-     * @description suggestAcceptanceCriteria: AI enabled, valid ticket — returns suggestion.
+     * @description suggestAcceptanceCriteria: AI enabled, valid workItem — returns suggestion.
      */
     @IsTest
     static void testSuggestAcceptanceCriteriaSuccess() {
         createSettings(true, 'sk-test-key-123');
-        WorkItem__c ticket = createTicket();
+        WorkItem__c workItem = createWorkItem();
         String body = '{"choices":[{"message":{"content":"- The dashboard supports dark mode\\n- Toggle persists on refresh"}}]}';
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
 
         Test.startTest();
-        String result = DeliveryAiController.suggestAcceptanceCriteria(ticket.Id);
+        String result = DeliveryAiController.suggestAcceptanceCriteria(workItem.Id);
         Test.stopTest();
 
         System.assertNotEquals(null, result, 'Result should not be null.');
@@ -203,34 +203,34 @@ private class DeliveryAiControllerTest {
     }
 
     /**
-     * @description suggestAcceptanceCriteria: ticket deleted — should throw.
+     * @description suggestAcceptanceCriteria: workItem deleted — should throw.
      */
     @IsTest
-    static void testSuggestAcceptanceCriteriaTicketNotFound() {
+    static void testSuggestAcceptanceCriteriaWorkItemNotFound() {
         createSettings(true, 'sk-test-key-123');
-        WorkItem__c ticket = createTicket();
-        Id ticketId = ticket.Id;
-        delete ticket;
+        WorkItem__c workItem = createWorkItem();
+        Id workItemId = workItem.Id;
+        delete workItem;
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryAiController.suggestAcceptanceCriteria(ticketId);
+            DeliveryAiController.suggestAcceptanceCriteria(workItemId);
         } catch (AuraHandledException e) {
             threw = true;
         }
         Test.stopTest();
 
-        System.assert(threw, 'Should throw when ticket does not exist.');
+        System.assert(threw, 'Should throw when workItem does not exist.');
     }
 
     /**
-     * @description draftBoardSummary: active tickets exist — returns summary text.
+     * @description draftBoardSummary: active workItems exist — returns summary text.
      */
     @IsTest
     static void testDraftBoardSummarySuccess() {
         createSettings(true, 'sk-test-key-123');
-        createTicket();
+        createWorkItem();
         String body = '{"choices":[{"message":{"content":"The team is making great progress this week."}}]}';
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
 
@@ -243,10 +243,10 @@ private class DeliveryAiControllerTest {
     }
 
     /**
-     * @description draftBoardSummary: no active tickets — should throw.
+     * @description draftBoardSummary: no active workItems — should throw.
      */
     @IsTest
-    static void testDraftBoardSummaryNoTickets() {
+    static void testDraftBoardSummaryNoWorkItems() {
         createSettings(true, 'sk-test-key-123');
 
         Boolean threw = false;
@@ -258,21 +258,21 @@ private class DeliveryAiControllerTest {
         }
         Test.stopTest();
 
-        System.assert(threw, 'Should throw when no active tickets exist.');
+        System.assert(threw, 'Should throw when no active workItems exist.');
     }
 
     /**
-     * @description draftReleaseNotes: tickets completed in last 30 days — returns notes.
+     * @description draftReleaseNotes: workItems completed in last 30 days — returns notes.
      */
     @IsTest
     static void testDraftReleaseNotesSuccess() {
         createSettings(true, 'sk-test-key-123');
-        WorkItem__c ticket = new WorkItem__c(
-            BriefDescriptionTxt__c = 'Export tickets to CSV',
+        WorkItem__c workItem = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Export workItems to CSV',
             StageNamePk__c = 'Done',
             PriorityPk__c = 'High'
         );
-        insert ticket;
+        insert workItem;
         String body = '{"choices":[{"message":{"content":"This release includes the following improvements:\\n- Export to CSV is now available."}}]}';
         Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
 
@@ -285,10 +285,10 @@ private class DeliveryAiControllerTest {
     }
 
     /**
-     * @description draftReleaseNotes: no recently completed tickets — should throw.
+     * @description draftReleaseNotes: no recently completed workItems — should throw.
      */
     @IsTest
-    static void testDraftReleaseNotesNoTickets() {
+    static void testDraftReleaseNotesNoWorkItems() {
         createSettings(true, 'sk-test-key-123');
 
         Boolean threw = false;
@@ -300,7 +300,7 @@ private class DeliveryAiControllerTest {
         }
         Test.stopTest();
 
-        System.assert(threw, 'Should throw when no recently completed tickets exist.');
+        System.assert(threw, 'Should throw when no recently completed workItems exist.');
     }
 
     // ── Mock ─────────────────────────────────────────────────────────────────

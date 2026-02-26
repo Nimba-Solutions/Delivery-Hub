@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ListView xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>All_Tickets_By_Created_Date_Descending</fullName>
+    <fullName>All_WorkItems_By_Created_Date_Descending</fullName>
     <columns>NAME</columns>
     <columns>BriefDescriptionTxt__c</columns>
     <columns>IsActiveBool__c</columns>

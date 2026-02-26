@@ -25,10 +25,10 @@ public without sharing class DeliveryRequestManagerController {
         // Execute DML in System Mode to bypass FLS restrictions for this specific app action
         Database.update(req, AccessLevel.SYSTEM_MODE);
         
-        // 3. "Touch" the parent Ticket to trigger the DeliverySyncEngine push
+        // 3. "Touch" the parent Work Item to trigger the DeliverySyncEngine push
         if (req.WorkItemId__c != null) {
-            WorkItem__c parentTicket = new WorkItem__c(Id = req.WorkItemId__c);
-            Database.update(parentTicket, AccessLevel.SYSTEM_MODE);
+            WorkItem__c parentWorkItem = new WorkItem__c(Id = req.WorkItemId__c);
+            Database.update(parentWorkItem, AccessLevel.SYSTEM_MODE);
         }
     }
 
