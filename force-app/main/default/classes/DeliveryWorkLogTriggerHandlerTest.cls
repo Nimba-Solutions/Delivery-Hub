@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Tests for DeliveryWorkLogTriggerHandler.
  * @author Cloud Nimbus LLC
  */
@@ -7,13 +9,13 @@ private class DeliveryWorkLogTriggerHandlerTest {
 
     @TestSetup
     static void setup() {
-        Network_Entity__c client = new Network_Entity__c(
+        NetworkEntity__c client = new NetworkEntity__c(
             Name = 'Test Client', EntityTypePk__c = 'Client', StatusPk__c = 'Active'
         );
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Test Vendor', EntityTypePk__c = 'Vendor', StatusPk__c = 'Active'
         );
-        insert new List<Network_Entity__c>{ client, vendor };
+        insert new List<NetworkEntity__c>{ client, vendor };
 
         WorkItem__c linkedWorkItem = new WorkItem__c(
             BriefDescriptionTxt__c   = 'Client Work Item',
@@ -60,9 +62,9 @@ private class DeliveryWorkLogTriggerHandlerTest {
         );
         Test.stopTest();
 
-        List<Sync_Item__c> items = [
+        List<SyncItem__c> items = [
             SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c, WorkItemId__c
-            FROM Sync_Item__c
+            FROM SyncItem__c
             WHERE WorkItemId__c = :workItem.Id
             AND ObjectTypePk__c = 'WorkLog__c'
         ];
@@ -87,7 +89,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         );
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+        List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
         System.assertEquals(0, items.size(), 'Should not create sync items for work items without a client');
     }
 
@@ -110,7 +112,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
 
         DeliveryTriggerControl.enableAfterLogic();
 
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+        List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
         System.assertEquals(0, items.size(), 'Should not create sync items when trigger control is disabled');
     }
 }

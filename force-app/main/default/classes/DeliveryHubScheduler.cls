@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Schedulable class to trigger the Delivery Hub Poller.
  * Runs in the background to keep the Client Org in sync with the Mothership.
  * @author Cloud Nimbus LLC
@@ -20,9 +22,9 @@ public class DeliveryHubScheduler implements Schedulable {
      * back to 'Queued' so the DeliverySyncItemProcessor can re-attempt them.
      */
     private static void requeueFailedItems() {
-        List<Sync_Item__c> failedItems = [
+        List<SyncItem__c> failedItems = [
             SELECT Id, StatusPk__c
-            FROM Sync_Item__c
+            FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             AND DirectionPk__c = 'Outbound'
             AND (RetryCountNumber__c = null OR RetryCountNumber__c < 3)
@@ -34,7 +36,7 @@ public class DeliveryHubScheduler implements Schedulable {
             return;
         }
 
-        for (Sync_Item__c item : failedItems) {
+        for (SyncItem__c item : failedItems) {
             item.StatusPk__c = 'Queued';
         }
         Database.update(failedItems, AccessLevel.SYSTEM_MODE);

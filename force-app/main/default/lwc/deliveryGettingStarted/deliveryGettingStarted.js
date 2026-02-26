@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Interactive onboarding wizard for Delivery Hub.
  * 4-step guided flow: Org Type → Partner Config → Test Ping → Connected.
  * @author Cloud Nimbus LLC

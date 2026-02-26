@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the ManageDeliveryRequest LWC.
  * Aligned with Bidding Architecture. Uses System Mode to ensure 
  * status updates succeed regardless of UI user FLS.

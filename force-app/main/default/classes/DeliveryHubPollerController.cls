@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the SyncPollerButton LWC.
  * Exposes the Delivery Hub polling logic to the Lightning UI for manual and on-load refreshes.
  * @author Cloud Nimbus LLC

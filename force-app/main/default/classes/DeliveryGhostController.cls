@@ -1,12 +1,14 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the Delivery Ghost Recorder LWC.
- * Logs user activity to Activity_Log__c and creates quick work items.
+ * Logs user activity to ActivityLog__c and creates quick work items.
  * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryGhostController {
 
     /**
-     * @description Logs a user navigation or action event to the Activity_Log__c object.
+     * @description Logs a user navigation or action event to the ActivityLog__c object.
      * Parses the contextData JSON to extract component name and populates the running
      * user's ID automatically.
      * @param actionType The type of action (e.g., 'Navigation', 'Button_Click', 'Feature_Use').
@@ -16,12 +18,12 @@ public with sharing class DeliveryGhostController {
     public static void logUserActivity(String actionType, String contextData) {
         try {
             // Gate: activity logging must be explicitly enabled in org settings
-            Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
             if (settings == null || !settings.EnableActivityLoggingBool__c) {
                 return;
             }
 
-            Activity_Log__c log = new Activity_Log__c();
+            ActivityLog__c log = new ActivityLog__c();
             log.ActionTypePk__c = actionType;
             log.ContextDataTxt__c = contextData;
             log.UserIdTxt__c = UserInfo.getUserId();
@@ -45,8 +47,8 @@ public with sharing class DeliveryGhostController {
             }
 
             // Attempt to link to the first active Network Entity (client org identity)
-            List<Network_Entity__c> entities = [
-                SELECT Id FROM Network_Entity__c
+            List<NetworkEntity__c> entities = [
+                SELECT Id FROM NetworkEntity__c
                 WHERE StatusPk__c = 'Active'
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate ASC

@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -10,7 +12,7 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
         DeliverySyncEngine.isSyncContext = false; // Ensure it's false to allow outbound sync
         
         // 2. Setup Routing Data (This is what was missing!)
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Test Vendor',
             IntegrationEndpointUrlTxt__c = 'https://example.com/api',
             StatusPk__c = 'Active',
@@ -52,7 +54,7 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
         Test.stopTest();
 
         // 5. Verify the Unified Ledger successfully generated an item!
-        List<Sync_Item__c> items = [SELECT Id, ObjectTypePk__c FROM Sync_Item__c WHERE ObjectTypePk__c = 'ContentVersion'];
+        List<SyncItem__c> items = [SELECT Id, ObjectTypePk__c FROM SyncItem__c WHERE ObjectTypePk__c = 'ContentVersion'];
         System.assertEquals(1, items.size(), 'Should have generated exactly 1 Sync Item for the attached file');
     }
 
@@ -82,7 +84,7 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
         Test.stopTest();
 
         // Should completely ignore files attached to Accounts
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE ObjectTypePk__c = 'ContentVersion'];
+        List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE ObjectTypePk__c = 'ContentVersion'];
         System.assertEquals(0, items.size(), 'Should not generate a Sync Item for non-workItem files');
     }
 }

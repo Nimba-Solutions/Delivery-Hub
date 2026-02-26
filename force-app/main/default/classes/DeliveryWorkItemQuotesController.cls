@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the deliveryWorkItemQuotes LWC.
  *              Returns all WorkRequest__c quotes linked to a work item and supports bid acceptance.
  * @author Cloud Nimbus LLC

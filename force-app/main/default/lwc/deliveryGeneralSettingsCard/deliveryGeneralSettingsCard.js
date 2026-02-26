@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
@@ -31,8 +33,8 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 this.notifications = data.enableNotifications || false;
 
                 // Explicit check for undefined/null to respect 'false' values
-                if (data.autoSyncNetworkEntity !== undefined && data.autoSyncNetworkEntity !== null) {
-                    this.autoSyncNetworkEntity = data.autoSyncNetworkEntity;
+                if (data.autoSendRequest !== undefined && data.autoSendRequest !== null) {
+                    this.autoSyncNetworkEntity = data.autoSendRequest;
                 }
                 this.slackWebhookUrl = data.slackWebhookUrl || '';
             }
@@ -58,9 +60,10 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     // Centralized Save Logic
     async saveState() {
         try {
-            await saveGeneralSettings({ 
+            await saveGeneralSettings({
                 enableNotifications: this.notifications,
-                autoSyncNetworkEntity: this.autoSyncNetworkEntity
+                autoCreateRequest: true,
+                autoSendRequest: this.autoSyncNetworkEntity
             });
             
             // Optional: Show a subtle success toast

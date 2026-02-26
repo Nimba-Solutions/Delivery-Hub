@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliveryAiController.
  *              Covers draftStatusUpdate (7 cases), suggestAcceptanceCriteria (2 cases),
  *              draftBoardSummary (2 cases), and draftReleaseNotes (2 cases).
@@ -9,8 +11,8 @@ private class DeliveryAiControllerTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static Delivery_Hub_Settings__c createSettings(Boolean aiEnabled, String apiKey) {
-        Delivery_Hub_Settings__c s = new Delivery_Hub_Settings__c(
+    private static DeliveryHubSettings__c createSettings(Boolean aiEnabled, String apiKey) {
+        DeliveryHubSettings__c s = new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
             AISuggestionsEnabledBool__c = aiEnabled,
             OpenAIApiKeyTxt__c = apiKey,
@@ -98,7 +100,7 @@ private class DeliveryAiControllerTest {
     }
 
     /**
-     * @description No Delivery_Hub_Settings__c record exists — getOrgDefaults returns
+     * @description No DeliveryHubSettings__c record exists — getOrgDefaults returns
      *              a record with null fields, so AI is treated as disabled.
      */
     @IsTest

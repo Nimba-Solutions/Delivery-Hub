@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-    <label>Cloud Nimbus LLC Marketing</label>
-    <description>Custom metadata type for Cloud Nimbus LLC marketing configuration settings</description>
-    <pluralLabel>Cloud Nimbus LLC Marketing</pluralLabel>
-    <visibility>Public</visibility>
-</CustomObject>

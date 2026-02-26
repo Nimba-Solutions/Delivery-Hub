@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Verifies inbound ingestion logic with namespace awareness.
  * V2 Architecture: Tests both Downstream (Request) and Upstream (Ledger) DAG traversal.
  * @author Cloud Nimbus LLC
@@ -9,7 +11,7 @@ private class DeliverySyncItemIngestorTest {
     @TestSetup
     static void makeData() {
         // 1. Create Upstream Client Entity
-        Network_Entity__c client = new Network_Entity__c(
+        NetworkEntity__c client = new NetworkEntity__c(
             Name = 'Upstream Client', 
             EntityTypePk__c = 'Client', 
             StatusPk__c = 'Active'
@@ -31,7 +33,7 @@ private class DeliverySyncItemIngestorTest {
         );
         
         // 4. Create an Upstream Ledger Entry (Simulating a workItem that came from the Client)
-        insert new Sync_Item__c(
+        insert new SyncItem__c(
             DirectionPk__c = 'Inbound',
             StatusPk__c = 'Synced',
             ObjectTypePk__c = 'WorkItem__c',
@@ -77,7 +79,7 @@ private class DeliverySyncItemIngestorTest {
         System.assertNotEquals(null, comm, 'Comment should be inserted');
         
         // Verify V2 Ledger Routing
-        Sync_Item__c ledger = [SELECT ObjectTypePk__c, RequestId__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-456' LIMIT 1];
+        SyncItem__c ledger = [SELECT ObjectTypePk__c, RequestId__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-456' LIMIT 1];
         System.assert(ledger.ObjectTypePk__c.contains('WorkItemComment__c'), 'Ledger must have valid ObjectTypePk__c value');
         System.assertNotEquals(null, ledger.RequestId__c, 'V2 DAG Rule: RequestId__c MUST be stamped on the inbound ledger item to log the routing edge.');
     }
@@ -101,7 +103,7 @@ private class DeliverySyncItemIngestorTest {
         System.assertNotEquals(null, comm, 'Comment should be inserted');
         
         // Verify V2 Ledger Routing & Upstream Echo Suppression
-        Sync_Item__c ledger = [SELECT ObjectTypePk__c, RequestId__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-789' LIMIT 1];
+        SyncItem__c ledger = [SELECT ObjectTypePk__c, RequestId__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-789' LIMIT 1];
         System.assertEquals(null, ledger.RequestId__c, 'V2 DAG Rule: RequestId__c must be NULL since this came from an upstream Client Ledger translation.');
         System.assert(DeliverySyncEngine.blockedOrigins.size() > 0, 'The ClientNetworkEntityId__c must have been passed to memory to block upstream echoes.');
     }
@@ -110,7 +112,7 @@ private class DeliverySyncItemIngestorTest {
     static void testProcessInboundWorkItemAutoParentsClient() {
         // 1. Setup a Client Network Entity with a simulated Org ID
         String simulatedOrgId = '00D_MOCK_ORG_ID';
-        Network_Entity__c clientEntity = new Network_Entity__c(
+        NetworkEntity__c clientEntity = new NetworkEntity__c(
             Name = 'Simulated Upstream Client',
             EntityTypePk__c = 'Client',
             StatusPk__c = 'Active',

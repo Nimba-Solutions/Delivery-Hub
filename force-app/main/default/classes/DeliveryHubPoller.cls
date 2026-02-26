@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Robust poller logic.
  * Uses Static SOQL to guarantee field visibility in namespaced tests.
  * V2 Architecture: Appends identity parameters for secure Hub multi-tenancy.
@@ -11,12 +13,12 @@ public without sharing class DeliveryHubPoller {
     public static String pollUpdates() {
         try {
             // Query ALL Active Vendors (Including 'Both' types)
-            List<Network_Entity__c> vendors = [
+            List<NetworkEntity__c> vendors = [
                 SELECT Id,
                        IntegrationEndpointUrlTxt__c,
                        LastInboundSyncDateTime__c,
                        RemoteExternalIdTxt__c
-                FROM Network_Entity__c
+                FROM NetworkEntity__c
                 WHERE StatusPk__c = 'Active'
                 AND EntityTypePk__c IN ('Vendor', 'Both')
                 WITH SYSTEM_MODE
@@ -29,7 +31,7 @@ public without sharing class DeliveryHubPoller {
             Integer totalSynced = 0;
             List<String> errors = new List<String>();
 
-            for (Network_Entity__c vendor : vendors) {
+            for (NetworkEntity__c vendor : vendors) {
                 String endpointUrl = vendor.IntegrationEndpointUrlTxt__c;
                 String remoteId = vendor.RemoteExternalIdTxt__c;
                 DateTime lastSync = vendor.LastInboundSyncDateTime__c;
@@ -71,7 +73,7 @@ public without sharing class DeliveryHubPoller {
         }
     }
 
-    private static Integer handleSuccess(String responseBody, Network_Entity__c vendor) {
+    private static Integer handleSuccess(String responseBody, NetworkEntity__c vendor) {
         // V2 ARCHITECTURE: The Vendor's API now returns a direct JSON array
         List<Object> events = (List<Object>) JSON.deserializeUntyped(responseBody);
 

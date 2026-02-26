@@ -7,7 +7,7 @@
         <value xsi:type="xsd:string">Software_Delivery</value>
     </values>
     <values>
-        <field>ApiValue__c</field>
+        <field>ApiValueTxt__c</field>
         <value xsi:type="xsd:string">Proposal Requested</value>
     </values>
     <values>
@@ -15,23 +15,23 @@
         <value xsi:type="xsd:double">9</value>
     </values>
     <values>
-        <field>CardColor__c</field>
+        <field>CardColorTxt__c</field>
         <value xsi:type="xsd:string">#E0F2FE</value>
     </values>
     <values>
-        <field>HeaderBgColor__c</field>
+        <field>HeaderBgColorTxt__c</field>
         <value xsi:type="xsd:string">rgba(255,237,213,0.5)</value>
     </values>
     <values>
-        <field>HeaderTextColor__c</field>
+        <field>HeaderTextColorTxt__c</field>
         <value xsi:type="xsd:string">#EA580C</value>
     </values>
     <values>
-        <field>OwnerPersona__c</field>
+        <field>OwnerPersonaTxt__c</field>
         <value xsi:type="xsd:string">Developer</value>
     </values>
     <values>
-        <field>Phase__c</field>
+        <field>PhaseTxt__c</field>
         <value xsi:type="xsd:string">Planning</value>
     </values>
     <values>
@@ -57,5 +57,9 @@
     <values>
         <field>AllowedBacktrackTransitionsTxt__c</field>
         <value xsi:type="xsd:string">Prioritizing,Ready for Prioritization,Sizing Underway,Cancelled</value>
+    </values>
+    <values>
+        <field>ETAWeightNum__c</field>
+        <value xsi:type="xsd:double">09.0</value>
     </values>
 </CustomMetadata>

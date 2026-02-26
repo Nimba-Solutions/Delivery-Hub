@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliverySyncEngine.
  * V2 Architecture: Tests bidirectional DAG routing and echo suppression.
  * Uses Apex-level filtering to isolate assertions from async trigger noise, bypassing SOQL Long Text limits.
@@ -10,25 +12,25 @@ private class DeliverySyncEngineTest {
     @TestSetup
     static void setupData() {
         // 1. Settings (Ensure Org-level enforcement to minimize rogue triggers)
-        insert new Delivery_Hub_Settings__c(
+        insert new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
             AutoCreateWorkRequestBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 
         // 2. Network Entities (The DAG Edges)
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Downstream Vendor', 
             EntityTypePk__c = 'Vendor', 
             StatusPk__c = 'Active', 
             IntegrationEndpointUrlTxt__c = 'https://vendor.com'
         );
-        Network_Entity__c client = new Network_Entity__c(
+        NetworkEntity__c client = new NetworkEntity__c(
             Name = 'Upstream Client', 
             EntityTypePk__c = 'Client', 
             StatusPk__c = 'Active'
         );
-        insert new List<Network_Entity__c>{vendor, client};
+        insert new List<NetworkEntity__c>{vendor, client};
 
         // 3. Work Item (With Upstream Edge mapped)
         WorkItem__c t = new WorkItem__c(
@@ -53,7 +55,7 @@ private class DeliverySyncEngineTest {
     @IsTest
     static void testCaptureChangesUpdateFansOutBidirectionally() {
         WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
-        delete [SELECT Id FROM Sync_Item__c]; // Clear setup trigger noise
+        delete [SELECT Id FROM SyncItem__c]; // Clear setup trigger noise
 
         Test.startTest();
         t.BriefDescriptionTxt__c = 'New Desc';
@@ -61,9 +63,9 @@ private class DeliverySyncEngineTest {
         Test.stopTest();
 
         // STRICT APEX FILTER: Long Text Areas cannot be filtered in SOQL.
-        List<Sync_Item__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM Sync_Item__c];
-        List<Sync_Item__c> items = new List<Sync_Item__c>();
-        for (Sync_Item__c si : allItems) {
+        List<SyncItem__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM SyncItem__c];
+        List<SyncItem__c> items = new List<SyncItem__c>();
+        for (SyncItem__c si : allItems) {
             if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('New Desc')) {
                 items.add(si);
             }
@@ -74,7 +76,7 @@ private class DeliverySyncEngineTest {
         
         Integer pushCount = 0;
         Integer hubCount = 0;
-        for (Sync_Item__c si : items) {
+        for (SyncItem__c si : items) {
             if (si.RequestId__c != null) {
                 pushCount++;
             } else {
@@ -90,7 +92,7 @@ private class DeliverySyncEngineTest {
         WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
         WorkRequest__c req = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :t.Id LIMIT 1];
         
-        delete [SELECT Id FROM Sync_Item__c]; // Clear setup noise
+        delete [SELECT Id FROM SyncItem__c]; // Clear setup noise
 
         Test.startTest();
         // Simulate Ingestor receiving a payload from the Vendor (Downstream)
@@ -105,9 +107,9 @@ private class DeliverySyncEngineTest {
         Test.stopTest();
 
         // STRICT APEX FILTER
-        List<Sync_Item__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM Sync_Item__c];
-        List<Sync_Item__c> items = new List<Sync_Item__c>();
-        for (Sync_Item__c si : allItems) {
+        List<SyncItem__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM SyncItem__c];
+        List<SyncItem__c> items = new List<SyncItem__c>();
+        for (SyncItem__c si : allItems) {
             if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Downstream Echo Update')) {
                 items.add(si);
             }
@@ -121,7 +123,7 @@ private class DeliverySyncEngineTest {
     static void testSmartRoutingBlocksUpstreamEcho() {
         WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c FROM WorkItem__c LIMIT 1];
         
-        delete [SELECT Id FROM Sync_Item__c]; // Clear setup noise
+        delete [SELECT Id FROM SyncItem__c]; // Clear setup noise
 
         Test.startTest();
         // Simulate Ingestor receiving a payload from the Client (Upstream)
@@ -136,9 +138,9 @@ private class DeliverySyncEngineTest {
         Test.stopTest();
 
         // STRICT APEX FILTER
-        List<Sync_Item__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM Sync_Item__c];
-        List<Sync_Item__c> items = new List<Sync_Item__c>();
-        for (Sync_Item__c si : allItems) {
+        List<SyncItem__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM SyncItem__c];
+        List<SyncItem__c> items = new List<SyncItem__c>();
+        for (SyncItem__c si : allItems) {
             if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Upstream Echo Update')) {
                 items.add(si);
             }

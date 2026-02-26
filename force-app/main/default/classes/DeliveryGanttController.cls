@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Provides work item timeline data for the Delivery Gantt Chart LWC.
  *              Returns active work items that have a projected UAT date, allowing the
  *              component to render a CSS-based horizontal bar chart.

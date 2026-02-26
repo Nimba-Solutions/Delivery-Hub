@@ -7,7 +7,7 @@
         <value xsi:type="xsd:string">Loan_Approval</value>
     </values>
     <values>
-        <field>ApiValue__c</field>
+        <field>ApiValueTxt__c</field>
         <value xsi:type="xsd:string">New</value>
     </values>
     <values>
@@ -15,23 +15,23 @@
         <value xsi:type="xsd:double">1</value>
     </values>
     <values>
-        <field>CardColor__c</field>
+        <field>CardColorTxt__c</field>
         <value xsi:type="xsd:string">#E0F2FE</value>
     </values>
     <values>
-        <field>HeaderBgColor__c</field>
+        <field>HeaderBgColorTxt__c</field>
         <value xsi:type="xsd:string">rgba(224,242,254,0.8)</value>
     </values>
     <values>
-        <field>HeaderTextColor__c</field>
+        <field>HeaderTextColorTxt__c</field>
         <value xsi:type="xsd:string">#0284C7</value>
     </values>
     <values>
-        <field>OwnerPersona__c</field>
+        <field>OwnerPersonaTxt__c</field>
         <value xsi:type="xsd:string">Client</value>
     </values>
     <values>
-        <field>Phase__c</field>
+        <field>PhaseTxt__c</field>
         <value xsi:type="xsd:string">Intake</value>
     </values>
     <values>

@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Logic for processing Inbound Sync Items using the "Ledger Pattern".
  * Strictly enforces DAG topology (no reverse-bridges) and maintains PMD compliance.
  * Captures routing origins and Global Traceability IDs to explicitly prevent echo loops.
@@ -70,7 +72,7 @@ public without sharing class DeliverySyncItemIngestor {
 
             // 2. Try to find parent via the Ledger (Upstream Origin)
             if (localParentId == null) {
-                List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :targetId AND ObjectTypePk__c = 'WorkItem__c' WITH SYSTEM_MODE LIMIT 1];
+                List<SyncItem__c> ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = :targetId AND ObjectTypePk__c = 'WorkItem__c' WITH SYSTEM_MODE LIMIT 1];
                 if (!ledger.isEmpty()) {
                     localParentId = (Id)ledger[0].LocalRecordIdTxt__c;
                 }
@@ -104,10 +106,10 @@ public without sharing class DeliverySyncItemIngestor {
                 String baseOrgId = senderOrgId.length() >= 15 ? senderOrgId.substring(0, 15) + '%' : senderOrgId;
                 
                 // FIX: Look at BOTH OrgIdTxt__c and RemoteExternalIdTxt__c
-                String query = 'SELECT Id, EntityTypePk__c FROM Network_Entity__c WHERE (OrgIdTxt__c LIKE :baseOrgId OR RemoteExternalIdTxt__c LIKE :baseOrgId) LIMIT 1';
+                String query = 'SELECT Id, EntityTypePk__c FROM NetworkEntity__c WHERE (OrgIdTxt__c LIKE :baseOrgId OR RemoteExternalIdTxt__c LIKE :baseOrgId) LIMIT 1';
                 
                 if (String.isNotBlank(getNamespacePrefix())) {
-                    query = query.replace('Network_Entity__c', getNamespacePrefix() + 'Network_Entity__c')
+                    query = query.replace('NetworkEntity__c', getNamespacePrefix() + 'NetworkEntity__c')
                                  .replace('OrgIdTxt__c', getNamespacePrefix() + 'OrgIdTxt__c')
                                  .replace('RemoteExternalIdTxt__c', getNamespacePrefix() + 'RemoteExternalIdTxt__c')
                                  .replace('EntityTypePk__c', getNamespacePrefix() + 'EntityTypePk__c');
@@ -183,7 +185,7 @@ public without sharing class DeliverySyncItemIngestor {
         String cleanName = stripNamespace(objName);
         
         if (!cleanName.endsWithIgnoreCase('WorkItem__c') || cleanName.endsWithIgnoreCase('WorkItemComment__c')) {
-            List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
+            List<SyncItem__c> ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
         return null;
@@ -198,7 +200,7 @@ public without sharing class DeliverySyncItemIngestor {
     // Updated to accept the requestId and the globalSourceId
     private static void createLedgerEntry(String objType, String remoteId, Id localId, Id requestId, String globalSourceId) {
         String cleanName = stripNamespace(objType);
-        Sync_Item__c ledger = new Sync_Item__c(
+        SyncItem__c ledger = new SyncItem__c(
             DirectionPk__c = 'Inbound', 
             StatusPk__c = 'Synced', 
             ObjectTypePk__c = cleanName,

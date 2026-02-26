@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the Delivery Work Item Files LWC.
  * Returns all files linked to a Work Item and its related Comments and Requests.
  * @author Cloud Nimbus LLC

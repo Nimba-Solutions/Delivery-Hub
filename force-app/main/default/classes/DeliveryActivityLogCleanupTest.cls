@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Tests for DeliveryActivityLogCleanup scheduled job.
  * Covers aggregation, purge, and the scheduled entry point.
  * @author Cloud Nimbus LLC
@@ -8,7 +10,7 @@ private class DeliveryActivityLogCleanupTest {
 
     @TestSetup
     static void setupData() {
-        Network_Entity__c entity = new Network_Entity__c(
+        NetworkEntity__c entity = new NetworkEntity__c(
             Name = 'Test Client Org',
             EntityTypePk__c = 'Client',
             StatusPk__c = 'Active'
@@ -18,12 +20,12 @@ private class DeliveryActivityLogCleanupTest {
 
     @IsTest
     static void testAggregateUsageAnalytics() {
-        Network_Entity__c entity = [SELECT Id FROM Network_Entity__c LIMIT 1];
+        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
 
         // Insert a batch of activity logs
-        List<Activity_Log__c> logs = new List<Activity_Log__c>();
+        List<ActivityLog__c> logs = new List<ActivityLog__c>();
         for (Integer i = 0; i < 5; i++) {
-            logs.add(new Activity_Log__c(
+            logs.add(new ActivityLog__c(
                 ActionTypePk__c = 'Navigation',
                 ComponentNameTxt__c = 'deliveryHubBoard',
                 UserIdTxt__c = UserInfo.getUserId(),
@@ -31,7 +33,7 @@ private class DeliveryActivityLogCleanupTest {
                 ContextDataTxt__c = '{"url":"https://test.salesforce.com"}'
             ));
         }
-        logs.add(new Activity_Log__c(
+        logs.add(new ActivityLog__c(
             ActionTypePk__c = 'Button_Click',
             ComponentNameTxt__c = 'deliveryGhostRecorder',
             UserIdTxt__c = UserInfo.getUserId(),
@@ -45,9 +47,9 @@ private class DeliveryActivityLogCleanupTest {
         Test.stopTest();
 
         // Verify the JSON was written to the Network Entity
-        Network_Entity__c updated = [
+        NetworkEntity__c updated = [
             SELECT UsageAnalyticsJsonTxt__c
-            FROM Network_Entity__c
+            FROM NetworkEntity__c
             WHERE Id = :entity.Id
         ];
         System.assertNotEquals(null, updated.UsageAnalyticsJsonTxt__c, 'Analytics JSON should be populated');
@@ -55,10 +57,10 @@ private class DeliveryActivityLogCleanupTest {
         System.assert(updated.UsageAnalyticsJsonTxt__c.contains('"uniqueUsers"'), 'JSON should contain uniqueUsers');
         System.assert(updated.UsageAnalyticsJsonTxt__c.contains('deliveryHubBoard'), 'JSON should contain component name');
 
-        // Verify a Sync_Item__c was queued
-        List<Sync_Item__c> syncItems = [
+        // Verify a SyncItem__c was queued
+        List<SyncItem__c> syncItems = [
             SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c, PayloadTxt__c
-            FROM Sync_Item__c
+            FROM SyncItem__c
             WHERE ObjectTypePk__c = 'UsageAnalytics'
         ];
         System.assertEquals(1, syncItems.size(), 'One sync item should be queued');
@@ -69,7 +71,7 @@ private class DeliveryActivityLogCleanupTest {
     @IsTest
     static void testBatchPurgesOldRecords() {
         // Insert a record and backdate it beyond retention
-        Activity_Log__c oldLog = new Activity_Log__c(
+        ActivityLog__c oldLog = new ActivityLog__c(
             ActionTypePk__c = 'Navigation',
             ComponentNameTxt__c = 'deliveryHubBoard',
             UserIdTxt__c = UserInfo.getUserId()
@@ -80,7 +82,7 @@ private class DeliveryActivityLogCleanupTest {
         Test.setCreatedDate(oldLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
 
         // Also insert a recent one that should survive
-        Activity_Log__c recentLog = new Activity_Log__c(
+        ActivityLog__c recentLog = new ActivityLog__c(
             ActionTypePk__c = 'Button_Click',
             ComponentNameTxt__c = 'deliveryGhostRecorder',
             UserIdTxt__c = UserInfo.getUserId()
@@ -91,8 +93,8 @@ private class DeliveryActivityLogCleanupTest {
         Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
         Test.stopTest();
 
-        List<Activity_Log__c> remaining = [
-            SELECT Id FROM Activity_Log__c
+        List<ActivityLog__c> remaining = [
+            SELECT Id FROM ActivityLog__c
         ];
         System.assertEquals(1, remaining.size(), 'Only the recent log should remain');
         System.assertEquals(recentLog.Id, remaining[0].Id, 'Surviving record should be the recent one');
@@ -118,7 +120,7 @@ private class DeliveryActivityLogCleanupTest {
         DeliveryActivityLogCleanup.aggregateUsageAnalytics();
         Test.stopTest();
 
-        Network_Entity__c entity = [SELECT UsageAnalyticsJsonTxt__c FROM Network_Entity__c LIMIT 1];
+        NetworkEntity__c entity = [SELECT UsageAnalyticsJsonTxt__c FROM NetworkEntity__c LIMIT 1];
         System.assertEquals(null, entity.UsageAnalyticsJsonTxt__c,
             'Analytics should remain null when no activity logs exist');
     }

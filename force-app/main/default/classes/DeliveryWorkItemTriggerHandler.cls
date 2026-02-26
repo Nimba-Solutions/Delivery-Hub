@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Aggregates WorkItem rows that need a DeliverySyncEngine update,
  * then enqueues worker jobs. Also handles Network Entity Sync and High-Water Mark Sync.
  * @author Cloud Nimbus LLC
@@ -59,7 +61,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      * @param newWorkItems List of new work items
      */
     private static void handleNetworkEntitySync(List<WorkItem__c> newWorkItems) {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
         
         Boolean shouldCreateRequest = true;
         if (settings.Id != null) {
@@ -74,8 +76,8 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         }
 
         // FIX: Swapped USER_MODE for SYSTEM_MODE to prevent packaging test failures
-        List<Network_Entity__c> vendors = [
-            SELECT Id FROM Network_Entity__c
+        List<NetworkEntity__c> vendors = [
+            SELECT Id FROM NetworkEntity__c
             WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'
             WITH SYSTEM_MODE
             LIMIT 1
@@ -84,7 +86,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         List<WorkRequest__c> newRequests = new List<WorkRequest__c>();
 
         if (!vendors.isEmpty()) {
-            Network_Entity__c vendor = vendors[0];
+            NetworkEntity__c vendor = vendors[0];
             for (WorkItem__c t : newWorkItems) {
                 newRequests.add(new WorkRequest__c(
                     WorkItemId__c = t.Id,
@@ -115,7 +117,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     }
     
     /**
-     * @description Publishes a Delivery_WorkItem_Change__e Platform Event for every workItem
+     * @description Publishes a DeliveryWorkItemChange__e Platform Event for every workItem
      *              whose StageNamePk__c changed in this transaction, enabling real-time
      *              board refresh via the EMP API without polling.
      *              Also schedules an async Slack notification for the same changes.
@@ -126,13 +128,13 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         List<WorkItem__c> newRows,
         Map<Id, WorkItem__c> oldMap
     ) {
-        List<Delivery_WorkItem_Change__e> events = new List<Delivery_WorkItem_Change__e>();
+        List<DeliveryWorkItemChange__e> events = new List<DeliveryWorkItemChange__e>();
         Map<String, String> slackChanges = new Map<String, String>();
 
         for (WorkItem__c t : newRows) {
             WorkItem__c old = oldMap.get(t.Id);
             if (old != null && t.StageNamePk__c != old.StageNamePk__c) {
-                events.add(new Delivery_WorkItem_Change__e(
+                events.add(new DeliveryWorkItemChange__e(
                     WorkItemId__c   = t.Id,
                     ChangeType__c = 'stage_change',
                     NewStage__c   = t.StageNamePk__c

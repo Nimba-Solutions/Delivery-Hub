@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Test class for DeliveryTimeLoggerController.
  * @author Cloud Nimbus LLC
  */
@@ -11,7 +13,7 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @TestSetup
     static void setup() {
-        Network_Entity__c vendor = new Network_Entity__c(
+        NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Test Vendor', EntityTypePk__c = 'Vendor', StatusPk__c = 'Active'
         );
         insert vendor;

@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Queueable Worker that processes 'Outbound' Sync Items.
  * It reads the specific Endpoint from the linked Request, pushes the payload natively,
  * passes the Global Traceability ID, and extracts the response ID to close the bridge loop.
@@ -10,10 +12,10 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         
         // 1. Query Queued Outbound Items linked to a valid Request route
         // NEW: Added GlobalSourceIdTxt__c to the query for header injection
-        List<Sync_Item__c> items = [
+        List<SyncItem__c> items = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RetryCountNumber__c, RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
-            FROM Sync_Item__c 
+            FROM SyncItem__c 
             WHERE StatusPk__c = 'Queued' 
             AND DirectionPk__c = 'Outbound'
             AND RequestId__c != NULL 
@@ -25,10 +27,10 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
             return;
         }
 
-        List<Sync_Item__c> itemsToUpdate = new List<Sync_Item__c>();
+        List<SyncItem__c> itemsToUpdate = new List<SyncItem__c>();
         Map<Id, WorkRequest__c> requestsToUpdate = new Map<Id, WorkRequest__c>();
 
-        for (Sync_Item__c item : items) {
+        for (SyncItem__c item : items) {
             try {
                 String endpointUrl = item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
                 
@@ -126,7 +128,7 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         // Chain Job if more outbound work exists
         Integer remaining = [
             SELECT Count() 
-            FROM Sync_Item__c 
+            FROM SyncItem__c 
             WHERE StatusPk__c = 'Queued' 
             AND DirectionPk__c = 'Outbound' 
             WITH SYSTEM_MODE 

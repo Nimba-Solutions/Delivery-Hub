@@ -1,10 +1,12 @@
 /**
- * @description Scheduled job that maintains the Activity_Log__c table.
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description Scheduled job that maintains the ActivityLog__c table.
  *
  * Two responsibilities run in sequence:
  * 1. **Aggregate** — Summarizes the last 30 days of activity per Network Entity into a
- *    JSON blob on Network_Entity__c.UsageAnalyticsJsonTxt__c and queues an outbound
- *    Sync_Item__c so the vendor org receives the analytics.
+ *    JSON blob on NetworkEntity__c.UsageAnalyticsJsonTxt__c and queues an outbound
+ *    SyncItem__c so the vendor org receives the analytics.
  * 2. **Purge** — Batch-deletes activity log records older than the retention window
  *    (default 90 days) to prevent storage bloat.
  *
@@ -37,7 +39,7 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     // -----------------------------------------------------------------------
 
     /**
-     * @description Returns a query locator for Activity_Log__c records older than the retention window.
+     * @description Returns a query locator for ActivityLog__c records older than the retention window.
      * @param bc The BatchableContext provided by the platform.
      * @return QueryLocator targeting expired activity log records.
      */
@@ -45,7 +47,7 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         DateTime cutoff = DateTime.now().addDays(-RETENTION_DAYS);
         return Database.getQueryLocator([
             SELECT Id
-            FROM Activity_Log__c
+            FROM ActivityLog__c
             WHERE CreatedDate < :cutoff
             WITH SYSTEM_MODE
         ]);
@@ -105,9 +107,9 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     // -----------------------------------------------------------------------
 
     private static void collectLogMetrics(DateTime since, MetricsAccumulator acc) {
-        for (Activity_Log__c log : [
+        for (ActivityLog__c log : [
             SELECT NetworkEntityId__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
-            FROM Activity_Log__c
+            FROM ActivityLog__c
             WHERE CreatedDate >= :since
             AND NetworkEntityId__c != null
             WITH SYSTEM_MODE
@@ -142,8 +144,8 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     }
 
     private static void buildSummariesAndSync(MetricsAccumulator acc) {
-        List<Network_Entity__c> toUpdate = new List<Network_Entity__c>();
-        List<Sync_Item__c> syncItems = new List<Sync_Item__c>();
+        List<NetworkEntity__c> toUpdate = new List<NetworkEntity__c>();
+        List<SyncItem__c> syncItems = new List<SyncItem__c>();
 
         for (Id entId : acc.totals.keySet()) {
             Map<String, Object> summary = new Map<String, Object>();
@@ -157,12 +159,12 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
 
             String jsonBlob = JSON.serialize(summary);
 
-            toUpdate.add(new Network_Entity__c(
+            toUpdate.add(new NetworkEntity__c(
                 Id = entId,
                 UsageAnalyticsJsonTxt__c = jsonBlob
             ));
 
-            syncItems.add(new Sync_Item__c(
+            syncItems.add(new SyncItem__c(
                 ObjectTypePk__c = 'UsageAnalytics',
                 DirectionPk__c = 'Outbound',
                 StatusPk__c = 'Queued',

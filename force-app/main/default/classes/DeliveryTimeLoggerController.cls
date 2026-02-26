@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the deliveryTimeLogger LWC. Creates a WorkLog__c
  *              entry against a Work Item, which the roll-up summary on
  *              TotalLoggedHoursNumber__c then reflects automatically.

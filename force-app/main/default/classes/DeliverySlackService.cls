@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Posts stage-change and test notifications to Slack via Incoming Webhooks.
  *              Stage-change messages are sent asynchronously (@future) from trigger context.
  *              The test-connection method runs synchronously from an LWC user action.
@@ -17,7 +19,7 @@ public with sharing class DeliverySlackService {
      */
     @future(callout=true)
     public static void postStageChanges(Map<String, String> workItemNameToStage) {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
             return;
         }
@@ -33,7 +35,7 @@ public with sharing class DeliverySlackService {
      */
     @future(callout=true)
     public static void postApprovalRequest(String approvalContextJson) {
-        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
             return;
         }

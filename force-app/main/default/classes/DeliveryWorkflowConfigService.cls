@@ -1,4 +1,6 @@
 /**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
  * @description Reads WorkflowType__mdt, WorkflowStage__mdt, and WorkflowPersonaView__mdt
  * Custom Metadata to return board configuration to LWC components. Replaces all hardcoded
  * color maps, transition maps, and persona column maps in deliveryHubBoard.js.
@@ -78,9 +80,9 @@ public with sharing class DeliveryWorkflowConfigService {
         // --- Load stages ---
         List<Map<String,Object>> stages = new List<Map<String,Object>>();
         for (WorkflowStage__mdt s : [
-            SELECT DeveloperName, ApiValue__c, DisplayName__c, SortOrderNumber__c,
-                   CardColor__c, HeaderBgColor__c, HeaderTextColor__c,
-                   OwnerPersona__c, Phase__c,
+            SELECT DeveloperName, ApiValueTxt__c, DisplayNameTxt__c, SortOrderNumber__c,
+                   CardColorTxt__c, HeaderBgColorTxt__c, HeaderTextColorTxt__c,
+                   OwnerPersonaTxt__c, PhaseTxt__c,
                    IsTerminalBool__c, IsBlockedStateBool__c, IsAttentionStateBool__c, IsVisibleByDefaultBool__c,
                    AllowedForwardTransitionsTxt__c, AllowedBacktrackTransitionsTxt__c,
                    WorkflowType__r.DeveloperName
@@ -90,13 +92,13 @@ public with sharing class DeliveryWorkflowConfigService {
             ORDER BY SortOrderNumber__c ASC NULLS LAST
         ]) {
             Map<String,Object> sm = new Map<String,Object>();
-            sm.put('apiValue',            s.ApiValue__c);
-            sm.put('displayName',         String.isNotBlank(s.DisplayName__c) ? s.DisplayName__c : s.ApiValue__c);
-            sm.put('cardColor',           s.CardColor__c);
-            sm.put('headerBgColor',       s.HeaderBgColor__c);
-            sm.put('headerTextColor',     s.HeaderTextColor__c);
-            sm.put('ownerPersona',        s.OwnerPersona__c);
-            sm.put('phase',               s.Phase__c);
+            sm.put('apiValue',            s.ApiValueTxt__c);
+            sm.put('displayName',         String.isNotBlank(s.DisplayNameTxt__c) ? s.DisplayNameTxt__c : s.ApiValueTxt__c);
+            sm.put('cardColor',           s.CardColorTxt__c);
+            sm.put('headerBgColor',       s.HeaderBgColorTxt__c);
+            sm.put('headerTextColor',     s.HeaderTextColorTxt__c);
+            sm.put('ownerPersona',        s.OwnerPersonaTxt__c);
+            sm.put('phase',               s.PhaseTxt__c);
             sm.put('isTerminal',          s.IsTerminalBool__c);
             sm.put('isBlockedState',      s.IsBlockedStateBool__c);
             sm.put('isAttentionState',    s.IsAttentionStateBool__c);
@@ -109,18 +111,18 @@ public with sharing class DeliveryWorkflowConfigService {
         // --- Load persona views ---
         Map<String,List<Map<String,Object>>> personaViews = new Map<String,List<Map<String,Object>>>();
         for (WorkflowPersonaView__mdt pv : [
-            SELECT PersonaName__c, ColumnName__c, StageApiValuesTxt__c, SortOrderNumber__c, IsExtendedColumnBool__c
+            SELECT PersonaNameTxt__c, ColumnNameTxt__c, StageApiValuesTxt__c, SortOrderNumber__c, IsExtendedColumnBool__c
             FROM WorkflowPersonaView__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
             WITH SYSTEM_MODE
-            ORDER BY PersonaName__c ASC, SortOrderNumber__c ASC NULLS LAST
+            ORDER BY PersonaNameTxt__c ASC, SortOrderNumber__c ASC NULLS LAST
         ]) {
-            String persona = pv.PersonaName__c;
+            String persona = pv.PersonaNameTxt__c;
             if (!personaViews.containsKey(persona)) {
                 personaViews.put(persona, new List<Map<String,Object>>());
             }
             Map<String,Object> col = new Map<String,Object>();
-            col.put('columnName',  pv.ColumnName__c);
+            col.put('columnName',  pv.ColumnNameTxt__c);
             col.put('stages',      parseCommaSep(pv.StageApiValuesTxt__c));
             col.put('isExtended',  pv.IsExtendedColumnBool__c);
             col.put('sortOrder',   pv.SortOrderNumber__c);
@@ -155,13 +157,13 @@ public with sharing class DeliveryWorkflowConfigService {
         if (String.isBlank(workflowTypeName)) { workflowTypeName = 'Software_Delivery'; }
         Set<String> result = new Set<String>();
         for (WorkflowStage__mdt s : [
-            SELECT ApiValue__c
+            SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
             AND IsTerminalBool__c = TRUE
             WITH SYSTEM_MODE
         ]) {
-            result.add(s.ApiValue__c);
+            result.add(s.ApiValueTxt__c);
         }
         // Defensive: if CMT is empty (e.g. scratch org first deploy), default to 'Done'
         if (result.isEmpty()) {
@@ -181,13 +183,13 @@ public with sharing class DeliveryWorkflowConfigService {
         if (String.isBlank(workflowTypeName)) { workflowTypeName = 'Software_Delivery'; }
         Set<String> result = new Set<String>();
         for (WorkflowStage__mdt s : [
-            SELECT ApiValue__c
+            SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
             AND IsAttentionStateBool__c = TRUE
             WITH SYSTEM_MODE
         ]) {
-            result.add(s.ApiValue__c);
+            result.add(s.ApiValueTxt__c);
         }
         // Defensive default
         if (result.isEmpty()) {
@@ -209,14 +211,14 @@ public with sharing class DeliveryWorkflowConfigService {
         if (String.isBlank(workflowTypeName)) { workflowTypeName = 'Software_Delivery'; }
         Map<String,String> result = new Map<String,String>();
         for (WorkflowStage__mdt s : [
-            SELECT ApiValue__c, Phase__c
+            SELECT ApiValueTxt__c, PhaseTxt__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
             AND IsTerminalBool__c = FALSE
-            AND Phase__c != null
+            AND PhaseTxt__c != null
             WITH SYSTEM_MODE
         ]) {
-            result.put(s.ApiValue__c, s.Phase__c);
+            result.put(s.ApiValueTxt__c, s.PhaseTxt__c);
         }
         return result;
     }

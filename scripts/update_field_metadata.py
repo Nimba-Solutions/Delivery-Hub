@@ -12,55 +12,32 @@ BASE = "force-app/main/default/objects"
 # Dictionary: "Object/FieldName" -> {"description": "...", "inlineHelpText": "..."}
 # Only entries for fields that are missing one or both tags.
 FIELD_META = {
-    # ── Cloud_Nimbus_LLC_Marketing__mdt ──────────────────────────────────────
-    "Cloud_Nimbus_LLC_Marketing__mdt/CloudNimbusLlcEndpointTxt__c": {
+    # ── CloudNimbusGlobalSettings__mdt ──────────────────────────────────────
+    "CloudNimbusGlobalSettings__mdt/EndpointUrlTxt__c": {
         "inlineHelpText": "Base URL for the Cloud Nimbus LLC integration endpoint.",
     },
-    "Cloud_Nimbus_LLC_Marketing__mdt/EnabledBool__c": {
+    "CloudNimbusGlobalSettings__mdt/EnabledBool__c": {
         "inlineHelpText": "Enable or disable this Cloud Nimbus LLC marketing integration.",
     },
 
-    # ── Delivery_Hub_Settings__c ─────────────────────────────────────────────
-    "Delivery_Hub_Settings__c/AutoCreateWorkRequestBool__c": {
+    # ── DeliveryHubSettings__c ─────────────────────────────────────────────
+    "DeliveryHubSettings__c/AutoCreateWorkRequestBool__c": {
         "inlineHelpText": "When enabled, a delivery Request is automatically created whenever a new Work Item is saved.",
     },
-    "Delivery_Hub_Settings__c/AutoSyncNetworkEntityBool__c": {
+    "DeliveryHubSettings__c/AutoSyncNetworkEntityBool__c": {
         "inlineHelpText": "When enabled, Network Entity records are kept in sync with their remote counterparts automatically.",
     },
-    "Delivery_Hub_Settings__c/EnableNotificationsBool__c": {
+    "DeliveryHubSettings__c/EnableNotificationsBool__c": {
         "inlineHelpText": "Enable in-app and email notifications for work item status changes and comments.",
     },
-    "Delivery_Hub_Settings__c/OpenAIApiKeyTxt__c": {
+    "DeliveryHubSettings__c/OpenAIApiKeyTxt__c": {
         "inlineHelpText": "Your OpenAI secret API key. Required for AI estimation and description generation features.",
     },
-    "Delivery_Hub_Settings__c/OpenAiApiTestedBool__c": {
+    "DeliveryHubSettings__c/OpenAiApiTestedBool__c": {
         "inlineHelpText": "Read-only flag set to true once the OpenAI API key has been successfully validated.",
     },
-    "Delivery_Hub_Settings__c/StagesToAutoShareWithDevTeamTxt__c": {
+    "DeliveryHubSettings__c/StagesToAutoShareWithDevTeamTxt__c": {
         "inlineHelpText": "Comma-separated list of stage names. Work items entering these stages are automatically shared with the development team.",
-    },
-
-    # ── Kanban_Configuration__mdt ────────────────────────────────────────────
-    "Kanban_Configuration__mdt/ActiveDevelopmentStagesTxt__c": {
-        "inlineHelpText": "Comma-separated stage names counted as active development (affects capacity and ETA calculations).",
-    },
-    "Kanban_Configuration__mdt/BlockedStagesTxt__c": {
-        "inlineHelpText": "Comma-separated stage names treated as blocked (highlighted on the board and excluded from ETA).",
-    },
-    "Kanban_Configuration__mdt/DefaultDevCountNumber__c": {
-        "inlineHelpText": "Default number of developers used when no team-specific count is configured.",
-    },
-    "Kanban_Configuration__mdt/PostDevelopmentStagesTxt__c": {
-        "inlineHelpText": "Comma-separated stage names that follow active development (QA, UAT, deployment stages).",
-    },
-    "Kanban_Configuration__mdt/PreDevelopmentStagesTxt__c": {
-        "inlineHelpText": "Comma-separated stage names that precede active development (backlog, scoping, sizing stages).",
-    },
-    "Kanban_Configuration__mdt/PriorityWeightsTxt__c": {
-        "inlineHelpText": "JSON map of priority label to numeric weight used in ETA scheduling calculations.",
-    },
-    "Kanban_Configuration__mdt/UATBufferDaysNumber__c": {
-        "inlineHelpText": "Number of buffer days added to ETA calculations to account for UAT review time.",
     },
 
     # ── Kanban_Stage_Field_Requirement__mdt ──────────────────────────────────
@@ -77,25 +54,25 @@ FIELD_META = {
         "inlineHelpText": "The exact stage name (matches StageNamePk__c picklist value) this requirement applies to.",
     },
 
-    # ── Network_Entity__c ────────────────────────────────────────────────────
-    "Network_Entity__c/DefaultHourlyRateCurrency__c": {
+    # ── NetworkEntity__c ────────────────────────────────────────────────────
+    "NetworkEntity__c/DefaultHourlyRateCurrency__c": {
         "inlineHelpText": "Default billing rate applied to this entity's work logs when no override is specified on a request.",
     },
-    "Network_Entity__c/EntityTypePk__c": {
+    "NetworkEntity__c/EntityTypePk__c": {
         "inlineHelpText": "Select Client, Vendor, or Both to define this entity's role in the delivery network.",
     },
-    "Network_Entity__c/GithubUsernameTxt__c": {
+    "NetworkEntity__c/GithubUsernameTxt__c": {
         "inlineHelpText": "GitHub username for this entity, used to link commits and PRs to work items.",
     },
-    "Network_Entity__c/IntegrationEndpointUrlTxt__c": {
+    "NetworkEntity__c/IntegrationEndpointUrlTxt__c": {
         "inlineHelpText": "Base URL of this entity's Salesforce org used for cross-org sync API calls.",
     },
-    "Network_Entity__c/StatusPk__c": {
+    "NetworkEntity__c/StatusPk__c": {
         "inlineHelpText": "Active entities participate in sync and routing. Inactive entities are excluded from all automated processes.",
     },
 
-    # ── OpenAI_Configuration__mdt ────────────────────────────────────────────
-    "OpenAI_Configuration__mdt/API_Key__c": {
+    # ── OpenAIConfiguration__mdt ────────────────────────────────────────────
+    "OpenAIConfiguration__mdt/API_Key__c": {
         "inlineHelpText": "OpenAI API key stored in custom metadata. Used by AI estimation and description features.",
     },
 
@@ -140,14 +117,14 @@ FIELD_META = {
         "inlineHelpText": "URL to a PR, deployment log, or other evidence of completed work submitted by the vendor.",
     },
 
-    # ── Sync_Item__c ─────────────────────────────────────────────────────────
-    "Sync_Item__c/GlobalSourceIdTxt__c": {
+    # ── SyncItem__c ─────────────────────────────────────────────────────────
+    "SyncItem__c/GlobalSourceIdTxt__c": {
         "inlineHelpText": "Globally unique identifier for the source record across all orgs in the network.",
     },
-    "Sync_Item__c/WorkItemCommentId__c": {
+    "SyncItem__c/WorkItemCommentId__c": {
         "inlineHelpText": "Lookup to the Work Item Comment this sync item represents, if the payload is a comment event.",
     },
-    "Sync_Item__c/WorkItemId__c": {
+    "SyncItem__c/WorkItemId__c": {
         "inlineHelpText": "Lookup to the Work Item this sync item is associated with.",
     },
 
