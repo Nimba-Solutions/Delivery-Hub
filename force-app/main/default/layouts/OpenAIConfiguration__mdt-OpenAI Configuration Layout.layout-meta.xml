@@ -16,7 +16,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>API_Key__c</field>
+                <field>ApiKeyTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

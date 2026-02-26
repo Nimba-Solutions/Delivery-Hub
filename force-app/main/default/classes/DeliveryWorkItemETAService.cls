@@ -92,6 +92,12 @@ public with sharing class DeliveryWorkItemETAService {
     }
 
 
+    // Constants moved to outer class level (Apex does not allow static in inner classes)
+    private static final Integer DEFAULT_UAT_BUFFER_DAYS = 5;
+    private static final Map<String, Decimal> DEFAULT_PRIORITY_WEIGHTS = new Map<String, Decimal>{
+        'High' => 1, 'Medium' => 2, 'Low' => 3
+    };
+
     /**
      * @description Calculates a confidence score (0-100) for an ETA estimate based on data completeness.
      * Each factor contributes 25%: developer assigned, effort estimated, active development, no blockers.
@@ -154,11 +160,6 @@ public with sharing class DeliveryWorkItemETAService {
         private Integer uatBufferDays;
         private final Set<Id> prioritizedWorkItemIds;
         private Set<Id> processedWorkItemIds;
-
-        private static final Integer DEFAULT_UAT_BUFFER_DAYS = 5;
-        private static final Map<String, Decimal> DEFAULT_PRIORITY_WEIGHTS = new Map<String, Decimal>{
-            'High' => 1, 'Medium' => 2, 'Low' => 3
-        };
 
         public ETACalculator(List<Id> prioritizedIds) {
             this.prioritizedWorkItemIds = (prioritizedIds == null) ? new Set<Id>() : new Set<Id>(prioritizedIds);

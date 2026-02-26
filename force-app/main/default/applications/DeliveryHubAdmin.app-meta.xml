@@ -100,7 +100,7 @@
     <tabs>WorkRequest__c</tabs>
     <tabs>WorkItemComment__c</tabs>
     <tabs>SyncItem__c</tabs>
-    <tabs>Delivery_Hub_Settings</tabs>
+    <tabs>DeliveryHubSettings</tabs>
     <tabs>standard-report</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubAdmin_UtilityBar</utilityBar>

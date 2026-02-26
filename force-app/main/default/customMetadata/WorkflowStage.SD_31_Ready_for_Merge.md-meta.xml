@@ -59,7 +59,7 @@
         <value xsi:type="xsd:string">Processing Sign-off,Ready for UAT Sign-off,In Client UAT,Cancelled</value>
     </values>
     <values>
-        <field>ETAWeightNum__c</field>
+        <field>EtaWeightNumber__c</field>
         <value xsi:type="xsd:double">31.0</value>
     </values>
 </CustomMetadata>

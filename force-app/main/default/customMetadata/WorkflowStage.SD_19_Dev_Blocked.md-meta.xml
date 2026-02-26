@@ -59,7 +59,7 @@
         <value xsi:type="xsd:string">In Development,Cancelled</value>
     </values>
     <values>
-        <field>ETAWeightNum__c</field>
+        <field>EtaWeightNumber__c</field>
         <value xsi:type="xsd:double">19.0</value>
     </values>
 </CustomMetadata>

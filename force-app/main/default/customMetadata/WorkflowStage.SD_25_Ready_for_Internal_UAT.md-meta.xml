@@ -59,7 +59,7 @@
         <value xsi:type="xsd:string">QA In Progress,Ready for QA,Cancelled</value>
     </values>
     <values>
-        <field>ETAWeightNum__c</field>
+        <field>EtaWeightNumber__c</field>
         <value xsi:type="xsd:double">25.0</value>
     </values>
 </CustomMetadata>

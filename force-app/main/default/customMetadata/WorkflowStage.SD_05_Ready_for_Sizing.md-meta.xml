@@ -59,7 +59,7 @@
         <value xsi:type="xsd:string">Providing Clarification,Clarification Requested (Pre-Dev),Scoping In Progress,Backlog,Cancelled</value>
     </values>
     <values>
-        <field>ETAWeightNum__c</field>
+        <field>EtaWeightNumber__c</field>
         <value xsi:type="xsd:double">05.0</value>
     </values>
 </CustomMetadata>

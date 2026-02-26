@@ -59,7 +59,7 @@
         <value xsi:type="xsd:string">Drafting Proposal,Proposal Requested,Sizing Underway,Ready for Prioritization,Cancelled</value>
     </values>
     <values>
-        <field>ETAWeightNum__c</field>
+        <field>EtaWeightNumber__c</field>
         <value xsi:type="xsd:double">11.0</value>
     </values>
 </CustomMetadata>

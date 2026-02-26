@@ -59,7 +59,7 @@
         <value xsi:type="xsd:string">Internal UAT,Ready for Internal UAT,QA In Progress,Cancelled</value>
     </values>
     <values>
-        <field>ETAWeightNum__c</field>
+        <field>EtaWeightNumber__c</field>
         <value xsi:type="xsd:double">27.0</value>
     </values>
 </CustomMetadata>
