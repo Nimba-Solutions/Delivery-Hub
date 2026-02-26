@@ -3,7 +3,7 @@
     <fullName>RemoteTicketIdTxt__c</fullName>
     <description>The ID of the record in their Salesforce org.</description>
     <inlineHelpText>ID of the corresponding ticket in the vendor's remote Salesforce org, used for cross-org sync.</inlineHelpText>
-    <externalId>true</externalId>
+    <externalId>false</externalId>
     <label>Remote ID</label>
     <length>255</length>
     <required>false</required>
