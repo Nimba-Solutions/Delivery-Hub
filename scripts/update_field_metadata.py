@@ -21,14 +21,14 @@ FIELD_META = {
     },
 
     # ── Delivery_Hub_Settings__c ─────────────────────────────────────────────
-    "Delivery_Hub_Settings__c/AutoCreateRequestFromTicketBool__c": {
-        "inlineHelpText": "When enabled, a delivery Request is automatically created whenever a new Ticket is saved.",
+    "Delivery_Hub_Settings__c/AutoCreateWorkRequestBool__c": {
+        "inlineHelpText": "When enabled, a delivery Request is automatically created whenever a new Work Item is saved.",
     },
     "Delivery_Hub_Settings__c/AutoSyncNetworkEntityBool__c": {
         "inlineHelpText": "When enabled, Network Entity records are kept in sync with their remote counterparts automatically.",
     },
     "Delivery_Hub_Settings__c/EnableNotificationsBool__c": {
-        "inlineHelpText": "Enable in-app and email notifications for ticket status changes and comments.",
+        "inlineHelpText": "Enable in-app and email notifications for work item status changes and comments.",
     },
     "Delivery_Hub_Settings__c/OpenAIApiKeyTxt__c": {
         "inlineHelpText": "Your OpenAI secret API key. Required for AI estimation and description generation features.",
@@ -37,7 +37,7 @@ FIELD_META = {
         "inlineHelpText": "Read-only flag set to true once the OpenAI API key has been successfully validated.",
     },
     "Delivery_Hub_Settings__c/StagesToAutoShareWithDevTeamTxt__c": {
-        "inlineHelpText": "Comma-separated list of stage names. Tickets entering these stages are automatically shared with the development team.",
+        "inlineHelpText": "Comma-separated list of stage names. Work items entering these stages are automatically shared with the development team.",
     },
 
     # ── Kanban_Configuration__mdt ────────────────────────────────────────────
@@ -71,7 +71,7 @@ FIELD_META = {
         "inlineHelpText": "Uncheck to disable this requirement without deleting the record.",
     },
     "Kanban_Stage_Field_Requirement__mdt/RequiredFieldsTxt__c": {
-        "inlineHelpText": "Comma-separated API field names that must be populated before a ticket can enter the target stage.",
+        "inlineHelpText": "Comma-separated API field names that must be populated before a work item can enter the target stage.",
     },
     "Kanban_Stage_Field_Requirement__mdt/TargetStageTxt__c": {
         "inlineHelpText": "The exact stage name (matches StageNamePk__c picklist value) this requirement applies to.",
@@ -85,7 +85,7 @@ FIELD_META = {
         "inlineHelpText": "Select Client, Vendor, or Both to define this entity's role in the delivery network.",
     },
     "Network_Entity__c/GithubUsernameTxt__c": {
-        "inlineHelpText": "GitHub username for this entity, used to link commits and PRs to tickets.",
+        "inlineHelpText": "GitHub username for this entity, used to link commits and PRs to work items.",
     },
     "Network_Entity__c/IntegrationEndpointUrlTxt__c": {
         "inlineHelpText": "Base URL of this entity's Salesforce org used for cross-org sync API calls.",
@@ -118,8 +118,8 @@ FIELD_META = {
     "Request__c/QuotedHoursNumber__c": {
         "inlineHelpText": "Hours quoted by the vendor in their proposal for this request.",
     },
-    "Request__c/RemoteTicketIdTxt__c": {
-        "inlineHelpText": "ID of the corresponding ticket in the vendor's remote Salesforce org, used for cross-org sync.",
+    "WorkRequest__c/RemoteWorkItemIdTxt__c": {
+        "inlineHelpText": "ID of the corresponding work item in the vendor's remote Salesforce org, used for cross-org sync.",
     },
     "Request__c/RequestedBudgetIncreaseNumber__c": {
         "inlineHelpText": "Additional hours requested by the vendor when the original pre-approved budget is insufficient.",
@@ -130,8 +130,8 @@ FIELD_META = {
     "Request__c/StatusPk__c": {
         "inlineHelpText": "Tracks the request lifecycle: Draft → Open for Bids → Offer Sent → Accepted → In Progress → Completed.",
     },
-    "Request__c/TicketId__c": {
-        "inlineHelpText": "The parent Ticket that originated this delivery request.",
+    "WorkRequest__c/WorkItemId__c": {
+        "inlineHelpText": "The parent Work Item that originated this delivery request.",
     },
     "Request__c/TotalLoggedHoursNumber__c": {
         "inlineHelpText": "Sum of all WorkLog hours associated with this request. Used to track budget consumption.",
@@ -144,123 +144,123 @@ FIELD_META = {
     "Sync_Item__c/GlobalSourceIdTxt__c": {
         "inlineHelpText": "Globally unique identifier for the source record across all orgs in the network.",
     },
-    "Sync_Item__c/TicketCommentId__c": {
-        "inlineHelpText": "Lookup to the Ticket Comment this sync item represents, if the payload is a comment event.",
+    "Sync_Item__c/WorkItemCommentId__c": {
+        "inlineHelpText": "Lookup to the Work Item Comment this sync item represents, if the payload is a comment event.",
     },
-    "Sync_Item__c/TicketId__c": {
-        "inlineHelpText": "Lookup to the Ticket this sync item is associated with.",
+    "Sync_Item__c/WorkItemId__c": {
+        "inlineHelpText": "Lookup to the Work Item this sync item is associated with.",
     },
 
-    # ── Ticket__c ────────────────────────────────────────────────────────────
-    "Ticket__c/BillableRateCurrency__c": {
-        "inlineHelpText": "Hourly rate used to calculate the projected and actual cost of this ticket.",
+    # ── WorkItem__c ────────────────────────────────────────────────────────────
+    "WorkItem__c/BillableRateCurrency__c": {
+        "inlineHelpText": "Hourly rate used to calculate the projected and actual cost of this work item.",
     },
-    "Ticket__c/BriefDescriptionTxt__c": {
-        "inlineHelpText": "One or two sentences summarising what this ticket is about. Shown in board card previews.",
+    "WorkItem__c/BriefDescriptionTxt__c": {
+        "inlineHelpText": "One or two sentences summarising what this work item is about. Shown in board card previews.",
     },
-    "Ticket__c/BudgetVarianceNumber__c": {
+    "WorkItem__c/BudgetVarianceNumber__c": {
         "inlineHelpText": "Difference between pre-approved hours and total logged hours. Negative means over budget.",
     },
-    "Ticket__c/CalculatedETADate__c": {
+    "WorkItem__c/CalculatedETADate__c": {
         "inlineHelpText": "System-calculated estimated completion date based on queue position, team capacity, and priority.",
     },
-    "Ticket__c/ClientIntentionPk__c": {
-        "description": "Indicates the client's current intention for this ticket: whether they intend to proceed, want sizing only, have deferred it, or placed it on hold.",
+    "WorkItem__c/ClientIntentionPk__c": {
+        "description": "Indicates the client's current intention for this work item: whether they intend to proceed, want sizing only, have deferred it, or placed it on hold.",
         "inlineHelpText": "Select the client's intent: Will Do, Sizing Only, Deferred, or On Hold.",
     },
-    "Ticket__c/DetailsTxt__c": {
-        "inlineHelpText": "Full technical and functional details of this ticket. Supports rich text formatting.",
+    "WorkItem__c/DetailsTxt__c": {
+        "inlineHelpText": "Full technical and functional details of this work item. Supports rich text formatting.",
     },
-    "Ticket__c/Developer__c": {
-        "inlineHelpText": "The developer currently assigned to work on this ticket.",
+    "WorkItem__c/Developer__c": {
+        "inlineHelpText": "The developer currently assigned to work on this work item.",
     },
-    "Ticket__c/DeveloperDaysSizeNumber__c": {
+    "WorkItem__c/DeveloperDaysSizeNumber__c": {
         "inlineHelpText": "T-shirt size expressed in developer-days. Used as input for ETA calculations.",
     },
-    "Ticket__c/Epic__c": {
-        "inlineHelpText": "The parent Epic ticket this ticket belongs to. Leave blank for standalone tickets.",
+    "WorkItem__c/Epic__c": {
+        "inlineHelpText": "The parent Epic this work item belongs to. Leave blank for standalone work items.",
     },
-    "Ticket__c/EstimatedEndDevDate__c": {
-        "inlineHelpText": "Estimated date when development work on this ticket will be complete.",
+    "WorkItem__c/EstimatedEndDevDate__c": {
+        "inlineHelpText": "Estimated date when development work on this work item will be complete.",
     },
-    "Ticket__c/EstimatedHoursNumber__c": {
+    "WorkItem__c/EstimatedHoursNumber__c": {
         "inlineHelpText": "Manually entered or AI-suggested estimate of total effort required in hours.",
     },
-    "Ticket__c/EstimatedStartDevDate__c": {
-        "inlineHelpText": "Estimated date when a developer will begin active work on this ticket.",
+    "WorkItem__c/EstimatedStartDevDate__c": {
+        "inlineHelpText": "Estimated date when a developer will begin active work on this work item.",
     },
-    "Ticket__c/EventReceivedOnDateTime__c": {
-        "inlineHelpText": "Timestamp when the source platform event that created or updated this ticket was received.",
+    "WorkItem__c/EventReceivedOnDateTime__c": {
+        "inlineHelpText": "Timestamp when the source platform event that created or updated this work item was received.",
     },
-    "Ticket__c/ExternalRequesterEmailTxt__c": {
+    "WorkItem__c/ExternalRequesterEmailTxt__c": {
         "inlineHelpText": "Email address of the person who submitted this request from an external org.",
     },
-    "Ticket__c/ExternalSourceOrgTxt__c": {
-        "inlineHelpText": "Salesforce org ID or name of the client org that originated this ticket via cross-org sync.",
+    "WorkItem__c/ExternalSourceOrgTxt__c": {
+        "inlineHelpText": "Salesforce org ID or name of the client org that originated this work item via cross-org sync.",
     },
-    "Ticket__c/HoursVarianceNumber__c": {
+    "WorkItem__c/HoursVarianceNumber__c": {
         "inlineHelpText": "Estimated Hours minus Total Logged Hours. Positive means under estimate; negative means over.",
     },
-    "Ticket__c/IsActiveBool__c": {
-        "inlineHelpText": "Uncheck to soft-delete this ticket from board views without permanently removing the record.",
+    "WorkItem__c/IsActiveBool__c": {
+        "inlineHelpText": "Uncheck to soft-delete this work item from board views without permanently removing the record.",
     },
-    "Ticket__c/PriorityPk__c": {
-        "inlineHelpText": "Select the priority level. Higher priority tickets are scheduled earlier in ETA calculations.",
+    "WorkItem__c/PriorityPk__c": {
+        "inlineHelpText": "Select the priority level. Higher priority work items are scheduled earlier in ETA calculations.",
     },
-    "Ticket__c/ProjectedUATReadyDate__c": {
-        "inlineHelpText": "System-calculated date when this ticket is expected to be ready for UAT, including buffer days.",
+    "WorkItem__c/ProjectedUATReadyDate__c": {
+        "inlineHelpText": "System-calculated date when this work item is expected to be ready for UAT, including buffer days.",
     },
-    "Ticket__c/RequestTypePk__c": {
-        "inlineHelpText": "Classifies whether this ticket is a Bug, Feature, Change Request, or other type of work.",
+    "WorkItem__c/RequestTypePk__c": {
+        "inlineHelpText": "Classifies whether this work item is a Bug, Feature, Change Request, or other type of work.",
     },
-    "Ticket__c/SortOrderNumber__c": {
-        "inlineHelpText": "Manual sort position within the ticket's current stage column on the Kanban board.",
+    "WorkItem__c/SortOrderNumber__c": {
+        "inlineHelpText": "Manual sort position within the work item's current stage column on the Kanban board.",
     },
-    "Ticket__c/SourceEventReplayIdTxt__c": {
+    "WorkItem__c/SourceEventReplayIdTxt__c": {
         "inlineHelpText": "Platform event replay ID used to detect and deduplicate duplicate inbound sync events.",
     },
-    "Ticket__c/StageNamePk__c": {
+    "WorkItem__c/StageNamePk__c": {
         "inlineHelpText": "Current stage on the Kanban board. Drag the card to a new column to update this value.",
     },
-    "Ticket__c/StatusPk__c": {
+    "WorkItem__c/StatusPk__c": {
         "inlineHelpText": "High-level status (Open, In Progress, Resolved, Closed). Distinct from the detailed Stage Name.",
     },
-    "Ticket__c/Tags__c": {
-        "inlineHelpText": "Comma-separated tags for filtering and grouping tickets on the board (e.g., frontend, api, urgent).",
+    "WorkItem__c/Tags__c": {
+        "inlineHelpText": "Comma-separated tags for filtering and grouping work items on the board (e.g., frontend, api, urgent).",
     },
-    "Ticket__c/TotalLoggedHoursNumber__c": {
-        "inlineHelpText": "Sum of all WorkLog hours recorded against this ticket. Auto-updated by roll-up.",
+    "WorkItem__c/TotalLoggedHoursNumber__c": {
+        "inlineHelpText": "Sum of all WorkLog hours recorded against this work item. Auto-updated by roll-up.",
     },
 
-    # ── Ticket_Comment__c ────────────────────────────────────────────────────
-    "Ticket_Comment__c/AuthorTxt__c": {
+    # ── WorkItemComment__c ────────────────────────────────────────────────────
+    "WorkItemComment__c/AuthorTxt__c": {
         "inlineHelpText": "Display name of the person who wrote this comment (may be from a remote org).",
     },
-    "Ticket_Comment__c/BodyTxt__c": {
+    "WorkItemComment__c/BodyTxt__c": {
         "inlineHelpText": "The full text content of this comment.",
     },
-    "Ticket_Comment__c/SourcePk__c": {
+    "WorkItemComment__c/SourcePk__c": {
         "inlineHelpText": "Indicates whether this comment originated locally or was synced from a remote org.",
     },
-    "Ticket_Comment__c/SyncedDateTime__c": {
+    "WorkItemComment__c/SyncedDateTime__c": {
         "inlineHelpText": "Timestamp when this comment was last successfully synced with the remote org.",
     },
-    "Ticket_Comment__c/TicketId__c": {
-        "inlineHelpText": "The ticket this comment belongs to.",
+    "WorkItemComment__c/WorkItemId__c": {
+        "inlineHelpText": "The work item this comment belongs to.",
     },
 
-    # ── Ticket_Dependency__c ─────────────────────────────────────────────────
-    "Ticket_Dependency__c/Blocked_Ticket__c": {
-        "inlineHelpText": "The ticket that cannot proceed until the blocking ticket is resolved.",
+    # ── WorkItemDependency__c ─────────────────────────────────────────────────
+    "WorkItemDependency__c/BlockedWorkItemId__c": {
+        "inlineHelpText": "The work item that cannot proceed until the blocking work item is resolved.",
     },
-    "Ticket_Dependency__c/Blocking_Ticket__c": {
-        "inlineHelpText": "The ticket that must be completed before the blocked ticket can move forward.",
+    "WorkItemDependency__c/BlockingWorkItemId__c": {
+        "inlineHelpText": "The work item that must be completed before the blocked work item can move forward.",
     },
-    "Ticket_Dependency__c/ExternalIdTxt__c": {
+    "WorkItemDependency__c/ExternalIdTxt__c": {
         "inlineHelpText": "External identifier for this dependency record, used for cross-org sync deduplication.",
     },
-    "Ticket_Dependency__c/TypePk__c": {
-        "inlineHelpText": "Blocks: the blocking ticket must finish first. Relates To: informational link. Clones: duplicate relationship.",
+    "WorkItemDependency__c/TypePk__c": {
+        "inlineHelpText": "Blocks: the blocking work item must finish first. Relates To: informational link. Clones: duplicate relationship.",
     },
 
     # ── WorkLog__c ───────────────────────────────────────────────────────────
@@ -270,8 +270,8 @@ FIELD_META = {
     "WorkLog__c/RequestId__c": {
         "inlineHelpText": "The delivery Request this work log is billed against.",
     },
-    "WorkLog__c/TicketId__c": {
-        "inlineHelpText": "The Ticket this work log is associated with.",
+    "WorkLog__c/WorkItemId__c": {
+        "inlineHelpText": "The Work Item this work log is associated with.",
     },
     "WorkLog__c/WorkDateDate__c": {
         "inlineHelpText": "The date the work was performed.",

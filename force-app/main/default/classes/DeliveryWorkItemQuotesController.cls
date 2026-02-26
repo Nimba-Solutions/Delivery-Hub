@@ -1,12 +1,12 @@
 /**
  * @description Controller for the deliveryWorkItemQuotes LWC.
- *              Returns all WorkRequest__c quotes linked to a ticket and supports bid acceptance.
+ *              Returns all WorkRequest__c quotes linked to a work item and supports bid acceptance.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryWorkItemQuotesController {
 
-    /** @description Represents a single vendor quote (WorkRequest__c) on a ticket. */
+    /** @description Represents a single vendor quote (WorkRequest__c) on a work item. */
     public class QuoteRow {
         @AuraEnabled public String id;
         @AuraEnabled public String vendorName;
@@ -21,12 +21,12 @@ public with sharing class DeliveryWorkItemQuotesController {
     }
 
     /**
-     * @description Returns all quotes (WorkRequest__c records) for a ticket.
-     * @param ticketId The parent WorkItem__c record Id.
+     * @description Returns all quotes (WorkRequest__c records) for a work item.
+     * @param workItemId The parent WorkItem__c record Id.
      * @return List of QuoteRow wrappers.
      */
     @AuraEnabled(cacheable=true)
-    public static List<QuoteRow> getQuotes(Id ticketId) {
+    public static List<QuoteRow> getQuotes(Id workItemId) {
         List<QuoteRow> rows = new List<QuoteRow>();
         for (WorkRequest__c req : [
             SELECT Id, DeliveryEntityId__r.Name, DeliveryEntityId__c,
@@ -34,7 +34,7 @@ public with sharing class DeliveryWorkItemQuotesController {
                    ProjectedCostCurrency__c, PreApprovedHoursNumber__c,
                    StatusPk__c, WorkProofUrl__c
             FROM WorkRequest__c
-            WHERE WorkItemId__c = :ticketId
+            WHERE WorkItemId__c = :workItemId
             AND QuotedHoursNumber__c != null
             WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
@@ -57,16 +57,16 @@ public with sharing class DeliveryWorkItemQuotesController {
 
     /**
      * @description Accepts a vendor quote: sets the chosen Request to Accepted,
-     *              sets all others on the same ticket to Inactive.
+     *              sets all others on the same work item to Inactive.
      * @param requestId The WorkRequest__c record to accept.
-     * @param ticketId  The parent WorkItem__c for context (used to deactivate other bids).
+     * @param workItemId  The parent WorkItem__c for context (used to deactivate other bids).
      */
     @AuraEnabled
-    public static void acceptQuote(Id requestId, Id ticketId) {
+    public static void acceptQuote(Id requestId, Id workItemId) {
         List<WorkRequest__c> allRequests = [
             SELECT Id, StatusPk__c
             FROM WorkRequest__c
-            WHERE WorkItemId__c = :ticketId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
         ];
         List<WorkRequest__c> toUpdate = new List<WorkRequest__c>();

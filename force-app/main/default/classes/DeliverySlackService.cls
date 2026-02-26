@@ -13,15 +13,15 @@ public with sharing class DeliverySlackService {
      * @description Asynchronously posts a stage-change notification to Slack.
      *              Reads the webhook URL from org-default Custom Settings.
      *              No-ops silently if Slack is not configured.
-     * @param ticketNameToStage Map of Ticket Name → new stage label
+     * @param workItemNameToStage Map of Work Item Name → new stage label
      */
     @future(callout=true)
-    public static void postStageChanges(Map<String, String> ticketNameToStage) {
+    public static void postStageChanges(Map<String, String> workItemNameToStage) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
             return;
         }
-        post(settings.SlackWebhookUrl__c, buildStagePayload(ticketNameToStage));
+        post(settings.SlackWebhookUrl__c, buildStagePayload(workItemNameToStage));
     }
 
     /**
@@ -70,16 +70,16 @@ public with sharing class DeliverySlackService {
     }
 
     /**
-     * @description Builds a Slack Block Kit payload listing ticket stage changes.
-     * @param ticketNameToStage Map of ticket Name → new stage
+     * @description Builds a Slack Block Kit payload listing work item stage changes.
+     * @param workItemNameToStage Map of work item Name → new stage
      * @return Serialised JSON string
      */
-    private static String buildStagePayload(Map<String, String> ticketNameToStage) {
+    private static String buildStagePayload(Map<String, String> workItemNameToStage) {
         List<String> lines = new List<String>();
-        for (String name : ticketNameToStage.keySet()) {
-            lines.add('\u2022 *' + name + '* \u2192 `' + ticketNameToStage.get(name) + '`');
+        for (String name : workItemNameToStage.keySet()) {
+            lines.add('\u2022 *' + name + '* \u2192 `' + workItemNameToStage.get(name) + '`');
         }
-        String text = ':arrows_counterclockwise: *Ticket Stage Update*\n' + String.join(lines, '\n');
+        String text = ':arrows_counterclockwise: *Work Item Stage Update*\n' + String.join(lines, '\n');
         return JSON.serialize(new Map<String, Object>{
             'blocks' => new List<Object>{
                 new Map<String, Object>{

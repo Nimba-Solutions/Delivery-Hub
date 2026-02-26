@@ -7,7 +7,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 
 // --- APEX IMPORTS ---
-import updateTicketStage from '@salesforce/apex/DeliveryHubBoardController.updateTicketStage';
+import updateWorkItemStage from '@salesforce/apex/DeliveryHubBoardController.updateWorkItemStage';
 
 // --- SCHEMA IMPORTS ---
 // Removed ID_FIELD import
@@ -29,8 +29,8 @@ const FIELDS = [
 
 export default class DeliveryWorkItemActionCenter extends LightningElement {
     @api recordId;
-    @track ticket;
-    @track wiredTicketResult; 
+    @track workItem;
+    @track wiredWorkItemResult; 
 
     // State
     @track missingFields = [];
@@ -143,14 +143,14 @@ export default class DeliveryWorkItemActionCenter extends LightningElement {
     };
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
-    wiredTicket(result) {
-        this.wiredTicketResult = result;
+    wiredWorkItem(result) {
+        this.wiredWorkItemResult = result;
         const { data, error } = result;
         if (data) {
-            this.ticket = data;
+            this.workItem = data;
             this.evaluateState();
         } else if (error) {
-            console.error('Error fetching ticket data', error);
+            console.error('Error fetching work item data', error);
         }
     }
 
@@ -164,12 +164,12 @@ export default class DeliveryWorkItemActionCenter extends LightningElement {
 
     evaluateState() {
         this.missingFields = [];
-        const stage = getFieldValue(this.ticket, STAGE_FIELD);
+        const stage = getFieldValue(this.workItem, STAGE_FIELD);
         this.currentStage = stage || '';
-        const est = getFieldValue(this.ticket, ESTIMATED_HOURS_FIELD);
-        const approved = getFieldValue(this.ticket, PRE_APPROVED_HOURS_FIELD);
-        const dev = getFieldValue(this.ticket, DEVELOPER_FIELD);
-        const criteria = getFieldValue(this.ticket, CRITERIA_FIELD);
+        const est = getFieldValue(this.workItem, ESTIMATED_HOURS_FIELD);
+        const approved = getFieldValue(this.workItem, PRE_APPROVED_HOURS_FIELD);
+        const dev = getFieldValue(this.workItem, DEVELOPER_FIELD);
+        const criteria = getFieldValue(this.workItem, CRITERIA_FIELD);
 
         // --- 1. DETERMINE MISSING FIELDS (Cumulative Health Check) ---
         
@@ -319,12 +319,12 @@ export default class DeliveryWorkItemActionCenter extends LightningElement {
         this.dispatchEvent(
             new ShowToastEvent({
                 title: 'Success',
-                message: 'Ticket requirements updated.',
+                message: 'Work item requirements updated.',
                 variant: 'success'
             })
         );
         // Refresh the wire to re-evaluate gates immediately
-        refreshApex(this.wiredTicketResult).then(() => {
+        refreshApex(this.wiredWorkItemResult).then(() => {
             this.processing = false;
         });
     }
@@ -334,8 +334,8 @@ export default class DeliveryWorkItemActionCenter extends LightningElement {
         this.processing = true;
 
         try {
-            await updateTicketStage({ 
-                ticketId: this.recordId, 
+            await updateWorkItemStage({ 
+                workItemId: this.recordId, 
                 newStage: targetStage 
             });
 
@@ -348,13 +348,13 @@ export default class DeliveryWorkItemActionCenter extends LightningElement {
             );
             
             // Refresh data
-            await refreshApex(this.wiredTicketResult);
+            await refreshApex(this.wiredWorkItemResult);
 
         } catch (error) {
             console.error('Move failed', error);
             this.dispatchEvent(
                 new ShowToastEvent({
-                    title: 'Error moving ticket',
+                    title: 'Error moving work item',
                     message: error.body ? error.body.message : error.message,
                     variant: 'error'
                 })

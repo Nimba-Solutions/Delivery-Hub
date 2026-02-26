@@ -7,30 +7,30 @@ private class DeliverySyncRetryControllerTest {
 
     @TestSetup
     static void setup() {
-        WorkItem__c ticket = new WorkItem__c(BriefDescriptionTxt__c = 'Test Ticket', StageNamePk__c = 'Backlog');
-        insert ticket;
+        WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Test Work Item', StageNamePk__c = 'Backlog');
+        insert workItem;
 
         List<Sync_Item__c> items = new List<Sync_Item__c>{
             new Sync_Item__c(
                 ObjectTypePk__c     = 'WorkItem__c',
-                LocalRecordIdTxt__c = ticket.Id,
-                WorkItemId__c         = ticket.Id,
+                LocalRecordIdTxt__c = workItem.Id,
+                WorkItemId__c         = workItem.Id,
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Failed',
                 ErrorLogTxt__c      = 'Connection timeout'
             ),
             new Sync_Item__c(
                 ObjectTypePk__c     = 'WorkItem__c',
-                LocalRecordIdTxt__c = ticket.Id,
-                WorkItemId__c         = ticket.Id,
+                LocalRecordIdTxt__c = workItem.Id,
+                WorkItemId__c         = workItem.Id,
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Failed',
                 ErrorLogTxt__c      = 'Auth error'
             ),
             new Sync_Item__c(
                 ObjectTypePk__c     = 'WorkItem__c',
-                LocalRecordIdTxt__c = ticket.Id,
-                WorkItemId__c         = ticket.Id,
+                LocalRecordIdTxt__c = workItem.Id,
+                WorkItemId__c         = workItem.Id,
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Synced',
                 ErrorLogTxt__c      = null

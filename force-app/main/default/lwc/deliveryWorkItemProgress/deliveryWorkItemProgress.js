@@ -81,15 +81,15 @@ const DONE_CONNECTOR_COLOR = '#94A3B8';
 export default class DeliveryWorkItemProgress extends LightningElement {
     @api recordId;
 
-    wiredTicket;
+    wiredWorkItem;
 
     @wire(getRecord, { recordId: '$recordId', fields: [STAGE_FIELD] })
-    wiredTicketHandler(result) {
-        this.wiredTicket = result;
+    wiredWorkItemHandler(result) {
+        this.wiredWorkItem = result;
     }
 
     get currentStageName() {
-        return getFieldValue(this.wiredTicket && this.wiredTicket.data, STAGE_FIELD) || '';
+        return getFieldValue(this.wiredWorkItem && this.wiredWorkItem.data, STAGE_FIELD) || '';
     }
 
     get isCancelled() {

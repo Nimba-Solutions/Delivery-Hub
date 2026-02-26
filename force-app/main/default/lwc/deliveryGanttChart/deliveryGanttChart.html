@@ -7,7 +7,7 @@
                 <lightning-icon icon-name="utility:date_time" alternative-text="Timeline" size="small" class="gantt-header-icon"></lightning-icon>
                 <div>
                     <h2 class="gantt-title">Delivery Timeline</h2>
-                    <p class="gantt-subtitle">Active tickets with projected UAT dates &bull; {windowLabel}</p>
+                    <p class="gantt-subtitle">Active work items with projected UAT dates &bull; {windowLabel}</p>
                 </div>
             </div>
             <div class="gantt-header-right">
@@ -61,11 +61,11 @@
                     </div>
                 </div>
 
-                <!-- Ticket rows -->
+                <!-- Work item rows -->
                 <template for:each={ganttRows} for:item="row">
-                    <div key={row.ticketId} class="gantt-row">
+                    <div key={row.workItemId} class="gantt-row">
                         <div class="gantt-label-col">
-                            <a href={row.recordUrl} target="_blank" class="gantt-ticket-name">
+                            <a href={row.recordUrl} target="_blank" class="gantt-work-item-name">
                                 {row.name}
                             </a>
                             <template if:true={row.descShort}>

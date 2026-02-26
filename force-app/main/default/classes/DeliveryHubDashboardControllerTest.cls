@@ -6,10 +6,10 @@ private class DeliveryHubDashboardControllerTest {
     
     @IsTest
     static void testGetMetrics() {
-        // 1. Create Active Ticket
+        // 1. Create Active Work Item
         // We do not set LoggedHoursNum__c here as the field does not exist yet
         WorkItem__c t = new WorkItem__c(
-            BriefDescriptionTxt__c = 'Test Ticket',
+            BriefDescriptionTxt__c = 'Test Work Item',
             StageNamePk__c = 'In Progress'
         );
         insert t;
@@ -40,7 +40,7 @@ private class DeliveryHubDashboardControllerTest {
 
         // 3. Assertions
         // We cast the Decimal values because the map values are generic Objects
-        System.assertEquals(1, (Decimal)metrics.get('activeRequests'), 'Should count 1 active ticket');
+        System.assertEquals(1, (Decimal)metrics.get('activeRequests'), 'Should count 1 active work item');
         System.assertEquals(1, (Decimal)metrics.get('succeededSyncs'), 'Should count 1 success');
         System.assertEquals(1, (Decimal)metrics.get('failedSyncs'), 'Should count 1 failure');
         
@@ -54,48 +54,48 @@ private class DeliveryHubDashboardControllerTest {
 
     @IsTest
     static void testGetClientDashboard() {
-        List<WorkItem__c> tickets = new List<WorkItem__c>{
-            new WorkItem__c(BriefDescriptionTxt__c = 'Backlog Ticket',    StageNamePk__c = 'Backlog'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Dev Ticket',        StageNamePk__c = 'In Development'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Attention Ticket',  StageNamePk__c = 'In Client Approval')
+        List<WorkItem__c> workItems = new List<WorkItem__c>{
+            new WorkItem__c(BriefDescriptionTxt__c = 'Backlog Work Item',    StageNamePk__c = 'Backlog'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Dev Work Item',        StageNamePk__c = 'In Development'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Attention Work Item',  StageNamePk__c = 'In Client Approval')
         };
-        insert tickets;
+        insert workItems;
 
         Test.startTest();
         Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard();
         Test.stopTest();
 
-        System.assert(result.containsKey('attentionTickets'), 'Should return attentionTickets key');
+        System.assert(result.containsKey('attentionWorkItems'), 'Should return attentionWorkItems key');
         System.assert(result.containsKey('phases'), 'Should return phases key');
-        System.assert(result.containsKey('recentTickets'), 'Should return recentTickets key');
+        System.assert(result.containsKey('recentWorkItems'), 'Should return recentWorkItems key');
 
-        List<DeliveryHubDashboardController.TicketItem> attention =
-            (List<DeliveryHubDashboardController.TicketItem>)result.get('attentionTickets');
-        System.assertEquals(1, attention.size(), 'Should return 1 attention ticket');
-        System.assertEquals('In Client Approval', attention[0].stage, 'Attention ticket stage should match');
+        List<DeliveryHubDashboardController.WorkItemSummary> attention =
+            (List<DeliveryHubDashboardController.WorkItemSummary>)result.get('attentionWorkItems');
+        System.assertEquals(1, attention.size(), 'Should return 1 attention work item');
+        System.assertEquals('In Client Approval', attention[0].stage, 'Attention work item stage should match');
 
         List<DeliveryHubDashboardController.PhaseItem> phases =
             (List<DeliveryHubDashboardController.PhaseItem>)result.get('phases');
         System.assertEquals(6, phases.size(), 'Should return all 6 phase buckets');
 
-        List<DeliveryHubDashboardController.TicketItem> recent =
-            (List<DeliveryHubDashboardController.TicketItem>)result.get('recentTickets');
-        System.assert(recent.size() > 0, 'Should return at least one recent ticket');
+        List<DeliveryHubDashboardController.WorkItemSummary> recent =
+            (List<DeliveryHubDashboardController.WorkItemSummary>)result.get('recentWorkItems');
+        System.assert(recent.size() > 0, 'Should return at least one recent work item');
     }
 
     @IsTest
     static void testGetAttentionCount() {
         insert new List<WorkItem__c>{
-            new WorkItem__c(BriefDescriptionTxt__c = 'UAT Ticket',      StageNamePk__c = 'In Client UAT'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Approval Ticket', StageNamePk__c = 'Ready for Client Approval'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Dev Ticket',      StageNamePk__c = 'In Development')
+            new WorkItem__c(BriefDescriptionTxt__c = 'UAT Work Item',      StageNamePk__c = 'In Client UAT'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Approval Work Item', StageNamePk__c = 'Ready for Client Approval'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Dev Work Item',      StageNamePk__c = 'In Development')
         };
 
         Test.startTest();
         Integer count = DeliveryHubDashboardController.getAttentionCount();
         Test.stopTest();
 
-        System.assertEquals(2, count, 'Should count tickets in client-facing stages only');
+        System.assertEquals(2, count, 'Should count workItems in client-facing stages only');
     }
 
     @IsTest

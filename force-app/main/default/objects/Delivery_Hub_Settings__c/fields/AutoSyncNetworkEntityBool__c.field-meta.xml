@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>AutoSyncNetworkEntityBool__c</fullName>
     <defaultValue>true</defaultValue>
-    <description>&quot;Auto-Send&quot; functionality (triggering the API callout automatically when the Ticket matches your criteria)</description>
+    <description>&quot;Auto-Send&quot; functionality (triggering the API callout automatically when the Work Item matches your criteria)</description>
     <inlineHelpText>When enabled, Network Entity records are kept in sync with their remote counterparts automatically.</inlineHelpText>
     <label>Auto-Sync Network Entity</label>
     <trackTrending>false</trackTrending>

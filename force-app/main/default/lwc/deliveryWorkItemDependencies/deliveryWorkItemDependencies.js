@@ -11,7 +11,7 @@ export default class DeliveryWorkItemDependencies extends NavigationMixin(Lightn
     @track blockedBy = [];
     @track isLoading = true;
 
-    @wire(getDependencies, { ticketId: '$recordId' })
+    @wire(getDependencies, { workItemId: '$recordId' })
     wiredDeps({ data, error }) {
         if (data) {
             this.blocking  = data.blocking  || [];
@@ -28,7 +28,7 @@ export default class DeliveryWorkItemDependencies extends NavigationMixin(Lightn
     get blockingCount()  { return this.blocking.length; }
     get blockedByCount() { return this.blockedBy.length; }
 
-    handleTicketClick(event) {
+    handleWorkItemClick(event) {
         this[NavigationMixin.Navigate]({
             type: 'standard__recordPage',
             attributes: {

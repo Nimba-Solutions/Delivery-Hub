@@ -12,7 +12,7 @@ private class DeliverySyncEngineTest {
         // 1. Settings (Ensure Org-level enforcement to minimize rogue triggers)
         insert new Delivery_Hub_Settings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            AutoCreateRequestFromTicketBool__c = false, 
+            AutoCreateWorkRequestBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 
@@ -30,7 +30,7 @@ private class DeliverySyncEngineTest {
         );
         insert new List<Network_Entity__c>{vendor, client};
 
-        // 3. Ticket (With Upstream Edge mapped)
+        // 3. Work Item (With Upstream Edge mapped)
         WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'T', 
             StageNamePk__c = 'Backlog', 
@@ -46,7 +46,7 @@ private class DeliverySyncEngineTest {
             WorkItemId__c = t.Id, 
             DeliveryEntityId__c = vendor.Id, 
             StatusPk__c = 'Active', 
-            RemoteTicketIdTxt__c = 'REMOTE-101'
+            RemoteWorkItemIdTxt__c = 'REMOTE-101'
         );
     }
 

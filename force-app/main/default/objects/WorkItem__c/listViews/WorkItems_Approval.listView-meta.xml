@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ListView xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Tickets_Approval</fullName>
+    <fullName>WorkItems_Approval</fullName>
     <columns>NAME</columns>
     <columns>BriefDescriptionTxt__c</columns>
     <columns>StageNamePk__c</columns>

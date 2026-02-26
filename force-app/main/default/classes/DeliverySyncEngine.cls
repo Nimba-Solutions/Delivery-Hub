@@ -27,20 +27,20 @@ public without sharing class DeliverySyncEngine {
         }
 
         try {
-            Set<Id> ticketIds = new Set<Id>();
+            Set<Id> workItemIds = new Set<Id>();
             Set<Id> recordIds = new Set<Id>();
-            Map<Id, Id> recordToTicketId = new Map<Id, Id>();
+            Map<Id, Id> recordToWorkItemId = new Map<Id, Id>();
 
             for (SObject rec : newRecords) {
                 recordIds.add(rec.Id);
-                Id tId = getTicketId(rec); 
+                Id tId = getWorkItemId(rec); 
                 if (tId != null) {
-                    ticketIds.add(tId);
-                    recordToTicketId.put(rec.Id, tId);
+                    workItemIds.add(tId);
+                    recordToWorkItemId.put(rec.Id, tId);
                 }
             }
 
-            if (ticketIds.isEmpty()) {
+            if (workItemIds.isEmpty()) {
                 return;
             }
 
@@ -57,21 +57,21 @@ public without sharing class DeliverySyncEngine {
                 recordToGlobalSource.put((Id)existingItem.LocalRecordIdTxt__c, existingItem.GlobalSourceIdTxt__c);
             }
 
-            // 2. Evaluate Upstream Routing Edges (The Parent Tickets)
-            Map<Id, WorkItem__c> parentTickets = new Map<Id, WorkItem__c>([
+            // 2. Evaluate Upstream Routing Edges (The Parent Work Items)
+            Map<Id, WorkItem__c> parentWorkItems = new Map<Id, WorkItem__c>([
                 SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c 
                 FROM WorkItem__c 
-                WHERE Id IN :ticketIds
+                WHERE Id IN :workItemIds
                 WITH SYSTEM_MODE
             ]);
 
             // 3. Evaluate Downstream Routing Edges (Active, Typed Requests)
             List<WorkRequest__c> connections = [
-                SELECT Id, WorkItemId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, 
+                SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityId__c, 
                        DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
                        DeliveryEntityId__r.EntityTypePk__c, StatusPk__c 
                 FROM WorkRequest__c 
-                WHERE WorkItemId__c IN :ticketIds 
+                WHERE WorkItemId__c IN :workItemIds 
                   AND StatusPk__c != 'Inactive' 
                   AND DeliveryEntityId__c != NULL 
                   AND DeliveryEntityId__r.EntityTypePk__c IN ('Vendor', 'Both')
@@ -92,8 +92,8 @@ public without sharing class DeliverySyncEngine {
                     continue;
                 }
 
-                Id tId = recordToTicketId.get(rec.Id);
-                WorkItem__c parentTicket = parentTickets.get(tId);
+                Id tId = recordToWorkItemId.get(rec.Id);
+                WorkItem__c parentWorkItem = parentWorkItems.get(tId);
                 List<WorkRequest__c> reqs = routes.get(tId);
 
                 // Determine Global Source: Inherit from ledger or this is the Birthplace
@@ -107,7 +107,7 @@ public without sharing class DeliverySyncEngine {
                 if (reqs != null && !reqs.isEmpty()) {
                     for (WorkRequest__c req : reqs) {
                         // Kill-Switch: If target is the Global Source or matches incoming edge, suppress circular sync
-                        if (blockedOrigins.contains((String)req.Id) || req.RemoteTicketIdTxt__c == globalSourceId) {
+                        if (blockedOrigins.contains((String)req.Id) || req.RemoteWorkItemIdTxt__c == globalSourceId) {
                             continue;
                         } 
                         itemsToInsert.add(createSyncItem(rec, req, allowedFields, globalSourceId));
@@ -117,13 +117,13 @@ public without sharing class DeliverySyncEngine {
                 // ==========================================
                 // FAN OUT UPSTREAM (Stage for Client Poller)
                 // ==========================================
-                if (parentTicket != null && parentTicket.ClientNetworkEntityId__c != null) {
-                    String entityType = parentTicket.ClientNetworkEntityId__r.EntityTypePk__c;
+                if (parentWorkItem != null && parentWorkItem.ClientNetworkEntityId__c != null) {
+                    String entityType = parentWorkItem.ClientNetworkEntityId__r.EntityTypePk__c;
                     
                     if (entityType == 'Client' || entityType == 'Both') {
                         // Kill-Switch: Do not stage for Client if they are the Global Source or sent this to us
-                        if (blockedOrigins.contains((String)parentTicket.ClientNetworkEntityId__c) || 
-                            (String)parentTicket.ClientNetworkEntityId__c == globalSourceId) {
+                        if (blockedOrigins.contains((String)parentWorkItem.ClientNetworkEntityId__c) || 
+                            (String)parentWorkItem.ClientNetworkEntityId__c == globalSourceId) {
                             continue;
                         }
                         
@@ -155,7 +155,7 @@ public without sharing class DeliverySyncEngine {
         return false;
     }
 
-    private static Id getTicketId(SObject rec) {
+    private static Id getWorkItemId(SObject rec) {
         String name = rec.getSObjectType().getDescribe().getName();
         if (name.endsWithIgnoreCase('WorkItem__c') && !name.endsWithIgnoreCase('WorkItemComment__c')) {
             return rec.Id;
@@ -183,7 +183,7 @@ public without sharing class DeliverySyncEngine {
             GlobalSourceIdTxt__c = globalSourceId
         );
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        item.WorkItemId__c = getTicketId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
+        item.WorkItemId__c = getWorkItemId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
 
         String fullApiName = rec.getSObjectType().getDescribe().getName();
         String cleanName = fullApiName.replace('delivery__', '');
@@ -204,7 +204,7 @@ public without sharing class DeliverySyncEngine {
         if (req != null) {
             // Push Mode: Explicit Downstream Route
             item.RequestId__c = req.Id; 
-            payload.put('TargetId', req.RemoteTicketIdTxt__c); 
+            payload.put('TargetId', req.RemoteWorkItemIdTxt__c); 
         } else {
             // Hub Mode: Upstream Stage
             payload.put('TargetId', item.WorkItemId__c);

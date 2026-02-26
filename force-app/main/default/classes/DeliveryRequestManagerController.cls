@@ -25,17 +25,17 @@ public without sharing class DeliveryRequestManagerController {
         // Execute DML in System Mode to bypass FLS restrictions for this specific app action
         Database.update(req, AccessLevel.SYSTEM_MODE);
         
-        // 3. "Touch" the parent Ticket to trigger the DeliverySyncEngine push
+        // 3. "Touch" the parent Work Item to trigger the DeliverySyncEngine push
         if (req.WorkItemId__c != null) {
-            WorkItem__c parentTicket = new WorkItem__c(Id = req.WorkItemId__c);
-            Database.update(parentTicket, AccessLevel.SYSTEM_MODE);
+            WorkItem__c parentWorkItem = new WorkItem__c(Id = req.WorkItemId__c);
+            Database.update(parentWorkItem, AccessLevel.SYSTEM_MODE);
         }
     }
 
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
         List<WorkRequest__c> reqs = [
-            SELECT Id, StatusPk__c, RemoteTicketIdTxt__c, LastModifiedDate
+            SELECT Id, StatusPk__c, RemoteWorkItemIdTxt__c, LastModifiedDate
             FROM WorkRequest__c
             WHERE Id = :requestId
             WITH SYSTEM_MODE
@@ -46,8 +46,8 @@ public without sharing class DeliveryRequestManagerController {
         }
         WorkRequest__c req = reqs[0];
         String info = 'Status: ' + req.StatusPk__c;
-        if (String.isNotBlank(req.RemoteTicketIdTxt__c)) {
-            info += ' | Remote Ticket ID: ' + req.RemoteTicketIdTxt__c;
+        if (String.isNotBlank(req.RemoteWorkItemIdTxt__c)) {
+            info += ' | Remote Work Item ID: ' + req.RemoteWorkItemIdTxt__c;
         }
         info += ' | Last Updated: ' + req.LastModifiedDate.format();
         return info;

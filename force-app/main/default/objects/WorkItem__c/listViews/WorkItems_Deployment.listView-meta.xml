@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ListView xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Tickets_Development</fullName>
+    <fullName>WorkItems_Deployment</fullName>
     <columns>NAME</columns>
     <columns>BriefDescriptionTxt__c</columns>
     <columns>StageNamePk__c</columns>
@@ -10,8 +10,8 @@
     <filters>
         <field>StageNamePk__c</field>
         <operation>equals</operation>
-        <value>Ready for Development,In Development,Dev Clarification Requested,Providing Dev Clarification,Dev Blocked,Back For Development</value>
+        <value>Ready for Merge,Merging,Ready for Deployment,Deploying</value>
     </filters>
     <filterScope>Everything</filterScope>
-    <label>Work Items — Development</label>
+    <label>Work Items — Deployment</label>
 </ListView>

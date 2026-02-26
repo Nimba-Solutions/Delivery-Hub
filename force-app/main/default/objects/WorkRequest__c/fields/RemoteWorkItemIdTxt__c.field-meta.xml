@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>RemoteTicketIdTxt__c</fullName>
+    <fullName>RemoteWorkItemIdTxt__c</fullName>
     <description>The ID of the record in their Salesforce org.</description>
     <inlineHelpText>ID of the corresponding work item in the vendor's remote Salesforce org, used for cross-org sync.</inlineHelpText>
     <externalId>false</externalId>

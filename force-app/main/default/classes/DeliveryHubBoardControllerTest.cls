@@ -8,18 +8,18 @@ public class DeliveryHubBoardControllerTest {
     static void setup() {
         DeliveryTriggerControl.disableAfterLogic();
 
-        List<WorkItem__c> tickets = new List<WorkItem__c>{
+        List<WorkItem__c> workItems = new List<WorkItem__c>{
             new WorkItem__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
             new WorkItem__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Blocked Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Blocking Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocked Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocking Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true),
             new WorkItem__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1, IsActiveBool__c = true)
         };
-        insert tickets;
+        insert workItems;
         
         WorkItemDependency__c dep = new WorkItemDependency__c(
-            BlockedWorkItemId__c = tickets[2].Id,
-            BlockingWorkItemId__c = tickets[3].Id,
+            BlockedWorkItemId__c = workItems[2].Id,
+            BlockingWorkItemId__c = workItems[3].Id,
             TypePk__c = 'Blocks'
         );
         insert dep;
@@ -28,28 +28,27 @@ public class DeliveryHubBoardControllerTest {
     }
 
     @isTest
-    static void testUpdateTicketStage() {
-        WorkItem__c ticket = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test' LIMIT 1];
+    static void testUpdateWorkItemStage() {
+        WorkItem__c workItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test' LIMIT 1];
         
         Test.startTest();
-        DeliveryHubBoardController.updateTicketStage(ticket.Id, 'In Progress');
+        DeliveryHubBoardController.updateWorkItemStage(workItem.Id, 'In Progress');
         Test.stopTest();
         
-        WorkItem__c updated = [SELECT StageNamePk__c FROM WorkItem__c WHERE Id = :ticket.Id];
+        WorkItem__c updated = [SELECT StageNamePk__c FROM WorkItem__c WHERE Id = :workItem.Id];
         System.assertEquals('In Progress', updated.StageNamePk__c);
     }
     
     @isTest
-    static void testReorderTicket() {
-        // FIX: Updated to test the reorderTicket method
-        WorkItem__c ticket = [SELECT Id, StageNamePk__c FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Sort Test' LIMIT 1];
+    static void testReorderWorkItem() {
+        WorkItem__c workItem = [SELECT Id, StageNamePk__c FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Sort Test' LIMIT 1];
 
         Test.startTest();
         // Move to index 0 (top of list)
-        DeliveryHubBoardController.reorderTicket(ticket.Id, ticket.StageNamePk__c, 0);
+        DeliveryHubBoardController.reorderWorkItem(workItem.Id, workItem.StageNamePk__c, 0);
         Test.stopTest();
         
-        WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :ticket.Id];
+        WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :workItem.Id];
         // Should be 1 because it's now top of the list
         System.assertEquals(1, updated.SortOrderNumber__c);
     }
@@ -68,11 +67,11 @@ public class DeliveryHubBoardControllerTest {
     
     @isTest
     static void testCreateDependencySelfBlock() {
-        WorkItem__c ticket = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocked Ticket'];
+        WorkItem__c workItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocked Work Item'];
         
         try {
             Test.startTest();
-            DeliveryHubBoardController.createDependency(ticket.Id, ticket.Id);
+            DeliveryHubBoardController.createDependency(workItem.Id, workItem.Id);
             Test.stopTest();
             System.assert(false, 'Expected AuraHandledException');
         } catch (AuraHandledException e) {
@@ -95,12 +94,12 @@ public class DeliveryHubBoardControllerTest {
     
     @isTest
     static void testSearchForPotentialBlockers() {
-        WorkItem__c currentTicket = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
-        
+        WorkItem__c currentWorkItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
+
         Test.startTest();
         List<WorkItem__c> results = DeliveryHubBoardController.searchForPotentialBlockers(
             'Search Target',
-            currentTicket.Id,
+            currentWorkItem.Id,
             new List<Id>(),
             'Software_Delivery'
         );

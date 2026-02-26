@@ -12,7 +12,7 @@
     <columns>
         <field>WorkItem__c.ClientNetworkEntityId__c</field>
     </columns>
-    <description>Count of tickets at each stage of the delivery pipeline. Use to monitor flow and identify bottlenecks.</description>
+    <description>Count of work items at each stage of the delivery pipeline. Use to monitor flow and identify bottlenecks.</description>
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>

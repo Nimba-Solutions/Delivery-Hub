@@ -18,7 +18,7 @@
     <columns>
         <field>WorkItem__c.ProjectedUATReadyDate__c</field>
     </columns>
-    <description>Side-by-side view of system-calculated ETA vs. projected UAT-ready date. Use to identify tickets where the timeline has slipped or the estimate is no longer realistic.</description>
+    <description>Side-by-side view of system-calculated ETA vs. projected UAT-ready date. Use to identify work items where the timeline has slipped or the estimate is no longer realistic.</description>
     <filter>
         <booleanFilter>1 AND 2</booleanFilter>
         <criteriaItems>
@@ -37,7 +37,7 @@
         </criteriaItems>
     </filter>
     <format>Tabular</format>
-    <name>ETA vs Projected — Active Tickets</name>
+    <name>ETA vs Projected — Active Work Items</name>
     <reportType>CustomEntity$WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>

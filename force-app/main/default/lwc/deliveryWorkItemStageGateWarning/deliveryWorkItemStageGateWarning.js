@@ -21,11 +21,11 @@ export default class DeliveryWorkItemStageGateWarning extends LightningElement {
     isDismissed = false;
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
-    wiredTicket({ error, data }) {
+    wiredWorkItem({ error, data }) {
         if (data) {
             this.evaluateGates(data);
         } else if (error) {
-            console.error('Error fetching ticket data', error);
+            console.error('Error fetching work item data', error);
         }
     }
 
@@ -43,7 +43,7 @@ export default class DeliveryWorkItemStageGateWarning extends LightningElement {
         const sizingStages = ['Drafting Proposal', 'Ready for Prioritization', 'Proposal Requested'];
         if (sizingStages.includes(stage)) {
             if (estimate == null) {
-                this.setAlert('warning', 'Ticket requires an Hours Estimate before moving forward.');
+                this.setAlert('warning', 'Work item requires an Hours Estimate before moving forward.');
                 return;
             }
         }

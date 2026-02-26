@@ -3,7 +3,7 @@
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
-import getTicketFiles from '@salesforce/apex/DeliveryHubFilesController.getTicketFiles';
+import getWorkItemFiles from '@salesforce/apex/DeliveryHubFilesController.getWorkItemFiles';
 
 const EXTENSION_ICON_MAP = {
     pdf: 'doctype:pdf',
@@ -42,7 +42,7 @@ export default class DeliveryWorkItemFiles extends LightningElement {
     @track isLoading = true;
     _wiredResult;
 
-    @wire(getTicketFiles, { ticketId: '$recordId' })
+    @wire(getWorkItemFiles, { workItemId: '$recordId' })
     wiredFiles(result) {
         this._wiredResult = result;
         const { data, error } = result;

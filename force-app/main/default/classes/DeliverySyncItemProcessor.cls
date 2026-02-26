@@ -91,11 +91,11 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                                 remoteId = (String) responseMap.get('remoteId'); // Fallback
                             }
 
-                            // If we pushed a Ticket, map the Vendor's new ID to our Request bridge
+                            // If we pushed a Work Item, map the Vendor's new ID to our Request bridge
                             if (String.isNotBlank(remoteId) && item.ObjectTypePk__c.endsWithIgnoreCase('WorkItem__c') && item.RequestId__c != null) {
                                 requestsToUpdate.put(item.RequestId__c, new WorkRequest__c(
                                     Id = item.RequestId__c,
-                                    RemoteTicketIdTxt__c = remoteId
+                                    RemoteWorkItemIdTxt__c = remoteId
                                 ));
                             }
                         } catch (Exception parseEx) {

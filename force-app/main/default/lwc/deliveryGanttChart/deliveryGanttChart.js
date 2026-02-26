@@ -4,7 +4,7 @@
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getWorkItemsForGantt from '@salesforce/apex/DeliveryGanttController.getWorkItemsForGantt';
-import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 
 const MS_PER_DAY = 86400000;
 
@@ -108,7 +108,7 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
             ].join('\n');
 
             return {
-                ticketId:       r.workItemId,
+                workItemId:       r.workItemId,
                 name:           r.name,
                 description:    desc,
                 descShort,

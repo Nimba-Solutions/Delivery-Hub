@@ -20,7 +20,7 @@
                         <ul class="dep-list">
                             <template for:each={blockedBy} for:item="dep">
                                 <li key={dep.id} class="dep-row">
-                                    <button class="slds-button slds-button_reset dep-link" onclick={handleTicketClick} data-id={dep.id}>
+                                    <button class="slds-button slds-button_reset dep-link" onclick={handleWorkItemClick} data-id={dep.id}>
                                         <strong>{dep.name}</strong>
                                         <template if:true={dep.title}>
                                             <span class="dep-title">&mdash; {dep.title}</span>
@@ -47,7 +47,7 @@
                         <ul class="dep-list">
                             <template for:each={blocking} for:item="dep">
                                 <li key={dep.id} class="dep-row">
-                                    <button class="slds-button slds-button_reset dep-link" onclick={handleTicketClick} data-id={dep.id}>
+                                    <button class="slds-button slds-button_reset dep-link" onclick={handleWorkItemClick} data-id={dep.id}>
                                         <strong>{dep.name}</strong>
                                         <template if:true={dep.title}>
                                             <span class="dep-title">&mdash; {dep.title}</span>

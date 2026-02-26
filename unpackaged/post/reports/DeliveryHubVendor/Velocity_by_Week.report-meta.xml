@@ -9,7 +9,7 @@
     <columns>
         <field>WorkItem__c.ClientNetworkEntityId__c</field>
     </columns>
-    <description>Tickets completed (Done stage) grouped by Calculated ETA date week. Shows delivery cadence and burn rate over time — adjust the date filter window as needed.</description>
+    <description>Work items completed (Done stage) grouped by Calculated ETA date week. Shows delivery cadence and burn rate over time — adjust the date filter window as needed.</description>
     <filter>
         <criteriaItems>
             <column>WorkItem__c.StageNamePk__c</column>
@@ -25,7 +25,7 @@
         <field>WorkItem__c.CalculatedETADate__c</field>
         <sortOrder>Desc</sortOrder>
     </groupingsDown>
-    <name>Velocity — Tickets Completed by Week</name>
+    <name>Velocity — Work Items Completed by Week</name>
     <reportType>CustomEntity$WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>

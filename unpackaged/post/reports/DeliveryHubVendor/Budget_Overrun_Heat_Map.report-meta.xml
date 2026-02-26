@@ -21,7 +21,7 @@
     <columns>
         <field>WorkItem__c.HoursVarianceNumber__c</field>
     </columns>
-    <description>Active tickets sorted by hours overrun (largest first). Use to prioritize budget conversations and catch scope creep before it escalates.</description>
+    <description>Active work items sorted by hours overrun (largest first). Use to prioritize budget conversations and catch scope creep before it escalates.</description>
     <filter>
         <booleanFilter>1 AND 2</booleanFilter>
         <criteriaItems>

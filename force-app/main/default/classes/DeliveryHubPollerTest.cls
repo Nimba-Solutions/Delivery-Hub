@@ -19,7 +19,7 @@ private class DeliveryHubPollerTest {
 
         // 1. Setup Settings (Dynamic SObject to handle namespace)
         SObject settings = (SObject) Type.forName(ns + 'Delivery_Hub_Settings__c').newInstance();
-        settings.put(ns + 'AutoCreateRequestFromTicketBool__c', false);
+        settings.put(ns + 'AutoCreateWorkRequestBool__c', false);
         settings.put(ns + 'AutoSyncNetworkEntityBool__c', false);
         insert settings;
 
@@ -33,9 +33,9 @@ private class DeliveryHubPollerTest {
         vendor.put(ns + 'RemoteExternalIdTxt__c', 'CLIENT-123');
         insert vendor;
 
-        // 3. Setup local Ticket
+        // 3. Setup local Work Item
         SObject t = (SObject) Type.forName(ns + 'WorkItem__c').newInstance();
-        t.put(ns + 'BriefDescriptionTxt__c', 'Poll Test Ticket');
+        t.put(ns + 'BriefDescriptionTxt__c', 'Poll Test Work Item');
         t.put(ns + 'StageNamePk__c', 'Backlog');
         insert t;
 
@@ -44,7 +44,7 @@ private class DeliveryHubPollerTest {
         req.put(ns + 'WorkItemId__c', t.get('Id'));
         req.put(ns + 'DeliveryEntityId__c', vendor.get('Id'));
         req.put(ns + 'StatusPk__c', 'Active');
-        req.put(ns + 'RemoteTicketIdTxt__c', 'MOTHERSHIP-TKT-001');
+        req.put(ns + 'RemoteWorkItemIdTxt__c', 'MOTHERSHIP-TKT-001');
         insert req;
     }
 
@@ -65,7 +65,7 @@ private class DeliveryHubPollerTest {
         String q = 'SELECT ' + ns + 'StageNamePk__c FROM ' + ns + 'WorkItem__c LIMIT 1';
         SObject updatedT = Database.query(q);
         
-        System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Ticket stage should have been updated by the mock payload.');
+        System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Work item stage should have been updated by the mock payload.');
     }
     
     public class MockResponseSuccess implements HttpCalloutMock {

@@ -9,7 +9,7 @@
     <columns>
         <field>WorkItemDependency__c.TypePk__c</field>
     </columns>
-    <description>All ticket dependencies — shows which tickets are blocked and what is blocking them. Use to identify critical path risks and unresolved blockers.</description>
+    <description>All work item dependencies — shows which work items are blocked and what is blocking them. Use to identify critical path risks and unresolved blockers.</description>
     <format>Tabular</format>
     <name>Dependency Health</name>
     <reportType>CustomEntity$WorkItemDependency__c</reportType>

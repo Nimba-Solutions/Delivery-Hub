@@ -21,9 +21,9 @@ private class DeliverySyncItemProcessorTest {
         );
         insert vendor;
 
-        // 2. Setup Ticket
+        // 2. Setup Work Item
         WorkItem__c t = new WorkItem__c(
-            BriefDescriptionTxt__c = 'Test Ticket',
+            BriefDescriptionTxt__c = 'Test Work Item',
             StageNamePk__c = 'Backlog'
         );
         insert t;
@@ -33,7 +33,7 @@ private class DeliverySyncItemProcessorTest {
             WorkItemId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
             StatusPk__c = 'Active',
-            RemoteTicketIdTxt__c = 'REMOTE-123'
+            RemoteWorkItemIdTxt__c = 'REMOTE-123'
         );
         insert req;
 

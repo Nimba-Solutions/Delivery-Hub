@@ -10,7 +10,7 @@ private class DeliveryHubSchedulerTest {
     static void makeData() {
         // Setup required settings for the Poller logic
         insert new Delivery_Hub_Settings__c(
-            AutoCreateRequestFromTicketBool__c = false,
+            AutoCreateWorkRequestBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 

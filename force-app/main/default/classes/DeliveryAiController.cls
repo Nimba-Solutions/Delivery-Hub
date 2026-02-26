@@ -1,9 +1,9 @@
 /**
  * @description Handles AI-powered features for Delivery Hub:
- *              - draftStatusUpdate: drafts a client-facing status update for a single ticket
- *              - suggestAcceptanceCriteria: proposes testable acceptance criteria for a ticket
- *              - draftBoardSummary: generates a weekly status summary across all active tickets
- *              - draftReleaseNotes: generates formatted release notes for recently completed tickets
+ *              - draftStatusUpdate: drafts a client-facing status update for a single work item
+ *              - suggestAcceptanceCriteria: proposes testable acceptance criteria for a work item
+ *              - draftBoardSummary: generates a weekly status summary across all active work items
+ *              - draftReleaseNotes: generates formatted release notes for recently completed work items
  * @author Cloud Nimbus LLC
  */
 // Complexity is distributed across many small, focused helper methods — aggregate is expected.
@@ -11,61 +11,61 @@
 public with sharing class DeliveryAiController {
 
     /**
-     * @description Generates a professional client-facing status update for a ticket
+     * @description Generates a professional client-facing status update for a work item
      *              using the OpenAI API. Throws AuraHandledException if AI is not configured.
-     * @param ticketId The Id of the WorkItem__c record to draft an update for.
+     * @param workItemId The Id of the WorkItem__c record to draft an update for.
      * @return String The drafted status update text.
      */
     @AuraEnabled
-    public static String draftStatusUpdate(Id ticketId) {
+    public static String draftStatusUpdate(Id workItemId) {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<WorkItem__c> tickets = [
+        List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                    EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
                    ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c
             FROM WorkItem__c
-            WHERE Id = :ticketId
+            WHERE Id = :workItemId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
 
-        if (tickets.isEmpty()) {
+        if (workItems.isEmpty()) {
             throw new AuraHandledException('Work Item not found.');
         }
 
         String model = getModel(settings);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildStatusPrompt(tickets[0]));
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildStatusPrompt(workItems[0]));
     }
 
     /**
-     * @description Suggests 3-5 testable acceptance criteria for a ticket
+     * @description Suggests 3-5 testable acceptance criteria for a work item
      *              based on its title and details, using the OpenAI API.
-     * @param ticketId The Id of the WorkItem__c to generate criteria for.
+     * @param workItemId The Id of the WorkItem__c to generate criteria for.
      * @return String Bulleted acceptance criteria text.
      */
     @AuraEnabled
-    public static String suggestAcceptanceCriteria(Id ticketId) {
+    public static String suggestAcceptanceCriteria(Id workItemId) {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<WorkItem__c> tickets = [
+        List<WorkItem__c> workItems = [
             SELECT BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c
             FROM WorkItem__c
-            WHERE Id = :ticketId
+            WHERE Id = :workItemId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
 
-        if (tickets.isEmpty()) {
+        if (workItems.isEmpty()) {
             throw new AuraHandledException('Work Item not found.');
         }
 
         String model = getModel(settings);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildCriteriaPrompt(tickets[0]));
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildCriteriaPrompt(workItems[0]));
     }
 
     /**
-     * @description Generates a weekly board-level status summary across all active tickets,
+     * @description Generates a weekly board-level status summary across all active work items,
      *              grouped by stage. Suitable for a client-facing weekly update email.
      * @return String The generated weekly status text.
      */
@@ -73,7 +73,7 @@ public with sharing class DeliveryAiController {
     public static String draftBoardSummary() {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<WorkItem__c> tickets = [
+        List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
             FROM WorkItem__c
             WHERE IsActiveBool__c = true
@@ -81,17 +81,17 @@ public with sharing class DeliveryAiController {
             ORDER BY StageNamePk__c, SortOrderNumber__c
         ];
 
-        if (tickets.isEmpty()) {
+        if (workItems.isEmpty()) {
             throw new AuraHandledException('No active work items found to summarise.');
         }
 
         String model = getModel(settings);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildBoardSummaryPrompt(tickets));
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildBoardSummaryPrompt(workItems));
     }
 
     /**
-     * @description Generates formatted release notes for tickets completed in the past 30 days.
-     *              Queries tickets in 'Done' or 'Deployed to Prod' stages and passes them to
+     * @description Generates formatted release notes for work items completed in the past 30 days.
+     *              Queries work items in 'Done' or 'Deployed to Prod' stages and passes them to
      *              the OpenAI API to produce a client-friendly changelog.
      * @return String The generated release notes text.
      */
@@ -99,7 +99,7 @@ public with sharing class DeliveryAiController {
     public static String draftReleaseNotes() {
         Delivery_Hub_Settings__c settings = getValidatedSettings();
 
-        List<WorkItem__c> tickets = [
+        List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN ('Done', 'Deployed to Prod')
@@ -108,14 +108,14 @@ public with sharing class DeliveryAiController {
             ORDER BY PriorityPk__c, Name
         ];
 
-        if (tickets.isEmpty()) {
+        if (workItems.isEmpty()) {
             throw new AuraHandledException(
                 'No work items were completed or deployed in the last 30 days.'
             );
         }
 
         String model = getModel(settings);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildReleaseNotesPrompt(tickets));
+        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildReleaseNotesPrompt(workItems));
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
@@ -250,9 +250,9 @@ public with sharing class DeliveryAiController {
         return p;
     }
 
-    private static String buildBoardSummaryPrompt(List<WorkItem__c> tickets) {
+    private static String buildBoardSummaryPrompt(List<WorkItem__c> workItems) {
         Map<String, List<String>> byStage = new Map<String, List<String>>();
-        for (WorkItem__c t : tickets) {
+        for (WorkItem__c t : workItems) {
             String stage = t.StageNamePk__c != null ? t.StageNamePk__c : 'Unknown';
             if (!byStage.containsKey(stage)) {
                 byStage.put(stage, new List<String>());
@@ -280,9 +280,9 @@ public with sharing class DeliveryAiController {
         return p;
     }
 
-    private static String buildReleaseNotesPrompt(List<WorkItem__c> tickets) {
+    private static String buildReleaseNotesPrompt(List<WorkItem__c> workItems) {
         List<String> lines = new List<String>();
-        for (WorkItem__c t : tickets) {
+        for (WorkItem__c t : workItems) {
             String title = String.isNotBlank(t.BriefDescriptionTxt__c)
                 ? t.BriefDescriptionTxt__c : t.Name;
             lines.add('- [' + t.StageNamePk__c + '] ' + title);

@@ -7,7 +7,7 @@ private class DeliveryGanttControllerTest {
 
     @TestSetup
     static void makeData() {
-        List<WorkItem__c> tickets = new List<WorkItem__c>{
+        List<WorkItem__c> workItems = new List<WorkItem__c>{
             new WorkItem__c(
                 BriefDescriptionTxt__c  = 'Build login page',
                 StageNamePk__c          = 'In Development',
@@ -23,13 +23,13 @@ private class DeliveryGanttControllerTest {
                 ProjectedUATReadyDate__c = Date.today().addDays(7)
             ),
             new WorkItem__c(
-                BriefDescriptionTxt__c  = 'No UAT date ticket',
+                BriefDescriptionTxt__c  = 'No UAT date work item',
                 StageNamePk__c          = 'Backlog',
                 IsActiveBool__c         = true
                 // ProjectedUATReadyDate__c intentionally null — should be excluded
             )
         };
-        insert tickets;
+        insert workItems;
     }
 
     @IsTest
@@ -38,7 +38,7 @@ private class DeliveryGanttControllerTest {
         List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
-        System.assertEquals(2, rows.size(), 'Should return only tickets with a UAT date.');
+        System.assertEquals(2, rows.size(), 'Should return only workItems with a UAT date.');
     }
 
     @IsTest
@@ -48,7 +48,7 @@ private class DeliveryGanttControllerTest {
         Test.stopTest();
 
         DeliveryGanttController.GanttRow first = rows[0];
-        System.assertNotEquals(null, first.workItemId, 'ticketId should be set.');
+        System.assertNotEquals(null, first.workItemId, 'workItemId should be set.');
         System.assertNotEquals(null, first.name, 'name should be set.');
         System.assertNotEquals(null, first.uatDate, 'uatDate should be set.');
         System.assertNotEquals(null, first.createdDate, 'createdDate should be set.');
@@ -68,7 +68,7 @@ private class DeliveryGanttControllerTest {
     }
 
     @IsTest
-    static void testGetWorkItemsForGanttNoActiveTickets() {
+    static void testGetWorkItemsForGanttNoActiveWorkItems() {
         // Delete all data
         delete [SELECT Id FROM WorkItem__c];
 
@@ -76,6 +76,6 @@ private class DeliveryGanttControllerTest {
         List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
-        System.assertEquals(0, rows.size(), 'Should return empty list when no active tickets exist.');
+        System.assertEquals(0, rows.size(), 'Should return empty list when no active workItems exist.');
     }
 }

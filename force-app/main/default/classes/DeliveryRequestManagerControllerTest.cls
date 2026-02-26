@@ -7,7 +7,7 @@ private class DeliveryRequestManagerControllerTest {
     @IsTest
     static void testController() {
         // Setup mock data
-        WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c='Test Ticket', StageNamePk__c='Backlog');
+        WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c='Test Work Item', StageNamePk__c='Backlog');
         insert t;
 
         WorkRequest__c r = new WorkRequest__c(WorkItemId__c = t.Id, StatusPk__c = 'Draft');

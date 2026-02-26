@@ -6,7 +6,7 @@
 private class DeliveryTimeLoggerControllerTest {
 
     /**
-     * @description Creates a Ticket and an Accepted Request so the controller
+     * @description Creates a Work Item and an Accepted Request so the controller
      *              can auto-link WorkLog records.
      */
     @TestSetup
@@ -16,7 +16,7 @@ private class DeliveryTimeLoggerControllerTest {
         );
         insert vendor;
 
-        WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c = 'Logger Ticket', StageNamePk__c = 'In Development');
+        WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c = 'Logger Work Item', StageNamePk__c = 'In Development');
         insert t;
 
         insert new WorkRequest__c(
@@ -30,7 +30,7 @@ private class DeliveryTimeLoggerControllerTest {
 
     /**
      * @description Verifies that logHours inserts a WorkLog__c record linked
-     *              to the accepted Request and the ticket.
+     *              to the accepted Request and the workItem.
      */
     @isTest
     static void testLogHoursCreatesWorkLog() {
@@ -88,12 +88,12 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursNoRequestThrows() {
-        WorkItem__c noReqTicket = new WorkItem__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
-        insert noReqTicket;
+        WorkItem__c noReqWorkItem = new WorkItem__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
+        insert noReqWorkItem;
 
         Test.startTest();
         try {
-            DeliveryTimeLoggerController.logHours(noReqTicket.Id, 1.0, 'Should fail');
+            DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Should fail');
             System.assert(false, 'Should have thrown AuraHandledException');
         } catch (AuraHandledException e) {
             System.assert(true, 'Correctly threw when no accepted request exists');

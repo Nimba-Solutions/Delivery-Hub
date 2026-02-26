@@ -5,7 +5,7 @@
 private class DeliveryContentDocLinkTriggerHandlerTest {
 
     @IsTest
-    static void testHandleAfterInsertWithTicket() {
+    static void testHandleAfterInsertWithWorkItem() {
         // 1. Prevent infinite test queues
         DeliverySyncEngine.isSyncContext = false; // Ensure it's false to allow outbound sync
         
@@ -18,13 +18,13 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
         );
         insert vendor;
 
-        WorkItem__c ticket = new WorkItem__c();
-        insert ticket;
+        WorkItem__c workItem = new WorkItem__c();
+        insert workItem;
 
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemId__c = ticket.Id,
+            WorkItemId__c = workItem.Id,
             DeliveryEntityId__c = vendor.Id,
-            RemoteTicketIdTxt__c = 'REMOTE-123',
+            RemoteWorkItemIdTxt__c = 'REMOTE-123',
             StatusPk__c = 'Open'
         );
         insert req;
@@ -39,10 +39,10 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
 
         cv = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
 
-        // 4. Attach File to Ticket
+        // 4. Attach File to Work Item
         ContentDocumentLink link = new ContentDocumentLink(
             ContentDocumentId = cv.ContentDocumentId,
-            LinkedEntityId = ticket.Id,
+            LinkedEntityId = workItem.Id,
             ShareType = 'V',
             Visibility = 'AllUsers'
         );
@@ -57,7 +57,7 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
     }
 
     @IsTest
-    static void testHandleAfterInsertNonTicketRecord() {
+    static void testHandleAfterInsertNonWorkItemRecord() {
         Account acc = new Account(Name = 'Test Account');
         insert acc;
 
@@ -83,6 +83,6 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
 
         // Should completely ignore files attached to Accounts
         List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE ObjectTypePk__c = 'ContentVersion'];
-        System.assertEquals(0, items.size(), 'Should not generate a Sync Item for non-ticket files');
+        System.assertEquals(0, items.size(), 'Should not generate a Sync Item for non-workItem files');
     }
 }

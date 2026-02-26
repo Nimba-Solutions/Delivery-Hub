@@ -6,7 +6,7 @@
     <label>Work Item</label>
     <referenceTo>WorkItem__c</referenceTo>
     <relationshipLabel>Work Item Comments</relationshipLabel>
-    <relationshipName>Ticket_Comments</relationshipName>
+    <relationshipName>WorkItemComments</relationshipName>
     <relationshipOrder>0</relationshipOrder>
     <reparentableMasterDetail>false</reparentableMasterDetail>
     <trackTrending>false</trackTrending>

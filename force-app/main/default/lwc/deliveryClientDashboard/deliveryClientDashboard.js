@@ -6,7 +6,7 @@ import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import getClientDashboard from '@salesforce/apex/DeliveryHubDashboardController.getClientDashboard';
-import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 import USER_ID from '@salesforce/user/Id';
 import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 
@@ -14,15 +14,15 @@ import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 const FALLBACK_PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
 
 const PHASE_LIST_VIEWS = {
-    'Planning':    'Tickets_Planning',
-    'Approval':    'Tickets_Approval',
-    'Development': 'Tickets_Development',
-    'Testing':     'Tickets_Testing',
-    'UAT':         'Tickets_UAT',
-    'Deployment':  'Tickets_Deployment'
+    'Planning':    'WorkItems_Planning',
+    'Approval':    'WorkItems_Approval',
+    'Development': 'WorkItems_Development',
+    'Testing':     'WorkItems_Testing',
+    'UAT':         'WorkItems_UAT',
+    'Deployment':  'WorkItems_Deployment'
 };
 
-// Maps phase name → badge CSS modifier (for attention ticket styling)
+// Maps phase name → badge CSS modifier (for attention work item styling)
 const PHASE_BADGE_SUFFIX = {
     'Approval':   'approval',
     'UAT':        'uat',
@@ -34,9 +34,9 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @api hideInFlightSection = false;
     @api hideRecentSection = false;
 
-    @track attentionTickets = [];
+    @track attentionWorkItems = [];
     @track phases = [];
-    @track recentTickets = [];
+    @track recentWorkItems = [];
     @track isLoading = true;
     @track announcements = [];
     @track inFlightCollapsed = false;
@@ -104,8 +104,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     _processData(data) {
-        // Attention tickets
-        this.attentionTickets = (data.attentionTickets || []).map(t => ({
+        // Attention work items
+        this.attentionWorkItems = (data.attentionWorkItems || []).map(t => ({
             id: t.id,
             name: t.name,
             title: t.title || null,
@@ -134,8 +134,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             };
         });
 
-        // Recent tickets
-        this.recentTickets = (data.recentTickets || []).map(t => ({
+        // Recent work items
+        this.recentWorkItems = (data.recentWorkItems || []).map(t => ({
             id: t.id,
             name: t.name,
             title: t.title || null,
@@ -153,11 +153,11 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     // ── Derived getters ──
 
     get hasAttentionItems() {
-        return this.attentionTickets && this.attentionTickets.length > 0;
+        return this.attentionWorkItems && this.attentionWorkItems.length > 0;
     }
 
     get hasRecentItems() {
-        return this.recentTickets && this.recentTickets.length > 0;
+        return this.recentWorkItems && this.recentWorkItems.length > 0;
     }
 
     get hasAnnouncements() {
@@ -165,7 +165,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     get attentionCount() {
-        return this.attentionTickets ? this.attentionTickets.length : 0;
+        return this.attentionWorkItems ? this.attentionWorkItems.length : 0;
     }
 
     get greeting() {
@@ -191,7 +191,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     get greetingSubtext() {
         if (this.hasAttentionItems) {
-            return 'Review the tickets below and take action to keep your project moving.';
+            return 'Review the work items below and take action to keep your project moving.';
         }
         return 'Nothing is waiting on you right now. Check back after your team makes progress.';
     }
@@ -208,7 +208,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     toggleInFlight() { this.inFlightCollapsed = !this.inFlightCollapsed; }
     toggleRecent()   { this.recentCollapsed   = !this.recentCollapsed;   }
 
-    handleTicketClick(event) {
+    handleWorkItemClick(event) {
         const recordId = event.currentTarget.dataset.id;
         this[NavigationMixin.Navigate]({
             type: 'standard__recordPage',

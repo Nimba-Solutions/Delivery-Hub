@@ -22,7 +22,7 @@ export default class DeliveryWorkItemQuotes extends LightningElement {
 
     _wiredResult;
 
-    @wire(getQuotes, { ticketId: '$recordId' })
+    @wire(getQuotes, { workItemId: '$recordId' })
     wiredQuotes(result) {
         this._wiredResult = result;
         if (result.data) {
@@ -51,11 +51,11 @@ export default class DeliveryWorkItemQuotes extends LightningElement {
         const requestId = event.currentTarget.dataset.id;
         this.isAccepting = true;
         try {
-            await acceptQuote({ requestId, ticketId: this.recordId });
+            await acceptQuote({ requestId, workItemId: this.recordId });
             await refreshApex(this._wiredResult);
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Quote Accepted',
-                message: 'This vendor has been selected for the ticket.',
+                message: 'This vendor has been selected for this work item.',
                 variant: 'success'
             }));
         } catch (error) {

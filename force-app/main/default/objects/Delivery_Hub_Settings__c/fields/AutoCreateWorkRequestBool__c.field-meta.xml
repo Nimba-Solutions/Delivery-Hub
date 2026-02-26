@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>AutoCreateRequestFromTicketBool__c</fullName>
+    <fullName>AutoCreateWorkRequestBool__c</fullName>
     <defaultValue>false</defaultValue>
     <description>If enabled, automatically creates a Request for a new Work Item if only one active Vendor exists.</description>
     <inlineHelpText>When enabled, a delivery Request is automatically created whenever a new Work Item is saved.</inlineHelpText>
