@@ -35,19 +35,19 @@
         <value xsi:type="xsd:string">Done</value>
     </values>
     <values>
-        <field>IsTerminal__c</field>
+        <field>IsTerminalBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>IsBlockedState__c</field>
+        <field>IsBlockedStateBool__c</field>
         <value xsi:type="xsd:boolean">false</value>
     </values>
     <values>
-        <field>IsAttentionState__c</field>
+        <field>IsAttentionStateBool__c</field>
         <value xsi:type="xsd:boolean">false</value>
     </values>
     <values>
-        <field>IsVisibleByDefault__c</field>
+        <field>IsVisibleByDefaultBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>

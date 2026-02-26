@@ -13,13 +13,15 @@ public with sharing class WorkflowConfigService {
     /**
      * @description Returns a summary list of all workflow types for the mode toggle.
      * Each entry includes developerName, label, sortOrder, iconName, and isDefault.
+     * @return List of Maps, each representing one WorkflowType__mdt record.
      */
     @AuraEnabled(cacheable=true)
     public static List<Map<String,Object>> getWorkflowTypes() {
         List<Map<String,Object>> result = new List<Map<String,Object>>();
         for (WorkflowType__mdt wt : [
-            SELECT DeveloperName, Label, SortOrder__c, IconName__c, IsDefault__c, UseSimplifiedView__c
+            SELECT DeveloperName, Label, SortOrder__c, IconName__c, IsDefaultBool__c, UseSimplifiedViewBool__c
             FROM WorkflowType__mdt
+            WITH SYSTEM_MODE
             ORDER BY SortOrder__c ASC NULLS LAST, Label ASC
         ]) {
             Map<String,Object> m = new Map<String,Object>();
@@ -27,8 +29,8 @@ public with sharing class WorkflowConfigService {
             m.put('label',         wt.Label);
             m.put('sortOrder',     wt.SortOrder__c);
             m.put('iconName',      wt.IconName__c);
-            m.put('isDefault',     wt.IsDefault__c);
-            m.put('useSimplifiedView', wt.UseSimplifiedView__c);
+            m.put('isDefault',     wt.IsDefaultBool__c);
+            m.put('useSimplifiedView', wt.UseSimplifiedViewBool__c);
             result.add(m);
         }
         return result;
@@ -49,6 +51,9 @@ public with sharing class WorkflowConfigService {
      *     Consultant: [...], Developer: [...], QA: [...]
      *   }
      * }
+     * @param workflowTypeName DeveloperName of the WorkflowType__mdt record (e.g. 'Software_Delivery').
+     *                         Defaults to 'Software_Delivery' when blank.
+     * @return Map containing 'type', 'stages', and 'personaViews' keys.
      */
     @AuraEnabled(cacheable=true)
     public static Map<String,Object> getWorkflowConfig(String workflowTypeName) {
@@ -59,9 +64,10 @@ public with sharing class WorkflowConfigService {
         // --- Load type record ---
         WorkflowType__mdt typeRec;
         List<WorkflowType__mdt> types = [
-            SELECT DeveloperName, Label, UseSimplifiedView__c
+            SELECT DeveloperName, Label, UseSimplifiedViewBool__c
             FROM WorkflowType__mdt
             WHERE DeveloperName = :workflowTypeName
+            WITH SYSTEM_MODE
             LIMIT 1
         ];
         if (types.isEmpty()) {
@@ -75,11 +81,12 @@ public with sharing class WorkflowConfigService {
             SELECT DeveloperName, ApiValue__c, DisplayName__c, SortOrder__c,
                    CardColor__c, HeaderBgColor__c, HeaderTextColor__c,
                    OwnerPersona__c, Phase__c,
-                   IsTerminal__c, IsBlockedState__c, IsAttentionState__c, IsVisibleByDefault__c,
+                   IsTerminalBool__c, IsBlockedStateBool__c, IsAttentionStateBool__c, IsVisibleByDefaultBool__c,
                    AllowedForwardTransitions__c, AllowedBacktrackTransitions__c,
                    WorkflowType__r.DeveloperName
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
+            WITH SYSTEM_MODE
             ORDER BY SortOrder__c ASC NULLS LAST
         ]) {
             Map<String,Object> sm = new Map<String,Object>();
@@ -90,10 +97,10 @@ public with sharing class WorkflowConfigService {
             sm.put('headerTextColor',     s.HeaderTextColor__c);
             sm.put('ownerPersona',        s.OwnerPersona__c);
             sm.put('phase',               s.Phase__c);
-            sm.put('isTerminal',          s.IsTerminal__c);
-            sm.put('isBlockedState',      s.IsBlockedState__c);
-            sm.put('isAttentionState',    s.IsAttentionState__c);
-            sm.put('isVisibleByDefault',  s.IsVisibleByDefault__c);
+            sm.put('isTerminal',          s.IsTerminalBool__c);
+            sm.put('isBlockedState',      s.IsBlockedStateBool__c);
+            sm.put('isAttentionState',    s.IsAttentionStateBool__c);
+            sm.put('isVisibleByDefault',  s.IsVisibleByDefaultBool__c);
             sm.put('forwardTransitions',  parseCommaSep(s.AllowedForwardTransitions__c));
             sm.put('backtrackTransitions',parseCommaSep(s.AllowedBacktrackTransitions__c));
             stages.add(sm);
@@ -102,9 +109,10 @@ public with sharing class WorkflowConfigService {
         // --- Load persona views ---
         Map<String,List<Map<String,Object>>> personaViews = new Map<String,List<Map<String,Object>>>();
         for (WorkflowPersonaView__mdt pv : [
-            SELECT PersonaName__c, ColumnName__c, StageApiValues__c, SortOrder__c, IsExtendedColumn__c
+            SELECT PersonaName__c, ColumnName__c, StageApiValues__c, SortOrder__c, IsExtendedColumnBool__c
             FROM WorkflowPersonaView__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
+            WITH SYSTEM_MODE
             ORDER BY PersonaName__c ASC, SortOrder__c ASC NULLS LAST
         ]) {
             String persona = pv.PersonaName__c;
@@ -114,7 +122,7 @@ public with sharing class WorkflowConfigService {
             Map<String,Object> col = new Map<String,Object>();
             col.put('columnName',  pv.ColumnName__c);
             col.put('stages',      parseCommaSep(pv.StageApiValues__c));
-            col.put('isExtended',  pv.IsExtendedColumn__c);
+            col.put('isExtended',  pv.IsExtendedColumnBool__c);
             col.put('sortOrder',   pv.SortOrder__c);
             personaViews.get(persona).add(col);
         }
@@ -123,7 +131,7 @@ public with sharing class WorkflowConfigService {
         Map<String,Object> typeMap = new Map<String,Object>{
             'developerName'      => typeRec.DeveloperName,
             'label'              => typeRec.Label,
-            'useSimplifiedView'  => typeRec.UseSimplifiedView__c
+            'useSimplifiedView'  => typeRec.UseSimplifiedViewBool__c
         };
 
         Map<String,Object> result = new Map<String,Object>();
@@ -140,6 +148,8 @@ public with sharing class WorkflowConfigService {
     /**
      * @description Returns the set of terminal stage ApiValues for a workflow type.
      * Used by BoardController.searchForPotentialBlockers to exclude terminal stages.
+     * @param workflowTypeName DeveloperName of the WorkflowType__mdt record.
+     * @return Set of ApiValue strings for all terminal stages (defaults to 'Done','Cancelled' if CMT empty).
      */
     public static Set<String> getTerminalStageValues(String workflowTypeName) {
         if (String.isBlank(workflowTypeName)) { workflowTypeName = 'Software_Delivery'; }
@@ -148,7 +158,8 @@ public with sharing class WorkflowConfigService {
             SELECT ApiValue__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
-            AND IsTerminal__c = TRUE
+            AND IsTerminalBool__c = TRUE
+            WITH SYSTEM_MODE
         ]) {
             result.add(s.ApiValue__c);
         }
@@ -163,6 +174,8 @@ public with sharing class WorkflowConfigService {
     /**
      * @description Returns the set of attention stage ApiValues for a workflow type.
      * Used by DashboardController to build the Needs Attention section.
+     * @param workflowTypeName DeveloperName of the WorkflowType__mdt record.
+     * @return Set of ApiValue strings for all attention stages.
      */
     public static Set<String> getAttentionStageValues(String workflowTypeName) {
         if (String.isBlank(workflowTypeName)) { workflowTypeName = 'Software_Delivery'; }
@@ -171,7 +184,8 @@ public with sharing class WorkflowConfigService {
             SELECT ApiValue__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
-            AND IsAttentionState__c = TRUE
+            AND IsAttentionStateBool__c = TRUE
+            WITH SYSTEM_MODE
         ]) {
             result.add(s.ApiValue__c);
         }
@@ -188,6 +202,8 @@ public with sharing class WorkflowConfigService {
     /**
      * @description Returns a Map<ApiValue, Phase> for a workflow type.
      * Used by DashboardController to build the phase counts bar.
+     * @param workflowTypeName DeveloperName of the WorkflowType__mdt record.
+     * @return Map from stage ApiValue to phase string for all non-terminal stages.
      */
     public static Map<String,String> getStagePhaseMap(String workflowTypeName) {
         if (String.isBlank(workflowTypeName)) { workflowTypeName = 'Software_Delivery'; }
@@ -196,8 +212,9 @@ public with sharing class WorkflowConfigService {
             SELECT ApiValue__c, Phase__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
-            AND IsTerminal__c = FALSE
+            AND IsTerminalBool__c = FALSE
             AND Phase__c != null
+            WITH SYSTEM_MODE
         ]) {
             result.put(s.ApiValue__c, s.Phase__c);
         }

@@ -35,6 +35,7 @@ public with sharing class DeliveryTicketController {
                 FROM Ticket__c
                 WHERE IsActiveBool__c = true
                 AND WorkflowTypeTxt__c = :workflowType
+                WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c
             ];
         }

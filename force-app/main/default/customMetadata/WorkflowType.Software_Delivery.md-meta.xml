@@ -11,7 +11,7 @@
         <value xsi:type="xsd:string">utility:code</value>
     </values>
     <values>
-        <field>IsDefault__c</field>
+        <field>IsDefaultBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
@@ -19,7 +19,7 @@
         <value xsi:type="xsd:double">1</value>
     </values>
     <values>
-        <field>UseSimplifiedView__c</field>
+        <field>UseSimplifiedViewBool__c</field>
         <value xsi:type="xsd:boolean">false</value>
     </values>
 </CustomMetadata>

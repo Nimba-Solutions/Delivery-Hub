@@ -66,12 +66,6 @@ const FIELDS = {
     WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`
 };
 
-// Owner persona → card accent color (UI-only, not CMT-driven)
-const OWNER_COLORS = {
-    Client: '#2196F3', Consultant: '#FFD600', Developer: '#FF9100',
-    QA: '#00C853', System: '#9E9E9E', Default: '#BDBDBD'
-};
-
 export default class DeliveryHubBoard extends NavigationMixin(LightningElement) {
     @track persona = "Client";
     @track sizeMode = "equalSized";

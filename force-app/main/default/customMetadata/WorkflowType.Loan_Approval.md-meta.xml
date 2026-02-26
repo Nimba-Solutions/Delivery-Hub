@@ -11,7 +11,7 @@
         <value xsi:type="xsd:string">utility:money</value>
     </values>
     <values>
-        <field>IsDefault__c</field>
+        <field>IsDefaultBool__c</field>
         <value xsi:type="xsd:boolean">false</value>
     </values>
     <values>
@@ -19,7 +19,7 @@
         <value xsi:type="xsd:double">2</value>
     </values>
     <values>
-        <field>UseSimplifiedView__c</field>
+        <field>UseSimplifiedViewBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
 </CustomMetadata>

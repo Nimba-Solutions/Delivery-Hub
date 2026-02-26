@@ -23,7 +23,7 @@
         <value xsi:type="xsd:double">22</value>
     </values>
     <values>
-        <field>IsExtendedColumn__c</field>
+        <field>IsExtendedColumnBool__c</field>
         <value xsi:type="xsd:boolean">false</value>
     </values>
 </CustomMetadata>

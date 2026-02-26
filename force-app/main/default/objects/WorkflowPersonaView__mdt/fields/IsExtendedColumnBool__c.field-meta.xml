@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>IsTerminal__c</fullName>
-    <description>If checked, this is a terminal stage (Done, Cancelled, Paid, Denied). Terminal stages are excluded from blocker searches and active counts.</description>
+    <fullName>IsExtendedColumnBool__c</fullName>
+    <description>If checked, this column is hidden unless the user enables Show Extended Pipeline. Used for detail stages that clutter the default board view.</description>
     <defaultValue>false</defaultValue>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
-    <label>Is Terminal</label>
+    <label>Is Extended Column</label>
     <type>Checkbox</type>
 </CustomField>
