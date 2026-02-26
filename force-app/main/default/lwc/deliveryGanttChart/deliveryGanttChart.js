@@ -3,7 +3,7 @@
  */
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
-import getTicketsForGantt from '@salesforce/apex/DeliveryGanttController.getTicketsForGantt';
+import getWorkItemsForGantt from '@salesforce/apex/DeliveryGanttController.getWorkItemsForGantt';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
 
 const MS_PER_DAY = 86400000;
@@ -17,8 +17,8 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
 
     // ── Wires ─────────────────────────────────────────────────────────────────
 
-    @wire(getTicketsForGantt)
-    wiredTickets({ data, error }) {
+    @wire(getWorkItemsForGantt)
+    wiredWorkItems({ data, error }) {
         this.isLoading = false;
         if (data) {
             this.rawRows = data;
@@ -108,7 +108,7 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
             ].join('\n');
 
             return {
-                ticketId:       r.ticketId,
+                ticketId:       r.workItemId,
                 name:           r.name,
                 description:    desc,
                 descShort,
@@ -119,7 +119,7 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
                 barStyle,
                 stageBadgeClass,
                 barTooltip,
-                recordUrl:      `/lightning/r/Ticket__c/${r.ticketId}/view`
+                recordUrl:      `/lightning/r/WorkItem__c/${r.workItemId}/view`
             };
         });
     }

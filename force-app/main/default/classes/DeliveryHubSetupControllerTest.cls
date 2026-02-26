@@ -40,10 +40,10 @@ private class DeliveryHubSetupControllerTest {
         System.assertEquals('MOCK_ORG_ID', updatedEntity.OrgIdTxt__c, 'Org ID should be mapped from payload');
 
         // Assert Ticket and Request bridge were created
-        List<Ticket__c> tickets = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.'];
+        List<WorkItem__c> tickets = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.'];
         System.assertEquals(1, tickets.size(), 'Initial ticket should be created');
         
-        List<Request__c> requests = [SELECT Id FROM Request__c WHERE TicketId__c = :tickets[0].Id];
+        List<WorkRequest__c> requests = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :tickets[0].Id];
         System.assertEquals(1, requests.size(), 'Bridge request should be created automatically by the trigger');
         
         // Assert settings were initialized

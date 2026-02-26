@@ -17,15 +17,15 @@ private class DeliverySyncItemIngestorTest {
         insert client;
 
         // 2. Create Ticket linked to Upstream Client
-        Ticket__c t = new Ticket__c(
+        WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Base Ticket',
             ClientNetworkEntityId__c = client.Id
         );
         insert t;
 
         // 3. Create Downstream Request Bridge
-        insert new Request__c(
-            TicketId__c = t.Id,
+        insert new WorkRequest__c(
+            WorkItemId__c = t.Id,
             RemoteTicketIdTxt__c = 'REMOTE-123',
             StatusPk__c = 'Active'
         );
@@ -34,10 +34,10 @@ private class DeliverySyncItemIngestorTest {
         insert new Sync_Item__c(
             DirectionPk__c = 'Inbound',
             StatusPk__c = 'Synced',
-            ObjectTypePk__c = 'Ticket__c',
+            ObjectTypePk__c = 'WorkItem__c',
             RemoteExternalIdTxt__c = 'REMOTE-CLIENT-TICKET-1',
             LocalRecordIdTxt__c = t.Id,
-            TicketId__c = t.Id
+            WorkItemId__c = t.Id
         );
     }
 
@@ -49,10 +49,10 @@ private class DeliverySyncItemIngestorTest {
         };
 
         Test.startTest();
-        DeliverySyncItemIngestor.processInboundItem('Ticket__c', payload);
+        DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
         Test.stopTest();
 
-        Ticket__c updated = [SELECT BriefDescriptionTxt__c FROM Ticket__c LIMIT 1];
+        WorkItem__c updated = [SELECT BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
         System.assertEquals('Updated via Inbound Sync', updated.BriefDescriptionTxt__c, 'Ticket description should be updated via robust field mapping');
         
         // V2 Verification: Engine memory should have captured the Request ID to block echoes
@@ -69,22 +69,22 @@ private class DeliverySyncItemIngestorTest {
         };
 
         Test.startTest();
-        DeliverySyncItemIngestor.processInboundItem('Ticket_Comment__c', payload);
+        DeliverySyncItemIngestor.processInboundItem('WorkItemComment__c', payload);
         Test.stopTest();
 
         // Verify insertion
-        Ticket_Comment__c comm = [SELECT BodyTxt__c FROM Ticket_Comment__c WHERE AuthorTxt__c = 'Vendor' LIMIT 1];
+        WorkItemComment__c comm = [SELECT BodyTxt__c FROM WorkItemComment__c WHERE AuthorTxt__c = 'Vendor' LIMIT 1];
         System.assertNotEquals(null, comm, 'Comment should be inserted');
         
         // Verify V2 Ledger Routing
         Sync_Item__c ledger = [SELECT ObjectTypePk__c, RequestId__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-456' LIMIT 1];
-        System.assert(ledger.ObjectTypePk__c.contains('Ticket_Comment__c'), 'Ledger must have valid ObjectTypePk__c value');
+        System.assert(ledger.ObjectTypePk__c.contains('WorkItemComment__c'), 'Ledger must have valid ObjectTypePk__c value');
         System.assertNotEquals(null, ledger.RequestId__c, 'V2 DAG Rule: RequestId__c MUST be stamped on the inbound ledger item to log the routing edge.');
     }
     
     @IsTest
     static void testProcessInboundCommentInsertUpstreamEdge() {
-        // TargetId points to the Client's remote ID stored in the Ledger (no Request__c bridge exists for this)
+        // TargetId points to the Client's remote ID stored in the Ledger (no WorkRequest__c bridge exists for this)
         Map<String, Object> payload = new Map<String, Object>{
             'SourceId' => 'REMOTE-COMM-789',
             'TargetId' => 'REMOTE-CLIENT-TICKET-1', 
@@ -93,11 +93,11 @@ private class DeliverySyncItemIngestorTest {
         };
 
         Test.startTest();
-        DeliverySyncItemIngestor.processInboundItem('Ticket_Comment__c', payload);
+        DeliverySyncItemIngestor.processInboundItem('WorkItemComment__c', payload);
         Test.stopTest();
 
         // Verify insertion
-        Ticket_Comment__c comm = [SELECT BodyTxt__c FROM Ticket_Comment__c WHERE AuthorTxt__c = 'Client' LIMIT 1];
+        WorkItemComment__c comm = [SELECT BodyTxt__c FROM WorkItemComment__c WHERE AuthorTxt__c = 'Client' LIMIT 1];
         System.assertNotEquals(null, comm, 'Comment should be inserted');
         
         // Verify V2 Ledger Routing & Upstream Echo Suppression
@@ -127,13 +127,13 @@ private class DeliverySyncItemIngestorTest {
 
         Test.startTest();
         // 3. Process the inbound item
-        DeliverySyncItemIngestor.processInboundItem('Ticket__c', payload);
+        DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
         Test.stopTest();
 
         // 4. Verify the Ticket was inserted AND automatically parented to the Client
-        Ticket__c insertedTicket = [
+        WorkItem__c insertedTicket = [
             SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c 
-            FROM Ticket__c 
+            FROM WorkItem__c 
             WHERE BriefDescriptionTxt__c = 'Testing Auto-Parenting' 
             LIMIT 1
         ];

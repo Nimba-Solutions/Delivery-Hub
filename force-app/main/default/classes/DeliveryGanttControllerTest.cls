@@ -7,22 +7,22 @@ private class DeliveryGanttControllerTest {
 
     @TestSetup
     static void makeData() {
-        List<Ticket__c> tickets = new List<Ticket__c>{
-            new Ticket__c(
+        List<WorkItem__c> tickets = new List<WorkItem__c>{
+            new WorkItem__c(
                 BriefDescriptionTxt__c  = 'Build login page',
                 StageNamePk__c          = 'In Development',
                 PriorityPk__c           = 'High',
                 IsActiveBool__c         = true,
                 ProjectedUATReadyDate__c = Date.today().addDays(14)
             ),
-            new Ticket__c(
+            new WorkItem__c(
                 BriefDescriptionTxt__c  = 'Fix export bug',
                 StageNamePk__c          = 'Ready for QA',
                 PriorityPk__c           = 'Medium',
                 IsActiveBool__c         = true,
                 ProjectedUATReadyDate__c = Date.today().addDays(7)
             ),
-            new Ticket__c(
+            new WorkItem__c(
                 BriefDescriptionTxt__c  = 'No UAT date ticket',
                 StageNamePk__c          = 'Backlog',
                 IsActiveBool__c         = true
@@ -33,18 +33,18 @@ private class DeliveryGanttControllerTest {
     }
 
     @IsTest
-    static void testGetTicketsForGanttReturnsRows() {
+    static void testGetWorkItemsForGanttReturnsRows() {
         Test.startTest();
-        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getTicketsForGantt();
+        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
         System.assertEquals(2, rows.size(), 'Should return only tickets with a UAT date.');
     }
 
     @IsTest
-    static void testGetTicketsForGanttFieldsPopulated() {
+    static void testGetWorkItemsForGanttFieldsPopulated() {
         Test.startTest();
-        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getTicketsForGantt();
+        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
         DeliveryGanttController.GanttRow first = rows[0];
@@ -55,9 +55,9 @@ private class DeliveryGanttControllerTest {
     }
 
     @IsTest
-    static void testGetTicketsForGanttOrdering() {
+    static void testGetWorkItemsForGanttOrdering() {
         Test.startTest();
-        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getTicketsForGantt();
+        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
         // First row should have the earlier UAT date (addDays(7) < addDays(14))
@@ -68,12 +68,12 @@ private class DeliveryGanttControllerTest {
     }
 
     @IsTest
-    static void testGetTicketsForGanttNoActiveTickets() {
+    static void testGetWorkItemsForGanttNoActiveTickets() {
         // Delete all data
-        delete [SELECT Id FROM Ticket__c];
+        delete [SELECT Id FROM WorkItem__c];
 
         Test.startTest();
-        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getTicketsForGantt();
+        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
         System.assertEquals(0, rows.size(), 'Should return empty list when no active tickets exist.');

@@ -5,7 +5,7 @@
     <columns>DirectionPk__c</columns>
     <columns>ObjectTypePk__c</columns>
     <columns>ErrorLogTxt__c</columns>
-    <columns>TicketId__c</columns>
+    <columns>WorkItemId__c</columns>
     <columns>StatusPk__c</columns>
     <columns>CREATED_DATE</columns>
     <columns>CREATEDBY_USER</columns>

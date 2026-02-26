@@ -1,0 +1,91 @@
+<template>
+    <lightning-card title="Refine &amp; Assign" icon-name="standard:service_contract">
+        <div class="slds-p-around_medium">
+
+            <template if:false={isRequestCreated}>
+                <lightning-record-edit-form
+                    record-id={recordId}
+                    object-api-name="WorkItem__c"
+                    onsuccess={handleTicketSave}>
+
+                    <div class="slds-text-title_caps slds-m-bottom_x-small">1. Define Success</div>
+
+                    <!-- AI Suggest row -->
+                    <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_x-small">
+                        <lightning-button
+                            label="Suggest with AI"
+                            icon-name="utility:sparkle"
+                            variant="neutral"
+                            onclick={handleSuggestCriteria}
+                            disabled={isSuggesting}>
+                        </lightning-button>
+                        <template if:true={isSuggesting}>
+                            <lightning-spinner size="x-small" alternative-text="Generating…" class="slds-m-left_small"></lightning-spinner>
+                        </template>
+                    </div>
+
+                    <!-- AI suggestion preview -->
+                    <template if:true={criteriaError}>
+                        <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_x-small" role="alert">
+                            <p>{criteriaError}</p>
+                        </div>
+                    </template>
+                    <template if:true={suggestedCriteria}>
+                        <div class="slds-box slds-theme_shade slds-m-bottom_small" style="border-left:3px solid #0176d3;">
+                            <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_x-small">AI Suggestion — review and apply:</p>
+                            <pre style="white-space:pre-wrap;font-size:0.8rem;">{suggestedCriteria}</pre>
+                            <lightning-button
+                                label="Apply to Field"
+                                variant="brand"
+                                icon-name="utility:forward"
+                                onclick={handleApplyCriteria}
+                                class="slds-m-top_x-small">
+                            </lightning-button>
+                        </div>
+                    </template>
+
+                    <lightning-input-field field-name="AcceptanceCriteriaTxt__c"></lightning-input-field>
+                    <lightning-input-field field-name="StepsToReproduceTxt__c"></lightning-input-field>
+
+                    <div class="slds-grid slds-gutters slds-m-top_small">
+                        <div class="slds-col">
+                            <div class="slds-text-title_caps slds-m-bottom_small">2. Client Constraints</div>
+                            <lightning-input-field field-name="ClientPreApprovedHoursNumber__c"></lightning-input-field>
+                        </div>
+                        <div class="slds-col">
+                            <div class="slds-text-title_caps slds-m-bottom_small">3. Deadline</div>
+                            <lightning-input-field field-name="ProjectedUATReadyDate__c"></lightning-input-field>
+                        </div>
+                    </div>
+
+                    <div class="slds-m-top_medium slds-text-align_right">
+                        <lightning-button
+                            variant="neutral"
+                            type="submit"
+                            label="Save Definition"
+                            class="slds-m-right_small">
+                        </lightning-button>
+
+                        <lightning-button
+                            variant="brand"
+                            label="Create Vendor Request"
+                            onclick={handleCreateRequest}
+                            disabled={isProcessing}>
+                        </lightning-button>
+                    </div>
+                </lightning-record-edit-form>
+            </template>
+
+            <template if:true={isRequestCreated}>
+                <div class="slds-notify slds-notify_alert slds-theme_success" role="alert">
+                    <lightning-icon icon-name="utility:success" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                    <h2>Vendor Request Created!</h2>
+                </div>
+                <div class="slds-m-top_medium slds-text-align_center">
+                    <lightning-button label="Go to Request" onclick={navigateToRequest}></lightning-button>
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

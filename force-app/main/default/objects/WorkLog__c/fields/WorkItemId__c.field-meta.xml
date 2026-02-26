@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkItemId__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Links this log to the parent Ticket.</description>
+    <inlineHelpText>The Ticket this work log is associated with.</inlineHelpText>
+    <label>Ticket</label>
+    <referenceTo>WorkItem__c</referenceTo>
+    <relationshipLabel>Work Logs</relationshipLabel>
+    <relationshipName>Work_Logs</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

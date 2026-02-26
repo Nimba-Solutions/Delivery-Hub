@@ -8,18 +8,18 @@ public class DeliveryHubBoardControllerTest {
     static void setup() {
         DeliveryTriggerControl.disableAfterLogic();
 
-        List<Ticket__c> tickets = new List<Ticket__c>{
-            new Ticket__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
-            new Ticket__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true),
-            new Ticket__c(BriefDescriptionTxt__c = 'Blocked Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
-            new Ticket__c(BriefDescriptionTxt__c = 'Blocking Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true),
-            new Ticket__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1, IsActiveBool__c = true)
+        List<WorkItem__c> tickets = new List<WorkItem__c>{
+            new WorkItem__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocked Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocking Ticket', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1, IsActiveBool__c = true)
         };
         insert tickets;
         
-        Ticket_Dependency__c dep = new Ticket_Dependency__c(
-            Blocked_Ticket__c = tickets[2].Id,
-            Blocking_Ticket__c = tickets[3].Id,
+        WorkItemDependency__c dep = new WorkItemDependency__c(
+            Blocked_WorkItem__c = tickets[2].Id,
+            Blocking_WorkItem__c = tickets[3].Id,
             TypePk__c = 'Blocks'
         );
         insert dep;
@@ -29,38 +29,38 @@ public class DeliveryHubBoardControllerTest {
 
     @isTest
     static void testUpdateTicketStage() {
-        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test' LIMIT 1];
+        WorkItem__c ticket = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test' LIMIT 1];
         
         Test.startTest();
         DeliveryHubBoardController.updateTicketStage(ticket.Id, 'In Progress');
         Test.stopTest();
         
-        Ticket__c updated = [SELECT StageNamePk__c FROM Ticket__c WHERE Id = :ticket.Id];
+        WorkItem__c updated = [SELECT StageNamePk__c FROM WorkItem__c WHERE Id = :ticket.Id];
         System.assertEquals('In Progress', updated.StageNamePk__c);
     }
     
     @isTest
     static void testReorderTicket() {
         // FIX: Updated to test the reorderTicket method
-        Ticket__c ticket = [SELECT Id, StageNamePk__c FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Sort Test' LIMIT 1];
+        WorkItem__c ticket = [SELECT Id, StageNamePk__c FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Sort Test' LIMIT 1];
 
         Test.startTest();
         // Move to index 0 (top of list)
         DeliveryHubBoardController.reorderTicket(ticket.Id, ticket.StageNamePk__c, 0);
         Test.stopTest();
         
-        Ticket__c updated = [SELECT SortOrderNumber__c FROM Ticket__c WHERE Id = :ticket.Id];
+        WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :ticket.Id];
         // Should be 1 because it's now top of the list
         System.assertEquals(1, updated.SortOrderNumber__c);
     }
     
     @isTest
     static void testCreateDependency() {
-        Ticket__c blocked = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
-        Ticket__c blocking = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Sort Test'];
+        WorkItem__c blocked = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
+        WorkItem__c blocking = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Sort Test'];
         
         Test.startTest();
-        Ticket_Dependency__c dep = DeliveryHubBoardController.createDependency(blocked.Id, blocking.Id);
+        WorkItemDependency__c dep = DeliveryHubBoardController.createDependency(blocked.Id, blocking.Id);
         Test.stopTest();
         
         System.assertNotEquals(null, dep.Id);
@@ -68,7 +68,7 @@ public class DeliveryHubBoardControllerTest {
     
     @isTest
     static void testCreateDependencySelfBlock() {
-        Ticket__c ticket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Blocked Ticket'];
+        WorkItem__c ticket = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocked Ticket'];
         
         try {
             Test.startTest();
@@ -83,22 +83,22 @@ public class DeliveryHubBoardControllerTest {
     
     @isTest
     static void testRemoveDependency() {
-        Ticket_Dependency__c dep = [SELECT Id FROM Ticket_Dependency__c LIMIT 1];
+        WorkItemDependency__c dep = [SELECT Id FROM WorkItemDependency__c LIMIT 1];
         
         Test.startTest();
         DeliveryHubBoardController.removeDependency(dep.Id);
         Test.stopTest();
         
-        Integer count = [SELECT count() FROM Ticket_Dependency__c WHERE Id = :dep.Id];
+        Integer count = [SELECT count() FROM WorkItemDependency__c WHERE Id = :dep.Id];
         System.assertEquals(0, count);
     }
     
     @isTest
     static void testSearchForPotentialBlockers() {
-        Ticket__c currentTicket = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
+        WorkItem__c currentTicket = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test'];
         
         Test.startTest();
-        List<Ticket__c> results = DeliveryHubBoardController.searchForPotentialBlockers(
+        List<WorkItem__c> results = DeliveryHubBoardController.searchForPotentialBlockers(
             'Search Target',
             currentTicket.Id,
             new List<Id>(),

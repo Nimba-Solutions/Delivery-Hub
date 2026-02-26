@@ -12,7 +12,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>TicketId__c</field>
+                <field>WorkItemId__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

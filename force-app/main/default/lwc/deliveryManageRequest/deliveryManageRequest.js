@@ -9,8 +9,8 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import sendRequestToVendor from '@salesforce/apex/DeliveryRequestManagerController.sendRequestToVendor';
 import checkRequestStatus from '@salesforce/apex/DeliveryRequestManagerController.checkRequestStatus';
 
-import STATUS_FIELD from '@salesforce/schema/Request__c.StatusPk__c';
-import REMOTE_ID_FIELD from '@salesforce/schema/Request__c.RemoteTicketIdTxt__c';
+import STATUS_FIELD from '@salesforce/schema/WorkRequest__c.StatusPk__c';
+import REMOTE_ID_FIELD from '@salesforce/schema/WorkRequest__c.RemoteTicketIdTxt__c';
 
 const FIELDS = [STATUS_FIELD, REMOTE_ID_FIELD];
 

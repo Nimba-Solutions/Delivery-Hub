@@ -12,9 +12,9 @@
         <valueSetDefinition>
             <sorted>false</sorted>
             <value>
-                <fullName>Ticket_Comment__c</fullName>
+                <fullName>WorkItemComment__c</fullName>
                 <default>false</default>
-                <label>Ticket_Comment__c</label>
+                <label>WorkItemComment__c</label>
             </value>
             <value>
                 <fullName>ContentVersion</fullName>
@@ -22,9 +22,9 @@
                 <label>ContentVersion</label>
             </value>
             <value>
-                <fullName>Ticket__c</fullName>
+                <fullName>WorkItem__c</fullName>
                 <default>false</default>
-                <label>Ticket__c</label>
+                <label>WorkItem__c</label>
             </value>
             <value>
                 <fullName>Network_Entity__c</fullName>

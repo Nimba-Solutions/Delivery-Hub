@@ -211,7 +211,7 @@
                     </template>
                     
                     <template if:false={isAiProcessing}>
-                        <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%Ticket__c" 
+                        <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%WorkItem__c" 
                             default-field-values={createDefaults} 
                             onsubmit={handleCreateSubmit}
                             onsuccess={handleCreateSuccess}>
@@ -302,7 +302,7 @@
                 </header>
                 <div class="slds-modal__content slds-p-around_medium">
                     <lightning-record-edit-form
-                        object-api-name="Ticket__c"
+                        object-api-name="WorkItem__c"
                         record-id={transitionTicketId}
                         onsuccess={handleTransitionSuccess}
                         onerror={handleTransitionError}>

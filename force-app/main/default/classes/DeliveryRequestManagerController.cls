@@ -11,9 +11,9 @@ public without sharing class DeliveryRequestManagerController {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void sendRequestToVendor(Id requestId) {
         // 1. Fetch the Request using SYSTEM_MODE to ensure availability
-        Request__c req = [
-            SELECT Id, TicketId__c, StatusPk__c 
-            FROM Request__c 
+        WorkRequest__c req = [
+            SELECT Id, WorkItemId__c, StatusPk__c 
+            FROM WorkRequest__c 
             WHERE Id = :requestId 
             WITH SYSTEM_MODE 
             LIMIT 1
@@ -26,17 +26,17 @@ public without sharing class DeliveryRequestManagerController {
         Database.update(req, AccessLevel.SYSTEM_MODE);
         
         // 3. "Touch" the parent Ticket to trigger the DeliverySyncEngine push
-        if (req.TicketId__c != null) {
-            Ticket__c parentTicket = new Ticket__c(Id = req.TicketId__c);
+        if (req.WorkItemId__c != null) {
+            WorkItem__c parentTicket = new WorkItem__c(Id = req.WorkItemId__c);
             Database.update(parentTicket, AccessLevel.SYSTEM_MODE);
         }
     }
 
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
-        List<Request__c> reqs = [
+        List<WorkRequest__c> reqs = [
             SELECT Id, StatusPk__c, RemoteTicketIdTxt__c, LastModifiedDate
-            FROM Request__c
+            FROM WorkRequest__c
             WHERE Id = :requestId
             WITH SYSTEM_MODE
             LIMIT 1
@@ -44,7 +44,7 @@ public without sharing class DeliveryRequestManagerController {
         if (reqs.isEmpty()) {
             return 'Error: Request not found.';
         }
-        Request__c req = reqs[0];
+        WorkRequest__c req = reqs[0];
         String info = 'Status: ' + req.StatusPk__c;
         if (String.isNotBlank(req.RemoteTicketIdTxt__c)) {
             info += ' | Remote Ticket ID: ' + req.RemoteTicketIdTxt__c;

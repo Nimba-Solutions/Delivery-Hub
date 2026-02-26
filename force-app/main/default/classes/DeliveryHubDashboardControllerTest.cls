@@ -8,7 +8,7 @@ private class DeliveryHubDashboardControllerTest {
     static void testGetMetrics() {
         // 1. Create Active Ticket
         // We do not set LoggedHoursNum__c here as the field does not exist yet
-        Ticket__c t = new Ticket__c(
+        WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Test Ticket',
             StageNamePk__c = 'In Progress'
         );
@@ -18,17 +18,17 @@ private class DeliveryHubDashboardControllerTest {
         List<Sync_Item__c> items = new List<Sync_Item__c>();
         
         items.add(new Sync_Item__c(
-            ObjectTypePk__c = 'Ticket__c',
+            ObjectTypePk__c = 'WorkItem__c',
             StatusPk__c = 'Synced',
             PayloadTxt__c = '{}',
-            TicketId__c = t.Id
+            WorkItemId__c = t.Id
         ));
         
         items.add(new Sync_Item__c(
-            ObjectTypePk__c = 'Ticket__c',
+            ObjectTypePk__c = 'WorkItem__c',
             StatusPk__c = 'Failed',
             PayloadTxt__c = '{}',
-            TicketId__c = t.Id
+            WorkItemId__c = t.Id
         ));
         
         insert items;
@@ -54,10 +54,10 @@ private class DeliveryHubDashboardControllerTest {
 
     @IsTest
     static void testGetClientDashboard() {
-        List<Ticket__c> tickets = new List<Ticket__c>{
-            new Ticket__c(BriefDescriptionTxt__c = 'Backlog Ticket',    StageNamePk__c = 'Backlog'),
-            new Ticket__c(BriefDescriptionTxt__c = 'Dev Ticket',        StageNamePk__c = 'In Development'),
-            new Ticket__c(BriefDescriptionTxt__c = 'Attention Ticket',  StageNamePk__c = 'In Client Approval')
+        List<WorkItem__c> tickets = new List<WorkItem__c>{
+            new WorkItem__c(BriefDescriptionTxt__c = 'Backlog Ticket',    StageNamePk__c = 'Backlog'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Dev Ticket',        StageNamePk__c = 'In Development'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Attention Ticket',  StageNamePk__c = 'In Client Approval')
         };
         insert tickets;
 
@@ -85,10 +85,10 @@ private class DeliveryHubDashboardControllerTest {
 
     @IsTest
     static void testGetAttentionCount() {
-        insert new List<Ticket__c>{
-            new Ticket__c(BriefDescriptionTxt__c = 'UAT Ticket',      StageNamePk__c = 'In Client UAT'),
-            new Ticket__c(BriefDescriptionTxt__c = 'Approval Ticket', StageNamePk__c = 'Ready for Client Approval'),
-            new Ticket__c(BriefDescriptionTxt__c = 'Dev Ticket',      StageNamePk__c = 'In Development')
+        insert new List<WorkItem__c>{
+            new WorkItem__c(BriefDescriptionTxt__c = 'UAT Ticket',      StageNamePk__c = 'In Client UAT'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Approval Ticket', StageNamePk__c = 'Ready for Client Approval'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Dev Ticket',      StageNamePk__c = 'In Development')
         };
 
         Test.startTest();

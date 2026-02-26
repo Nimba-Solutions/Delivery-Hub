@@ -15,28 +15,28 @@ private class DeliveryWorkLogTriggerHandlerTest {
         );
         insert new List<Network_Entity__c>{ client, vendor };
 
-        Ticket__c linkedTicket = new Ticket__c(
+        WorkItem__c linkedTicket = new WorkItem__c(
             BriefDescriptionTxt__c   = 'Client Ticket',
             StageNamePk__c           = 'In Development',
             ClientNetworkEntityId__c = client.Id
         );
-        Ticket__c unlinkedTicket = new Ticket__c(
+        WorkItem__c unlinkedTicket = new WorkItem__c(
             BriefDescriptionTxt__c = 'No Client Ticket',
             StageNamePk__c         = 'In Development'
         );
-        insert new List<Ticket__c>{ linkedTicket, unlinkedTicket };
+        insert new List<WorkItem__c>{ linkedTicket, unlinkedTicket };
 
-        // Every WorkLog__c is Master-Detail to Request__c — create one per ticket
-        insert new List<Request__c>{
-            new Request__c(
-                TicketId__c           = linkedTicket.Id,
+        // Every WorkLog__c is Master-Detail to WorkRequest__c — create one per ticket
+        insert new List<WorkRequest__c>{
+            new WorkRequest__c(
+                WorkItemId__c           = linkedTicket.Id,
                 DeliveryEntityId__c   = vendor.Id,
                 QuotedHoursNumber__c  = 20,
                 HourlyRateCurrency__c = 100,
                 StatusPk__c           = 'Accepted'
             ),
-            new Request__c(
-                TicketId__c           = unlinkedTicket.Id,
+            new WorkRequest__c(
+                WorkItemId__c           = unlinkedTicket.Id,
                 DeliveryEntityId__c   = vendor.Id,
                 QuotedHoursNumber__c  = 10,
                 HourlyRateCurrency__c = 100,
@@ -47,13 +47,13 @@ private class DeliveryWorkLogTriggerHandlerTest {
 
     @IsTest
     static void testWorkLogOnClientTicketCreatesSyncItem() {
-        Ticket__c ticket   = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Client Ticket' LIMIT 1];
-        Request__c request = [SELECT Id FROM Request__c WHERE TicketId__c = :ticket.Id LIMIT 1];
+        WorkItem__c ticket   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Ticket' LIMIT 1];
+        WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :ticket.Id LIMIT 1];
 
         Test.startTest();
         insert new WorkLog__c(
             RequestId__c           = request.Id,
-            TicketId__c            = ticket.Id,
+            WorkItemId__c            = ticket.Id,
             HoursLoggedNumber__c   = 3.5,
             WorkDateDate__c        = Date.today(),
             WorkDescriptionTxt__c  = 'Implemented feature X'
@@ -61,9 +61,9 @@ private class DeliveryWorkLogTriggerHandlerTest {
         Test.stopTest();
 
         List<Sync_Item__c> items = [
-            SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c, TicketId__c
+            SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c, WorkItemId__c
             FROM Sync_Item__c
-            WHERE TicketId__c = :ticket.Id
+            WHERE WorkItemId__c = :ticket.Id
             AND ObjectTypePk__c = 'WorkLog__c'
         ];
         System.assertEquals(1, items.size(), 'Should create 1 sync item for client-linked ticket');
@@ -74,34 +74,34 @@ private class DeliveryWorkLogTriggerHandlerTest {
 
     @IsTest
     static void testWorkLogOnUnlinkedTicketNoSyncItem() {
-        Ticket__c ticket   = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'No Client Ticket' LIMIT 1];
-        Request__c request = [SELECT Id FROM Request__c WHERE TicketId__c = :ticket.Id LIMIT 1];
+        WorkItem__c ticket   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'No Client Ticket' LIMIT 1];
+        WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :ticket.Id LIMIT 1];
 
         Test.startTest();
         insert new WorkLog__c(
             RequestId__c           = request.Id,
-            TicketId__c            = ticket.Id,
+            WorkItemId__c            = ticket.Id,
             HoursLoggedNumber__c   = 2.0,
             WorkDateDate__c        = Date.today(),
             WorkDescriptionTxt__c  = 'Internal work only'
         );
         Test.stopTest();
 
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE TicketId__c = :ticket.Id AND ObjectTypePk__c = 'WorkLog__c'];
+        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE WorkItemId__c = :ticket.Id AND ObjectTypePk__c = 'WorkLog__c'];
         System.assertEquals(0, items.size(), 'Should not create sync items for tickets without a client');
     }
 
     @IsTest
     static void testTriggerControlDisabled() {
-        Ticket__c ticket   = [SELECT Id FROM Ticket__c WHERE BriefDescriptionTxt__c = 'Client Ticket' LIMIT 1];
-        Request__c request = [SELECT Id FROM Request__c WHERE TicketId__c = :ticket.Id LIMIT 1];
+        WorkItem__c ticket   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Ticket' LIMIT 1];
+        WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :ticket.Id LIMIT 1];
 
         DeliveryTriggerControl.disableAfterLogic();
 
         Test.startTest();
         insert new WorkLog__c(
             RequestId__c           = request.Id,
-            TicketId__c            = ticket.Id,
+            WorkItemId__c            = ticket.Id,
             HoursLoggedNumber__c   = 1.0,
             WorkDateDate__c        = Date.today(),
             WorkDescriptionTxt__c  = 'Trigger disabled test'
@@ -110,7 +110,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
 
         DeliveryTriggerControl.enableAfterLogic();
 
-        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE TicketId__c = :ticket.Id AND ObjectTypePk__c = 'WorkLog__c'];
+        List<Sync_Item__c> items = [SELECT Id FROM Sync_Item__c WHERE WorkItemId__c = :ticket.Id AND ObjectTypePk__c = 'WorkLog__c'];
         System.assertEquals(0, items.size(), 'Should not create sync items when trigger control is disabled');
     }
 }

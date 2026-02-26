@@ -34,14 +34,14 @@ private class DeliveryHubPollerTest {
         insert vendor;
 
         // 3. Setup local Ticket
-        SObject t = (SObject) Type.forName(ns + 'Ticket__c').newInstance();
+        SObject t = (SObject) Type.forName(ns + 'WorkItem__c').newInstance();
         t.put(ns + 'BriefDescriptionTxt__c', 'Poll Test Ticket');
         t.put(ns + 'StageNamePk__c', 'Backlog');
         insert t;
 
         // 4. Setup the Ledger bridge
-        SObject req = (SObject) Type.forName(ns + 'Request__c').newInstance();
-        req.put(ns + 'TicketId__c', t.get('Id'));
+        SObject req = (SObject) Type.forName(ns + 'WorkRequest__c').newInstance();
+        req.put(ns + 'WorkItemId__c', t.get('Id'));
         req.put(ns + 'DeliveryEntityId__c', vendor.get('Id'));
         req.put(ns + 'StatusPk__c', 'Active');
         req.put(ns + 'RemoteTicketIdTxt__c', 'MOTHERSHIP-TKT-001');
@@ -62,7 +62,7 @@ private class DeliveryHubPollerTest {
 
         // 2. Verify Data Update (Dynamic Query to be safe)
         String ns = getNamespace();
-        String q = 'SELECT ' + ns + 'StageNamePk__c FROM ' + ns + 'Ticket__c LIMIT 1';
+        String q = 'SELECT ' + ns + 'StageNamePk__c FROM ' + ns + 'WorkItem__c LIMIT 1';
         SObject updatedT = Database.query(q);
         
         System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Ticket stage should have been updated by the mock payload.');
@@ -77,7 +77,7 @@ private class DeliveryHubPollerTest {
             // Notice the inner "payload" value is escaped as a string, matching the Vendor's database storage format.
             String jsonBody = '[' +
                 '{' +
-                    '"objectType": "Ticket__c",' +
+                    '"objectType": "WorkItem__c",' +
                     '"payload": "{\\"SourceId\\": \\"MOTHERSHIP-TKT-001\\", \\"StageNamePk__c\\": \\"In Development\\"}",' +
                     '"syncItemId": "a0D000000000000EAA",' +
                     '"createdDate": "2026-02-18T12:00:00.000Z"' +

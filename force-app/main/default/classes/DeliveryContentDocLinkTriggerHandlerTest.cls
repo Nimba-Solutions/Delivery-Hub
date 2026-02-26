@@ -18,11 +18,11 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
         );
         insert vendor;
 
-        Ticket__c ticket = new Ticket__c();
+        WorkItem__c ticket = new WorkItem__c();
         insert ticket;
 
-        Request__c req = new Request__c(
-            TicketId__c = ticket.Id,
+        WorkRequest__c req = new WorkRequest__c(
+            WorkItemId__c = ticket.Id,
             DeliveryEntityId__c = vendor.Id,
             RemoteTicketIdTxt__c = 'REMOTE-123',
             StatusPk__c = 'Open'

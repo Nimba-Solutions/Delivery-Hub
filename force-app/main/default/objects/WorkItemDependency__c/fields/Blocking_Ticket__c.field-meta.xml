@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Blocking_WorkItem__c</fullName>
+    <description>Lookup relationship to the ticket that is blocking this dependency</description>
+    <inlineHelpText>The ticket that must be completed before the blocked ticket can move forward.</inlineHelpText>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <externalId>false</externalId>
+    <label>Blocking Ticket</label>
+    <referenceTo>WorkItem__c</referenceTo>
+    <relationshipLabel>Work Item Dependency</relationshipLabel>
+    <relationshipName>Ticket_Dependency</relationshipName>
+    <required>true</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

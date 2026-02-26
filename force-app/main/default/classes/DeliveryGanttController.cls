@@ -1,6 +1,6 @@
 /**
- * @description Provides ticket timeline data for the Delivery Gantt Chart LWC.
- *              Returns active tickets that have a projected UAT date, allowing the
+ * @description Provides work item timeline data for the Delivery Gantt Chart LWC.
+ *              Returns active work items that have a projected UAT date, allowing the
  *              component to render a CSS-based horizontal bar chart.
  * @author Cloud Nimbus LLC
  */
@@ -11,12 +11,12 @@ public with sharing class DeliveryGanttController {
      */
     public class GanttRow {
         /** @description Salesforce record Id */
-        @AuraEnabled public String ticketId { get; set; }
-        /** @description Auto-number ticket name (e.g. TKT-0001) */
+        @AuraEnabled public String workItemId { get; set; }
+        /** @description Auto-number work item name (e.g. WI-0001) */
         @AuraEnabled public String name { get; set; }
-        /** @description Brief one-line description of the ticket */
+        /** @description Brief one-line description of the work item */
         @AuraEnabled public String description { get; set; }
-        /** @description Current stage of the ticket */
+        /** @description Current stage of the work item */
         @AuraEnabled public String stage { get; set; }
         /** @description Priority label */
         @AuraEnabled public String priority { get; set; }
@@ -29,16 +29,16 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
-     * @description Returns active Ticket__c records that have a ProjectedUATReadyDate__c,
+     * @description Returns active WorkItem__c records that have a ProjectedUATReadyDate__c,
      *              ordered by that date ascending. Used by deliveryGanttChart to draw bars.
-     * @return List&lt;GanttRow&gt; Ordered list of ticket timeline rows.
+     * @return List&lt;GanttRow&gt; Ordered list of work item timeline rows.
      */
     @AuraEnabled(cacheable=true)
-    public static List<GanttRow> getTicketsForGantt() {
-        List<Ticket__c> tickets = [
+    public static List<GanttRow> getWorkItemsForGantt() {
+        List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                    ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE IsActiveBool__c = true
             AND ProjectedUATReadyDate__c != null
             WITH SYSTEM_MODE
@@ -46,10 +46,10 @@ public with sharing class DeliveryGanttController {
         ];
 
         List<GanttRow> rows = new List<GanttRow>();
-        for (Ticket__c t : tickets) {
-            GanttRow row  = new GanttRow();
-            row.ticketId  = t.Id;
-            row.name      = t.Name;
+        for (WorkItem__c t : items) {
+            GanttRow row     = new GanttRow();
+            row.workItemId   = t.Id;
+            row.name         = t.Name;
             row.description = t.BriefDescriptionTxt__c;
             row.stage     = t.StageNamePk__c;
             row.priority  = t.PriorityPk__c;

@@ -24,12 +24,12 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemIngestorTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemProcessorTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncRetryControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTicketCommentTriggerHandlerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTicketControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTicketDependenciesControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTicketETAServiceTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTicketQuotesControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTicketTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemCommentTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemDependenciesControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemETAServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemQuotesControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTimeLoggerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkLogTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WorkflowConfigServiceTest</testClassName>

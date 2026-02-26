@@ -52,62 +52,62 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Request__c.BudgetUtilizationPercent__c</field>
+        <field>WorkRequest__c.BudgetUtilizationPercent__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.DeliveryEntityId__c</field>
+        <field>WorkRequest__c.DeliveryEntityId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.HourlyRateCurrency__c</field>
+        <field>WorkRequest__c.HourlyRateCurrency__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.PreApprovedHoursNumber__c</field>
+        <field>WorkRequest__c.PreApprovedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Request__c.ProjectedCostCurrency__c</field>
+        <field>WorkRequest__c.ProjectedCostCurrency__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.QuotedHoursNumber__c</field>
+        <field>WorkRequest__c.QuotedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.RemoteTicketIdTxt__c</field>
+        <field>WorkRequest__c.RemoteTicketIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.RequestedBudgetIncreaseNumber__c</field>
+        <field>WorkRequest__c.RequestedBudgetIncreaseNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.StandDownReasonTxt__c</field>
+        <field>WorkRequest__c.StandDownReasonTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.StatusPk__c</field>
+        <field>WorkRequest__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Request__c.TotalLoggedHoursNumber__c</field>
+        <field>WorkRequest__c.TotalLoggedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Request__c.WorkProofUrl__c</field>
+        <field>WorkRequest__c.WorkProofUrl__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -172,198 +172,198 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.TicketCommentId__c</field>
+        <field>Sync_Item__c.WorkItemCommentId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Sync_Item__c.TicketId__c</field>
+        <field>Sync_Item__c.WorkItemId__c</field>
         <readable>true</readable>
     </fieldPermissions>
 
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Comment__c.AuthorTxt__c</field>
+        <field>WorkItemComment__c.AuthorTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Comment__c.BodyTxt__c</field>
+        <field>WorkItemComment__c.BodyTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Comment__c.SourcePk__c</field>
+        <field>WorkItemComment__c.SourcePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Comment__c.SyncedDateTime__c</field>
+        <field>WorkItemComment__c.SyncedDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Dependency__c.ExternalIdTxt__c</field>
+        <field>WorkItemDependency__c.ExternalIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket_Dependency__c.TypePk__c</field>
+        <field>WorkItemDependency__c.TypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.AcceptanceCriteriaTxt__c</field>
+        <field>WorkItem__c.AcceptanceCriteriaTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.BillableRateCurrency__c</field>
+        <field>WorkItem__c.BillableRateCurrency__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.BriefDescriptionTxt__c</field>
+        <field>WorkItem__c.BriefDescriptionTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Ticket__c.BudgetVarianceNumber__c</field>
+        <field>WorkItem__c.BudgetVarianceNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.CalculatedETADate__c</field>
+        <field>WorkItem__c.CalculatedETADate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.ClientIntentionPk__c</field>
+        <field>WorkItem__c.ClientIntentionPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.ClientNetworkEntityId__c</field>
+        <field>WorkItem__c.ClientNetworkEntityId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.ClientPreApprovedHoursNumber__c</field>
+        <field>WorkItem__c.ClientPreApprovedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.DetailsTxt__c</field>
+        <field>WorkItem__c.DetailsTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.DeveloperDaysSizeNumber__c</field>
+        <field>WorkItem__c.DeveloperDaysSizeNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.Developer__c</field>
+        <field>WorkItem__c.Developer__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.Epic__c</field>
+        <field>WorkItem__c.Epic__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.EstimatedEndDevDate__c</field>
+        <field>WorkItem__c.EstimatedEndDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.EstimatedHoursNumber__c</field>
+        <field>WorkItem__c.EstimatedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.EstimatedStartDevDate__c</field>
+        <field>WorkItem__c.EstimatedStartDevDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.EventReceivedOnDateTime__c</field>
+        <field>WorkItem__c.EventReceivedOnDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.ExternalRequesterEmailTxt__c</field>
+        <field>WorkItem__c.ExternalRequesterEmailTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.ExternalSourceOrgTxt__c</field>
+        <field>WorkItem__c.ExternalSourceOrgTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Ticket__c.HoursVarianceNumber__c</field>
+        <field>WorkItem__c.HoursVarianceNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.IsActiveBool__c</field>
+        <field>WorkItem__c.IsActiveBool__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.PriorityPk__c</field>
+        <field>WorkItem__c.PriorityPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.ProjectedUATReadyDate__c</field>
+        <field>WorkItem__c.ProjectedUATReadyDate__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.RequestTypePk__c</field>
+        <field>WorkItem__c.RequestTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.SortOrderNumber__c</field>
+        <field>WorkItem__c.SortOrderNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.SourceEventReplayIdTxt__c</field>
+        <field>WorkItem__c.SourceEventReplayIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.StageNamePk__c</field>
+        <field>WorkItem__c.StageNamePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.StatusPk__c</field>
+        <field>WorkItem__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.StepsToReproduceTxt__c</field>
+        <field>WorkItem__c.StepsToReproduceTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.Tags__c</field>
+        <field>WorkItem__c.Tags__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Ticket__c.TotalLoggedHoursNumber__c</field>
+        <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Ticket__c.WorkflowTypeTxt__c</field>
+        <field>WorkItem__c.WorkflowTypeTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -373,7 +373,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkLog__c.TicketId__c</field>
+        <field>WorkLog__c.WorkItemId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -403,7 +403,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>Request__c</object>
+        <object>WorkRequest__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -421,7 +421,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>Ticket_Comment__c</object>
+        <object>WorkItemComment__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -430,7 +430,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>Ticket_Dependency__c</object>
+        <object>WorkItemDependency__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -439,7 +439,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>Ticket__c</object>
+        <object>WorkItem__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -456,11 +456,11 @@
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
-        <tab>Ticket_Board</tab>
+        <tab>Delivery_Board</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
-        <tab>Ticket_Comment__c</tab>
+        <tab>WorkItemComment__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>

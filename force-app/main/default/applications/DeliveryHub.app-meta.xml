@@ -25,7 +25,7 @@
         <formFactor>Large</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Request__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkRequest__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
@@ -34,7 +34,7 @@
         <formFactor>Small</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Request__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkRequest__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
@@ -43,7 +43,7 @@
         <formFactor>Large</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket_Comment__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItemComment__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
@@ -52,7 +52,7 @@
         <formFactor>Small</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket_Comment__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItemComment__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
@@ -61,7 +61,7 @@
         <formFactor>Large</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItem__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>View</actionName>
@@ -70,7 +70,7 @@
         <formFactor>Small</formFactor>
         <skipRecordTypeSelect>false</skipRecordTypeSelect>
         <type>Flexipage</type>
-        <pageOrSobjectType>Ticket__c</pageOrSobjectType>
+        <pageOrSobjectType>WorkItem__c</pageOrSobjectType>
     </actionOverrides>
     <actionOverrides>
         <actionName>Tab</actionName>
@@ -95,8 +95,8 @@
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
     <tabs>Ticket_Board</tabs>
-    <tabs>Ticket__c</tabs>
-    <tabs>Ticket_Comment__c</tabs>
+    <tabs>WorkItem__c</tabs>
+    <tabs>WorkItemComment__c</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
 </CustomApplication>

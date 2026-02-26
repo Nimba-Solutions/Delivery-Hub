@@ -10,7 +10,7 @@ global without sharing class DeliveryHubSyncService {
     /**
      * @description Handles incoming HTTP POST requests containing sync payloads (The Push Flow).
      * Identifies the object type from the URL path and delegates processing to the ingestor.
-     * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/Ticket__c
+     * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/WorkItem__c
      */
     @HttpPost
     global static void handleIncomingSync() {

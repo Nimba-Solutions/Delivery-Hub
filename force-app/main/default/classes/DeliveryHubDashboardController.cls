@@ -33,7 +33,7 @@ public with sharing class DeliveryHubDashboardController {
         Set<String> terminalStages = WorkflowConfigService.getTerminalStageValues('Software_Delivery');
         AggregateResult[] ticketStats = [
             SELECT Count(Id) total
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
         ];
 
@@ -56,9 +56,9 @@ public with sharing class DeliveryHubDashboardController {
         metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
 
         // 2. Last Entry Logic (Find most recent activity on tickets)
-        List<Ticket__c> lastActivity = [
+        List<WorkItem__c> lastActivity = [
             SELECT LastModifiedDate
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             ORDER BY LastModifiedDate DESC
             LIMIT 1
@@ -115,7 +115,7 @@ public with sharing class DeliveryHubDashboardController {
         Set<String> clientStages = WorkflowConfigService.getAttentionStageValues('Software_Delivery');
         return [
             SELECT COUNT()
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
             WITH SYSTEM_MODE
         ];
@@ -138,9 +138,9 @@ public with sharing class DeliveryHubDashboardController {
     private static List<TicketItem> fetchAttentionTickets() {
         Set<String> clientStages = WorkflowConfigService.getAttentionStageValues('Software_Delivery');
 
-        List<Ticket__c> recs = [
+        List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -148,7 +148,7 @@ public with sharing class DeliveryHubDashboardController {
         ];
 
         List<TicketItem> items = new List<TicketItem>();
-        for (Ticket__c t : recs) {
+        for (WorkItem__c t : recs) {
             TicketItem item = new TicketItem();
             item.id = t.Id;
             item.name = t.Name;
@@ -168,7 +168,7 @@ public with sharing class DeliveryHubDashboardController {
 
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled', 'Deployed to Prod')
             WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
@@ -190,9 +190,9 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     private static List<TicketItem> fetchRecentTickets() {
-        List<Ticket__c> recs = [
+        List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled')
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -200,7 +200,7 @@ public with sharing class DeliveryHubDashboardController {
         ];
 
         List<TicketItem> items = new List<TicketItem>();
-        for (Ticket__c t : recs) {
+        for (WorkItem__c t : recs) {
             TicketItem item = new TicketItem();
             item.id = t.Id;
             item.name = t.Name;

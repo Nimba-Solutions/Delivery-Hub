@@ -162,7 +162,7 @@ force-app/main/default/
 │   ├── DeliveryHubPoller.cls           # Polls all active vendors for inbound items
 │   ├── DeliverySyncItemIngestor.cls    # Maps inbound payloads to sObject fields
 │   ├── DeliveryHubSyncService.cls      # REST endpoint (/delivery/sync)
-│   ├── DeliveryTicketETAService.cls    # ETA calculation engine
+│   ├── DeliveryWorkItemETAService.cls    # ETA calculation engine
 │   ├── DeliveryHubDashboardController  # Home page metrics + client dashboard
 │   ├── DeliveryHubFilesController      # Rolled-up file queries
 │   ├── DeliveryHubCommentController    # Chat: get/post comments + file indicators
@@ -170,26 +170,26 @@ force-app/main/default/
 │   └── DeliveryHubSetupController      # Quickstart wizard + handshake
 ├── lwc/
 │   ├── deliveryHubBoard/               # Main Kanban board (drag-drop, column config)
-│   ├── deliveryTicketActionCenter/     # Stage transition buttons with gate logic
-│   ├── deliveryTicketChat/             # Real-time polling chat with file indicators
-│   ├── deliveryTicketFiles/            # Rolled-up files sidebar panel
+│   ├── deliveryWorkItemActionCenter/     # Stage transition buttons with gate logic
+│   ├── deliveryWorkItemChat/             # Real-time polling chat with file indicators
+│   ├── deliveryWorkItemFiles/            # Rolled-up files sidebar panel
 │   ├── deliveryTimeLogger/             # Quick time logging with WorkLog__c creation
 │   ├── deliveryClientDashboard/        # Client home: attention / in-flight / recent
 │   ├── deliveryBudgetSummary/          # System pulse: active tickets, hours, sync health
 │   ├── deliveryHubSetup/               # Quickstart connection wizard
 │   ├── deliveryGhostRecorder/          # Issue / feature request submission form
-│   └── deliveryTicketRefiner/          # AI description and sizing assistant
+│   └── deliveryWorkItemRefiner/          # AI description and sizing assistant
 ├── objects/
-│   ├── Ticket__c/                      # Core work item
-│   ├── Request__c/                     # Sync bridge (client ↔ vendor)
+│   ├── WorkItem__c/                      # Core work item
+│   ├── WorkRequest__c/                     # Sync bridge (client ↔ vendor)
 │   ├── Sync_Item__c/                   # Outbound sync ledger
 │   ├── Network_Entity__c/              # Connected org registry
-│   ├── Ticket_Comment__c/              # Chat messages
-│   ├── Ticket_Dependency__c/           # Blocking relationships
+│   ├── WorkItemComment__c/              # Chat messages
+│   ├── WorkItemDependency__c/           # Blocking relationships
 │   └── WorkLog__c/                     # Time tracking entries
 └── triggers/
-    ├── DeliveryTicketTrigger           # Stage changes → sync engine
-    ├── DeliveryTicketCommentTrigger    # Comments → sync engine
+    ├── DeliveryWorkItemTrigger           # Stage changes → sync engine
+    ├── DeliveryWorkItemCommentTrigger    # Comments → sync engine
     └── DeliveryContentDocumentLinkTrigger  # File attachments → sync engine
 ```
 

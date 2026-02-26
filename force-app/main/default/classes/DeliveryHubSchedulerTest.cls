@@ -57,7 +57,7 @@ private class DeliveryHubSchedulerTest {
             // V2 ARCHITECTURE: Must return a JSON Array, simulating a pulled update
             String jsonBody = '[' +
                 '{' +
-                    '"objectType": "Ticket__c",' +
+                    '"objectType": "WorkItem__c",' +
                     '"payload": "{\\"SourceId\\": \\"REMOTE-123\\"}",' +
                     '"syncItemId": "a0D000000000000EAA",' +
                     '"createdDate": "2026-02-18T12:00:00.000Z"' +

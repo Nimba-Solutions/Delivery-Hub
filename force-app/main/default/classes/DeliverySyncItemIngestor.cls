@@ -37,15 +37,15 @@ public without sharing class DeliverySyncItemIngestor {
         Id localRecordId = findLocalId(targetType, sourceId);
         
         // If it's a Ticket, try to find the Request Bridge (Downstream Origin)
-        if (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
-            Request__c bridge = findTicketBridge(sourceId);
+        if (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
+            WorkRequest__c bridge = findTicketBridge(sourceId);
             if (bridge != null) {
-                localRecordId = bridge.TicketId__c;
+                localRecordId = bridge.WorkItemId__c;
                 localRequestId = bridge.Id;
             }
         }
 
-        if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
+        if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             try {
                 Id castId = (Id) targetId;
                 if (castId.getSobjectType() == targetType) {
@@ -59,18 +59,18 @@ public without sharing class DeliverySyncItemIngestor {
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
         
         Id localParentId = null;
-        if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('Ticket_Comment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
+        if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('WorkItemComment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
             
             // 1. Try to find parent via Request Bridge (Downstream Origin)
-            Request__c parentBridge = findTicketBridge(targetId);
+            WorkRequest__c parentBridge = findTicketBridge(targetId);
             if (parentBridge != null) {
-                localParentId = parentBridge.TicketId__c;
+                localParentId = parentBridge.WorkItemId__c;
                 localRequestId = parentBridge.Id; 
             }
 
             // 2. Try to find parent via the Ledger (Upstream Origin)
             if (localParentId == null) {
-                List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :targetId AND ObjectTypePk__c = 'Ticket__c' WITH SYSTEM_MODE LIMIT 1];
+                List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :targetId AND ObjectTypePk__c = 'WorkItem__c' WITH SYSTEM_MODE LIMIT 1];
                 if (!ledger.isEmpty()) {
                     localParentId = (Id)ledger[0].LocalRecordIdTxt__c;
                 }
@@ -80,7 +80,7 @@ public without sharing class DeliverySyncItemIngestor {
             if (localParentId == null) {
                 try {
                     Id castId = (Id) targetId;
-                    if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('Ticket__c')) {
+                    if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
                         localParentId = castId;
                     }
                 } catch (Exception e) {
@@ -88,8 +88,8 @@ public without sharing class DeliverySyncItemIngestor {
                 }
             }
 
-            if (localParentId != null && objectType.containsIgnoreCase('Ticket_Comment__c')) {
-                putSafe(recordToUpsert, 'TicketId__c', localParentId);
+            if (localParentId != null && objectType.containsIgnoreCase('WorkItemComment__c')) {
+                putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
             }
         }
 
@@ -98,7 +98,7 @@ public without sharing class DeliverySyncItemIngestor {
         // ==========================================
         // NEW: AUTO-PARENTING THE UPSTREAM CLIENT
         // ==========================================
-        if (String.isNotBlank(senderOrgId) && objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) {
+        if (String.isNotBlank(senderOrgId) && objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             try {
                 // Grab the 15-char base ID to prevent 18-char mismatch failures on Text fields
                 String baseOrgId = senderOrgId.length() >= 15 ? senderOrgId.substring(0, 15) + '%' : senderOrgId;
@@ -147,18 +147,18 @@ public without sharing class DeliverySyncItemIngestor {
         // ECHO SUPPRESSION: REGISTER ORIGIN ROUTE
         // ==========================================
         if (localRequestId != null) {
-            // Origin was a Downstream Vendor via Request__c
+            // Origin was a Downstream Vendor via WorkRequest__c
             DeliverySyncEngine.ignoreOrigin(localRequestId);
         } else {
             // No Request found. Origin must be the Upstream Client.
-            Id parentTicketId = (objectType.endsWithIgnoreCase('Ticket__c') && !objectType.endsWithIgnoreCase('Ticket_Comment__c')) ? recordToUpsert.Id : localParentId;
+            Id parentTicketId = (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) ? recordToUpsert.Id : localParentId;
             
             if (parentTicketId != null) {
                 try {
                     // Look up the ClientNetworkEntityId__c of the target Ticket (which we just stamped!)
-                    String query = 'SELECT ClientNetworkEntityId__c FROM Ticket__c WHERE Id = :parentTicketId LIMIT 1';
+                    String query = 'SELECT ClientNetworkEntityId__c FROM WorkItem__c WHERE Id = :parentTicketId LIMIT 1';
                     if (String.isNotBlank(getNamespacePrefix())) {
-                        query = query.replace('Ticket__c', getNamespacePrefix() + 'Ticket__c')
+                        query = query.replace('WorkItem__c', getNamespacePrefix() + 'WorkItem__c')
                                      .replace('ClientNetworkEntityId__c', getNamespacePrefix() + 'ClientNetworkEntityId__c');
                     }
                     
@@ -182,7 +182,7 @@ public without sharing class DeliverySyncItemIngestor {
         String objName = type.getDescribe().getName();
         String cleanName = stripNamespace(objName);
         
-        if (!cleanName.endsWithIgnoreCase('Ticket__c') || cleanName.endsWithIgnoreCase('Ticket_Comment__c')) {
+        if (!cleanName.endsWithIgnoreCase('WorkItem__c') || cleanName.endsWithIgnoreCase('WorkItemComment__c')) {
             List<Sync_Item__c> ledger = [SELECT LocalRecordIdTxt__c FROM Sync_Item__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
         }
@@ -190,8 +190,8 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     // Helper to grab both the Ticket ID and the Request ID
-    private static Request__c findTicketBridge(String remoteTicketId) {
-        List<Request__c> reqs = [SELECT Id, TicketId__c FROM Request__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
+    private static WorkRequest__c findTicketBridge(String remoteTicketId) {
+        List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteTicketIdTxt__c = :remoteTicketId WITH SYSTEM_MODE LIMIT 1];
         return reqs.isEmpty() ? null : reqs[0];
     }
 

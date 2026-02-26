@@ -22,15 +22,15 @@ private class DeliverySyncItemProcessorTest {
         insert vendor;
 
         // 2. Setup Ticket
-        Ticket__c t = new Ticket__c(
+        WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Test Ticket',
             StageNamePk__c = 'Backlog'
         );
         insert t;
 
         // 3. Setup Request (The Bridge)
-        Request__c req = new Request__c(
-            TicketId__c = t.Id,
+        WorkRequest__c req = new WorkRequest__c(
+            WorkItemId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
             StatusPk__c = 'Active',
             RemoteTicketIdTxt__c = 'REMOTE-123'
@@ -41,9 +41,9 @@ private class DeliverySyncItemProcessorTest {
         Sync_Item__c item = new Sync_Item__c(
             StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
-            TicketId__c = t.Id,
+            WorkItemId__c = t.Id,
             RequestId__c = req.Id,
-            ObjectTypePk__c = 'Ticket__c',
+            ObjectTypePk__c = 'WorkItem__c',
             PayloadTxt__c = '{"StageNamePk__c":"In Development"}'
         );
         insert item;

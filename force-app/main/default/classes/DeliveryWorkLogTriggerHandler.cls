@@ -19,17 +19,17 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         }
         Set<Id> ticketIds = new Set<Id>();
         for (WorkLog__c wl : newLogs) {
-            if (wl.TicketId__c != null) {
-                ticketIds.add(wl.TicketId__c);
+            if (wl.WorkItemId__c != null) {
+                ticketIds.add(wl.WorkItemId__c);
             }
         }
         if (ticketIds.isEmpty()) {
             return;
         }
 
-        Map<Id, Ticket__c> clientTickets = new Map<Id, Ticket__c>([
+        Map<Id, WorkItem__c> clientTickets = new Map<Id, WorkItem__c>([
             SELECT Id, ClientNetworkEntityId__c
-            FROM Ticket__c
+            FROM WorkItem__c
             WHERE Id IN :ticketIds
             AND ClientNetworkEntityId__c != null
             WITH SYSTEM_MODE
@@ -52,14 +52,14 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      * @param clientTickets Map of ticket Ids that have a client entity linked.
      * @return List of Sync_Item__c records ready for insert.
      */
-    private static List<Sync_Item__c> buildSyncItems(List<WorkLog__c> logs, Map<Id, Ticket__c> clientTickets) {
+    private static List<Sync_Item__c> buildSyncItems(List<WorkLog__c> logs, Map<Id, WorkItem__c> clientTickets) {
         List<Sync_Item__c> items = new List<Sync_Item__c>();
         for (WorkLog__c wl : logs) {
-            if (!clientTickets.containsKey(wl.TicketId__c)) {
+            if (!clientTickets.containsKey(wl.WorkItemId__c)) {
                 continue;
             }
             Map<String, Object> payload = new Map<String, Object>{
-                'TicketId__c'            => wl.TicketId__c,
+                'WorkItemId__c'            => wl.WorkItemId__c,
                 'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
                 'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
                 'WorkDescriptionTxt__c'  => wl.WorkDescriptionTxt__c
@@ -67,7 +67,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             items.add(new Sync_Item__c(
                 ObjectTypePk__c         = 'WorkLog__c',
                 LocalRecordIdTxt__c     = wl.Id,
-                TicketId__c             = wl.TicketId__c,
+                WorkItemId__c             = wl.WorkItemId__c,
                 DirectionPk__c          = 'Outbound',
                 StatusPk__c             = 'Queued',
                 PayloadTxt__c           = JSON.serialize(payload)

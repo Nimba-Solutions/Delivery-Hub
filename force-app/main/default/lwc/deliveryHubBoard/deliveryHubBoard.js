@@ -16,20 +16,20 @@ import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import { subscribe, unsubscribe, onError } from 'lightning/empApi';
 import draftBoardSummary from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryAiController.draftBoardSummary';
 
-const TICKET_CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%Delivery_Ticket_Change__e';
+const WORK_ITEM_CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%Delivery_WorkItem_Change__e';
 
 // --- Apex Imports ---
-import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getTickets";
-import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.linkFilesAndSync";
-import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getAiEnhancedTicketDetails";
-import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketETAService.getTicketETAsWithPriority";
+import getTickets from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getTickets";
+import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync";
+import getAiEnhancedTicketDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getAiEnhancedTicketDetails";
+import getTicketETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemETAService.getTicketETAsWithPriority";
 import updateTicketStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateTicketStage";
 // UPDATED: Using new reorder method instead of updateTicketSortOrder
 import reorderTicket from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.reorderTicket";
 import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.createDependency";
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
-import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTicketController.getRequiredFieldsForStage';
+import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getRequiredFieldsForStage';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
 import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowTypes';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
@@ -61,8 +61,8 @@ const FIELDS = {
     // Relationships
     DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%Ticket_Dependency1__r`,
     DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%Ticket_Dependency__r`,
-    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%Blocking_Ticket__c`,
-    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_Ticket__c`,
+    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%Blocking_WorkItem__c`,
+    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_WorkItem__c`,
     WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`
 };
 
@@ -140,7 +140,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     subscribeToTicketChanges() {
-        subscribe(TICKET_CHANGE_CHANNEL, -1, () => {
+        subscribe(WORK_ITEM_CHANGE_CHANNEL, -1, () => {
             refreshApex(this.ticketsWire);
         }).then(response => {
             this._empSubscription = response;
@@ -212,7 +212,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         const fields = {
-            '%%%NAMESPACED_ORG%%%TicketId__c': ticketId,
+            '%%%NAMESPACED_ORG%%%WorkItemId__c': ticketId,
             '%%%NAMESPACED_ORG%%%BodyTxt__c': this.moveComment,
             '%%%NAMESPACED_ORG%%%SourcePk__c': 'Salesforce',
             '%%%NAMESPACED_ORG%%%AuthorTxt__c': this.currentUserName 
@@ -221,7 +221,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         const recordInput = { 
             // Note: apiName is a string value, so it was already fine, 
             // but the keys inside 'fields' MUST be quoted.
-            apiName: '%%%NAMESPACED_ORG%%%Ticket_Comment__c', 
+            apiName: '%%%NAMESPACED_ORG%%%WorkItemComment__c', 
             fields 
         };
 
@@ -230,7 +230,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             const result = await createRecord(recordInput);
             console.log('Comment created → ID:', result.id);
         } catch (error) {
-            console.error('Failed to create Ticket_Comment__c:', error);
+            console.error('Failed to create WorkItemComment__c:', error);
             throw error;
         }
     }
@@ -457,13 +457,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
             const isBlockedBy = blockedByRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKING_TICKET),
-                name: dep['Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__c'],
+                name: dep['Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__r']?.Name || dep['Blocking_WorkItem__c'],
                 dependencyId: dep.Id
             }));
 
             const isBlocking = blockingRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKED_TICKET),
-                name: dep['Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__c'],
+                name: dep['Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__r']?.Name || dep['Blocked_WorkItem__c'],
                 dependencyId: dep.Id
             }));
 
@@ -690,7 +690,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleTitleClick(e) {
         const id = e.currentTarget.dataset.id;
         if (id) {
-            this[NavigationMixin.Navigate]({ type: "standard__recordPage", attributes: { recordId: id, objectApiName: "Ticket__c", actionName: "view" } });
+            this[NavigationMixin.Navigate]({ type: "standard__recordPage", attributes: { recordId: id, objectApiName: "WorkItem__c", actionName: "view" } });
         }
     }
 
