@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>SD - Ready for Development</label>
+    <protected>false</protected>
+    <values>
+        <field>WorkflowType__c</field>
+        <value xsi:type="xsd:string">Software_Delivery</value>
+    </values>
+    <values>
+        <field>ApiValue__c</field>
+        <value xsi:type="xsd:string">Ready for Development</value>
+    </values>
+    <values>
+        <field>SortOrder__c</field>
+        <value xsi:type="xsd:double">15</value>
+    </values>
+    <values>
+        <field>CardColor__c</field>
+        <value xsi:type="xsd:string">#DCFCE7</value>
+    </values>
+    <values>
+        <field>HeaderBgColor__c</field>
+        <value xsi:type="xsd:string">rgba(220,252,231,0.5)</value>
+    </values>
+    <values>
+        <field>HeaderTextColor__c</field>
+        <value xsi:type="xsd:string">#16A34A</value>
+    </values>
+    <values>
+        <field>OwnerPersona__c</field>
+        <value xsi:type="xsd:string">Developer</value>
+    </values>
+    <values>
+        <field>Phase__c</field>
+        <value xsi:type="xsd:string">Development</value>
+    </values>
+    <values>
+        <field>IsTerminal__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsBlockedState__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsAttentionState__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsVisibleByDefault__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>AllowedForwardTransitions__c</field>
+        <value xsi:type="xsd:string">In Development</value>
+    </values>
+    <values>
+        <field>AllowedBacktrackTransitions__c</field>
+        <value xsi:type="xsd:string">In Client Approval,Ready for Client Approval,Tech Reviewing,Prioritizing,Cancelled</value>
+    </values>
+</CustomMetadata>

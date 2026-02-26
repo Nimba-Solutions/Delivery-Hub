@@ -37,6 +37,19 @@
             </div>
             
             <div class="kanban-filter-bar">
+                <template if:true={hasMultipleWorkflows}>
+                    <div class="filter-group">
+                        <label class="filter-label">Workflow:</label>
+                        <div class="button-group">
+                            <template for:each={workflowTypes} for:item="wt">
+                                <button key={wt.developerName}
+                                    class="toolbar-button"
+                                    data-type={wt.developerName}
+                                    onclick={handleWorkflowTypeChange}>{wt.label}</button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
                 <div class="filter-group">
                     <label class="filter-label">Board View:</label>
                     <select class="slds-select" value={overallFilter} onchange={handleOverallFilterChange}>

@@ -32,6 +32,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTicketTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTimeLoggerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkLogTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WorkflowConfigServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%ForgotPasswordControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%MyProfilePageControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%SiteLoginControllerTest</testClassName>

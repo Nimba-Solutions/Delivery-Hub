@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>HeaderBgColor__c</fullName>
+    <description>RGBA or hex background color for the column header in this stage (e.g. rgba(255,145,0,0.3)).</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Header Background Color</label>
+    <length>50</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

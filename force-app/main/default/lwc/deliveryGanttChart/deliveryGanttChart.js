@@ -4,26 +4,18 @@
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getTicketsForGantt from '@salesforce/apex/DeliveryGanttController.getTicketsForGantt';
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%WorkflowConfigService.getWorkflowConfig';
 
 const MS_PER_DAY = 86400000;
-const STAGE_COLORS = {
-    'Backlog':           'var(--gantt-gray)',
-    'In Development':   'var(--gantt-blue)',
-    'Ready for QA':     'var(--gantt-indigo)',
-    'In QA':            'var(--gantt-purple)',
-    'UAT':              'var(--gantt-teal)',
-    'Done':             'var(--gantt-green)',
-    'Deployed to Prod': 'var(--gantt-emerald)',
-    'Blocked':          'var(--gantt-red)',
-};
 
 export default class DeliveryGanttChart extends NavigationMixin(LightningElement) {
     @track windowDays = 60;
     @track isLoading = true;
     @track errorMessage = '';
     @track rawRows = [];
+    @track workflowConfig = null;
 
-    // ── Wire ──────────────────────────────────────────────────────────────────
+    // ── Wires ─────────────────────────────────────────────────────────────────
 
     @wire(getTicketsForGantt)
     wiredTickets({ data, error }) {
@@ -33,6 +25,21 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
         } else if (error) {
             this.errorMessage = error.body ? error.body.message : error.message;
         }
+    }
+
+    // Static workflowTypeName: Gantt is Software_Delivery only for now
+    @wire(getWorkflowConfig, { workflowTypeName: 'Software_Delivery' })
+    wiredConfig({ data, error }) {
+        if (data) { this.workflowConfig = data; }
+        else if (error) { console.error('[DeliveryGanttChart] getWorkflowConfig error:', error); }
+    }
+
+    // CMT-driven stage → card color lookup
+    get _stageColorMap() {
+        if (!this.workflowConfig?.stages) return {};
+        const map = {};
+        this.workflowConfig.stages.forEach(s => { map[s.apiValue] = s.cardColor; });
+        return map;
     }
 
     // ── Window controls ───────────────────────────────────────────────────────
@@ -82,7 +89,7 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
                 barClass += ' gantt-bar--future';
             }
 
-            const stageColor = STAGE_COLORS[r.stage] || 'var(--gantt-gray)';
+            const stageColor = this._stageColorMap[r.stage] || 'var(--gantt-gray)';
             const barStyle = `left:${left.toFixed(1)}%; width:${width.toFixed(1)}%; background:${stageColor};`;
 
             let stageBadgeClass = 'gantt-stage-badge';

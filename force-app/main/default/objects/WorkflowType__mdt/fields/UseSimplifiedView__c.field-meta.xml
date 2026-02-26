@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>UseSimplifiedView__c</fullName>
+    <description>If checked, each stage renders as its own column (no persona column groupings). Use for simple linear workflows like Loan Approval.</description>
+    <defaultValue>false</defaultValue>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Use Simplified View</label>
+    <type>Checkbox</type>
+</CustomField>

@@ -63,7 +63,8 @@ private class DeliveryTicketControllerTest {
     static void testGetTickets() {
          
         Test.startTest();
-        List<Ticket__c> results = DeliveryTicketController.getTickets();
+        // Pass null to get all active tickets (backward-compatible path)
+        List<Ticket__c> results = DeliveryTicketController.getTickets(null);
         Test.stopTest();
        // System.assert(!results.isEmpty(), 'Tickets should be returned');
         
