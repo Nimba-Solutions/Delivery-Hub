@@ -4,7 +4,7 @@
  * color maps, transition maps, and persona column maps in deliveryHubBoard.js.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryDeliveryWorkflowConfigService {
+public with sharing class DeliveryWorkflowConfigService {
 
     // -------------------------------------------------------------------------
     // AuraEnabled — called by board / gantt / dashboard LWC components

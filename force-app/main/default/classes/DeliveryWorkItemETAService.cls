@@ -351,26 +351,26 @@ public with sharing class DeliveryWorkItemETAService {
             WorkItemWrapper other = (WorkItemWrapper)compareTo;
 
             // Rule 0: A work item explicitly prioritized by the LWC always comes first.
-            if (this.isPrioritizedByLWC && !other.isPrioritizedByLWC) return -1;
-            if (!this.isPrioritizedByLWC && other.isPrioritizedByLWC) return 1;
+            if (this.isPrioritizedByLWC && !other.isPrioritizedByLWC) { return -1; }
+            if (!this.isPrioritizedByLWC && other.isPrioritizedByLWC) { return 1; }
 
             // Rule 1: Stage Category (Active work items before pre-dev work items)
-            if (this.stageCategory < other.stageCategory) return -1;
-            if (this.stageCategory > other.stageCategory) return 1;
+            if (this.stageCategory < other.stageCategory) { return -1; }
+            if (this.stageCategory > other.stageCategory) { return 1; }
 
             // Rule 2: Priority Weight (Lower number is higher priority)
-            if (this.priorityWeight < other.priorityWeight) return -1;
-            if (this.priorityWeight > other.priorityWeight) return 1;
+            if (this.priorityWeight < other.priorityWeight) { return -1; }
+            if (this.priorityWeight > other.priorityWeight) { return 1; }
 
             // Rule 3: Manual Sort Order (Lower number is higher priority)
             Decimal thisSort = this.workItem.SortOrderNumber__c == null ? 9999 : this.workItem.SortOrderNumber__c;
             Decimal otherSort = other.workItem.SortOrderNumber__c == null ? 9999 : other.workItem.SortOrderNumber__c;
-            if (thisSort < otherSort) return -1;
-            if (thisSort > otherSort) return 1;
+            if (thisSort < otherSort) { return -1; }
+            if (thisSort > otherSort) { return 1; }
 
             // Rule 4: Creation Date (Older work items first)
-            if (this.workItem.CreatedDate < other.workItem.CreatedDate) return -1;
-            if (this.workItem.CreatedDate > other.workItem.CreatedDate) return 1;
+            if (this.workItem.CreatedDate < other.workItem.CreatedDate) { return -1; }
+            if (this.workItem.CreatedDate > other.workItem.CreatedDate) { return 1; }
 
             return 0; // Work items are considered equal
         }

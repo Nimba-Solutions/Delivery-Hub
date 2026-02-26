@@ -23,7 +23,6 @@ import getWorkItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemCo
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync";
 import getAiEnhancedWorkItemDetails from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getAiEnhancedWorkItemDetails";
 import getWorkItemETAsWithPriority from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemETAService.getWorkItemETAsWithPriority";
-import updateWorkItemStage from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateWorkItemStage";
 import reorderWorkItem from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.reorderWorkItem";
 import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.createDependency";
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";

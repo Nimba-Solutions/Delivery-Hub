@@ -1,13 +1,13 @@
 /**
- * @description Tests for DeliveryDeliveryWorkflowConfigService.
+ * @description Tests for DeliveryWorkflowConfigService.
  * @author Cloud Nimbus LLC
  */
 @isTest
-private class WorkflowConfigServiceTest {
+private class DeliveryWorkflowConfigServiceTest {
 
     @isTest
     static void testGetWorkflowTypes() {
-        List<Map<String,Object>> types = DeliveryDeliveryWorkflowConfigService.getWorkflowTypes();
+        List<Map<String,Object>> types = DeliveryWorkflowConfigService.getWorkflowTypes();
         // Must have at least the two built-in workflow types
         System.assert(types.size() >= 2, 'Expected at least 2 workflow types, got ' + types.size());
 
@@ -27,7 +27,7 @@ private class WorkflowConfigServiceTest {
 
     @isTest
     static void testGetWorkflowConfigSoftwareDelivery() {
-        Map<String,Object> config = DeliveryDeliveryWorkflowConfigService.getWorkflowConfig('Software_Delivery');
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Software_Delivery');
 
         System.assertNotEquals(null, config, 'Config must not be null');
 
@@ -60,7 +60,7 @@ private class WorkflowConfigServiceTest {
 
     @isTest
     static void testGetWorkflowConfigLoanApproval() {
-        Map<String,Object> config = DeliveryDeliveryWorkflowConfigService.getWorkflowConfig('Loan_Approval');
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Loan_Approval');
         System.assertNotEquals(null, config, 'Loan_Approval config must not be null');
 
         Map<String,Object> typeMap = (Map<String,Object>) config.get('type');
@@ -73,8 +73,8 @@ private class WorkflowConfigServiceTest {
 
     @isTest
     static void testGetWorkflowConfigBlankDefaultsToSoftwareDelivery() {
-        Map<String,Object> configBlank = DeliveryDeliveryWorkflowConfigService.getWorkflowConfig('');
-        Map<String,Object> configNull  = DeliveryDeliveryWorkflowConfigService.getWorkflowConfig(null);
+        Map<String,Object> configBlank = DeliveryWorkflowConfigService.getWorkflowConfig('');
+        Map<String,Object> configNull  = DeliveryWorkflowConfigService.getWorkflowConfig(null);
 
         Map<String,Object> typeBlank = (Map<String,Object>) configBlank.get('type');
         Map<String,Object> typeNull  = (Map<String,Object>) configNull.get('type');
@@ -85,7 +85,7 @@ private class WorkflowConfigServiceTest {
 
     @isTest
     static void testGetTerminalStageValues() {
-        Set<String> terminals = DeliveryDeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+        Set<String> terminals = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
         System.assert(!terminals.isEmpty(), 'Terminal stages must not be empty');
         System.assert(terminals.contains('Done'), 'Done must be terminal for Software_Delivery');
         System.assert(terminals.contains('Cancelled'), 'Cancelled must be terminal for Software_Delivery');
@@ -93,7 +93,7 @@ private class WorkflowConfigServiceTest {
 
     @isTest
     static void testGetAttentionStageValues() {
-        Set<String> attention = DeliveryDeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
+        Set<String> attention = DeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
         System.assert(!attention.isEmpty(), 'Attention stages must not be empty');
         System.assert(attention.contains('Ready for Client Approval'), 'Ready for Client Approval must be an attention stage');
         System.assert(attention.contains('In Client UAT'), 'In Client UAT must be an attention stage');
@@ -101,7 +101,7 @@ private class WorkflowConfigServiceTest {
 
     @isTest
     static void testGetStagePhaseMap() {
-        Map<String,String> phaseMap = DeliveryDeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
+        Map<String,String> phaseMap = DeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
         System.assert(!phaseMap.isEmpty(), 'Phase map must not be empty');
         System.assertEquals('Planning', phaseMap.get('Backlog'), 'Backlog must map to Planning');
         System.assertEquals('Development', phaseMap.get('In Development'), 'In Development must map to Development');
@@ -117,7 +117,7 @@ private class WorkflowConfigServiceTest {
     static void testGetWorkflowConfigUnknownTypeThrows() {
         Boolean threw = false;
         try {
-            DeliveryDeliveryWorkflowConfigService.getWorkflowConfig('Does_Not_Exist_XYZ');
+            DeliveryWorkflowConfigService.getWorkflowConfig('Does_Not_Exist_XYZ');
         } catch (AuraHandledException e) {
             threw = true;
         }
