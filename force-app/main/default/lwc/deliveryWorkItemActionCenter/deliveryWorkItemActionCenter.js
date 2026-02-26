@@ -27,7 +27,7 @@ const FIELDS = [
     PRIORITY_FIELD
 ];
 
-export default class DeliveryTicketActionCenter extends LightningElement {
+export default class DeliveryWorkItemActionCenter extends LightningElement {
     @api recordId;
     @track ticket;
     @track wiredTicketResult; 
@@ -342,7 +342,7 @@ export default class DeliveryTicketActionCenter extends LightningElement {
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Moved',
-                    message: `Ticket moved to ${targetStage}`,
+                    message: `Work item moved to ${targetStage}`,
                     variant: 'success'
                 })
             );

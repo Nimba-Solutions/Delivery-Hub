@@ -5,7 +5,7 @@ import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getDependencies from '@salesforce/apex/DeliveryWorkItemDependenciesController.getDependencies';
 
-export default class DeliveryTicketDependencies extends NavigationMixin(LightningElement) {
+export default class DeliveryWorkItemDependencies extends NavigationMixin(LightningElement) {
     @api recordId;
     @track blocking = [];
     @track blockedBy = [];

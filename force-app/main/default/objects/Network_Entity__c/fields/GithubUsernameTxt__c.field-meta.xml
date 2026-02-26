@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>GithubUsernameTxt__c</fullName>
     <description>For auto-provisioning repo access (Future Phase).</description>
-    <inlineHelpText>GitHub username for this entity, used to link commits and PRs to tickets.</inlineHelpText>
+    <inlineHelpText>GitHub username for this entity, used to link commits and PRs to work items.</inlineHelpText>
     <externalId>false</externalId>
     <label>Github User</label>
     <length>255</length>

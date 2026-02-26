@@ -143,7 +143,7 @@
     <allowInChatterGroups>true</allowInChatterGroups>
     <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
     <deploymentStatus>InDevelopment</deploymentStatus>
-    <description>Junction object that records blocking and relational dependencies between Tickets. Enables the Kanban board to surface blocked tickets and prevent invalid stage transitions when a blocking ticket is still in progress.</description>
+    <description>Junction object that records blocking and relational dependencies between work items. Enables the Kanban board to surface blocked work items and prevent invalid stage transitions when a blocking work item is still in progress.</description>
     <enableActivities>true</enableActivities>
     <enableBulkApi>true</enableBulkApi>
     <enableFeeds>false</enableFeeds>

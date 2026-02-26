@@ -20,7 +20,7 @@ import suggestAcceptanceCriteria from '@salesforce/apex/%%%NAMESPACE_DOT%%%Deliv
 // Load the Ticket fields so we have the data ready to copy
 const FIELDS = [TICKET_HOURS];
 
-export default class DeliveryTicketRefiner extends NavigationMixin(LightningElement) {
+export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningElement) {
     @api recordId;
     @track isProcessing = false;
     @track isRequestCreated = false;

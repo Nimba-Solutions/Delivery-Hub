@@ -15,7 +15,7 @@ const STATUS_CLASS = {
     'Budget Hold':'q-status q-status--hold'
 };
 
-export default class DeliveryTicketQuotes extends LightningElement {
+export default class DeliveryWorkItemQuotes extends LightningElement {
     @api recordId;
     @track isAccepting = false;
     @track isLoading = true;

@@ -175,7 +175,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             for (WorkItemDependency__c dependency : unresolvedBlockers) {
                 for (WorkItem__c ticket : newTickets) {
                     if (ticket.Id == dependency.BlockedWorkItemId__c) {
-                        ticket.addError('This ticket cannot be started. It is blocked by ticket: ' + dependency.BlockingWorkItemId__r.BriefDescriptionTxt__c);
+                        ticket.addError('This work item cannot be started. It is blocked by: ' + dependency.BlockingWorkItemId__r.BriefDescriptionTxt__c);
                     }
                 }
             }

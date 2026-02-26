@@ -269,7 +269,7 @@ public with sharing class DeliveryWorkItemController {
             'messages' => new List<Map<String, Object>>{
                 new Map<String, Object>{
                     'role' => 'system',
-                    'content' => 'You are a helpful assistant that enhances software development tickets. You provide improved titles, detailed descriptions, and realistic development time estimates.'
+                    'content' => 'You are a helpful assistant that enhances software development work items. You provide improved titles, detailed descriptions, and realistic development time estimates.'
                 },
                 new Map<String, Object>{
                     'role' => 'user',

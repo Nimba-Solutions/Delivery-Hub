@@ -36,7 +36,7 @@ function formatSize(bytes) {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-export default class DeliveryTicketFiles extends LightningElement {
+export default class DeliveryWorkItemFiles extends LightningElement {
     @api recordId;
     @track files = [];
     @track isLoading = true;

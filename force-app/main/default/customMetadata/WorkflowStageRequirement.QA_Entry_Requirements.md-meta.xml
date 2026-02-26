@@ -4,7 +4,7 @@
     <protected>false</protected>
     <values>
         <field>DescriptionTxt__c</field>
-        <value xsi:type="xsd:string">Ensures every ticket entering QA has an assigned engineer and a documented test plan.</value>
+        <value xsi:type="xsd:string">Ensures every work item entering QA has an assigned engineer and a documented test plan.</value>
     </values>
     <values>
         <field>IsActiveBool__c</field>

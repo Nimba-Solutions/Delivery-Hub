@@ -154,7 +154,7 @@
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>ControlledByParent</externalSharingModel>
     <label>Work Item Comment</label>
-    <description>Custom object for storing comments associated with tickets, supporting both Salesforce and Jira comment synchronization</description>
+    <description>Custom object for storing comments associated with work items, supporting both Salesforce and Jira comment synchronization</description>
     <nameField>
         <displayFormat>TC-{000000}</displayFormat>
         <label>Work Item Comment Name</label>

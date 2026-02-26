@@ -110,7 +110,7 @@ public with sharing class DeliveryAiController {
 
         if (tickets.isEmpty()) {
             throw new AuraHandledException(
-                'No tickets were completed or deployed in the last 30 days.'
+                'No work items were completed or deployed in the last 30 days.'
             );
         }
 
@@ -204,7 +204,7 @@ public with sharing class DeliveryAiController {
 
         String p = 'You are a professional software delivery manager writing a brief status '
             + 'update for a non-technical client.\n\n';
-        p += 'Ticket: ' + t.Name + '\n';
+        p += 'Work Item: ' + t.Name + '\n';
         p += 'Title: '  + brief  + '\n';
         p += 'Current Stage: ' + (t.StageNamePk__c != null ? t.StageNamePk__c : 'Unknown') + '\n';
 
@@ -227,7 +227,7 @@ public with sharing class DeliveryAiController {
         p += '\nWrite a concise 2-3 sentence status update to send directly to the client. '
            + 'Be professional and focus on current progress and what comes next. '
            + 'Translate any technical stage names into plain language the client will understand. '
-           + 'Do not include ticket IDs, greetings, sign-offs, or subject lines. '
+           + 'Do not include work item IDs, greetings, sign-offs, or subject lines. '
            + 'Return ONLY the status update text.';
 
         return p;
@@ -238,9 +238,9 @@ public with sharing class DeliveryAiController {
             ? t.BriefDescriptionTxt__c : 'No title provided';
         String details = String.isNotBlank(t.DetailsTxt__c) ? stripHtml(t.DetailsTxt__c) : '';
 
-        String p = 'You are a software business analyst. Based on the following ticket, '
+        String p = 'You are a software business analyst. Based on the following work item, '
             + 'write 3-5 clear, testable acceptance criteria.\n\n'
-            + 'Ticket: ' + brief + '\n';
+            + 'Work Item: ' + brief + '\n';
         if (String.isNotBlank(details)) {
             p += 'Details: ' + details + '\n';
         }
@@ -264,7 +264,7 @@ public with sharing class DeliveryAiController {
 
         String p = 'You are a software delivery manager. Write a concise weekly status update '
             + 'for a non-technical client, covering all active work grouped by stage.\n\n'
-            + 'Active Tickets by Stage:\n';
+            + 'Active Work Items by Stage:\n';
 
         for (String stage : byStage.keySet()) {
             p += '\n[' + stage + ']\n';
@@ -288,11 +288,11 @@ public with sharing class DeliveryAiController {
             lines.add('- [' + t.StageNamePk__c + '] ' + title);
         }
         return 'You are a technical product manager writing a client-facing release notes summary. '
-            + 'Based on the completed tickets below, write concise, professional release notes '
+            + 'Based on the completed work items below, write concise, professional release notes '
             + 'suitable for a client email or changelog. Group related items where possible. '
             + 'Use plain language, avoid jargon, and highlight user impact. '
             + 'Format with a brief intro sentence, then a bulleted list.\n\n'
-            + 'Completed Tickets:\n' + String.join(lines, '\n') + '\n\n'
+            + 'Completed Work Items:\n' + String.join(lines, '\n') + '\n\n'
             + 'Return ONLY the release notes text, no subject lines or sign-offs.';
     }
 

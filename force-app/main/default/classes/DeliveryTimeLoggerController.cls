@@ -27,7 +27,7 @@ public with sharing class DeliveryTimeLoggerController {
             LIMIT 1
         ];
         if (activeReqs.isEmpty()) {
-            throw new AuraHandledException('No accepted request found for this ticket. Please accept a vendor quote before logging time.');
+            throw new AuraHandledException('No accepted request found for this work item. Please accept a vendor quote before logging time.');
         }
         WorkLog__c entry = new WorkLog__c(
             RequestId__c          = activeReqs[0].Id,

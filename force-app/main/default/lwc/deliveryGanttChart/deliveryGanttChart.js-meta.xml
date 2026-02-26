@@ -8,5 +8,5 @@
         <target>lightning__HomePage</target>
     </targets>
     <masterLabel>Delivery Gantt Chart</masterLabel>
-    <description>Visual timeline of active tickets plotted against their projected UAT dates.</description>
+    <description>Visual timeline of active work items plotted against their projected UAT dates.</description>
 </LightningComponentBundle>

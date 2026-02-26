@@ -107,6 +107,6 @@ public with sharing class DeliveryHubCommentController {
             }
         }
         
-        throw new AuraHandledException('Unsupported Object or Ticket not found: ' + type.getDescribe().getName());
+        throw new AuraHandledException('Unsupported object type or work item not found: ' + type.getDescribe().getName());
     }
 }

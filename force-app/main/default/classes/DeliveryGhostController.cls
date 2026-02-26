@@ -57,7 +57,7 @@ public with sharing class DeliveryGhostController {
             if (Schema.sObjectType.WorkItem__c.isCreateable()) {
                 insert t;
             } else {
-                throw new AuraHandledException('Insufficient permissions to create Ticket.');
+                throw new AuraHandledException('Insufficient permissions to create Work Item.');
             }
 
             return t.Id;

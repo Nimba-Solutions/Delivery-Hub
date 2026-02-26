@@ -16,7 +16,7 @@ const FIELDS = {
     CREATED_DATE: 'CreatedDate'
 };
 
-export default class DeliveryTicketChat extends LightningElement {
+export default class DeliveryWorkItemChat extends LightningElement {
     @api recordId;
     @track comments = { data: [] };
     @track commentBody = '';

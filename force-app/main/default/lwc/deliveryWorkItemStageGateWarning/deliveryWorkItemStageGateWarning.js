@@ -12,7 +12,7 @@ import PRE_APPROVED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.ClientPreAp
 
 const FIELDS = [STAGE_FIELD, DEV_FIELD, ESTIMATED_HOURS_FIELD, PRE_APPROVED_HOURS_FIELD];
 
-export default class TicketStageGateWarning extends LightningElement {
+export default class DeliveryWorkItemStageGateWarning extends LightningElement {
     @api recordId;
     @track message = '';
     @track type = ''; // 'warning', 'error', 'success' (for fast track), 'info'

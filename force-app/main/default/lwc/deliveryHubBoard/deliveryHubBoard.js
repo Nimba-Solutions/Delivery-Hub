@@ -775,9 +775,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 }
 
                 if (commentCreated) {
-                    this.showToast("Success", "Ticket moved and comment added.", "success");
+                    this.showToast("Success", "Work item moved and comment added.", "success");
                 } else {
-                    this.showToast("Success", "Ticket moved to " + newStage + ".", "success");
+                    this.showToast("Success", "Work item moved to " + newStage + ".", "success");
                 }
 
                 this.refreshTickets(); 
@@ -785,7 +785,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             })
             .catch((error) => {
                 console.error("Update Error:", error);
-                this.showToast("Error", "Failed to update ticket.", "error");
+                this.showToast("Error", "Failed to update work item.", "error");
                 this.closeModal(); // MOVED HERE
             });
             
@@ -808,9 +808,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         if (commentCreated) {
-            this.showToast('Success', 'Ticket updated and comment saved.', 'success');
+            this.showToast('Success', 'Work item updated and comment saved.', 'success');
         } else {
-            this.showToast('Success', 'Ticket moved successfully.', 'success');
+            this.showToast('Success', 'Work item moved successfully.', 'success');
         }
 
         this.closeTransitionModal();
@@ -818,7 +818,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     handleTransitionError(event) {
-        this.showToast('Error Saving Ticket', 'Please review the fields and try again.', 'error');
+        this.showToast('Error Saving Work Item', 'Please review the fields and try again.', 'error');
         console.error('Error on transition save:', JSON.stringify(event.detail));
     }
 
@@ -959,7 +959,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 newStage: newInternalStage, 
                 newIndex: dropIndex 
             });
-            this.showToast('Success', 'Ticket moved.', 'success');
+            this.showToast('Success', 'Work item moved.', 'success');
             this.refreshTickets();
         } catch (error) {
             const errorMessage = error.body?.message || 'An unknown error occurred.';

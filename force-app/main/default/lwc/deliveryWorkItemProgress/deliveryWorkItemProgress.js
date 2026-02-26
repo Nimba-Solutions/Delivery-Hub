@@ -78,7 +78,7 @@ const PHASES = [
 
 const DONE_CONNECTOR_COLOR = '#94A3B8';
 
-export default class DeliveryTicketProgress extends LightningElement {
+export default class DeliveryWorkItemProgress extends LightningElement {
     @api recordId;
 
     wiredTicket;

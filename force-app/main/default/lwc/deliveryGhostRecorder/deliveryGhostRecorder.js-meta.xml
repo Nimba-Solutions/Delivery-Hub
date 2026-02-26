@@ -3,7 +3,7 @@
     <apiVersion>59.0</apiVersion>
     <isExposed>true</isExposed>
     <masterLabel>Delivery Ghost Recorder</masterLabel>
-	<description>A universal utility that logs user navigation activity and allows one-click creation of Support Tickets with automatic context capture (URL, Record ID, Browser).</description>
+	<description>A universal utility that logs user navigation activity and allows one-click creation of Support Requests with automatic context capture (URL, Record ID, Browser).</description>
     <targets>
         <target>lightning__UtilityBar</target>
         <target>lightning__RecordPage</target>

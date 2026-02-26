@@ -11,10 +11,10 @@ public with sharing class DeliveryHubBoardController {
                 WorkItem__c ticket = new WorkItem__c(Id = ticketId, StageNamePk__c = newStage);
                 update ticket;
             } else {
-                throw createAuraException('Insufficient permissions to update ticket.');
+                throw createAuraException('Insufficient permissions to update work item.');
             }
         } catch (Exception e) {
-            throw createAuraException('Error updating ticket stage: ' + e.getMessage());
+            throw createAuraException('Error updating work item stage: ' + e.getMessage());
         }
     }
 
@@ -79,7 +79,7 @@ public with sharing class DeliveryHubBoardController {
                 if (Schema.sObjectType.WorkItem__c.isUpdateable()) {
                     update toUpdate;
                 } else {
-                    throw createAuraException('Insufficient permissions to reorder tickets.');
+                    throw createAuraException('Insufficient permissions to reorder work items.');
                 }
             }
         } catch (Exception e) {
@@ -91,7 +91,7 @@ public with sharing class DeliveryHubBoardController {
     @AuraEnabled
     public static WorkItemDependency__c createDependency(Id blockedTicketId, Id blockingTicketId) {
         if (blockedTicketId == blockingTicketId) {
-            throw createAuraException('A ticket cannot block itself.');
+            throw createAuraException('A work item cannot block itself.');
         }
 
         try {

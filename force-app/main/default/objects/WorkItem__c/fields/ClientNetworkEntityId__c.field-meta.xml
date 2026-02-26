@@ -2,11 +2,11 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ClientNetworkEntityId__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
-    <description>MOTHERSHIP ONLY: Specifies which Client this ticket belongs to. Used to route updates when the Client pulls data.</description>
-    <inlineHelpText>MOTHERSHIP ONLY: Specifies which Client this ticket belongs to. Used to route updates when the Client pulls data.</inlineHelpText>
+    <description>MOTHERSHIP ONLY: Specifies which Client this work item belongs to. Used to route updates when the Client pulls data.</description>
+    <inlineHelpText>MOTHERSHIP ONLY: Specifies which Client this work item belongs to. Used to route updates when the Client pulls data.</inlineHelpText>
     <label>Client Network Entity</label>
     <referenceTo>Network_Entity__c</referenceTo>
-    <relationshipLabel>Tickets</relationshipLabel>
+    <relationshipLabel>Work Items</relationshipLabel>
     <relationshipName>ClientTickets</relationshipName>
     <required>false</required>
     <trackTrending>false</trackTrending>
