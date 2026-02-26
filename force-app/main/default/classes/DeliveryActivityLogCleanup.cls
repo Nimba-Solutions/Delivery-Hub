@@ -1,5 +1,5 @@
 /**
- * @description Scheduled job that maintains the Delivery_Activity_Log__c table.
+ * @description Scheduled job that maintains the Activity_Log__c table.
  *
  * Two responsibilities run in sequence:
  * 1. **Aggregate** — Summarizes the last 30 days of activity per Network Entity into a
@@ -36,7 +36,7 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         DateTime cutoff = DateTime.now().addDays(-RETENTION_DAYS);
         return Database.getQueryLocator([
             SELECT Id
-            FROM Delivery_Activity_Log__c
+            FROM Activity_Log__c
             WHERE CreatedDate < :cutoff
             WITH SYSTEM_MODE
         ]);
@@ -65,9 +65,9 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         Map<Id, Set<String>> entityUniqueUsers = new Map<Id, Set<String>>();
         Map<Id, Integer> entityTotals = new Map<Id, Integer>();
 
-        for (Delivery_Activity_Log__c log : [
+        for (Activity_Log__c log : [
             SELECT NetworkEntityId__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
-            FROM Delivery_Activity_Log__c
+            FROM Activity_Log__c
             WHERE CreatedDate >= :since
             AND NetworkEntityId__c != null
             WITH SYSTEM_MODE

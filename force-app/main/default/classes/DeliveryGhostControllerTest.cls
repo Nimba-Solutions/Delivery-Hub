@@ -50,9 +50,9 @@ private class DeliveryGhostControllerTest {
         DeliveryGhostController.logUserActivity('Navigation', contextJson);
         Test.stopTest();
 
-        List<Delivery_Activity_Log__c> logs = [
+        List<Activity_Log__c> logs = [
             SELECT ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c, SessionIdTxt__c, ContextDataTxt__c
-            FROM Delivery_Activity_Log__c
+            FROM Activity_Log__c
         ];
         System.assertEquals(1, logs.size(), 'One activity log should be persisted');
         System.assertEquals('Navigation', logs[0].ActionTypePk__c, 'Action type should match');
@@ -68,9 +68,9 @@ private class DeliveryGhostControllerTest {
         DeliveryGhostController.logUserActivity('Error', 'not-valid-json');
         Test.stopTest();
 
-        List<Delivery_Activity_Log__c> logs = [
+        List<Activity_Log__c> logs = [
             SELECT ActionTypePk__c, ContextDataTxt__c
-            FROM Delivery_Activity_Log__c
+            FROM Activity_Log__c
         ];
         System.assertEquals(1, logs.size(), 'Record should still be created even with bad JSON');
         System.assertEquals('Error', logs[0].ActionTypePk__c, 'Action type should still be set');

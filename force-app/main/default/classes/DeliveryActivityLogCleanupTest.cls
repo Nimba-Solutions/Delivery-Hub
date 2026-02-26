@@ -21,9 +21,9 @@ private class DeliveryActivityLogCleanupTest {
         Network_Entity__c entity = [SELECT Id FROM Network_Entity__c LIMIT 1];
 
         // Insert a batch of activity logs
-        List<Delivery_Activity_Log__c> logs = new List<Delivery_Activity_Log__c>();
+        List<Activity_Log__c> logs = new List<Activity_Log__c>();
         for (Integer i = 0; i < 5; i++) {
-            logs.add(new Delivery_Activity_Log__c(
+            logs.add(new Activity_Log__c(
                 ActionTypePk__c = 'Navigation',
                 ComponentNameTxt__c = 'deliveryHubBoard',
                 UserIdTxt__c = UserInfo.getUserId(),
@@ -31,7 +31,7 @@ private class DeliveryActivityLogCleanupTest {
                 ContextDataTxt__c = '{"url":"https://test.salesforce.com"}'
             ));
         }
-        logs.add(new Delivery_Activity_Log__c(
+        logs.add(new Activity_Log__c(
             ActionTypePk__c = 'Button_Click',
             ComponentNameTxt__c = 'deliveryGhostRecorder',
             UserIdTxt__c = UserInfo.getUserId(),
@@ -69,7 +69,7 @@ private class DeliveryActivityLogCleanupTest {
     @IsTest
     static void testBatchPurgesOldRecords() {
         // Insert a record and backdate it beyond retention
-        Delivery_Activity_Log__c oldLog = new Delivery_Activity_Log__c(
+        Activity_Log__c oldLog = new Activity_Log__c(
             ActionTypePk__c = 'Navigation',
             ComponentNameTxt__c = 'deliveryHubBoard',
             UserIdTxt__c = UserInfo.getUserId()
@@ -80,7 +80,7 @@ private class DeliveryActivityLogCleanupTest {
         Test.setCreatedDate(oldLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
 
         // Also insert a recent one that should survive
-        Delivery_Activity_Log__c recentLog = new Delivery_Activity_Log__c(
+        Activity_Log__c recentLog = new Activity_Log__c(
             ActionTypePk__c = 'Button_Click',
             ComponentNameTxt__c = 'deliveryGhostRecorder',
             UserIdTxt__c = UserInfo.getUserId()
@@ -91,8 +91,8 @@ private class DeliveryActivityLogCleanupTest {
         Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
         Test.stopTest();
 
-        List<Delivery_Activity_Log__c> remaining = [
-            SELECT Id FROM Delivery_Activity_Log__c
+        List<Activity_Log__c> remaining = [
+            SELECT Id FROM Activity_Log__c
         ];
         System.assertEquals(1, remaining.size(), 'Only the recent log should remain');
         System.assertEquals(recentLog.Id, remaining[0].Id, 'Surviving record should be the recent one');
