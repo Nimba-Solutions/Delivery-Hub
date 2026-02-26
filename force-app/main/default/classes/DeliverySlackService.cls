@@ -28,18 +28,17 @@ public with sharing class DeliverySlackService {
      * @description Asynchronously posts a rich approval-request message to Slack with
      *              a deep link back to the work item in Salesforce.
      *              No-ops silently if Slack is not configured.
-     * @param workItemId The Id of the work item entering a client-action stage
-     * @param workItemName The auto-number Name of the work item
-     * @param workItemTitle The brief description / title
-     * @param newStage The stage the work item moved to
+     *              Accepts a JSON string with keys: workItemId, workItemName, workItemTitle, newStage.
+     * @param approvalContextJson JSON containing work item approval context
      */
     @future(callout=true)
-    public static void postApprovalRequest(Id workItemId, String workItemName, String workItemTitle, String newStage) {
+    public static void postApprovalRequest(String approvalContextJson) {
         Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
         if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
             return;
         }
-        post(settings.SlackWebhookUrl__c, buildApprovalPayload(workItemId, workItemName, workItemTitle, newStage));
+        Map<String, String> ctx = (Map<String, String>) JSON.deserialize(approvalContextJson, Map<String, String>.class);
+        post(settings.SlackWebhookUrl__c, buildApprovalPayload(ctx));
     }
 
     /**
@@ -114,13 +113,15 @@ public with sharing class DeliverySlackService {
     /**
      * @description Builds a rich Slack Block Kit payload for client-action stages
      *              with a deep link button back to the work item in Salesforce.
-     * @param workItemId The record Id
-     * @param workItemName The auto-number Name
-     * @param workItemTitle The brief description
-     * @param newStage The stage requiring action
+     * @param ctx Map with keys: workItemId, workItemName, workItemTitle, newStage
      * @return Serialised JSON string
      */
-    private static String buildApprovalPayload(Id workItemId, String workItemName, String workItemTitle, String newStage) {
+    private static String buildApprovalPayload(Map<String, String> ctx) {
+        String workItemId = ctx.get('workItemId');
+        String workItemName = ctx.get('workItemName');
+        String workItemTitle = ctx.get('workItemTitle');
+        String newStage = ctx.get('newStage');
+
         String orgUrl = Url.getOrgDomainUrl().toExternalForm();
         String recordUrl = orgUrl + '/lightning/r/WorkItem__c/' + workItemId + '/view';
         String title = String.isNotBlank(workItemTitle) ? workItemTitle : 'Work Item';

@@ -73,34 +73,38 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     // Aggregation — builds JSON summary per Network Entity and queues sync
     // -----------------------------------------------------------------------
 
+    /** @description Accumulates per-entity metrics during log processing. */
+    @TestVisible
+    private class MetricsAccumulator {
+        /** @description Action type counts per entity. */
+        Map<Id, Map<String, Integer>> actionCounts = new Map<Id, Map<String, Integer>>();
+        /** @description Component counts per entity. */
+        Map<Id, Map<String, Integer>> componentCounts = new Map<Id, Map<String, Integer>>();
+        /** @description Unique user IDs per entity. */
+        Map<Id, Set<String>> uniqueUsers = new Map<Id, Set<String>>();
+        /** @description Total action count per entity. */
+        Map<Id, Integer> totals = new Map<Id, Integer>();
+    }
+
     @TestVisible
     private static void aggregateUsageAnalytics() {
         DateTime since = DateTime.now().addDays(-AGGREGATION_DAYS);
-        Map<Id, Map<String, Integer>> entityActionCounts = new Map<Id, Map<String, Integer>>();
-        Map<Id, Map<String, Integer>> entityComponentCounts = new Map<Id, Map<String, Integer>>();
-        Map<Id, Set<String>> entityUniqueUsers = new Map<Id, Set<String>>();
-        Map<Id, Integer> entityTotals = new Map<Id, Integer>();
+        MetricsAccumulator acc = new MetricsAccumulator();
 
-        collectLogMetrics(since, entityActionCounts, entityComponentCounts, entityUniqueUsers, entityTotals);
+        collectLogMetrics(since, acc);
 
-        if (entityTotals.isEmpty()) {
+        if (acc.totals.isEmpty()) {
             return;
         }
 
-        buildSummariesAndSync(entityActionCounts, entityComponentCounts, entityUniqueUsers, entityTotals);
+        buildSummariesAndSync(acc);
     }
 
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
 
-    private static void collectLogMetrics(
-        DateTime since,
-        Map<Id, Map<String, Integer>> entityActionCounts,
-        Map<Id, Map<String, Integer>> entityComponentCounts,
-        Map<Id, Set<String>> entityUniqueUsers,
-        Map<Id, Integer> entityTotals
-    ) {
+    private static void collectLogMetrics(DateTime since, MetricsAccumulator acc) {
         for (Activity_Log__c log : [
             SELECT NetworkEntityId__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
             FROM Activity_Log__c
@@ -112,19 +116,19 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         ]) {
             Id entId = log.NetworkEntityId__c;
 
-            entityTotals.put(entId, (entityTotals.containsKey(entId) ? entityTotals.get(entId) : 0) + 1);
+            acc.totals.put(entId, (acc.totals.containsKey(entId) ? acc.totals.get(entId) : 0) + 1);
 
-            incrementBucket(entityActionCounts, entId,
+            incrementBucket(acc.actionCounts, entId,
                 String.isNotBlank(log.ActionTypePk__c) ? log.ActionTypePk__c : 'Unknown');
 
-            incrementBucket(entityComponentCounts, entId,
+            incrementBucket(acc.componentCounts, entId,
                 String.isNotBlank(log.ComponentNameTxt__c) ? log.ComponentNameTxt__c : 'Unknown');
 
-            if (!entityUniqueUsers.containsKey(entId)) {
-                entityUniqueUsers.put(entId, new Set<String>());
+            if (!acc.uniqueUsers.containsKey(entId)) {
+                acc.uniqueUsers.put(entId, new Set<String>());
             }
             if (String.isNotBlank(log.UserIdTxt__c)) {
-                entityUniqueUsers.get(entId).add(log.UserIdTxt__c);
+                acc.uniqueUsers.get(entId).add(log.UserIdTxt__c);
             }
         }
     }
@@ -137,24 +141,19 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         bucket.put(key, (bucket.containsKey(key) ? bucket.get(key) : 0) + 1);
     }
 
-    private static void buildSummariesAndSync(
-        Map<Id, Map<String, Integer>> entityActionCounts,
-        Map<Id, Map<String, Integer>> entityComponentCounts,
-        Map<Id, Set<String>> entityUniqueUsers,
-        Map<Id, Integer> entityTotals
-    ) {
+    private static void buildSummariesAndSync(MetricsAccumulator acc) {
         List<Network_Entity__c> toUpdate = new List<Network_Entity__c>();
         List<Sync_Item__c> syncItems = new List<Sync_Item__c>();
 
-        for (Id entId : entityTotals.keySet()) {
+        for (Id entId : acc.totals.keySet()) {
             Map<String, Object> summary = new Map<String, Object>();
             summary.put('lastUpdated', DateTime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss\'Z\''));
             summary.put('periodDays', AGGREGATION_DAYS);
-            summary.put('totalActions', entityTotals.get(entId));
-            summary.put('uniqueUsers', entityUniqueUsers.containsKey(entId)
-                ? entityUniqueUsers.get(entId).size() : 0);
-            summary.put('topActions', sortedEntries(entityActionCounts.get(entId)));
-            summary.put('topComponents', sortedEntries(entityComponentCounts.get(entId)));
+            summary.put('totalActions', acc.totals.get(entId));
+            summary.put('uniqueUsers', acc.uniqueUsers.containsKey(entId)
+                ? acc.uniqueUsers.get(entId).size() : 0);
+            summary.put('topActions', sortedEntries(acc.actionCounts.get(entId)));
+            summary.put('topComponents', sortedEntries(acc.componentCounts.get(entId)));
 
             String jsonBlob = JSON.serialize(summary);
 

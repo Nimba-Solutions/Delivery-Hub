@@ -126,8 +126,15 @@ private class DeliverySlackServiceTest {
         );
         insert wi;
 
+        String ctxJson = JSON.serialize(new Map<String, String>{
+            'workItemId' => wi.Id,
+            'workItemName' => 'WI-001',
+            'workItemTitle' => 'Test Approval Item',
+            'newStage' => 'In Client Approval'
+        });
+
         Test.startTest();
-        DeliverySlackService.postApprovalRequest(wi.Id, 'WI-001', 'Test Approval Item', 'In Client Approval');
+        DeliverySlackService.postApprovalRequest(ctxJson);
         Test.stopTest();
         System.assert(true, 'postApprovalRequest completed without exception');
     }
@@ -138,9 +145,16 @@ private class DeliverySlackServiceTest {
         settings.SlackWebhookUrl__c = null;
         update settings;
 
+        String ctxJson = JSON.serialize(new Map<String, String>{
+            'workItemId' => null,
+            'workItemName' => 'WI-001',
+            'workItemTitle' => 'Test',
+            'newStage' => 'In Client Approval'
+        });
+
         Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
         Test.startTest();
-        DeliverySlackService.postApprovalRequest(null, 'WI-001', 'Test', 'In Client Approval');
+        DeliverySlackService.postApprovalRequest(ctxJson);
         Test.stopTest();
         System.assert(true, 'postApprovalRequest no-ops when no webhook URL configured');
     }
