@@ -4,6 +4,15 @@
 @IsTest
 private class DeliveryGhostControllerTest {
 
+    /**
+     * @description Inserts org-level Delivery_Hub_Settings__c with activity logging enabled.
+     */
+    private static void enableActivityLogging() {
+        Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getOrgDefaults();
+        settings.EnableActivityLoggingBool__c = true;
+        upsert settings;
+    }
+
     @IsTest
     static void testCreateQuickRequest() {
         Account mockRecord = new Account(Name = 'Test Context Account');
@@ -37,7 +46,26 @@ private class DeliveryGhostControllerTest {
     }
 
     @IsTest
-    static void testLogUserActivityPersistsRecord() {
+    static void testLogUserActivityDisabledByDefault() {
+        // Setting is OFF by default — no record should be created
+        Map<String, Object> contextMap = new Map<String, Object>{
+            'url' => 'https://salesforce.com/nav',
+            'browser' => 'Safari',
+            'objectName' => 'deliveryHubBoard'
+        };
+
+        Test.startTest();
+        DeliveryGhostController.logUserActivity('Navigation', JSON.serialize(contextMap));
+        Test.stopTest();
+
+        List<Activity_Log__c> logs = [SELECT Id FROM Activity_Log__c];
+        System.assertEquals(0, logs.size(), 'No activity log should be created when setting is disabled');
+    }
+
+    @IsTest
+    static void testLogUserActivityPersistsWhenEnabled() {
+        enableActivityLogging();
+
         Map<String, Object> contextMap = new Map<String, Object>{
             'url' => 'https://salesforce.com/nav',
             'browser' => 'Safari',
@@ -63,7 +91,8 @@ private class DeliveryGhostControllerTest {
 
     @IsTest
     static void testLogUserActivityWithBadJson() {
-        // Should not throw — activity logging is best-effort
+        enableActivityLogging();
+
         Test.startTest();
         DeliveryGhostController.logUserActivity('Error', 'not-valid-json');
         Test.stopTest();

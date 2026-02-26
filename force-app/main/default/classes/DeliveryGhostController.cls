@@ -15,6 +15,12 @@ public with sharing class DeliveryGhostController {
     @AuraEnabled
     public static void logUserActivity(String actionType, String contextData) {
         try {
+            // Gate: activity logging must be explicitly enabled in org settings
+            Delivery_Hub_Settings__c settings = Delivery_Hub_Settings__c.getInstance();
+            if (settings == null || !settings.EnableActivityLoggingBool__c) {
+                return;
+            }
+
             Activity_Log__c log = new Activity_Log__c();
             log.ActionTypePk__c = actionType;
             log.ContextDataTxt__c = contextData;
