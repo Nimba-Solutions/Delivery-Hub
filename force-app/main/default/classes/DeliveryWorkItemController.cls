@@ -104,6 +104,7 @@ public with sharing class DeliveryWorkItemController {
     }
 
     @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void updateWorkItemSortOrders(List<Map<String, Object>> updates) {
         List<WorkItem__c> workItems = new List<WorkItem__c>();
         for (Map<String, Object> u : updates) {
