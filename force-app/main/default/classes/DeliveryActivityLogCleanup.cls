@@ -23,6 +23,10 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     // Schedulable entry point
     // -----------------------------------------------------------------------
 
+    /**
+     * @description Runs usage aggregation then kicks off the batch purge of old activity logs.
+     * @param sc The SchedulableContext provided by the platform.
+     */
     public void execute(SchedulableContext sc) {
         aggregateUsageAnalytics();
         Database.executeBatch(new DeliveryActivityLogCleanup(), 2000);
@@ -32,6 +36,11 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     // Batchable — deletes records older than retention window
     // -----------------------------------------------------------------------
 
+    /**
+     * @description Returns a query locator for Activity_Log__c records older than the retention window.
+     * @param bc The BatchableContext provided by the platform.
+     * @return QueryLocator targeting expired activity log records.
+     */
     public Database.QueryLocator start(Database.BatchableContext bc) {
         DateTime cutoff = DateTime.now().addDays(-RETENTION_DAYS);
         return Database.getQueryLocator([
@@ -42,10 +51,19 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         ]);
     }
 
+    /**
+     * @description Deletes a batch of expired activity log records.
+     * @param bc The BatchableContext provided by the platform.
+     * @param scope The list of records to delete in this batch.
+     */
     public void execute(Database.BatchableContext bc, List<SObject> scope) {
         delete scope;
     }
 
+    /**
+     * @description Post-batch callback. No processing needed for this job.
+     * @param bc The BatchableContext provided by the platform.
+     */
     @SuppressWarnings('PMD.EmptyStatementBlock')
     public void finish(Database.BatchableContext bc) {
         // No post-processing needed
@@ -58,13 +76,31 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     @TestVisible
     private static void aggregateUsageAnalytics() {
         DateTime since = DateTime.now().addDays(-AGGREGATION_DAYS);
-
-        // --- 1. Counts by entity + action type ---
         Map<Id, Map<String, Integer>> entityActionCounts = new Map<Id, Map<String, Integer>>();
         Map<Id, Map<String, Integer>> entityComponentCounts = new Map<Id, Map<String, Integer>>();
         Map<Id, Set<String>> entityUniqueUsers = new Map<Id, Set<String>>();
         Map<Id, Integer> entityTotals = new Map<Id, Integer>();
 
+        collectLogMetrics(since, entityActionCounts, entityComponentCounts, entityUniqueUsers, entityTotals);
+
+        if (entityTotals.isEmpty()) {
+            return;
+        }
+
+        buildSummariesAndSync(entityActionCounts, entityComponentCounts, entityUniqueUsers, entityTotals);
+    }
+
+    // -----------------------------------------------------------------------
+    // Private helpers
+    // -----------------------------------------------------------------------
+
+    private static void collectLogMetrics(
+        DateTime since,
+        Map<Id, Map<String, Integer>> entityActionCounts,
+        Map<Id, Map<String, Integer>> entityComponentCounts,
+        Map<Id, Set<String>> entityUniqueUsers,
+        Map<Id, Integer> entityTotals
+    ) {
         for (Activity_Log__c log : [
             SELECT NetworkEntityId__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
             FROM Activity_Log__c
@@ -76,26 +112,14 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         ]) {
             Id entId = log.NetworkEntityId__c;
 
-            // Total count
             entityTotals.put(entId, (entityTotals.containsKey(entId) ? entityTotals.get(entId) : 0) + 1);
 
-            // Action type counts
-            if (!entityActionCounts.containsKey(entId)) {
-                entityActionCounts.put(entId, new Map<String, Integer>());
-            }
-            String action = String.isNotBlank(log.ActionTypePk__c) ? log.ActionTypePk__c : 'Unknown';
-            Map<String, Integer> actions = entityActionCounts.get(entId);
-            actions.put(action, (actions.containsKey(action) ? actions.get(action) : 0) + 1);
+            incrementBucket(entityActionCounts, entId,
+                String.isNotBlank(log.ActionTypePk__c) ? log.ActionTypePk__c : 'Unknown');
 
-            // Component counts
-            if (!entityComponentCounts.containsKey(entId)) {
-                entityComponentCounts.put(entId, new Map<String, Integer>());
-            }
-            String comp = String.isNotBlank(log.ComponentNameTxt__c) ? log.ComponentNameTxt__c : 'Unknown';
-            Map<String, Integer> comps = entityComponentCounts.get(entId);
-            comps.put(comp, (comps.containsKey(comp) ? comps.get(comp) : 0) + 1);
+            incrementBucket(entityComponentCounts, entId,
+                String.isNotBlank(log.ComponentNameTxt__c) ? log.ComponentNameTxt__c : 'Unknown');
 
-            // Unique users
             if (!entityUniqueUsers.containsKey(entId)) {
                 entityUniqueUsers.put(entId, new Set<String>());
             }
@@ -103,12 +127,22 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
                 entityUniqueUsers.get(entId).add(log.UserIdTxt__c);
             }
         }
+    }
 
-        if (entityTotals.isEmpty()) {
-            return;
+    private static void incrementBucket(Map<Id, Map<String, Integer>> buckets, Id entId, String key) {
+        if (!buckets.containsKey(entId)) {
+            buckets.put(entId, new Map<String, Integer>());
         }
+        Map<String, Integer> bucket = buckets.get(entId);
+        bucket.put(key, (bucket.containsKey(key) ? bucket.get(key) : 0) + 1);
+    }
 
-        // --- 2. Build JSON and update Network Entities ---
+    private static void buildSummariesAndSync(
+        Map<Id, Map<String, Integer>> entityActionCounts,
+        Map<Id, Map<String, Integer>> entityComponentCounts,
+        Map<Id, Set<String>> entityUniqueUsers,
+        Map<Id, Integer> entityTotals
+    ) {
         List<Network_Entity__c> toUpdate = new List<Network_Entity__c>();
         List<Sync_Item__c> syncItems = new List<Sync_Item__c>();
 
@@ -119,14 +153,8 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
             summary.put('totalActions', entityTotals.get(entId));
             summary.put('uniqueUsers', entityUniqueUsers.containsKey(entId)
                 ? entityUniqueUsers.get(entId).size() : 0);
-
-            // Top action types (sorted descending by count)
-            List<Map<String, Object>> topActions = sortedEntries(entityActionCounts.get(entId));
-            summary.put('topActions', topActions);
-
-            // Top components (sorted descending by count)
-            List<Map<String, Object>> topComponents = sortedEntries(entityComponentCounts.get(entId));
-            summary.put('topComponents', topComponents);
+            summary.put('topActions', sortedEntries(entityActionCounts.get(entId)));
+            summary.put('topComponents', sortedEntries(entityComponentCounts.get(entId)));
 
             String jsonBlob = JSON.serialize(summary);
 
@@ -135,7 +163,6 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
                 UsageAnalyticsJsonTxt__c = jsonBlob
             ));
 
-            // Queue outbound sync so vendor receives analytics
             syncItems.add(new Sync_Item__c(
                 ObjectTypePk__c = 'UsageAnalytics',
                 DirectionPk__c = 'Outbound',
@@ -153,16 +180,11 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
     private static List<Map<String, Object>> sortedEntries(Map<String, Integer> counts) {
         if (counts == null || counts.isEmpty()) {
             return new List<Map<String, Object>>();
         }
 
-        // Build sortable list (Apex has no built-in sorted-map-by-value)
         List<Map<String, Object>> entries = new List<Map<String, Object>>();
         for (String key : counts.keySet()) {
             entries.add(new Map<String, Object>{
@@ -171,7 +193,7 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
             });
         }
 
-        // Simple insertion sort descending by count (small N)
+        // Insertion sort descending by count (small N)
         for (Integer i = 1; i < entries.size(); i++) {
             Map<String, Object> current = entries[i];
             Integer currentCount = (Integer) current.get('count');
