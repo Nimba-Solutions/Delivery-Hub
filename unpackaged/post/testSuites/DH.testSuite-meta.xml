@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ApexTestSuite xmlns="http://soap.sforce.com/2006/04/metadata">
-    <testClassName>%%%NAMESPACE_DOT%%%ChangePasswordControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryAiControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGanttControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySlackServiceTest</testClassName>
@@ -33,8 +32,4 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTimeLoggerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkLogTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WorkflowConfigServiceTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%ForgotPasswordControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%MyProfilePageControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%SiteLoginControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%SiteRegisterControllerTest</testClassName>
 </ApexTestSuite>
