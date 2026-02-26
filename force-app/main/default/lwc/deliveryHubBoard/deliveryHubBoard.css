@@ -749,3 +749,27 @@
     width: 80px;
     height: 80px;
 }
+
+/* ── ETA Confidence Badge ── */
+.confidence-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    margin-left: 0.3rem;
+    line-height: 1;
+    vertical-align: middle;
+}
+.confidence--high {
+    background: #d1fae5;
+    color: #065f46;
+}
+.confidence--medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+.confidence--low {
+    background: #fee2e2;
+    color: #991b1b;
+}

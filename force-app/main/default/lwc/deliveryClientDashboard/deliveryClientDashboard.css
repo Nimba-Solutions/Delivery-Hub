@@ -193,3 +193,30 @@
     background: #f1f5f9;
     --lwc-colorTextIconDefault: #94a3b8;
 }
+
+/* ── This Week metrics ── */
+.tw-metric {
+    padding: 0.5rem 0.25rem;
+}
+.tw-metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1e293b;
+}
+.tw-metric-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-top: 4px;
+}
+.tw-metric--success {
+    color: #059669;
+}
+.tw-metric--info {
+    color: #0284c7;
+}
+.tw-metric--warning {
+    color: #d97706;
+}

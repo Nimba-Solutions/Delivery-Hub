@@ -470,6 +470,17 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 return tagsString.split(",").map((tag) => tag.trim()).filter((tag) => tag);
             };
 
+            // ETA Confidence from the DTO
+            const confidencePercent = (etaDto && etaDto.confidencePercent != null) ? etaDto.confidencePercent : null;
+            let confidenceLabel = null;
+            let confidenceClass = 'confidence-badge';
+            if (confidencePercent != null) {
+                confidenceLabel = `${confidencePercent}%`;
+                if (confidencePercent >= 75) { confidenceClass += ' confidence--high'; }
+                else if (confidencePercent >= 50) { confidenceClass += ' confidence--medium'; }
+                else { confidenceClass += ' confidence--low'; }
+            }
+
             return {
                 ...rec,
                 uiId: rec.Id,
@@ -483,6 +494,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 uiPriority: priority,
                 calculatedETA: displayDate,
                 dateTooltip: dateLabel,
+                confidencePercent,
+                confidenceLabel,
+                confidenceClass,
+                hasConfidence: confidencePercent != null,
                 isBlockedBy: isBlockedBy,
                 isBlocking: isBlocking,
                 isCurrentlyBlocked: isBlockedBy.length > 0,
@@ -903,12 +918,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    // --- UPDATED DROP HANDLER ---
+    // --- UPDATED DROP HANDLER (with transition validation) ---
     async handleDrop(event) {
         event.preventDefault();
         const workItemId = this.draggedItem.uiId;
         const dropColumnEl = event.target.closest('.kanban-column');
-        
+
         if (!dropColumnEl) {
             this.handleDragEnd();
             return;
@@ -924,6 +939,24 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             this.handleDragEnd();
             this.showToast('Error', 'Invalid target stage.', 'error');
             return;
+        }
+
+        // 2. Validate transition is allowed by CMT workflow config
+        const currentStage = this.draggedItem.uiStage;
+        if (currentStage && currentStage !== newInternalStage) {
+            const stageData = this._stageMap[currentStage];
+            const allowedForward = stageData?.forwardTransitions || [];
+            const allowedBacktrack = stageData?.backtrackTransitions || [];
+            const allAllowed = [...allowedForward, ...allowedBacktrack];
+            if (allAllowed.length > 0 && !allAllowed.includes(newInternalStage)) {
+                this.handleDragEnd();
+                this.showToast(
+                    'Invalid Transition',
+                    `Cannot move from "${currentStage}" to "${newInternalStage}". Check the allowed workflow transitions.`,
+                    'warning'
+                );
+                return;
+            }
         }
 
         // 2. Calculate the INTEGER Index where the user dropped the card

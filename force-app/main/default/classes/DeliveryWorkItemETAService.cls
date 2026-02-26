@@ -34,15 +34,32 @@ public with sharing class DeliveryWorkItemETAService {
             Set<Id> processedIds = calculator.getProcessedWorkItemIds();
 
             List<WorkItem__c> queriedWorkItems = [
-                SELECT Id, ProjectedUATReadyDate__c
+                SELECT Id, ProjectedUATReadyDate__c, Developer__c,
+                       DeveloperDaysSizeNumber__c, StageNamePk__c
                 FROM WorkItem__c
                 WHERE Id IN :processedIds
             ];
+
+            // Collect blocked work item IDs for confidence calculation
+            Set<Id> blockedIds = new Set<Id>();
+            for (WorkItemDependency__c dep : [
+                SELECT BlockedWorkItemId__c FROM WorkItemDependency__c
+                WHERE BlockedWorkItemId__c IN :processedIds
+                AND BlockingWorkItemId__c NOT IN (
+                    SELECT Id FROM WorkItem__c WHERE StageNamePk__c IN ('Done', 'Deployed to Prod', 'Cancelled')
+                )
+                WITH SYSTEM_MODE
+            ]) {
+                blockedIds.add(dep.BlockedWorkItemId__c);
+            }
+
+            Set<String> activeDevStages = new Set<String>{'In Development', 'In Code Review', 'In QA'};
 
             for (WorkItem__c wi : queriedWorkItems) {
                 WorkItemETADTO dto = new WorkItemETADTO();
                 dto.workItemId = wi.Id;
                 dto.calculatedETA = wi.ProjectedUATReadyDate__c;
+                dto.confidencePercent = calculateConfidence(wi, activeDevStages, blockedIds);
                 result.workItems.add(dto);
             }
 
@@ -68,8 +85,28 @@ public with sharing class DeliveryWorkItemETAService {
         @AuraEnabled public Id workItemId { get; set; }
         /** @description Calculated estimated completion date. */
         @AuraEnabled public Date calculatedETA { get; set; }
+        /** @description Confidence percentage (0-100) based on data completeness. */
+        @AuraEnabled public Integer confidencePercent { get; set; }
     }
 
+
+    /**
+     * @description Calculates a confidence score (0-100) for an ETA estimate based on data completeness.
+     * Each factor contributes 25%: developer assigned, effort estimated, active development, no blockers.
+     * @param wi The work item record
+     * @param activeDevStages Set of stage values considered active development
+     * @param blockedIds Set of work item IDs that have unresolved blocking dependencies
+     * @return Integer confidence percentage 0-100
+     */
+    @TestVisible
+    private static Integer calculateConfidence(WorkItem__c wi, Set<String> activeDevStages, Set<Id> blockedIds) {
+        Integer score = 0;
+        if (wi.Developer__c != null) { score += 25; }
+        if (wi.DeveloperDaysSizeNumber__c != null && wi.DeveloperDaysSizeNumber__c > 0) { score += 25; }
+        if (activeDevStages.contains(wi.StageNamePk__c)) { score += 25; }
+        if (!blockedIds.contains(wi.Id)) { score += 25; }
+        return score;
+    }
 
     // #################################################################################
     // SECTION 2: Asynchronous Job Implementations
