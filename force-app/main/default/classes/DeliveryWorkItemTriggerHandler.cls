@@ -166,16 +166,16 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         if (!ticketsToCheck.isEmpty()) {
             // FIX: Swapped USER_MODE for SYSTEM_MODE
             List<WorkItemDependency__c> unresolvedBlockers = [
-                SELECT Blocked_WorkItem__c, Blocking_Ticket__r.BriefDescriptionTxt__c, Blocking_Ticket__r.StageNamePk__c
+                SELECT BlockedWorkItemId__c, BlockingWorkItemId__r.BriefDescriptionTxt__c, BlockingWorkItemId__r.StageNamePk__c
                 FROM WorkItemDependency__c
-                WHERE Blocked_WorkItem__c IN :ticketsToCheck
-                AND Blocking_Ticket__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                WHERE BlockedWorkItemId__c IN :ticketsToCheck
+                AND BlockingWorkItemId__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
                 WITH SYSTEM_MODE
             ];
             for (WorkItemDependency__c dependency : unresolvedBlockers) {
                 for (WorkItem__c ticket : newTickets) {
-                    if (ticket.Id == dependency.Blocked_WorkItem__c) {
-                        ticket.addError('This ticket cannot be started. It is blocked by ticket: ' + dependency.Blocking_Ticket__r.BriefDescriptionTxt__c);
+                    if (ticket.Id == dependency.BlockedWorkItemId__c) {
+                        ticket.addError('This ticket cannot be started. It is blocked by ticket: ' + dependency.BlockingWorkItemId__r.BriefDescriptionTxt__c);
                     }
                 }
             }

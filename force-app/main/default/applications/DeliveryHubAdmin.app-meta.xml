@@ -95,7 +95,7 @@
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
     <tabs>WorkItem__c</tabs>
-    <tabs>Ticket_Board</tabs>
+    <tabs>Delivery_Board</tabs>
     <tabs>Network_Entity__c</tabs>
     <tabs>WorkRequest__c</tabs>
     <tabs>WorkItemComment__c</tabs>

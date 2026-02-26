@@ -18,8 +18,8 @@ public class DeliveryHubBoardControllerTest {
         insert tickets;
         
         WorkItemDependency__c dep = new WorkItemDependency__c(
-            Blocked_WorkItem__c = tickets[2].Id,
-            Blocking_WorkItem__c = tickets[3].Id,
+            BlockedWorkItemId__c = tickets[2].Id,
+            BlockingWorkItemId__c = tickets[3].Id,
             TypePk__c = 'Blocks'
         );
         insert dep;

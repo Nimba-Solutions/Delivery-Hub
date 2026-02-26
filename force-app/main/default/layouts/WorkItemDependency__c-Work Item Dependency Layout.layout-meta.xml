@@ -12,11 +12,11 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>Blocking_WorkItem__c</field>
+                <field>BlockingWorkItemId__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>Blocked_WorkItem__c</field>
+                <field>BlockedWorkItemId__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

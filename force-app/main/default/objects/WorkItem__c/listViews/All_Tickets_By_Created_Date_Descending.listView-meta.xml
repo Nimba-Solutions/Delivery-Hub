@@ -11,5 +11,5 @@
     <columns>ClientIntentionPk__c</columns>
     <columns>ClientPreApprovedHoursNumber__c</columns>
     <filterScope>Everything</filterScope>
-    <label>All Work Items By Created Date Descending</label>
+    <label>All Work Items By Created Date Desc</label>
 </ListView>

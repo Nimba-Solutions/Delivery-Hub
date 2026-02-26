@@ -94,7 +94,7 @@
     <label>Delivery Hub</label>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
-    <tabs>Ticket_Board</tabs>
+    <tabs>Delivery_Board</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>WorkItemComment__c</tabs>
     <uiType>Lightning</uiType>

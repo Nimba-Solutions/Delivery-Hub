@@ -97,8 +97,8 @@ public with sharing class DeliveryHubBoardController {
         try {
             if (Schema.sObjectType.WorkItemDependency__c.isCreateable()) {
                 WorkItemDependency__c newDependency = new WorkItemDependency__c(
-                    Blocked_WorkItem__c = blockedTicketId,
-                    Blocking_WorkItem__c = blockingTicketId,
+                    BlockedWorkItemId__c = blockedTicketId,
+                    BlockingWorkItemId__c = blockingTicketId,
                     TypePk__c = 'Blocks'
                 );
                 insert newDependency;

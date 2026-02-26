@@ -59,10 +59,10 @@ const FIELDS = {
     CREATED_DATE: 'CreatedDate',
     DEVELOPER: `%%%NAMESPACED_ORG%%%Developer__c`,
     // Relationships
-    DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%Ticket_Dependency1__r`,
-    DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%Ticket_Dependency__r`,
-    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%Blocking_WorkItem__c`,
-    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%Blocked_WorkItem__c`,
+    DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%BlockedByDeps__r`,
+    DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%BlockingDeps__r`,
+    BLOCKING_TICKET: `%%%NAMESPACED_ORG%%%BlockingWorkItemId__c`,
+    BLOCKED_TICKET: `%%%NAMESPACED_ORG%%%BlockedWorkItemId__c`,
     WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`
 };
 
@@ -457,13 +457,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
             const isBlockedBy = blockedByRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKING_TICKET),
-                name: dep['Blocking_Ticket__r']?.Name || dep['Blocking_Ticket__r']?.Name || dep['Blocking_WorkItem__c'],
+                name: dep['BlockingWorkItemId__r']?.Name || dep['BlockingWorkItemId__r']?.Name || dep['BlockingWorkItemId__c'],
                 dependencyId: dep.Id
             }));
 
             const isBlocking = blockingRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKED_TICKET),
-                name: dep['Blocked_Ticket__r']?.Name || dep['Blocked_Ticket__r']?.Name || dep['Blocked_WorkItem__c'],
+                name: dep['BlockedWorkItemId__r']?.Name || dep['BlockedWorkItemId__r']?.Name || dep['BlockedWorkItemId__c'],
                 dependencyId: dep.Id
             }));
 

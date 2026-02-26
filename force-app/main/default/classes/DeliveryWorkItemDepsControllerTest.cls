@@ -3,7 +3,7 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
-private class DeliveryWorkItemDependenciesControllerTest {
+private class DeliveryWorkItemDepsControllerTest {
 
     @TestSetup
     static void setup() {
@@ -12,8 +12,8 @@ private class DeliveryWorkItemDependenciesControllerTest {
         insert new List<WorkItem__c>{ blocker, blocked };
 
         insert new WorkItemDependency__c(
-            Blocking_WorkItem__c = blocker.Id,
-            Blocked_WorkItem__c  = blocked.Id,
+            BlockingWorkItemId__c = blocker.Id,
+            BlockedWorkItemId__c  = blocked.Id,
             TypePk__c          = 'Blocks'
         );
     }

@@ -239,8 +239,8 @@ public with sharing class DeliveryWorkItemETAService {
 
             // Find all dependencies where the blocker is one of these incomplete tickets
             Set<Id> allBlockedTicketIds = new Set<Id>();
-            for (WorkItemDependency__c dep : [SELECT Blocked_WorkItem__c FROM WorkItemDependency__c WHERE Blocking_WorkItem__c IN :incompleteTicketIds WITH SYSTEM_MODE]) {
-                allBlockedTicketIds.add(dep.Blocked_WorkItem__c);
+            for (WorkItemDependency__c dep : [SELECT BlockedWorkItemId__c FROM WorkItemDependency__c WHERE BlockingWorkItemId__c IN :incompleteTicketIds WITH SYSTEM_MODE]) {
+                allBlockedTicketIds.add(dep.BlockedWorkItemId__c);
             }
 
             Set<String> preDev = new Set<String>();
@@ -326,6 +326,7 @@ public with sharing class DeliveryWorkItemETAService {
      * @description Wrapper class for WorkItem__c to implement complex, multi-level sorting.
      */
     private class TicketWrapper implements Comparable {
+        /** @description The WorkItem__c record being wrapped for sort comparison. */
         public WorkItem__c ticket { get; private set; }
         private final Integer stageCategory;     // 1 for ACTIVE_DEV, 2 for PRE_DEV
         private final Decimal priorityWeight;    // Lower is better (e.g., High=1, Med=2)

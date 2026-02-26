@@ -2,7 +2,7 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
-private class DeliveryWorkItemCommentTriggerHandlerTest {
+private class DeliveryWorkItemCommentTriggerTest {
 
     @TestSetup
     static void setup() {

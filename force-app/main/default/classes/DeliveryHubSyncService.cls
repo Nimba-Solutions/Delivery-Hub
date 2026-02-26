@@ -106,14 +106,14 @@ global without sharing class DeliveryHubSyncService {
             }
 
             // Query Unrouted Outbound Items (Passive Hub Mode)
-            // V2 Architecture Rule: Must strictly filter by TicketId__r.ClientNetworkEntityId__c
+            // V2 Architecture Rule: Must strictly filter by WorkItemId__r.ClientNetworkEntityId__c
             List<Sync_Item__c> items = [
                 SELECT Id, ObjectTypePk__c, PayloadTxt__c, CreatedDate
                 FROM Sync_Item__c
                 WHERE DirectionPk__c = 'Outbound'
                 AND RequestId__c = NULL
                 AND CreatedDate > :sinceDate
-                AND TicketId__r.ClientNetworkEntityId__c = :clientId
+                AND WorkItemId__r.ClientNetworkEntityId__c = :clientId
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate ASC
                 LIMIT 200

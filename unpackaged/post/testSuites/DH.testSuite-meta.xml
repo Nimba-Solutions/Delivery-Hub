@@ -24,9 +24,9 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemIngestorTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemProcessorTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncRetryControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemCommentTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemCommentTriggerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemDependenciesControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemDepsControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemETAServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemQuotesControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemTriggerHandlerTest</testClassName>

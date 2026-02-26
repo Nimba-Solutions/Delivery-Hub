@@ -48,7 +48,7 @@ private class DeliveryGanttControllerTest {
         Test.stopTest();
 
         DeliveryGanttController.GanttRow first = rows[0];
-        System.assertNotEquals(null, first.ticketId, 'ticketId should be set.');
+        System.assertNotEquals(null, first.workItemId, 'ticketId should be set.');
         System.assertNotEquals(null, first.name, 'name should be set.');
         System.assertNotEquals(null, first.uatDate, 'uatDate should be set.');
         System.assertNotEquals(null, first.createdDate, 'createdDate should be set.');
