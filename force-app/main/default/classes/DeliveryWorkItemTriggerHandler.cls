@@ -64,8 +64,8 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         Boolean shouldCreateRequest = true;
         if (settings.Id != null) {
             Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
-            if (populatedFields.containsKey('AutoCreateRequestFromTicketBool__c')) {
-                shouldCreateRequest = settings.AutoCreateRequestFromTicketBool__c;
+            if (populatedFields.containsKey('AutoCreateWorkRequestBool__c')) {
+                shouldCreateRequest = settings.AutoCreateWorkRequestBool__c;
             }
         }
 

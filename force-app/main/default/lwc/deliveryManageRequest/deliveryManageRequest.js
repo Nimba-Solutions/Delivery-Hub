@@ -10,7 +10,7 @@ import sendRequestToVendor from '@salesforce/apex/DeliveryRequestManagerControll
 import checkRequestStatus from '@salesforce/apex/DeliveryRequestManagerController.checkRequestStatus';
 
 import STATUS_FIELD from '@salesforce/schema/WorkRequest__c.StatusPk__c';
-import REMOTE_ID_FIELD from '@salesforce/schema/WorkRequest__c.RemoteTicketIdTxt__c';
+import REMOTE_ID_FIELD from '@salesforce/schema/WorkRequest__c.RemoteWorkItemIdTxt__c';
 
 const FIELDS = [STATUS_FIELD, REMOTE_ID_FIELD];
 

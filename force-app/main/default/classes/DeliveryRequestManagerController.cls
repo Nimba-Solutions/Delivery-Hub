@@ -35,7 +35,7 @@ public without sharing class DeliveryRequestManagerController {
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
         List<WorkRequest__c> reqs = [
-            SELECT Id, StatusPk__c, RemoteTicketIdTxt__c, LastModifiedDate
+            SELECT Id, StatusPk__c, RemoteWorkItemIdTxt__c, LastModifiedDate
             FROM WorkRequest__c
             WHERE Id = :requestId
             WITH SYSTEM_MODE
@@ -46,8 +46,8 @@ public without sharing class DeliveryRequestManagerController {
         }
         WorkRequest__c req = reqs[0];
         String info = 'Status: ' + req.StatusPk__c;
-        if (String.isNotBlank(req.RemoteTicketIdTxt__c)) {
-            info += ' | Remote Work Item ID: ' + req.RemoteTicketIdTxt__c;
+        if (String.isNotBlank(req.RemoteWorkItemIdTxt__c)) {
+            info += ' | Remote Work Item ID: ' + req.RemoteWorkItemIdTxt__c;
         }
         info += ' | Last Updated: ' + req.LastModifiedDate.format();
         return info;

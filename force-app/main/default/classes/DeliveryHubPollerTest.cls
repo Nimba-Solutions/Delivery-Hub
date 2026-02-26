@@ -19,7 +19,7 @@ private class DeliveryHubPollerTest {
 
         // 1. Setup Settings (Dynamic SObject to handle namespace)
         SObject settings = (SObject) Type.forName(ns + 'Delivery_Hub_Settings__c').newInstance();
-        settings.put(ns + 'AutoCreateRequestFromTicketBool__c', false);
+        settings.put(ns + 'AutoCreateWorkRequestBool__c', false);
         settings.put(ns + 'AutoSyncNetworkEntityBool__c', false);
         insert settings;
 
@@ -44,7 +44,7 @@ private class DeliveryHubPollerTest {
         req.put(ns + 'WorkItemId__c', t.get('Id'));
         req.put(ns + 'DeliveryEntityId__c', vendor.get('Id'));
         req.put(ns + 'StatusPk__c', 'Active');
-        req.put(ns + 'RemoteTicketIdTxt__c', 'MOTHERSHIP-TKT-001');
+        req.put(ns + 'RemoteWorkItemIdTxt__c', 'MOTHERSHIP-TKT-001');
         insert req;
     }
 

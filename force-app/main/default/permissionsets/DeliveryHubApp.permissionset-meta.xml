@@ -82,7 +82,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkRequest__c.RemoteTicketIdTxt__c</field>
+        <field>WorkRequest__c.RemoteWorkItemIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

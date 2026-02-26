@@ -53,7 +53,7 @@ public with sharing class DeliveryHubSettingsController {
             dto.enableNotifications = settings.EnableNotificationsBool__c;
             
             // Map new fields (using defaults if null)
-            dto.autoCreateRequest = (settings.AutoCreateRequestFromTicketBool__c == null) ? true : settings.AutoCreateRequestFromTicketBool__c;
+            dto.autoCreateRequest = (settings.AutoCreateWorkRequestBool__c == null) ? true : settings.AutoCreateWorkRequestBool__c;
             dto.autoSendRequest = (settings.AutoSyncNetworkEntityBool__c == null) ? true : settings.AutoSyncNetworkEntityBool__c;
 
             // Map other fields
@@ -96,7 +96,7 @@ public with sharing class DeliveryHubSettingsController {
         Delivery_Hub_Settings__c settings = getOrCreateSettings();
         
         settings.EnableNotificationsBool__c = enableNotifications;
-        settings.AutoCreateRequestFromTicketBool__c = autoCreateRequest;
+        settings.AutoCreateWorkRequestBool__c = autoCreateRequest;
         settings.AutoSyncNetworkEntityBool__c = autoSendRequest;
 
         SObjectAccessDecision decision = Security.stripInaccessible(

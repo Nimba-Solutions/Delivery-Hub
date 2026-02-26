@@ -12,7 +12,7 @@ private class DeliverySyncEngineTest {
         // 1. Settings (Ensure Org-level enforcement to minimize rogue triggers)
         insert new Delivery_Hub_Settings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            AutoCreateRequestFromTicketBool__c = false, 
+            AutoCreateWorkRequestBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 
@@ -46,7 +46,7 @@ private class DeliverySyncEngineTest {
             WorkItemId__c = t.Id, 
             DeliveryEntityId__c = vendor.Id, 
             StatusPk__c = 'Active', 
-            RemoteTicketIdTxt__c = 'REMOTE-101'
+            RemoteWorkItemIdTxt__c = 'REMOTE-101'
         );
     }
 

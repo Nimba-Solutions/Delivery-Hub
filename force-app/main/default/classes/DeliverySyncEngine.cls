@@ -67,7 +67,7 @@ public without sharing class DeliverySyncEngine {
 
             // 3. Evaluate Downstream Routing Edges (Active, Typed Requests)
             List<WorkRequest__c> connections = [
-                SELECT Id, WorkItemId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c, 
+                SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityId__c, 
                        DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
                        DeliveryEntityId__r.EntityTypePk__c, StatusPk__c 
                 FROM WorkRequest__c 
@@ -107,7 +107,7 @@ public without sharing class DeliverySyncEngine {
                 if (reqs != null && !reqs.isEmpty()) {
                     for (WorkRequest__c req : reqs) {
                         // Kill-Switch: If target is the Global Source or matches incoming edge, suppress circular sync
-                        if (blockedOrigins.contains((String)req.Id) || req.RemoteTicketIdTxt__c == globalSourceId) {
+                        if (blockedOrigins.contains((String)req.Id) || req.RemoteWorkItemIdTxt__c == globalSourceId) {
                             continue;
                         } 
                         itemsToInsert.add(createSyncItem(rec, req, allowedFields, globalSourceId));
@@ -204,7 +204,7 @@ public without sharing class DeliverySyncEngine {
         if (req != null) {
             // Push Mode: Explicit Downstream Route
             item.RequestId__c = req.Id; 
-            payload.put('TargetId', req.RemoteTicketIdTxt__c); 
+            payload.put('TargetId', req.RemoteWorkItemIdTxt__c); 
         } else {
             // Hub Mode: Upstream Stage
             payload.put('TargetId', item.WorkItemId__c);

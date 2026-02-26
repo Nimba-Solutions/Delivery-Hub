@@ -33,7 +33,7 @@ private class DeliverySyncItemProcessorTest {
             WorkItemId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
             StatusPk__c = 'Active',
-            RemoteTicketIdTxt__c = 'REMOTE-123'
+            RemoteWorkItemIdTxt__c = 'REMOTE-123'
         );
         insert req;
 

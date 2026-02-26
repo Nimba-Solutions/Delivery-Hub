@@ -191,7 +191,7 @@ public without sharing class DeliverySyncItemIngestor {
 
     // Helper to grab both the Work Item ID and the Request ID
     private static WorkRequest__c findWorkItemBridge(String remoteWorkItemId) {
-        List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteTicketIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
+        List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteWorkItemIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
         return reqs.isEmpty() ? null : reqs[0];
     }
 

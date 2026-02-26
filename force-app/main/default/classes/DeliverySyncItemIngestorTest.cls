@@ -26,7 +26,7 @@ private class DeliverySyncItemIngestorTest {
         // 3. Create Downstream Request Bridge
         insert new WorkRequest__c(
             WorkItemId__c = t.Id,
-            RemoteTicketIdTxt__c = 'REMOTE-123',
+            RemoteWorkItemIdTxt__c = 'REMOTE-123',
             StatusPk__c = 'Active'
         );
         

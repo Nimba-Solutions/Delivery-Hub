@@ -49,7 +49,7 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         // 4. Query Routes (WorkRequest__c Bridge) exactly like DeliverySyncEngine
         Set<Id> workItemIds = new Set<Id>(docToWorkItemMap.values());
         List<WorkRequest__c> connections = [
-            SELECT Id, WorkItemId__c, RemoteTicketIdTxt__c, DeliveryEntityId__c 
+            SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityId__c 
             FROM WorkRequest__c 
             WHERE WorkItemId__c IN :workItemIds AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
@@ -86,7 +86,7 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
                 Boolean routed = false;
                 // PUSH MODEL (Client Side): Generate routed items
                 for (WorkRequest__c req : reqs) {
-                    String remoteId = (String) req.get('RemoteTicketIdTxt__c');
+                    String remoteId = (String) req.get('RemoteWorkItemIdTxt__c');
                     if (String.isNotBlank(remoteId)) {
                         itemsToInsert.add(createFileItem(cv, tId, req.Id, remoteId, payload));
                         routed = true;

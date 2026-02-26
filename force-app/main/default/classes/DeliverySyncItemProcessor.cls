@@ -95,7 +95,7 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                             if (String.isNotBlank(remoteId) && item.ObjectTypePk__c.endsWithIgnoreCase('WorkItem__c') && item.RequestId__c != null) {
                                 requestsToUpdate.put(item.RequestId__c, new WorkRequest__c(
                                     Id = item.RequestId__c,
-                                    RemoteTicketIdTxt__c = remoteId
+                                    RemoteWorkItemIdTxt__c = remoteId
                                 ));
                             }
                         } catch (Exception parseEx) {

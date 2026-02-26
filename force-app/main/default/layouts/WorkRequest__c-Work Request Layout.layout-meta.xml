@@ -81,7 +81,7 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>RemoteTicketIdTxt__c</field>
+                <field>RemoteWorkItemIdTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

@@ -21,7 +21,7 @@ FIELD_META = {
     },
 
     # ── Delivery_Hub_Settings__c ─────────────────────────────────────────────
-    "Delivery_Hub_Settings__c/AutoCreateRequestFromTicketBool__c": {
+    "Delivery_Hub_Settings__c/AutoCreateWorkRequestBool__c": {
         "inlineHelpText": "When enabled, a delivery Request is automatically created whenever a new Work Item is saved.",
     },
     "Delivery_Hub_Settings__c/AutoSyncNetworkEntityBool__c": {
@@ -118,7 +118,7 @@ FIELD_META = {
     "Request__c/QuotedHoursNumber__c": {
         "inlineHelpText": "Hours quoted by the vendor in their proposal for this request.",
     },
-    "WorkRequest__c/RemoteTicketIdTxt__c": {
+    "WorkRequest__c/RemoteWorkItemIdTxt__c": {
         "inlineHelpText": "ID of the corresponding work item in the vendor's remote Salesforce org, used for cross-org sync.",
     },
     "Request__c/RequestedBudgetIncreaseNumber__c": {

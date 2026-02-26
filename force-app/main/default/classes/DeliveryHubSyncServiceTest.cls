@@ -11,7 +11,7 @@ private class DeliveryHubSyncServiceTest {
     static void makeData() {
         // 1. Setup Settings
         insert new Delivery_Hub_Settings__c(
-            AutoCreateRequestFromTicketBool__c = false,
+            AutoCreateWorkRequestBool__c = false,
             AutoSyncNetworkEntityBool__c = false
         );
 
@@ -40,7 +40,7 @@ private class DeliveryHubSyncServiceTest {
         insert new WorkRequest__c(
             WorkItemId__c = t.Id,
             DeliveryEntityId__c = vendor.Id,
-            RemoteTicketIdTxt__c = 'REMOTE-WORKITEM-123',
+            RemoteWorkItemIdTxt__c = 'REMOTE-WORKITEM-123',
             StatusPk__c = 'Active'
         );
         
