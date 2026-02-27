@@ -67,6 +67,31 @@
             <div class="section-divider"></div>
 
             <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:email" alternative-text="Email" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Email Notifications</label>
+                        </div>
+                        <div class="toggle-help">
+                            Send email notifications to assigned developers and record owners when work items change stage.
+                        </div>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={emailNotificationsEnabled}
+                                onchange={handleEmailNotificationsToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="form-section">
                 <div class="slack-group">
                     <div class="toggle-label-wrapper" style="margin-bottom: 0.5rem;">
                         <lightning-icon icon-name="utility:chat" alternative-text="Slack" size="x-small"></lightning-icon>

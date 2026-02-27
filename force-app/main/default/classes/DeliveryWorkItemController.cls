@@ -116,7 +116,7 @@ public with sharing class DeliveryWorkItemController {
     public static void updateWorkItemSortOrders(List<Map<String, Object>> updates) {
         List<WorkItem__c> workItems = new List<WorkItem__c>();
         for (Map<String, Object> u : updates) {
-            Object sortOrderRaw = u.get('SortOrderNumber__c');
+            Object sortOrderRaw = getFieldValue(u, 'SortOrderNumber__c');
             Decimal sortOrder;
             if (sortOrderRaw == null) {
                 sortOrder = null;
@@ -461,5 +461,24 @@ public with sharing class DeliveryWorkItemController {
     @SuppressWarnings('PMD.MethodNamingConventions')
     private static String test_extractJsonFromContent(String content) {
         return extractJsonFromContent(content);
+    }
+
+    /**
+     * @description Namespace-agnostic field value lookup from a string-keyed map.
+     * Handles both 'FieldName__c' and 'namespace__FieldName__c' keys sent by LWC.
+     * @param fieldMap The map to search
+     * @param fieldSuffix The unqualified field API name (e.g. 'SortOrderNumber__c')
+     * @return The value, or null if not found
+     */
+    private static Object getFieldValue(Map<String, Object> fieldMap, String fieldSuffix) {
+        if (fieldMap.containsKey(fieldSuffix)) {
+            return fieldMap.get(fieldSuffix);
+        }
+        for (String key : fieldMap.keySet()) {
+            if (key.endsWithIgnoreCase(fieldSuffix)) {
+                return fieldMap.get(key);
+            }
+        }
+        return null;
     }
 }

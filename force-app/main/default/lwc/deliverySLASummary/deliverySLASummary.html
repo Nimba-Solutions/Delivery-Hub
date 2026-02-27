@@ -1,0 +1,60 @@
+<template>
+    <lightning-card title="SLA Summary" icon-name="standard:timeslot">
+
+        <lightning-button-icon
+            icon-name="utility:refresh"
+            slot="actions"
+            variant="border-filled"
+            onclick={handleRefresh}
+            alternative-text="Refresh SLA Counts">
+        </lightning-button-icon>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <template lwc:if={hasData}>
+                <div class="slds-grid slds-wrap slds-gutters_small">
+
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="sla-tile slds-text-align_center slds-p-around_small">
+                            <span class="sla-dot sla-dot_on-track"></span>
+                            <div class="sla-count">{onTrack}</div>
+                            <div class="sla-label">On Track</div>
+                        </div>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="sla-tile slds-text-align_center slds-p-around_small">
+                            <span class="sla-dot sla-dot_at-risk"></span>
+                            <div class="sla-count">{atRisk}</div>
+                            <div class="sla-label">At Risk</div>
+                        </div>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="sla-tile slds-text-align_center slds-p-around_small">
+                            <span class="sla-dot sla-dot_breached"></span>
+                            <div class="sla-count">{breached}</div>
+                            <div class="sla-label">Breached</div>
+                        </div>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-4">
+                        <div class="sla-tile slds-text-align_center slds-p-around_small">
+                            <span class="sla-dot sla-dot_met"></span>
+                            <div class="sla-count">{met}</div>
+                            <div class="sla-label">Met</div>
+                        </div>
+                    </div>
+
+                </div>
+            </template>
+
+            <template lwc:else>
+                <div class="slds-text-align_center slds-text-color_weak slds-p-vertical_medium">
+                    No work items with SLA targets found.
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

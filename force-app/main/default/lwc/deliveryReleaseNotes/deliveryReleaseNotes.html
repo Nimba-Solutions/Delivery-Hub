@@ -1,29 +1,53 @@
 <template>
     <div class="rn-card">
+        <!-- Header -->
         <div class="rn-header">
             <div class="rn-header-left">
                 <lightning-icon icon-name="utility:note" alternative-text="Release Notes" size="small" class="rn-icon"></lightning-icon>
                 <div class="rn-header-text">
-                    <h2 class="rn-title">AI Release Notes</h2>
-                    <p class="rn-subtitle">Generate a client-facing changelog from recently completed work items</p>
+                    <h2 class="rn-title">Release Notes Generator</h2>
+                    <p class="rn-subtitle">Generate formatted release notes from completed work items</p>
                 </div>
             </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="rn-controls">
+            <div class="rn-date-inputs">
+                <lightning-input
+                    type="date"
+                    label="Start Date"
+                    value={startDate}
+                    onchange={handleStartDateChange}
+                    class="rn-date-field">
+                </lightning-input>
+                <lightning-input
+                    type="date"
+                    label="End Date"
+                    value={endDate}
+                    onchange={handleEndDateChange}
+                    class="rn-date-field">
+                </lightning-input>
+            </div>
             <lightning-button
-                label={draftLabel}
+                label={generateLabel}
                 variant="brand"
-                icon-name="utility:einstein"
-                onclick={handleDraft}
-                disabled={isLoading}>
+                icon-name="utility:refresh"
+                onclick={handleGenerate}
+                disabled={isLoading}
+                class="rn-generate-btn">
             </lightning-button>
         </div>
 
+        <!-- Loading -->
         <template lwc:if={isLoading}>
             <div class="rn-loading">
                 <lightning-spinner alternative-text="Generating release notes..." size="small"></lightning-spinner>
-                <span class="rn-loading-text">Drafting release notes with AI...</span>
+                <span class="rn-loading-text">Querying completed work items...</span>
             </div>
         </template>
 
+        <!-- Error -->
         <template lwc:if={errorMessage}>
             <div class="rn-error" role="alert">
                 <lightning-icon icon-name="utility:error" size="x-small" class="rn-error-icon"></lightning-icon>
@@ -31,10 +55,22 @@
             </div>
         </template>
 
-        <template lwc:if={releaseNotes}>
+        <!-- Empty state -->
+        <template lwc:if={isEmpty}>
+            <div class="rn-empty">
+                <lightning-icon icon-name="utility:info" size="small" class="rn-empty-icon"></lightning-icon>
+                <p class="rn-empty-text">No completed items found for this date range.</p>
+            </div>
+        </template>
+
+        <!-- Results -->
+        <template lwc:if={hasResults}>
             <div class="rn-output">
                 <div class="rn-output-header">
-                    <span class="rn-output-label">Last 30 Days &mdash; Completed Work Items</span>
+                    <div class="rn-output-title-row">
+                        <h3 class="rn-output-title">{releaseData.title}</h3>
+                        <span class="rn-summary">{summaryLine}</span>
+                    </div>
                     <lightning-button
                         label={copyLabel}
                         variant="neutral"
@@ -43,12 +79,25 @@
                         class="rn-copy-btn">
                     </lightning-button>
                 </div>
-                <textarea
-                    class="rn-textarea"
-                    value={releaseNotes}
-                    onchange={handleTextChange}
-                    rows="14">
-                </textarea>
+
+                <template for:each={releaseData.sections} for:item="section">
+                    <div key={section.key} class="rn-section">
+                        <h4 class="rn-section-heading">{section.category}</h4>
+                        <ul class="rn-item-list">
+                            <template for:each={section.items} for:item="item">
+                                <li key={item.key} class="rn-item">
+                                    <span class="rn-item-line">{item.displayLine}</span>
+                                    <template lwc:if={item.hasPriority}>
+                                        <span class={item.priorityClass}>{item.priority}</span>
+                                    </template>
+                                    <template lwc:if={item.hasDeveloper}>
+                                        <span class="rn-developer">{item.developer}</span>
+                                    </template>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </template>
             </div>
         </template>
     </div>

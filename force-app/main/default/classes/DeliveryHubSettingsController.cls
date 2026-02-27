@@ -40,6 +40,9 @@ public with sharing class DeliveryHubSettingsController {
 
         /** @description Slack Incoming Webhook URL */
         @AuraEnabled public String slackWebhookUrl { get; set; }
+
+        /** @description Email notifications on stage changes */
+        @AuraEnabled public Boolean emailNotificationsEnabled { get; set; }
     }
 
     /**
@@ -68,11 +71,13 @@ public with sharing class DeliveryHubSettingsController {
             dto.openaiModel = settings.OpenAIModelTxt__c;
             dto.openAiApiTested = settings.OpenAiApiTestedBool__c;
             dto.slackWebhookUrl = settings.SlackWebhookUrl__c;
+            dto.emailNotificationsEnabled = settings.EmailNotificationsEnabledBool__c;
         } else {
             // Fresh Install Defaults
             dto.autoCreateRequest = true;
             dto.autoSendRequest = true;
             dto.enableNotifications = false;
+            dto.emailNotificationsEnabled = false;
         }
         return dto;
     }
@@ -94,15 +99,17 @@ public with sharing class DeliveryHubSettingsController {
      * @param enableNotifications Whether to enable notifications
      * @param autoCreateRequest Whether to auto-create Requests
      * @param autoSendRequest Whether to auto-send Requests to Vendor
+     * @param emailNotificationsEnabled Whether to send email on stage changes
      */
     @AuraEnabled
-    public static void saveGeneralSettings(Boolean enableNotifications, Boolean autoCreateRequest, Boolean autoSendRequest) {
+    public static void saveGeneralSettings(Boolean enableNotifications, Boolean autoCreateRequest, Boolean autoSendRequest, Boolean emailNotificationsEnabled) {
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
 
             settings.EnableNotificationsBool__c = enableNotifications;
             settings.AutoCreateWorkRequestBool__c = autoCreateRequest;
             settings.AutoSyncNetworkEntityBool__c = autoSendRequest;
+            settings.EmailNotificationsEnabledBool__c = (emailNotificationsEnabled == true);
 
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});

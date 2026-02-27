@@ -11,6 +11,9 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     /** @description Flag to disable trigger execution */
     public static boolean triggerDisabled = false;
 
+    /** @description Guard flag to prevent recursive SLA target setting */
+    private static Boolean slaProcessed = false;
+
     /**
      * @description Entry point for After Insert/Update logic
      * @param newRows List of new WorkItem records
@@ -29,6 +32,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         // 1. BRIDGE CREATION (Network Entity Sync)
         if (isInsert){
             handleNetworkEntitySync(newRows);
+            autoSetSLATargets(newRows);
         }
 
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
@@ -130,6 +134,8 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     ) {
         List<DeliveryWorkItemChange__e> events = new List<DeliveryWorkItemChange__e>();
         Map<String, String> slackChanges = new Map<String, String>();
+        Set<Id> changedIds = new Set<Id>();
+        Map<Id, String> emailStageMap = new Map<Id, String>();
 
         for (WorkItem__c t : newRows) {
             WorkItem__c old = oldMap.get(t.Id);
@@ -140,6 +146,8 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                     NewStage__c   = t.StageNamePk__c
                 ));
                 slackChanges.put(t.Name, t.StageNamePk__c);
+                changedIds.add(t.Id);
+                emailStageMap.put(t.Id, t.StageNamePk__c);
             }
         }
 
@@ -149,6 +157,42 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
         if (!slackChanges.isEmpty()) {
             DeliverySlackService.postStageChanges(slackChanges);
+        }
+
+        // Email notifications for stage changes
+        if (!changedIds.isEmpty()) {
+            DeliveryEmailNotificationService.sendStageChangeEmails(changedIds, emailStageMap);
+        }
+    }
+
+    /**
+     * @description Auto-sets SLA target dates on newly inserted work items via
+     *              DeliverySLAService. Creates lightweight update records to persist
+     *              the computed dates (after-insert requires separate DML).
+     * @param newRows List of newly inserted WorkItem__c records
+     */
+    private static void autoSetSLATargets(List<WorkItem__c> newRows) {
+        if (slaProcessed) {
+            return;
+        }
+        slaProcessed = true;
+
+        List<WorkItem__c> clones = new List<WorkItem__c>();
+        for (WorkItem__c wi : newRows) {
+            clones.add(wi.clone(true, true, false, false));
+        }
+
+        DeliverySLAService.autoSetSLATarget(clones);
+
+        List<WorkItem__c> slaUpdates = new List<WorkItem__c>();
+        for (WorkItem__c wi : clones) {
+            if (wi.SLATargetDate__c != null) {
+                slaUpdates.add(new WorkItem__c(Id = wi.Id, SLATargetDate__c = wi.SLATargetDate__c));
+            }
+        }
+
+        if (!slaUpdates.isEmpty()) {
+            Database.update(slaUpdates, AccessLevel.SYSTEM_MODE);
         }
     }
 

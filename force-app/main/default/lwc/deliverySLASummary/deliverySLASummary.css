@@ -1,0 +1,43 @@
+.sla-tile {
+    border: 1px solid #e5e5e5;
+    border-radius: 0.5rem;
+    background-color: #fafaf9;
+}
+
+.sla-dot {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    margin-bottom: 0.25rem;
+}
+
+.sla-dot_on-track {
+    background-color: #2e844a;
+}
+
+.sla-dot_at-risk {
+    background-color: #fe9339;
+}
+
+.sla-dot_breached {
+    background-color: #ea001e;
+}
+
+.sla-dot_met {
+    background-color: #706e6b;
+}
+
+.sla-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #181818;
+}
+
+.sla-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.0625rem;
+    color: #706e6b;
+}
