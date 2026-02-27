@@ -230,9 +230,13 @@ public with sharing class DeliveryHubDashboardController {
      * @return String urgency level: 'critical', 'high', 'medium', or 'low'
      */
     private static String scoreToUrgency(Integer score) {
-        if (score >= 40) return 'critical';
-        if (score >= 25) return 'high';
-        if (score >= 15) return 'medium';
+        if (score >= 40) {
+            return 'critical';
+        } else if (score >= 25) {
+            return 'high';
+        } else if (score >= 15) {
+            return 'medium';
+        }
         return 'low';
     }
 
