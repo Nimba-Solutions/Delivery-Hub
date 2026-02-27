@@ -8,5 +8,5 @@
         <target>lightning__HomePage</target>
     </targets>
     <masterLabel>Delivery Release Notes</masterLabel>
-    <description>AI-powered release notes generator for recently completed work items.</description>
+    <description>Generates formatted release notes from completed work items within a date range, grouped by request type.</description>
 </LightningComponentBundle>
