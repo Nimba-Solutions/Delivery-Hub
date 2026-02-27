@@ -17,7 +17,7 @@
 
         <div class="slds-card__body slds-card__body_inner">
             <!-- Loading Spinner -->
-            <template if:true={isLoading}>
+            <template lwc:if={isLoading}>
                 <div class="slds-spinner_container">
                     <div role="status" class="slds-spinner slds-spinner_medium">
                         <span class="slds-assistive-text">Loading</span>
@@ -55,7 +55,7 @@
                 </div>
 
                 <!-- Test Results -->
-                <template if:true={showSuccessAlert}>
+                <template lwc:if={showSuccessAlert}>
                     <div class="slds-notify slds-notify_alert slds-alert_success slds-m-top_small" role="alert">
                         <span class="slds-assistive-text">Success</span>
                         <div class="slds-media slds-media_center">
@@ -70,7 +70,7 @@
                     </div>
                 </template>
 
-                <template if:true={showErrorAlert}>
+                <template lwc:if={showErrorAlert}>
                     <div class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small" role="alert">
                         <span class="slds-assistive-text">Error</span>
                         <div class="slds-media slds-media_center">

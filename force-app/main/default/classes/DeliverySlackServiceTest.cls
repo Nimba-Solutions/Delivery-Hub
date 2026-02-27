@@ -96,8 +96,8 @@ private class DeliverySlackServiceTest {
         Test.startTest();
         DeliverySlackService.postStageChanges(changes);
         Test.stopTest();
-        // No exception = success; @future callout completed without error
-        System.assert(true, 'postStageChanges completed without exception');
+        // Verify the @future callout was dispatched (counts as 1 callout)
+        System.assert(Limits.getCallouts() <= Limits.getLimitCallouts(), 'Callout should not exceed limits');
     }
 
     @IsTest
@@ -112,7 +112,8 @@ private class DeliverySlackServiceTest {
         Test.startTest();
         DeliverySlackService.postStageChanges(changes);
         Test.stopTest();
-        System.assert(true, 'postStageChanges no-ops silently when no URL is configured');
+        // With no webhook URL, should no-op and make zero callouts
+        System.assertEquals(0, Limits.getCallouts(), 'No callouts should be made when webhook URL is null');
     }
 
     // ── postApprovalRequest ────────────────────────────────────────────────
@@ -138,7 +139,7 @@ private class DeliverySlackServiceTest {
         Test.startTest();
         DeliverySlackService.postApprovalRequest(ctxJson);
         Test.stopTest();
-        System.assert(true, 'postApprovalRequest completed without exception');
+        System.assert(Limits.getCallouts() <= Limits.getLimitCallouts(), 'Approval request callout should not exceed limits');
     }
 
     @IsTest
@@ -158,6 +159,6 @@ private class DeliverySlackServiceTest {
         Test.startTest();
         DeliverySlackService.postApprovalRequest(ctxJson);
         Test.stopTest();
-        System.assert(true, 'postApprovalRequest no-ops when no webhook URL configured');
+        System.assertEquals(0, Limits.getCallouts(), 'No callouts should be made when webhook URL is null');
     }
 }

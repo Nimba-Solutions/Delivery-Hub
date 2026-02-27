@@ -6,77 +6,7 @@
 import { LightningElement, api, wire } from 'lwc';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import STAGE_FIELD from '@salesforce/schema/WorkItem__c.StageNamePk__c';
-
-// Phase definitions — order matters: index = visual position
-const PHASES = [
-    {
-        index: 0,
-        label: 'Scoping',
-        color: '#6B7280',
-        stages: [
-            'Backlog', 'Scoping In Progress',
-            'Clarification Requested (Pre-Dev)', 'Providing Clarification'
-        ]
-    },
-    {
-        index: 1,
-        label: 'Estimation',
-        color: '#D97706',
-        stages: [
-            'Ready for Sizing', 'Sizing Underway',
-            'Ready for Prioritization', 'Prioritizing',
-            'Proposal Requested', 'Drafting Proposal'
-        ]
-    },
-    {
-        index: 2,
-        label: 'Approval',
-        color: '#2563EB',
-        stages: [
-            'Ready for Tech Review', 'Tech Reviewing',
-            'Ready for Client Approval', 'In Client Approval',
-            'Ready for Final Approval', 'Final Approving'
-        ]
-    },
-    {
-        index: 3,
-        label: 'Development',
-        color: '#EA580C',
-        stages: [
-            'Ready for Development', 'In Development',
-            'Dev Clarification Requested', 'Providing Dev Clarification',
-            'Dev Blocked', 'Back For Development'
-        ]
-    },
-    {
-        index: 4,
-        label: 'Testing',
-        color: '#059669',
-        stages: [
-            'Ready for Scratch Test', 'Scratch Testing',
-            'Ready for QA', 'QA In Progress',
-            'Ready for Internal UAT', 'Internal UAT'
-        ]
-    },
-    {
-        index: 5,
-        label: 'UAT',
-        color: '#7C3AED',
-        stages: [
-            'Ready for Client UAT', 'In Client UAT',
-            'Ready for UAT Sign-off', 'Processing Sign-off'
-        ]
-    },
-    {
-        index: 6,
-        label: 'Deployment',
-        color: '#4F46E5',
-        stages: [
-            'Ready for Merge', 'Merging',
-            'Ready for Deployment', 'Deploying', 'Deployed to Prod'
-        ]
-    }
-];
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 
 const DONE_CONNECTOR_COLOR = '#94A3B8';
 
@@ -84,10 +14,47 @@ export default class DeliveryWorkItemProgress extends LightningElement {
     @api recordId;
 
     wiredWorkItem;
+    _workflowConfig = null;
+
+    @wire(getWorkflowConfig, { workflowTypeName: 'Software_Delivery' })
+    wiredConfig({ data, error }) {
+        if (data) {
+            this._workflowConfig = data;
+        } else if (error) {
+            console.error('[WorkItemProgress] getWorkflowConfig error:', error);
+        }
+    }
 
     @wire(getRecord, { recordId: '$recordId', fields: [STAGE_FIELD] })
     wiredWorkItemHandler(result) {
         this.wiredWorkItem = result;
+    }
+
+    /**
+     * Derives phase data from CMT stages by grouping non-terminal stages by phase.
+     * Each phase gets the headerBgColor from its first stage.
+     */
+    get _phaseData() {
+        if (!this._workflowConfig?.stages) return [];
+        const phaseMap = new Map();
+        this._workflowConfig.stages.forEach(s => {
+            if (s.isTerminal) return; // Exclude Done/Cancelled from progress track
+            if (!phaseMap.has(s.phase)) {
+                phaseMap.set(s.phase, {
+                    label: s.phase,
+                    color: s.headerBgColor || '#6B7280',
+                    stages: []
+                });
+            }
+            phaseMap.get(s.phase).stages.push(s.apiValue);
+        });
+        // Assign index based on insertion order
+        let idx = 0;
+        const result = [];
+        for (const phase of phaseMap.values()) {
+            result.push({ ...phase, index: idx++ });
+        }
+        return result;
     }
 
     get currentStageName() {
@@ -110,19 +77,22 @@ export default class DeliveryWorkItemProgress extends LightningElement {
     }
 
     get currentPhaseIndex() {
-        if (this.isDone) return PHASES.length; // all phases completed
+        const phaseData = this._phaseData;
+        if (this.isDone) return phaseData.length; // all phases completed
         const stage = this.currentStageName;
-        for (let i = 0; i < PHASES.length; i++) {
-            if (PHASES[i].stages.includes(stage)) return i;
+        for (let i = 0; i < phaseData.length; i++) {
+            if (phaseData[i].stages.includes(stage)) return i;
         }
-        return 0; // default to first phase if stage unknown
+        return 0;
     }
 
     get phases() {
+        const phaseData = this._phaseData;
+        if (!phaseData.length) return [];
         const currentIdx = this.currentPhaseIndex;
-        const last = PHASES.length - 1;
+        const last = phaseData.length - 1;
 
-        return PHASES.map((p) => {
+        return phaseData.map((p) => {
             const i = p.index;
             const isCompleted = i < currentIdx;
             const isCurrent   = i === currentIdx && !this.isDone;
@@ -140,8 +110,6 @@ export default class DeliveryWorkItemProgress extends LightningElement {
             const pipStyle = `background:${p.color}; opacity:0.4;`;
 
             // Connector: colored when the span it covers is "done"
-            //   left connector of phase i = the line between i-1 and i
-            //   it's done when we've reached or passed phase i  (currentIdx >= i)
             const leftDone = i > 0 && currentIdx >= i;
             const rightDone = i < last && currentIdx > i;
 

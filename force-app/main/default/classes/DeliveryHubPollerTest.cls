@@ -66,15 +66,51 @@ private class DeliveryHubPollerTest {
         String ns = getNamespace();
         String q = 'SELECT ' + ns + 'StageNamePk__c FROM ' + ns + 'WorkItem__c LIMIT 1';
         SObject updatedT = Database.query(q);
-        
+
         System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Work item stage should have been updated by the mock payload.');
     }
-    
+
+    @IsTest
+    static void testPollUpdatesHttpError() {
+        Test.setMock(HttpCalloutMock.class, new MockResponseError());
+
+        Test.startTest();
+        String result = DeliveryHubPoller.pollUpdates();
+        Test.stopTest();
+
+        System.assert(result.contains('HTTP 500'), 'Result should contain the HTTP error code: ' + result);
+    }
+
+    @IsTest
+    static void testPollUpdatesNoVendors() {
+        // Delete all vendors to trigger the "No Active Vendor" path
+        delete [SELECT Id FROM NetworkEntity__c];
+
+        Test.startTest();
+        String result = DeliveryHubPoller.pollUpdates();
+        Test.stopTest();
+
+        System.assert(result.contains('No Active Vendor'), 'Result should indicate no vendor found: ' + result);
+    }
+
+    @IsTest
+    static void testPollUpdatesEmptyResponse() {
+        Test.setMock(HttpCalloutMock.class, new MockResponseEmpty());
+
+        Test.startTest();
+        String result = DeliveryHubPoller.pollUpdates();
+        Test.stopTest();
+
+        System.assert(result.contains('Synced 0 items'), 'Result should indicate zero items synced: ' + result);
+    }
+
+    // --- Mock Implementations ---
+
     public class MockResponseSuccess implements HttpCalloutMock {
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
-            
+
             // V2 ARCHITECTURE: Payload is now a direct JSON array.
             // Notice the inner "payload" value is escaped as a string, matching the Vendor's database storage format.
             String jsonBody = '[' +
@@ -85,8 +121,38 @@ private class DeliveryHubPollerTest {
                     '"createdDate": "2026-02-18T12:00:00.000Z"' +
                 '}' +
             ']';
-            
+
             res.setBody(jsonBody);
+            return res;
+        }
+    }
+
+    /** @description Mock that returns HTTP 500 to test error handling. */
+    public class MockResponseError implements HttpCalloutMock {
+        /**
+         * @description Returns a 500 Internal Server Error response.
+         * @param req The HTTP request
+         * @return HttpResponse with status 500
+         */
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(500);
+            res.setBody('Internal Server Error');
+            return res;
+        }
+    }
+
+    /** @description Mock that returns an empty JSON array to test zero-item sync. */
+    public class MockResponseEmpty implements HttpCalloutMock {
+        /**
+         * @description Returns a 200 response with an empty JSON array.
+         * @param req The HTTP request
+         * @return HttpResponse with status 200 and empty array body
+         */
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(200);
+            res.setBody('[]');
             return res;
         }
     }

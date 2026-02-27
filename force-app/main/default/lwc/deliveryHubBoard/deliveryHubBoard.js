@@ -67,58 +67,58 @@ const FIELDS = {
 };
 
 export default class DeliveryHubBoard extends NavigationMixin(LightningElement) {
-    @track persona = "Client";
-    @track sizeMode = "equalSized";
-    @track displayMode = "kanban";
-    @track showModal = false;
+    persona = "Client";
+    sizeMode = "equalSized";
+    displayMode = "kanban";
+    showModal = false;
     @track selectedRecord = null;
-    @track selectedStage = null;
+    selectedStage = null;
     @track realRecords = [];
-    @track moveComment = "";
+    moveComment = "";
     @track recentComments = [];
-    @track numDevs = 2;
+    numDevs = 2;
     @track etaResults = [];
-    @track showAllColumns = false; 
-    @track showCreateModal = false;
-    @track nextSortOrder = 1;
-    @track overallFilter = "all";
-    @track intentionFilter = "all";
+    showAllColumns = false;
+    showCreateModal = false;
+    nextSortOrder = 1;
+    overallFilter = "all";
+    intentionFilter = "all";
     @track uploadedFileIds = [];
-    @track showMode = "overall";
+    showMode = "overall";
     @track draggedItem = {};
-    @track isDragging = false;
-    @track placeholder = null;
-    @track AiEnhancementEnabled = true;
-    @track AiEstimation = true;
-    @track isAiProcessing = false;
+    isDragging = false;
+    placeholder = null;
+    AiEnhancementEnabled = true;
+    AiEstimation = true;
+    isAiProcessing = false;
     @track aiSuggestions = null;
-    @track createWorkItemTitle = "";
-    @track createWorkItemDescription = "";
-    @track estimatedDaysValue = null;
+    createWorkItemTitle = "";
+    createWorkItemDescription = "";
+    estimatedDaysValue = null;
     @track formFieldValues = {};
-    @track showTransitionModal = false;
-    @track transitionWorkItemId = null;
-    @track transitionTargetStage = null;
+    showTransitionModal = false;
+    transitionWorkItemId = null;
+    transitionTargetStage = null;
     @track transitionRequiredFields = [];
-    @track isModalOpen = false;
+    isModalOpen = false;
     @track selectedWorkItem = {};
-    @track searchTerm = '';
+    searchTerm = '';
     @track searchResults = [];
-    @track isSearching = false;
-    @track hasValidOpenAIKey = false;
-    @track myWorkOnly = false;
+    isSearching = false;
+    hasValidOpenAIKey = false;
+    myWorkOnly = false;
 
     // --- CMT-DRIVEN WORKFLOW STATE ---
-    @track activeWorkflowType = 'Software_Delivery';
+    activeWorkflowType = 'Software_Delivery';
     @track workflowTypes = [];
     @track workflowConfig = null;
 
     // Weekly AI summary modal
-    @track showWeeklyModal = false;
-    @track weeklyUpdate = '';
-    @track isWeeklyLoading = false;
-    @track weeklyError = '';
-    @track weeklyCopied = false;
+    showWeeklyModal = false;
+    weeklyUpdate = '';
+    isWeeklyLoading = false;
+    weeklyError = '';
+    weeklyCopied = false;
 
     workItemsWire;
     _empSubscription = {};
@@ -129,6 +129,15 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     get currentUserName() {
         return getFieldValue(this.currentUser.data, USER_NAME_FIELD) || '';
     }
+
+    get currentUserId() {
+        return USER_ID;
+    }
+
+    // ── Negated getters for lwc:if migration ──
+    get isNotAiProcessing()  { return !this.isAiProcessing; }
+    get isWeeklyLoaded()     { return !this.isWeeklyLoading; }
+    get hasNoBlockedBy()     { return !this.selectedWorkItem?.isBlockedBy?.length; }
 
     connectedCallback() {
         this.loadSettings();

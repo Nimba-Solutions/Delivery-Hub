@@ -37,29 +37,35 @@ public with sharing class DeliveryGanttController {
      */
     @AuraEnabled(cacheable=true)
     public static List<GanttRow> getWorkItemsForGantt() {
-        List<WorkItem__c> items = [
-            SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                   ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate
-            FROM WorkItem__c
-            WHERE IsActiveBool__c = true
-            AND ProjectedUATReadyDate__c != null
-            WITH SYSTEM_MODE
-            ORDER BY ProjectedUATReadyDate__c ASC
-        ];
+        try {
+            List<WorkItem__c> items = [
+                SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
+                       ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate
+                FROM WorkItem__c
+                WHERE IsActiveBool__c = true
+                AND ProjectedUATReadyDate__c != null
+                WITH SYSTEM_MODE
+                ORDER BY ProjectedUATReadyDate__c ASC
+            ];
 
-        List<GanttRow> rows = new List<GanttRow>();
-        for (WorkItem__c t : items) {
-            GanttRow row     = new GanttRow();
-            row.workItemId   = t.Id;
-            row.name         = t.Name;
-            row.description = t.BriefDescriptionTxt__c;
-            row.stage     = t.StageNamePk__c;
-            row.priority  = t.PriorityPk__c;
-            row.uatDate   = String.valueOf(t.ProjectedUATReadyDate__c);
-            row.etaDate   = t.CalculatedETADate__c != null ? String.valueOf(t.CalculatedETADate__c) : null;
-            row.createdDate = String.valueOf(t.CreatedDate.date());
-            rows.add(row);
+            List<GanttRow> rows = new List<GanttRow>();
+            for (WorkItem__c t : items) {
+                GanttRow row     = new GanttRow();
+                row.workItemId   = t.Id;
+                row.name         = t.Name;
+                row.description = t.BriefDescriptionTxt__c;
+                row.stage     = t.StageNamePk__c;
+                row.priority  = t.PriorityPk__c;
+                row.uatDate   = String.valueOf(t.ProjectedUATReadyDate__c);
+                row.etaDate   = t.CalculatedETADate__c != null ? String.valueOf(t.CalculatedETADate__c) : null;
+                row.createdDate = String.valueOf(t.CreatedDate.date());
+                rows.add(row);
+            }
+            return rows;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
         }
-        return rows;
     }
 }

@@ -2,7 +2,7 @@
     <lightning-card title="Delivery Hub Sync" icon-name="custom:custom13">
         <div class="slds-p-horizontal_medium slds-text-align_center">
             
-            <template if:true={isPolling}>
+            <template lwc:if={isPolling}>
                 <lightning-spinner alternative-text="Polling for updates..." size="small"></lightning-spinner>
                 <p class="slds-m-bottom_small slds-text-color_weak">Checking for updates...</p>
             </template>

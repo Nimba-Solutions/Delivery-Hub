@@ -31,13 +31,12 @@ export default class DeliveryWorkItemChat extends LightningElement {
     // --- LIFECYCLE HOOKS ---
     
     connectedCallback() {
-        // Start polling every 5 seconds (5000 milliseconds)
-        // Adjust the time as needed (e.g., 10000 for 10 seconds)
+        // Poll every 30 seconds, only when the tab is visible
         this._pollingInterval = setInterval(() => {
-            if (this.wiredResult) {
+            if (this.wiredResult && document.visibilityState === 'visible') {
                 refreshApex(this.wiredResult);
             }
-        }, 5000);
+        }, 30000);
     }
 
     disconnectedCallback() {

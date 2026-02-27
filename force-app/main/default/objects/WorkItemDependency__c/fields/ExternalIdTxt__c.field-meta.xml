@@ -3,7 +3,7 @@
     <fullName>ExternalIdTxt__c</fullName>
     <description>External identifier for the work item dependency, typically from Jira</description>
     <inlineHelpText>External identifier for this dependency record, used for cross-org sync deduplication.</inlineHelpText>
-    <externalId>false</externalId>
+    <externalId>true</externalId>
     <label>External ID</label>
     <length>255</length>
     <required>false</required>

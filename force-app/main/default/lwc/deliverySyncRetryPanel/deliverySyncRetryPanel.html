@@ -8,18 +8,18 @@
             alternative-text="Refresh">
         </lightning-button-icon>
 
-        <template if:true={isLoading}>
+        <template lwc:if={isLoading}>
             <div class="slds-p-medium slds-text-align_center">
                 <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
             </div>
         </template>
 
-        <template if:false={isLoading}>
+        <template lwc:else>
             <div class="slds-p-horizontal_medium slds-p-bottom_medium">
 
                 <!-- Health summary row -->
                 <div class="srp-summary">
-                    <template if:true={hasFailures}>
+                    <template lwc:if={hasFailures}>
                         <div class="srp-badge srp-badge--error">
                             <lightning-icon icon-name="utility:error" size="x-small" class="srp-badge-icon"></lightning-icon>
                             <span>{failedCount} failed sync{pluralSuffix}</span>
@@ -33,7 +33,7 @@
                             class="srp-retry-btn">
                         </lightning-button>
                     </template>
-                    <template if:false={hasFailures}>
+                    <template lwc:else>
                         <div class="srp-badge srp-badge--ok">
                             <lightning-icon icon-name="utility:check" size="x-small" class="srp-badge-icon"></lightning-icon>
                             <span>All syncs healthy</span>
@@ -42,7 +42,7 @@
                 </div>
 
                 <!-- Recent errors table -->
-                <template if:true={hasErrors}>
+                <template lwc:if={hasErrors}>
                     <table class="srp-table">
                         <thead>
                             <tr>

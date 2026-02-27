@@ -49,7 +49,7 @@ export default class DeliveryKanbanSettingsContainer extends LightningElement {
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Error Saving Settings',
-                    message: error.body.message,
+                    message: error.body ? error.body.message : error.message,
                     variant: 'error',
                 })
             );

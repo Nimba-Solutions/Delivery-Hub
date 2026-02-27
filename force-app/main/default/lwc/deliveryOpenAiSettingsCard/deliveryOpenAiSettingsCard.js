@@ -5,6 +5,7 @@
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import LightningConfirm from 'lightning/confirm';
 import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
 import saveOpenAISettings from '@salesforce/apex/DeliveryHubSettingsController.saveOpenAISettings';
 import testOpenAIConnection from '@salesforce/apex/DeliveryHubSettingsController.testOpenAIConnection';
@@ -90,7 +91,12 @@ export default class DeliveryOpenAiSettingsCard extends LightningElement {
     }
 
     async resetSettings() {
-        if (confirm('Are you sure you want to revert your changes to the last saved configuration?')) {
+        const confirmed = await LightningConfirm.open({
+            message: 'Are you sure you want to revert your changes to the last saved configuration?',
+            variant: 'default',
+            label: 'Confirm Reset'
+        });
+        if (confirmed) {
             this.isLoading = true;
             try {
                 const savedData = await getSettings();
@@ -99,7 +105,7 @@ export default class DeliveryOpenAiSettingsCard extends LightningElement {
                     this.openaiModel = savedData.openaiModel || 'gpt-4o-mini';
                     this.apiTested = savedData.openAiApiTested || false;
                 }
-                
+
                 this.testResult = null;
                 this.showToast('Reset Complete', 'Settings have been reverted to the last saved state.', 'success');
             } catch (error) {

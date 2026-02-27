@@ -27,7 +27,7 @@
                         <lightning-icon icon-name="utility:add" size="x-small" class="slds-m-right_x-small"></lightning-icon>
                         New Work Item
                     </button>
-                    <template if:true={AiEnhancementEnabled}>
+                    <template lwc:if={AiEnhancementEnabled}>
                         <button class="new-work-item-button" onclick={handleWeeklyUpdate} title="Generate AI weekly status summary">
                             <lightning-icon icon-name="utility:sparkle" size="x-small" class="slds-m-right_x-small"></lightning-icon>
                             Weekly Update
@@ -37,7 +37,7 @@
             </div>
             
             <div class="kanban-filter-bar">
-                <template if:true={hasMultipleWorkflows}>
+                <template lwc:if={hasMultipleWorkflows}>
                     <div class="filter-group">
                         <label class="filter-label">Workflow:</label>
                         <div class="button-group">
@@ -51,24 +51,24 @@
                     </div>
                 </template>
                 <div class="filter-group">
-                    <label class="filter-label">Board View:</label>
-                    <select class="slds-select" value={overallFilter} onchange={handleOverallFilterChange}>
+                    <label class="filter-label" for="board-view-select">Board View:</label>
+                    <select id="board-view-select" class="slds-select" value={overallFilter} onchange={handleOverallFilterChange}>
                         <template for:each={overallFilterOptions} for:item="opt">
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         </template>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label">Intention:</label>
-                    <select class="slds-select" value={intentionFilter} onchange={handleIntentionFilterChange}>
+                    <label class="filter-label" for="intention-select">Intention:</label>
+                    <select id="intention-select" class="slds-select" value={intentionFilter} onchange={handleIntentionFilterChange}>
                         <template for:each={intentionFilterOptions} for:item="opt">
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         </template>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label">Display Mode:</label>
-                    <select class="slds-select" value={displayMode} onchange={handleDisplayModeChange}>
+                    <label class="filter-label" for="display-mode-select">Display Mode:</label>
+                    <select id="display-mode-select" class="slds-select" value={displayMode} onchange={handleDisplayModeChange}>
                         <template for:each={displayModeOptions} for:item="opt">
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         </template>
@@ -89,7 +89,7 @@
         <div class="kanban-board js-kanban-board">
             <div class="kanban-columns-container">
                 <template for:each={stageColumns} for:item="col">
-                    <div key={col.stage} class="kanban-column" ondrop={handleDrop} ondragover={handleDragOver} ondragleave={handleDragLeave} data-stage={col.stage}>
+                    <div key={col.stage} class="kanban-column" role="list" aria-label={col.displayName} ondrop={handleDrop} ondragover={handleDragOver} ondragleave={handleDragLeave} data-stage={col.stage}>
                         
                         <div class="kanban-column-header" style={col.headerStyle}>
                             <h2 class="column-title">{col.displayName}</h2>
@@ -97,11 +97,11 @@
                         </div>
 
                         <div class={col.bodyClasses}>
-                            <template if:true={col.workItems.length}>
+                            <template lwc:if={col.workItems.length}>
                                 <template for:each={col.workItems} for:item="wi">
-                                    <div key={wi.uiId} class={wi.cardClasses} draggable="true" style={wi.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={wi.uiId}>
+                                    <div key={wi.uiId} class={wi.cardClasses} role="listitem" draggable="true" aria-label={wi.uiTitle} style={wi.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={wi.uiId}>
                                         
-                                        <template if:true={wi.isHighPriority}>
+                                        <template lwc:if={wi.isHighPriority}>
                                             <div class="priority-indicator">
                                                 <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
                                             </div>
@@ -128,12 +128,12 @@
                                                 <div class="meta-item" title={wi.dateTooltip}>
                                                     <lightning-icon icon-name="utility:event" size="xx-small" class="slds-icon-text-light"></lightning-icon>
                                                     <span>ETA: {wi.calculatedETA}</span>
-                                                    <template if:true={wi.hasConfidence}>
+                                                    <template lwc:if={wi.hasConfidence}>
                                                         <span class={wi.confidenceClass} title="ETA confidence">{wi.confidenceLabel}</span>
                                                     </template>
                                                 </div>
 
-                                                <template if:true={wi.uiUat}>
+                                                <template lwc:if={wi.uiUat}>
                                                     <div class="meta-item uat-date" title="Target UAT Date">
                                                         <span>UAT: {wi.uiUat}</span>
                                                     </div>
@@ -141,7 +141,7 @@
                                             </div>
                                         </div>
 
-                                        <template if:true={wi.tags.length}>
+                                        <template lwc:if={wi.tags.length}>
                                             <div class="work-item-tags">
                                                 <template for:each={wi.tags} for:item="tag">
                                                     <span key={tag} class="tag-badge">{tag}</span>
@@ -150,7 +150,7 @@
                                         </template>
 
                                         <div class="work-item-footer">
-                                            <template if:true={wi.uiPriority}>
+                                            <template lwc:if={wi.uiPriority}>
                                                 <span class={wi.priorityClasses}>{wi.uiPriority}</span>
                                             </template>
 
@@ -162,14 +162,14 @@
                                                 <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Dependencies"></lightning-icon>
                                             </button>
 
-                                            <template if:true={wi.OwnerName}>
+                                            <template lwc:if={wi.OwnerName}>
                                                 <div class="assignee">
                                                     <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
                                                     <span>{wi.OwnerName}</span>
                                                 </div>
                                             </template>
 
-                                            <template if:true={wi.isCurrentlyBlocked}>
+                                            <template lwc:if={wi.isCurrentlyBlocked}>
                                                 <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This work item is blocked."></lightning-icon>
                                             </template>
                                         </div>
@@ -177,7 +177,7 @@
                                 </template>
                             </template>
 
-                            <template if:false={col.workItems.length}>
+                            <template lwc:else>
                                 <div class="empty-column-placeholder">
                                     <div class="empty-col-dots">
                                         <span class="empty-dot"></span>
@@ -195,25 +195,25 @@
         </div>
     </div>
 
-    <template if:true={showCreateModal}>
+    <template lwc:if={showCreateModal}>
         <section class="slds-modal slds-fade-in-open custom-modal" tabindex="0">
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <button class="slds-modal__close" onclick={handleCreateCancel} title="Close">
-                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                        <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
                     </button>
                     <h2 class="slds-text-heading_medium">Create New Work Item</h2>
                 </header>
 
                 <div class="slds-modal__content slds-p-around_medium" style="background:#fafcff;">
-                    <template if:true={AiEnhancementEnabled}>
+                    <template lwc:if={AiEnhancementEnabled}>
                         <div class="ai-enhancement-box slds-p-around_medium slds-m-bottom_medium">
                              <lightning-button label="Enhance with AI" icon-name="utility:sparkle" variant="brand" 
                                 onclick={handleAiEnhance} disabled={isAiProcessing}></lightning-button>
                         </div>
                     </template>
                     
-                    <template if:false={isAiProcessing}>
+                    <template lwc:if={isNotAiProcessing}>
                         <lightning-record-edit-form object-api-name="%%%NAMESPACED_ORG%%%WorkItem__c" 
                             default-field-values={createDefaults} 
                             onsubmit={handleCreateSubmit}
@@ -227,7 +227,7 @@
                                 <lightning-input-field field-name="%%%NAMESPACED_ORG%%%IsActiveBool__c" value={createDefaults.IsActiveBool__c}></lightning-input-field>
                             </div>
 
-                            <lightning-file-upload label="Attach files" onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
+                            <lightning-file-upload label="Attach files" record-id={currentUserId} onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
                             
                             <details class="slds-m-top_small">
                                 <summary style="cursor:pointer;color:#005fb2;">Advanced fields</summary>
@@ -252,7 +252,7 @@
         <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
     
-    <template if:true={showModal}>
+    <template lwc:if={showModal}>
         <section class="modal-backdrop" tabindex="0">
             <div class="modal-body" role="dialog">
                 <header class="modal-header">
@@ -260,7 +260,7 @@
                     <p>Current Status: <strong>{selectedRecord.uiStage}</strong></p>
                 </header>
                 <div class="modal-content">
-                    <template if:true={advanceOptions.length}>
+                    <template lwc:if={advanceOptions.length}>
                         <div class="modal-section">
                             <h4 class="section-title-advance">Advance</h4>
                             <div class="button-container">
@@ -272,7 +272,7 @@
                             </div>
                         </div>
                     </template>
-                    <template if:true={backtrackOptions.length}>
+                    <template lwc:if={backtrackOptions.length}>
                         <div class="modal-section">
                             <h4 class="section-title-backtrack">Backtrack</h4>
                             <div class="button-container">
@@ -296,7 +296,7 @@
         </section>
     </template>
 
-    <template if:true={showTransitionModal}>
+    <template lwc:if={showTransitionModal}>
         <section class="slds-modal slds-fade-in-open" tabindex="-1">
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
@@ -327,7 +327,7 @@
     </template>
     
     <!-- Weekly AI Summary Modal -->
-    <template if:true={showWeeklyModal}>
+    <template lwc:if={showWeeklyModal}>
         <section class="slds-modal slds-fade-in-open" tabindex="-1">
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
@@ -340,20 +340,20 @@
                     </h2>
                 </header>
                 <div class="slds-modal__content slds-p-around_medium">
-                    <template if:true={isWeeklyLoading}>
+                    <template lwc:if={isWeeklyLoading}>
                         <div class="slds-align_absolute-center slds-p-around_large">
                             <lightning-spinner alternative-text="Generating summary..." size="medium"></lightning-spinner>
                             <p class="slds-m-top_medium slds-text-color_weak">Summarising your board with AI…</p>
                         </div>
                     </template>
-                    <template if:true={weeklyError}>
+                    <template lwc:if={weeklyError}>
                         <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
                             <lightning-icon icon-name="utility:error" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
                             <p>{weeklyError}</p>
                         </div>
                     </template>
-                    <template if:false={isWeeklyLoading}>
-                        <template if:true={weeklyUpdate}>
+                    <template lwc:if={isWeeklyLoaded}>
+                        <template lwc:if={weeklyUpdate}>
                             <lightning-textarea
                                 value={weeklyUpdate}
                                 label="Generated Weekly Update"
@@ -368,7 +368,7 @@
                 </div>
                 <footer class="slds-modal__footer">
                     <lightning-button variant="neutral" label="Close" onclick={closeWeeklyModal}></lightning-button>
-                    <template if:true={weeklyUpdate}>
+                    <template lwc:if={weeklyUpdate}>
                         <lightning-button
                             variant="brand"
                             label={weeklyCopyLabel}
@@ -383,7 +383,7 @@
         <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
 
-    <template if:true={isModalOpen}>
+    <template lwc:if={isModalOpen}>
         <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
@@ -391,7 +391,7 @@
                 </header>
                 <div class="slds-modal__content slds-p-around_medium">
                     <h3 class="slds-text-heading_small slds-m-bottom_small">Blocked By:</h3>
-                    <template if:false={selectedWorkItem.isBlockedBy.length}>
+                    <template lwc:if={hasNoBlockedBy}>
                         <p>This work item is not blocked by any other work items.</p>
                     </template>
                     <template for:each={selectedWorkItem.isBlockedBy} for:item="dep">
@@ -408,7 +408,7 @@
                         </div>
                     </div>
                     <div class="slds-m-top_medium">
-                        <template if:true={isSearching}>
+                        <template lwc:if={isSearching}>
                             <lightning-spinner alternative-text="Searching..." size="small"></lightning-spinner>
                         </template>
                         <template for:each={searchResults} for:item="result">

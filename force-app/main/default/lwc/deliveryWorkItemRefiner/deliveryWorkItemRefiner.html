@@ -2,7 +2,17 @@
     <lightning-card title="Refine &amp; Assign" icon-name="standard:service_contract">
         <div class="slds-p-around_medium">
 
-            <template if:false={isRequestCreated}>
+            <template lwc:if={isRequestCreated}>
+                <div class="slds-notify slds-notify_alert slds-theme_success" role="alert">
+                    <lightning-icon icon-name="utility:success" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                    <h2>Vendor Request Created!</h2>
+                </div>
+                <div class="slds-m-top_medium slds-text-align_center">
+                    <lightning-button label="Go to Request" onclick={navigateToRequest}></lightning-button>
+                </div>
+            </template>
+
+            <template lwc:else>
                 <lightning-record-edit-form
                     record-id={recordId}
                     object-api-name="WorkItem__c"
@@ -19,18 +29,18 @@
                             onclick={handleSuggestCriteria}
                             disabled={isSuggesting}>
                         </lightning-button>
-                        <template if:true={isSuggesting}>
+                        <template lwc:if={isSuggesting}>
                             <lightning-spinner size="x-small" alternative-text="Generating…" class="slds-m-left_small"></lightning-spinner>
                         </template>
                     </div>
 
                     <!-- AI suggestion preview -->
-                    <template if:true={criteriaError}>
+                    <template lwc:if={criteriaError}>
                         <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_x-small" role="alert">
                             <p>{criteriaError}</p>
                         </div>
                     </template>
-                    <template if:true={suggestedCriteria}>
+                    <template lwc:if={suggestedCriteria}>
                         <div class="slds-box slds-theme_shade slds-m-bottom_small" style="border-left:3px solid #0176d3;">
                             <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_x-small">AI Suggestion — review and apply:</p>
                             <pre style="white-space:pre-wrap;font-size:0.8rem;">{suggestedCriteria}</pre>
@@ -74,16 +84,6 @@
                         </lightning-button>
                     </div>
                 </lightning-record-edit-form>
-            </template>
-
-            <template if:true={isRequestCreated}>
-                <div class="slds-notify slds-notify_alert slds-theme_success" role="alert">
-                    <lightning-icon icon-name="utility:success" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
-                    <h2>Vendor Request Created!</h2>
-                </div>
-                <div class="slds-m-top_medium slds-text-align_center">
-                    <lightning-button label="Go to Request" onclick={navigateToRequest}></lightning-button>
-                </div>
             </template>
 
         </div>

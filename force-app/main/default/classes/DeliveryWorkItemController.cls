@@ -289,7 +289,9 @@ public with sharing class DeliveryWorkItemController {
         HttpResponse res = http.send(req);
 
         if (res.getStatusCode() != 200) {
-            throw new AuraHandledException('OpenAI API error: ' + res.getStatus() + ' - ' + res.getBody());
+            AuraHandledException ahe = new AuraHandledException('OpenAI API error: HTTP ' + res.getStatusCode());
+            ahe.setMessage('OpenAI API error: HTTP ' + res.getStatusCode());
+            throw ahe;
         }
 
         return parseOpenAIResponse(res.getBody());
@@ -349,7 +351,9 @@ public with sharing class DeliveryWorkItemController {
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Error parsing OpenAI response: ' + e.getMessage());
             System.debug(LoggingLevel.DEBUG, 'Response body: ' + responseBody);
-            throw new AuraHandledException('Failed to parse AI response: ' + e.getMessage());
+            AuraHandledException ahe = new AuraHandledException('Failed to parse AI response: ' + e.getMessage());
+            ahe.setMessage('Failed to parse AI response: ' + e.getMessage());
+            throw ahe;
         }
     }
 
@@ -436,8 +440,9 @@ public with sharing class DeliveryWorkItemController {
      * @param responseBody The JSON response from OpenAI
      * @return AISuggestionWrapper The parsed suggestions
      */
+    @TestVisible
     @SuppressWarnings('PMD.MethodNamingConventions')
-    public static AISuggestionWrapper test_parseOpenAIResponse(String responseBody) {
+    private static AISuggestionWrapper test_parseOpenAIResponse(String responseBody) {
         return parseOpenAIResponse(responseBody);
     }
 
@@ -446,8 +451,9 @@ public with sharing class DeliveryWorkItemController {
      * @param content The content string that may contain JSON
      * @return String The extracted JSON string
      */
+    @TestVisible
     @SuppressWarnings('PMD.MethodNamingConventions')
-    public static String test_extractJsonFromContent(String content) {
+    private static String test_extractJsonFromContent(String content) {
         return extractJsonFromContent(content);
     }
 }

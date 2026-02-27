@@ -120,8 +120,7 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
                 barClass,
                 barStyle,
                 stageBadgeClass,
-                barTooltip,
-                recordUrl:      `/lightning/r/WorkItem__c/${r.workItemId}/view`
+                barTooltip
             };
         });
     }
@@ -155,6 +154,18 @@ export default class DeliveryGanttChart extends NavigationMixin(LightningElement
         const totalMs = winMs * 1.2;
         const pct = (((today.getTime() - windowStartMs) / totalMs) * 100).toFixed(1);
         return `left:${pct}%`;
+    }
+
+    handleRowClick(event) {
+        const recordId = event.currentTarget.dataset.id;
+        this[NavigationMixin.Navigate]({
+            type: 'standard__recordPage',
+            attributes: {
+                recordId: recordId,
+                objectApiName: 'WorkItem__c',
+                actionName: 'view'
+            }
+        });
     }
 
     // ── State flags ───────────────────────────────────────────────────────────

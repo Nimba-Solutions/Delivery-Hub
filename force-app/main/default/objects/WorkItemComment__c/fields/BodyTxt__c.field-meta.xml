@@ -3,7 +3,7 @@
     <fullName>BodyTxt__c</fullName>
     <description>Rich-text body of the comment as entered in Salesforce or pulled from Jira.</description>
     <inlineHelpText>The full text content of this comment.</inlineHelpText>
-    <label>BodyTxt</label>
+    <label>Body</label>
     <length>130768</length>
     <trackTrending>false</trackTrending>
     <type>Html</type>

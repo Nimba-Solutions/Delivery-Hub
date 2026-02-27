@@ -6,7 +6,8 @@
  * status updates succeed regardless of UI user FLS.
  * @author Cloud Nimbus LLC
  */
-// Changed to without sharing to ensure the process can complete in any org
+// without sharing: Required so vendor request routing, status updates, and SyncItem creation
+// succeed regardless of the running user's sharing rules on WorkRequest__c / SyncItem__c.
 public without sharing class DeliveryRequestManagerController {
     
     @AuraEnabled

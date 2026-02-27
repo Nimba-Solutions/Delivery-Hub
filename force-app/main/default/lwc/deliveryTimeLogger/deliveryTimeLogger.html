@@ -1,9 +1,9 @@
 <template>
-    <template if:true={hasClientEntity}>
+    <template lwc:if={hasClientEntity}>
     <lightning-card icon-name="utility:clock">
         <div slot="title" class="tl-title-wrapper">
             <span class="tl-card-title">Log Time</span>
-            <template if:true={currentHours}>
+            <template lwc:if={currentHours}>
                 <span class="tl-total-badge">{currentHours}h logged</span>
             </template>
         </div>
@@ -56,7 +56,7 @@
                     onclick={handleSubmit}
                     disabled={isSubmitting}>
                 </lightning-button>
-                <template if:true={isSubmitting}>
+                <template lwc:if={isSubmitting}>
                     <lightning-spinner alternative-text="Logging..." size="small" class="slds-m-left_small"></lightning-spinner>
                 </template>
             </div>

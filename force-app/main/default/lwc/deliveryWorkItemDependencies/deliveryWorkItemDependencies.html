@@ -1,12 +1,12 @@
 <template>
     <lightning-card title="Dependencies" icon-name="utility:hierarchy">
-        <template if:true={isLoading}>
+        <template lwc:if={isLoading}>
             <div class="slds-p-medium slds-text-align_center">
                 <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
             </div>
         </template>
 
-        <template if:false={isLoading}>
+        <template lwc:else>
             <div class="slds-p-horizontal_medium slds-p-bottom_medium">
 
                 <!-- Blocked By -->
@@ -16,13 +16,13 @@
                         <span class="dep-section-title">Blocked By</span>
                         <span class="dep-count">{blockedByCount}</span>
                     </div>
-                    <template if:true={hasBlockedBy}>
+                    <template lwc:if={hasBlockedBy}>
                         <ul class="dep-list">
                             <template for:each={blockedBy} for:item="dep">
                                 <li key={dep.id} class="dep-row">
                                     <button class="slds-button slds-button_reset dep-link" onclick={handleWorkItemClick} data-id={dep.id}>
                                         <strong>{dep.name}</strong>
-                                        <template if:true={dep.title}>
+                                        <template lwc:if={dep.title}>
                                             <span class="dep-title">&mdash; {dep.title}</span>
                                         </template>
                                     </button>
@@ -31,7 +31,7 @@
                             </template>
                         </ul>
                     </template>
-                    <template if:false={hasBlockedBy}>
+                    <template lwc:else>
                         <p class="dep-empty">No blockers</p>
                     </template>
                 </div>
@@ -43,13 +43,13 @@
                         <span class="dep-section-title">Blocking</span>
                         <span class="dep-count">{blockingCount}</span>
                     </div>
-                    <template if:true={hasBlocking}>
+                    <template lwc:if={hasBlocking}>
                         <ul class="dep-list">
                             <template for:each={blocking} for:item="dep">
                                 <li key={dep.id} class="dep-row">
                                     <button class="slds-button slds-button_reset dep-link" onclick={handleWorkItemClick} data-id={dep.id}>
                                         <strong>{dep.name}</strong>
-                                        <template if:true={dep.title}>
+                                        <template lwc:if={dep.title}>
                                             <span class="dep-title">&mdash; {dep.title}</span>
                                         </template>
                                     </button>
@@ -58,7 +58,7 @@
                             </template>
                         </ul>
                     </template>
-                    <template if:false={hasBlocking}>
+                    <template lwc:else>
                         <p class="dep-empty">Not blocking anything</p>
                     </template>
                 </div>

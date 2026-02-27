@@ -9,14 +9,14 @@
         </lightning-button-icon>
 
         <div class="slds-p-horizontal_medium slds-p-bottom_medium">
-            <template if:true={isLoading}>
+            <template lwc:if={isLoading}>
                 <div class="slds-text-align_center slds-p-medium">
                     <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
                 </div>
             </template>
 
-            <template if:false={isLoading}>
-                <template if:true={hasFiles}>
+            <template lwc:else>
+                <template lwc:if={hasFiles}>
                     <ul class="slds-list_dotted">
                         <template for:each={files} for:item="file">
                             <li key={file.documentId} class="slds-p-vertical_xx-small">
@@ -41,7 +41,7 @@
                     </ul>
                 </template>
 
-                <template if:false={hasFiles}>
+                <template lwc:else>
                     <div class="slds-text-align_center slds-p-medium">
                         <p class="slds-text-color_weak">No files attached to this work item, its comments, or related requests.</p>
                     </div>

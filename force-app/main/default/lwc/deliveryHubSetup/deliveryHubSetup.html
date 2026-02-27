@@ -1,8 +1,8 @@
 <template>
-    <template if:true={isVisible}>
+    <template lwc:if={isVisible}>
 
         <!-- ── Mothership: this org is the Cloud Nimbus host ── -->
-        <template if:true={status.isMothership}>
+        <template lwc:if={status.isMothership}>
             <lightning-card title="Delivery Hub" icon-name="standard:service_territory_member">
                 <div class="slds-p-around_medium slds-text-align_center">
                     <lightning-icon icon-name="utility:success" variant="success" size="small" class="slds-m-right_x-small"></lightning-icon>
@@ -11,19 +11,49 @@
             </lightning-card>
         </template>
 
-        <template if:false={status.isMothership}>
+        <template lwc:else>
 
             <!-- ── Loading ── -->
-            <template if:true={isLoading}>
+            <template lwc:if={isLoading}>
                 <div class="slds-p-around_large slds-text-align_center">
                     <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
                 </div>
             </template>
 
-            <template if:false={isLoading}>
+            <template lwc:else>
+
+                <!-- ── Connected: status card (admin home only) ── -->
+                <template lwc:if={status.isConnected}>
+                    <lightning-card icon-name="utility:connected_apps">
+                        <span slot="title">Delivery Hub</span>
+                        <div class="slds-p-around_medium">
+
+                            <div class="hs-connected-banner">
+                                <lightning-icon icon-name="utility:success" variant="success" size="x-small" class="hs-connected-icon"></lightning-icon>
+                                <span class="hs-connected-label">Connected to Cloud Nimbus LLC</span>
+                            </div>
+
+                            <div class="hs-detail-grid slds-m-top_small">
+                                <div class="hs-detail-row">
+                                    <span class="hs-detail-key">Vendor</span>
+                                    <span class="hs-detail-val">{status.entity.Name}</span>
+                                </div>
+                                <div class="hs-detail-row">
+                                    <span class="hs-detail-key">Status</span>
+                                    <span class="hs-detail-val">{entityStatus}</span>
+                                </div>
+                                <div class="hs-detail-row">
+                                    <span class="hs-detail-key">Sync</span>
+                                    <span class="hs-detail-val">Every 15 min</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </lightning-card>
+                </template>
 
                 <!-- ── Not connected: Quickstart ── -->
-                <template if:false={status.isConnected}>
+                <template lwc:else>
                     <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
                         <div class="slds-p-around_medium">
 
@@ -59,42 +89,12 @@
                                 </lightning-button>
                             </div>
 
-                            <template if:true={isConnecting}>
+                            <template lwc:if={isConnecting}>
                                 <div class="slds-m-top_medium slds-text-align_center">
                                     <lightning-spinner alternative-text="Connecting..." size="small"></lightning-spinner>
                                     <p class="slds-text-body_small slds-text-color_weak slds-m-top_small">{connectingStep}</p>
                                 </div>
                             </template>
-
-                        </div>
-                    </lightning-card>
-                </template>
-
-                <!-- ── Connected: status card (admin home only) ── -->
-                <template if:true={status.isConnected}>
-                    <lightning-card icon-name="utility:connected_apps">
-                        <span slot="title">Delivery Hub</span>
-                        <div class="slds-p-around_medium">
-
-                            <div class="hs-connected-banner">
-                                <lightning-icon icon-name="utility:success" variant="success" size="x-small" class="hs-connected-icon"></lightning-icon>
-                                <span class="hs-connected-label">Connected to Cloud Nimbus LLC</span>
-                            </div>
-
-                            <div class="hs-detail-grid slds-m-top_small">
-                                <div class="hs-detail-row">
-                                    <span class="hs-detail-key">Vendor</span>
-                                    <span class="hs-detail-val">{status.entity.Name}</span>
-                                </div>
-                                <div class="hs-detail-row">
-                                    <span class="hs-detail-key">Status</span>
-                                    <span class="hs-detail-val">{entityStatus}</span>
-                                </div>
-                                <div class="hs-detail-row">
-                                    <span class="hs-detail-key">Sync</span>
-                                    <span class="hs-detail-val">Every 15 min</span>
-                                </div>
-                            </div>
 
                         </div>
                     </lightning-card>

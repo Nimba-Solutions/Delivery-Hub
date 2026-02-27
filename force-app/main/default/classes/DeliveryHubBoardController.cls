@@ -34,6 +34,7 @@ public with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c = :newStage
                 AND Id != :workItemId
                 AND IsActiveBool__c = TRUE
+                WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate DESC
             ];
 
@@ -151,6 +152,7 @@ public with sharing class DeliveryHubBoardController {
             WHERE (Name LIKE :queryTerm OR BriefDescriptionTxt__c LIKE :queryTerm)
             AND Id NOT IN :exclusionIds
             AND StageNamePk__c NOT IN :terminalStages
+            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 10
         ];

@@ -60,6 +60,7 @@ public with sharing class DeliverySyncRetryController {
             FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             WITH SYSTEM_MODE
+            LIMIT 200
         ];
         List<SyncItem__c> toRetry = new List<SyncItem__c>();
         for (SyncItem__c si : failed) {

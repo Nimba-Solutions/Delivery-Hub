@@ -267,6 +267,8 @@ public with sharing class DeliveryWorkItemETAService {
         private Map<Id, User> loadResources() {
             List<User> developers = [
                 SELECT Id, Name FROM User WHERE IsActive = TRUE
+                WITH SYSTEM_MODE
+                LIMIT 2000
             ];
             return new Map<Id, User>(developers);
         }
@@ -276,6 +278,9 @@ public with sharing class DeliveryWorkItemETAService {
                 SELECT Id, Name, StageNamePk__c, PriorityPk__c, DeveloperDaysSizeNumber__c,
                        SortOrderNumber__c, Developer__c, CreatedDate
                 FROM WorkItem__c
+                WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                WITH SYSTEM_MODE
+                LIMIT 10000
             ];
         }
 

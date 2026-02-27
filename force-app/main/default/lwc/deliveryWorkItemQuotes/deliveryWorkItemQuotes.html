@@ -1,13 +1,13 @@
 <template>
-    <template if:true={hasQuotes}>
+    <template lwc:if={hasQuotes}>
         <lightning-card title="Vendor Quotes" icon-name="utility:currency">
-            <template if:true={isLoading}>
+            <template lwc:if={isLoading}>
                 <div class="slds-p-medium slds-text-align_center">
                     <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
                 </div>
             </template>
 
-            <template if:false={isLoading}>
+            <template lwc:else>
                 <div class="slds-p-horizontal_medium slds-p-bottom_medium">
                     <template for:each={quotes} for:item="quote">
                         <div key={quote.id} class={quote.cardClass}>
@@ -21,7 +21,13 @@
                                     <span class="q-metric-label">Quoted Hours</span>
                                 </div>
                             </div>
-                            <template if:false={quote.isAccepted}>
+                            <template lwc:if={quote.isAccepted}>
+                                <div class="q-accepted-badge">
+                                    <lightning-icon icon-name="utility:check" size="xx-small" class="q-accepted-icon"></lightning-icon>
+                                    <span>Quote accepted</span>
+                                </div>
+                            </template>
+                            <template lwc:else>
                                 <div class="q-accept-row">
                                     <lightning-button
                                         label="Accept This Quote"
@@ -31,12 +37,6 @@
                                         onclick={handleAccept}
                                         disabled={isAccepting}>
                                     </lightning-button>
-                                </div>
-                            </template>
-                            <template if:true={quote.isAccepted}>
-                                <div class="q-accepted-badge">
-                                    <lightning-icon icon-name="utility:check" size="xx-small" class="q-accepted-icon"></lightning-icon>
-                                    <span>Quote accepted</span>
                                 </div>
                             </template>
                         </div>
