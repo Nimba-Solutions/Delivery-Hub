@@ -1,0 +1,95 @@
+<template>
+    <div class="portal-form">
+        <div class="portal-form-header">
+            <h1 class="portal-form-title">Submit a Request</h1>
+            <p class="portal-form-subtitle">Tell us what you need and we will get it into our pipeline.</p>
+        </div>
+
+        <!-- Success Message -->
+        <template lwc:if={submitSuccess}>
+            <div class="portal-success-banner">
+                <div class="portal-success-icon">&#10003;</div>
+                <div class="portal-success-content">
+                    <h3 class="portal-success-title">Request Submitted Successfully</h3>
+                    <p class="portal-success-text">Your request has been received and added to our backlog. We will review it shortly.</p>
+                    <div class="portal-success-actions">
+                        <button class="portal-btn portal-btn-secondary" onclick={handleViewCreatedItem}>
+                            View Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Error Message -->
+        <template lwc:if={submitError}>
+            <div class="portal-error">
+                <p class="portal-error-text">{submitError}</p>
+            </div>
+        </template>
+
+        <!-- Form -->
+        <div class="portal-form-card">
+            <!-- Title -->
+            <div class="portal-field">
+                <label class="portal-label" for="title">
+                    Title <span class="portal-required">*</span>
+                </label>
+                <input type="text"
+                       id="title"
+                       class="portal-input"
+                       placeholder="Brief summary of your request"
+                       value={title}
+                       oninput={handleTitleInput}
+                       maxlength="255" />
+            </div>
+
+            <!-- Description -->
+            <div class="portal-field">
+                <label class="portal-label" for="description">Description</label>
+                <textarea id="description"
+                          class="portal-textarea"
+                          placeholder="Provide additional details, steps to reproduce (for bugs), or context for your request..."
+                          value={description}
+                          oninput={handleDescriptionInput}
+                          rows="6"></textarea>
+            </div>
+
+            <!-- Priority + Type Row -->
+            <div class="portal-field-row">
+                <div class="portal-field">
+                    <label class="portal-label" for="priority">Priority</label>
+                    <select id="priority" class="portal-select" onchange={handlePriorityChange}>
+                        <template for:each={priorityOptions} for:item="opt">
+                            <option key={opt.value} value={opt.value} selected={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="portal-field">
+                    <label class="portal-label" for="type">Type</label>
+                    <select id="type" class="portal-select" onchange={handleTypeChange}>
+                        <template for:each={typeOptions} for:item="opt">
+                            <option key={opt.label} value={opt.value}>{opt.label}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="portal-form-actions">
+                <button class="portal-btn portal-btn-ghost" onclick={handleCancel}>Cancel</button>
+                <button class="portal-btn portal-btn-primary"
+                        onclick={handleSubmit}
+                        disabled={submitDisabled}>
+                    <template lwc:if={isSubmitting}>Submitting...</template>
+                    <template lwc:else>Submit Request</template>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="portal-footer">
+            Powered by Delivery Hub | Cloud Nimbus LLC
+        </div>
+    </div>
+</template>

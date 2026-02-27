@@ -1,0 +1,87 @@
+<template>
+    <div class="portal-list">
+        <!-- Header -->
+        <div class="portal-list-header">
+            <h1 class="portal-list-title">Your Work Items</h1>
+            <span class="portal-list-count">{itemCountLabel}</span>
+        </div>
+
+        <!-- Filters -->
+        <div class="portal-filters">
+            <div class="portal-filter-tabs">
+                <button class={filterAll} data-filter="" onclick={handleFilterChange}>All</button>
+                <button class={filterActive} data-filter="active" onclick={handleFilterChange}>Active</button>
+                <button class={filterAttention} data-filter="attention" onclick={handleFilterChange}>Needs Your Input</button>
+                <button class={filterCompleted} data-filter="completed" onclick={handleFilterChange}>Completed</button>
+            </div>
+            <div class="portal-search">
+                <input type="text"
+                       class="portal-search-input"
+                       placeholder="Search by title..."
+                       value={searchTerm}
+                       oninput={handleSearchInput} />
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <template lwc:if={isLoading}>
+            <div class="portal-loading">
+                <div class="portal-spinner"></div>
+                <p class="portal-loading-text">Loading items...</p>
+            </div>
+        </template>
+
+        <!-- Error State -->
+        <template lwc:if={error}>
+            <div class="portal-error">
+                <p class="portal-error-text">{error}</p>
+            </div>
+        </template>
+
+        <!-- Item Cards -->
+        <template lwc:if={hasItems}>
+            <div class="portal-item-grid">
+                <template for:each={filteredItems} for:item="item">
+                    <div class="portal-item-card" key={item.id} data-id={item.id} onclick={handleItemClick}>
+                        <div class="portal-item-top">
+                            <span class="portal-item-number">{item.name}</span>
+                            <span style={item.stageBadgeStyle}>{item.stage}</span>
+                        </div>
+                        <h3 class="portal-item-title">{item.title}</h3>
+                        <template lwc:if={item.hasDescription}>
+                            <p class="portal-item-desc">{item.descriptionPreview}</p>
+                        </template>
+                        <div class="portal-item-bottom">
+                            <div class="portal-item-meta">
+                                <template lwc:if={item.hasPriority}>
+                                    <span style={item.priorityBadgeStyle}>{item.priority}</span>
+                                </template>
+                                <template lwc:if={item.hasEta}>
+                                    <span class="portal-item-eta">ETA: {item.formattedEta}</span>
+                                </template>
+                            </div>
+                            <span class="portal-item-date">Updated {item.formattedDate}</span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Empty State -->
+        <template lwc:if={isLoading}>
+        </template>
+        <template lwc:elseif={hasItems}>
+        </template>
+        <template lwc:else>
+            <div class="portal-empty">
+                <p class="portal-empty-title">No items found</p>
+                <p class="portal-empty-text">There are no work items matching your current filter.</p>
+            </div>
+        </template>
+
+        <!-- Footer -->
+        <div class="portal-footer">
+            Powered by Delivery Hub | Cloud Nimbus LLC
+        </div>
+    </div>
+</template>
