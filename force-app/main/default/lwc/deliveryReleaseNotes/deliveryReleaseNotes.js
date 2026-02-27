@@ -108,7 +108,6 @@ export default class DeliveryReleaseNotes extends LightningElement {
         const text = this._buildPlainText();
         navigator.clipboard.writeText(text).then(() => {
             this.copied = true;
-            // eslint-disable-next-line @lwc/lwc/no-async-operation
             setTimeout(() => {
                 this.copied = false;
             }, 3000);
