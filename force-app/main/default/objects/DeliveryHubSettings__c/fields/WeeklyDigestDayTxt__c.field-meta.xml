@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WeeklyDigestDayTxt__c</fullName>
+    <defaultValue>&apos;Monday&apos;</defaultValue>
+    <description>Day of the week to send the weekly digest email (e.g. Monday, Tuesday, etc.).</description>
+    <inlineHelpText>Day of the week to send the digest (e.g. Monday).</inlineHelpText>
+    <label>Weekly Digest Day</label>
+    <length>20</length>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <required>false</required>
+</CustomField>

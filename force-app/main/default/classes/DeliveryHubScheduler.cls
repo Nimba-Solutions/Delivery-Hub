@@ -1,9 +1,10 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description Schedulable class to trigger the Delivery Hub Poller and escalation engine.
- * Runs in the background to keep the Client Org in sync with the Mothership
- * and to process automated escalation rules for stalled work items.
+ * @description Schedulable class to trigger the Delivery Hub Poller, escalation engine,
+ *              and the weekly AI digest email. Runs in the background to keep the
+ *              Client Org in sync with the Mothership, process automated escalation
+ *              rules for stalled work items, and deliver periodic status summaries.
  * @author Cloud Nimbus LLC
  */
 public without sharing class DeliveryHubScheduler implements Schedulable {
@@ -11,13 +12,15 @@ public without sharing class DeliveryHubScheduler implements Schedulable {
     /**
      * @description Schedulable execute method.
      * Requeues failed outbound sync items, runs escalation processing,
-     * then delegates to an async method for HTTP callouts.
+     * delegates to an async method for HTTP callouts, and enqueues the weekly
+     * digest email if today is the configured digest day.
      * @param sc The SchedulableContext (standard system parameter).
      */
     public void execute(SchedulableContext sc) {
         requeueFailedItems();
         processEscalations();
         runSyncAsync();
+        enqueueWeeklyDigestIfDue();
     }
 
     /**
@@ -57,6 +60,22 @@ public without sharing class DeliveryHubScheduler implements Schedulable {
         }
         Database.update(failedItems, AccessLevel.SYSTEM_MODE);
         System.enqueueJob(new DeliverySyncItemProcessor());
+    }
+
+    /**
+     * @description Enqueues the weekly digest Queueable if today matches the configured
+     *              digest day and the feature is enabled in org settings.
+     */
+    private static void enqueueWeeklyDigestIfDue() {
+        try {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (DeliveryWeeklyDigestService.isTodayDigestDay(settings)) {
+                System.enqueueJob(new DeliveryWeeklyDigestQueueable());
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubScheduler] Weekly digest enqueue failed: ' + e.getMessage());
+        }
     }
 
     /**

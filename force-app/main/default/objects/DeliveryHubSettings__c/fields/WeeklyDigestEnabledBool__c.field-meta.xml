@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WeeklyDigestEnabledBool__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When enabled, sends a weekly AI-powered board summary digest email to configured recipients.</description>
+    <inlineHelpText>Send a weekly AI-generated board summary email to stakeholders.</inlineHelpText>
+    <label>Weekly Digest Enabled</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
