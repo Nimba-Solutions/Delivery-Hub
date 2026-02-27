@@ -200,8 +200,9 @@ private class DeliveryWorkItemControllerTest {
         System.runAs(testUser) {
 
         Test.startTest();
-        DeliveryWorkItemController.getRequiredFieldsForStage('In QA');
+        List<String> fields = DeliveryWorkItemController.getRequiredFieldsForStage('In QA');
         Test.stopTest();
+        System.assertNotEquals(null, fields, 'Should return a list (possibly empty) of required fields');
         }
     }
 

@@ -127,7 +127,9 @@ private class DeliveryHubPollerTest {
         }
     }
 
+    /** @description Mock that returns HTTP 500 to test error handling. */
     public class MockResponseError implements HttpCalloutMock {
+        /** @description Returns a 500 Internal Server Error response. */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(500);
@@ -136,7 +138,9 @@ private class DeliveryHubPollerTest {
         }
     }
 
+    /** @description Mock that returns an empty JSON array to test zero-item sync. */
     public class MockResponseEmpty implements HttpCalloutMock {
+        /** @description Returns a 200 response with an empty JSON array. */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
