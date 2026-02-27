@@ -29,6 +29,7 @@ import reorderWorkItem from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoar
 import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.createDependency";
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
+import getBoardMetrics from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.getBoardMetrics";
 import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getRequiredFieldsForStage';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
 import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTypes';
@@ -119,6 +120,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     @track workflowTypes = [];
     @track workflowConfig = null;
 
+    // Board metrics
+    @track boardMetrics = null;
+
     // Weekly AI summary modal
     showWeeklyModal = false;
     weeklyUpdate = '';
@@ -144,6 +148,23 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     get isNotAiProcessing()  { return !this.isAiProcessing; }
     get isWeeklyLoaded()     { return !this.isWeeklyLoading; }
     get hasNoBlockedBy()     { return !this.selectedWorkItem?.isBlockedBy?.length; }
+
+    // ── Board metrics getters ──
+    get hasMetrics()                { return this.boardMetrics != null; }
+    get metricsActiveCount()        { return this.boardMetrics?.activeCount ?? 0; }
+    get metricsCompletedThisWeek()  { return this.boardMetrics?.completedThisWeek ?? 0; }
+    get metricsCompletedThisMonth() { return this.boardMetrics?.completedThisMonth ?? 0; }
+    get metricsAvgCycleTime()       { return this.boardMetrics?.avgCycleTimeDays ?? '—'; }
+    get metricsBlockedCount()       { return this.boardMetrics?.blockedCount ?? 0; }
+    get metricsAttentionCount()     { return this.boardMetrics?.attentionCount ?? 0; }
+    get metricsBlockedClass() {
+        const base = 'metric-item';
+        return (this.boardMetrics?.blockedCount > 0) ? base + ' highlight-warning' : base;
+    }
+    get metricsAttentionClass() {
+        const base = 'metric-item';
+        return (this.boardMetrics?.attentionCount > 0) ? base + ' highlight-attention' : base;
+    }
 
     connectedCallback() {
         this.loadSettings();
@@ -280,6 +301,15 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             }
         } else if (error) {
             console.error('[DeliveryHubBoard] getWorkflowConfig error:', error);
+        }
+    }
+
+    @wire(getBoardMetrics, { workflowType: '$activeWorkflowType' })
+    wiredMetrics({ data, error }) {
+        if (data) {
+            this.boardMetrics = data;
+        } else if (error) {
+            console.error('[DeliveryHubBoard] getBoardMetrics error:', error);
         }
     }
 

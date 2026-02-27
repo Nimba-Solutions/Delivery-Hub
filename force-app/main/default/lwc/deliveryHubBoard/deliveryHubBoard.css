@@ -129,6 +129,81 @@
     --sds-c-icon-color-foreground-default: white;
 }
 
+/* ── Metrics Bar ── */
+.metrics-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    background-color: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0.5rem 1.5rem;
+}
+
+.metric-item {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.5rem;
+    border-right: 1px solid var(--gray-200);
+    transition: background-color 0.2s;
+}
+.metric-item:last-child {
+    border-right: none;
+}
+
+.metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--gray-900);
+}
+.metric-value--success {
+    color: #059669;
+}
+.metric-value--info {
+    color: #0284c7;
+}
+
+.metric-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gray-500);
+    margin-top: 3px;
+}
+
+.metric-item.highlight-warning {
+    background-color: #fef2f2;
+}
+.metric-item.highlight-warning .metric-value {
+    color: #dc2626;
+}
+
+.metric-item.highlight-attention {
+    background-color: #fffbeb;
+}
+.metric-item.highlight-attention .metric-value {
+    color: #d97706;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 768px) {
+    .metrics-bar {
+        flex-wrap: wrap;
+    }
+    .metric-item {
+        flex: 1 1 33.33%;
+        border-right: none;
+        border-bottom: 1px solid var(--gray-200);
+        padding: 0.35rem 0.25rem;
+    }
+    .metric-item:nth-last-child(-n+3) {
+        border-bottom: none;
+    }
+}
+
 /* Kanban Column */
 .kanban-column {
     width: 300px;

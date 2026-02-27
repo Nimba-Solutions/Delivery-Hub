@@ -158,6 +158,113 @@ public with sharing class DeliveryHubBoardController {
         ];
     }
 
+    /**
+     * @description Returns board-level KPI metrics: active items, weekly/monthly throughput,
+     * average cycle time, blocked count, and attention-needed count.
+     * @param workflowType The workflow type DeveloperName (defaults to 'Software_Delivery').
+     * @return Map of metric name to value.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getBoardMetrics(String workflowType) {
+        if (String.isBlank(workflowType)) {
+            workflowType = 'Software_Delivery';
+        }
+        Map<String, Object> metrics = new Map<String, Object>();
+
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
+        Set<String> attentionStages = DeliveryWorkflowConfigService.getAttentionStageValues(workflowType);
+
+        // 1. Active items (non-terminal)
+        Integer activeCount = [
+            SELECT COUNT()
+            FROM WorkItem__c
+            WHERE StageNamePk__c NOT IN :terminalStages
+            AND WorkflowTypeTxt__c = :workflowType
+            WITH SYSTEM_MODE
+        ];
+        metrics.put('activeCount', activeCount);
+
+        // 2. Completed this week
+        Date weekStart = Date.today().toStartOfWeek();
+        Datetime weekStartDt = Datetime.newInstance(weekStart, Time.newInstance(0, 0, 0, 0));
+        Integer completedThisWeek = [
+            SELECT COUNT()
+            FROM WorkItem__c
+            WHERE StageNamePk__c IN :terminalStages
+            AND WorkflowTypeTxt__c = :workflowType
+            AND LastModifiedDate >= :weekStartDt
+            WITH SYSTEM_MODE
+        ];
+        metrics.put('completedThisWeek', completedThisWeek);
+
+        // 3. Completed this month (throughput)
+        Date monthStart = Date.today().toStartOfMonth();
+        Datetime monthStartDt = Datetime.newInstance(monthStart, Time.newInstance(0, 0, 0, 0));
+        Integer completedThisMonth = [
+            SELECT COUNT()
+            FROM WorkItem__c
+            WHERE StageNamePk__c IN :terminalStages
+            AND WorkflowTypeTxt__c = :workflowType
+            AND LastModifiedDate >= :monthStartDt
+            WITH SYSTEM_MODE
+        ];
+        metrics.put('completedThisMonth', completedThisMonth);
+
+        // 4. Average cycle time (days from creation to terminal stage, last 30 days)
+        Date thirtyDaysAgo = Date.today().addDays(-30);
+        Datetime thirtyDaysAgoDt = Datetime.newInstance(thirtyDaysAgo, Time.newInstance(0, 0, 0, 0));
+        List<WorkItem__c> completedRecent = [
+            SELECT CreatedDate, LastModifiedDate
+            FROM WorkItem__c
+            WHERE StageNamePk__c IN :terminalStages
+            AND WorkflowTypeTxt__c = :workflowType
+            AND LastModifiedDate >= :thirtyDaysAgoDt
+            WITH SYSTEM_MODE
+            LIMIT 200
+        ];
+        Decimal totalDays = 0;
+        for (WorkItem__c wi : completedRecent) {
+            Long msecDiff = wi.LastModifiedDate.getTime() - wi.CreatedDate.getTime();
+            totalDays += msecDiff / (1000.0 * 60 * 60 * 24);
+        }
+        Decimal avgCycleTime = completedRecent.isEmpty()
+            ? 0
+            : (totalDays / completedRecent.size()).setScale(1, RoundingMode.HALF_UP);
+        metrics.put('avgCycleTimeDays', avgCycleTime);
+
+        // 5. Blocked items count (items that have unresolved blocking dependencies)
+        Set<Id> blockedIds = new Set<Id>();
+        for (WorkItemDependency__c dep : [
+            SELECT BlockedWorkItemId__c
+            FROM WorkItemDependency__c
+            WHERE BlockedWorkItemId__c IN (
+                SELECT Id FROM WorkItem__c
+                WHERE StageNamePk__c NOT IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+            )
+            AND BlockingWorkItemId__c IN (
+                SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
+            )
+            WITH SYSTEM_MODE
+        ]) {
+            blockedIds.add(dep.BlockedWorkItemId__c);
+        }
+        metrics.put('blockedCount', blockedIds.size());
+
+        // 6. Attention-needed items
+        Integer attentionCount = [
+            SELECT COUNT()
+            FROM WorkItem__c
+            WHERE StageNamePk__c IN :attentionStages
+            AND WorkflowTypeTxt__c = :workflowType
+            WITH SYSTEM_MODE
+        ];
+        metrics.put('attentionCount', attentionCount);
+
+        return metrics;
+    }
+
     private static AuraHandledException createAuraException(String message) {
         AuraHandledException e = new AuraHandledException(message);
         e.setMessage(message);

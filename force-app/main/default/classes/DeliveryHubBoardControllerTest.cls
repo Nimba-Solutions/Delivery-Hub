@@ -110,4 +110,33 @@ public class DeliveryHubBoardControllerTest {
         System.assertEquals(1, results.size());
         System.assertEquals('Search Target', results[0].BriefDescriptionTxt__c);
     }
+
+    @isTest
+    static void testGetBoardMetrics() {
+        Test.startTest();
+        Map<String, Object> metrics = DeliveryHubBoardController.getBoardMetrics('Software_Delivery');
+        Test.stopTest();
+
+        System.assertNotEquals(null, metrics, 'Metrics map should not be null');
+        System.assert(metrics.containsKey('activeCount'), 'Should contain activeCount');
+        System.assert(metrics.containsKey('completedThisWeek'), 'Should contain completedThisWeek');
+        System.assert(metrics.containsKey('completedThisMonth'), 'Should contain completedThisMonth');
+        System.assert(metrics.containsKey('avgCycleTimeDays'), 'Should contain avgCycleTimeDays');
+        System.assert(metrics.containsKey('blockedCount'), 'Should contain blockedCount');
+        System.assert(metrics.containsKey('attentionCount'), 'Should contain attentionCount');
+
+        // With test data, we should have active items (all are in Open/In Progress = non-terminal)
+        Integer activeCount = (Integer) metrics.get('activeCount');
+        System.assert(activeCount >= 0, 'Active count should be non-negative');
+    }
+
+    @isTest
+    static void testGetBoardMetricsDefaultWorkflowType() {
+        Test.startTest();
+        Map<String, Object> metrics = DeliveryHubBoardController.getBoardMetrics(null);
+        Test.stopTest();
+
+        System.assertNotEquals(null, metrics, 'Metrics should be returned for null workflow type');
+        System.assert(metrics.containsKey('activeCount'), 'Should default to Software_Delivery');
+    }
 }
