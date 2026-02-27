@@ -32,8 +32,11 @@ public with sharing class DeliveryWorkItemController {
                     WorkflowTypeTxt__c,
                     TotalLoggedHoursNumber__c,
                     EstimatedHoursNumber__c,
+                    LastModifiedDate,
+                    PriorityPk__c,
                     (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
-                    (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r)
+                    (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                    (SELECT Id FROM WorkItemComments__r LIMIT 100)
                 FROM WorkItem__c
                 WHERE IsActiveBool__c = true
                 AND WorkflowTypeTxt__c = :workflowType
@@ -54,8 +57,11 @@ public with sharing class DeliveryWorkItemController {
                 WorkflowTypeTxt__c,
                 TotalLoggedHoursNumber__c,
                 EstimatedHoursNumber__c,
+                LastModifiedDate,
+                PriorityPk__c,
                 (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
-                (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r)
+                (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                (SELECT Id FROM WorkItemComments__r LIMIT 100)
             FROM WorkItem__c
             WHERE IsActiveBool__c = true
             ORDER BY SortOrderNumber__c
