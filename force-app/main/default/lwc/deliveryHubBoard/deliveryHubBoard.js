@@ -63,7 +63,10 @@ const FIELDS = {
     DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%BlockingDeps__r`,
     BLOCKING_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockingWorkItemId__c`,
     BLOCKED_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockedWorkItemId__c`,
-    WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`
+    WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`,
+    // Card enrichment
+    LAST_MODIFIED: 'LastModifiedDate',
+    COMMENT_REL: `%%%NAMESPACED_ORG%%%WorkItemComments__r`
 };
 
 export default class DeliveryHubBoard extends NavigationMixin(LightningElement) {
@@ -496,6 +499,25 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 else { confidenceClass += ' confidence--low'; }
             }
 
+            // Comment count from subquery
+            const commentsRaw = getValue(rec, FIELDS.COMMENT_REL) || [];
+            const commentCount = commentsRaw.length;
+
+            // Aging: days since last modified
+            const lastMod = getValue(rec, FIELDS.LAST_MODIFIED);
+            let agingDays = 0;
+            if (lastMod) {
+                agingDays = Math.floor((Date.now() - new Date(lastMod).getTime()) / 86400000);
+            }
+            let agingClass = '';
+            if (agingDays >= 14) {
+                agingClass = 'aging-dot aging-dot--critical';
+            } else if (agingDays >= 7) {
+                agingClass = 'aging-dot aging-dot--warning';
+            } else if (agingDays >= 5) {
+                agingClass = 'aging-dot aging-dot--stale';
+            }
+
             return {
                 ...rec,
                 uiId: rec.Id,
@@ -523,6 +545,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 tags: getTagsArray(tags),
                 cardClasses: `work-item-card`,
                 priorityClasses: `priority-badge priority-${priority?.toLowerCase()}`,
+                commentCount,
+                hasComments: commentCount > 0,
+                commentLabel: commentCount === 1 ? '1' : `${commentCount}`,
+                agingDays,
+                agingClass,
+                hasAging: agingDays >= 5,
+                agingLabel: `${agingDays}d`,
             };
         });
     }

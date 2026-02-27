@@ -162,6 +162,17 @@
                                                 <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Dependencies"></lightning-icon>
                                             </button>
 
+                                            <template lwc:if={wi.hasComments}>
+                                                <div class="card-badge" title="Comments">
+                                                    <lightning-icon icon-name="utility:comments" size="xx-small" class="slds-icon-text-light"></lightning-icon>
+                                                    <span>{wi.commentLabel}</span>
+                                                </div>
+                                            </template>
+
+                                            <template lwc:if={wi.hasAging}>
+                                                <span class={wi.agingClass} title="No activity for {wi.agingLabel}"></span>
+                                            </template>
+
                                             <template lwc:if={wi.OwnerName}>
                                                 <div class="assignee">
                                                     <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
