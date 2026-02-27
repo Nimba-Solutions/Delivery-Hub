@@ -1,0 +1,109 @@
+/* ── Swipe Card Wrapper ── */
+.swipe-card-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    /* Ensure action indicators behind the card are visible */
+    background: transparent;
+}
+
+/* ── Inner card (the sliding element) ── */
+.swipe-card-inner {
+    position: relative;
+    z-index: 2;
+    will-change: transform, opacity;
+    /* Default: no transform, snap-back transition applied via JS */
+}
+
+/* ── Action indicators (behind the card) ── */
+.swipe-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+    border-radius: 0.75rem;
+    padding: 0 1rem;
+    box-sizing: border-box;
+}
+
+.swipe-indicator-forward {
+    background: linear-gradient(90deg, transparent 0%, #dcfce7 30%, #bbf7d0 100%);
+    justify-content: flex-start;
+}
+
+.swipe-indicator-backtrack {
+    background: linear-gradient(270deg, transparent 0%, #ffedd5 30%, #fed7aa 100%);
+    justify-content: flex-end;
+}
+
+.indicator-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.indicator-arrow {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.swipe-indicator-forward .indicator-arrow {
+    color: #16a34a;
+}
+
+.swipe-indicator-backtrack .indicator-arrow {
+    color: #ea580c;
+}
+
+.indicator-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
+.swipe-indicator-forward .indicator-label {
+    color: #166534;
+}
+
+.swipe-indicator-backtrack .indicator-label {
+    color: #9a3412;
+}
+
+/* ── Past-threshold pulse ── */
+.swipe-indicator.past-threshold {
+    animation: indicator-pulse 0.6s ease-in-out infinite;
+}
+
+.swipe-indicator-forward.past-threshold {
+    background: linear-gradient(90deg, transparent 0%, #bbf7d0 20%, #86efac 100%);
+}
+
+.swipe-indicator-backtrack.past-threshold {
+    background: linear-gradient(270deg, transparent 0%, #fed7aa 20%, #fdba74 100%);
+}
+
+@keyframes indicator-pulse {
+    0%, 100% {
+        opacity: 0.95;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* ── Elevation during active swipe (applied by JS) ── */
+.swipe-card-inner[style*="translateX"] {
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.15),
+                0 4px 10px -5px rgba(0, 0, 0, 0.08);
+}

@@ -9,6 +9,7 @@ import { NavigationMixin } from "lightning/navigation";
 
 // Update this line to include createRecord, getRecord, and getFieldValue
 import { updateRecord, createRecord, getRecord, getFieldValue } from "lightning/uiRecordApi";
+import FORM_FACTOR from "@salesforce/client/formFactor";
 
 // Add these new imports for the current user
 import USER_ID from "@salesforce/user/Id";
@@ -165,6 +166,30 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     get metricsAttentionClass() {
         const base = 'metric-item';
         return (this.boardMetrics?.attentionCount > 0) ? base + ' highlight-attention' : base;
+    }
+
+    // ── Mobile detection ──
+    get isMobile() {
+        return FORM_FACTOR === 'Small';
+    }
+    get isDesktop() {
+        return !this.isMobile;
+    }
+
+    // ── Mobile collapsed stage state ──
+    @track _collapsedStages = {};
+
+    handleToggleStageCollapse(event) {
+        const stage = event.currentTarget.dataset.stage;
+        this._collapsedStages = {
+            ...this._collapsedStages,
+            [stage]: !this._collapsedStages[stage]
+        };
+    }
+
+    isStageCollapsed(stage) {
+        // On mobile, start collapsed except if the stage has items
+        return !!this._collapsedStages[stage];
     }
 
     connectedCallback() {
@@ -689,7 +714,38 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 });
         }
 
-        return this.showMode === 'active' ? columns.filter(col => col.workItems.length > 0) : columns;
+        const isMobile = this.isMobile;
+
+        // Enrich columns with mobile-specific data
+        const enrichedColumns = columns.map(col => {
+            const isCollapsed = isMobile && this.isStageCollapsed(col.stage);
+            // For mobile, enrich work items with swipe data per-item
+            const workItemsWithSwipe = isMobile ? col.workItems.map(wi => {
+                const swipeData = this.getSwipeDataForStage(wi.uiStage);
+                return {
+                    ...wi,
+                    swipeForwardStageName: swipeData.forwardStageName,
+                    swipeForwardStageValue: swipeData.forwardStageValue,
+                    swipeBacktrackStageName: swipeData.backtrackStageName,
+                    swipeBacktrackStageValue: swipeData.backtrackStageValue,
+                    swipeIsTerminal: swipeData.isTerminal
+                };
+            }) : col.workItems;
+
+            return {
+                ...col,
+                workItems: workItemsWithSwipe,
+                isCollapsed,
+                isExpanded: !isCollapsed,
+                mobileHeaderClasses: `mobile-stage-header ${isCollapsed ? 'collapsed' : 'expanded'}`,
+                collapseIcon: isCollapsed ? 'utility:chevronright' : 'utility:chevrondown',
+                bodyClasses: isCollapsed
+                    ? `kanban-column-body mobile-collapsed ${col.workItems.length > 0 ? 'has-items' : 'is-empty'}`
+                    : col.bodyClasses
+            };
+        });
+
+        return this.showMode === 'active' ? enrichedColumns.filter(col => col.workItems.length > 0) : enrichedColumns;
     }
 
     getClientCardColor(status) {
@@ -1362,6 +1418,59 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     handleWorkflowTypeChange(event) {
         this.activeWorkflowType = event.currentTarget.dataset.type;
+    }
+
+    // --- SWIPE TRANSITION HANDLER (mobile) ---
+    async handleSwipeTransition(event) {
+        const { workItemId, targetStage } = event.detail;
+        if (!workItemId || !targetStage) return;
+
+        try {
+            const requiredFields = await getRequiredFieldsForStage({ targetStage });
+            if (requiredFields && requiredFields.length > 0) {
+                // Stage requires additional fields — open the transition modal
+                this.transitionWorkItemId = workItemId;
+                this.transitionTargetStage = targetStage;
+                this.transitionRequiredFields = requiredFields;
+                this.showTransitionModal = true;
+            } else {
+                // Direct update — reuse existing update path
+                const fields = {
+                    Id: workItemId,
+                    '%%%NAMESPACED_ORG%%%StageNamePk__c': targetStage
+                };
+                await updateRecord({ fields });
+                this.showToast('Success', 'Work item moved to ' + targetStage + '.', 'success');
+                this.refreshWorkItems();
+            }
+        } catch (error) {
+            console.error('Swipe transition error:', error);
+            const msg = error.body?.message || 'Failed to update work item.';
+            this.showToast('Error', msg, 'error');
+            this.refreshWorkItems();
+        }
+    }
+
+    /**
+     * Returns swipe metadata for a given work item stage.
+     * Used by the template to pass transition data to deliverySwipeCard.
+     */
+    getSwipeDataForStage(stage) {
+        const stageData = this._stageMap[stage];
+        if (!stageData) return { forwardStageName: '', forwardStageValue: '', backtrackStageName: '', backtrackStageValue: '', isTerminal: false };
+
+        const forwardTransitions = stageData.forwardTransitions || [];
+        const backtrackTransitions = stageData.backtrackTransitions || [];
+        const forwardTarget = forwardTransitions.length > 0 ? forwardTransitions[0] : '';
+        const backtrackTarget = backtrackTransitions.length > 0 ? backtrackTransitions[0] : '';
+
+        return {
+            forwardStageName: forwardTarget ? (this._stageMap[forwardTarget]?.displayName || forwardTarget) : '',
+            forwardStageValue: forwardTarget,
+            backtrackStageName: backtrackTarget ? (this._stageMap[backtrackTarget]?.displayName || backtrackTarget) : '',
+            backtrackStageValue: backtrackTarget,
+            isTerminal: !!stageData.isTerminal
+        };
     }
 
     showToast(title, message, variant) {

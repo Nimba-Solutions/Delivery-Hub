@@ -1,0 +1,28 @@
+<template>
+    <div class="swipe-card-wrapper">
+        <!-- Backtrack indicator (revealed when swiping left) -->
+        <template lwc:if={hasBacktrack}>
+            <div class="swipe-indicator swipe-indicator-backtrack">
+                <div class="indicator-content">
+                    <span class="indicator-arrow">&larr;</span>
+                    <span class="indicator-label">{backtrackLabel}</span>
+                </div>
+            </div>
+        </template>
+
+        <!-- Forward indicator (revealed when swiping right) -->
+        <template lwc:if={hasForward}>
+            <div class="swipe-indicator swipe-indicator-forward">
+                <div class="indicator-content">
+                    <span class="indicator-label">{forwardLabel}</span>
+                    <span class="indicator-arrow">&rarr;</span>
+                </div>
+            </div>
+        </template>
+
+        <!-- The actual card content (slides with finger) -->
+        <div class="swipe-card-inner">
+            <slot></slot>
+        </div>
+    </div>
+</template>

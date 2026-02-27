@@ -881,3 +881,140 @@
     background: #fee2e2;
     color: #991b1b;
 }
+
+/* ========================================================================
+ * MOBILE BOARD LAYOUT
+ * Single-column list with collapsible stage sections and swipe cards
+ * ======================================================================== */
+
+.mobile-board {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0.5rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ── Mobile Stage Section ── */
+.mobile-stage-section {
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--white, #ffffff);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ── Mobile Stage Header (collapsible accordion) ── */
+.mobile-stage-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px; /* iOS touch target minimum */
+}
+
+.mobile-stage-header.collapsed {
+    border-radius: 0.5rem;
+}
+
+.mobile-stage-header.expanded {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.collapse-chevron {
+    flex-shrink: 0;
+    --sds-c-icon-color-foreground-default: currentColor;
+    opacity: 0.6;
+}
+
+.mobile-stage-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0;
+    flex-grow: 1;
+}
+
+/* ── Mobile Stage Body ── */
+.mobile-stage-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.mobile-collapsed {
+    display: none !important;
+}
+
+.empty-stage-mobile {
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--gray-400, #9ca3af);
+}
+
+/* ── Mobile Card Overrides ── */
+.mobile-card {
+    cursor: default !important;
+    /* Larger touch targets on mobile */
+    padding: 1rem;
+}
+
+.mobile-card .work-item-title-text {
+    font-size: 1rem;
+    padding-right: 2rem;
+}
+
+.mobile-card .work-item-description {
+    font-size: 0.9rem;
+}
+
+/* On mobile, always show action buttons (no hover state on touch) */
+.mobile-action-visible {
+    opacity: 0.6 !important;
+}
+
+/* ── Mobile Toolbar Adjustments ── */
+@media (max-width: 768px) {
+    .kanban-toolbar {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .toolbar-right {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .kanban-filter-bar {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .filter-group {
+        flex-wrap: wrap;
+    }
+
+    .active-devs-wrapper {
+        display: none; /* Hide on mobile — not useful for small screens */
+    }
+
+    .new-work-item-button {
+        padding: 0.5rem 0.8rem;
+        font-size: 13px;
+    }
+}
