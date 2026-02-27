@@ -67,7 +67,7 @@ private class DeliveryWorkflowConfigServiceTest {
 
         Map<String,Object> typeMap = (Map<String,Object>) config.get('type');
         System.assertEquals('Loan_Approval', typeMap.get('developerName'), 'developerName must be Loan_Approval');
-        System.assertEquals(true, typeMap.get('useSimplifiedView'), 'Loan_Approval uses simplified view');
+        System.assertEquals(false, typeMap.get('useSimplifiedView'), 'Loan_Approval uses persona views');
 
         List<Object> stages = (List<Object>) config.get('stages');
         System.assertEquals(8, stages.size(), 'Loan_Approval must have exactly 8 stages');

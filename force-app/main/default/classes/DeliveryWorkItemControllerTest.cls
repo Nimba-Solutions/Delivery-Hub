@@ -63,13 +63,15 @@ private class DeliveryWorkItemControllerTest {
 
     @isTest
     static void testGetWorkItems() {
+        User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
+        System.runAs(testUser) {
         Test.startTest();
         // Pass null to get all active work items (backward-compatible path)
         List<WorkItem__c> results = DeliveryWorkItemController.getWorkItems(null);
         Test.stopTest();
         System.assert(!results.isEmpty(), 'Work items should be returned');
-
+        }
     }
 
     @isTest
