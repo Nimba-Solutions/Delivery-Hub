@@ -36,7 +36,8 @@
                         <template for:each={attentionWorkItems} for:item="wi">
                             <li key={wi.id} class="slds-p-vertical_x-small slds-border_bottom attention-item">
                                 <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
-                                    <div class="slds-col slds-truncate">
+                                    <div class="slds-col slds-truncate slds-grid slds-grid_vertical-align-center">
+                                        <span class={wi.urgencyClass} title={wi.urgency}></span>
                                         <button
                                             class="slds-button slds-button_reset slds-text-link work-item-link"
                                             onclick={handleWorkItemClick}
@@ -47,7 +48,8 @@
                                             </template>
                                         </button>
                                     </div>
-                                    <div class="slds-col slds-shrink slds-m-left_x-small">
+                                    <div class="slds-col slds-shrink slds-m-left_x-small slds-grid slds-grid_vertical-align-center" style="gap: 0.5rem;">
+                                        <span class="score-meta">{wi.scoreLabel}</span>
                                         <span class={wi.badgeClass}>{wi.stage}</span>
                                     </div>
                                 </div>

@@ -14,6 +14,10 @@ public with sharing class DeliveryHubDashboardController {
         @AuraEnabled public String title;
         @AuraEnabled public String stage;
         @AuraEnabled public String lastModified;
+        @AuraEnabled public Integer attentionScore;
+        @AuraEnabled public String urgency;
+        @AuraEnabled public String priority;
+        @AuraEnabled public Integer daysInStage;
     }
 
     /** @description Wrapper for a phase bucket count used in the client dashboard. */
@@ -145,12 +149,12 @@ public with sharing class DeliveryHubDashboardController {
         Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
 
         List<WorkItem__c> recs = [
-            SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c
+            SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
+                   PriorityPk__c, LastModifiedDate, CalculatedETADate__c, Developer__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
             WITH SYSTEM_MODE
-            ORDER BY LastModifiedDate DESC
-            LIMIT 20
+            LIMIT 50
         ];
 
         List<WorkItemSummary> items = new List<WorkItemSummary>();
@@ -160,9 +164,95 @@ public with sharing class DeliveryHubDashboardController {
             item.name = t.Name;
             item.title = t.BriefDescriptionTxt__c;
             item.stage = t.StageNamePk__c;
+            item.priority = t.PriorityPk__c;
+            item.daysInStage = Date.today().daysBetween(Date.today()) >= 0
+                ? (Integer) t.LastModifiedDate.date().daysBetween(Date.today())
+                : 0;
+            item.attentionScore = calculateAttentionScore(t, item.daysInStage);
+            item.urgency = scoreToUrgency(item.attentionScore);
             items.add(item);
         }
+
+        // Sort by attention score descending (highest urgency first)
+        items.sort(new AttentionScoreComparator());
+        // Return top 20 after scoring
+        if (items.size() > 20) {
+            List<WorkItemSummary> top = new List<WorkItemSummary>();
+            for (Integer i = 0; i < 20; i++) {
+                top.add(items[i]);
+            }
+            return top;
+        }
         return items;
+    }
+
+    /**
+     * @description Computes an attention score for a work item based on multiple risk factors.
+     * Higher score = needs more immediate attention.
+     * @param t The work item record
+     * @param daysInStage Number of days since last modification
+     * @return Integer attention score (0-100+)
+     */
+    private static Integer calculateAttentionScore(WorkItem__c t, Integer daysInStage) {
+        Integer score = 0;
+
+        // Factor 1: Time in stage (2 points per day, max 30)
+        score += Math.min(daysInStage * 2, 30);
+
+        // Factor 2: Priority weight
+        String priority = t.PriorityPk__c;
+        if (priority == 'Critical') {
+            score += 20;
+        } else if (priority == 'High') {
+            score += 12;
+        } else if (priority == 'Medium') {
+            score += 6;
+        } else {
+            score += 2;
+        }
+
+        // Factor 3: No developer assigned (needs staffing)
+        if (t.Developer__c == null) {
+            score += 8;
+        }
+
+        // Factor 4: Overdue ETA
+        if (t.CalculatedETADate__c != null && t.CalculatedETADate__c < Date.today()) {
+            score += 15;
+        }
+
+        return score;
+    }
+
+    /**
+     * @description Maps a numeric attention score to an urgency label.
+     * @param score The attention score
+     * @return String urgency level: 'critical', 'high', 'medium', or 'low'
+     */
+    private static String scoreToUrgency(Integer score) {
+        if (score >= 40) {
+            return 'critical';
+        } else if (score >= 25) {
+            return 'high';
+        } else if (score >= 15) {
+            return 'medium';
+        }
+        return 'low';
+    }
+
+    /**
+     * @description Comparator to sort WorkItemSummary by attentionScore descending.
+     */
+    private class AttentionScoreComparator implements Comparator<WorkItemSummary> {
+        /**
+         * @description Compares two WorkItemSummary objects by attentionScore descending.
+         * @param a First summary
+         * @param b Second summary
+         * @return Integer negative if a > b, positive if a < b
+         */
+        public Integer compare(WorkItemSummary a, WorkItemSummary b) {
+            return b.attentionScore - a.attentionScore;
+        }
     }
 
     private static List<PhaseItem> fetchPhaseList() {

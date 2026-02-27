@@ -170,6 +170,35 @@
     color: #8a6800;
 }
 
+/* ── Attention scoring ── */
+.urgency-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 0.4rem;
+}
+.urgency-dot--critical {
+    background: #dc2626;
+    box-shadow: 0 0 0 2px #fecaca;
+}
+.urgency-dot--high {
+    background: #ea580c;
+    box-shadow: 0 0 0 2px #fed7aa;
+}
+.urgency-dot--medium {
+    background: #d97706;
+    box-shadow: 0 0 0 2px #fde68a;
+}
+.urgency-dot--low {
+    background: #94a3b8;
+}
+.score-meta {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
 .recent-time {
     font-size: 0.75rem;
     min-width: 4.5rem;
