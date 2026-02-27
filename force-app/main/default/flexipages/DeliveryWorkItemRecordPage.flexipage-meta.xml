@@ -163,6 +163,16 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentInstanceProperties>
+                    <name>height</name>
+                    <value>350</value>
+                </componentInstanceProperties>
+                <componentName>deliveryDependencyGraph</componentName>
+                <identifier>c_deliveryDependencyGraph</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryWorkItemQuotes</componentName>
                 <identifier>c_deliveryWorkItemQuotes</identifier>
             </componentInstance>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Dependency Graph</masterLabel>
+    <description>Interactive SVG network graph showing work item dependency relationships with force-directed layout.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <objects>
+                <object>WorkItem__c</object>
+            </objects>
+            <property name="height" type="Integer" default="400" label="Graph Height (px)" description="Height of the graph canvas in pixels." />
+        </targetConfig>
+        <targetConfig targets="lightning__AppPage">
+            <property name="workflowType" type="String" default="Software_Delivery" label="Workflow Type" description="DeveloperName of the workflow type to show the project-wide graph for." />
+            <property name="height" type="Integer" default="500" label="Graph Height (px)" description="Height of the graph canvas in pixels." />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
