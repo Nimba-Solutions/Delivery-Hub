@@ -265,8 +265,19 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     @wire(getWorkflowConfig, { workflowTypeName: '$activeWorkflowType' })
     wiredConfig({ data, error }) {
-        if (data) { this.workflowConfig = data; }
-        else if (error) { console.error('[DeliveryHubBoard] getWorkflowConfig error:', error); }
+        if (data) {
+            this.workflowConfig = data;
+            // Reset persona if current one doesn't exist in new workflow
+            const views = data.personaViews;
+            if (views && !views[this.persona]) {
+                const available = Object.keys(views);
+                if (available.length > 0) {
+                    this.persona = available[0];
+                }
+            }
+        } else if (error) {
+            console.error('[DeliveryHubBoard] getWorkflowConfig error:', error);
+        }
     }
 
     @wire(getWorkItems, { workflowType: '$activeWorkflowType' })
