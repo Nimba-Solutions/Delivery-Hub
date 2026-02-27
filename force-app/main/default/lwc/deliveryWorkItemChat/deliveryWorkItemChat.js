@@ -4,9 +4,9 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, api, track } from 'lwc';
-import getLiveComments from '@salesforce/apex/DeliveryHubCommentController.getLiveComments';
-import postLiveComment from '@salesforce/apex/DeliveryHubCommentController.postLiveComment';
-import getCommentFiles from '@salesforce/apex/DeliveryHubCommentController.getCommentFiles';
+import getLiveComments from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.getLiveComments';
+import postLiveComment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.postLiveComment';
+import getCommentFiles from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.getCommentFiles';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 

@@ -9,7 +9,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 
 // --- APEX IMPORTS ---
-import updateWorkItemStage from '@salesforce/apex/DeliveryHubBoardController.updateWorkItemStage';
+import updateWorkItemStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.updateWorkItemStage';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 
 // --- SCHEMA IMPORTS ---

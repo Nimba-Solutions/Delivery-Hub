@@ -8,8 +8,8 @@ import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 // --- FIX: Import from the new Controller ---
-import sendRequestToVendor from '@salesforce/apex/DeliveryRequestManagerController.sendRequestToVendor';
-import checkRequestStatus from '@salesforce/apex/DeliveryRequestManagerController.checkRequestStatus';
+import sendRequestToVendor from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryRequestManagerController.sendRequestToVendor';
+import checkRequestStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryRequestManagerController.checkRequestStatus';
 
 import STATUS_FIELD from '@salesforce/schema/WorkRequest__c.StatusPk__c';
 import REMOTE_ID_FIELD from '@salesforce/schema/WorkRequest__c.RemoteWorkItemIdTxt__c';

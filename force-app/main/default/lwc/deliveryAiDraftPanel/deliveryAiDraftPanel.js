@@ -5,7 +5,7 @@
  */
 import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import draftStatusUpdate from '@salesforce/apex/DeliveryAiController.draftStatusUpdate';
+import draftStatusUpdate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryAiController.draftStatusUpdate';
 
 export default class DeliveryAiDraftPanel extends LightningElement {
     @api recordId;

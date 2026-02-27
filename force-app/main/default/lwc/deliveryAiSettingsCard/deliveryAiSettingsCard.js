@@ -5,8 +5,8 @@
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
-import saveAiSettings from '@salesforce/apex/DeliveryHubSettingsController.saveAiSettings';
+import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
+import saveAiSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.saveAiSettings';
 
 export default class DeliveryAiSettingsCard extends LightningElement {
     @track aiSuggestionsEnabled = false;

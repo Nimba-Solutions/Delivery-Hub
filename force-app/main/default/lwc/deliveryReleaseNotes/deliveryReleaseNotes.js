@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
-import generateReleaseNotes from '@salesforce/apex/DeliveryReleaseNotesController.generateReleaseNotes';
+import generateReleaseNotes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryReleaseNotesController.generateReleaseNotes';
 
 export default class DeliveryReleaseNotes extends LightningElement {
     @track startDate;

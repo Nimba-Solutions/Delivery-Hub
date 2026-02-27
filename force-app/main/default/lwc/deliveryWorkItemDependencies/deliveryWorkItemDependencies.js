@@ -5,7 +5,7 @@
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
-import getDependencies from '@salesforce/apex/DeliveryWorkItemDependenciesController.getDependencies';
+import getDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemDependenciesController.getDependencies';
 
 export default class DeliveryWorkItemDependencies extends NavigationMixin(LightningElement) {
     @api recordId;

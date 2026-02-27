@@ -7,9 +7,9 @@
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getSetupStatus from '@salesforce/apex/DeliveryHubSetupController.getSetupStatus';
-import prepareLocalEntity from '@salesforce/apex/DeliveryHubSetupController.prepareLocalEntity';
-import performHandshake from '@salesforce/apex/DeliveryHubSetupController.performHandshake';
+import getSetupStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.getSetupStatus';
+import prepareLocalEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.prepareLocalEntity';
+import performHandshake from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.performHandshake';
 
 const STEPS = [
     { index: 1, label: 'Org Type' },

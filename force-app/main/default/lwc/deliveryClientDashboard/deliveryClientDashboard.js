@@ -7,7 +7,7 @@ import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
-import getClientDashboard from '@salesforce/apex/DeliveryHubDashboardController.getClientDashboard';
+import getClientDashboard from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getClientDashboard';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 import USER_ID from '@salesforce/user/Id';
 import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';

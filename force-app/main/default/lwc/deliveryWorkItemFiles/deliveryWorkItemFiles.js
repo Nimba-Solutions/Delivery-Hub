@@ -5,7 +5,7 @@
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
-import getWorkItemFiles from '@salesforce/apex/DeliveryHubFilesController.getWorkItemFiles';
+import getWorkItemFiles from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubFilesController.getWorkItemFiles';
 
 const EXTENSION_ICON_MAP = {
     pdf: 'doctype:pdf',

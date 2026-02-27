@@ -6,8 +6,8 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getQuotes from '@salesforce/apex/DeliveryWorkItemQuotesController.getQuotes';
-import acceptQuote from '@salesforce/apex/DeliveryWorkItemQuotesController.acceptQuote';
+import getQuotes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemQuotesController.getQuotes';
+import acceptQuote from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemQuotesController.acceptQuote';
 
 const STATUS_CLASS = {
     'Accepted':   'q-status q-status--accepted',

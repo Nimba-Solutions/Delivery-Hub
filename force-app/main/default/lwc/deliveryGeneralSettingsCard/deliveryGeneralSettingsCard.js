@@ -5,10 +5,10 @@
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
-import saveGeneralSettings from '@salesforce/apex/DeliveryHubSettingsController.saveGeneralSettings';
-import saveSlackWebhookUrl from '@salesforce/apex/DeliveryHubSettingsController.saveSlackWebhookUrl';
-import testWebhook from '@salesforce/apex/DeliverySlackService.testWebhook';
+import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
+import saveGeneralSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.saveGeneralSettings';
+import saveSlackWebhookUrl from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.saveSlackWebhookUrl';
+import testWebhook from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySlackService.testWebhook';
 
 export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track notifications = false;

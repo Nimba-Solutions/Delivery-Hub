@@ -4,7 +4,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
-import getBudgetMetrics from '@salesforce/apex/DeliveryHubDashboardController.getBudgetMetrics';
+import getBudgetMetrics from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getBudgetMetrics';
 import { refreshApex } from '@salesforce/apex';
 
 export default class DeliveryBudgetSummary extends LightningElement {

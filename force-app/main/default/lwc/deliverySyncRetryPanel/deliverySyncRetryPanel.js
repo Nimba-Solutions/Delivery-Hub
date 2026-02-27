@@ -6,8 +6,8 @@
 import { LightningElement, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getSyncHealth from '@salesforce/apex/DeliverySyncRetryController.getSyncHealth';
-import retryFailed from '@salesforce/apex/DeliverySyncRetryController.retryFailed';
+import getSyncHealth from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySyncRetryController.getSyncHealth';
+import retryFailed from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySyncRetryController.retryFailed';
 
 export default class DeliverySyncRetryPanel extends LightningElement {
     @track isRetrying = false;

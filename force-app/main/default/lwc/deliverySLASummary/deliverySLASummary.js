@@ -4,7 +4,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire } from 'lwc';
-import getSLAStatusCounts from '@salesforce/apex/DeliverySLAService.getSLAStatusCounts';
+import getSLAStatusCounts from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySLAService.getSLAStatusCounts';
 import { refreshApex } from '@salesforce/apex';
 
 export default class DeliverySLASummary extends LightningElement {

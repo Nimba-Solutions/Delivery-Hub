@@ -4,8 +4,8 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from 'lwc';
-import getSettings from '@salesforce/apex/DeliveryHubSettingsController.getSettings';
-import saveSettings from '@salesforce/apex/DeliveryHubSettingsController.saveAllAiSettings';
+import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
+import saveSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.saveAllAiSettings';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DeliveryKanbanSettingsContainer extends LightningElement {

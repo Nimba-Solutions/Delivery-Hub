@@ -6,7 +6,7 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { getRecord, getFieldValue, refreshApex } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import logHours from '@salesforce/apex/DeliveryTimeLoggerController.logHours';
+import logHours from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTimeLoggerController.logHours';
 import TOTAL_LOGGED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.TotalLoggedHoursNumber__c';
 import CLIENT_ENTITY_FIELD from '@salesforce/schema/WorkItem__c.ClientNetworkEntityId__c';
 
