@@ -109,10 +109,13 @@ private class DeliveryEmailNotificationServiceTest {
 
     @IsTest
     static void testBuildHtmlBody() {
-        String html = DeliveryEmailNotificationService.buildHtmlBody(
-            'WI-0042', 'Fix login bug', 'In Development',
-            'https://test.salesforce.com/lightning/r/WorkItem__c/001/view'
-        );
+        DeliveryEmailNotificationService.EmailContext ctx = new DeliveryEmailNotificationService.EmailContext();
+        ctx.workItemName = 'WI-0042';
+        ctx.title = 'Fix login bug';
+        ctx.newStage = 'In Development';
+        ctx.recordUrl = 'https://test.salesforce.com/lightning/r/WorkItem__c/001/view';
+
+        String html = DeliveryEmailNotificationService.buildHtmlBody(ctx);
         System.assert(html.contains('WI-0042'), 'HTML must contain work item name');
         System.assert(html.contains('Fix login bug'), 'HTML must contain title');
         System.assert(html.contains('In Development'), 'HTML must contain new stage');
