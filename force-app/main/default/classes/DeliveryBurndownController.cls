@@ -11,8 +11,16 @@ public with sharing class DeliveryBurndownController {
     /** @description Number of weeks of history to return. */
     private static final Integer WEEKS_TO_SHOW = 12;
 
-    /** @description Milliseconds in one day — not used in Apex but kept for clarity. */
+    /** @description Days in one week. */
     private static final Integer DAYS_PER_WEEK = 7;
+
+    /** @description Holds weekly bucket counts for created and completed items. */
+    private class WeeklyBuckets {
+        /** @description Monday date → count of items created that week */
+        Map<Date, Integer> createdByWeek = new Map<Date, Integer>();
+        /** @description Monday date → count of items completed that week */
+        Map<Date, Integer> completedByWeek = new Map<Date, Integer>();
+    }
 
     /**
      * @description Returns weekly burndown data for the given workflow type.
@@ -33,11 +41,9 @@ public with sharing class DeliveryBurndownController {
 
             List<WorkItem__c> workItems = queryWorkItems(workflowTypeName, windowStart);
 
-            Map<Date, Integer> createdByWeek = new Map<Date, Integer>();
-            Map<Date, Integer> completedByWeek = new Map<Date, Integer>();
-            buildWeeklyBuckets(workItems, terminalStages, createdByWeek, completedByWeek);
+            WeeklyBuckets buckets = buildWeeklyBuckets(workItems, terminalStages);
 
-            return assembleResult(windowStart, createdByWeek, completedByWeek);
+            return assembleResult(windowStart, buckets);
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
@@ -111,44 +117,41 @@ public with sharing class DeliveryBurndownController {
     }
 
     /**
-     * @description Populates the created-by-week and completed-by-week maps from work items.
+     * @description Populates weekly bucket counts from work items.
      * @param workItems The queried work items.
      * @param terminalStages Set of stage values considered terminal (completed).
-     * @param createdByWeek Output map: Monday date to count of items created that week.
-     * @param completedByWeek Output map: Monday date to count of items completed that week.
+     * @return WeeklyBuckets with created and completed counts per Monday.
      */
-    private static void buildWeeklyBuckets(
+    private static WeeklyBuckets buildWeeklyBuckets(
         List<WorkItem__c> workItems,
-        Set<String> terminalStages,
-        Map<Date, Integer> createdByWeek,
-        Map<Date, Integer> completedByWeek
+        Set<String> terminalStages
     ) {
+        WeeklyBuckets buckets = new WeeklyBuckets();
         for (WorkItem__c wi : workItems) {
             Date createdMonday = toMonday(wi.CreatedDate.date());
-            Integer createdCount = createdByWeek.containsKey(createdMonday)
-                ? createdByWeek.get(createdMonday) : 0;
-            createdByWeek.put(createdMonday, createdCount + 1);
+            Integer createdCount = buckets.createdByWeek.containsKey(createdMonday)
+                ? buckets.createdByWeek.get(createdMonday) : 0;
+            buckets.createdByWeek.put(createdMonday, createdCount + 1);
 
             if (terminalStages.contains(wi.StageNamePk__c)) {
                 Date completedMonday = toMonday(wi.LastModifiedDate.date());
-                Integer completedCount = completedByWeek.containsKey(completedMonday)
-                    ? completedByWeek.get(completedMonday) : 0;
-                completedByWeek.put(completedMonday, completedCount + 1);
+                Integer completedCount = buckets.completedByWeek.containsKey(completedMonday)
+                    ? buckets.completedByWeek.get(completedMonday) : 0;
+                buckets.completedByWeek.put(completedMonday, completedCount + 1);
             }
         }
+        return buckets;
     }
 
     /**
      * @description Builds the final list of weekly data points with running totals.
      * @param windowStart The Monday that begins the 12-week window.
-     * @param createdByWeek Map of Monday dates to created counts.
-     * @param completedByWeek Map of Monday dates to completed counts.
+     * @param buckets The weekly created/completed counts.
      * @return Ordered list of maps representing each week.
      */
     private static List<Map<String, Object>> assembleResult(
         Date windowStart,
-        Map<Date, Integer> createdByWeek,
-        Map<Date, Integer> completedByWeek
+        WeeklyBuckets buckets
     ) {
         List<Map<String, Object>> result = new List<Map<String, Object>>();
         Integer cumulativeCreated = 0;
@@ -156,10 +159,10 @@ public with sharing class DeliveryBurndownController {
 
         for (Integer i = 0; i < WEEKS_TO_SHOW; i++) {
             Date weekMonday = windowStart.addDays(i * DAYS_PER_WEEK);
-            Integer weekCreated = createdByWeek.containsKey(weekMonday)
-                ? createdByWeek.get(weekMonday) : 0;
-            Integer weekCompleted = completedByWeek.containsKey(weekMonday)
-                ? completedByWeek.get(weekMonday) : 0;
+            Integer weekCreated = buckets.createdByWeek.containsKey(weekMonday)
+                ? buckets.createdByWeek.get(weekMonday) : 0;
+            Integer weekCompleted = buckets.completedByWeek.containsKey(weekMonday)
+                ? buckets.completedByWeek.get(weekMonday) : 0;
 
             cumulativeCreated += weekCreated;
             cumulativeCompleted += weekCompleted;
