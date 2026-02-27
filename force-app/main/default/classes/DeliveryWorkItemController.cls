@@ -39,6 +39,7 @@ public with sharing class DeliveryWorkItemController {
                     (SELECT Id FROM WorkItemComments__r LIMIT 100)
                 FROM WorkItem__c
                 WHERE IsActiveBool__c = true
+                AND IsTemplateBool__c = false
                 AND WorkflowTypeTxt__c = :workflowType
                 WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c
@@ -64,6 +65,7 @@ public with sharing class DeliveryWorkItemController {
                 (SELECT Id FROM WorkItemComments__r LIMIT 100)
             FROM WorkItem__c
             WHERE IsActiveBool__c = true
+            AND IsTemplateBool__c = false
             ORDER BY SortOrderNumber__c
         ];
     }

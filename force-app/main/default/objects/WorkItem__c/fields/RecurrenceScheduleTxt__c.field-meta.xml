@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RecurrenceScheduleTxt__c</fullName>
+    <description>The recurrence frequency for this work item: Weekly, Biweekly, Monthly, or Quarterly. Only used when IsRecurringBool__c is true.</description>
+    <inlineHelpText>Select how often this work item should be automatically recreated: Weekly, Biweekly, Monthly, or Quarterly.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Recurrence Schedule</label>
+    <length>50</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

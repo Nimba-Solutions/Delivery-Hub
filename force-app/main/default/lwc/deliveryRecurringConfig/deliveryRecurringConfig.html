@@ -1,0 +1,84 @@
+<template>
+    <lightning-card title="Recurring & Template Settings" icon-name="utility:loop">
+        <div class="slds-p-around_medium">
+            <!-- Template Source Lineage -->
+            <template lwc:if={hasTemplateSource}>
+                <div class="slds-notify slds-notify_alert slds-alert_texture slds-m-bottom_small" style="background:#f3f3f3; border:1px solid #d8d8d8; border-radius:4px; padding:0.5rem 0.75rem;">
+                    <lightning-icon icon-name="utility:link" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                    <span class="slds-text-body_small">Created from template: {templateSourceId}</span>
+                </div>
+            </template>
+
+            <!-- Template Toggle -->
+            <div class="slds-m-bottom_medium">
+                <lightning-input
+                    type="checkbox"
+                    label="Mark as Template"
+                    checked={isTemplate}
+                    onchange={handleTemplateToggle}
+                    message-when-value-missing="Templates are excluded from the board and can be cloned.">
+                </lightning-input>
+                <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                    Templates do not appear on the board and are available in the template browser for quick cloning.
+                </p>
+            </div>
+
+            <!-- Recurring Toggle -->
+            <div class="slds-m-bottom_small">
+                <lightning-input
+                    type="checkbox"
+                    label="Enable Recurring"
+                    checked={isRecurring}
+                    onchange={handleRecurringToggle}>
+                </lightning-input>
+                <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                    Recurring items are automatically cloned on a schedule.
+                </p>
+            </div>
+
+            <!-- Recurrence Schedule -->
+            <template lwc:if={showRecurrenceOptions}>
+                <lightning-combobox
+                    label="Schedule"
+                    value={schedule}
+                    options={scheduleOptions}
+                    onchange={handleScheduleChange}
+                    placeholder="Select frequency..."
+                    class="slds-m-bottom_small">
+                </lightning-combobox>
+
+                <template lwc:if={showDayPicker}>
+                    <lightning-combobox
+                        label={dayPickerLabel}
+                        value={recurrenceDay}
+                        options={dayOptions}
+                        onchange={handleDayChange}
+                        placeholder="Select day..."
+                        class="slds-m-bottom_small">
+                    </lightning-combobox>
+                </template>
+            </template>
+
+            <!-- Next Recurrence Date (read-only) -->
+            <template lwc:if={hasNextRecurrenceDate}>
+                <div class="slds-m-bottom_small">
+                    <span class="slds-form-element__label slds-text-body_small">Next Recurrence Date</span>
+                    <div class="slds-form-element__static">
+                        <lightning-icon icon-name="utility:event" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                        <span>{formattedNextDate}</span>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Save Button -->
+            <div class="slds-m-top_medium">
+                <lightning-button
+                    variant="brand"
+                    label="Save Settings"
+                    onclick={handleSave}
+                    disabled={isSaving}>
+                </lightning-button>
+            </div>
+        </div>
+    </lightning-card>
+</template>

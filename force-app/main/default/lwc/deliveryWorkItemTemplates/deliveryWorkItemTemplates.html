@@ -1,0 +1,110 @@
+<template>
+    <lightning-card title="Work Item Templates" icon-name="utility:copy">
+        <template lwc:if={hasTemplates}>
+            <template for:each={groupedTemplates} for:item="group">
+                <div key={group.workflowType} class="slds-p-around_small">
+                    <h3 class="slds-text-heading_small slds-m-bottom_x-small slds-text-color_weak">
+                        {group.label}
+                    </h3>
+                    <div class="template-grid">
+                        <template for:each={group.items} for:item="tmpl">
+                            <div key={tmpl.Id} class="template-card slds-box slds-box_x-small slds-m-bottom_x-small">
+                                <div class="template-card-header">
+                                    <span class="template-name slds-text-heading_small">{tmpl.BriefDescriptionTxt__c}</span>
+                                    <template lwc:if={tmpl.PriorityPk__c}>
+                                        <span class={tmpl.priorityClass}>{tmpl.PriorityPk__c}</span>
+                                    </template>
+                                </div>
+                                <p class="template-description slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                                    {tmpl.descriptionPreview}
+                                </p>
+                                <template lwc:if={tmpl.tagList.length}>
+                                    <div class="template-tags slds-m-top_xx-small">
+                                        <template for:each={tmpl.tagList} for:item="tag">
+                                            <span key={tag} class="slds-badge slds-badge_lightest slds-m-right_xx-small">{tag}</span>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template lwc:if={tmpl.hasEstimate}>
+                                    <div class="template-estimate slds-m-top_xx-small">
+                                        <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        <span class="slds-text-body_small">{tmpl.estimateLabel}</span>
+                                    </div>
+                                </template>
+                                <div class="slds-m-top_small">
+                                    <lightning-button
+                                        variant="brand"
+                                        label="Use Template"
+                                        icon-name="utility:copy"
+                                        data-id={tmpl.Id}
+                                        onclick={handleUseTemplate}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </template>
+        <template lwc:else>
+            <div class="slds-p-around_medium slds-text-align_center slds-text-color_weak">
+                <lightning-icon icon-name="utility:info" size="small" class="slds-m-bottom_small"></lightning-icon>
+                <p>No templates available. Mark a work item as a template to see it here.</p>
+            </div>
+        </template>
+    </lightning-card>
+
+    <!-- Clone Modal -->
+    <template lwc:if={showCloneModal}>
+        <section class="slds-modal slds-fade-in-open" tabindex="-1" role="dialog" aria-modal="true">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-modal__close" onclick={handleCloneCancel} title="Close">
+                        <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium">Create from Template</h2>
+                    <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                        Creating from: {selectedTemplate.BriefDescriptionTxt__c}
+                    </p>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p class="slds-text-body_small slds-m-bottom_medium slds-text-color_weak">
+                        Optionally override fields below, or leave blank to use template defaults.
+                    </p>
+                    <lightning-input
+                        label="Title Override"
+                        placeholder="Leave blank to use template title"
+                        value={overrideTitle}
+                        onchange={handleOverrideTitleChange}>
+                    </lightning-input>
+                    <lightning-combobox
+                        label="Priority Override"
+                        value={overridePriority}
+                        options={priorityOptions}
+                        onchange={handleOverridePriorityChange}
+                        class="slds-m-top_small">
+                    </lightning-combobox>
+                    <lightning-input
+                        label="Tags Override"
+                        placeholder="Comma-separated tags"
+                        value={overrideTags}
+                        onchange={handleTagsChange}
+                        class="slds-m-top_small">
+                    </lightning-input>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button variant="neutral" label="Cancel" onclick={handleCloneCancel}></lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Create Work Item"
+                        icon-name="utility:add"
+                        onclick={handleCloneConfirm}
+                        disabled={isCloning}
+                        class="slds-m-left_x-small">
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

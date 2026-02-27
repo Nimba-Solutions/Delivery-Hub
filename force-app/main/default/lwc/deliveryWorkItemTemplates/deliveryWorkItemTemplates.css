@@ -1,0 +1,44 @@
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.75rem;
+}
+
+.template-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.template-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.template-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.template-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.template-description {
+    line-height: 1.4;
+}
+
+.template-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.template-estimate {
+    display: flex;
+    align-items: center;
+    color: #706e6b;
+}

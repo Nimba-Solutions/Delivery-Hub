@@ -79,6 +79,7 @@ public with sharing class DeliveryAiController {
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
             FROM WorkItem__c
             WHERE IsActiveBool__c = true
+            AND IsTemplateBool__c = false
             WITH SYSTEM_MODE
             ORDER BY StageNamePk__c, SortOrderNumber__c
         ];

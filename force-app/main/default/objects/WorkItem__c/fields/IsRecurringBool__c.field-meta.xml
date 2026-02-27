@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsRecurringBool__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Marks this work item as recurring. The scheduler will automatically clone this item on the configured schedule, creating new active work items at regular intervals.</description>
+    <inlineHelpText>Check to enable automatic recurring creation of this work item on a schedule.</inlineHelpText>
+    <label>Is Recurring</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
