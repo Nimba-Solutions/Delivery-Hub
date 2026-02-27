@@ -43,7 +43,7 @@ public with sharing class DeliveryCycleTimeController {
 
     /**
      * @description Returns average days in current stage for active (non-terminal) work items,
-     * grouped by stage. Falls back to LastModifiedDate when StageEnteredDatetime__c is null.
+     * grouped by stage. Falls back to LastModifiedDate when StageEnteredDateTime__c is null.
      * @param workflowTypeName DeveloperName of WorkflowType__mdt (defaults to Software_Delivery)
      * @return List of maps with stageName (String), avgDays (Decimal), itemCount (Integer)
      */
@@ -111,7 +111,7 @@ public with sharing class DeliveryCycleTimeController {
         Set<String> terminalStages, String workflowType
     ) {
         return [
-            SELECT Id, StageNamePk__c, StageEnteredDatetime__c, LastModifiedDate
+            SELECT Id, StageNamePk__c, StageEnteredDateTime__c, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             AND WorkflowTypeTxt__c = :workflowType
@@ -152,8 +152,8 @@ public with sharing class DeliveryCycleTimeController {
         Datetime now = Datetime.now();
 
         for (WorkItem__c item : items) {
-            Datetime enteredDate = (item.StageEnteredDatetime__c != null)
-                ? item.StageEnteredDatetime__c
+            Datetime enteredDate = (item.StageEnteredDateTime__c != null)
+                ? item.StageEnteredDateTime__c
                 : item.LastModifiedDate;
             Decimal daysInStage = calcDaysBetween(enteredDate, now);
             String stage = item.StageNamePk__c;

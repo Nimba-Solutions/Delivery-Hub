@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>StageEnteredDatetime__c</fullName>
+    <fullName>StageEnteredDateTime__c</fullName>
     <description>Timestamp when the work item entered its current stage. Auto-set by trigger on stage changes.</description>
     <inlineHelpText>When the current stage was entered.</inlineHelpText>
     <label>Stage Entered</label>

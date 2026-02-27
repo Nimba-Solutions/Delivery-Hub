@@ -43,14 +43,14 @@ private class DeliveryCycleTimeControllerTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StageEnteredDatetime__c = Datetime.now().addDays(-3)
+            StageEnteredDateTime__c = Datetime.now().addDays(-3)
         ));
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Active QA item',
             StageNamePk__c = 'QA In Progress',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StageEnteredDatetime__c = Datetime.now().addDays(-7)
+            StageEnteredDateTime__c = Datetime.now().addDays(-7)
         ));
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Active backlog item no timestamp',

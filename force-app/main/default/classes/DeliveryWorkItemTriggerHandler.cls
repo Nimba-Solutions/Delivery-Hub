@@ -189,20 +189,20 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     }
 
     /**
-     * @description Sets StageEnteredDatetime__c on new work items during before-insert.
+     * @description Sets StageEnteredDateTime__c on new work items during before-insert.
      * @param newWorkItems List of WorkItem__c records being inserted
      */
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
         for (WorkItem__c workItem : newWorkItems) {
-            if (workItem.StageEnteredDatetime__c == null) {
-                workItem.StageEnteredDatetime__c = now;
+            if (workItem.StageEnteredDateTime__c == null) {
+                workItem.StageEnteredDateTime__c = now;
             }
         }
     }
 
     /**
-     * @description Sets StageEnteredDatetime__c when the stage changes during update.
+     * @description Sets StageEnteredDateTime__c when the stage changes during update.
      * @param newWorkItems List of WorkItem__c records being updated
      * @param oldMap Map of old WorkItem__c records keyed by Id
      */
@@ -214,7 +214,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         for (WorkItem__c workItem : newWorkItems) {
             WorkItem__c oldItem = oldMap.get(workItem.Id);
             if (oldItem != null && workItem.StageNamePk__c != oldItem.StageNamePk__c) {
-                workItem.StageEnteredDatetime__c = now;
+                workItem.StageEnteredDateTime__c = now;
             }
         }
     }
