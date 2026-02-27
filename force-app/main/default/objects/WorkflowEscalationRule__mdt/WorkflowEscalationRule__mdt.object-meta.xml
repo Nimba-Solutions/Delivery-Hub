@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Workflow Escalation Rule</label>
+    <description>Defines an automated escalation action for work items that have been stalled in a given stage beyond a configurable threshold. Rules are evaluated by DeliveryEscalationService on a scheduled basis.</description>
+    <pluralLabel>Workflow Escalation Rules</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>
