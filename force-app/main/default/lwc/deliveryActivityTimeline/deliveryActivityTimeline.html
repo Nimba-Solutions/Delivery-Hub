@@ -1,0 +1,135 @@
+<template>
+    <lightning-card title="Activity Timeline" icon-name="standard:task2">
+        <lightning-button-icon
+            slot="actions"
+            icon-name="utility:refresh"
+            alternative-text="Refresh"
+            onclick={handleRefresh}
+        ></lightning-button-icon>
+
+        <!-- Filter Bar -->
+        <div class="slds-p-horizontal_medium slds-p-bottom_x-small">
+            <div class="filter-bar">
+                <template for:each={computedFilterButtons} for:item="btn">
+                    <button
+                        key={btn.value}
+                        class={btn.cssClass}
+                        data-value={btn.value}
+                        onclick={handleFilterChange}
+                    >
+                        <lightning-icon
+                            icon-name={btn.icon}
+                            size="xx-small"
+                            class="slds-m-right_xx-small filter-icon"
+                        ></lightning-icon>
+                        {btn.label}
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_large slds-align_absolute-center">
+                <lightning-spinner alternative-text="Loading timeline" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Empty State -->
+        <template lwc:if={showEmpty}>
+            <div class="slds-p-around_large slds-align_absolute-center empty-state">
+                <div class="slds-text-align_center">
+                    <lightning-icon
+                        icon-name="utility:info"
+                        size="large"
+                        class="slds-m-bottom_small empty-icon"
+                    ></lightning-icon>
+                    <p class="slds-text-heading_small slds-text-color_weak">No activity yet</p>
+                    <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                        Comments, stage changes, and time logs will appear here.
+                    </p>
+                </div>
+            </div>
+        </template>
+
+        <!-- Timeline -->
+        <template lwc:if={hasEvents}>
+            <div class="timeline-container slds-p-horizontal_medium">
+                <template for:each={displayGroups} for:item="group">
+                    <div key={group.dateKey} class="timeline-group">
+                        <!-- Date Header -->
+                        <div class="date-header">
+                            <span class="date-header__label">{group.dateLabel}</span>
+                        </div>
+
+                        <!-- Events within this date group -->
+                        <div class="timeline-line">
+                            <template for:each={group.events} for:item="ev">
+                                <div key={ev.id} class="timeline-item">
+                                    <!-- Icon node -->
+                                    <div class={ev.typeClass}>
+                                        <lightning-icon
+                                            icon-name={ev.icon}
+                                            size="x-small"
+                                        ></lightning-icon>
+                                    </div>
+
+                                    <!-- Content card -->
+                                    <div class="timeline-content">
+                                        <div class="timeline-header">
+                                            <span class="timeline-user">{ev.userName}</span>
+                                            <span class="timeline-time" title={ev.formattedTime}>
+                                                {ev.relativeTime}
+                                            </span>
+                                        </div>
+                                        <div class="timeline-title">{ev.title}</div>
+
+                                        <!-- Detail (collapsible) -->
+                                        <template lwc:if={ev.hasDetail}>
+                                            <template lwc:if={ev.isExpanded}>
+                                                <div class="timeline-detail">{ev.detail}</div>
+                                            </template>
+                                            <button
+                                                class="detail-toggle"
+                                                data-id={ev.id}
+                                                onclick={handleToggleDetail}
+                                            >
+                                                <template lwc:if={ev.isExpanded}>
+                                                    Show less
+                                                </template>
+                                                <template lwc:else>
+                                                    Show more
+                                                </template>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Load More -->
+                <template lwc:if={showLoadMore}>
+                    <div class="slds-align_absolute-center slds-p-vertical_small">
+                        <lightning-button
+                            label={loadMoreLabel}
+                            variant="neutral"
+                            onclick={handleLoadMore}
+                            disabled={isLoadingMore}
+                        ></lightning-button>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={error}>
+            <div class="slds-p-around_medium">
+                <div class="slds-text-color_error slds-text-body_small">
+                    Unable to load timeline. Please try refreshing.
+                </div>
+            </div>
+        </template>
+    </lightning-card>
+</template>

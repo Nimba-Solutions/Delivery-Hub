@@ -1,0 +1,257 @@
+/**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description  Controller for the Activity Timeline LWC.
+ * Queries WorkItemComment__c, WorkLog__c, and ActivityLog__c to build a
+ * unified, chronological event feed for a given Work Item.
+ * @author Cloud Nimbus LLC
+ */
+public with sharing class DeliveryActivityTimelineController {
+
+    private static final Integer PAGE_SIZE = 20;
+
+    /**
+     * @description Returns a unified list of timeline events for a Work Item.
+     * Merges comments, work logs, and activity logs (stage changes) into a
+     * single chronologically-sorted collection.
+     * @param workItemId The Id of the parent WorkItem__c record.
+     * @param filterType One of: 'all', 'comments', 'stage_changes', 'time_logs'.
+     * @param pageOffset Zero-based page offset for pagination (0 = first page).
+     * @return List of Maps, each representing one timeline event.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getTimelineEvents(
+        Id workItemId,
+        String filterType,
+        Integer pageOffset
+    ) {
+        if (workItemId == null) {
+            return new List<Map<String, Object>>();
+        }
+        if (String.isBlank(filterType)) {
+            filterType = 'all';
+        }
+        if (pageOffset == null || pageOffset < 0) {
+            pageOffset = 0;
+        }
+
+        List<Map<String, Object>> events = new List<Map<String, Object>>();
+
+        // 1. Comments
+        if (filterType == 'all' || filterType == 'comments') {
+            events.addAll(queryComments(workItemId));
+        }
+
+        // 2. Work Logs (time entries)
+        if (filterType == 'all' || filterType == 'time_logs') {
+            events.addAll(queryWorkLogs(workItemId));
+        }
+
+        // 3. Activity Logs — stage changes related to this work item
+        if (filterType == 'all' || filterType == 'stage_changes') {
+            events.addAll(queryActivityLogs(workItemId));
+        }
+
+        // Sort descending by timestamp (newest first)
+        events.sort(new TimelineEventComparator());
+
+        // Apply pagination
+        Integer startIndex = pageOffset * PAGE_SIZE;
+        if (startIndex >= events.size()) {
+            return new List<Map<String, Object>>();
+        }
+        Integer endIndex = Math.min(startIndex + PAGE_SIZE, events.size());
+        List<Map<String, Object>> page = new List<Map<String, Object>>();
+        for (Integer i = startIndex; i < endIndex; i++) {
+            page.add(events[i]);
+        }
+        return page;
+    }
+
+    // ── Comment events ──────────────────────────────────────────────────
+
+    private static List<Map<String, Object>> queryComments(Id workItemId) {
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+
+        List<WorkItemComment__c> comments = [
+            SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, CreatedBy.Name
+            FROM WorkItemComment__c
+            WHERE WorkItemId__c = :workItemId
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 200
+        ];
+
+        for (WorkItemComment__c c : comments) {
+            String authorName = String.isNotBlank(c.AuthorTxt__c)
+                ? c.AuthorTxt__c
+                : c.CreatedBy.Name;
+
+            // Strip HTML tags from body for plain-text preview
+            String bodyPreview = c.BodyTxt__c;
+            if (String.isNotBlank(bodyPreview)) {
+                bodyPreview = bodyPreview.stripHtmlTags();
+                if (bodyPreview.length() > 300) {
+                    bodyPreview = bodyPreview.substring(0, 300) + '...';
+                }
+            }
+
+            String sourceLabel = String.isNotBlank(c.SourcePk__c)
+                ? c.SourcePk__c
+                : 'Salesforce';
+
+            results.add(new Map<String, Object>{
+                'id'          => c.Id,
+                'type'        => 'comment',
+                'timestamp'   => c.CreatedDate,
+                'userName'    => authorName,
+                'title'       => 'Comment from ' + authorName + ' (' + sourceLabel + ')',
+                'detail'      => bodyPreview,
+                'icon'        => 'standard:feedback',
+                'iconVariant' => 'success'
+            });
+        }
+        return results;
+    }
+
+    // ── Work Log events ─────────────────────────────────────────────────
+
+    private static List<Map<String, Object>> queryWorkLogs(Id workItemId) {
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+
+        List<WorkLog__c> logs = [
+            SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
+                   WorkDescriptionTxt__c, WorkDateDate__c
+            FROM WorkLog__c
+            WHERE WorkItemId__c = :workItemId
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 200
+        ];
+
+        for (WorkLog__c wl : logs) {
+            Decimal hours = wl.HoursLoggedNumber__c != null
+                ? wl.HoursLoggedNumber__c
+                : 0;
+            String hoursLabel = hours + 'h logged';
+
+            String detail = String.isNotBlank(wl.WorkDescriptionTxt__c)
+                ? wl.WorkDescriptionTxt__c
+                : '';
+            if (wl.WorkDateDate__c != null) {
+                String dateStr = String.valueOf(wl.WorkDateDate__c);
+                detail = (String.isNotBlank(detail))
+                    ? detail + ' (Work date: ' + dateStr + ')'
+                    : 'Work date: ' + dateStr;
+            }
+
+            results.add(new Map<String, Object>{
+                'id'          => wl.Id,
+                'type'        => 'worklog',
+                'timestamp'   => wl.CreatedDate,
+                'userName'    => wl.CreatedBy.Name,
+                'title'       => hoursLabel + ' by ' + wl.CreatedBy.Name,
+                'detail'      => detail,
+                'icon'        => 'standard:timesheet',
+                'iconVariant' => ''
+            });
+        }
+        return results;
+    }
+
+    // ── Activity Log events (stage changes) ─────────────────────────────
+
+    private static List<Map<String, Object>> queryActivityLogs(Id workItemId) {
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+
+        // ActivityLog__c has no direct WorkItem lookup. Stage_Change entries
+        // store the record Id inside the ContextDataTxt__c JSON blob.
+        // We filter by ActionTypePk__c = 'Stage_Change' and use LIKE to
+        // match the 18-char record Id inside the JSON text.
+        String idFilter = '%' + String.valueOf(workItemId) + '%';
+
+        List<ActivityLog__c> logs = [
+            SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c,
+                   ComponentNameTxt__c, ContextDataTxt__c
+            FROM ActivityLog__c
+            WHERE ActionTypePk__c = 'Stage_Change'
+              AND ContextDataTxt__c LIKE :idFilter
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 200
+        ];
+
+        // Collect unique User Ids so we can resolve names in one query
+        Set<Id> userIds = new Set<Id>();
+        for (ActivityLog__c al : logs) {
+            if (String.isNotBlank(al.UserIdTxt__c)) {
+                try {
+                    userIds.add((Id) al.UserIdTxt__c);
+                } catch (Exception ex) {
+                    // Non-critical — skip invalid Ids
+                }
+            }
+        }
+
+        Map<Id, String> userNameMap = new Map<Id, String>();
+        if (!userIds.isEmpty()) {
+            for (User u : [SELECT Id, Name FROM User WHERE Id IN :userIds WITH SYSTEM_MODE]) {
+                userNameMap.put(u.Id, u.Name);
+            }
+        }
+
+        for (ActivityLog__c al : logs) {
+            String userName = 'System';
+            if (String.isNotBlank(al.UserIdTxt__c) && userNameMap.containsKey(al.UserIdTxt__c)) {
+                userName = userNameMap.get(al.UserIdTxt__c);
+            }
+
+            // Parse context JSON to extract stage info
+            String title = 'Stage changed';
+            String detail = '';
+            if (String.isNotBlank(al.ContextDataTxt__c)) {
+                try {
+                    Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(al.ContextDataTxt__c);
+                    String newStage = (String) ctx.get('newStage');
+                    String oldStage = (String) ctx.get('oldStage');
+                    if (String.isNotBlank(newStage)) {
+                        title = 'Stage changed to ' + newStage;
+                    }
+                    if (String.isNotBlank(oldStage) && String.isNotBlank(newStage)) {
+                        detail = oldStage + ' → ' + newStage;
+                    }
+                } catch (Exception ex) {
+                    // Non-critical — use default title
+                }
+            }
+
+            results.add(new Map<String, Object>{
+                'id'          => al.Id,
+                'type'        => 'stage_change',
+                'timestamp'   => al.CreatedDate,
+                'userName'    => userName,
+                'title'       => title,
+                'detail'      => detail,
+                'icon'        => 'standard:record',
+                'iconVariant' => ''
+            });
+        }
+        return results;
+    }
+
+    // ── Comparator: sort events by timestamp descending ─────────────────
+
+    private class TimelineEventComparator implements Comparator<Map<String, Object>> {
+        public Integer compare(Map<String, Object> a, Map<String, Object> b) {
+            Datetime tsA = (Datetime) a.get('timestamp');
+            Datetime tsB = (Datetime) b.get('timestamp');
+            if (tsA == null && tsB == null) return 0;
+            if (tsA == null) return 1;
+            if (tsB == null) return -1;
+            // Descending: newer first
+            if (tsB > tsA) return 1;
+            if (tsB < tsA) return -1;
+            return 0;
+        }
+    }
+}
