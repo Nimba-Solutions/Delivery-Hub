@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StatusPageEnabledBool__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Master toggle to enable or disable the public status page. When disabled, the status page returns an error to all visitors.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enable the public-facing status page for sharing project health with external stakeholders.</inlineHelpText>
+    <label>Status Page Enabled</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

@@ -1,0 +1,144 @@
+<template>
+    <!-- Loading -->
+    <template lwc:if={isLoading}>
+        <div class="loading-container">
+            <lightning-spinner alternative-text="Loading status page"></lightning-spinner>
+        </div>
+    </template>
+
+    <!-- Error -->
+    <template lwc:if={hasError}>
+        <div class="error-container">
+            <h1>Status Unavailable</h1>
+            <p>{errorMessage}</p>
+            <div class="footer-text">
+                Powered by <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Delivery Hub</a> | Cloud Nimbus LLC
+            </div>
+        </div>
+    </template>
+
+    <!-- Main content -->
+    <template lwc:if={hasData}>
+        <div class="status-page">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <h1>{entityName}</h1>
+                    <div class="last-updated">Last updated: {lastUpdated}</div>
+                </div>
+                <div class={healthBadgeClass}>
+                    <span class={healthDotClass}></span>
+                    {overallHealth}
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-value value-blue">{activeCount}</div>
+                    <div class="card-label">Active Items</div>
+                </div>
+                <div class="card">
+                    <div class="card-value value-green">{completedCount}</div>
+                    <div class="card-label">Completed</div>
+                </div>
+                <div class="card">
+                    <div class="card-value value-dark">{completionRate}</div>
+                    <div class="card-label">Completion Rate</div>
+                </div>
+            </div>
+
+            <!-- SLA Health -->
+            <div class="section-card">
+                <div class="section-title">SLA Health</div>
+                <div class="sla-cards">
+                    <div class="sla-card sla-card-green">
+                        <div class="sla-value color-green">{slaOnTrack}</div>
+                        <div class="sla-label color-green">On Track</div>
+                    </div>
+                    <div class="sla-card sla-card-yellow">
+                        <div class="sla-value color-yellow">{slaAtRisk}</div>
+                        <div class="sla-label color-yellow">At Risk</div>
+                    </div>
+                    <div class="sla-card sla-card-red">
+                        <div class="sla-value color-red">{slaBreached}</div>
+                        <div class="sla-label color-red">Breached</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase Distribution -->
+            <div class="section-card">
+                <div class="section-title">Work Distribution</div>
+                <template lwc:if={hasPhaseData}>
+                    <div class="phase-bar-container">
+                        <template lwc:if={planningCount}>
+                            <div class="phase-segment phase-planning" style={planningStyle}>{planningCount}</div>
+                        </template>
+                        <template lwc:if={developmentCount}>
+                            <div class="phase-segment phase-development" style={developmentStyle}>{developmentCount}</div>
+                        </template>
+                        <template lwc:if={testingCount}>
+                            <div class="phase-segment phase-testing" style={testingStyle}>{testingCount}</div>
+                        </template>
+                        <template lwc:if={uatCount}>
+                            <div class="phase-segment phase-uat" style={uatStyle}>{uatCount}</div>
+                        </template>
+                        <template lwc:if={deploymentCount}>
+                            <div class="phase-segment phase-deployment" style={deploymentStyle}>{deploymentCount}</div>
+                        </template>
+                    </div>
+                    <div class="phase-legend">
+                        <div class="legend-item">
+                            <span class="legend-dot dot-planning"></span>
+                            Planning ({planningCount})
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot dot-development"></span>
+                            Development ({developmentCount})
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot dot-testing"></span>
+                            Testing ({testingCount})
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot dot-uat"></span>
+                            UAT ({uatCount})
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot dot-deployment"></span>
+                            Deployment ({deploymentCount})
+                        </div>
+                    </div>
+                </template>
+                <template lwc:else>
+                    <div class="empty-state">No active items in the pipeline.</div>
+                </template>
+            </div>
+
+            <!-- Recent Completions -->
+            <div class="section-card">
+                <div class="section-title">Recent Completions</div>
+                <template lwc:if={hasRecentCompletions}>
+                    <template for:each={recentCompletions} for:item="item">
+                        <div key={item.title} class="completion-item">
+                            <div class="completion-title">
+                                <span class="completion-check">&#10003;</span>
+                                {item.title}
+                            </div>
+                            <div class="completion-date">{item.completedDate}</div>
+                        </div>
+                    </template>
+                </template>
+                <template lwc:else>
+                    <div class="empty-state">No completed items yet.</div>
+                </template>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer-text">
+                Powered by <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Delivery Hub</a> | <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Cloud Nimbus LLC</a>
+            </div>
+        </div>
+    </template>
+</template>
