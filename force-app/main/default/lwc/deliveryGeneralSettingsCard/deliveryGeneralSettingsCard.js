@@ -13,6 +13,7 @@ import testWebhook from '@salesforce/apex/DeliverySlackService.testWebhook';
 export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track notifications = false;
     @track autoSyncNetworkEntity = true; // Default to true
+    @track emailNotificationsEnabled = false;
     @track slackWebhookUrl = '';
     @track slackTestResult = '';
     @track isSlackTesting = false;
@@ -37,6 +38,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                     this.autoSyncNetworkEntity = data.autoSendRequest;
                 }
                 this.slackWebhookUrl = data.slackWebhookUrl || '';
+                this.emailNotificationsEnabled = data.emailNotificationsEnabled || false;
             }
         } catch (error) {
             this.showToast('Error Loading Settings', error.body ? error.body.message : error.message, 'error');
@@ -57,13 +59,20 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveState();
     }
 
+    // Handler for Email Notifications
+    handleEmailNotificationsToggle(event) {
+        this.emailNotificationsEnabled = event.target.checked;
+        this.saveState();
+    }
+
     // Centralized Save Logic
     async saveState() {
         try {
             await saveGeneralSettings({
                 enableNotifications: this.notifications,
                 autoCreateRequest: true,
-                autoSendRequest: this.autoSyncNetworkEntity
+                autoSendRequest: this.autoSyncNetworkEntity,
+                emailNotificationsEnabled: this.emailNotificationsEnabled
             });
             
             // Optional: Show a subtle success toast
