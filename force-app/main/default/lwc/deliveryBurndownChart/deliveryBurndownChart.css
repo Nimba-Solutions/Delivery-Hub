@@ -1,0 +1,189 @@
+:host {
+    display: block;
+}
+
+/* Card shell */
+.burndown-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    font-size: 0.8125rem;
+}
+
+/* Header */
+.burndown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.125rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.burndown-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.burndown-header-icon {
+    color: #3b82f6;
+}
+
+.burndown-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.15rem 0;
+}
+
+.burndown-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Loading */
+.burndown-loading {
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+/* Error */
+.burndown-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+/* Empty state */
+.burndown-empty {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.burndown-empty-icon {
+    color: #d1d5db;
+    margin-bottom: 0.75rem;
+}
+
+.burndown-empty-sub {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+}
+
+/* Chart body */
+.burndown-body {
+    padding: 1rem 1.25rem 0.25rem;
+}
+
+.burndown-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Grid lines */
+.grid-line {
+    stroke: #e5e7eb;
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+}
+
+/* Axis lines */
+.axis-line {
+    stroke: #9ca3af;
+    stroke-width: 1.5;
+}
+
+/* Axis labels */
+.axis-label {
+    font-size: 10px;
+    fill: #6b7280;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.axis-label--y {
+    text-anchor: end;
+    dominant-baseline: middle;
+}
+
+.axis-label--x {
+    text-anchor: middle;
+    dominant-baseline: hanging;
+}
+
+/* Chart lines */
+.chart-line {
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.chart-line--open {
+    stroke: #3b82f6;
+}
+
+.chart-line--completed {
+    stroke: #22c55e;
+}
+
+/* Data dots */
+.chart-dot {
+    stroke: #ffffff;
+    stroke-width: 1.5;
+}
+
+.chart-dot--open {
+    fill: #3b82f6;
+}
+
+.chart-dot--completed {
+    fill: #22c55e;
+}
+
+/* Legend */
+.burndown-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.6875rem;
+    color: #6b7280;
+}
+
+.legend-line {
+    display: inline-block;
+    width: 1.25rem;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.legend-line--open {
+    background: #3b82f6;
+}
+
+.legend-line--completed {
+    background: #22c55e;
+}

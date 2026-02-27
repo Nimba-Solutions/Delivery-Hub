@@ -1,0 +1,115 @@
+<template>
+    <div class="burndown-card">
+
+        <!-- Header -->
+        <div class="burndown-header">
+            <div class="burndown-header-left">
+                <lightning-icon icon-name="utility:trending" alternative-text="Burndown" size="small" class="burndown-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="burndown-title">Burndown Chart</h2>
+                    <p class="burndown-subtitle">Work items created vs completed over the last 12 weeks</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="burndown-loading">
+                <lightning-spinner alternative-text="Loading burndown data..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={hasError}>
+            <div class="burndown-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <!-- Empty state -->
+        <template lwc:if={isEmpty}>
+            <div class="burndown-empty">
+                <lightning-icon icon-name="utility:trending" size="medium" class="burndown-empty-icon"></lightning-icon>
+                <p>No data available</p>
+                <p class="burndown-empty-sub">Create some work items to see the burndown chart.</p>
+            </div>
+        </template>
+
+        <!-- Chart -->
+        <template lwc:if={hasData}>
+            <div class="burndown-body">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     viewBox={svgViewBox}
+                     class="burndown-svg"
+                     preserveAspectRatio="xMidYMid meet">
+
+                    <!-- Grid lines -->
+                    <template for:each={gridLines} for:item="gl">
+                        <line key={gl.key}
+                              x1={chartLeft} y1={gl.y}
+                              x2={chartRight} y2={gl.y}
+                              class="grid-line"></line>
+                    </template>
+
+                    <!-- Y axis labels -->
+                    <template for:each={gridLines} for:item="gl">
+                        <text key={gl.labelKey}
+                              x={yLabelX} y={gl.y}
+                              class="axis-label axis-label--y">{gl.label}</text>
+                    </template>
+
+                    <!-- X axis labels -->
+                    <template for:each={xLabels} for:item="xl">
+                        <text key={xl.key}
+                              x={xl.x} y={xLabelY}
+                              class="axis-label axis-label--x">{xl.label}</text>
+                    </template>
+
+                    <!-- Open line (blue) -->
+                    <polyline points={openLinePoints}
+                              class="chart-line chart-line--open"
+                              fill="none"></polyline>
+
+                    <!-- Completed line (green) -->
+                    <polyline points={completedLinePoints}
+                              class="chart-line chart-line--completed"
+                              fill="none"></polyline>
+
+                    <!-- Data point dots — open -->
+                    <template for:each={openDots} for:item="dot">
+                        <circle key={dot.key}
+                                cx={dot.x} cy={dot.y} r="3"
+                                class="chart-dot chart-dot--open"></circle>
+                    </template>
+
+                    <!-- Data point dots — completed -->
+                    <template for:each={completedDots} for:item="dot">
+                        <circle key={dot.key}
+                                cx={dot.x} cy={dot.y} r="3"
+                                class="chart-dot chart-dot--completed"></circle>
+                    </template>
+
+                    <!-- Axis lines -->
+                    <line x1={chartLeft} y1={chartTop}
+                          x2={chartLeft} y2={chartBottom}
+                          class="axis-line"></line>
+                    <line x1={chartLeft} y1={chartBottom}
+                          x2={chartRight} y2={chartBottom}
+                          class="axis-line"></line>
+                </svg>
+            </div>
+
+            <!-- Legend -->
+            <div class="burndown-legend">
+                <span class="legend-item">
+                    <span class="legend-line legend-line--open"></span>Open
+                </span>
+                <span class="legend-item">
+                    <span class="legend-line legend-line--completed"></span>Completed (cumulative)
+                </span>
+            </div>
+        </template>
+
+    </div>
+</template>
