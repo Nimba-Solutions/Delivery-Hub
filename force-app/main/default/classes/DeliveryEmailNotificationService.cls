@@ -12,13 +12,13 @@ public with sharing class DeliveryEmailNotificationService {
     @TestVisible
     private class EmailContext {
         /** @description Auto-number name e.g. WI-0042 */
-        String workItemName;
+        @TestVisible String workItemName;
         /** @description Brief description / title */
-        String title;
+        @TestVisible String title;
         /** @description New stage value */
-        String newStage;
+        @TestVisible String newStage;
         /** @description Deep link to the record */
-        String recordUrl;
+        @TestVisible String recordUrl;
     }
 
     /**
