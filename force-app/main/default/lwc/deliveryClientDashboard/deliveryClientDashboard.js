@@ -110,13 +110,19 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     _processData(data) {
-        // Attention work items
+        // Attention work items (pre-sorted by attention score from Apex)
         this.attentionWorkItems = (data.attentionWorkItems || []).map(t => ({
             id: t.id,
             name: t.name,
             title: t.title || null,
             stage: t.stage,
-            badgeClass: this._getBadgeClass(t.stage)
+            badgeClass: this._getBadgeClass(t.stage),
+            attentionScore: t.attentionScore || 0,
+            urgency: t.urgency || 'low',
+            priority: t.priority || '',
+            daysInStage: t.daysInStage || 0,
+            urgencyClass: `urgency-dot urgency-dot--${t.urgency || 'low'}`,
+            scoreLabel: this._formatScoreLabel(t)
         }));
 
         // Phase counts
@@ -164,6 +170,13 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
                 blocked: data.thisWeek.blocked || 0
             };
         }
+    }
+
+    _formatScoreLabel(t) {
+        const parts = [];
+        if (t.daysInStage > 0) parts.push(`${t.daysInStage}d`);
+        if (t.priority) parts.push(t.priority);
+        return parts.join(' · ');
     }
 
     // ── Derived getters ──
