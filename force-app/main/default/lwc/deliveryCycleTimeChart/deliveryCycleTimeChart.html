@@ -1,0 +1,101 @@
+<template>
+    <lightning-card title="Cycle Time Analytics" icon-name="standard:metrics">
+        <!-- Average Cycle Time Section -->
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <h2 class="slds-text-heading_small slds-p-bottom_x-small section-heading">
+                Average Cycle Time (Last 12 Weeks)
+            </h2>
+
+            <template lwc:if={hasCycleTimeData}>
+                <div class="chart-container">
+                    <svg class="bar-chart" viewBox={cycleTimeViewBox} xmlns="http://www.w3.org/2000/svg">
+                        <!-- Y-axis label -->
+                        <text x="10" y="15" class="axis-label">Days</text>
+
+                        <!-- Bars -->
+                        <template for:each={cycleTimeBars} for:item="bar">
+                            <g key={bar.key}>
+                                <rect
+                                    x={bar.x}
+                                    y={bar.y}
+                                    width={bar.width}
+                                    height={bar.height}
+                                    class="cycle-bar"
+                                    fill={bar.fill}
+                                ></rect>
+                                <!-- Value label -->
+                                <text
+                                    x={bar.labelX}
+                                    y={bar.labelY}
+                                    class="bar-value"
+                                    text-anchor="middle"
+                                >{bar.value}</text>
+                                <!-- Week label -->
+                                <text
+                                    x={bar.labelX}
+                                    y={bar.weekLabelY}
+                                    class="week-label"
+                                    text-anchor="middle"
+                                    transform={bar.weekLabelTransform}
+                                >{bar.label}</text>
+                            </g>
+                        </template>
+
+                        <!-- Baseline -->
+                        <line x1="40" y1={cycleTimeBaseline} x2={cycleTimeChartWidth} y2={cycleTimeBaseline} class="baseline"></line>
+                    </svg>
+                </div>
+            </template>
+
+            <template lwc:if={noCycleTimeData}>
+                <div class="slds-align_absolute-center slds-p-around_large empty-state">
+                    <p class="slds-text-body_regular slds-text-color_weak">
+                        No completed work items found in the last 90 days.
+                    </p>
+                </div>
+            </template>
+        </div>
+
+        <!-- Time in Stage Section -->
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <h2 class="slds-text-heading_small slds-p-bottom_x-small section-heading">
+                Time in Stage (Active Items)
+            </h2>
+
+            <template lwc:if={hasStageData}>
+                <div class="stage-list">
+                    <template for:each={stageAgeBars} for:item="stage">
+                        <div key={stage.key} class="stage-row slds-p-vertical_xx-small">
+                            <div class="stage-label slds-truncate" title={stage.stageName}>
+                                {stage.stageName}
+                            </div>
+                            <div class="stage-bar-container">
+                                <div
+                                    class={stage.barClass}
+                                    style={stage.barStyle}
+                                ></div>
+                            </div>
+                            <div class="stage-value">
+                                {stage.avgDays}d
+                                <span class="stage-count">({stage.itemCount})</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <template lwc:if={noStageData}>
+                <div class="slds-align_absolute-center slds-p-around_large empty-state">
+                    <p class="slds-text-body_regular slds-text-color_weak">
+                        No active work items found.
+                    </p>
+                </div>
+            </template>
+        </div>
+
+        <!-- Loading spinner -->
+        <template lwc:if={isLoading}>
+            <lightning-spinner alternative-text="Loading analytics" size="medium"></lightning-spinner>
+        </template>
+    </lightning-card>
+</template>
