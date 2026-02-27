@@ -1,0 +1,100 @@
+<template>
+    <lightning-card title="Developer Workload" icon-name="standard:people">
+
+        <lightning-button-icon
+            icon-name="utility:refresh"
+            slot="actions"
+            variant="border-filled"
+            onclick={handleRefresh}
+            alternative-text="Refresh workload data">
+        </lightning-button-icon>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <!-- Loading spinner -->
+            <template lwc:if={isLoading}>
+                <div class="slds-align_absolute-center slds-p-around_large">
+                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <!-- Error state -->
+            <template lwc:if={error}>
+                <div class="slds-text-color_error slds-p-around_medium slds-text-align_center">
+                    <lightning-icon icon-name="utility:error" size="small" variant="error"
+                        class="slds-m-right_x-small"></lightning-icon>
+                    {error}
+                </div>
+            </template>
+
+            <!-- Data loaded -->
+            <template lwc:if={hasData}>
+                <!-- Summary bar -->
+                <div class="dw-summary-bar">
+                    <div class="dw-summary-text">
+                        <lightning-icon icon-name="utility:groups" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        {summaryText}
+                    </div>
+                    <template lwc:if={hasUnassigned}>
+                        <span class={unassignedBadgeClass}>
+                            {unassignedCount} unassigned
+                        </span>
+                    </template>
+                </div>
+
+                <!-- Developer cards -->
+                <template for:each={developers} for:item="dev">
+                    <div key={dev.key} class="dw-card">
+                        <div class="dw-card-header">
+                            <div class="dw-dev-info">
+                                <lightning-icon icon-name="standard:avatar" size="small"
+                                    class="dw-avatar"></lightning-icon>
+                                <span class="dw-dev-name">{dev.developerName}</span>
+                            </div>
+                            <div class="dw-metrics">
+                                <span class="dw-metric-item">
+                                    <strong>{dev.totalItems}</strong> items
+                                </span>
+                                <span class="dw-metric-divider">|</span>
+                                <span class="dw-metric-item">
+                                    <strong>{dev.totalEstimatedHours}</strong> est.
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Load bar -->
+                        <div class="dw-bar-track">
+                            <div class="dw-bar-fill" style={dev.barStyle}></div>
+                        </div>
+
+                        <!-- Stage pills -->
+                        <template lwc:if={dev.stagePills.length}>
+                            <div class="dw-pills">
+                                <template for:each={dev.stagePills} for:item="pill">
+                                    <span key={pill.key} class={pill.cssClass}>
+                                        {pill.label}
+                                    </span>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Empty state -->
+            <template lwc:if={showEmptyState}>
+                <div class="dw-empty">
+                    <div class="dw-empty-icon">
+                        <lightning-icon icon-name="utility:check" size="large"></lightning-icon>
+                    </div>
+                    <p class="dw-empty-title">No active work items found</p>
+                    <p class="dw-empty-sub">
+                        All work items are complete or no items have been created yet.
+                    </p>
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>
