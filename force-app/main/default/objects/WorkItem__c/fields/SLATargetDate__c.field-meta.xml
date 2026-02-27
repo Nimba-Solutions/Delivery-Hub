@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SLATargetDate__c</fullName>
+    <description>Target date by which this work item should reach a terminal stage.</description>
+    <inlineHelpText>Deadline for completing this work item per the SLA.</inlineHelpText>
+    <label>SLA Target Date</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

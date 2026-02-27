@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SLAStatusTxt__c</fullName>
+    <description>Formula-calculated SLA status based on target date and current stage.</description>
+    <externalId>false</externalId>
+    <formula>IF(
+    ISBLANK( SLATargetDate__c ),
+    &quot;&quot;,
+    IF(
+        OR(
+            ISPICKVAL( StageNamePk__c, &quot;Done&quot; ),
+            ISPICKVAL( StageNamePk__c, &quot;Cancelled&quot; ),
+            ISPICKVAL( StageNamePk__c, &quot;Deployed to Prod&quot; )
+        ),
+        &quot;Met&quot;,
+        IF(
+            SLATargetDate__c &lt; TODAY(),
+            &quot;Breached&quot;,
+            IF(
+                ( SLATargetDate__c - TODAY() ) &lt;= 2,
+                &quot;At Risk&quot;,
+                &quot;On Track&quot;
+            )
+        )
+    )
+)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <inlineHelpText>Automatically calculated: On Track, At Risk (within 2 days), Breached (past due), or Met (terminal stage).</inlineHelpText>
+    <label>SLA Status</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
