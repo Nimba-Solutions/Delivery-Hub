@@ -29,7 +29,7 @@ private class DeliveryWorkItemControllerTest {
         );
         insert psa;
 
-         
+
 
         System.runAs(testUser) {
         // --- FIX: Disable trigger logic during test data setup ---
@@ -63,36 +63,36 @@ private class DeliveryWorkItemControllerTest {
 
     @isTest
     static void testGetWorkItems() {
-         
+
         Test.startTest();
         // Pass null to get all active work items (backward-compatible path)
         List<WorkItem__c> results = DeliveryWorkItemController.getWorkItems(null);
         Test.stopTest();
-       // System.assert(!results.isEmpty(), 'Work items should be returned');
-        
+        System.assert(!results.isEmpty(), 'Work items should be returned');
+
     }
 
     @isTest
     static void testCreateDummyWorkItems() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
         Test.startTest();
-        
+
         // --- FIX: Disable trigger logic for this DML operation ---
         DeliveryTriggerControl.disableAfterLogic();
         List<WorkItem__c> created = DeliveryWorkItemController.createDummyWorkItems();
         DeliveryTriggerControl.enableAfterLogic();
-        
+
         Test.stopTest();
-       // System.assertEquals(4, created.size(), '4 dummy work items should be created');
+        System.assertEquals(4, created.size(), '4 dummy work items should be created');
         }
     }
 
     @isTest
     static void testUpdateWorkItemSortOrders() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -114,13 +114,13 @@ private class DeliveryWorkItemControllerTest {
         Test.stopTest();
 
         WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :workItems[0].Id];
-       // System.assertEquals(5, updated.SortOrderNumber__c.intValue());\
+        System.assertEquals(5, updated.SortOrderNumber__c.intValue());
     }
     }
 
     @isTest
     static void testLinkFilesToWorkItem() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -139,13 +139,13 @@ private class DeliveryWorkItemControllerTest {
         Test.stopTest();
 
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :workItemId];
+        System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
         }
-       // System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
     }
-    
+
     @isTest
     static void testlinkFilesAndSync() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -160,7 +160,7 @@ private class DeliveryWorkItemControllerTest {
         Id workItemId = [SELECT Id FROM WorkItem__c LIMIT 1].Id;
 
         Test.startTest();
-        
+
         // --- FIX: Disable trigger logic for this DML operation ---
         DeliveryTriggerControl.disableAfterLogic();
         DeliveryWorkItemController.linkFilesAndSync(workItemId, new List<Id>{contentDocumentId});
@@ -169,14 +169,14 @@ private class DeliveryWorkItemControllerTest {
         Test.stopTest();
 
         List<ContentDocumentLink> links = [SELECT Id FROM ContentDocumentLink WHERE LinkedEntityId = :workItemId];
+        System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
         }
-       // System.assert(!links.isEmpty(), 'ContentDocumentLink should be created');
     }
 
-    
+
     @isTest
     static void testGetAiEnhancedWorkItemDetails_withFallback() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -185,34 +185,16 @@ private class DeliveryWorkItemControllerTest {
         DeliveryWorkItemController.AISuggestionWrapper result = DeliveryWorkItemController.getAiEnhancedWorkItemDetails('Login bug', 'User cannot log in');
         Test.stopTest();
 
-       // System.assertNotEquals(null, result);
-       // System.assertNotEquals(null, result.title);
-       // System.assertNotEquals(null, result.description);
-       // System.assert(result.estimatedDays > 0);
+        System.assertNotEquals(null, result, 'Result should not be null');
+        System.assertNotEquals(null, result.title, 'Title should not be null');
+        System.assertNotEquals(null, result.description, 'Description should not be null');
+        System.assert(result.estimatedDays > 0, 'Estimated days should be positive');
         }
     }
 
-    // @isTest
-    // static void testTriggerExecution() {
-    //     List<WorkItem__c> workItems = new List<WorkItem__c>{
-    //         new WorkItem__c(
-    //             BriefDescriptionTxt__c = 'Trigger Test',
-    //             CalculatedETADate__c = Date.today(),
-    //             DeveloperDaysSizeNumber__c = 1,
-    //             StageNamePk__c = 'Active Scoping',
-    //             SortOrderNumber__c = 1,
-    //             IsActiveBool__c = true
-    //         )
-    //     };
-    //     insert workItems;
-
-    //     workItems[0].BriefDescriptionTxt__c = 'Updated Description';
-    //     update workItems;
-    // }
-    
     @isTest
     static void testgetRequiredFieldsForStage() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -222,11 +204,11 @@ private class DeliveryWorkItemControllerTest {
         Test.stopTest();
         }
     }
- 
+
 
     @isTest
     static void testParseOpenAIResponse_ValidJson() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -244,31 +226,32 @@ private class DeliveryWorkItemControllerTest {
         DeliveryWorkItemController.AISuggestionWrapper result = DeliveryWorkItemController.test_parseOpenAIResponse(mockResponse);
         Test.stopTest();
 
-       // System.assertEquals('Enhanced Login Feature', result.title);
-       // System.assertEquals('Improved login with MFA', result.description);
-       // System.assertEquals(4, result.estimatedDays);
+        System.assertEquals('Enhanced Login Feature', result.title, 'Title should match');
+        System.assertEquals('Improved login with MFA', result.description, 'Description should match');
+        System.assertEquals(4, result.estimatedDays, 'Estimated days should match');
     }
     }
 
     @isTest
     static void testExtractJsonFromContent_Valid() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
         String wrappedText = 'Some intro text\n{\n"title": "Test", "description": "Test desc", "estimatedDays": 2\n}\nMore trailing text';
-        
+
         Test.startTest();
         String jsonResult = DeliveryWorkItemController.test_extractJsonFromContent(wrappedText);
         Test.stopTest();
+
+        System.assert(jsonResult.contains('"title"'), 'Extracted JSON should contain title key');
+        System.assert(jsonResult.contains('Test'), 'Extracted JSON should contain title value');
         }
-       // System.assert(jsonResult.contains('"title": "Test"'));
-       // System.assertEquals('{ "title": "Test", "description": "Test desc", "estimatedDays": 2 }'.replaceAll('\\s+', ''), jsonResult.replaceAll('\\s+', ''));
     }
 
     @isTest
     static void testParseOpenAIResponse_MissingContent() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -286,17 +269,16 @@ private class DeliveryWorkItemControllerTest {
             Test.startTest();
             DeliveryWorkItemController.test_parseOpenAIResponse(badResponse);
             Test.stopTest();
-            //System.assert(false, 'Exception expected for invalid JSON');
+            System.assert(false, 'Exception expected for invalid JSON');
         } catch (AuraHandledException e) {
-            //System.assert(e.getMessage().contains('No valid JSON'));
-        	System.debug('test catch');
+            System.assert(e.getMessage() != null, 'Exception should have a message');
         }
     }
     }
 
     @isTest
     static void testExtractJsonFromContent_Invalid() {
-         
+
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
         System.runAs(testUser) {
@@ -304,10 +286,9 @@ private class DeliveryWorkItemControllerTest {
             Test.startTest();
             DeliveryWorkItemController.test_extractJsonFromContent('Just some text, no JSON brackets');
             Test.stopTest();
-           //// System.assert(false, 'Exception expected for missing brackets');
+            System.assert(false, 'Exception expected for missing brackets');
         } catch (AuraHandledException e) {
-            //System.assert(e.getMessage().contains('No valid JSON'));
-            System.debug('test catch');
+            System.assert(e.getMessage() != null, 'Exception should have a message');
         }
     }
 }

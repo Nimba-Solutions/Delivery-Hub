@@ -2,7 +2,7 @@
     <lightning-card icon-name="standard:flow">
         <div slot="title" class="ac-title-wrapper">
             <span class="ac-card-title">Action Center</span>
-            <template if:true={currentPhaseLabel}>
+            <template lwc:if={currentPhaseLabel}>
                 <span class="ac-phase-chip">{currentPhaseLabel}</span>
             </template>
         </div>
@@ -12,7 +12,7 @@
             <!-- ── Current Stage Banner ── -->
             <div class="ac-stage-banner" style={stageBannerStyle}>
                 <div class="ac-stage-name">{currentStage}</div>
-                <template if:true={isFastTrackAvailable}>
+                <template lwc:if={isFastTrackAvailable}>
                     <div class="ac-fast-track-badge">
                         <lightning-icon icon-name="utility:zap" size="xx-small" class="ac-zap-icon"></lightning-icon>
                         Fast Track
@@ -21,7 +21,7 @@
             </div>
 
             <!-- ── Missing Fields ── -->
-            <template if:true={hasMissingFields}>
+            <template lwc:if={hasMissingFields}>
                 <div class="ac-missing-panel">
                     <div class="ac-missing-header">
                         <lightning-icon icon-name="utility:warning" size="xx-small"></lightning-icon>
@@ -44,8 +44,8 @@
             </template>
 
             <!-- ── Advance Options (hidden when required actions exist) ── -->
-            <template if:true={showMoveOptions}>
-            <template if:true={advanceOptions.length}>
+            <template lwc:if={showMoveOptions}>
+            <template lwc:if={advanceOptions.length}>
                 <div class="ac-section">
                     <div class="ac-section-label">
                         <lightning-icon icon-name="utility:forward" size="xx-small" class="ac-section-icon"></lightning-icon>
@@ -69,7 +69,7 @@
             </template>
 
             <!-- ── Backtrack Options (hidden when required actions exist) ── -->
-            <template if:true={backtrackOptions.length}>
+            <template lwc:if={backtrackOptions.length}>
                 <div class="ac-backtrack-section">
                     <span class="ac-backtrack-label">
                         <lightning-icon icon-name="utility:back" size="xx-small" class="ac-section-icon"></lightning-icon>

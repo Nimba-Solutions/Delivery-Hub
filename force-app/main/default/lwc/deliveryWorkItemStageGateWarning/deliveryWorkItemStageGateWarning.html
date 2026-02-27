@@ -1,5 +1,5 @@
 <template>
-    <template if:true={showAlert}>
+    <template lwc:if={showAlert}>
         <div class={alertClass} role="alert">
             <span class="slds-assistive-text">{type}</span>
             <span class="slds-icon_container slds-m-right_x-small" title={type}>

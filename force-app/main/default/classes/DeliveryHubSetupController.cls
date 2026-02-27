@@ -5,6 +5,8 @@
  * Handles the initial handshake with the Mothership and manages connection status.
  * @author Cloud Nimbus LLC
  */
+// without sharing: Required so any user (including Standard Users without sharing rules)
+// can read/write NetworkEntity__c and DeliveryHubSettings__c during initial org setup.
 @SuppressWarnings('PMD.ApexSharingViolations')
 public without sharing class DeliveryHubSetupController {
 

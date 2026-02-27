@@ -72,7 +72,7 @@ export default class DeliveryKanbanOpenAiSettings extends LightningElement {
             }
         } catch (error) {
             this.testResult = "error";
-            this.testResultMessage = `An error occurred: ${error.body.message}`;
+            this.testResultMessage = `An error occurred: ${error.body ? error.body.message : error.message}`;
         } finally {
             this.isTesting = false;
         }

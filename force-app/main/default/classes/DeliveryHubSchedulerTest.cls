@@ -44,6 +44,22 @@ private class DeliveryHubSchedulerTest {
     }
     
     /**
+     * @description Verifies that the scheduler can be registered via System.schedule().
+     */
+    @IsTest
+    static void testSchedulableExecution() {
+        Test.setMock(HttpCalloutMock.class, new MockResponse());
+
+        Test.startTest();
+        String cronExp = '0 0 0 15 3 ? 2040';
+        String jobId = System.schedule('TestDeliveryHubScheduler', cronExp, new DeliveryHubScheduler());
+        Test.stopTest();
+
+        CronTrigger ct = [SELECT Id, State FROM CronTrigger WHERE Id = :jobId];
+        System.assertNotEquals(null, ct, 'Scheduled job should exist');
+    }
+
+    /**
      * @description Mock implementation for the sync handshake.
      */
     public class MockResponse implements HttpCalloutMock {

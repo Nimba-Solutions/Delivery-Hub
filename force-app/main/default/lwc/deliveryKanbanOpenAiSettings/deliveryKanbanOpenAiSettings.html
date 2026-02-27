@@ -28,7 +28,7 @@
             class="slds-m-left_small">
         </lightning-button>
         
-        <template if:true={testResult}>
+        <template lwc:if={testResult}>
              <div class={testResultClass} role="alert">{testResultMessage}</div>
         </template>
         

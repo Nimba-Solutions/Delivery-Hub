@@ -1,8 +1,16 @@
 <template>
     <div class={rootClass}>
 
+        <!-- ── Cancelled state ── -->
+        <template lwc:if={isCancelled}>
+            <div class="tp-cancelled-strip">
+                <lightning-icon icon-name="utility:ban" size="x-small" class="tp-cancelled-icon"></lightning-icon>
+                <span class="tp-cancelled-text">Cancelled</span>
+            </div>
+        </template>
+
         <!-- ── Normal progress track ── -->
-        <template if:false={isCancelled}>
+        <template lwc:else>
             <div class="tp-track">
                 <template for:each={phases} for:item="phase">
                     <div key={phase.index} class={phase.wrapClass}>
@@ -12,14 +20,14 @@
                             <div class={phase.connLeftClass}></div>
 
                             <div class={phase.dotClass} style={phase.dotStyle}>
-                                <template if:true={phase.isCompleted}>
+                                <template lwc:if={phase.isCompleted}>
                                     <lightning-icon
                                         icon-name="utility:check"
                                         size="xx-small"
                                         class="tp-check-icon">
                                     </lightning-icon>
                                 </template>
-                                <template if:true={phase.isCurrent}>
+                                <template lwc:if={phase.isCurrent}>
                                     <div class="tp-current-pip" style={phase.pipStyle}></div>
                                 </template>
                             </div>
@@ -30,7 +38,7 @@
                         <!-- Label + current-stage chip below the dot -->
                         <div class="tp-label-area">
                             <span class="tp-phase-name" style={phase.labelStyle}>{phase.label}</span>
-                            <template if:true={phase.isCurrent}>
+                            <template lwc:if={phase.isCurrent}>
                                 <span class="tp-stage-chip" style={phase.chipStyle}>{currentStageName}</span>
                             </template>
                         </div>
@@ -39,20 +47,12 @@
                 </template>
 
                 <!-- Trailing "Done" badge when work item is complete -->
-                <template if:true={isDone}>
+                <template lwc:if={isDone}>
                     <div class="tp-done-badge">
                         <lightning-icon icon-name="utility:success" size="small" class="tp-done-icon"></lightning-icon>
                         <span class="tp-done-label">Done</span>
                     </div>
                 </template>
-            </div>
-        </template>
-
-        <!-- ── Cancelled state ── -->
-        <template if:true={isCancelled}>
-            <div class="tp-cancelled-strip">
-                <lightning-icon icon-name="utility:ban" size="x-small" class="tp-cancelled-icon"></lightning-icon>
-                <span class="tp-cancelled-text">Cancelled</span>
             </div>
         </template>
 

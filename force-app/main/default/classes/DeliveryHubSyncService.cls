@@ -27,7 +27,7 @@ global without sharing class DeliveryHubSyncService {
             String jsonBody = req.requestBody.toString();
             if (String.isBlank(jsonBody)) {
                 res.statusCode = 400;
-                res.responseBody = Blob.valueOf('{"error":"Empty Payload"}');
+                res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => 'Empty Payload' }));
                 return;
             }
 
@@ -43,7 +43,7 @@ global without sharing class DeliveryHubSyncService {
                 ];
                 if (echoCount > 0) {
                     res.statusCode = 200;
-                    res.responseBody = Blob.valueOf('{"status":"Echo suppressed", "globalSourceId":"' + incomingGlobalSourceId + '"}');
+                    res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'status' => 'Echo suppressed', 'globalSourceId' => incomingGlobalSourceId }));
                     return;
                 }
             }
@@ -55,12 +55,11 @@ global without sharing class DeliveryHubSyncService {
 
             // 4. Respond
             res.statusCode = 200;
-            String jsonResponse = '{"status":"Success", "processedId":"' + processedId + '", "orgId":"' + UserInfo.getOrganizationId() + '"}';
-            res.responseBody = Blob.valueOf(jsonResponse);
+            res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'status' => 'Success', 'processedId' => String.valueOf(processedId), 'orgId' => UserInfo.getOrganizationId() }));
 
         } catch (Exception e) {
             res.statusCode = 500;
-            res.responseBody = Blob.valueOf('{"error":"' + e.getMessage() + '"}');
+            res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => e.getMessage() }));
         }
     }
 
@@ -80,7 +79,7 @@ global without sharing class DeliveryHubSyncService {
             // Route Validation: Ensure they are hitting the /changes endpoint
             if (path.toLowerCase() != 'changes') {
                 res.statusCode = 404;
-                res.responseBody = Blob.valueOf('{"error":"Endpoint not found. Please use /sync/changes"}');
+                res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => 'Endpoint not found. Please use /sync/changes' }));
                 return;
             }
 
@@ -88,7 +87,7 @@ global without sharing class DeliveryHubSyncService {
             String clientId = req.params.get('clientId');
             if (String.isBlank(clientId)) {
                 res.statusCode = 400;
-                res.responseBody = Blob.valueOf('{"error":"Missing required parameter: clientId. Cannot authorize data retrieval without identity."}');
+                res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => 'Missing required parameter: clientId. Cannot authorize data retrieval without identity.' }));
                 return;
             }
 
@@ -137,7 +136,7 @@ global without sharing class DeliveryHubSyncService {
 
         } catch (Exception e) {
             res.statusCode = 500;
-            res.responseBody = Blob.valueOf('{"error":"' + e.getMessage() + '"}');
+            res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => e.getMessage() }));
         }
     }
 }

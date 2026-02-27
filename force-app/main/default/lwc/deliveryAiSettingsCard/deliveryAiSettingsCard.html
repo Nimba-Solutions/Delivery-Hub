@@ -16,7 +16,7 @@
         
         <div class="slds-card__body slds-card__body_inner">
             <!-- OpenAI Warning -->
-            <template if:true={showOpenAIWarning}>
+            <template lwc:if={showOpenAIWarning}>
                 <div class="slds-notify slds-notify_alert slds-alert_warning slds-m-bottom_large" role="alert">
                     <span class="slds-assistive-text">Warning</span>
                     <div class="slds-media slds-media_center">

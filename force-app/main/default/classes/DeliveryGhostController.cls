@@ -111,7 +111,9 @@ public with sharing class DeliveryGhostController {
 
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Create Work Item Failed: ' + e.getMessage());
-            throw new AuraHandledException(e.getMessage());
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
         }
     }
 }

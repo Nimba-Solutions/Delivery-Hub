@@ -3,7 +3,7 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
-public class DeliveryTriggerControl {
+public with sharing class DeliveryTriggerControl {
 
     // This is the switch. When true, the async logic runs. When false, it's skipped.
     public static Boolean runAfterLogic = true;

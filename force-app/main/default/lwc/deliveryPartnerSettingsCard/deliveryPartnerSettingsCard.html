@@ -22,7 +22,7 @@
             </lightning-input>
         </div>
 
-        <template if:true={isEnabled}>
+        <template lwc:if={isEnabled}>
             <div class="slds-box slds-theme_shade slds-m-bottom_medium">
                 
                 <lightning-combobox
@@ -34,7 +34,7 @@
                     class="slds-m-bottom_medium">
                 </lightning-combobox>
 
-                <template if:true={isCustomPartner}>
+                <template lwc:if={isCustomPartner}>
                     <lightning-input 
                         type="url" 
                         label="Partner API Endpoint" 
@@ -45,7 +45,7 @@
                     </lightning-input>
                 </template>
 
-                <template if:false={isCustomPartner}>
+                <template lwc:else>
                     <div class="slds-alert slds-alert_info slds-m-bottom_medium">
                         <lightning-icon icon-name="utility:info" size="x-small" class="slds-m-right_x-small"></lightning-icon>
                         Work items will be sent to the Cloud Nimbus Fulfillment Team.

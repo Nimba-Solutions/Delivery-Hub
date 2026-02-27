@@ -168,6 +168,16 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     // ── Derived getters ──
 
+    // ── Negated getters for lwc:if migration ──
+    get showAttentionSection() { return !this.hideAttentionSection; }
+    get showInFlightSection()  { return !this.hideInFlightSection; }
+    get showRecentSection()    { return !this.hideRecentSection; }
+    get showThisWeekSection()  { return !this.hideThisWeekSection; }
+    get isLoaded()             { return !this.isLoading; }
+    get inFlightExpanded()     { return !this.inFlightCollapsed; }
+    get recentExpanded()       { return !this.recentCollapsed; }
+    get thisWeekExpanded()     { return !this.thisWeekCollapsed; }
+
     get hasAttentionItems() {
         return this.attentionWorkItems && this.attentionWorkItems.length > 0;
     }

@@ -8,7 +8,7 @@
                             <div class={msg.bubbleClass}>
                                 <lightning-formatted-text value={msg.body}></lightning-formatted-text>
                             </div>
-                            <template if:true={msg.files}>
+                            <template lwc:if={msg.files}>
                                 <template for:each={msg.files} for:item="fileName">
                                     <div key={fileName} class="chat-file-indicator">
                                         <lightning-icon icon-name="doctype:attachment" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>

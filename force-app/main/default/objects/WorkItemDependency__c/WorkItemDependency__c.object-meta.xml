@@ -142,7 +142,7 @@
     </actionOverrides>
     <allowInChatterGroups>true</allowInChatterGroups>
     <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
-    <deploymentStatus>InDevelopment</deploymentStatus>
+    <deploymentStatus>Deployed</deploymentStatus>
     <description>Junction object that records blocking and relational dependencies between work items. Enables the Kanban board to surface blocked work items and prevent invalid stage transitions when a blocking work item is still in progress.</description>
     <enableActivities>true</enableActivities>
     <enableBulkApi>true</enableBulkApi>

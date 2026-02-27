@@ -98,4 +98,8 @@ export default class DeliveryAiSettingsCard extends LightningElement {
     get isAiEstimationDisabled() {
         return !this.aiSuggestionsEnabled;
     }
+
+    get showOpenAIWarning() {
+        return this.aiSuggestionsEnabled && !this.hasValidOpenAIKey;
+    }
 }

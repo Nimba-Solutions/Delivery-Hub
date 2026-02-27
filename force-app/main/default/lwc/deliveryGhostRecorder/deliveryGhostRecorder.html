@@ -1,7 +1,7 @@
 <template>
-    <template if:true={isCardMode}>
+    <template lwc:if={isCardMode}>
         <lightning-card title={cardTitle} icon-name={cardIcon}>
-            <template if:true={hasAttentionItems}>
+            <template lwc:if={hasAttentionItems}>
                 <div class="gr-attention-banner">
                     <lightning-icon icon-name="utility:warning" size="x-small" class="gr-attention-icon"></lightning-icon>
                     <span class="gr-attention-text">{attentionLabel}</span>
@@ -58,7 +58,7 @@
                         onuploadfinished={handleUploadFinished}
                         multiple>
                     </lightning-file-upload>
-                    <template if:true={uploadedFileCount}>
+                    <template lwc:if={uploadedFileCount}>
                         <div class="slds-text-color_success slds-m-top_xx-small slds-text-body_small">
                             <lightning-icon icon-name="utility:check" size="xx-small" class="slds-m-right_xx-small"></lightning-icon> 
                             {uploadedFileCount} file(s) attached
@@ -73,12 +73,12 @@
         </lightning-card>
     </template>
 
-    <template if:true={isFloatingMode}>
+    <template lwc:if={isFloatingMode}>
         <div class="floating-fab" onclick={togglePanel} title="Delivery Hub Assistant">
             <lightning-icon icon-name="utility:question" variant="inverse" size="small"></lightning-icon>
         </div>
         
-        <template if:true={isOpen}>
+        <template lwc:if={isOpen}>
             <section role="dialog" class="slds-modal slds-fade-in-open">
                 <div class="slds-modal__container">
                     <header class="slds-modal__header">
@@ -88,7 +88,7 @@
                         <h2 class="slds-text-heading_medium">{cardTitle}</h2>
                     </header>
                     <div class="slds-modal__content slds-p-around_medium">
-                        <template if:true={hasAttentionItems}>
+                        <template lwc:if={hasAttentionItems}>
                             <div class="gr-attention-banner slds-m-bottom_small">
                                 <lightning-icon icon-name="utility:warning" size="x-small" class="gr-attention-icon"></lightning-icon>
                                 <span class="gr-attention-text">{attentionLabel}</span>
@@ -146,7 +146,7 @@
                                 onuploadfinished={handleUploadFinished}
                                 multiple>
                             </lightning-file-upload>
-                            <template if:true={uploadedFileCount}>
+                            <template lwc:if={uploadedFileCount}>
                                 <p class="slds-text-color_success slds-m-top_xx-small">
                                     <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon> 
                                     {uploadedFileCount} file(s) queued

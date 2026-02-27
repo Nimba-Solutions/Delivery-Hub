@@ -65,7 +65,7 @@
                 <template for:each={ganttRows} for:item="row">
                     <div key={row.workItemId} class="gantt-row">
                         <div class="gantt-label-col">
-                            <a href={row.recordUrl} target="_blank" class="gantt-work-item-name">
+                            <a data-id={row.workItemId} onclick={handleRowClick} class="gantt-work-item-name">
                                 {row.name}
                             </a>
                             <template if:true={row.descShort}>

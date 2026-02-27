@@ -19,6 +19,10 @@ export default class DeliveryAiDraftPanel extends LightningElement {
         return !!this.draft && !this.isLoading;
     }
 
+    get noDraft() {
+        return !this.hasDraft;
+    }
+
     get hasError() {
         return !!this.errorMessage && !this.isLoading;
     }

@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>RequestTypePk__c</fullName>
     <defaultValue>&apos;Internal&apos;</defaultValue>
-    <description>The name or ID of the originating Salesforce organization. Used to group work items by client or source implementation.</description>
+    <description>Classifies whether this work item is a Bug, Feature, Change Request, or other type of work.</description>
     <inlineHelpText>Classifies whether this work item is a Bug, Feature, Change Request, or other type of work.</inlineHelpText>
     <label>Request Type</label>
     <required>false</required>

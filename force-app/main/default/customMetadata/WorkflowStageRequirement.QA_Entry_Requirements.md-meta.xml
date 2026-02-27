@@ -12,10 +12,10 @@
     </values>
     <values>
         <field>RequiredFieldsTxt__c</field>
-        <value xsi:type="xsd:string">QA_Engineer__c, ClientIntentionPk__c</value>
+        <value xsi:type="xsd:string">ClientIntentionPk__c</value>
     </values>
     <values>
         <field>TargetStageTxt__c</field>
-        <value xsi:type="xsd:string">Ready for Scratch Org Test</value>
+        <value xsi:type="xsd:string">Ready for Scratch Test</value>
     </values>
 </CustomMetadata>

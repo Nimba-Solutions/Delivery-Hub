@@ -5,7 +5,7 @@
         <div class="slds-p-horizontal_medium slds-p-bottom_medium">
 
             <!-- Draft button row -->
-            <template if:false={hasDraft}>
+            <template lwc:if={noDraft}>
                 <div class="ai-cta">
                     <p class="ai-cta-desc">
                         Generate a professional status update ready to share with your client.
@@ -21,7 +21,7 @@
             </template>
 
             <!-- Loading -->
-            <template if:true={isLoading}>
+            <template lwc:if={isLoading}>
                 <div class="ai-loading">
                     <lightning-spinner alternative-text="Generating..." size="small"></lightning-spinner>
                     <span class="ai-loading-text">Drafting your update&hellip;</span>
@@ -29,7 +29,7 @@
             </template>
 
             <!-- Error -->
-            <template if:true={hasError}>
+            <template lwc:if={hasError}>
                 <div class="ai-error">
                     <lightning-icon icon-name="utility:error" size="x-small" class="ai-error-icon"></lightning-icon>
                     <span class="ai-error-text">{errorMessage}</span>
@@ -44,7 +44,7 @@
             </template>
 
             <!-- Result -->
-            <template if:true={hasDraft}>
+            <template lwc:if={hasDraft}>
                 <lightning-textarea
                     label="Drafted Update"
                     value={draft}

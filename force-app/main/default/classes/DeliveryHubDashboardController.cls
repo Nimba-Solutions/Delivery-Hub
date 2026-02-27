@@ -37,6 +37,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT Count(Id) total
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
+            WITH SYSTEM_MODE
         ];
 
         Decimal activeCount = (workItemStats[0].get('total') != null) ? (Decimal)workItemStats[0].get('total') : 0;
@@ -62,6 +63,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
+            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
@@ -79,6 +81,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT StatusPk__c val, Count(Id) cnt
             FROM SyncItem__c
             WHERE StatusPk__c IN ('Synced', 'Failed')
+            WITH SYSTEM_MODE
             GROUP BY StatusPk__c
         ];
 

@@ -28,7 +28,9 @@ public with sharing class DeliveryHubCommentController {
                 ORDER BY CreatedDate ASC
             ];
         } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage());
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
         }
     }
 
@@ -54,7 +56,9 @@ public with sharing class DeliveryHubCommentController {
             insert comment; 
             
         } catch (Exception e) {
-            throw new AuraHandledException('Failed to post comment: ' + e.getMessage());
+            AuraHandledException ahe = new AuraHandledException('Failed to post comment: ' + e.getMessage());
+            ahe.setMessage('Failed to post comment: ' + e.getMessage());
+            throw ahe;
         }
     }
 

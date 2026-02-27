@@ -5,7 +5,7 @@
             <div class="gs-header-left">
                 <lightning-icon icon-name="utility:knowledge_base" size="x-small" class="gs-icon"></lightning-icon>
                 <span class="gs-title">{headerTitle}</span>
-                <template if:true={isAlreadyConnected}>
+                <template lwc:if={isAlreadyConnected}>
                     <span class="gs-connected-pill">Connected</span>
                 </template>
             </div>
@@ -13,7 +13,7 @@
         </div>
 
         <!-- Expanded body -->
-        <template if:true={isExpanded}>
+        <template lwc:if={isExpanded}>
             <div class="gs-body">
 
                 <!-- Progress indicator -->
@@ -27,7 +27,7 @@
                 </div>
 
                 <!-- ── STEP 1: Org Type ── -->
-                <template if:true={isStep1}>
+                <template lwc:if={isStep1}>
                     <div class="wiz-content">
                         <h3 class="wiz-heading">What type of org is this?</h3>
                         <p class="wiz-sub">This determines how Delivery Hub connects to the network.</p>
@@ -37,7 +37,7 @@
                                 <lightning-icon icon-name="standard:account" size="medium"></lightning-icon>
                                 <strong>Client Org</strong>
                                 <span class="wiz-card-desc">I receive deliverables from a consulting partner.</span>
-                                <template if:true={isClientOrg}>
+                                <template lwc:if={isClientOrg}>
                                     <span class="wiz-card-check">
                                         <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
                                     </span>
@@ -48,7 +48,7 @@
                                 <lightning-icon icon-name="standard:partners" size="medium"></lightning-icon>
                                 <strong>Vendor / Consulting Org</strong>
                                 <span class="wiz-card-desc">I deliver work to client organizations.</span>
-                                <template if:true={isVendorOrg}>
+                                <template lwc:if={isVendorOrg}>
                                     <span class="wiz-card-check">
                                         <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
                                     </span>
@@ -63,9 +63,9 @@
                 </template>
 
                 <!-- ── STEP 2: Partner Config ── -->
-                <template if:true={isStep2}>
+                <template lwc:if={isStep2}>
                     <div class="wiz-content">
-                        <template if:true={isClientOrg}>
+                        <template lwc:if={isClientOrg}>
                             <h3 class="wiz-heading">Connect to your delivery partner</h3>
                             <p class="wiz-sub">
                                 By default, your portal will connect to <strong>Cloud Nimbus LLC</strong> as your delivery partner.
@@ -76,7 +76,7 @@
                                 <span>Default partner: <strong>Cloud Nimbus LLC</strong></span>
                             </div>
                         </template>
-                        <template if:true={isVendorOrg}>
+                        <template lwc:if={isVendorOrg}>
                             <h3 class="wiz-heading">Configure your vendor hub</h3>
                             <p class="wiz-sub">
                                 As a vendor org, your Delivery Hub instance becomes the central hub.
@@ -95,17 +95,17 @@
                 </template>
 
                 <!-- ── STEP 3: Test Connection ── -->
-                <template if:true={isStep3}>
+                <template lwc:if={isStep3}>
                     <div class="wiz-content">
                         <h3 class="wiz-heading">Establish connection</h3>
-                        <template if:true={isClientOrg}>
+                        <template lwc:if={isClientOrg}>
                             <p class="wiz-sub">Click the button below to register your org with Cloud Nimbus LLC and set up sync jobs.</p>
                         </template>
-                        <template if:true={isVendorOrg}>
+                        <template lwc:if={isVendorOrg}>
                             <p class="wiz-sub">Click the button below to initialize default settings and schedule sync jobs.</p>
                         </template>
 
-                        <template if:true={connectionError}>
+                        <template lwc:if={connectionError}>
                             <div class="wiz-error">
                                 <lightning-icon icon-name="utility:error" size="x-small" variant="error"></lightning-icon>
                                 <span>{connectionError}</span>
@@ -117,7 +117,7 @@
                             <lightning-button label="Connect Now" variant="brand" onclick={handleConnect}
                                               disabled={isConnecting}
                                               icon-name="utility:connected_apps"></lightning-button>
-                            <template if:true={isConnecting}>
+                            <template lwc:if={isConnecting}>
                                 <lightning-spinner size="small" alternative-text="Connecting..."></lightning-spinner>
                             </template>
                         </div>
@@ -125,19 +125,19 @@
                 </template>
 
                 <!-- ── STEP 4: Success ── -->
-                <template if:true={isStep4}>
+                <template lwc:if={isStep4}>
                     <div class="wiz-content wiz-content--success">
                         <div class="wiz-success-icon">
                             <lightning-icon icon-name="action:approval" size="large"></lightning-icon>
                         </div>
                         <h3 class="wiz-heading">You&apos;re all set!</h3>
-                        <template if:true={isAlreadyConnected}>
+                        <template lwc:if={isAlreadyConnected}>
                             <p class="wiz-sub">
                                 Your portal is connected to <strong>{connectedEntityName}</strong>.
                                 Sync jobs are running automatically to keep your work items in sync.
                             </p>
                         </template>
-                        <template if:false={isAlreadyConnected}>
+                        <template lwc:else>
                             <p class="wiz-sub">Setup is complete. Your delivery workflow is ready to use.</p>
                         </template>
                         <div class="wiz-actions wiz-actions--center">

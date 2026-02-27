@@ -5,7 +5,7 @@
  * Runs in the background to keep the Client Org in sync with the Mothership.
  * @author Cloud Nimbus LLC
  */
-public class DeliveryHubScheduler implements Schedulable {
+public without sharing class DeliveryHubScheduler implements Schedulable {
 
     /**
      * @description Schedulable execute method.

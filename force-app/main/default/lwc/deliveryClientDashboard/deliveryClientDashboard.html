@@ -3,9 +3,9 @@
     <!-- ============================================================ -->
     <!-- SECTION 1: Greeting + Announcements + Needs Your Attention  -->
     <!-- ============================================================ -->
-    <template if:false={hideAttentionSection}>
+    <template lwc:if={showAttentionSection}>
 
-        <template if:true={hasAnnouncements}>
+        <template lwc:if={hasAnnouncements}>
             <template for:each={announcements} for:item="ann">
                 <div key={ann.key} class="cd-announcement">
                     <lightning-icon icon-name="utility:announcement" size="x-small" class="cd-announcement-icon"></lightning-icon>
@@ -29,8 +29,8 @@
             </lightning-button-icon>
         </div>
 
-        <template if:false={isLoading}>
-            <template if:true={hasAttentionItems}>
+        <template lwc:if={isLoaded}>
+            <template lwc:if={hasAttentionItems}>
                 <lightning-card title="Needs Your Attention" icon-name="standard:task" class="slds-m-bottom_small">
                     <ul class="slds-p-horizontal_medium slds-p-bottom_small attention-list">
                         <template for:each={attentionWorkItems} for:item="wi">
@@ -42,7 +42,7 @@
                                             onclick={handleWorkItemClick}
                                             data-id={wi.id}>
                                             <strong>{wi.name}</strong>
-                                            <template if:true={wi.title}>
+                                            <template lwc:if={wi.title}>
                                                 <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {wi.title}</span>
                                             </template>
                                         </button>
@@ -56,7 +56,7 @@
                     </ul>
                 </lightning-card>
             </template>
-            <template if:false={hasAttentionItems}>
+            <template lwc:else>
                 <div class="cd-caught-up-pill">
                     <lightning-icon icon-name="utility:check" size="x-small" class="cd-caught-up-icon"></lightning-icon>
                     <span class="cd-caught-up-text">All caught up &mdash; nothing is waiting on you</span>
@@ -64,7 +64,7 @@
             </template>
         </template>
 
-        <template if:true={isLoading}>
+        <template lwc:if={isLoading}>
             <div class="slds-p-medium slds-text-align_center">
                 <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
             </div>
@@ -75,7 +75,7 @@
     <!-- ============================================================ -->
     <!-- SECTION 2: What's In Flight                                  -->
     <!-- ============================================================ -->
-    <template if:false={hideInFlightSection}>
+    <template lwc:if={showInFlightSection}>
         <lightning-card title="What&apos;s In Flight" icon-name="standard:kanban" class="slds-m-bottom_small">
             <lightning-button-icon
                 slot="actions"
@@ -84,8 +84,8 @@
                 onclick={toggleInFlight}
                 alternative-text="Toggle">
             </lightning-button-icon>
-            <template if:false={inFlightCollapsed}>
-                <template if:false={isLoading}>
+            <template lwc:if={inFlightExpanded}>
+                <template lwc:if={isLoaded}>
                     <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
                         <template for:each={phases} for:item="phase">
                             <div key={phase.label} class={phase.colClass}>
@@ -104,8 +104,8 @@
     <!-- ============================================================ -->
     <!-- SECTION 2b: This Week at a Glance                           -->
     <!-- ============================================================ -->
-    <template if:false={hideThisWeekSection}>
-        <template if:true={hasThisWeek}>
+    <template lwc:if={showThisWeekSection}>
+        <template lwc:if={hasThisWeek}>
             <lightning-card title="This Week" icon-name="utility:date_input" class="slds-m-bottom_small">
                 <lightning-button-icon
                     slot="actions"
@@ -114,8 +114,8 @@
                     onclick={toggleThisWeek}
                     alternative-text="Toggle">
                 </lightning-button-icon>
-                <template if:false={thisWeekCollapsed}>
-                    <template if:false={isLoading}>
+                <template lwc:if={thisWeekExpanded}>
+                    <template lwc:if={isLoaded}>
                         <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
                                 <div class="tw-metric">
@@ -151,7 +151,7 @@
     <!-- ============================================================ -->
     <!-- SECTION 3: Recently Updated                                  -->
     <!-- ============================================================ -->
-    <template if:false={hideRecentSection}>
+    <template lwc:if={showRecentSection}>
         <lightning-card title="Recently Updated" icon-name="utility:clock">
             <lightning-button-icon
                 slot="actions"
@@ -160,9 +160,9 @@
                 onclick={toggleRecent}
                 alternative-text="Toggle">
             </lightning-button-icon>
-            <template if:false={recentCollapsed}>
-                <template if:false={isLoading}>
-                    <template if:true={hasRecentItems}>
+            <template lwc:if={recentExpanded}>
+                <template lwc:if={isLoaded}>
+                    <template lwc:if={hasRecentItems}>
                         <ul class="slds-p-horizontal_medium slds-p-bottom_small">
                             <template for:each={recentWorkItems} for:item="wi">
                                 <li key={wi.id} class="slds-p-vertical_x-small slds-border_bottom recent-item">
@@ -173,7 +173,7 @@
                                                 onclick={handleWorkItemClick}
                                                 data-id={wi.id}>
                                                 <strong>{wi.name}</strong>
-                                                <template if:true={wi.title}>
+                                                <template lwc:if={wi.title}>
                                                     <span class="slds-m-left_xx-small slds-text-color_default">&mdash; {wi.title}</span>
                                                 </template>
                                             </button>
@@ -188,7 +188,7 @@
                         </ul>
                     </template>
 
-                    <template if:false={hasRecentItems}>
+                    <template lwc:else>
                         <div class="empty-state slds-p-around_large slds-text-align_center">
                             <div class="empty-state-icon-wrapper empty-state-icon--neutral">
                                 <lightning-icon icon-name="utility:activity" size="large"></lightning-icon>
