@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkflowTypeTxt__c</fullName>
+    <description>Which workflow type this SLA rule applies to (e.g. Software_Delivery, Loan_Approval). Leave blank for default/fallback rules that apply when no workflow-specific match exists.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Workflow Type</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
