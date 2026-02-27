@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Onboarding Checklist</label>
+    <protected>false</protected>
+    <values>
+        <field>DescriptionTxt__c</field>
+        <value xsi:type="xsd:string">Employee or customer onboarding workflow with approval gates. Three persona views for HR Admin, Manager, and New Hire with hold/resume capability.</value>
+    </values>
+    <values>
+        <field>IconName__c</field>
+        <value xsi:type="xsd:string">utility:checkin</value>
+    </values>
+    <values>
+        <field>IsDefaultBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>SortOrderNumber__c</field>
+        <value xsi:type="xsd:double">5</value>
+    </values>
+    <values>
+        <field>UseSimplifiedViewBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+</CustomMetadata>

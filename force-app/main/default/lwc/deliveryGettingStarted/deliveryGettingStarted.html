@@ -62,8 +62,24 @@
                     </div>
                 </template>
 
-                <!-- ── STEP 2: Partner Config ── -->
+                <!-- ── STEP 2: Workflow Template ── -->
                 <template lwc:if={isStep2}>
+                    <div class="wiz-content">
+                        <h3 class="wiz-heading">Choose your workflow</h3>
+                        <p class="wiz-sub">Pick a workflow template that best matches how your team works. You can customize it later.</p>
+                        <c-delivery-workflow-template-picker
+                            compact
+                            ontemplateselected={handleTemplateSelected}>
+                        </c-delivery-workflow-template-picker>
+                        <div class="wiz-actions">
+                            <lightning-button label="Back" variant="neutral" onclick={handleBack}></lightning-button>
+                            <lightning-button label="Next" variant="brand" onclick={handleNext}></lightning-button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ── STEP 3: Partner Config ── -->
+                <template lwc:if={isStep3}>
                     <div class="wiz-content">
                         <template lwc:if={isClientOrg}>
                             <h3 class="wiz-heading">Connect to your delivery partner</h3>
@@ -94,8 +110,8 @@
                     </div>
                 </template>
 
-                <!-- ── STEP 3: Test Connection ── -->
-                <template lwc:if={isStep3}>
+                <!-- ── STEP 4: Test Connection ── -->
+                <template lwc:if={isStep4}>
                     <div class="wiz-content">
                         <h3 class="wiz-heading">Establish connection</h3>
                         <template lwc:if={isClientOrg}>
@@ -124,8 +140,8 @@
                     </div>
                 </template>
 
-                <!-- ── STEP 4: Success ── -->
-                <template lwc:if={isStep4}>
+                <!-- ── STEP 5: Success ── -->
+                <template lwc:if={isStep5}>
                     <div class="wiz-content wiz-content--success">
                         <div class="wiz-success-icon">
                             <lightning-icon icon-name="action:approval" size="large"></lightning-icon>

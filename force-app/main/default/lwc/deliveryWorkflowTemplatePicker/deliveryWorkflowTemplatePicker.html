@@ -1,0 +1,68 @@
+<template>
+    <div class="tp-root">
+        <template lwc:if={showHeading}>
+            <h3 class="tp-heading">Choose Your Workflow</h3>
+            <p class="tp-subtext">Select a workflow template that matches your use case. Each template includes pre-configured stages, transitions, and persona views.</p>
+        </template>
+
+        <template lwc:if={isLoading}>
+            <div class="tp-loading">
+                <lightning-spinner size="small" alternative-text="Loading templates..."></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={error}>
+            <div class="tp-error">
+                <lightning-icon icon-name="utility:error" size="x-small" variant="error"></lightning-icon>
+                <span>{error}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasTemplates}>
+            <div class="tp-grid">
+                <template for:each={templates} for:item="tmpl">
+                    <button key={tmpl.developerName}
+                            class={tmpl.cardClass}
+                            data-name={tmpl.developerName}
+                            onclick={handleCardSelect}
+                            aria-pressed={tmpl.isSelected}>
+
+                        <div class="tp-card-header">
+                            <lightning-icon icon-name={tmpl.iconName} size="small"></lightning-icon>
+                            <span class="tp-card-title">{tmpl.label}</span>
+                            <template lwc:if={tmpl.defaultBadge}>
+                                <span class="tp-default-badge">Default</span>
+                            </template>
+                            <template lwc:if={tmpl.isSelected}>
+                                <span class="tp-check">
+                                    <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
+                                </span>
+                            </template>
+                        </div>
+
+                        <p class="tp-card-desc">{tmpl.description}</p>
+
+                        <!-- Mini pipeline preview -->
+                        <div class="tp-pipeline">
+                            <template for:each={tmpl.pipelineDots} for:item="dot">
+                                <span key={dot.key} class="tp-dot" style={dot.style}></span>
+                            </template>
+                        </div>
+
+                        <div class="tp-card-meta">
+                            <span class="tp-meta-item">
+                                <lightning-icon icon-name="utility:steps" size="xx-small"></lightning-icon>
+                                {tmpl.stageLabel}
+                            </span>
+                            <span class="tp-meta-item">
+                                <lightning-icon icon-name="utility:people" size="xx-small"></lightning-icon>
+                                {tmpl.personaCount} personas
+                            </span>
+                        </div>
+                        <div class="tp-persona-list">{tmpl.personaLabel}</div>
+                    </button>
+                </template>
+            </div>
+        </template>
+    </div>
+</template>

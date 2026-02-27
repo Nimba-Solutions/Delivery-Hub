@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>IP - Integration Testing</label>
+    <protected>false</protected>
+    <values>
+        <field>WorkflowType__c</field>
+        <value xsi:type="xsd:string">Implementation_Project</value>
+    </values>
+    <values>
+        <field>ApiValueTxt__c</field>
+        <value xsi:type="xsd:string">Integration Testing</value>
+    </values>
+    <values>
+        <field>SortOrderNumber__c</field>
+        <value xsi:type="xsd:double">6</value>
+    </values>
+    <values>
+        <field>CardColorTxt__c</field>
+        <value xsi:type="xsd:string">#A5F3FC</value>
+    </values>
+    <values>
+        <field>HeaderBgColorTxt__c</field>
+        <value xsi:type="xsd:string">rgba(165,243,252,0.8)</value>
+    </values>
+    <values>
+        <field>HeaderTextColorTxt__c</field>
+        <value xsi:type="xsd:string">#0E7490</value>
+    </values>
+    <values>
+        <field>OwnerPersonaTxt__c</field>
+        <value xsi:type="xsd:string">Consultant</value>
+    </values>
+    <values>
+        <field>PhaseTxt__c</field>
+        <value xsi:type="xsd:string">Testing</value>
+    </values>
+    <values>
+        <field>IsTerminalBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsBlockedStateBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsAttentionStateBool__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsVisibleByDefaultBool__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>AllowedForwardTransitionsTxt__c</field>
+        <value xsi:type="xsd:string">UAT</value>
+    </values>
+    <values>
+        <field>AllowedBacktrackTransitionsTxt__c</field>
+        <value xsi:type="xsd:string">Unit Testing,Build,Closed</value>
+    </values>
+</CustomMetadata>

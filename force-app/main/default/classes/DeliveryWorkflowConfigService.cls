@@ -143,6 +143,77 @@ public with sharing class DeliveryWorkflowConfigService {
         return result;
     }
 
+    /**
+     * @description Returns enriched workflow template data for the template picker UI.
+     * Each entry includes developerName, label, description, iconName, stageCount,
+     * personas list, and stage color previews for the mini-pipeline visualization.
+     * @return List of Maps, each representing one WorkflowType__mdt with enriched data.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String,Object>> getWorkflowTemplates() {
+        // Load all types
+        List<WorkflowType__mdt> types = [
+            SELECT DeveloperName, Label, DescriptionTxt__c, IconName__c,
+                   SortOrderNumber__c, IsDefaultBool__c, UseSimplifiedViewBool__c
+            FROM WorkflowType__mdt
+            WITH SYSTEM_MODE
+            ORDER BY SortOrderNumber__c ASC NULLS LAST, Label ASC
+        ];
+
+        // Collect stage counts and colors per type
+        Map<String,List<String>> stageColorsByType = new Map<String,List<String>>();
+        Map<String,Integer> stageCountByType = new Map<String,Integer>();
+        for (WorkflowStage__mdt s : [
+            SELECT WorkflowType__r.DeveloperName, CardColorTxt__c
+            FROM WorkflowStage__mdt
+            WITH SYSTEM_MODE
+            ORDER BY SortOrderNumber__c ASC NULLS LAST
+        ]) {
+            String typeName = s.WorkflowType__r.DeveloperName;
+            if (!stageColorsByType.containsKey(typeName)) {
+                stageColorsByType.put(typeName, new List<String>());
+                stageCountByType.put(typeName, 0);
+            }
+            stageColorsByType.get(typeName).add(s.CardColorTxt__c);
+            stageCountByType.put(typeName, stageCountByType.get(typeName) + 1);
+        }
+
+        // Collect unique persona names per type
+        Map<String,Set<String>> personasByType = new Map<String,Set<String>>();
+        for (WorkflowPersonaView__mdt pv : [
+            SELECT WorkflowType__r.DeveloperName, PersonaNameTxt__c
+            FROM WorkflowPersonaView__mdt
+            WITH SYSTEM_MODE
+        ]) {
+            String typeName = pv.WorkflowType__r.DeveloperName;
+            if (!personasByType.containsKey(typeName)) {
+                personasByType.put(typeName, new Set<String>());
+            }
+            personasByType.get(typeName).add(pv.PersonaNameTxt__c);
+        }
+
+        // Build result
+        List<Map<String,Object>> result = new List<Map<String,Object>>();
+        for (WorkflowType__mdt wt : types) {
+            Map<String,Object> m = new Map<String,Object>();
+            m.put('developerName',     wt.DeveloperName);
+            m.put('label',             wt.Label);
+            m.put('description',       wt.DescriptionTxt__c);
+            m.put('iconName',          wt.IconName__c);
+            m.put('sortOrder',         wt.SortOrderNumber__c);
+            m.put('isDefault',         wt.IsDefaultBool__c);
+            m.put('useSimplifiedView', wt.UseSimplifiedViewBool__c);
+            m.put('stageCount',        stageCountByType.containsKey(wt.DeveloperName)
+                                        ? stageCountByType.get(wt.DeveloperName) : 0);
+            m.put('stageColors',       stageColorsByType.containsKey(wt.DeveloperName)
+                                        ? stageColorsByType.get(wt.DeveloperName) : new List<String>());
+            m.put('personas',          personasByType.containsKey(wt.DeveloperName)
+                                        ? new List<String>(personasByType.get(wt.DeveloperName)) : new List<String>());
+            result.add(m);
+        }
+        return result;
+    }
+
     // -------------------------------------------------------------------------
     // Internal helpers — called by other Apex classes
     // -------------------------------------------------------------------------
