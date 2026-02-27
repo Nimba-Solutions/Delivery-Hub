@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EmailNotificationsEnabledBool__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When enabled, sends email notifications on work item stage changes to assigned developers and record owners.</description>
+    <inlineHelpText>Send email notifications when work items change stage.</inlineHelpText>
+    <label>Email Notifications Enabled</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
