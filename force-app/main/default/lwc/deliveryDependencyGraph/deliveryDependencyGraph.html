@@ -1,0 +1,94 @@
+<template>
+    <lightning-card title="Dependency Graph" icon-name="utility:graph">
+        <div slot="actions">
+            <template lwc:if={hasGraph}>
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    alternative-text="Reset zoom"
+                    title="Reset zoom"
+                    onclick={handleResetZoom}
+                    size="small"
+                ></lightning-button-icon>
+            </template>
+        </div>
+
+        <!-- Loading state -->
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_large slds-text-align_center">
+                <lightning-spinner alternative-text="Loading dependency graph" size="small"></lightning-spinner>
+                <p class="slds-m-top_small slds-text-color_weak">Loading dependency graph...</p>
+            </div>
+        </template>
+
+        <!-- Error state -->
+        <template lwc:elseif={errorMessage}>
+            <div class="slds-p-around_medium">
+                <p class="slds-text-color_error slds-text-body_regular">{errorMessage}</p>
+            </div>
+        </template>
+
+        <!-- Empty state -->
+        <template lwc:elseif={isEmpty}>
+            <div class="slds-p-around_large slds-text-align_center empty-state">
+                <lightning-icon icon-name="utility:routing_offline" size="large" class="empty-icon"></lightning-icon>
+                <h3 class="slds-text-heading_small slds-m-top_medium">No Dependencies</h3>
+                <p class="slds-text-body_regular slds-text-color_weak slds-m-top_x-small">
+                    This work item has no dependency connections. Add blocking or blocked-by
+                    relationships to see the dependency graph.
+                </p>
+            </div>
+        </template>
+
+        <!-- Graph rendered via lwc:dom="manual" for SVG compatibility -->
+        <template lwc:elseif={hasGraph}>
+            <div class="graph-container" style={containerStyle}>
+                <!-- Tooltip -->
+                <template lwc:if={hasTooltip}>
+                    <div class="graph-tooltip" style={tooltipStyle}>
+                        <div class="tooltip-header">{tooltipNode.name}</div>
+                        <div class="tooltip-title">{tooltipNode.title}</div>
+                        <div class="tooltip-meta">
+                            <span class="tooltip-label">Stage:</span> {tooltipNode.stage}
+                        </div>
+                        <div class="tooltip-meta">
+                            <span class="tooltip-label">Priority:</span> {tooltipNode.priority}
+                        </div>
+                        <div class="tooltip-meta">
+                            <span class="tooltip-label">Owner:</span> {tooltipNode.owner}
+                        </div>
+                    </div>
+                </template>
+
+                <!-- SVG Canvas — built programmatically -->
+                <div class="svg-host" lwc:dom="manual"></div>
+
+                <!-- Legend -->
+                <div class="graph-legend">
+                    <div class="legend-section">
+                        <span class="legend-heading">Stages</span>
+                        <template for:each={legendItems} for:item="item">
+                            <span key={item.key} class="legend-item">
+                                <span class="legend-swatch" style={item.swatchStyle}></span>
+                                <span class="legend-text">{item.label}</span>
+                            </span>
+                        </template>
+                    </div>
+                    <div class="legend-section">
+                        <span class="legend-heading">Edges</span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--blocks"></span>
+                            <span class="legend-text">Blocks</span>
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--relates"></span>
+                            <span class="legend-text">Relates To</span>
+                        </span>
+                    </div>
+                    <div class="legend-section">
+                        <span class="legend-heading">Size = Priority</span>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </lightning-card>
+</template>
