@@ -38,17 +38,30 @@ public with sharing class DeliveryDependencyGraphController {
 
     /**
      * @description BFS traversal that discovers the full connected component of dependencies.
-     * Modifies the visited set in place to accumulate all connected work item IDs.
+     * Loads all dependency records in a single upfront query, then traverses the graph
+     * entirely in memory to avoid SOQL inside loops. Modifies the visited set in place
+     * to accumulate all connected work item IDs.
      * @param visited Set of IDs seeded with the starting work item; expanded during traversal.
-     * @return All unique WorkItemDependency__c records found during traversal.
+     * @return All unique WorkItemDependency__c records in the connected component.
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static List<WorkItemDependency__c> traverseDependencies(Set<Id> visited) {
+        // Load all dependency records upfront — single SOQL, no loop
+        List<WorkItemDependency__c> allRecords = [
+            SELECT Id, BlockedWorkItemId__c, BlockingWorkItemId__c, TypePk__c
+            FROM WorkItemDependency__c
+            WITH SYSTEM_MODE
+            LIMIT 2000
+        ];
+
+        // Build an in-memory adjacency index: workItemId -> list of dependency records
+        Map<Id, List<WorkItemDependency__c>> adjacency = buildAdjacencyMap(allRecords);
+
+        // BFS in memory — no further SOQL
         Set<String> edgeKeys = new Set<String>();
-        List<WorkItemDependency__c> allDeps = new List<WorkItemDependency__c>();
+        List<WorkItemDependency__c> connectedDeps = new List<WorkItemDependency__c>();
         List<Id> queue = new List<Id>(visited);
 
-        // BFS loop — limit iterations to prevent runaway on very large graphs
         Integer maxIterations = 10;
         Integer iteration = 0;
         while (!queue.isEmpty() && iteration < maxIterations) {
@@ -56,27 +69,55 @@ public with sharing class DeliveryDependencyGraphController {
             List<Id> currentBatch = new List<Id>(queue);
             queue.clear();
 
-            // Find all dependencies where any current batch item appears on either side
-            List<WorkItemDependency__c> deps = [
-                SELECT Id, BlockedWorkItemId__c, BlockingWorkItemId__c, TypePk__c
-                FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__c IN :currentBatch
-                   OR BlockingWorkItemId__c IN :currentBatch
-                WITH SYSTEM_MODE
-                LIMIT 200
-            ];
-
-            for (WorkItemDependency__c dep : deps) {
-                String edgeKey = dep.BlockingWorkItemId__c + '->' + dep.BlockedWorkItemId__c;
-                if (!edgeKeys.contains(edgeKey)) {
-                    edgeKeys.add(edgeKey);
-                    allDeps.add(dep);
+            for (Id itemId : currentBatch) {
+                List<WorkItemDependency__c> neighbors = adjacency.get(itemId);
+                if (neighbors == null) {
+                    continue;
                 }
-                enqueueIfUnvisited(dep.BlockedWorkItemId__c, visited, queue);
-                enqueueIfUnvisited(dep.BlockingWorkItemId__c, visited, queue);
+                for (WorkItemDependency__c dep : neighbors) {
+                    String edgeKey = dep.BlockingWorkItemId__c + '->' + dep.BlockedWorkItemId__c;
+                    if (!edgeKeys.contains(edgeKey)) {
+                        edgeKeys.add(edgeKey);
+                        connectedDeps.add(dep);
+                    }
+                    enqueueIfUnvisited(dep.BlockedWorkItemId__c, visited, queue);
+                    enqueueIfUnvisited(dep.BlockingWorkItemId__c, visited, queue);
+                }
             }
         }
-        return allDeps;
+        return connectedDeps;
+    }
+
+    /**
+     * @description Builds a bidirectional adjacency map from dependency records.
+     * Each work item ID maps to all dependency records where it appears on either side.
+     * @param deps The full list of dependency records.
+     * @return Map from work item Id to the list of dependencies involving that item.
+     */
+    private static Map<Id, List<WorkItemDependency__c>> buildAdjacencyMap(
+        List<WorkItemDependency__c> deps
+    ) {
+        Map<Id, List<WorkItemDependency__c>> adjacency = new Map<Id, List<WorkItemDependency__c>>();
+        for (WorkItemDependency__c dep : deps) {
+            addToAdjacency(adjacency, dep.BlockedWorkItemId__c, dep);
+            addToAdjacency(adjacency, dep.BlockingWorkItemId__c, dep);
+        }
+        return adjacency;
+    }
+
+    /**
+     * @description Adds a dependency record to the adjacency list for the given work item Id.
+     * @param adjacency The adjacency map to update.
+     * @param itemId The work item Id to index under.
+     * @param dep The dependency record to add.
+     */
+    private static void addToAdjacency(
+        Map<Id, List<WorkItemDependency__c>> adjacency, Id itemId, WorkItemDependency__c dep
+    ) {
+        if (!adjacency.containsKey(itemId)) {
+            adjacency.put(itemId, new List<WorkItemDependency__c>());
+        }
+        adjacency.get(itemId).add(dep);
     }
 
     /**
