@@ -43,6 +43,7 @@ public with sharing class DeliveryGanttController {
                        ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate
                 FROM WorkItem__c
                 WHERE IsActiveBool__c = true
+                AND IsTemplateBool__c = false
                 AND ProjectedUATReadyDate__c != null
                 WITH SYSTEM_MODE
                 ORDER BY ProjectedUATReadyDate__c ASC

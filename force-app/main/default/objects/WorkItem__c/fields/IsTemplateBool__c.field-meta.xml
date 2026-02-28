@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsTemplateBool__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Marks this work item as a template. Templates are excluded from the board and metrics, and can be cloned to quickly create new work items with pre-filled fields.</description>
+    <inlineHelpText>Check to mark this work item as a reusable template. Templates do not appear on the board.</inlineHelpText>
+    <label>Is Template</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

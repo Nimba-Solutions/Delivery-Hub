@@ -177,6 +177,12 @@
                 <identifier>c_deliveryWorkItemQuotes</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryRecurringConfig</componentName>
+                <identifier>c_deliveryRecurringConfig</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>sidebarContextContent</name>
         <type>Facet</type>
     </flexiPageRegions>
