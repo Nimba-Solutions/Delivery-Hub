@@ -3,7 +3,7 @@
            controller="DeliveryStatusPageController" cache="true" expires="300">
     <html lang="en">
         <head>
-            <title>{!IF(hasError, 'Delivery Hub — Status', entityName &amp; ' — Live Status')}</title>
+            <title>{!pageTitle}</title>
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <meta name="robots" content="noindex, nofollow" />
             <style>
@@ -444,18 +444,18 @@
                     <!-- Recent Completions -->
                     <div class="completions-section">
                         <div class="section-title">Recent Completions</div>
-                        <apex:outputPanel rendered="{!recentCompletions.size > 0}">
-                            <apex:repeat value="{!recentCompletions}" var="item">
+                        <apex:outputPanel rendered="{!hasRecentCompletions}">
+                            <apex:repeat value="{!completionItems}" var="item">
                                 <div class="completion-item">
                                     <div class="completion-title">
                                         <span class="completion-check">&#10003;</span>
-                                        {!item['title']}
+                                        {!item.title}
                                     </div>
-                                    <div class="completion-date">{!item['completedDate']}</div>
+                                    <div class="completion-date">{!item.completedDate}</div>
                                 </div>
                             </apex:repeat>
                         </apex:outputPanel>
-                        <apex:outputPanel rendered="{!recentCompletions.size == 0}">
+                        <apex:outputPanel rendered="{!NOT(hasRecentCompletions)}">
                             <div class="empty-state">No completed items yet.</div>
                         </apex:outputPanel>
                     </div>

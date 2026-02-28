@@ -11,6 +11,14 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class DeliveryStatusPageController {
 
+    /** @description Simple wrapper for a completed item shown on the VF page */
+    public class CompletionItem {
+        /** @description Title/description of the completed work item */
+        public String title { get; set; }
+        /** @description Formatted completion date string */
+        public String completedDate { get; set; }
+    }
+
     /** @description Wrapper returned by the VF page getters */
     public class StatusPageData {
         /** @description Display name of the network entity */
@@ -21,6 +29,8 @@ public without sharing class DeliveryStatusPageController {
         public Map<String, Integer> slaHealth { get; set; }
         /** @description List of recently completed items with title and date */
         public List<Map<String, String>> recentCompletions { get; set; }
+        /** @description Structured list of recent completions for VF rendering */
+        public List<CompletionItem> completionItems { get; set; }
         /** @description Number of currently active work items */
         public Integer activeCount { get; set; }
         /** @description Number of completed work items */
@@ -391,11 +401,39 @@ public without sharing class DeliveryStatusPageController {
         }
     }
 
-    /** @description Recent completions list */
+    /** @description Recent completions list (Map format for API consumers) */
     public List<Map<String, String>> recentCompletions {
         get {
             ensureLoaded();
             return cachedData != null ? cachedData.recentCompletions : new List<Map<String, String>>();
+        }
+    }
+
+    /** @description Recent completions as typed wrappers for VF rendering */
+    public List<CompletionItem> completionItems {
+        get {
+            ensureLoaded();
+            return cachedData != null && cachedData.completionItems != null
+                ? cachedData.completionItems : new List<CompletionItem>();
+        }
+    }
+
+    /** @description Page title combining entity name or fallback */
+    public String pageTitle {
+        get {
+            ensureLoaded();
+            if (String.isNotBlank(errorMsg)) {
+                return 'Delivery Hub - Status';
+            }
+            return (cachedData != null ? cachedData.entityName : '') + ' - Live Status';
+        }
+    }
+
+    /** @description Whether there are recent completions to display */
+    public Boolean hasRecentCompletions {
+        get {
+            ensureLoaded();
+            return cachedData != null && cachedData.recentCompletions != null && !cachedData.recentCompletions.isEmpty();
         }
     }
 
@@ -470,5 +508,14 @@ public without sharing class DeliveryStatusPageController {
             rawRecent = (List<Map<String, String>>) recentObj;
         }
         cachedData.recentCompletions = rawRecent;
+
+        // Build typed wrapper list for VF rendering
+        cachedData.completionItems = new List<CompletionItem>();
+        for (Map<String, String> m : rawRecent) {
+            CompletionItem ci = new CompletionItem();
+            ci.title = m.get('title');
+            ci.completedDate = m.get('completedDate');
+            cachedData.completionItems.add(ci);
+        }
     }
 }

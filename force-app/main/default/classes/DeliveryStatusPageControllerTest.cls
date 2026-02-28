@@ -31,40 +31,35 @@ private class DeliveryStatusPageControllerTest {
                 StageNamePk__c = 'Backlog',
                 PriorityPk__c = 'Medium',
                 ClientNetworkEntityId__c = entity.Id,
-                SLATargetDate__c = Date.today().addDays(10),
-                SLAStatusTxt__c = 'On Track'
+                SLATargetDate__c = Date.today().addDays(10)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Build feature A',
                 StageNamePk__c = 'In Development',
                 PriorityPk__c = 'High',
                 ClientNetworkEntityId__c = entity.Id,
-                SLATargetDate__c = Date.today().addDays(2),
-                SLAStatusTxt__c = 'At Risk'
+                SLATargetDate__c = Date.today().addDays(2)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Deploy v1.0',
                 StageNamePk__c = 'Done',
                 PriorityPk__c = 'Low',
                 ClientNetworkEntityId__c = entity.Id,
-                SLATargetDate__c = Date.today().addDays(-5),
-                SLAStatusTxt__c = 'Met'
+                SLATargetDate__c = Date.today().addDays(-5)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Fix login bug',
                 StageNamePk__c = 'Done',
                 PriorityPk__c = 'Critical',
                 ClientNetworkEntityId__c = entity.Id,
-                SLATargetDate__c = Date.today().addDays(-2),
-                SLAStatusTxt__c = 'Met'
+                SLATargetDate__c = Date.today().addDays(-2)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Overdue item',
                 StageNamePk__c = 'In Progress',
                 PriorityPk__c = 'Critical',
                 ClientNetworkEntityId__c = entity.Id,
-                SLATargetDate__c = Date.today().addDays(-1),
-                SLAStatusTxt__c = 'Breached'
+                SLATargetDate__c = Date.today().addDays(-1)
             )
         };
         insert workItems;
@@ -211,6 +206,9 @@ private class DeliveryStatusPageControllerTest {
         Map<String, Integer> ph = ctrl.phases;
         Integer phTotal = ctrl.phaseTotal;
         List<Map<String, String>> recent = ctrl.recentCompletions;
+        List<DeliveryStatusPageController.CompletionItem> items = ctrl.completionItems;
+        String pTitle = ctrl.pageTitle;
+        Boolean hasRecent = ctrl.hasRecentCompletions;
         String hColor = ctrl.healthColor;
         String hBgColor = ctrl.healthBgColor;
         Boolean hasErr = ctrl.hasError;
