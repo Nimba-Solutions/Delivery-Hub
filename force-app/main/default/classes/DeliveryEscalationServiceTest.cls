@@ -364,8 +364,21 @@ private class DeliveryEscalationServiceTest {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
+     * @description Returns the org namespace prefix (e.g. 'delivery__') or empty string
+     *              if running in an unpackaged context. Used to namespace-qualify custom
+     *              field keys in JSON deserialization of CMT records.
+     * @return Namespace prefix with trailing __ or empty string
+     */
+    private static String getNamespace() {
+        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
+    }
+
+    /**
      * @description Builds a WorkflowEscalationRule__mdt record for testing.
      *              Uses JSON deserialize since CMT records cannot be constructed via new().
+     *              Prefixes custom field keys with the org namespace to ensure correct
+     *              deserialization in namespaced package contexts.
      * @param label Rule label
      * @param workflowType Workflow type filter (or null for all)
      * @param triggerStage Stage that triggers this rule
@@ -385,16 +398,17 @@ private class DeliveryEscalationServiceTest {
         String targetValue,
         String priorityFilter
     ) {
+        String ns = getNamespace();
         Map<String, Object> fieldMap = new Map<String, Object>{
             'MasterLabel' => label,
-            'WorkflowTypeTxt__c' => workflowType,
-            'TriggerStageTxt__c' => triggerStage,
-            'DaysThresholdNum__c' => daysThreshold,
-            'ActionTypePk__c' => actionType,
-            'TargetValueTxt__c' => targetValue,
-            'PriorityFilterTxt__c' => priorityFilter,
-            'IsActiveBool__c' => true,
-            'SortOrderNum__c' => 1
+            ns + 'WorkflowTypeTxt__c' => workflowType,
+            ns + 'TriggerStageTxt__c' => triggerStage,
+            ns + 'DaysThresholdNum__c' => daysThreshold,
+            ns + 'ActionTypePk__c' => actionType,
+            ns + 'TargetValueTxt__c' => targetValue,
+            ns + 'PriorityFilterTxt__c' => priorityFilter,
+            ns + 'IsActiveBool__c' => true,
+            ns + 'SortOrderNum__c' => 1
         };
         return (WorkflowEscalationRule__mdt) JSON.deserialize(
             JSON.serialize(fieldMap), WorkflowEscalationRule__mdt.class
