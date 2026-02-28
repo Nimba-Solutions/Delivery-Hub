@@ -4,8 +4,6 @@
     <description>Comma-separated email addresses for weekly digest recipients. If blank, sends to all active users with the Delivery Hub permission set.</description>
     <inlineHelpText>Comma-separated email addresses. Leave blank to send to all Delivery Hub users.</inlineHelpText>
     <label>Weekly Digest Recipients</label>
-    <length>1000</length>
     <trackTrending>false</trackTrending>
-    <type>LongTextArea</type>
-    <visibleLines>3</visibleLines>
+    <type>TextArea</type>
 </CustomField>
