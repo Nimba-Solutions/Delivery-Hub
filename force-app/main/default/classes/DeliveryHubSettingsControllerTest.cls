@@ -45,8 +45,8 @@ private class DeliveryHubSettingsControllerTest {
     @isTest
     static void testSaveGeneralSettings() {
         Test.startTest();
-        // Pass 4 arguments: (Notifications, AutoCreate, AutoSend, EmailNotifications)
-        DeliveryHubSettingsController.saveGeneralSettings(false, false, false, true);
+        // Pass 5 arguments: (Notifications, AutoCreate, AutoSend, EmailNotifications, ShowBoardMetrics)
+        DeliveryHubSettingsController.saveGeneralSettings(false, false, false, true, false);
         Test.stopTest();
 
         DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
@@ -55,6 +55,7 @@ private class DeliveryHubSettingsControllerTest {
         System.assertEquals(false, s.AutoCreateWorkRequestBool__c, 'Auto Create should be disabled');
         System.assertEquals(false, s.AutoSyncNetworkEntityBool__c, 'Auto Send should be disabled');
         System.assertEquals(true, s.EmailNotificationsEnabledBool__c, 'Email notifications should be enabled');
+        System.assertEquals(false, s.ShowBoardMetricsBool__c, 'Board metrics should be disabled');
     }
 
     @isTest

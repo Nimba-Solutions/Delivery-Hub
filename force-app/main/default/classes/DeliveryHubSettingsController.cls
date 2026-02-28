@@ -43,6 +43,9 @@ public with sharing class DeliveryHubSettingsController {
 
         /** @description Email notifications on stage changes */
         @AuraEnabled public Boolean emailNotificationsEnabled { get; set; }
+
+        /** @description Show inline board metrics bar on the Kanban board */
+        @AuraEnabled public Boolean showBoardMetrics { get; set; }
     }
 
     /**
@@ -72,12 +75,14 @@ public with sharing class DeliveryHubSettingsController {
             dto.openAiApiTested = settings.OpenAiApiTestedBool__c;
             dto.slackWebhookUrl = settings.SlackWebhookUrl__c;
             dto.emailNotificationsEnabled = settings.EmailNotificationsEnabledBool__c;
+            dto.showBoardMetrics = (settings.ShowBoardMetricsBool__c == null) ? true : settings.ShowBoardMetricsBool__c;
         } else {
             // Fresh Install Defaults
             dto.autoCreateRequest = true;
             dto.autoSendRequest = true;
             dto.enableNotifications = false;
             dto.emailNotificationsEnabled = false;
+            dto.showBoardMetrics = true;
         }
         return dto;
     }
@@ -102,7 +107,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param emailNotificationsEnabled Whether to send email on stage changes
      */
     @AuraEnabled
-    public static void saveGeneralSettings(Boolean enableNotifications, Boolean autoCreateRequest, Boolean autoSendRequest, Boolean emailNotificationsEnabled) {
+    public static void saveGeneralSettings(Boolean enableNotifications, Boolean autoCreateRequest, Boolean autoSendRequest, Boolean emailNotificationsEnabled, Boolean showBoardMetrics) {
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
 
@@ -110,6 +115,7 @@ public with sharing class DeliveryHubSettingsController {
             settings.AutoCreateWorkRequestBool__c = autoCreateRequest;
             settings.AutoSyncNetworkEntityBool__c = autoSendRequest;
             settings.EmailNotificationsEnabledBool__c = (emailNotificationsEnabled == true);
+            settings.ShowBoardMetricsBool__c = (showBoardMetrics == null) ? true : showBoardMetrics;
 
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});

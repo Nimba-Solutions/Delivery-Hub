@@ -86,6 +86,36 @@
             </div>
         </div>
 
+        <!-- Metrics Bar -->
+        <template lwc:if={hasMetrics}>
+            <div class="metrics-bar">
+                <div class="metric-item">
+                    <span class="metric-value">{metricsActiveCount}</span>
+                    <span class="metric-label">Active</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value metric-value--success">{metricsCompletedThisWeek}</span>
+                    <span class="metric-label">Done This Week</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value metric-value--info">{metricsCompletedThisMonth}</span>
+                    <span class="metric-label">Done This Month</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value">{metricsAvgCycleTime}</span>
+                    <span class="metric-label">Avg Cycle (days)</span>
+                </div>
+                <div class={metricsBlockedClass}>
+                    <span class="metric-value">{metricsBlockedCount}</span>
+                    <span class="metric-label">Blocked</span>
+                </div>
+                <div class={metricsAttentionClass}>
+                    <span class="metric-value">{metricsAttentionCount}</span>
+                    <span class="metric-label">Needs Attention</span>
+                </div>
+            </div>
+        </template>
+
         <div class="kanban-board js-kanban-board">
             <div class="kanban-columns-container">
                 <template for:each={stageColumns} for:item="col">
