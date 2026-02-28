@@ -14,6 +14,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track notifications = false;
     @track autoSyncNetworkEntity = true; // Default to true
     @track emailNotificationsEnabled = false;
+    @track showBoardMetrics = true; // Default to true
     @track slackWebhookUrl = '';
     @track slackTestResult = '';
     @track isSlackTesting = false;
@@ -39,6 +40,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 }
                 this.slackWebhookUrl = data.slackWebhookUrl || '';
                 this.emailNotificationsEnabled = data.emailNotificationsEnabled || false;
+                this.showBoardMetrics = (data.showBoardMetrics !== undefined && data.showBoardMetrics !== null) ? data.showBoardMetrics : true;
             }
         } catch (error) {
             this.showToast('Error Loading Settings', error.body ? error.body.message : error.message, 'error');
@@ -65,6 +67,12 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveState();
     }
 
+    // Handler for Board Metrics
+    handleBoardMetricsToggle(event) {
+        this.showBoardMetrics = event.target.checked;
+        this.saveState();
+    }
+
     // Centralized Save Logic
     async saveState() {
         try {
@@ -72,7 +80,8 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 enableNotifications: this.notifications,
                 autoCreateRequest: true,
                 autoSendRequest: this.autoSyncNetworkEntity,
-                emailNotificationsEnabled: this.emailNotificationsEnabled
+                emailNotificationsEnabled: this.emailNotificationsEnabled,
+                showBoardMetrics: this.showBoardMetrics
             });
             
             // Optional: Show a subtle success toast

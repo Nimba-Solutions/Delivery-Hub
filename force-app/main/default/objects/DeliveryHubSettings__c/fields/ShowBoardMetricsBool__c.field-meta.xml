@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ShowBoardMetricsBool__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>When enabled, displays the inline metrics bar (active count, cycle time, blocked, etc.) at the top of the Kanban board.</description>
+    <inlineHelpText>Show or hide the metrics bar on the board.</inlineHelpText>
+    <label>Show Board Metrics</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
