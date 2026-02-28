@@ -296,7 +296,14 @@ public with sharing class DeliveryActivityTimelineController {
 
     // ── Comparator: sort events by timestamp descending ─────────────────
 
+    /** @description Comparator that sorts timeline events by timestamp in descending order (newest first). */
     private class TimelineEventComparator implements Comparator<Map<String, Object>> {
+        /**
+         * @description Compares two timeline event maps by their timestamp field for descending sort order.
+         * @param a First timeline event map
+         * @param b Second timeline event map
+         * @return Negative if a is newer, positive if b is newer, zero if equal
+         */
         public Integer compare(Map<String, Object> a, Map<String, Object> b) {
             Datetime tsA = (Datetime) a.get('timestamp');
             Datetime tsB = (Datetime) b.get('timestamp');
