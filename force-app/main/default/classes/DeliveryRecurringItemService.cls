@@ -182,7 +182,7 @@ public with sharing class DeliveryRecurringItemService {
         String fieldList = String.escapeSingleQuotes(CLONE_FIELDS_CSV);
 
         String query = 'SELECT Id, OwnerId, ' + fieldList +
-            ', IsTemplateBool__c, WorkflowTypeTxt__c' +
+            ', IsTemplateBool__c' +
             ' FROM WorkItem__c WHERE Id = :templateId WITH SYSTEM_MODE LIMIT 1';
 
         List<WorkItem__c> templates = Database.query(query);

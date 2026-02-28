@@ -141,6 +141,7 @@ public class DeliveryRecurringItemServiceTest {
             SELECT NextRecurrenceDate__c
             FROM WorkItem__c
             WHERE BriefDescriptionTxt__c = 'Weekly Standup Notes'
+            AND IsRecurringBool__c = true
         ];
         Date originalDate = weeklyBefore.NextRecurrenceDate__c;
 
@@ -152,6 +153,7 @@ public class DeliveryRecurringItemServiceTest {
             SELECT NextRecurrenceDate__c
             FROM WorkItem__c
             WHERE BriefDescriptionTxt__c = 'Weekly Standup Notes'
+            AND IsRecurringBool__c = true
         ];
         System.assert(weeklyAfter.NextRecurrenceDate__c > originalDate, 'Next recurrence date should be advanced');
     }
