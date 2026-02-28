@@ -6,7 +6,7 @@
  * unified, chronological event feed for a given Work Item.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity,PMD.AvoidDebugStatements')
 public with sharing class DeliveryActivityTimelineController {
 
     private static final Integer PAGE_SIZE = 20;
@@ -191,20 +191,29 @@ public with sharing class DeliveryActivityTimelineController {
     private static List<ActivityLog__c> queryStageChangeLogs(Id workItemId) {
         // ActivityLog__c has no direct WorkItem lookup. Stage_Change entries
         // store the record Id inside the ContextDataTxt__c JSON blob.
-        // We filter by ActionTypePk__c = 'Stage_Change' and use LIKE to
-        // match the 18-char record Id inside the JSON text.
-        String idFilter = '%' + String.valueOf(workItemId) + '%';
+        // ContextDataTxt__c is a Long Text Area — not filterable in SOQL.
+        // We query all Stage_Change logs and post-filter in Apex.
+        String workItemIdStr = String.valueOf(workItemId);
 
-        return [
+        List<ActivityLog__c> allLogs = [
             SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c,
                    ComponentNameTxt__c, ContextDataTxt__c
             FROM ActivityLog__c
             WHERE ActionTypePk__c = 'Stage_Change'
-              AND ContextDataTxt__c LIKE :idFilter
             WITH SYSTEM_MODE
             ORDER BY CreatedDate DESC
-            LIMIT 200
+            LIMIT 1000
         ];
+
+        List<ActivityLog__c> filtered = new List<ActivityLog__c>();
+        for (ActivityLog__c log : allLogs) {
+            if (String.isNotBlank(log.ContextDataTxt__c)
+                && log.ContextDataTxt__c.contains(workItemIdStr)
+                && filtered.size() < 200) {
+                filtered.add(log);
+            }
+        }
+        return filtered;
     }
 
     // ── User resolution helpers ──────────────────────────────────────────
