@@ -230,14 +230,41 @@ public with sharing class DeliveryCsvImportController {
     }
 
     /**
+     * @description Strips a managed-package namespace prefix from a field API name.
+     *              For example, 'delivery__BriefDescriptionTxt__c' becomes
+     *              'BriefDescriptionTxt__c'. Standard fields and already-unprefixed
+     *              names are returned unchanged.
+     * @param apiName  The API name to strip.
+     * @return The API name without namespace prefix.
+     */
+    private static String stripNamespace(String apiName) {
+        if (String.isNotBlank(apiName) && apiName.countMatches('__') > 1) {
+            return apiName.substringAfter('__');
+        }
+        return apiName;
+    }
+
+    /**
      * @description Case-insensitive lookup of a field name against the cached schema map.
+     *              Handles namespace-prefixed and unprefixed field names so that CSV
+     *              columns using bare names (e.g. 'BriefDescriptionTxt__c') resolve
+     *              correctly in namespaced package contexts where the schema map keys
+     *              are prefixed (e.g. 'delivery__BriefDescriptionTxt__c').
      * @param fieldName  The field API name to resolve.
      * @return The matched SObjectField, or null if not found.
      */
     private static Schema.SObjectField resolveField(String fieldName) {
         String fieldNameLower = fieldName.toLowerCase();
+        // First try exact (case-insensitive) match
         for (String key : cachedFieldMap.keySet()) {
             if (key.toLowerCase() == fieldNameLower) {
+                return cachedFieldMap.get(key);
+            }
+        }
+        // Second pass: compare with namespace stripped from both sides
+        String strippedInput = stripNamespace(fieldName).toLowerCase();
+        for (String key : cachedFieldMap.keySet()) {
+            if (stripNamespace(key).toLowerCase() == strippedInput) {
                 return cachedFieldMap.get(key);
             }
         }

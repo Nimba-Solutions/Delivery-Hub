@@ -7,6 +7,32 @@
 @isTest
 public class DeliveryCsvImportControllerTest {
 
+    // ── Namespace helpers ────────────────────────────────────────────
+
+    /**
+     * @description Returns the org namespace prefix (e.g. 'delivery__') or empty
+     *              string if running in an unpackaged context. Used to prefix custom
+     *              field API names in CSV row maps so they match the schema field map
+     *              in namespaced package test runs.
+     * @return Namespace prefix with trailing __ or empty string
+     */
+    private static String getNamespace() {
+        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
+    }
+
+    /**
+     * @description Prefixes a custom field API name with the org namespace when
+     *              running in a namespaced context. Standard fields and already-
+     *              prefixed names are not double-prefixed because custom fields in
+     *              this package always have exactly one '__' suffix.
+     * @param fieldName The bare field API name (e.g. 'BriefDescriptionTxt__c')
+     * @return Namespace-qualified field name (e.g. 'delivery__BriefDescriptionTxt__c')
+     */
+    private static String ns(String fieldName) {
+        return getNamespace() + fieldName;
+    }
+
     // ── Single record import ─────────────────────────────────────────
 
     @isTest
@@ -15,9 +41,9 @@ public class DeliveryCsvImportControllerTest {
 
         List<Map<String, String>> records = new List<Map<String, String>>();
         Map<String, String> row = new Map<String, String>();
-        row.put('BriefDescriptionTxt__c', 'CSV Single Import');
-        row.put('PriorityPk__c', 'High');
-        row.put('StageNamePk__c', 'Backlog');
+        row.put(ns('BriefDescriptionTxt__c'), 'CSV Single Import');
+        row.put(ns('PriorityPk__c'), 'High');
+        row.put(ns('StageNamePk__c'), 'Backlog');
         records.add(row);
 
         Test.startTest();
@@ -56,9 +82,9 @@ public class DeliveryCsvImportControllerTest {
         List<Map<String, String>> records = new List<Map<String, String>>();
         for (Integer i = 0; i < 15; i++) {
             Map<String, String> row = new Map<String, String>();
-            row.put('BriefDescriptionTxt__c', 'Bulk Item ' + i);
-            row.put('PriorityPk__c', 'Medium');
-            row.put('StageNamePk__c', 'Backlog');
+            row.put(ns('BriefDescriptionTxt__c'), 'Bulk Item ' + i);
+            row.put(ns('PriorityPk__c'), 'Medium');
+            row.put(ns('StageNamePk__c'), 'Backlog');
             records.add(row);
         }
 
@@ -93,8 +119,8 @@ public class DeliveryCsvImportControllerTest {
 
         // Good record
         Map<String, String> good = new Map<String, String>();
-        good.put('BriefDescriptionTxt__c', 'Good Record');
-        good.put('StageNamePk__c', 'Backlog');
+        good.put(ns('BriefDescriptionTxt__c'), 'Good Record');
+        good.put(ns('StageNamePk__c'), 'Backlog');
         records.add(good);
 
         // Bad record — BriefDescriptionTxt__c is Text(100); exceed that limit to cause an error
@@ -103,8 +129,8 @@ public class DeliveryCsvImportControllerTest {
         for (Integer i = 0; i < 20; i++) {
             longVal += 'ABCDEFGHIJ'; // 200 chars total — over the 100 char limit
         }
-        bad.put('BriefDescriptionTxt__c', longVal);
-        bad.put('StageNamePk__c', 'Backlog');
+        bad.put(ns('BriefDescriptionTxt__c'), longVal);
+        bad.put(ns('StageNamePk__c'), 'Backlog');
         records.add(bad);
 
         Test.startTest();
@@ -140,10 +166,11 @@ public class DeliveryCsvImportControllerTest {
             System.assert(f.containsKey('type'), 'Field entry missing type');
         }
 
-        // BriefDescriptionTxt__c must be present
+        // BriefDescriptionTxt__c must be present (may be namespace-prefixed)
         Boolean found = false;
         for (Map<String, String> f : fields) {
-            if (f.get('apiName') == 'BriefDescriptionTxt__c') {
+            String apiName = f.get('apiName');
+            if (apiName != null && apiName.endsWith('BriefDescriptionTxt__c')) {
                 found = true;
                 System.assertEquals('Brief Description', f.get('label'));
                 break;
@@ -160,8 +187,8 @@ public class DeliveryCsvImportControllerTest {
 
         List<Map<String, String>> records = new List<Map<String, String>>();
         Map<String, String> row = new Map<String, String>();
-        row.put('BriefDescriptionTxt__c', 'Loan Work Item');
-        row.put('StageNamePk__c', 'Backlog');
+        row.put(ns('BriefDescriptionTxt__c'), 'Loan Work Item');
+        row.put(ns('StageNamePk__c'), 'Backlog');
         records.add(row);
 
         Test.startTest();
@@ -192,8 +219,8 @@ public class DeliveryCsvImportControllerTest {
 
         List<Map<String, String>> records = new List<Map<String, String>>();
         Map<String, String> row = new Map<String, String>();
-        row.put('BriefDescriptionTxt__c', 'Default WF Item');
-        row.put('StageNamePk__c', 'Backlog');
+        row.put(ns('BriefDescriptionTxt__c'), 'Default WF Item');
+        row.put(ns('StageNamePk__c'), 'Backlog');
         records.add(row);
 
         Test.startTest();
@@ -249,11 +276,11 @@ public class DeliveryCsvImportControllerTest {
 
         List<Map<String, String>> records = new List<Map<String, String>>();
         Map<String, String> row = new Map<String, String>();
-        row.put('BriefDescriptionTxt__c', 'Numeric Fields Test');
-        row.put('EstimatedHoursNumber__c', '24.5');
-        row.put('DeveloperDaysSizeNumber__c', '3');
-        row.put('SortOrderNumber__c', '5');
-        row.put('StageNamePk__c', 'Backlog');
+        row.put(ns('BriefDescriptionTxt__c'), 'Numeric Fields Test');
+        row.put(ns('EstimatedHoursNumber__c'), '24.5');
+        row.put(ns('DeveloperDaysSizeNumber__c'), '3');
+        row.put(ns('SortOrderNumber__c'), '5');
+        row.put(ns('StageNamePk__c'), 'Backlog');
         records.add(row);
 
         Test.startTest();
@@ -285,9 +312,9 @@ public class DeliveryCsvImportControllerTest {
 
         List<Map<String, String>> records = new List<Map<String, String>>();
         Map<String, String> row = new Map<String, String>();
-        row.put('BriefDescriptionTxt__c', 'Unknown Field Test');
+        row.put(ns('BriefDescriptionTxt__c'), 'Unknown Field Test');
         row.put('TotallyFakeField__c', 'should be ignored');
-        row.put('StageNamePk__c', 'Backlog');
+        row.put(ns('StageNamePk__c'), 'Backlog');
         records.add(row);
 
         Test.startTest();
