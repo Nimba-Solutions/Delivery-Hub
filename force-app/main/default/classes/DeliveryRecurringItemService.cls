@@ -24,7 +24,10 @@ public with sharing class DeliveryRecurringItemService {
         'Developer__c'
     };
 
-    // Day-of-week name to Datetime dayOfWeek integer mapping (Sunday=1 .. Saturday=7)
+    // Pre-built CSV of clone fields for dynamic SOQL
+    private static final String CLONE_FIELDS_CSV = String.join(CLONE_FIELDS, ', ');
+
+    // Day-of-week name to Salesforce dayOfWeek integer (Sunday=1 .. Saturday=7)
     private static final Map<String, Integer> DAY_NAME_TO_NUMBER = new Map<String, Integer>{
         'Sunday' => 1, 'Monday' => 2, 'Tuesday' => 3, 'Wednesday' => 4,
         'Thursday' => 5, 'Friday' => 6, 'Saturday' => 7
@@ -40,31 +43,45 @@ public with sharing class DeliveryRecurringItemService {
         'Monthly' => 1, 'Quarterly' => 3
     };
 
+    private static final String DEFAULT_WORKFLOW = 'Software_Delivery';
+    private static final String DEFAULT_STAGE = 'Backlog';
+
     /**
      * @description Called by the scheduler to process all recurring work items whose
      * NextRecurrenceDate__c is today or in the past. Creates clones and advances
      * the next recurrence date.
      */
     public static void processRecurringItems() {
-        Date today = Date.today();
-
-        List<WorkItem__c> recurringItems = queryRecurringItems(today);
-
-        if (recurringItems.isEmpty()) {
-            return;
-        }
+        List<WorkItem__c> recurringItems = queryRecurringItems(Date.today());
 
         List<WorkItem__c> newItems = new List<WorkItem__c>();
         List<WorkItem__c> updatedSources = new List<WorkItem__c>();
         List<ActivityLog__c> logs = new List<ActivityLog__c>();
 
         for (WorkItem__c source : recurringItems) {
-            newItems.add(buildRecurringClone(source));
-            updatedSources.add(buildUpdatedSource(source));
-            logs.add(buildRecurringLog(source));
+            WorkItem__c clone = initClone(source.WorkflowTypeTxt__c, source.Id, source.OwnerId);
+            copyCloneFields(clone, source);
+            newItems.add(clone);
+
+            updatedSources.add(new WorkItem__c(
+                Id = source.Id,
+                NextRecurrenceDate__c = calculateNextDate(
+                    source.RecurrenceScheduleTxt__c,
+                    source.RecurrenceDayTxt__c,
+                    source.NextRecurrenceDate__c
+                )
+            ));
+
+            logs.add(new ActivityLog__c(
+                ActionTypePk__c = 'Feature_Use',
+                ComponentNameTxt__c = 'DeliveryRecurringItemService',
+                ContextDataTxt__c = '{"action":"recurring_clone","sourceId":"' + source.Id + '","schedule":"' + source.RecurrenceScheduleTxt__c + '"}'
+            ));
         }
 
-        persistRecurringResults(newItems, updatedSources, logs);
+        Database.insert(newItems, AccessLevel.SYSTEM_MODE);
+        Database.update(updatedSources, AccessLevel.SYSTEM_MODE);
+        Database.insert(logs, AccessLevel.SYSTEM_MODE);
     }
 
     /**
@@ -77,7 +94,9 @@ public with sharing class DeliveryRecurringItemService {
     @AuraEnabled
     public static Id cloneFromTemplate(Id templateId, Map<String, Object> overrides) {
         if (templateId == null) {
-            throw createAuraException('Template Id is required.');
+            AuraHandledException ex = new AuraHandledException('Template Id is required.');
+            ex.setMessage('Template Id is required.');
+            throw ex;
         }
 
         WorkItem__c template = queryTemplate(templateId);
@@ -85,7 +104,12 @@ public with sharing class DeliveryRecurringItemService {
 
         Database.insert(new List<WorkItem__c>{ clone }, AccessLevel.SYSTEM_MODE);
 
-        logTemplateUsage(template.Id, clone.Id);
+        ActivityLog__c log = new ActivityLog__c(
+            ActionTypePk__c = 'Feature_Use',
+            ComponentNameTxt__c = 'DeliveryRecurringItemService',
+            ContextDataTxt__c = '{"action":"template_clone","templateId":"' + template.Id + '","newId":"' + clone.Id + '"}'
+        );
+        Database.insert(new List<ActivityLog__c>{ log }, AccessLevel.SYSTEM_MODE);
 
         return clone.Id;
     }
@@ -121,11 +145,16 @@ public with sharing class DeliveryRecurringItemService {
             return null;
         }
 
-        if (WEEKLY_SCHEDULES.containsKey(schedule)) {
-            return calculateNextWeeklyDate(recurrenceDay, fromDate, WEEKLY_SCHEDULES.get(schedule));
+        Integer weeksAhead = WEEKLY_SCHEDULES.get(schedule);
+        if (weeksAhead != null) {
+            return calculateNextWeeklyDate(recurrenceDay, fromDate, weeksAhead);
         }
-        if (MONTHLY_SCHEDULES.containsKey(schedule)) {
-            return calculateNextMonthlyDate(recurrenceDay, fromDate, MONTHLY_SCHEDULES.get(schedule));
+
+        Integer monthsAhead = MONTHLY_SCHEDULES.get(schedule);
+        if (monthsAhead != null) {
+            Integer dayNum = parseDayOfMonth(recurrenceDay);
+            Date nextMonth = fromDate.addMonths(monthsAhead);
+            return Date.newInstance(nextMonth.year(), nextMonth.month(), dayNum);
         }
 
         return fromDate.addDays(7); // Fallback: 1 week
@@ -136,7 +165,7 @@ public with sharing class DeliveryRecurringItemService {
     // -------------------------------------------------------------------------
 
     private static List<WorkItem__c> queryRecurringItems(Date today) {
-        String fieldList = String.escapeSingleQuotes(buildFieldList());
+        String fieldList = String.escapeSingleQuotes(CLONE_FIELDS_CSV);
 
         String query = 'SELECT Id, OwnerId, ' + fieldList +
             ', IsRecurringBool__c, RecurrenceScheduleTxt__c, RecurrenceDayTxt__c, NextRecurrenceDate__c' +
@@ -150,7 +179,7 @@ public with sharing class DeliveryRecurringItemService {
     }
 
     private static WorkItem__c queryTemplate(Id templateId) {
-        String fieldList = String.escapeSingleQuotes(buildFieldList());
+        String fieldList = String.escapeSingleQuotes(CLONE_FIELDS_CSV);
 
         String query = 'SELECT Id, OwnerId, ' + fieldList +
             ', IsTemplateBool__c, WorkflowTypeTxt__c' +
@@ -158,7 +187,9 @@ public with sharing class DeliveryRecurringItemService {
 
         List<WorkItem__c> templates = Database.query(query);
         if (templates.isEmpty()) {
-            throw createAuraException('Template not found.');
+            AuraHandledException ex = new AuraHandledException('Template not found.');
+            ex.setMessage('Template not found.');
+            throw ex;
         }
         return templates[0];
     }
@@ -167,37 +198,27 @@ public with sharing class DeliveryRecurringItemService {
     // Private helpers -- clone builders
     // -------------------------------------------------------------------------
 
-    private static WorkItem__c buildRecurringClone(WorkItem__c source) {
-        String firstStage = getFirstStageForWorkflow(source.WorkflowTypeTxt__c);
-
-        WorkItem__c clone = new WorkItem__c();
-        clone.IsActiveBool__c = true;
-        clone.IsTemplateBool__c = false;
-        clone.IsRecurringBool__c = false;
-        clone.StageNamePk__c = firstStage;
-        clone.TemplateSourceId__c = source.Id;
-        clone.OwnerId = source.OwnerId;
-
-        copyCloneFields(clone, source);
+    private static WorkItem__c buildTemplateClone(WorkItem__c template, Map<String, Object> overrides) {
+        Map<String, Object> safeOverrides = overrides != null ? overrides : new Map<String, Object>();
+        String workflowType = safeOverrides.containsKey('WorkflowTypeTxt__c')
+            ? (String) safeOverrides.get('WorkflowTypeTxt__c')
+            : template.WorkflowTypeTxt__c;
+        WorkItem__c clone = initClone(workflowType, template.Id, template.OwnerId);
+        copyCloneFields(clone, template);
+        for (String field : safeOverrides.keySet()) {
+            clone.put(field, safeOverrides.get(field));
+        }
         return clone;
     }
 
-    private static WorkItem__c buildTemplateClone(WorkItem__c template, Map<String, Object> overrides) {
-        String workflowType = (overrides != null && overrides.containsKey('WorkflowTypeTxt__c'))
-            ? (String) overrides.get('WorkflowTypeTxt__c')
-            : template.WorkflowTypeTxt__c;
-        String firstStage = getFirstStageForWorkflow(workflowType);
-
+    private static WorkItem__c initClone(String workflowType, Id sourceId, Id ownerId) {
         WorkItem__c clone = new WorkItem__c();
         clone.IsActiveBool__c = true;
         clone.IsTemplateBool__c = false;
         clone.IsRecurringBool__c = false;
-        clone.StageNamePk__c = firstStage;
-        clone.TemplateSourceId__c = template.Id;
-        clone.OwnerId = template.OwnerId;
-
-        copyCloneFields(clone, template);
-        applyOverrides(clone, overrides);
+        clone.StageNamePk__c = getFirstStageForWorkflow(workflowType);
+        clone.TemplateSourceId__c = sourceId;
+        clone.OwnerId = ownerId;
         return clone;
     }
 
@@ -207,70 +228,17 @@ public with sharing class DeliveryRecurringItemService {
         }
     }
 
-    private static void applyOverrides(WorkItem__c clone, Map<String, Object> overrides) {
-        if (overrides == null) {
-            return;
-        }
-        for (String field : overrides.keySet()) {
-            clone.put(field, overrides.get(field));
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Private helpers -- source update & logging
-    // -------------------------------------------------------------------------
-
-    private static WorkItem__c buildUpdatedSource(WorkItem__c source) {
-        Date nextDate = calculateNextDate(
-            source.RecurrenceScheduleTxt__c,
-            source.RecurrenceDayTxt__c,
-            source.NextRecurrenceDate__c
-        );
-        return new WorkItem__c(
-            Id = source.Id,
-            NextRecurrenceDate__c = nextDate
-        );
-    }
-
-    private static ActivityLog__c buildRecurringLog(WorkItem__c source) {
-        return new ActivityLog__c(
-            ActionTypePk__c = 'Feature_Use',
-            ComponentNameTxt__c = 'DeliveryRecurringItemService',
-            ContextDataTxt__c = '{"action":"recurring_clone","sourceId":"' + source.Id + '","schedule":"' + source.RecurrenceScheduleTxt__c + '"}'
-        );
-    }
-
-    private static void logTemplateUsage(Id templateId, Id cloneId) {
-        ActivityLog__c log = new ActivityLog__c(
-            ActionTypePk__c = 'Feature_Use',
-            ComponentNameTxt__c = 'DeliveryRecurringItemService',
-            ContextDataTxt__c = '{"action":"template_clone","templateId":"' + templateId + '","newId":"' + cloneId + '"}'
-        );
-        Database.insert(new List<ActivityLog__c>{ log }, AccessLevel.SYSTEM_MODE);
-    }
-
-    private static void persistRecurringResults(
-        List<WorkItem__c> newItems,
-        List<WorkItem__c> updatedSources,
-        List<ActivityLog__c> logs
-    ) {
-        Database.insert(newItems, AccessLevel.SYSTEM_MODE);
-        Database.update(updatedSources, AccessLevel.SYSTEM_MODE);
-        Database.insert(logs, AccessLevel.SYSTEM_MODE);
-    }
-
     // -------------------------------------------------------------------------
     // Private helpers -- date calculations
     // -------------------------------------------------------------------------
 
     private static Date calculateNextWeeklyDate(String dayName, Date fromDate, Integer weeksAhead) {
-        if (String.isBlank(dayName) || !DAY_NAME_TO_NUMBER.containsKey(dayName)) {
+        Integer targetDayNum = DAY_NAME_TO_NUMBER.get(dayName);
+        if (targetDayNum == null) {
             return fromDate.addDays(7 * weeksAhead);
         }
 
-        Integer targetDayNum = DAY_NAME_TO_NUMBER.get(dayName);
         Integer currentSfDay = getSalesforceDayOfWeek(fromDate);
-
         Integer daysUntilTarget = targetDayNum - currentSfDay;
         if (daysUntilTarget <= 0) {
             daysUntilTarget += 7;
@@ -283,56 +251,31 @@ public with sharing class DeliveryRecurringItemService {
     private static Integer getSalesforceDayOfWeek(Date d) {
         DateTime dt = DateTime.newInstance(d, Time.newInstance(0, 0, 0, 0));
         Integer isoDay = Integer.valueOf(dt.format('u'));
-        return (isoDay == 7) ? 1 : isoDay + 1;
-    }
-
-    private static Date calculateNextMonthlyDate(String dayOfMonth, Date fromDate, Integer monthsAhead) {
-        Integer dayNum = parseDayOfMonth(dayOfMonth);
-        Date nextMonth = fromDate.addMonths(monthsAhead);
-        return Date.newInstance(nextMonth.year(), nextMonth.month(), dayNum);
+        // ISO: Monday=1..Sunday=7 -> SF: Sunday=1..Saturday=7
+        return Math.mod(isoDay, 7) + 1;
     }
 
     private static Integer parseDayOfMonth(String dayOfMonth) {
         Integer dayNum = 1;
-        if (String.isNotBlank(dayOfMonth)) {
-            try {
-                dayNum = Integer.valueOf(dayOfMonth.trim());
-            } catch (Exception e) {
-                dayNum = 1;
-            }
+        if (String.isNotBlank(dayOfMonth) && dayOfMonth.trim().isNumeric()) {
+            dayNum = Integer.valueOf(dayOfMonth.trim());
         }
         return Math.max(1, Math.min(dayNum, 28));
     }
 
     private static String getFirstStageForWorkflow(String workflowType) {
-        if (String.isBlank(workflowType)) {
-            workflowType = 'Software_Delivery';
-        }
+        String resolvedType = String.isBlank(workflowType) ? DEFAULT_WORKFLOW : workflowType;
 
         List<WorkflowStage__mdt> stages = [
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowType__r.DeveloperName = :workflowType
+            WHERE WorkflowType__r.DeveloperName = :resolvedType
             AND IsTerminalBool__c = false
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST
             LIMIT 1
         ];
 
-        if (!stages.isEmpty()) {
-            return stages[0].ApiValueTxt__c;
-        }
-
-        return 'Backlog'; // Fallback
-    }
-
-    private static String buildFieldList() {
-        return String.join(CLONE_FIELDS, ', ');
-    }
-
-    private static AuraHandledException createAuraException(String message) {
-        AuraHandledException e = new AuraHandledException(message);
-        e.setMessage(message);
-        return e;
+        return stages.isEmpty() ? DEFAULT_STAGE : stages[0].ApiValueTxt__c;
     }
 }
