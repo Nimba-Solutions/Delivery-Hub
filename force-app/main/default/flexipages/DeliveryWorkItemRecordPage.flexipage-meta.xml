@@ -83,7 +83,7 @@
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>
-        <name>activityTabContent</name>
+        <name>timelineTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
@@ -123,7 +123,7 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>activityTabContent</value>
+                    <value>timelineTabContent</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>title</name>
