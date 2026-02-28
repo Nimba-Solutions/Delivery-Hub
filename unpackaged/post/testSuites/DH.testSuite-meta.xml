@@ -33,4 +33,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkLogTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityTimelineControllerTest</testClassName>
 </ApexTestSuite>
