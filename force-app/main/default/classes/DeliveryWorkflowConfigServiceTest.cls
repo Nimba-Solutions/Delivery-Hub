@@ -125,4 +125,100 @@ private class DeliveryWorkflowConfigServiceTest {
         }
         System.assert(threw, 'Unknown workflow type should throw AuraHandledException');
     }
+
+    @isTest
+    static void testGetWorkflowTemplates() {
+        List<Map<String,Object>> templates = DeliveryWorkflowConfigService.getWorkflowTemplates();
+        // Must have at least the 5 built-in workflow types
+        System.assert(templates.size() >= 5, 'Expected at least 5 workflow templates, got ' + templates.size());
+
+        // Verify enriched structure of each returned map
+        Set<String> expectedTypes = new Set<String>{
+            'Software_Delivery', 'Loan_Approval', 'Implementation_Project', 'Support_Triage', 'Onboarding_Checklist'
+        };
+        Set<String> foundTypes = new Set<String>();
+        for (Map<String,Object> t : templates) {
+            System.assertNotEquals(null, t.get('developerName'), 'developerName must be present');
+            System.assertNotEquals(null, t.get('label'), 'label must be present');
+            System.assertNotEquals(null, t.get('description'), 'description must be present');
+            System.assertNotEquals(null, t.get('iconName'), 'iconName must be present');
+            System.assertNotEquals(null, t.get('stageCount'), 'stageCount must be present');
+            System.assertNotEquals(null, t.get('stageColors'), 'stageColors must be present');
+            System.assertNotEquals(null, t.get('personas'), 'personas must be present');
+
+            // stageCount must be > 0 for known types
+            Integer stageCount = (Integer) t.get('stageCount');
+            System.assert(stageCount > 0, 'stageCount must be > 0 for ' + t.get('developerName'));
+
+            foundTypes.add((String) t.get('developerName'));
+        }
+        // All expected types must be present
+        for (String expected : expectedTypes) {
+            System.assert(foundTypes.contains(expected), expected + ' must be in the template list');
+        }
+    }
+
+    @isTest
+    static void testGetWorkflowTemplatesEnrichedData() {
+        List<Map<String,Object>> templates = DeliveryWorkflowConfigService.getWorkflowTemplates();
+
+        // Find Implementation_Project and verify its enriched data
+        Map<String,Object> ipTemplate;
+        for (Map<String,Object> t : templates) {
+            if (t.get('developerName') == 'Implementation_Project') {
+                ipTemplate = t;
+                break;
+            }
+        }
+        System.assertNotEquals(null, ipTemplate, 'Implementation_Project template must exist');
+        System.assertEquals(11, (Integer) ipTemplate.get('stageCount'), 'Implementation_Project must have 11 stages');
+
+        List<Object> personas = (List<Object>) ipTemplate.get('personas');
+        System.assert(personas.size() >= 3, 'Implementation_Project must have at least 3 personas');
+
+        List<Object> stageColors = (List<Object>) ipTemplate.get('stageColors');
+        System.assertEquals(11, stageColors.size(), 'Implementation_Project must have 11 stage colors');
+    }
+
+    @isTest
+    static void testGetWorkflowConfigImplementationProject() {
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Implementation_Project');
+        System.assertNotEquals(null, config, 'Implementation_Project config must not be null');
+
+        List<Object> stages = (List<Object>) config.get('stages');
+        System.assertEquals(11, stages.size(), 'Implementation_Project must have exactly 11 stages');
+
+        Map<String,Object> personaViews = (Map<String,Object>) config.get('personaViews');
+        System.assert(personaViews.containsKey('Project_Manager'), 'Project_Manager persona view required');
+        System.assert(personaViews.containsKey('Consultant'), 'Consultant persona view required');
+        System.assert(personaViews.containsKey('Client_Stakeholder'), 'Client_Stakeholder persona view required');
+    }
+
+    @isTest
+    static void testGetWorkflowConfigSupportTriage() {
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Support_Triage');
+        System.assertNotEquals(null, config, 'Support_Triage config must not be null');
+
+        List<Object> stages = (List<Object>) config.get('stages');
+        System.assertEquals(8, stages.size(), 'Support_Triage must have exactly 8 stages');
+
+        Map<String,Object> personaViews = (Map<String,Object>) config.get('personaViews');
+        System.assert(personaViews.containsKey('Support_Agent'), 'Support_Agent persona view required');
+        System.assert(personaViews.containsKey('Engineering'), 'Engineering persona view required');
+        System.assert(personaViews.containsKey('Customer'), 'Customer persona view required');
+    }
+
+    @isTest
+    static void testGetWorkflowConfigOnboardingChecklist() {
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Onboarding_Checklist');
+        System.assertNotEquals(null, config, 'Onboarding_Checklist config must not be null');
+
+        List<Object> stages = (List<Object>) config.get('stages');
+        System.assertEquals(7, stages.size(), 'Onboarding_Checklist must have exactly 7 stages');
+
+        Map<String,Object> personaViews = (Map<String,Object>) config.get('personaViews');
+        System.assert(personaViews.containsKey('HR_Admin'), 'HR_Admin persona view required');
+        System.assert(personaViews.containsKey('Manager'), 'Manager persona view required');
+        System.assert(personaViews.containsKey('New_Hire'), 'New_Hire persona view required');
+    }
 }

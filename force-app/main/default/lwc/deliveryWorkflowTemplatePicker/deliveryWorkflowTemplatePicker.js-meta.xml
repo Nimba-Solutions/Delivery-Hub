@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Workflow Template Picker</masterLabel>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__HomePage</target>
+        <target>lightning__AppPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__HomePage,lightning__AppPage">
+            <property name="compact" type="Boolean" label="Compact Mode" description="Hides heading/description for embedding in wizards." default="false"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

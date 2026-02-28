@@ -2,7 +2,7 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description Interactive onboarding wizard for Delivery Hub.
- * 4-step guided flow: Org Type → Partner Config → Test Ping → Connected.
+ * 5-step guided flow: Org Type → Workflow → Partner Config → Test Ping → Connected.
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
@@ -13,9 +13,10 @@ import performHandshake from '@salesforce/apex/DeliveryHubSetupController.perfor
 
 const STEPS = [
     { index: 1, label: 'Org Type' },
-    { index: 2, label: 'Partner' },
-    { index: 3, label: 'Connect' },
-    { index: 4, label: 'Done' }
+    { index: 2, label: 'Workflow' },
+    { index: 3, label: 'Partner' },
+    { index: 4, label: 'Connect' },
+    { index: 5, label: 'Done' }
 ];
 
 export default class DeliveryGettingStarted extends LightningElement {
@@ -28,6 +29,7 @@ export default class DeliveryGettingStarted extends LightningElement {
     @track connectedEntityName = '';
     @track isMothership = false;
     @track isCheckingStatus = false;
+    @track selectedWorkflowType = '';
 
     steps = STEPS;
 
@@ -42,7 +44,7 @@ export default class DeliveryGettingStarted extends LightningElement {
                 if (status && status.isConnected && status.entity) {
                     this.isAlreadyConnected = true;
                     this.connectedEntityName = status.entity.Name;
-                    this.currentStep = 4;
+                    this.currentStep = 5;
                 }
                 if (status && status.isMothership) {
                     this.isMothership = true;
@@ -72,6 +74,7 @@ export default class DeliveryGettingStarted extends LightningElement {
     get isStep2() { return this.currentStep === 2; }
     get isStep3() { return this.currentStep === 3; }
     get isStep4() { return this.currentStep === 4; }
+    get isStep5() { return this.currentStep === 5; }
 
     get isClientOrg() { return this.orgType === 'client'; }
     get isVendorOrg() { return this.orgType === 'vendor'; }
@@ -107,7 +110,7 @@ export default class DeliveryGettingStarted extends LightningElement {
     }
 
     handleNext() {
-        if (this.currentStep < 4) {
+        if (this.currentStep < 5) {
             this.currentStep++;
         }
     }
@@ -117,6 +120,10 @@ export default class DeliveryGettingStarted extends LightningElement {
             this.currentStep--;
             this.connectionError = '';
         }
+    }
+
+    handleTemplateSelected(event) {
+        this.selectedWorkflowType = event.detail.workflowType;
     }
 
     handleConnect() {
@@ -129,7 +136,7 @@ export default class DeliveryGettingStarted extends LightningElement {
                     .then(() => {
                         this.isAlreadyConnected = true;
                         this.connectedEntityName = entity.Name || 'Cloud Nimbus LLC';
-                        this.currentStep = 4;
+                        this.currentStep = 5;
                         this.dispatchEvent(new ShowToastEvent({
                             title: 'Connected!',
                             message: 'Your portal is now connected to ' + this.connectedEntityName + '.',
