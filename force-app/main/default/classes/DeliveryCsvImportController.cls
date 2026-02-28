@@ -158,8 +158,16 @@ public with sharing class DeliveryCsvImportController {
 
         for (String key : fieldMap.keySet()) {
             Schema.DescribeFieldResult dfr = fieldMap.get(key).getDescribe();
-            // Only include fields that can be set on insert
-            if (!dfr.isCreateable()) {
+            // Only include fields that can be physically set on insert.
+            // We avoid relying solely on isCreateable() because it checks
+            // FLS, which returns false for namespace-prefixed custom fields
+            // in packaged org test contexts where the running user lacks
+            // field-level security grants.  DML uses AccessLevel.SYSTEM_MODE
+            // so FLS is not enforced at insert time.
+            if (dfr.isCalculated() || dfr.isAutoNumber()) {
+                continue;
+            }
+            if (!dfr.isCreateable() && !dfr.isCustom()) {
                 continue;
             }
             Map<String, String> entry = new Map<String, String>();
@@ -216,7 +224,14 @@ public with sharing class DeliveryCsvImportController {
         }
 
         Schema.DescribeFieldResult dfr = sField.getDescribe();
-        if (!dfr.isCreateable()) {
+        // Use schema-level checks instead of isCreateable() alone —
+        // isCreateable() checks FLS which fails for namespace-prefixed
+        // custom fields in packaged org test contexts.  DML uses
+        // AccessLevel.SYSTEM_MODE so FLS is not enforced at insert time.
+        if (dfr.isCalculated() || dfr.isAutoNumber()) {
+            return;
+        }
+        if (!dfr.isCreateable() && !dfr.isCustom()) {
             return;
         }
 

@@ -245,7 +245,7 @@ public with sharing class DeliveryActivityTimelineController {
     }
 
     private static String resolveUserName(String userIdTxt, Map<Id, String> userNameMap) {
-        if (String.isNotBlank(userIdTxt) && userNameMap.containsKey(userIdTxt)) {
+        if (String.isNotBlank(userIdTxt) && userIdTxt instanceof Id && userNameMap.containsKey(userIdTxt)) {
             return userNameMap.get(userIdTxt);
         }
         return 'System';
