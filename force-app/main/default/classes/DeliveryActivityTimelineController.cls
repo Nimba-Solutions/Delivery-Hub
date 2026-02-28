@@ -28,34 +28,46 @@ public with sharing class DeliveryActivityTimelineController {
         if (workItemId == null) {
             return new List<Map<String, Object>>();
         }
-        if (String.isBlank(filterType)) {
-            filterType = 'all';
-        }
-        if (pageOffset == null || pageOffset < 0) {
-            pageOffset = 0;
-        }
+        filterType = sanitizeFilterType(filterType);
+        pageOffset = sanitizePageOffset(pageOffset);
 
+        List<Map<String, Object>> events = collectFilteredEvents(workItemId, filterType);
+        events.sort(new TimelineEventComparator());
+        return paginateEvents(events, pageOffset);
+    }
+
+    // ── Input sanitization helpers ───────────────────────────────────────
+
+    private static String sanitizeFilterType(String filterType) {
+        return String.isBlank(filterType) ? 'all' : filterType;
+    }
+
+    private static Integer sanitizePageOffset(Integer pageOffset) {
+        return (pageOffset == null || pageOffset < 0) ? 0 : pageOffset;
+    }
+
+    // ── Event collection by filter ───────────────────────────────────────
+
+    private static List<Map<String, Object>> collectFilteredEvents(Id workItemId, String filterType) {
         List<Map<String, Object>> events = new List<Map<String, Object>>();
 
-        // 1. Comments
         if (filterType == 'all' || filterType == 'comments') {
             events.addAll(queryComments(workItemId));
         }
-
-        // 2. Work Logs (time entries)
         if (filterType == 'all' || filterType == 'time_logs') {
             events.addAll(queryWorkLogs(workItemId));
         }
-
-        // 3. Activity Logs — stage changes related to this work item
         if (filterType == 'all' || filterType == 'stage_changes') {
             events.addAll(queryActivityLogs(workItemId));
         }
+        return events;
+    }
 
-        // Sort descending by timestamp (newest first)
-        events.sort(new TimelineEventComparator());
+    // ── Pagination helper ────────────────────────────────────────────────
 
-        // Apply pagination
+    private static List<Map<String, Object>> paginateEvents(
+        List<Map<String, Object>> events, Integer pageOffset
+    ) {
         Integer startIndex = pageOffset * PAGE_SIZE;
         if (startIndex >= events.size()) {
             return new List<Map<String, Object>>();
@@ -162,15 +174,27 @@ public with sharing class DeliveryActivityTimelineController {
     // ── Activity Log events (stage changes) ─────────────────────────────
 
     private static List<Map<String, Object>> queryActivityLogs(Id workItemId) {
-        List<Map<String, Object>> results = new List<Map<String, Object>>();
+        List<ActivityLog__c> logs = queryStageChangeLogs(workItemId);
+        Set<Id> userIds = collectUserIds(logs);
+        Map<Id, String> userNameMap = resolveUserNames(userIds);
 
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+        for (ActivityLog__c al : logs) {
+            String userName = resolveUserName(al.UserIdTxt__c, userNameMap);
+            Map<String, String> stageInfo = parseStageChangeContext(al.ContextDataTxt__c);
+            results.add(buildStageChangeEvent(al, userName, stageInfo));
+        }
+        return results;
+    }
+
+    private static List<ActivityLog__c> queryStageChangeLogs(Id workItemId) {
         // ActivityLog__c has no direct WorkItem lookup. Stage_Change entries
         // store the record Id inside the ContextDataTxt__c JSON blob.
         // We filter by ActionTypePk__c = 'Stage_Change' and use LIKE to
         // match the 18-char record Id inside the JSON text.
         String idFilter = '%' + String.valueOf(workItemId) + '%';
 
-        List<ActivityLog__c> logs = [
+        return [
             SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c,
                    ComponentNameTxt__c, ContextDataTxt__c
             FROM ActivityLog__c
@@ -180,8 +204,11 @@ public with sharing class DeliveryActivityTimelineController {
             ORDER BY CreatedDate DESC
             LIMIT 200
         ];
+    }
 
-        // Collect unique User Ids so we can resolve names in one query
+    // ── User resolution helpers ──────────────────────────────────────────
+
+    private static Set<Id> collectUserIds(List<ActivityLog__c> logs) {
         Set<Id> userIds = new Set<Id>();
         for (ActivityLog__c al : logs) {
             if (String.isNotBlank(al.UserIdTxt__c)) {
@@ -192,51 +219,65 @@ public with sharing class DeliveryActivityTimelineController {
                 }
             }
         }
+        return userIds;
+    }
 
+    private static Map<Id, String> resolveUserNames(Set<Id> userIds) {
         Map<Id, String> userNameMap = new Map<Id, String>();
         if (!userIds.isEmpty()) {
             for (User u : [SELECT Id, Name FROM User WHERE Id IN :userIds WITH SYSTEM_MODE]) {
                 userNameMap.put(u.Id, u.Name);
             }
         }
+        return userNameMap;
+    }
 
-        for (ActivityLog__c al : logs) {
-            String userName = 'System';
-            if (String.isNotBlank(al.UserIdTxt__c) && userNameMap.containsKey(al.UserIdTxt__c)) {
-                userName = userNameMap.get(al.UserIdTxt__c);
-            }
-
-            // Parse context JSON to extract stage info
-            String title = 'Stage changed';
-            String detail = '';
-            if (String.isNotBlank(al.ContextDataTxt__c)) {
-                try {
-                    Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(al.ContextDataTxt__c);
-                    String newStage = (String) ctx.get('newStage');
-                    String oldStage = (String) ctx.get('oldStage');
-                    if (String.isNotBlank(newStage)) {
-                        title = 'Stage changed to ' + newStage;
-                    }
-                    if (String.isNotBlank(oldStage) && String.isNotBlank(newStage)) {
-                        detail = oldStage + ' → ' + newStage;
-                    }
-                } catch (Exception ex) {
-                    // Non-critical — use default title
-                }
-            }
-
-            results.add(new Map<String, Object>{
-                'id'          => al.Id,
-                'type'        => 'stage_change',
-                'timestamp'   => al.CreatedDate,
-                'userName'    => userName,
-                'title'       => title,
-                'detail'      => detail,
-                'icon'        => 'standard:record',
-                'iconVariant' => ''
-            });
+    private static String resolveUserName(String userIdTxt, Map<Id, String> userNameMap) {
+        if (String.isNotBlank(userIdTxt) && userNameMap.containsKey(userIdTxt)) {
+            return userNameMap.get(userIdTxt);
         }
-        return results;
+        return 'System';
+    }
+
+    // ── Stage change context parsing ─────────────────────────────────────
+
+    private static Map<String, String> parseStageChangeContext(String contextDataJson) {
+        Map<String, String> stageInfo = new Map<String, String>{
+            'title'  => 'Stage changed',
+            'detail' => ''
+        };
+        if (String.isBlank(contextDataJson)) {
+            return stageInfo;
+        }
+        try {
+            Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextDataJson);
+            String newStage = (String) ctx.get('newStage');
+            String oldStage = (String) ctx.get('oldStage');
+            if (String.isNotBlank(newStage)) {
+                stageInfo.put('title', 'Stage changed to ' + newStage);
+            }
+            if (String.isNotBlank(oldStage) && String.isNotBlank(newStage)) {
+                stageInfo.put('detail', oldStage + ' → ' + newStage);
+            }
+        } catch (Exception ex) {
+            // Non-critical — use default title
+        }
+        return stageInfo;
+    }
+
+    private static Map<String, Object> buildStageChangeEvent(
+        ActivityLog__c al, String userName, Map<String, String> stageInfo
+    ) {
+        return new Map<String, Object>{
+            'id'          => al.Id,
+            'type'        => 'stage_change',
+            'timestamp'   => al.CreatedDate,
+            'userName'    => userName,
+            'title'       => stageInfo.get('title'),
+            'detail'      => stageInfo.get('detail'),
+            'icon'        => 'standard:record',
+            'iconVariant' => ''
+        };
     }
 
     // ── Comparator: sort events by timestamp descending ─────────────────
