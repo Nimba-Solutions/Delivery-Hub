@@ -197,10 +197,14 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     }
 
     /**
-     * @description Logic to handle Before Update events (Blocking logic)
+     * @description Logic to handle Before Update events (stage timestamp + blocking logic)
+     * @param newWorkItems List of WorkItem__c records being updated
+     * @param oldMap Map of old WorkItem__c records keyed by Id
      */
     public static void handleBeforeUpdate(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
-        Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'}; 
+        stampStageEnteredOnUpdate(newWorkItems, oldMap);
+
+        Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'};
         Set<Id> workItemsToCheck = new Set<Id>();
         for (WorkItem__c workItem : newWorkItems) {
             String oldStage = oldMap.get(workItem.Id).StageNamePk__c;
@@ -224,6 +228,37 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                         workItem.addError('This work item cannot be started. It is blocked by: ' + dependency.BlockingWorkItemId__r.BriefDescriptionTxt__c);
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * @description Sets StageEnteredDateTime__c on new work items during before-insert.
+     * @param newWorkItems List of WorkItem__c records being inserted
+     */
+    public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
+        Datetime now = Datetime.now();
+        for (WorkItem__c workItem : newWorkItems) {
+            if (workItem.StageEnteredDateTime__c == null) {
+                workItem.StageEnteredDateTime__c = now;
+            }
+        }
+    }
+
+    /**
+     * @description Sets StageEnteredDateTime__c when the stage changes during update.
+     * @param newWorkItems List of WorkItem__c records being updated
+     * @param oldMap Map of old WorkItem__c records keyed by Id
+     */
+    private static void stampStageEnteredOnUpdate(
+        List<WorkItem__c> newWorkItems,
+        Map<Id, WorkItem__c> oldMap
+    ) {
+        Datetime now = Datetime.now();
+        for (WorkItem__c workItem : newWorkItems) {
+            WorkItem__c oldItem = oldMap.get(workItem.Id);
+            if (oldItem != null && workItem.StageNamePk__c != oldItem.StageNamePk__c) {
+                workItem.StageEnteredDateTime__c = now;
             }
         }
     }
