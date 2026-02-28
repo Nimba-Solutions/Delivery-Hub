@@ -10,7 +10,7 @@ private class DeliverySyncItemProcessorTest {
 
     @TestSetup
     static void makeData() {
-        // FIX: Prevent DeliverySyncEngine from firing during setup so it doesn't enqueue 
+        // FIX: Prevent DeliverySyncEngine from firing during setup so it doesn't enqueue
         // a processor that sweeps up and fails our test records before the test starts!
         DeliverySyncEngine.setSyncContext();
 
@@ -23,12 +23,29 @@ private class DeliverySyncItemProcessorTest {
         );
         insert vendor;
 
-        // 2. Setup Work Item
+        // 1b. Setup Network Entity (Client) for Hub Mode testing
+        NetworkEntity__c client = new NetworkEntity__c(
+            Name = 'Client Org',
+            StatusPk__c = 'Active',
+            EntityTypePk__c = 'Client',
+            IntegrationEndpointUrlTxt__c = 'https://client.example.com'
+        );
+        insert client;
+
+        // 2. Setup Work Item (Push Mode)
         WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Test Work Item',
             StageNamePk__c = 'Backlog'
         );
         insert t;
+
+        // 2b. Setup Work Item (Hub Mode — linked to client)
+        WorkItem__c hubItem = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Hub Mode Work Item',
+            StageNamePk__c = 'Backlog',
+            ClientNetworkEntityId__c = client.Id
+        );
+        insert hubItem;
 
         // 3. Setup Request (The Bridge)
         WorkRequest__c req = new WorkRequest__c(
@@ -39,7 +56,7 @@ private class DeliverySyncItemProcessorTest {
         );
         insert req;
 
-        // 4. Setup Outbound Sync Item
+        // 4. Setup Outbound Sync Item (Push Mode)
         SyncItem__c item = new SyncItem__c(
             StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
@@ -49,9 +66,16 @@ private class DeliverySyncItemProcessorTest {
             PayloadTxt__c = '{"StageNamePk__c":"In Development"}'
         );
         insert item;
-        
-        // Clean up auto-generated passive items just in case
-        delete [SELECT Id FROM SyncItem__c WHERE RequestId__c = null];
+
+        // 4b. Setup Outbound Sync Item (Hub Mode — no RequestId)
+        SyncItem__c hubSyncItem = new SyncItem__c(
+            StatusPk__c = 'Queued',
+            DirectionPk__c = 'Outbound',
+            WorkItemId__c = hubItem.Id,
+            ObjectTypePk__c = 'WorkItem__c',
+            PayloadTxt__c = '{"StageNamePk__c":"In Development"}'
+        );
+        insert hubSyncItem;
     }
 
     /**
@@ -83,6 +107,21 @@ private class DeliverySyncItemProcessorTest {
         SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
         System.assertEquals('Failed', result.StatusPk__c, 'Status should update to Failed on 500 error');
         System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
+    }
+
+    /**
+     * @description Verifies Hub Mode items (no RequestId, upstream to client) are processed successfully.
+     */
+    @IsTest
+    static void testProcessHubModeSuccess() {
+        Test.setMock(HttpCalloutMock.class, new MockSuccess());
+
+        Test.startTest();
+        System.enqueueJob(new DeliverySyncItemProcessor());
+        Test.stopTest();
+
+        SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c = null LIMIT 1];
+        System.assertEquals('Synced', result.StatusPk__c, 'Hub Mode item should be Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
     }
 
     /**
