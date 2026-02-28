@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Delivery Portal Dashboard</masterLabel>
+    <description>Client-facing portal dashboard for Experience Cloud. Displays project overview, stats, phase distribution, and quick links for external users.</description>
+    <targets>
+        <target>lightning__CommunityDefault</target>
+        <target>lightning__CommunityPageLayout</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__CommunityDefault,lightning__CommunityPageLayout">
+            <property name="networkEntityId" type="String" label="Network Entity ID" description="The ID of the NetworkEntity__c record for this portal user's organization." />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
