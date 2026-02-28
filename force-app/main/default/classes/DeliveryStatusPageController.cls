@@ -274,7 +274,8 @@ public without sharing class DeliveryStatusPageController {
      * @description Default constructor — reads entity token from URL param.
      */
     public DeliveryStatusPageController() {
-        this.entityToken = ApexPages.currentPage().getParameters().get('token');
+        String rawToken = ApexPages.currentPage().getParameters().get('token');
+        this.entityToken = String.isNotBlank(rawToken) ? String.escapeSingleQuotes(rawToken.trim()) : null;
     }
 
     /** @description Whether the page has an error */
