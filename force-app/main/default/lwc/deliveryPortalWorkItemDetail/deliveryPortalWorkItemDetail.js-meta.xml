@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Delivery Portal Work Item Detail</masterLabel>
+    <description>Work item detail view for Experience Cloud portal users. Shows status pipeline, description, comments, and file info.</description>
+    <targets>
+        <target>lightning__CommunityDefault</target>
+        <target>lightning__CommunityPageLayout</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__CommunityDefault,lightning__CommunityPageLayout">
+            <property name="workItemId" type="String" label="Work Item ID" description="The ID of the WorkItem__c record to display." />
+            <property name="networkEntityId" type="String" label="Network Entity ID" description="The ID of the NetworkEntity__c record for back-navigation context." />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

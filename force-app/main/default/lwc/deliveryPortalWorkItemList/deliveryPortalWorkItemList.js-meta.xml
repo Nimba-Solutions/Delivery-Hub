@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Delivery Portal Work Item List</masterLabel>
+    <description>Card-based, filterable work item list for Experience Cloud portal users. Scoped to a single NetworkEntity.</description>
+    <targets>
+        <target>lightning__CommunityDefault</target>
+        <target>lightning__CommunityPageLayout</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__CommunityDefault,lightning__CommunityPageLayout">
+            <property name="networkEntityId" type="String" label="Network Entity ID" description="The ID of the NetworkEntity__c record for this portal user's organization." />
+            <property name="initialFilter" type="String" datasource=",,active,attention,completed" default="" label="Initial Filter" description="Default filter to apply on load (blank for All)." />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

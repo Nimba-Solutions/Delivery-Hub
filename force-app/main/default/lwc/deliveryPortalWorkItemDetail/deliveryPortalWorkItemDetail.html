@@ -1,0 +1,164 @@
+<template>
+    <div class="portal-detail">
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="portal-loading">
+                <div class="portal-spinner"></div>
+                <p class="portal-loading-text">Loading work item details...</p>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={error}>
+            <div class="portal-error">
+                <p class="portal-error-text">{error}</p>
+            </div>
+        </template>
+
+        <!-- Detail Content -->
+        <template lwc:if={hasDetail}>
+            <!-- Back Link -->
+            <div class="portal-back-bar">
+                <button class="portal-back-btn" onclick={handleBackToList}>
+                    &#8592; Back to List
+                </button>
+            </div>
+
+            <!-- Header -->
+            <div class="portal-detail-header">
+                <div class="portal-detail-header-top">
+                    <span class="portal-detail-name">{itemName}</span>
+                    <span style={stageBadgeStyle}>{stage}</span>
+                </div>
+                <h1 class="portal-detail-title">{title}</h1>
+                <div class="portal-detail-meta">
+                    <template lwc:if={hasPriority}>
+                        <span style={priorityBadgeStyle}>{priority}</span>
+                    </template>
+                    <template lwc:if={hasRequestType}>
+                        <span class="portal-meta-tag">{requestType}</span>
+                    </template>
+                    <span class="portal-meta-date">Created {formattedCreatedDate}</span>
+                    <span class="portal-meta-date">Updated {formattedLastModified}</span>
+                </div>
+            </div>
+
+            <!-- Status Progress Bar -->
+            <div class="portal-progress-section">
+                <h2 class="portal-section-title">Status Pipeline</h2>
+                <div class="portal-progress-bar">
+                    <template for:each={stageSteps} for:item="step">
+                        <div class={step.stepClass} key={step.key}>
+                            <div class="portal-step-dot"></div>
+                            <span class="portal-step-label">{step.label}</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Details Section -->
+            <div class="portal-info-grid">
+                <!-- Description -->
+                <div class="portal-section portal-section-wide">
+                    <h2 class="portal-section-title">Description</h2>
+                    <template lwc:if={hasDescription}>
+                        <div class="portal-description" lwc:inner-html={description}></div>
+                    </template>
+                    <template lwc:else>
+                        <p class="portal-empty-text">No description provided.</p>
+                    </template>
+                </div>
+
+                <!-- Sidebar Info -->
+                <div class="portal-section">
+                    <h2 class="portal-section-title">Details</h2>
+                    <div class="portal-info-list">
+                        <template lwc:if={hasEta}>
+                            <div class="portal-info-row">
+                                <span class="portal-info-label">Estimated Completion</span>
+                                <span class="portal-info-value">{formattedEta}</span>
+                            </div>
+                        </template>
+                        <template lwc:if={hasEstimatedDays}>
+                            <div class="portal-info-row">
+                                <span class="portal-info-label">Estimated Days</span>
+                                <span class="portal-info-value">{estimatedDays}</span>
+                            </div>
+                        </template>
+                        <template lwc:if={hasEstimatedHours}>
+                            <div class="portal-info-row">
+                                <span class="portal-info-label">Estimated Hours</span>
+                                <span class="portal-info-value">{estimatedHours}</span>
+                            </div>
+                        </template>
+                        <template lwc:if={hasLoggedHours}>
+                            <div class="portal-info-row">
+                                <span class="portal-info-label">Hours Logged</span>
+                                <span class="portal-info-value">{loggedHours}</span>
+                            </div>
+                        </template>
+                        <template lwc:if={hasFiles}>
+                            <div class="portal-info-row">
+                                <span class="portal-info-label">Attachments</span>
+                                <span class="portal-info-value">{fileCountLabel}</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="portal-section">
+                <h2 class="portal-section-title">Comments ({commentCount})</h2>
+
+                <!-- Comment Thread -->
+                <template lwc:if={hasComments}>
+                    <div class="portal-comment-list">
+                        <template for:each={comments} for:item="comment">
+                            <div class={comment.commentClass} key={comment.id}>
+                                <div class="portal-comment-avatar">{comment.avatarInitial}</div>
+                                <div class="portal-comment-content">
+                                    <div class="portal-comment-header">
+                                        <span class="portal-comment-author">{comment.author}</span>
+                                        <span class="portal-comment-date">{comment.formattedDate}</span>
+                                    </div>
+                                    <div class="portal-comment-body" lwc:inner-html={comment.body}></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <template lwc:else>
+                    <p class="portal-empty-text">No comments yet.</p>
+                </template>
+
+                <!-- Add Comment -->
+                <div class="portal-add-comment">
+                    <h3 class="portal-subsection-title">Add a Comment</h3>
+                    <template lwc:if={commentSuccess}>
+                        <div class="portal-success-msg">Comment added successfully.</div>
+                    </template>
+                    <textarea class="portal-comment-input"
+                              placeholder="Type your comment here..."
+                              value={newComment}
+                              oninput={handleCommentInput}
+                              rows="3"></textarea>
+                    <div class="portal-comment-actions">
+                        <button class="portal-btn portal-btn-primary"
+                                onclick={handleSubmitComment}
+                                disabled={isSubmittingComment}>
+                            <template lwc:if={isSubmittingComment}>Submitting...</template>
+                            <template lwc:else>Post Comment</template>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Footer -->
+        <div class="portal-footer">
+            Powered by Delivery Hub | Cloud Nimbus LLC
+        </div>
+    </div>
+</template>

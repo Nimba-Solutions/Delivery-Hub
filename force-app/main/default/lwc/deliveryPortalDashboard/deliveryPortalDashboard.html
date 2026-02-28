@@ -1,0 +1,116 @@
+<template>
+    <div class="portal-dashboard">
+        <!-- Loading State -->
+        <template lwc:if={isLoading}>
+            <div class="portal-loading">
+                <div class="portal-spinner"></div>
+                <p class="portal-loading-text">Loading your dashboard...</p>
+            </div>
+        </template>
+
+        <!-- Error State -->
+        <template lwc:if={error}>
+            <div class="portal-error">
+                <p class="portal-error-text">{error}</p>
+            </div>
+        </template>
+
+        <!-- Dashboard Content -->
+        <template lwc:if={hasData}>
+            <!-- Welcome Banner -->
+            <div class="portal-welcome">
+                <h1 class="portal-welcome-title">{greeting}, {entityName}</h1>
+                <p class="portal-welcome-subtitle">Here is your project overview at a glance.</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="portal-stats-grid">
+                <div class="portal-stat-card">
+                    <div class="portal-stat-value portal-stat-active">{activeCount}</div>
+                    <div class="portal-stat-label">Active Items</div>
+                </div>
+                <div class="portal-stat-card">
+                    <div class="portal-stat-value portal-stat-completed">{completedCount}</div>
+                    <div class="portal-stat-label">Completed</div>
+                </div>
+                <div class="portal-stat-card portal-stat-card-attention" onclick={handleViewAttention}>
+                    <div class="portal-stat-value portal-stat-attention">{attentionCount}</div>
+                    <div class="portal-stat-label">Needs Your Input</div>
+                    <template lwc:if={hasAttentionItems}>
+                        <div class="portal-stat-badge">Action Required</div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Phase Distribution -->
+            <div class="portal-section">
+                <h2 class="portal-section-title">Work in Progress by Phase</h2>
+                <div class="portal-phase-grid">
+                    <template for:each={phases} for:item="phase">
+                        <div class="portal-phase-item" key={phase.label}>
+                            <div class="portal-phase-count">{phase.count}</div>
+                            <div class="portal-phase-label">{phase.label}</div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Two Column Layout: Recent Activity + Quick Links -->
+            <div class="portal-two-col">
+                <!-- Recent Activity -->
+                <div class="portal-section">
+                    <h2 class="portal-section-title">Recent Activity</h2>
+                    <template lwc:if={hasRecentActivity}>
+                        <div class="portal-activity-list">
+                            <template for:each={recentActivity} for:item="item">
+                                <div class="portal-activity-item" key={item.id}>
+                                    <div class="portal-activity-dot"></div>
+                                    <div class="portal-activity-content">
+                                        <span class="portal-activity-title">{item.title}</span>
+                                        <span class="portal-activity-meta">
+                                            {item.name} &middot; {item.stage} &middot; {item.formattedDate}
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template lwc:else>
+                        <p class="portal-empty-text">No recent activity to show.</p>
+                    </template>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="portal-section">
+                    <h2 class="portal-section-title">Quick Links</h2>
+                    <div class="portal-quick-links">
+                        <button class="portal-btn portal-btn-primary" onclick={handleSubmitRequest}>
+                            Submit a Request
+                        </button>
+                        <button class="portal-btn portal-btn-secondary" onclick={handleViewAllItems}>
+                            View All Items
+                        </button>
+                    </div>
+
+                    <!-- Recently Completed -->
+                    <template lwc:if={hasRecentCompleted}>
+                        <h3 class="portal-subsection-title">Recently Completed</h3>
+                        <div class="portal-completed-list">
+                            <template for:each={recentCompleted} for:item="item">
+                                <div class="portal-completed-item" key={item.id}>
+                                    <span class="portal-completed-check">&#10003;</span>
+                                    <span class="portal-completed-title">{item.title}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- Footer -->
+        <div class="portal-footer">
+            Powered by Delivery Hub | Cloud Nimbus LLC
+        </div>
+    </div>
+</template>
