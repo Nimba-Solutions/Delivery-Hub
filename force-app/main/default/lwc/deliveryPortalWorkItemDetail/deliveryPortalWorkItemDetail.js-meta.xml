@@ -5,11 +5,11 @@
     <masterLabel>Delivery Portal Work Item Detail</masterLabel>
     <description>Work item detail view for Experience Cloud portal users. Shows status pipeline, description, comments, and file info.</description>
     <targets>
-        <target>lightning__CommunityDefault</target>
-        <target>lightning__CommunityPageLayout</target>
+        <target>lightningCommunity__Default</target>
+        <target>lightningCommunity__Page</target>
     </targets>
     <targetConfigs>
-        <targetConfig targets="lightning__CommunityDefault,lightning__CommunityPageLayout">
+        <targetConfig targets="lightningCommunity__Default,lightningCommunity__Page">
             <property name="workItemId" type="String" label="Work Item ID" description="The ID of the WorkItem__c record to display." />
             <property name="networkEntityId" type="String" label="Network Entity ID" description="The ID of the NetworkEntity__c record for back-navigation context." />
         </targetConfig>

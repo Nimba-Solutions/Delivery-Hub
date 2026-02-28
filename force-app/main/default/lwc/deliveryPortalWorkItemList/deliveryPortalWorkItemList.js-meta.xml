@@ -5,11 +5,11 @@
     <masterLabel>Delivery Portal Work Item List</masterLabel>
     <description>Card-based, filterable work item list for Experience Cloud portal users. Scoped to a single NetworkEntity.</description>
     <targets>
-        <target>lightning__CommunityDefault</target>
-        <target>lightning__CommunityPageLayout</target>
+        <target>lightningCommunity__Default</target>
+        <target>lightningCommunity__Page</target>
     </targets>
     <targetConfigs>
-        <targetConfig targets="lightning__CommunityDefault,lightning__CommunityPageLayout">
+        <targetConfig targets="lightningCommunity__Default,lightningCommunity__Page">
             <property name="networkEntityId" type="String" label="Network Entity ID" description="The ID of the NetworkEntity__c record for this portal user's organization." />
             <property name="initialFilter" type="String" datasource=",,active,attention,completed" default="" label="Initial Filter" description="Default filter to apply on load (blank for All)." />
         </targetConfig>

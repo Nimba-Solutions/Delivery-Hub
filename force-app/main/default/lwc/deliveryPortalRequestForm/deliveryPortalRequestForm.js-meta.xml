@@ -5,11 +5,11 @@
     <masterLabel>Delivery Portal Request Form</masterLabel>
     <description>Request submission form for Experience Cloud portal users. Allows external clients to submit new work item requests with title, description, priority, and type.</description>
     <targets>
-        <target>lightning__CommunityDefault</target>
-        <target>lightning__CommunityPageLayout</target>
+        <target>lightningCommunity__Default</target>
+        <target>lightningCommunity__Page</target>
     </targets>
     <targetConfigs>
-        <targetConfig targets="lightning__CommunityDefault,lightning__CommunityPageLayout">
+        <targetConfig targets="lightningCommunity__Default,lightningCommunity__Page">
             <property name="networkEntityId" type="String" label="Network Entity ID" description="The ID of the NetworkEntity__c record for this portal user's organization." />
         </targetConfig>
     </targetConfigs>

@@ -62,7 +62,7 @@
                 <div class="portal-section portal-section-wide">
                     <h2 class="portal-section-title">Description</h2>
                     <template lwc:if={hasDescription}>
-                        <div class="portal-description" lwc:inner-html={description}></div>
+                        <lightning-formatted-rich-text value={description} class="portal-description"></lightning-formatted-rich-text>
                     </template>
                     <template lwc:else>
                         <p class="portal-empty-text">No description provided.</p>
@@ -122,7 +122,7 @@
                                         <span class="portal-comment-author">{comment.author}</span>
                                         <span class="portal-comment-date">{comment.formattedDate}</span>
                                     </div>
-                                    <div class="portal-comment-body" lwc:inner-html={comment.body}></div>
+                                    <lightning-formatted-rich-text value={comment.body} class="portal-comment-body"></lightning-formatted-rich-text>
                                 </div>
                             </div>
                         </template>
