@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>NextRecurrenceDateDt__c</fullName>
+    <fullName>NextRecurrenceDate__c</fullName>
     <description>The next date on which the scheduler will automatically create a clone of this recurring work item. Calculated and maintained by DeliveryRecurringItemService.</description>
     <inlineHelpText>Next scheduled date for automatic creation of this recurring work item. Managed automatically.</inlineHelpText>
     <externalId>false</externalId>

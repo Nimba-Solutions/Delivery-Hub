@@ -32,24 +32,13 @@ public with sharing class DeliveryRecurringItemService {
 
     /**
      * @description Called by the scheduler to process all recurring work items whose
-     * NextRecurrenceDateDt__c is today or in the past. Creates clones and advances
+     * NextRecurrenceDate__c is today or in the past. Creates clones and advances
      * the next recurrence date.
      */
     public static void processRecurringItems() {
         Date today = Date.today();
 
-        // Build dynamic field list for the query
-        String fieldList = buildFieldList();
-
-        String query = 'SELECT Id, OwnerId, ' + fieldList +
-            ', IsRecurringBool__c, RecurrenceScheduleTxt__c, RecurrenceDayTxt__c, NextRecurrenceDateDt__c' +
-            ' FROM WorkItem__c' +
-            ' WHERE IsRecurringBool__c = true' +
-            ' AND IsTemplateBool__c = false' +
-            ' AND NextRecurrenceDateDt__c <= :today' +
-            ' AND NextRecurrenceDateDt__c != null';
-
-        List<WorkItem__c> recurringItems = Database.query(query);
+        List<WorkItem__c> recurringItems = queryRecurringItems(today);
 
         if (recurringItems.isEmpty()) {
             return;
@@ -60,52 +49,12 @@ public with sharing class DeliveryRecurringItemService {
         List<ActivityLog__c> logs = new List<ActivityLog__c>();
 
         for (WorkItem__c source : recurringItems) {
-            // Determine the first stage for this workflow type
-            String firstStage = getFirstStageForWorkflow(source.WorkflowTypeTxt__c);
-
-            WorkItem__c clone = new WorkItem__c();
-            clone.IsActiveBool__c = true;
-            clone.IsTemplateBool__c = false;
-            clone.IsRecurringBool__c = false;
-            clone.StageNamePk__c = firstStage;
-            clone.TemplateSourceId__c = source.Id;
-            clone.OwnerId = source.OwnerId;
-
-            // Copy descriptive fields
-            for (String field : CLONE_FIELDS) {
-                clone.put(field, source.get(field));
-            }
-
-            newItems.add(clone);
-
-            // Advance the next recurrence date on the source
-            Date nextDate = calculateNextDate(
-                source.RecurrenceScheduleTxt__c,
-                source.RecurrenceDayTxt__c,
-                source.NextRecurrenceDateDt__c
-            );
-            updatedSources.add(new WorkItem__c(
-                Id = source.Id,
-                NextRecurrenceDateDt__c = nextDate
-            ));
-
-            // Create activity log entry
-            logs.add(new ActivityLog__c(
-                ActionTypePk__c = 'Feature_Use',
-                ComponentNameTxt__c = 'DeliveryRecurringItemService',
-                ContextDataTxt__c = '{"action":"recurring_clone","sourceId":"' + source.Id + '","schedule":"' + source.RecurrenceScheduleTxt__c + '"}'
-            ));
+            newItems.add(buildRecurringClone(source));
+            updatedSources.add(buildUpdatedSource(source));
+            logs.add(buildRecurringLog(source));
         }
 
-        if (!newItems.isEmpty()) {
-            Database.insert(newItems, AccessLevel.SYSTEM_MODE);
-        }
-        if (!updatedSources.isEmpty()) {
-            Database.update(updatedSources, AccessLevel.SYSTEM_MODE);
-        }
-        if (!logs.isEmpty()) {
-            Database.insert(logs, AccessLevel.SYSTEM_MODE);
-        }
+        persistRecurringResults(newItems, updatedSources, logs);
     }
 
     /**
@@ -121,54 +70,12 @@ public with sharing class DeliveryRecurringItemService {
             throw createAuraException('Template Id is required.');
         }
 
-        String fieldList = buildFieldList();
-        String query = 'SELECT Id, OwnerId, ' + fieldList +
-            ', IsTemplateBool__c, WorkflowTypeTxt__c' +
-            ' FROM WorkItem__c WHERE Id = :templateId WITH SYSTEM_MODE LIMIT 1';
-
-        List<WorkItem__c> templates = Database.query(query);
-        if (templates.isEmpty()) {
-            throw createAuraException('Template not found.');
-        }
-
-        WorkItem__c template = templates[0];
-
-        // Determine the first stage for this workflow type
-        String workflowType = (overrides != null && overrides.containsKey('WorkflowTypeTxt__c'))
-            ? (String) overrides.get('WorkflowTypeTxt__c')
-            : template.WorkflowTypeTxt__c;
-        String firstStage = getFirstStageForWorkflow(workflowType);
-
-        WorkItem__c clone = new WorkItem__c();
-        clone.IsActiveBool__c = true;
-        clone.IsTemplateBool__c = false;
-        clone.IsRecurringBool__c = false;
-        clone.StageNamePk__c = firstStage;
-        clone.TemplateSourceId__c = template.Id;
-        clone.OwnerId = template.OwnerId;
-
-        // Copy descriptive fields from template
-        for (String field : CLONE_FIELDS) {
-            clone.put(field, template.get(field));
-        }
-
-        // Apply overrides
-        if (overrides != null) {
-            for (String field : overrides.keySet()) {
-                Object val = overrides.get(field);
-                clone.put(field, val);
-            }
-        }
+        WorkItem__c template = queryTemplate(templateId);
+        WorkItem__c clone = buildTemplateClone(template, overrides);
 
         Database.insert(new List<WorkItem__c>{ clone }, AccessLevel.SYSTEM_MODE);
 
-        // Log template usage
-        ActivityLog__c log = new ActivityLog__c(
-            ActionTypePk__c = 'Feature_Use',
-            ComponentNameTxt__c = 'DeliveryRecurringItemService',
-            ContextDataTxt__c = '{"action":"template_clone","templateId":"' + template.Id + '","newId":"' + clone.Id + '"}'
-        );
-        Database.insert(new List<ActivityLog__c>{ log }, AccessLevel.SYSTEM_MODE);
+        logTemplateUsage(template.Id, clone.Id);
 
         return clone.Id;
     }
@@ -195,7 +102,7 @@ public with sharing class DeliveryRecurringItemService {
      * @description Calculates the next recurrence date based on schedule type and day preference.
      * @param schedule The recurrence schedule: Weekly, Biweekly, Monthly, or Quarterly.
      * @param recurrenceDay The day of week (e.g. Monday) or day of month (e.g. 1, 15).
-     * @param fromDate The date to calculate from (typically the current NextRecurrenceDateDt__c).
+     * @param fromDate The date to calculate from (typically the current NextRecurrenceDate__c).
      * @return Date The next recurrence date.
      */
     @TestVisible
@@ -218,7 +125,141 @@ public with sharing class DeliveryRecurringItemService {
     }
 
     // -------------------------------------------------------------------------
-    // Private helpers
+    // Private helpers -- query
+    // -------------------------------------------------------------------------
+
+    private static List<WorkItem__c> queryRecurringItems(Date today) {
+        String fieldList = String.escapeSingleQuotes(buildFieldList());
+
+        String query = 'SELECT Id, OwnerId, ' + fieldList +
+            ', IsRecurringBool__c, RecurrenceScheduleTxt__c, RecurrenceDayTxt__c, NextRecurrenceDate__c' +
+            ' FROM WorkItem__c' +
+            ' WHERE IsRecurringBool__c = true' +
+            ' AND IsTemplateBool__c = false' +
+            ' AND NextRecurrenceDate__c <= :today' +
+            ' AND NextRecurrenceDate__c != null';
+
+        return Database.query(query);
+    }
+
+    private static WorkItem__c queryTemplate(Id templateId) {
+        String fieldList = String.escapeSingleQuotes(buildFieldList());
+
+        String query = 'SELECT Id, OwnerId, ' + fieldList +
+            ', IsTemplateBool__c, WorkflowTypeTxt__c' +
+            ' FROM WorkItem__c WHERE Id = :templateId WITH SYSTEM_MODE LIMIT 1';
+
+        List<WorkItem__c> templates = Database.query(query);
+        if (templates.isEmpty()) {
+            throw createAuraException('Template not found.');
+        }
+        return templates[0];
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers -- clone builders
+    // -------------------------------------------------------------------------
+
+    private static WorkItem__c buildRecurringClone(WorkItem__c source) {
+        String firstStage = getFirstStageForWorkflow(source.WorkflowTypeTxt__c);
+
+        WorkItem__c clone = new WorkItem__c();
+        clone.IsActiveBool__c = true;
+        clone.IsTemplateBool__c = false;
+        clone.IsRecurringBool__c = false;
+        clone.StageNamePk__c = firstStage;
+        clone.TemplateSourceId__c = source.Id;
+        clone.OwnerId = source.OwnerId;
+
+        copyCloneFields(clone, source);
+        return clone;
+    }
+
+    private static WorkItem__c buildTemplateClone(WorkItem__c template, Map<String, Object> overrides) {
+        String workflowType = (overrides != null && overrides.containsKey('WorkflowTypeTxt__c'))
+            ? (String) overrides.get('WorkflowTypeTxt__c')
+            : template.WorkflowTypeTxt__c;
+        String firstStage = getFirstStageForWorkflow(workflowType);
+
+        WorkItem__c clone = new WorkItem__c();
+        clone.IsActiveBool__c = true;
+        clone.IsTemplateBool__c = false;
+        clone.IsRecurringBool__c = false;
+        clone.StageNamePk__c = firstStage;
+        clone.TemplateSourceId__c = template.Id;
+        clone.OwnerId = template.OwnerId;
+
+        copyCloneFields(clone, template);
+        applyOverrides(clone, overrides);
+        return clone;
+    }
+
+    private static void copyCloneFields(WorkItem__c target, WorkItem__c source) {
+        for (String field : CLONE_FIELDS) {
+            target.put(field, source.get(field));
+        }
+    }
+
+    private static void applyOverrides(WorkItem__c clone, Map<String, Object> overrides) {
+        if (overrides == null) {
+            return;
+        }
+        for (String field : overrides.keySet()) {
+            clone.put(field, overrides.get(field));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers -- source update & logging
+    // -------------------------------------------------------------------------
+
+    private static WorkItem__c buildUpdatedSource(WorkItem__c source) {
+        Date nextDate = calculateNextDate(
+            source.RecurrenceScheduleTxt__c,
+            source.RecurrenceDayTxt__c,
+            source.NextRecurrenceDate__c
+        );
+        return new WorkItem__c(
+            Id = source.Id,
+            NextRecurrenceDate__c = nextDate
+        );
+    }
+
+    private static ActivityLog__c buildRecurringLog(WorkItem__c source) {
+        return new ActivityLog__c(
+            ActionTypePk__c = 'Feature_Use',
+            ComponentNameTxt__c = 'DeliveryRecurringItemService',
+            ContextDataTxt__c = '{"action":"recurring_clone","sourceId":"' + source.Id + '","schedule":"' + source.RecurrenceScheduleTxt__c + '"}'
+        );
+    }
+
+    private static void logTemplateUsage(Id templateId, Id cloneId) {
+        ActivityLog__c log = new ActivityLog__c(
+            ActionTypePk__c = 'Feature_Use',
+            ComponentNameTxt__c = 'DeliveryRecurringItemService',
+            ContextDataTxt__c = '{"action":"template_clone","templateId":"' + templateId + '","newId":"' + cloneId + '"}'
+        );
+        Database.insert(new List<ActivityLog__c>{ log }, AccessLevel.SYSTEM_MODE);
+    }
+
+    private static void persistRecurringResults(
+        List<WorkItem__c> newItems,
+        List<WorkItem__c> updatedSources,
+        List<ActivityLog__c> logs
+    ) {
+        if (!newItems.isEmpty()) {
+            Database.insert(newItems, AccessLevel.SYSTEM_MODE);
+        }
+        if (!updatedSources.isEmpty()) {
+            Database.update(updatedSources, AccessLevel.SYSTEM_MODE);
+        }
+        if (!logs.isEmpty()) {
+            Database.insert(logs, AccessLevel.SYSTEM_MODE);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers -- date calculations
     // -------------------------------------------------------------------------
 
     private static Date calculateNextWeeklyDate(String dayName, Date fromDate, Integer weeksAhead) {

@@ -26,7 +26,7 @@ public class DeliveryRecurringItemServiceTest {
                 IsTemplateBool__c = false,
                 RecurrenceScheduleTxt__c = 'Weekly',
                 RecurrenceDayTxt__c = 'Monday',
-                NextRecurrenceDateDt__c = Date.today(),
+                NextRecurrenceDate__c = Date.today(),
                 Tags__c = 'standup,recurring',
                 EstimatedHoursNumber__c = 1
             ),
@@ -42,7 +42,7 @@ public class DeliveryRecurringItemServiceTest {
                 IsTemplateBool__c = false,
                 RecurrenceScheduleTxt__c = 'Monthly',
                 RecurrenceDayTxt__c = '15',
-                NextRecurrenceDateDt__c = Date.today(),
+                NextRecurrenceDate__c = Date.today(),
                 Tags__c = 'report,monthly',
                 EstimatedHoursNumber__c = 4
             ),
@@ -57,7 +57,7 @@ public class DeliveryRecurringItemServiceTest {
                 IsTemplateBool__c = false,
                 RecurrenceScheduleTxt__c = 'Quarterly',
                 RecurrenceDayTxt__c = '1',
-                NextRecurrenceDateDt__c = Date.today()
+                NextRecurrenceDate__c = Date.today()
             ),
             // Template item
             new WorkItem__c(
@@ -92,7 +92,7 @@ public class DeliveryRecurringItemServiceTest {
                 IsTemplateBool__c = false,
                 RecurrenceScheduleTxt__c = 'Weekly',
                 RecurrenceDayTxt__c = 'Friday',
-                NextRecurrenceDateDt__c = Date.today().addDays(30)
+                NextRecurrenceDate__c = Date.today().addDays(30)
             )
         };
         insert items;
@@ -106,7 +106,7 @@ public class DeliveryRecurringItemServiceTest {
 
     @IsTest
     static void testProcessRecurringItemsCreatesClones() {
-        // 3 recurring items have NextRecurrenceDateDt__c <= today
+        // 3 recurring items have NextRecurrenceDate__c <= today
         Integer countBefore = [SELECT COUNT() FROM WorkItem__c WHERE IsRecurringBool__c = false AND IsTemplateBool__c = false];
 
         Test.startTest();
@@ -138,22 +138,22 @@ public class DeliveryRecurringItemServiceTest {
     @IsTest
     static void testProcessRecurringItemsAdvancesNextDate() {
         WorkItem__c weeklyBefore = [
-            SELECT NextRecurrenceDateDt__c
+            SELECT NextRecurrenceDate__c
             FROM WorkItem__c
             WHERE BriefDescriptionTxt__c = 'Weekly Standup Notes'
         ];
-        Date originalDate = weeklyBefore.NextRecurrenceDateDt__c;
+        Date originalDate = weeklyBefore.NextRecurrenceDate__c;
 
         Test.startTest();
         DeliveryRecurringItemService.processRecurringItems();
         Test.stopTest();
 
         WorkItem__c weeklyAfter = [
-            SELECT NextRecurrenceDateDt__c
+            SELECT NextRecurrenceDate__c
             FROM WorkItem__c
             WHERE BriefDescriptionTxt__c = 'Weekly Standup Notes'
         ];
-        System.assert(weeklyAfter.NextRecurrenceDateDt__c > originalDate, 'Next recurrence date should be advanced');
+        System.assert(weeklyAfter.NextRecurrenceDate__c > originalDate, 'Next recurrence date should be advanced');
     }
 
     @IsTest
