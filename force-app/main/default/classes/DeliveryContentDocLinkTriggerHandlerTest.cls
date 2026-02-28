@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Tests for DeliveryContentDocLinkTriggerHandler covering outbound
+ *              file sync ledger creation for Work Item and non-Work Item attachments.
  * @author Cloud Nimbus LLC
  */
 @IsTest

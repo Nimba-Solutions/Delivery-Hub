@@ -10,6 +10,11 @@
 // succeed regardless of the running user's sharing rules on WorkRequest__c / SyncItem__c.
 public without sharing class DeliveryRequestManagerController {
     
+    /**
+     * @description Sends a work request to the vendor by updating its status to 'Offer Sent'
+     * and touching the parent WorkItem__c to trigger the DeliverySyncEngine push.
+     * @param requestId The Id of the WorkRequest__c to send
+     */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void sendRequestToVendor(Id requestId) {
@@ -35,6 +40,12 @@ public without sharing class DeliveryRequestManagerController {
         }
     }
 
+    /**
+     * @description Checks the current status of a work request and returns a formatted
+     * string with the status, remote work item ID (if linked), and last modified date.
+     * @param requestId The Id of the WorkRequest__c to check
+     * @return String formatted status message or error if not found
+     */
     @AuraEnabled
     public static String checkRequestStatus(Id requestId) {
         List<WorkRequest__c> reqs = [

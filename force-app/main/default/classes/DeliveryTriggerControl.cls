@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Provides static flags to enable or disable trigger-based
+ *              after-logic (e.g., sync engine enqueue) at runtime.
  * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryTriggerControl {

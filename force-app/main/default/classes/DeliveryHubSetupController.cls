@@ -10,6 +10,7 @@
 @SuppressWarnings('PMD.ApexSharingViolations')
 public without sharing class DeliveryHubSetupController {
 
+    /** @description DTO holding the org's Delivery Hub connection status for the setup LWC. */
     public class SetupStatus {
         @AuraEnabled public Boolean isConnected;
         @AuraEnabled public Boolean isMothership;
@@ -17,7 +18,13 @@ public without sharing class DeliveryHubSetupController {
         @AuraEnabled public NetworkEntity__c entity;
     }
 
+    /**
+     * @description Retrieves the current Delivery Hub setup status including connection state,
+     * mothership detection, and the required Remote Site URL.
+     * @return SetupStatus containing connection info and the local NetworkEntity__c record if found
+     */
     @AuraEnabled(cacheable=true)
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
         CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
@@ -51,6 +58,11 @@ public without sharing class DeliveryHubSetupController {
         return status;
     }
 
+    /**
+     * @description Creates or updates the local Cloud Nimbus LLC NetworkEntity__c record
+     * with the endpoint URL from CloudNimbusGlobalSettings__mdt and sets it to Active.
+     * @return NetworkEntity__c the upserted mothership entity record
+     */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static NetworkEntity__c prepareLocalEntity() {
@@ -78,6 +90,12 @@ public without sharing class DeliveryHubSetupController {
         return mothership;
     }
 
+    /**
+     * @description Performs the initial handshake with the Cloud Nimbus Mothership.
+     * Sends the local org's identity to the vendor endpoint, stores the returned remote
+     * entity ID, initializes default settings, and schedules recurring sync jobs.
+     * @param localEntityId The Id of the local NetworkEntity__c representing the mothership
+     */
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
     public static void performHandshake(Id localEntityId) {

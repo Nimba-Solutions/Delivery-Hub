@@ -6,9 +6,15 @@
  * feeding them into the Unified Sync Architecture.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public without sharing class DeliveryContentDocLinkTriggerHandler {
 
+    /**
+     * @description Evaluates ContentDocumentLink records inserted on Work Items,
+     *              resolves sync routes, and creates outbound SyncItem__c ledger entries.
+     * @param newLinks List of newly inserted ContentDocumentLink records
+     */
+    @SuppressWarnings('PMD.NcssMethodCount')
     public static void handleAfterInsert(List<ContentDocumentLink> newLinks) {
         
         // ==========================================
@@ -118,6 +124,16 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         }
     }
 
+    /**
+     * @description Constructs a SyncItem__c record for an outbound file sync payload.
+     * @param cv The ContentVersion record for the file
+     * @param workItemId The parent Work Item Id
+     * @param reqId The WorkRequest Id (nullable for hub model)
+     * @param targetId The target identifier for routing
+     * @param basePayload Base payload map to clone and enrich
+     * @return A fully populated SyncItem__c record ready for insert
+     */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     private static SyncItem__c createFileItem(ContentVersion cv, Id workItemId, Id reqId, String targetId, Map<String, Object> basePayload) {
         SyncItem__c item = new SyncItem__c(StatusPk__c = 'Queued', DirectionPk__c = 'Outbound');
         item.LocalRecordIdTxt__c = cv.Id;

@@ -4,8 +4,14 @@
  * @description Controller for the Delivery Hub Board LWC.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryHubBoardController {
 
+    /**
+     * @description Updates the stage of a single work item.
+     * @param workItemId The Id of the WorkItem__c to update.
+     * @param newStage The new stage picklist value to set.
+     */
     @AuraEnabled
     public static void updateWorkItemStage(Id workItemId, String newStage) {
         try {
@@ -22,6 +28,9 @@ public with sharing class DeliveryHubBoardController {
 
     /**
      * @description Reorders a work item using integer-based indexing.
+     * @param workItemId The Id of the WorkItem__c being moved.
+     * @param newStage The target stage column for the work item.
+     * @param newIndex The zero-based position within the target stage column.
      */
     @AuraEnabled
     public static void reorderWorkItem(Id workItemId, String newStage, Integer newIndex) {
@@ -91,6 +100,12 @@ public with sharing class DeliveryHubBoardController {
         }
     }
 
+    /**
+     * @description Creates a blocking dependency between two work items.
+     * @param blockedWorkItemId The Id of the work item that is blocked.
+     * @param blockingWorkItemId The Id of the work item that is blocking.
+     * @return The newly created WorkItemDependency__c record.
+     */
     @AuraEnabled
     public static WorkItemDependency__c createDependency(Id blockedWorkItemId, Id blockingWorkItemId) {
         if (blockedWorkItemId == blockingWorkItemId) {
@@ -114,6 +129,10 @@ public with sharing class DeliveryHubBoardController {
         }
     }
 
+    /**
+     * @description Deletes a work item dependency record.
+     * @param dependencyId The Id of the WorkItemDependency__c to delete.
+     */
     @AuraEnabled
     public static void removeDependency(Id dependencyId) {
         try {
@@ -128,6 +147,16 @@ public with sharing class DeliveryHubBoardController {
         }
     }
     
+    /**
+     * @description Searches for work items that could be added as blockers, excluding terminal stages
+     *              and already-linked dependencies.
+     * @param searchTerm Text to match against work item Name or BriefDescriptionTxt__c.
+     * @param currentWorkItemId The Id of the current work item (excluded from results).
+     * @param existingDependencyIds List of Ids already linked as dependencies (excluded from results).
+     * @param workflowType The workflow type DeveloperName used to determine terminal stages.
+     * @return List of matching non-terminal WorkItem__c records (max 10).
+     */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled(cacheable=true)
     public static List<WorkItem__c> searchForPotentialBlockers(String searchTerm, Id currentWorkItemId, List<Id> existingDependencyIds, String workflowType) {
         String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';

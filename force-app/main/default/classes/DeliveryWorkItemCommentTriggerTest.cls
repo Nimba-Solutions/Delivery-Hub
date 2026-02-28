@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Tests for the WorkItemComment__c trigger verifying that comment
+ *              inserts and updates produce outbound SyncItem__c ledger entries.
  * @author Cloud Nimbus LLC
  */
 @IsTest

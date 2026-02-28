@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Tests for DeliveryRequestManagerController covering vendor request
+ * submission and status checking.
  * @author Cloud Nimbus LLC
  */
 @IsTest

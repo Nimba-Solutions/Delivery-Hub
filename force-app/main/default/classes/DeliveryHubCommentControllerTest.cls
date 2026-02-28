@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description  Tests for DeliveryHubCommentController. Validates comment retrieval,
+ *               posting, and file attachment lookups on work item comments.
  * @author Cloud Nimbus LLC
  */
 @IsTest

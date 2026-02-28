@@ -128,6 +128,7 @@ private class DeliverySyncItemProcessorTest {
      * @description Mock for successful response.
      */
     private class MockSuccess implements HttpCalloutMock {
+        /** @description Returns a mock HTTP 200 success response for sync callout testing. @param req The inbound request. @return Mock HttpResponse with status 200. */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
@@ -140,6 +141,7 @@ private class DeliverySyncItemProcessorTest {
      * @description Mock for failed response.
      */
     private class MockFailure implements HttpCalloutMock {
+        /** @description Returns a mock HTTP 500 failure response for sync callout testing. @param req The inbound request. @return Mock HttpResponse with status 500. */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(500);
