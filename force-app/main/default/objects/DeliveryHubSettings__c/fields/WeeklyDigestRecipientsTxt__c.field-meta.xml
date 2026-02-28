@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WeeklyDigestRecipientsTxt__c</fullName>
+    <description>Comma-separated email addresses for weekly digest recipients. If blank, sends to all active users with the Delivery Hub permission set.</description>
+    <inlineHelpText>Comma-separated email addresses. Leave blank to send to all Delivery Hub users.</inlineHelpText>
+    <label>Weekly Digest Recipients</label>
+    <trackTrending>false</trackTrending>
+    <type>TextArea</type>
+</CustomField>
