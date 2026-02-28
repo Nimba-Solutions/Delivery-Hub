@@ -82,7 +82,6 @@
                 <identifier>c_deliveryActivityTimeline</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>timelineTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
