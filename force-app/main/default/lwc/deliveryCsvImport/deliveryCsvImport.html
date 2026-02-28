@@ -1,0 +1,202 @@
+<template>
+    <lightning-card title="CSV Import" icon-name="utility:upload">
+
+        <!-- ── Step 1: Upload ─────────────────────────────────────── -->
+        <template lwc:if={isUploadStep}>
+            <div class="slds-p-around_medium">
+                <p class="slds-text-body_regular slds-m-bottom_medium">
+                    Upload a CSV file to bulk-create Work Items. Jira exports are auto-detected.
+                </p>
+
+                <!-- Drag-and-drop zone -->
+                <div class={dropZoneClass}
+                     ondragover={handleDragOver}
+                     ondragleave={handleDragLeave}
+                     ondrop={handleDrop}>
+                    <div class="slds-p-around_large">
+                        <lightning-icon icon-name="utility:upload" size="large"
+                                        class="slds-m-bottom_small drop-zone-icon"></lightning-icon>
+                        <p class="slds-text-heading_small slds-m-bottom_x-small">
+                            Drag &amp; drop a CSV file here
+                        </p>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                            or
+                        </p>
+                        <lightning-button label="Choose File"
+                                          variant="neutral"
+                                          onclick={handleFilePick}></lightning-button>
+                        <input type="file" accept=".csv" class="file-input-hidden"
+                               onchange={handleFileChange} />
+                    </div>
+                </div>
+
+                <template lwc:if={parseError}>
+                    <div class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small" role="alert">
+                        <lightning-icon icon-name="utility:error" size="x-small"
+                                        variant="inverse" class="slds-m-right_x-small"></lightning-icon>
+                        <span>{parseError}</span>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- ── Step 2: Column Mapping ─────────────────────────────── -->
+        <template lwc:if={isMappingStep}>
+            <div class="slds-p-around_medium">
+
+                <!-- Jira detection banner -->
+                <template lwc:if={isJiraDetected}>
+                    <div class="jira-banner slds-m-bottom_medium">
+                        <lightning-icon icon-name="utility:magicwand" size="x-small"
+                                        class="slds-m-right_x-small"></lightning-icon>
+                        <span class="jira-banner-text">
+                            Jira format detected! Columns have been auto-mapped. Adjust as needed.
+                        </span>
+                    </div>
+                </template>
+
+                <p class="slds-text-body_regular slds-m-bottom_small">
+                    <strong>{fileName}</strong> &mdash;
+                    {totalRows} row(s) detected, {mappedColumnCount} column(s) mapped.
+                </p>
+
+                <!-- Mapping table -->
+                <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th scope="col" class="slds-text-title_caps">CSV Column</th>
+                            <th scope="col" class="slds-text-title_caps">Work Item Field</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={columnMappings} for:item="mapping">
+                            <tr key={mapping.key}>
+                                <td class="slds-align-middle">
+                                    <span class="slds-text-body_regular">{mapping.csvColumn}</span>
+                                </td>
+                                <td>
+                                    <lightning-combobox
+                                        value={mapping.targetField}
+                                        options={fieldOptions}
+                                        data-column={mapping.csvColumn}
+                                        onchange={handleMappingChange}
+                                        variant="label-hidden"
+                                        dropdown-alignment="auto">
+                                    </lightning-combobox>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+
+                <div class="slds-m-top_medium slds-grid slds-grid_align-spread">
+                    <lightning-button label="Back" onclick={handleBackToUpload}></lightning-button>
+                    <lightning-button label="Preview Import" variant="brand"
+                                      onclick={handleProceedToPreview}
+                                      disabled={hasNoMappedColumns}></lightning-button>
+                </div>
+            </div>
+        </template>
+
+        <!-- ── Step 3: Preview ────────────────────────────────────── -->
+        <template lwc:if={isPreviewStep}>
+            <div class="slds-p-around_medium">
+                <p class="slds-text-body_regular slds-m-bottom_small">
+                    Preview of the first {previewRows.length} rows (out of {totalRows} total).
+                    Verify the data looks correct before importing.
+                </p>
+
+                <template lwc:if={isJiraDetected}>
+                    <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                        Jira values (priority, status, issue type) will be automatically
+                        translated to Delivery Hub equivalents during import.
+                    </p>
+                </template>
+
+                <div class="slds-scrollable_x">
+                    <lightning-datatable
+                        key-field="_rowKey"
+                        data={previewData}
+                        columns={previewColumns}
+                        hide-checkbox-column>
+                    </lightning-datatable>
+                </div>
+
+                <div class="slds-m-top_medium slds-grid slds-grid_align-spread">
+                    <lightning-button label="Back to Mapping" onclick={handleBackToMapping}></lightning-button>
+                    <lightning-button label={importButtonLabel} variant="brand"
+                                      onclick={handleStartImport}
+                                      icon-name="utility:upload"></lightning-button>
+                </div>
+            </div>
+        </template>
+
+        <!-- ── Step 4: Importing ──────────────────────────────────── -->
+        <template lwc:if={isImportingStep}>
+            <div class="slds-p-around_large slds-text-align_center">
+                <lightning-spinner alternative-text="Importing..." size="medium"></lightning-spinner>
+                <p class="slds-text-heading_small slds-m-top_medium">
+                    Importing {importTotal} work items...
+                </p>
+                <div class="slds-m-top_medium">
+                    <lightning-progress-bar value={progressPercent} size="large"></lightning-progress-bar>
+                </div>
+            </div>
+        </template>
+
+        <!-- ── Step 5: Results ────────────────────────────────────── -->
+        <template lwc:if={isResultsStep}>
+            <div class="slds-p-around_medium">
+
+                <!-- Success summary -->
+                <div class={resultBannerClass}>
+                    <lightning-icon icon-name={resultIconName} size="small"
+                                    class="slds-m-right_small"></lightning-icon>
+                    <div>
+                        <p class="slds-text-heading_small">{summaryMessage}</p>
+                    </div>
+                </div>
+
+                <!-- Error details -->
+                <template lwc:if={hasErrors}>
+                    <div class="slds-m-top_medium">
+                        <p class="slds-text-title_caps slds-m-bottom_x-small">Error Details</p>
+                        <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th scope="col" class="slds-text-title_caps" style="width:80px;">Row</th>
+                                    <th scope="col" class="slds-text-title_caps">Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={resultErrors} for:item="err">
+                                    <tr key={err.row}>
+                                        <td>{err.row}</td>
+                                        <td class="slds-text-color_error">{err.message}</td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+
+                <!-- Actions -->
+                <div class="slds-m-top_large slds-grid slds-grid_align-center slds-gutters">
+                    <div class="slds-col">
+                        <lightning-button label="Import Another File"
+                                          onclick={handleImportAnother}
+                                          icon-name="utility:upload"></lightning-button>
+                    </div>
+                    <template lwc:if={isAllSuccess}>
+                        <div class="slds-col">
+                            <lightning-button label="View on Board" variant="brand"
+                                              onclick={handleViewOnBoard}
+                                              icon-name="utility:kanban"></lightning-button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+    </lightning-card>
+</template>
