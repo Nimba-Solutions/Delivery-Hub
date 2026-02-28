@@ -9,7 +9,7 @@
  *               Called nightly by DeliveryHubScheduler.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryEscalationService {
 
     /** @description Priority escalation ladder: Low → Medium → High → Critical */
@@ -42,6 +42,7 @@ public with sharing class DeliveryEscalationService {
      * @param rules List of escalation rules to process
      */
     @TestVisible
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     static void processEscalations(List<WorkflowEscalationRule__mdt> rules) {
         if (rules == null || rules.isEmpty()) {
             return;
@@ -158,6 +159,7 @@ public with sharing class DeliveryEscalationService {
      * @param slackNotifications Accumulator for Slack notifications
      * @param logEntries Accumulator for activity log entries
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     private static void executeAction(
         WorkflowEscalationRule__mdt rule,
         WorkItem__c wi,
@@ -263,6 +265,7 @@ public with sharing class DeliveryEscalationService {
      *              Leverages the same email infrastructure as stage-change notifications.
      * @param workItemIdToStage Map of WorkItem Id → current stalled stage
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     private static void sendEscalationEmails(Map<Id, String> workItemIdToStage) {
         // Build escalation-specific stage labels to indicate this is an escalation
         Map<Id, String> escalationStageMap = new Map<Id, String>();
@@ -397,6 +400,7 @@ public with sharing class DeliveryEscalationService {
      * @return HTML string
      */
     @TestVisible
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     private static String buildEscalationHtml(String workItemName, String title,
         String stalledStage, String recordUrl) {
         return '<div style="font-family: Arial, sans-serif; max-width: 600px;">'

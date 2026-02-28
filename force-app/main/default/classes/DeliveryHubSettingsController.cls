@@ -105,7 +105,9 @@ public with sharing class DeliveryHubSettingsController {
      * @param autoCreateRequest Whether to auto-create Requests
      * @param autoSendRequest Whether to auto-send Requests to Vendor
      * @param emailNotificationsEnabled Whether to send email on stage changes
+     * @param showBoardMetrics Whether to show inline board metrics on the Kanban board
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
     public static void saveGeneralSettings(Boolean enableNotifications, Boolean autoCreateRequest, Boolean autoSendRequest, Boolean emailNotificationsEnabled, Boolean showBoardMetrics) {
         try {

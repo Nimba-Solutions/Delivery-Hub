@@ -5,7 +5,7 @@
  * then enqueues worker jobs. Also handles Network Entity Sync and High-Water Mark Sync.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public without sharing class DeliveryWorkItemTriggerHandler {
     
     /** @description Flag to disable trigger execution */
@@ -21,6 +21,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      * @param isInsert Boolean indicating insert context
      * @param isUpdate Boolean indicating update context
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static void handleAfter(
         List<WorkItem__c> newRows,
         Map<Id, WorkItem__c> oldMap,

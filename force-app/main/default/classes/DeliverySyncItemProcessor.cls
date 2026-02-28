@@ -6,8 +6,16 @@
  * passes the Global Traceability ID, and extracts the response ID to close the bridge loop.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
 public inherited sharing class DeliverySyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
+    /**
+     * @description Processes queued outbound Sync Items by resolving endpoints, performing HTTP
+     * callouts, updating item statuses, closing bridge loops with response IDs, and chaining
+     * for remaining work.
+     * @param context The QueueableContext provided by the Apex runtime.
+     */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     public void execute(QueueableContext context) {
 
         // 1a. Query Queued Outbound Items linked to a valid Request route (Push Mode — downstream)

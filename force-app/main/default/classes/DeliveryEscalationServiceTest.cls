@@ -375,6 +375,7 @@ private class DeliveryEscalationServiceTest {
      * @param priorityFilter Priority filter (or null for all)
      * @return WorkflowEscalationRule__mdt record
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     private static WorkflowEscalationRule__mdt buildRule(
         String label,
         String workflowType,

@@ -106,7 +106,13 @@ private class DeliveryHubPollerTest {
 
     // --- Mock Implementations ---
 
+    /** @description Mock that returns a 200 response with a single WorkItem__c sync payload. */
     public class MockResponseSuccess implements HttpCalloutMock {
+        /**
+         * @description Returns a successful response with a JSON array containing one sync item.
+         * @param req The HTTP request
+         * @return HttpResponse with status 200 and a JSON sync payload body
+         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);

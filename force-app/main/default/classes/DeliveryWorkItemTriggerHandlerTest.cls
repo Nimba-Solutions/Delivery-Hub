@@ -1,6 +1,9 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Tests for DeliveryWorkItemTriggerHandler covering sync engine
+ *              integration, auto work request creation, stage change events, and
+ *              blocked dependency validation.
  * @author Cloud Nimbus LLC
  */
 @IsTest

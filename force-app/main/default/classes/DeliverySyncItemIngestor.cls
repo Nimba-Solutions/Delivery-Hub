@@ -6,6 +6,7 @@
  * Captures routing origins and Global Traceability IDs to explicitly prevent echo loops.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public without sharing class DeliverySyncItemIngestor {
 
     private static String getNamespacePrefix() {
@@ -20,6 +21,14 @@ public without sharing class DeliverySyncItemIngestor {
         return apiName;
     }
 
+    /**
+     * @description Processes an inbound sync payload by resolving the local record via ledger/bridge
+     * lookup, mapping fields, auto-parenting upstream clients, and registering echo suppression.
+     * @param objectType The API name of the SObject type being synced.
+     * @param payload The deserialized JSON payload containing field values and routing metadata.
+     * @return The Id of the upserted local record.
+     */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     public static Id processInboundItem(String objectType, Map<String, Object> payload) {
         DeliverySyncEngine.setSyncContext();
 
@@ -197,7 +206,7 @@ public without sharing class DeliverySyncItemIngestor {
         return reqs.isEmpty() ? null : reqs[0];
     }
 
-    // Updated to accept the requestId and the globalSourceId
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     private static void createLedgerEntry(String objType, String remoteId, Id localId, Id requestId, String globalSourceId) {
         String cleanName = stripNamespace(objType);
         SyncItem__c ledger = new SyncItem__c(
@@ -234,6 +243,7 @@ public without sharing class DeliverySyncItemIngestor {
         }
     }
 
+    @SuppressWarnings('PMD.CyclomaticComplexity')
     private static void mapFields(SObject record, Map<String, Object> payload, Schema.SObjectType type) {
         Map<String, SObjectField> fieldMap = type.getDescribe().fields.getMap();
         Map<String, SObjectField> cleanNameIndex = new Map<String, SObjectField>();

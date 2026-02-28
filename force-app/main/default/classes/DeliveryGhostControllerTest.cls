@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description  Tests for DeliveryGhostController. Validates quick request creation,
+ *               activity logging toggle behavior, and malformed JSON handling.
  * @author Cloud Nimbus LLC
  */
 @IsTest

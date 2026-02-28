@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Tests for DeliveryHubSetupController covering setup status retrieval,
+ * local entity preparation, and handshake success/failure scenarios.
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -69,7 +71,9 @@ private class DeliveryHubSetupControllerTest {
         Test.stopTest();
     }
 
+    /** @description Mock that returns a successful 200 handshake response with processedId and orgId. */
     private class SuccessMock implements HttpCalloutMock {
+        /** @description Builds a mock 200 response. @param req The inbound request. @return Mock HttpResponse with status 200. */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
@@ -79,7 +83,9 @@ private class DeliveryHubSetupControllerTest {
         }
     }
     
+    /** @description Mock that returns HTTP 500 to test handshake failure handling. */
     private class FailureMock implements HttpCalloutMock {
+        /** @description Builds a mock 500 response. @param req The inbound request. @return Mock HttpResponse with status 500. */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(500);

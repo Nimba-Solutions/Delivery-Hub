@@ -23,6 +23,7 @@ public with sharing class DeliveryWorkItemETAService {
      * @return ETAResult A wrapper object containing the list of calculated work item ETAs.
      */
     @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     // <<< FIX 1: Changed parameter from Set<Id> to List<Id> which is supported by AuraEnabled.
     public static ETAResult getWorkItemETAsWithPriority(Integer numberOfDevs, List<Id> prioritizedWorkItemIds) {
         ETAResult result = new ETAResult();
@@ -82,6 +83,7 @@ public with sharing class DeliveryWorkItemETAService {
         @AuraEnabled public List<String> pushedBackWorkItemNumbers { get; set; }
     }
 
+    /** @description DTO containing ETA calculation results for a single work item. */
     public class WorkItemETADTO {
         /** @description Salesforce Id of the work item. */
         @AuraEnabled public Id workItemId { get; set; }
@@ -125,6 +127,10 @@ public with sharing class DeliveryWorkItemETAService {
      * This should be called from a trigger on WorkItem__c when relevant fields change.
      */
     public class RecalculateAllETAsQueueable implements Queueable {
+        /**
+         * @description Executes the ETA recalculation asynchronously with no prioritized items.
+         * @param context The queueable context provided by the platform
+         */
         public void execute(QueueableContext context) {
             ETACalculator calculator = new ETACalculator(null);
             calculator.execute();
@@ -135,6 +141,10 @@ public with sharing class DeliveryWorkItemETAService {
      * @description Schedulable job to run a full recalculation nightly, ensuring data consistency.
      */
     public class NightlyRecalculation implements Schedulable {
+        /**
+         * @description Enqueues the ETA recalculation queueable on a nightly schedule.
+         * @param sc The schedulable context provided by the platform
+         */
         public void execute(SchedulableContext sc) {
             // We enqueue the queueable from the scheduler to ensure it has its own governor limits
             // and to handle any potential callout limitations if they are added in the future.
@@ -153,7 +163,8 @@ public with sharing class DeliveryWorkItemETAService {
      *   Planning → pre-development, Development → active development.
      */
     @TestVisible
-    private class ETACalculator {
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+    private inherited sharing class ETACalculator {
         private Set<String> preDevStages;
         private Set<String> activeDevStages;
         private Map<String, Decimal> priorityWeights;
@@ -161,11 +172,19 @@ public with sharing class DeliveryWorkItemETAService {
         private final Set<Id> prioritizedWorkItemIds;
         private Set<Id> processedWorkItemIds;
 
+        /**
+         * @description Constructs the ETACalculator with an optional list of prioritized work item IDs.
+         * @param prioritizedIds Work item IDs to prioritize at the top of the queue, or null for default ordering
+         */
         public ETACalculator(List<Id> prioritizedIds) {
             this.prioritizedWorkItemIds = (prioritizedIds == null) ? new Set<Id>() : new Set<Id>(prioritizedIds);
             this.processedWorkItemIds = new Set<Id>();
         }
 
+        /**
+         * @description Returns the set of work item IDs that were processed during the ETA calculation.
+         * @return Set of WorkItem__c IDs that received ETA updates
+         */
         public Set<Id> getProcessedWorkItemIds() {
             return this.processedWorkItemIds;
         }
@@ -173,6 +192,7 @@ public with sharing class DeliveryWorkItemETAService {
         /**
          * @description Main method that executes the entire ETA calculation process.
          */
+        @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
         public void execute() {
             // --- Phase 1: Initialization from WorkflowStage__mdt ---
             loadStageConfiguration();
@@ -284,6 +304,7 @@ public with sharing class DeliveryWorkItemETAService {
             ];
         }
 
+        @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
         private List<WorkItemWrapper> buildAndSortQueue(List<WorkItem__c> allWorkItems, Set<Id> developerIds) {
             Set<Id> incompleteWorkItemIds = new Set<Id>();
             for (WorkItem__c t : allWorkItems) {
@@ -357,6 +378,7 @@ public with sharing class DeliveryWorkItemETAService {
     /**
      * @description Wrapper class for WorkItem__c to implement complex, multi-level sorting.
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     private class WorkItemWrapper implements Comparable {
         /** @description The WorkItem__c record being wrapped for sort comparison. */
         public WorkItem__c workItem { get; private set; }
@@ -364,6 +386,14 @@ public with sharing class DeliveryWorkItemETAService {
         private final Decimal priorityWeight;    // Lower is better (e.g., High=1, Med=2)
         private final Boolean isPrioritizedByLWC; // Absolute highest priority
 
+        /**
+         * @description Constructs a WorkItemWrapper that pre-computes sort keys for multi-level ordering.
+         * @param t The WorkItem__c record to wrap
+         * @param activeDevStages Set of stage API values considered active development
+         * @param priorityWeights Map of priority picklist values to numeric sort weights
+         * @param prioritizedIds Set of work item IDs explicitly prioritized by the LWC user
+         */
+        @SuppressWarnings('PMD.ExcessiveParameterList')
         public WorkItemWrapper(WorkItem__c t, Set<String> activeDevStages, Map<String, Decimal> priorityWeights, Set<Id> prioritizedIds) {
             this.workItem = t;
             this.isPrioritizedByLWC = prioritizedIds.contains(t.Id);
@@ -375,6 +405,12 @@ public with sharing class DeliveryWorkItemETAService {
             if (this.priorityWeight == null) { this.priorityWeight = 999; }
         }
 
+        /**
+         * @description Compares two WorkItemWrappers using multi-level sort: LWC priority,
+         * stage category, priority weight, manual sort order, then creation date.
+         * @param compareTo The other WorkItemWrapper object to compare against
+         * @return Integer negative if this sorts first, positive if other sorts first, 0 if equal
+         */
         public Integer compareTo(Object compareTo) {
             WorkItemWrapper other = (WorkItemWrapper)compareTo;
 

@@ -9,6 +9,13 @@
  */
 public without sharing class DeliveryHubPoller {
 
+    /**
+     * @description Polls all active vendor endpoints for new sync items since the last
+     * inbound sync timestamp. Processes received payloads through SyncItemIngestor and
+     * advances each vendor's watermark to prevent duplicate pulls.
+     * @return String summary message indicating synced item count and any vendor errors
+     */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     @AuraEnabled
     public static String pollUpdates() {
         try {

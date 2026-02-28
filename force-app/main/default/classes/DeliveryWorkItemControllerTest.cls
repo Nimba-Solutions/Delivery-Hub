@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Test class for DeliveryWorkItemController. Covers work item CRUD,
+ *              file linking, AI enhancement fallback, and OpenAI response parsing.
  * @author Cloud Nimbus LLC
  */
 @isTest
@@ -177,7 +179,7 @@ private class DeliveryWorkItemControllerTest {
 
 
     @isTest
-    static void testGetAiEnhancedWorkItemDetails_withFallback() {
+    static void testGetAiEnhancedWorkItemDetailsWithFallback() {
 
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
@@ -210,7 +212,7 @@ private class DeliveryWorkItemControllerTest {
 
 
     @isTest
-    static void testParseOpenAIResponse_ValidJson() {
+    static void testParseOpenAIResponseValidJson() {
 
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
@@ -236,7 +238,7 @@ private class DeliveryWorkItemControllerTest {
     }
 
     @isTest
-    static void testExtractJsonFromContent_Valid() {
+    static void testExtractJsonFromContentValid() {
 
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
@@ -253,7 +255,7 @@ private class DeliveryWorkItemControllerTest {
     }
 
     @isTest
-    static void testParseOpenAIResponse_MissingContent() {
+    static void testParseOpenAIResponseMissingContent() {
 
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 
@@ -280,7 +282,7 @@ private class DeliveryWorkItemControllerTest {
     }
 
     @isTest
-    static void testExtractJsonFromContent_Invalid() {
+    static void testExtractJsonFromContentInvalid() {
 
         User testUser = [SELECT Id FROM User WHERE Alias = 'testu' LIMIT 1];
 

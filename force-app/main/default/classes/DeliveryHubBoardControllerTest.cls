@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Test class for DeliveryHubBoardController. Covers stage updates, reordering,
+ *              dependency creation/removal, blocker search, and board metrics.
  * @author Cloud Nimbus LLC
  */
 @isTest

@@ -114,10 +114,6 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     /**
-     * @description Returns client-facing dashboard data: attention items, phase counts, recent work items.
-     * @return Map containing attentionWorkItems, phases, and recentWorkItems lists.
-     */
-    /**
      * @description Returns the count of work items currently waiting on client action.
      * @return Integer count of attention-requiring work items.
      */
@@ -132,6 +128,11 @@ public with sharing class DeliveryHubDashboardController {
         ];
     }
 
+    /**
+     * @description Returns client-facing dashboard data: attention items, phase counts,
+     *              recent work items, vendor announcements, and this-week metrics.
+     * @return Map containing attentionWorkItems, phases, recentWorkItems, announcements, and thisWeek keys.
+     */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getClientDashboard() {
         Map<String, Object> result = new Map<String, Object>();

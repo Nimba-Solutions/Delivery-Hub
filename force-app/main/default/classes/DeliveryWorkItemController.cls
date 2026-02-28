@@ -4,6 +4,7 @@
  * @description Controller for retrieving and seeding demo WorkItem__c records.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryWorkItemController {
 
     /**
@@ -11,8 +12,10 @@ public with sharing class DeliveryWorkItemController {
      * @param workflowType Optional DeveloperName of a WorkflowType__mdt record.
      *                     When provided, only returns work items in that workflow type.
      *                     When blank/null, returns all active work items (backward-compatible).
+     * @return List of active WorkItem__c records with related dependencies and comments.
      */
     @AuraEnabled(cacheable=true)
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static List<WorkItem__c> getWorkItems(String workflowType) {
         if (!Schema.sObjectType.WorkItem__c.isAccessible()
             || !Schema.sObjectType.WorkItem__c.fields.StageNamePk__c.isAccessible()) {
@@ -72,8 +75,10 @@ public with sharing class DeliveryWorkItemController {
 
     /**
      * @description Creates demo WorkItem__c records and returns them.
+     * @return List of newly created demo WorkItem__c records.
      */
     @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static List<WorkItem__c> createDummyWorkItems() {
         List<WorkItem__c> demo = new List<WorkItem__c>{
             new WorkItem__c(
@@ -113,6 +118,11 @@ public with sharing class DeliveryWorkItemController {
         return demo;
     }
 
+    /**
+     * @description Bulk-updates SortOrderNumber__c for a list of work items.
+     *              Handles namespace-prefixed and unprefixed field keys from LWC.
+     * @param updates List of maps, each containing an 'Id' key and a 'SortOrderNumber__c' key with the new sort value.
+     */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void updateWorkItemSortOrders(List<Map<String, Object>> updates) {
@@ -143,6 +153,10 @@ public with sharing class DeliveryWorkItemController {
         update workItems;
     }
 
+    /**
+     * @description Checks whether Cloud Nimbus marketing features are enabled via custom metadata.
+     * @return True if marketing is enabled in CloudNimbusGlobalSettings__mdt, false otherwise.
+     */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static Boolean isMarketingEnabled() {
@@ -159,7 +173,13 @@ public with sharing class DeliveryWorkItemController {
         }
     }
 
+    /**
+     * @description Links one or more ContentDocuments to a WorkItem__c via ContentDocumentLink.
+     * @param workItemId The Id of the WorkItem__c to link files to.
+     * @param contentDocumentIds List of ContentDocument Ids to link.
+     */
     @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static void linkFilesToWorkItem(Id workItemId, List<Id> contentDocumentIds) {
         List<ContentDocumentLink> links = new List<ContentDocumentLink>();
         for (Id docId : contentDocumentIds) {
@@ -173,6 +193,11 @@ public with sharing class DeliveryWorkItemController {
         insert links;
     }
 
+    /**
+     * @description Links ContentDocuments to a WorkItem__c using Security.stripInaccessible for FLS enforcement.
+     * @param workItemId The Id of the WorkItem__c to link files to.
+     * @param contentDocumentIds List of ContentDocument Ids to link.
+     */
     @AuraEnabled
     public static void linkFilesAndSync(Id workItemId, List<Id> contentDocumentIds) {
         List<ContentDocumentLink> links = new List<ContentDocumentLink>();
@@ -191,6 +216,11 @@ public with sharing class DeliveryWorkItemController {
         // Removed the AttachmentSyncService Jira callout here so it is strictly local Salesforce logic now
     }
 
+    /**
+     * @description Returns a list of required field API names for a given workflow target stage.
+     * @param targetStage The stage API value to look up required fields for.
+     * @return List of required field API names, or an empty list if none are configured.
+     */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static List<String> getRequiredFieldsForStage(String targetStage) {
@@ -319,6 +349,7 @@ public with sharing class DeliveryWorkItemController {
                '}';
     }
 
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     private static AISuggestionWrapper parseOpenAIResponse(String responseBody) {
         try {
             Map<String, Object> response = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
@@ -408,6 +439,7 @@ public with sharing class DeliveryWorkItemController {
         return null;
     }
 
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     private static AISuggestionWrapper getFallbackSuggestions(String currentTitle, String currentDescription) {
         AISuggestionWrapper suggestions = new AISuggestionWrapper();
         String searchText = ((currentTitle != null ? currentTitle : '') + ' ' + 

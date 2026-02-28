@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description  Tests for DeliveryHubFilesController. Validates file retrieval,
+ *               comment-linked files, deduplication, and empty-state handling.
  * @author Cloud Nimbus LLC
  */
 @IsTest

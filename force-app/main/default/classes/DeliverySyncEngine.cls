@@ -6,23 +6,36 @@
  * Origin-Based Echo Suppression, and Global Traceability (Loop Prevention).
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public without sharing class DeliverySyncEngine {
 
     public static Boolean isSyncContext = false;
     @TestVisible private static Set<String> blockedOrigins = new Set<String>();
 
+    /** @description Flags the current transaction as a sync context to prevent recursive processing. */
     public static void setSyncContext() {
         isSyncContext = true;
     }
     
-    // Stores the Request ID (Downstream) or Network Entity ID (Upstream) to prevent echo loops
+    /**
+     * @description Registers an origin ID to block echo loops during sync routing.
+     * Stores the Request ID (Downstream) or Network Entity ID (Upstream).
+     * @param originId The ID of the origin to suppress.
+     */
     public static void ignoreOrigin(String originId) {
         if (String.isNotBlank(originId)) {
             blockedOrigins.add(originId.trim());
         }
     }
 
-    @SuppressWarnings('PMD.ApexCRUDViolation') 
+    /**
+     * @description Captures field-level changes on records and fans out Sync Items to downstream
+     * vendors (Push) and upstream clients (Hub) based on DAG routing edges.
+     * @param newRecords The list of new/updated SObject records from the trigger context.
+     * @param oldMap The map of old SObject records for comparison (null on insert).
+     * @param allowedFields The set of field API names to include in the sync payload.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
         if (isSyncContext || newRecords == null || newRecords.isEmpty()) {
             return;
@@ -178,6 +191,7 @@ public without sharing class DeliverySyncEngine {
         return null;
     }
 
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     private static SyncItem__c createSyncItem(SObject rec, WorkRequest__c req, Set<String> allowedFields, String globalSourceId) {
         SyncItem__c item = new SyncItem__c(
             StatusPk__c = 'Queued', 

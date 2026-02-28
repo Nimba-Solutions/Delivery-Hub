@@ -1,6 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
+ * @description Tests for DeliveryHubCalloutService covering POST requests,
+ * URL normalization, and missing endpoint exception handling.
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -62,10 +64,13 @@ private class DeliveryHubCalloutServiceTest {
         System.assert(exceptionCaught, 'A CalloutException should have been thrown for null input');
     }
 
-    /**
-     * @description Inner class to mock HTTP responses
-     */
+    /** @description Mock HTTP response generator that returns a 200 JSON success response. */
     public class MockHttpResponseGenerator implements HttpCalloutMock {
+        /**
+         * @description Returns a mock 200 response with a JSON success body.
+         * @param req The HTTP request
+         * @return HttpResponse with status 200 and success JSON body
+         */
         public HTTPResponse respond(HTTPRequest req) {
             // Optional: Assertions on the request if needed
             // System.assertEquals('POST', req.getMethod());
