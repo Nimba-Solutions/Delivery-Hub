@@ -9,7 +9,7 @@
         <target>lightningCommunity__Page</target>
     </targets>
     <targetConfigs>
-        <targetConfig targets="lightningCommunity__Default,lightningCommunity__Page">
+        <targetConfig targets="lightningCommunity__Default">
             <property name="networkEntityId" type="String" label="Network Entity ID" description="The ID of the NetworkEntity__c record for this portal user's organization." />
         </targetConfig>
     </targetConfigs>
