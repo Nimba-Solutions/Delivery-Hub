@@ -243,11 +243,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItemDependency__c.BlockingWorkItemId__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>WorkItemDependency__c.ExternalIdTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>

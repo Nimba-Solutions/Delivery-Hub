@@ -9,6 +9,7 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
+@SuppressWarnings('PMD.CyclomaticComplexity')
 private class DeliveryWeeklyDigestServiceTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
