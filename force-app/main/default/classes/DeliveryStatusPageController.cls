@@ -13,13 +13,21 @@ public without sharing class DeliveryStatusPageController {
 
     /** @description Wrapper returned by the VF page getters */
     public class StatusPageData {
+        /** @description Display name of the network entity */
         public String entityName { get; set; }
+        /** @description Map of phase names to active work-item counts */
         public Map<String, Integer> phaseDistribution { get; set; }
+        /** @description Map of SLA buckets (onTrack, atRisk, breached) to counts */
         public Map<String, Integer> slaHealth { get; set; }
+        /** @description List of recently completed items with title and date */
         public List<Map<String, String>> recentCompletions { get; set; }
+        /** @description Number of currently active work items */
         public Integer activeCount { get; set; }
+        /** @description Number of completed work items */
         public Integer completedCount { get; set; }
+        /** @description Formatted timestamp of the most recent activity */
         public String lastUpdated { get; set; }
+        /** @description Overall health rating: Healthy, At Risk, or Critical */
         public String overallHealth { get; set; }
     }
 
@@ -64,12 +72,30 @@ public without sharing class DeliveryStatusPageController {
         }
 
         NetworkEntity__c entity = entities[0];
-        result.put('entityName', entity.Name);
-
-        // --- Terminal stages ---
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
 
-        // --- Phase distribution ---
+        result.put('entityName', entity.Name);
+        result.put('phaseDistribution', buildPhaseDistribution(entity.Id, terminalStages));
+        result.put('activeCount', countWorkItems(entity.Id, terminalStages, false));
+        result.put('completedCount', countWorkItems(entity.Id, terminalStages, true));
+
+        Map<String, Integer> slaHealth = buildSlaHealth(entity.Id, terminalStages);
+        result.put('slaHealth', slaHealth);
+        result.put('overallHealth', calculateOverallHealth(slaHealth));
+        result.put('recentCompletions', buildRecentCompletions(entity.Id, terminalStages));
+        result.put('lastUpdated', getLastUpdatedTimestamp(entity.Id));
+
+        return result;
+    }
+
+    /**
+     * @description Aggregates active work items by workflow phase (Planning,
+     *              Development, Testing, UAT, Deployment).
+     * @param entityId Id of the NetworkEntity__c to scope the query
+     * @param terminalStages Set of stage values considered terminal/completed
+     * @return Map of phase name to count of active items in that phase
+     */
+    private static Map<String, Integer> buildPhaseDistribution(Id entityId, Set<String> terminalStages) {
         Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
         Map<String, Integer> phaseCounts = new Map<String, Integer>{
             'Planning' => 0, 'Development' => 0, 'Testing' => 0,
@@ -79,7 +105,7 @@ public without sharing class DeliveryStatusPageController {
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entity.Id
+            WHERE ClientNetworkEntityId__c = :entityId
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
@@ -89,29 +115,44 @@ public without sharing class DeliveryStatusPageController {
                 phaseCounts.put(phase, phaseCounts.get(phase) + ((Decimal) ar.get('cnt')).intValue());
             }
         }
-        result.put('phaseDistribution', phaseCounts);
+        return phaseCounts;
+    }
 
-        // --- Active count ---
-        Integer activeCount = [
+    /**
+     * @description Counts work items that are either active or completed,
+     *              depending on the terminal flag.
+     * @param entityId Id of the NetworkEntity__c to scope the query
+     * @param terminalStages Set of stage values considered terminal/completed
+     * @param terminal When true counts completed items; when false counts active items
+     * @return Count of matching work items
+     */
+    private static Integer countWorkItems(Id entityId, Set<String> terminalStages, Boolean terminal) {
+        if (terminal) {
+            return [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE ClientNetworkEntityId__c = :entityId
+                AND StageNamePk__c IN :terminalStages
+                WITH SYSTEM_MODE
+            ];
+        }
+        return [
             SELECT COUNT()
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entity.Id
+            WHERE ClientNetworkEntityId__c = :entityId
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
         ];
-        result.put('activeCount', activeCount);
+    }
 
-        // --- Completed count ---
-        Integer completedCount = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entity.Id
-            AND StageNamePk__c IN :terminalStages
-            WITH SYSTEM_MODE
-        ];
-        result.put('completedCount', completedCount);
-
-        // --- SLA Health ---
+    /**
+     * @description Categorises active work items with SLA targets into
+     *              onTrack, atRisk, and breached buckets.
+     * @param entityId Id of the NetworkEntity__c to scope the query
+     * @param terminalStages Set of stage values considered terminal/completed
+     * @return Map with keys onTrack, atRisk, breached and their integer counts
+     */
+    private static Map<String, Integer> buildSlaHealth(Id entityId, Set<String> terminalStages) {
         Map<String, Integer> slaHealth = new Map<String, Integer>{
             'onTrack' => 0, 'atRisk' => 0, 'breached' => 0
         };
@@ -119,42 +160,66 @@ public without sharing class DeliveryStatusPageController {
         for (WorkItem__c wi : [
             SELECT SLAStatusTxt__c
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entity.Id
+            WHERE ClientNetworkEntityId__c = :entityId
             AND SLATargetDate__c != NULL
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
         ]) {
-            String status = wi.SLAStatusTxt__c;
-            if (status == 'On Track') {
-                slaHealth.put('onTrack', slaHealth.get('onTrack') + 1);
-            } else if (status == 'At Risk') {
-                slaHealth.put('atRisk', slaHealth.get('atRisk') + 1);
-            } else if (status == 'Breached') {
-                slaHealth.put('breached', slaHealth.get('breached') + 1);
+            String bucket = slaStatusToBucket(wi.SLAStatusTxt__c);
+            if (bucket != null) {
+                slaHealth.put(bucket, slaHealth.get(bucket) + 1);
             }
         }
-        result.put('slaHealth', slaHealth);
+        return slaHealth;
+    }
 
-        // --- Overall health ---
+    /**
+     * @description Maps an SLA status display value to its bucket key.
+     * @param status The SLAStatusTxt__c value (On Track, At Risk, Breached)
+     * @return The bucket key (onTrack, atRisk, breached) or null if unrecognised
+     */
+    private static String slaStatusToBucket(String status) {
+        if (status == 'On Track') { return 'onTrack'; }
+        if (status == 'At Risk') { return 'atRisk'; }
+        if (status == 'Breached') { return 'breached'; }
+        return null;
+    }
+
+    /**
+     * @description Derives an overall health label from SLA bucket counts.
+     *              Critical when >20% breached, At Risk when >30% at-risk+breached.
+     * @param slaHealth Map with keys onTrack, atRisk, breached
+     * @return One of Healthy, At Risk, or Critical
+     */
+    private static String calculateOverallHealth(Map<String, Integer> slaHealth) {
         Integer totalSLA = slaHealth.get('onTrack') + slaHealth.get('atRisk') + slaHealth.get('breached');
-        String overallHealth = 'Healthy';
-        if (totalSLA > 0) {
-            Decimal breachedRatio = (Decimal) slaHealth.get('breached') / totalSLA;
-            Decimal atRiskRatio = (Decimal) slaHealth.get('atRisk') / totalSLA;
-            if (breachedRatio > 0.2) {
-                overallHealth = 'Critical';
-            } else if (atRiskRatio + breachedRatio > 0.3) {
-                overallHealth = 'At Risk';
-            }
+        if (totalSLA == 0) {
+            return 'Healthy';
         }
-        result.put('overallHealth', overallHealth);
+        Decimal breachedRatio = (Decimal) slaHealth.get('breached') / totalSLA;
+        Decimal atRiskRatio = (Decimal) slaHealth.get('atRisk') / totalSLA;
+        if (breachedRatio > 0.2) {
+            return 'Critical';
+        }
+        if (atRiskRatio + breachedRatio > 0.3) {
+            return 'At Risk';
+        }
+        return 'Healthy';
+    }
 
-        // --- Recent completions (title + date only — no descriptions or owners) ---
-        List<Map<String, String>> recentCompletions = new List<Map<String, String>>();
+    /**
+     * @description Retrieves the five most recently completed work items,
+     *              returning only their title and formatted completion date.
+     * @param entityId Id of the NetworkEntity__c to scope the query
+     * @param terminalStages Set of stage values considered terminal/completed
+     * @return List of maps each containing title and completedDate strings
+     */
+    private static List<Map<String, String>> buildRecentCompletions(Id entityId, Set<String> terminalStages) {
+        List<Map<String, String>> completions = new List<Map<String, String>>();
         for (WorkItem__c wi : [
             SELECT BriefDescriptionTxt__c, LastModifiedDate
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entity.Id
+            WHERE ClientNetworkEntityId__c = :entityId
             AND StageNamePk__c IN :terminalStages
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -163,26 +228,30 @@ public without sharing class DeliveryStatusPageController {
             Map<String, String> item = new Map<String, String>();
             item.put('title', wi.BriefDescriptionTxt__c);
             item.put('completedDate', wi.LastModifiedDate.format('MMM d, yyyy'));
-            recentCompletions.add(item);
+            completions.add(item);
         }
-        result.put('recentCompletions', recentCompletions);
+        return completions;
+    }
 
-        // --- Last updated ---
+    /**
+     * @description Returns a formatted timestamp of the most recent work-item
+     *              modification for the given entity, or 'No activity' if none exist.
+     * @param entityId Id of the NetworkEntity__c to scope the query
+     * @return Formatted date string or 'No activity'
+     */
+    private static String getLastUpdatedTimestamp(Id entityId) {
         List<WorkItem__c> lastMod = [
             SELECT LastModifiedDate
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entity.Id
+            WHERE ClientNetworkEntityId__c = :entityId
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
         if (!lastMod.isEmpty()) {
-            result.put('lastUpdated', lastMod[0].LastModifiedDate.format('MMM d, yyyy h:mm a'));
-        } else {
-            result.put('lastUpdated', 'No activity');
+            return lastMod[0].LastModifiedDate.format('MMM d, yyyy h:mm a');
         }
-
-        return result;
+        return 'No activity';
     }
 
     // -------------------------------------------------------------------------
