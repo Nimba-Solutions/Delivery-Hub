@@ -4,9 +4,9 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
-import getSetupStatus from '@salesforce/apex/DeliveryHubSetupController.getSetupStatus';
-import prepareLocalEntity from '@salesforce/apex/DeliveryHubSetupController.prepareLocalEntity';
-import performHandshake from '@salesforce/apex/DeliveryHubSetupController.performHandshake';
+import getSetupStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.getSetupStatus';
+import prepareLocalEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.prepareLocalEntity';
+import performHandshake from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.performHandshake';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 

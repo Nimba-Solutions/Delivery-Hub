@@ -6,7 +6,7 @@
 import { LightningElement, api } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { RefreshEvent } from 'lightning/refresh';
-import triggerPoll from '@salesforce/apex/DeliveryHubPollerController.triggerPoll';
+import triggerPoll from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubPollerController.triggerPoll';
 
 export default class DeliverySyncPollerButton extends LightningElement {
     @api recordId; // Allows it to sit on a record page seamlessly
