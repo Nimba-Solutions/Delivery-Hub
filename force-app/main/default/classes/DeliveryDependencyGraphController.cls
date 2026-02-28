@@ -168,7 +168,8 @@ public with sharing class DeliveryDependencyGraphController {
         node.put('title', wi.BriefDescriptionTxt__c);
         node.put('stage', wi.StageNamePk__c);
         node.put('priority', wi.PriorityPk__c);
-        node.put('owner', wi.Owner.Name);
+        String ownerName = (wi.Owner != null) ? wi.Owner.Name : null;
+        node.put('owner', ownerName != null ? ownerName : '');
         node.put('isCurrentItem', isCurrentItem);
         return node;
     }

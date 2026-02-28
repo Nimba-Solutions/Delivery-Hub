@@ -392,7 +392,7 @@ private class DeliveryActivityTimelineControllerTest {
         Boolean foundMinimal = false;
         for (Map<String, Object> ev : events) {
             String title = (String) ev.get('title');
-            if (title.contains('0h logged')) {
+            if (title.startsWith('0h logged')) {
                 foundMinimal = true;
                 String detail = (String) ev.get('detail');
                 System.assertEquals('', detail,
