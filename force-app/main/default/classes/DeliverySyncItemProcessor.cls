@@ -9,19 +9,36 @@
 public inherited sharing class DeliverySyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
     public void execute(QueueableContext context) {
-        
-        // 1. Query Queued Outbound Items linked to a valid Request route
-        // NEW: Added GlobalSourceIdTxt__c to the query for header injection
-        List<SyncItem__c> items = [
+
+        // 1a. Query Queued Outbound Items linked to a valid Request route (Push Mode — downstream)
+        List<SyncItem__c> pushItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RetryCountNumber__c, RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
-            FROM SyncItem__c 
-            WHERE StatusPk__c = 'Queued' 
+            FROM SyncItem__c
+            WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
-            AND RequestId__c != NULL 
-            WITH SYSTEM_MODE 
+            AND RequestId__c != NULL
+            WITH SYSTEM_MODE
             LIMIT 50
         ];
+
+        // 1b. Query Queued Outbound Items with no Request (Hub Mode — upstream to client)
+        List<SyncItem__c> hubItems = [
+            SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
+                   RetryCountNumber__c, RequestId__c,
+                   WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c
+            FROM SyncItem__c
+            WHERE StatusPk__c = 'Queued'
+            AND DirectionPk__c = 'Outbound'
+            AND RequestId__c = NULL
+            AND WorkItemId__r.ClientNetworkEntityId__c != NULL
+            WITH SYSTEM_MODE
+            LIMIT 50
+        ];
+
+        List<SyncItem__c> items = new List<SyncItem__c>();
+        items.addAll(pushItems);
+        items.addAll(hubItems);
 
         if (items.isEmpty()) {
             return;
@@ -32,7 +49,10 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
 
         for (SyncItem__c item : items) {
             try {
-                String endpointUrl = item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c;
+                // Resolve endpoint: Push Mode uses Request→Entity, Hub Mode uses WorkItem→ClientEntity
+                String endpointUrl = item.RequestId__c != null
+                    ? item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
+                    : item.WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c;
                 
                 // Validate Endpoint Configuration
                 if (String.isBlank(endpointUrl)) {
@@ -125,13 +145,13 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
             Database.update(requestsToUpdate.values(), AccessLevel.SYSTEM_MODE);
         }
 
-        // Chain Job if more outbound work exists
+        // Chain Job if more outbound work exists (both Push and Hub Mode items)
         Integer remaining = [
-            SELECT Count() 
-            FROM SyncItem__c 
-            WHERE StatusPk__c = 'Queued' 
-            AND DirectionPk__c = 'Outbound' 
-            WITH SYSTEM_MODE 
+            SELECT Count()
+            FROM SyncItem__c
+            WHERE StatusPk__c = 'Queued'
+            AND DirectionPk__c = 'Outbound'
+            WITH SYSTEM_MODE
             LIMIT 1
         ];
         
