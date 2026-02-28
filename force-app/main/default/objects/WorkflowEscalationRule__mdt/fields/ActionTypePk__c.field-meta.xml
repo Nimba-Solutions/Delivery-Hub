@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActionTypePk__c</fullName>
+    <description>The automated action to take when this escalation rule fires.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Action Type</label>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Email_Owner</fullName>
+                <default>true</default>
+                <label>Email Owner</label>
+            </value>
+            <value>
+                <fullName>Email_Manager</fullName>
+                <default>false</default>
+                <label>Email Manager</label>
+            </value>
+            <value>
+                <fullName>Slack_Alert</fullName>
+                <default>false</default>
+                <label>Slack Alert</label>
+            </value>
+            <value>
+                <fullName>Bump_Priority</fullName>
+                <default>false</default>
+                <label>Bump Priority</label>
+            </value>
+            <value>
+                <fullName>Move_Stage</fullName>
+                <default>false</default>
+                <label>Move Stage</label>
+            </value>
+            <value>
+                <fullName>Reassign</fullName>
+                <default>false</default>
+                <label>Reassign</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,20 +1,36 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description Schedulable class to trigger the Delivery Hub Poller.
- * Runs in the background to keep the Client Org in sync with the Mothership.
+ * @description Schedulable class to trigger the Delivery Hub Poller and escalation engine.
+ * Runs in the background to keep the Client Org in sync with the Mothership
+ * and to process automated escalation rules for stalled work items.
  * @author Cloud Nimbus LLC
  */
 public without sharing class DeliveryHubScheduler implements Schedulable {
 
     /**
      * @description Schedulable execute method.
-     * Requeues failed outbound sync items, then delegates to an async method for HTTP callouts.
+     * Requeues failed outbound sync items, runs escalation processing,
+     * then delegates to an async method for HTTP callouts.
      * @param sc The SchedulableContext (standard system parameter).
      */
     public void execute(SchedulableContext sc) {
         requeueFailedItems();
+        processEscalations();
         runSyncAsync();
+    }
+
+    /**
+     * @description Evaluates CMT-driven escalation rules against stalled work items
+     * and executes automated actions (email, Slack, bump priority, move stage, reassign).
+     */
+    private static void processEscalations() {
+        try {
+            DeliveryEscalationService.processEscalations();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'Delivery Hub Escalation Processing Failed: ' + e.getMessage());
+        }
     }
 
     /**
