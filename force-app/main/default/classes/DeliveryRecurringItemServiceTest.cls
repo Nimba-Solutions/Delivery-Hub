@@ -163,12 +163,13 @@ public class DeliveryRecurringItemServiceTest {
         Test.stopTest();
 
         // Future recurring item should not have been cloned
+        WorkItem__c futureItem = [
+            SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Future Recurring' LIMIT 1
+        ];
         Integer futureClones = [
             SELECT COUNT()
             FROM WorkItem__c
-            WHERE TemplateSourceId__c IN (
-                SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Future Recurring'
-            )
+            WHERE TemplateSourceId__c = :futureItem.Id
         ];
         System.assertEquals(0, futureClones, 'Future recurring items should not be processed');
     }
@@ -183,9 +184,14 @@ public class DeliveryRecurringItemServiceTest {
             SELECT ComponentNameTxt__c, ContextDataTxt__c
             FROM ActivityLog__c
             WHERE ComponentNameTxt__c = 'DeliveryRecurringItemService'
-            AND ContextDataTxt__c LIKE '%recurring_clone%'
         ];
-        System.assertEquals(3, logs.size(), 'Should log 3 recurring clone activities');
+        Integer recurringLogCount = 0;
+        for (ActivityLog__c log : logs) {
+            if (log.ContextDataTxt__c != null && log.ContextDataTxt__c.contains('recurring_clone')) {
+                recurringLogCount++;
+            }
+        }
+        System.assertEquals(3, recurringLogCount, 'Should log 3 recurring clone activities');
     }
 
     // -------------------------------------------------------------------------
@@ -267,9 +273,14 @@ public class DeliveryRecurringItemServiceTest {
             SELECT ContextDataTxt__c
             FROM ActivityLog__c
             WHERE ComponentNameTxt__c = 'DeliveryRecurringItemService'
-            AND ContextDataTxt__c LIKE '%template_clone%'
         ];
-        System.assertEquals(1, logs.size(), 'Should log template clone activity');
+        Integer templateLogCount = 0;
+        for (ActivityLog__c log : logs) {
+            if (log.ContextDataTxt__c != null && log.ContextDataTxt__c.contains('template_clone')) {
+                templateLogCount++;
+            }
+        }
+        System.assertEquals(1, templateLogCount, 'Should log template clone activity');
     }
 
     // -------------------------------------------------------------------------

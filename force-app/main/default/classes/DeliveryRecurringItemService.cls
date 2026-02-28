@@ -30,6 +30,16 @@ public with sharing class DeliveryRecurringItemService {
         'Thursday' => 5, 'Friday' => 6, 'Saturday' => 7
     };
 
+    // Schedule type to weeks-ahead mapping for weekly-based schedules
+    private static final Map<String, Integer> WEEKLY_SCHEDULES = new Map<String, Integer>{
+        'Weekly' => 1, 'Biweekly' => 2
+    };
+
+    // Schedule type to months-ahead mapping for month-based schedules
+    private static final Map<String, Integer> MONTHLY_SCHEDULES = new Map<String, Integer>{
+        'Monthly' => 1, 'Quarterly' => 3
+    };
+
     /**
      * @description Called by the scheduler to process all recurring work items whose
      * NextRecurrenceDate__c is today or in the past. Creates clones and advances
@@ -111,14 +121,11 @@ public with sharing class DeliveryRecurringItemService {
             return null;
         }
 
-        if (schedule == 'Weekly') {
-            return calculateNextWeeklyDate(recurrenceDay, fromDate, 1);
-        } else if (schedule == 'Biweekly') {
-            return calculateNextWeeklyDate(recurrenceDay, fromDate, 2);
-        } else if (schedule == 'Monthly') {
-            return calculateNextMonthlyDate(recurrenceDay, fromDate, 1);
-        } else if (schedule == 'Quarterly') {
-            return calculateNextMonthlyDate(recurrenceDay, fromDate, 3);
+        if (WEEKLY_SCHEDULES.containsKey(schedule)) {
+            return calculateNextWeeklyDate(recurrenceDay, fromDate, WEEKLY_SCHEDULES.get(schedule));
+        }
+        if (MONTHLY_SCHEDULES.containsKey(schedule)) {
+            return calculateNextMonthlyDate(recurrenceDay, fromDate, MONTHLY_SCHEDULES.get(schedule));
         }
 
         return fromDate.addDays(7); // Fallback: 1 week
@@ -247,15 +254,9 @@ public with sharing class DeliveryRecurringItemService {
         List<WorkItem__c> updatedSources,
         List<ActivityLog__c> logs
     ) {
-        if (!newItems.isEmpty()) {
-            Database.insert(newItems, AccessLevel.SYSTEM_MODE);
-        }
-        if (!updatedSources.isEmpty()) {
-            Database.update(updatedSources, AccessLevel.SYSTEM_MODE);
-        }
-        if (!logs.isEmpty()) {
-            Database.insert(logs, AccessLevel.SYSTEM_MODE);
-        }
+        Database.insert(newItems, AccessLevel.SYSTEM_MODE);
+        Database.update(updatedSources, AccessLevel.SYSTEM_MODE);
+        Database.insert(logs, AccessLevel.SYSTEM_MODE);
     }
 
     // -------------------------------------------------------------------------
@@ -268,29 +269,30 @@ public with sharing class DeliveryRecurringItemService {
         }
 
         Integer targetDayNum = DAY_NAME_TO_NUMBER.get(dayName);
-        // Get the day-of-week for fromDate: use DateTime to get dayOfWeek
-        DateTime fromDt = DateTime.newInstance(fromDate, Time.newInstance(0, 0, 0, 0));
-        // Salesforce: Sunday=1, Monday=2... Saturday=7
-        // We need to map from Date. Using format('u') gives ISO day (1=Monday..7=Sunday)
-        String isoDayStr = fromDt.format('u');
-        Integer currentIsoDay = Integer.valueOf(isoDayStr);
-        // Convert ISO (1=Mon..7=Sun) to SF (1=Sun..7=Sat)
-        Integer currentSfDay = (currentIsoDay == 7) ? 1 : currentIsoDay + 1;
+        Integer currentSfDay = getSalesforceDayOfWeek(fromDate);
 
         Integer daysUntilTarget = targetDayNum - currentSfDay;
         if (daysUntilTarget <= 0) {
             daysUntilTarget += 7;
         }
-
-        // For biweekly, add an extra week
-        if (weeksAhead > 1) {
-            daysUntilTarget += 7 * (weeksAhead - 1);
-        }
+        daysUntilTarget += 7 * (weeksAhead - 1);
 
         return fromDate.addDays(daysUntilTarget);
     }
 
+    private static Integer getSalesforceDayOfWeek(Date d) {
+        DateTime dt = DateTime.newInstance(d, Time.newInstance(0, 0, 0, 0));
+        Integer isoDay = Integer.valueOf(dt.format('u'));
+        return (isoDay == 7) ? 1 : isoDay + 1;
+    }
+
     private static Date calculateNextMonthlyDate(String dayOfMonth, Date fromDate, Integer monthsAhead) {
+        Integer dayNum = parseDayOfMonth(dayOfMonth);
+        Date nextMonth = fromDate.addMonths(monthsAhead);
+        return Date.newInstance(nextMonth.year(), nextMonth.month(), dayNum);
+    }
+
+    private static Integer parseDayOfMonth(String dayOfMonth) {
         Integer dayNum = 1;
         if (String.isNotBlank(dayOfMonth)) {
             try {
@@ -299,11 +301,7 @@ public with sharing class DeliveryRecurringItemService {
                 dayNum = 1;
             }
         }
-        if (dayNum < 1) { dayNum = 1; }
-        if (dayNum > 28) { dayNum = 28; } // Safe max to avoid month-boundary issues
-
-        Date nextMonth = fromDate.addMonths(monthsAhead);
-        return Date.newInstance(nextMonth.year(), nextMonth.month(), dayNum);
+        return Math.max(1, Math.min(dayNum, 28));
     }
 
     private static String getFirstStageForWorkflow(String workflowType) {
