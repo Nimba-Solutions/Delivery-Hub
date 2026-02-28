@@ -1,0 +1,390 @@
+/* Delivery Hub — Public Status Page LWC Styles */
+
+:host {
+    --color-blue: #0070d2;
+    --color-green: #04844b;
+    --color-yellow: #b86e00;
+    --color-red: #c23934;
+    --color-dark: #16325c;
+    --color-gray: #706e6b;
+    --color-bg: #f4f6f9;
+}
+
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.status-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+/* Header */
+.header {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-top: 4px solid var(--color-blue);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-dark);
+    margin-bottom: 4px;
+}
+
+.last-updated {
+    font-size: 13px;
+    color: var(--color-gray);
+}
+
+.health-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.health-healthy {
+    background-color: #e6f7ee;
+    color: var(--color-green);
+}
+
+.health-at-risk {
+    background-color: #fef3cd;
+    color: var(--color-yellow);
+}
+
+.health-critical {
+    background-color: #fce4e4;
+    color: var(--color-red);
+}
+
+.health-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dot-green {
+    background-color: var(--color-green);
+}
+
+.dot-yellow {
+    background-color: var(--color-yellow);
+}
+
+.dot-red {
+    background-color: var(--color-red);
+}
+
+/* Cards grid */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    text-align: center;
+}
+
+.card-value {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.value-blue {
+    color: var(--color-blue);
+}
+
+.value-green {
+    color: var(--color-green);
+}
+
+.value-dark {
+    color: var(--color-dark);
+}
+
+.card-label {
+    font-size: 13px;
+    color: var(--color-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Section cards */
+.section-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-dark);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+/* SLA cards */
+.sla-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.sla-card {
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+.sla-card-green {
+    background: #e6f7ee;
+    border: 1px solid #b7e4c7;
+}
+
+.sla-card-yellow {
+    background: #fef3cd;
+    border: 1px solid #f5e0a0;
+}
+
+.sla-card-red {
+    background: #fce4e4;
+    border: 1px solid #f5b7b7;
+}
+
+.sla-value {
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.sla-label {
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.color-green {
+    color: var(--color-green);
+}
+
+.color-yellow {
+    color: var(--color-yellow);
+}
+
+.color-red {
+    color: var(--color-red);
+}
+
+/* Phase bar */
+.phase-bar-container {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 36px;
+    margin-bottom: 12px;
+}
+
+.phase-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    min-width: 24px;
+}
+
+.phase-planning {
+    background-color: #7b8793;
+}
+
+.phase-development {
+    background-color: var(--color-blue);
+}
+
+.phase-testing {
+    background-color: #9050e9;
+}
+
+.phase-uat {
+    background-color: #e8a300;
+}
+
+.phase-deployment {
+    background-color: var(--color-green);
+}
+
+.phase-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #3e3e3c;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.dot-planning {
+    background-color: #7b8793;
+}
+
+.dot-development {
+    background-color: var(--color-blue);
+}
+
+.dot-testing {
+    background-color: #9050e9;
+}
+
+.dot-uat {
+    background-color: #e8a300;
+}
+
+.dot-deployment {
+    background-color: var(--color-green);
+}
+
+/* Completions */
+.completion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.completion-item:last-child {
+    border-bottom: none;
+}
+
+.completion-title {
+    font-size: 14px;
+    color: var(--color-dark);
+    font-weight: 500;
+}
+
+.completion-check {
+    color: var(--color-green);
+    margin-right: 8px;
+    font-weight: 700;
+}
+
+.completion-date {
+    font-size: 13px;
+    color: var(--color-gray);
+    white-space: nowrap;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--color-gray);
+    font-size: 14px;
+}
+
+/* Error */
+.error-container {
+    text-align: center;
+    background: #ffffff;
+    padding: 60px 40px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-top: 4px solid var(--color-red);
+    max-width: 500px;
+    margin: 80px auto;
+}
+
+.error-container h1 {
+    color: var(--color-red);
+    font-size: 22px;
+    margin-bottom: 12px;
+}
+
+.error-container p {
+    color: #3e3e3c;
+    font-size: 15px;
+}
+
+/* Footer */
+.footer-text {
+    text-align: center;
+    padding: 24px;
+    font-size: 13px;
+    color: var(--color-gray);
+}
+
+.footer-text a {
+    color: var(--color-blue);
+    text-decoration: none;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 24px;
+    }
+
+    .header-left h1 {
+        font-size: 22px;
+    }
+
+    .cards-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .sla-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .card-value {
+        font-size: 28px;
+    }
+
+    .sla-value {
+        font-size: 26px;
+    }
+}

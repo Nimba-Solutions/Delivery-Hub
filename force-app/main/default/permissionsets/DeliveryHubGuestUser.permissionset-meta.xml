@@ -2,7 +2,42 @@
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub Guest User</label>
-    <description>Grants the necessary object and field-level permissions for unauthenticated guest users accessing the public site. This permission set allows guest users to view and interact with specific records, such as Work Items.</description>
+    <description>Grants object and field-level permissions for unauthenticated guest users on the public status page. Allows read access to Work Items and Network Entities for status display.</description>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>WorkItem__c.BriefDescriptionTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>WorkItem__c.StageNamePk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>WorkItem__c.SLATargetDate__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>WorkItem__c.WorkflowTypeTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>NetworkEntity__c.EntityTypePk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>NetworkEntity__c.StatusPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
     <objectPermissions>
         <allowCreate>false</allowCreate>
         <allowDelete>false</allowDelete>
@@ -12,4 +47,17 @@
         <object>WorkItem__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
+    <objectPermissions>
+        <allowCreate>false</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>false</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>NetworkEntity__c</object>
+        <viewAllRecords>false</viewAllRecords>
+    </objectPermissions>
+    <pageAccesses>
+        <apexPage>DeliveryStatusPage</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
 </PermissionSet>

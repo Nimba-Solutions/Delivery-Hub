@@ -1,0 +1,471 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="false"
+           applyHtmlTag="false" applyBodyTag="false" docType="html-5.0"
+           controller="DeliveryStatusPageController" cache="true" expires="300">
+    <html lang="en">
+        <head>
+            <title>{!pageTitle}</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <meta name="robots" content="noindex, nofollow" />
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+
+                body {
+                    font-family: 'Salesforce Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    background-color: #f4f6f9;
+                    color: #16325c;
+                    line-height: 1.6;
+                    min-height: 100vh;
+                }
+
+                .status-page {
+                    max-width: 900px;
+                    margin: 0 auto;
+                    padding: 24px 16px;
+                }
+
+                /* Header */
+                .header {
+                    background: #ffffff;
+                    border-radius: 12px;
+                    padding: 32px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    border-top: 4px solid #0070d2;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                }
+
+                .header-left h1 {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: #16325c;
+                    margin-bottom: 4px;
+                }
+
+                .header-left .last-updated {
+                    font-size: 13px;
+                    color: #706e6b;
+                }
+
+                .health-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 20px;
+                    border-radius: 24px;
+                    font-size: 16px;
+                    font-weight: 600;
+                }
+
+                .health-dot {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    display: inline-block;
+                }
+
+                /* Cards grid */
+                .cards-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 16px;
+                    margin-bottom: 20px;
+                }
+
+                .card {
+                    background: #ffffff;
+                    border-radius: 10px;
+                    padding: 24px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    text-align: center;
+                }
+
+                .card-value {
+                    font-size: 36px;
+                    font-weight: 700;
+                    margin-bottom: 4px;
+                }
+
+                .card-label {
+                    font-size: 13px;
+                    color: #706e6b;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                /* SLA section */
+                .sla-section {
+                    background: #ffffff;
+                    border-radius: 10px;
+                    padding: 24px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    margin-bottom: 20px;
+                }
+
+                .section-title {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #16325c;
+                    margin-bottom: 16px;
+                    padding-bottom: 8px;
+                    border-bottom: 1px solid #e5e5e5;
+                }
+
+                .sla-cards {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 16px;
+                }
+
+                .sla-card {
+                    border-radius: 8px;
+                    padding: 20px;
+                    text-align: center;
+                }
+
+                .sla-card-green {
+                    background: #e6f7ee;
+                    border: 1px solid #b7e4c7;
+                }
+
+                .sla-card-yellow {
+                    background: #fef3cd;
+                    border: 1px solid #f5e0a0;
+                }
+
+                .sla-card-red {
+                    background: #fce4e4;
+                    border: 1px solid #f5b7b7;
+                }
+
+                .sla-value {
+                    font-size: 32px;
+                    font-weight: 700;
+                }
+
+                .sla-label {
+                    font-size: 13px;
+                    font-weight: 500;
+                    margin-top: 4px;
+                }
+
+                .color-green { color: #04844b; }
+                .color-yellow { color: #b86e00; }
+                .color-red { color: #c23934; }
+
+                /* Phase bar */
+                .phase-section {
+                    background: #ffffff;
+                    border-radius: 10px;
+                    padding: 24px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    margin-bottom: 20px;
+                }
+
+                .phase-bar-container {
+                    display: flex;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    height: 36px;
+                    margin-bottom: 12px;
+                }
+
+                .phase-segment {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #ffffff;
+                    min-width: 2px;
+                    transition: flex-grow 0.3s ease;
+                }
+
+                .phase-legend {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                    justify-content: center;
+                }
+
+                .legend-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 13px;
+                    color: #3e3e3c;
+                }
+
+                .legend-dot {
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 3px;
+                    display: inline-block;
+                }
+
+                /* Recent completions */
+                .completions-section {
+                    background: #ffffff;
+                    border-radius: 10px;
+                    padding: 24px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    margin-bottom: 20px;
+                }
+
+                .completion-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 0;
+                    border-bottom: 1px solid #f0f0f0;
+                }
+
+                .completion-item:last-child {
+                    border-bottom: none;
+                }
+
+                .completion-title {
+                    font-size: 14px;
+                    color: #16325c;
+                    font-weight: 500;
+                }
+
+                .completion-check {
+                    color: #04844b;
+                    margin-right: 8px;
+                    font-weight: 700;
+                }
+
+                .completion-date {
+                    font-size: 13px;
+                    color: #706e6b;
+                    white-space: nowrap;
+                }
+
+                /* Footer */
+                .footer {
+                    text-align: center;
+                    padding: 24px;
+                    font-size: 13px;
+                    color: #706e6b;
+                }
+
+                .footer a {
+                    color: #0070d2;
+                    text-decoration: none;
+                }
+
+                .footer a:hover {
+                    text-decoration: underline;
+                }
+
+                /* Error state */
+                .error-container {
+                    text-align: center;
+                    background: #ffffff;
+                    padding: 60px 40px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    border-top: 4px solid #c23934;
+                    max-width: 500px;
+                    margin: 80px auto;
+                }
+
+                .error-container h1 {
+                    color: #c23934;
+                    font-size: 22px;
+                    margin-bottom: 12px;
+                }
+
+                .error-container p {
+                    color: #3e3e3c;
+                    font-size: 15px;
+                }
+
+                .empty-state {
+                    text-align: center;
+                    padding: 20px;
+                    color: #706e6b;
+                    font-size: 14px;
+                }
+
+                /* Responsive */
+                @media (max-width: 600px) {
+                    .header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        padding: 24px;
+                    }
+
+                    .header-left h1 {
+                        font-size: 22px;
+                    }
+
+                    .cards-grid {
+                        grid-template-columns: 1fr 1fr;
+                    }
+
+                    .sla-cards {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .card-value {
+                        font-size: 28px;
+                    }
+
+                    .sla-value {
+                        font-size: 26px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <apex:outputPanel rendered="{!hasError}">
+                <div class="error-container">
+                    <h1>Status Unavailable</h1>
+                    <p>{!errorMessage}</p>
+                    <div class="footer" style="margin-top: 30px;">
+                        Powered by <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Delivery Hub</a> | Cloud Nimbus LLC
+                    </div>
+                </div>
+            </apex:outputPanel>
+
+            <apex:outputPanel rendered="{!NOT(hasError)}">
+                <div class="status-page">
+                    <!-- Header -->
+                    <div class="header">
+                        <div class="header-left">
+                            <h1>{!entityName}</h1>
+                            <div class="last-updated">Last updated: {!lastUpdated}</div>
+                        </div>
+                        <div class="health-badge" style="background-color: {!healthBgColor}; color: {!healthColor};">
+                            <span class="health-dot" style="background-color: {!healthColor};"></span>
+                            {!overallHealth}
+                        </div>
+                    </div>
+
+                    <!-- Stats Row -->
+                    <div class="cards-grid">
+                        <div class="card">
+                            <div class="card-value" style="color: #0070d2;">{!activeCount}</div>
+                            <div class="card-label">Active Items</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-value" style="color: #04844b;">{!completedCount}</div>
+                            <div class="card-label">Completed</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-value" style="color: #16325c;">{!completionRate}</div>
+                            <div class="card-label">Completion Rate</div>
+                        </div>
+                    </div>
+
+                    <!-- SLA Health -->
+                    <div class="sla-section">
+                        <div class="section-title">SLA Health</div>
+                        <div class="sla-cards">
+                            <div class="sla-card sla-card-green">
+                                <div class="sla-value color-green">{!slaOnTrack}</div>
+                                <div class="sla-label color-green">On Track</div>
+                            </div>
+                            <div class="sla-card sla-card-yellow">
+                                <div class="sla-value color-yellow">{!slaAtRisk}</div>
+                                <div class="sla-label color-yellow">At Risk</div>
+                            </div>
+                            <div class="sla-card sla-card-red">
+                                <div class="sla-value color-red">{!slaBreached}</div>
+                                <div class="sla-label color-red">Breached</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase Distribution -->
+                    <div class="phase-section">
+                        <div class="section-title">Work Distribution</div>
+                        <apex:outputPanel rendered="{!phaseTotal > 0}">
+                            <div class="phase-bar-container">
+                                <apex:outputPanel rendered="{!phases['Planning'] > 0}">
+                                    <div class="phase-segment" style="flex-grow: {!phases['Planning']}; background-color: #7b8793;">
+                                        {!phases['Planning']}
+                                    </div>
+                                </apex:outputPanel>
+                                <apex:outputPanel rendered="{!phases['Development'] > 0}">
+                                    <div class="phase-segment" style="flex-grow: {!phases['Development']}; background-color: #0070d2;">
+                                        {!phases['Development']}
+                                    </div>
+                                </apex:outputPanel>
+                                <apex:outputPanel rendered="{!phases['Testing'] > 0}">
+                                    <div class="phase-segment" style="flex-grow: {!phases['Testing']}; background-color: #9050e9;">
+                                        {!phases['Testing']}
+                                    </div>
+                                </apex:outputPanel>
+                                <apex:outputPanel rendered="{!phases['UAT'] > 0}">
+                                    <div class="phase-segment" style="flex-grow: {!phases['UAT']}; background-color: #e8a300;">
+                                        {!phases['UAT']}
+                                    </div>
+                                </apex:outputPanel>
+                                <apex:outputPanel rendered="{!phases['Deployment'] > 0}">
+                                    <div class="phase-segment" style="flex-grow: {!phases['Deployment']}; background-color: #04844b;">
+                                        {!phases['Deployment']}
+                                    </div>
+                                </apex:outputPanel>
+                            </div>
+                            <div class="phase-legend">
+                                <div class="legend-item">
+                                    <span class="legend-dot" style="background-color: #7b8793;"></span>
+                                    Planning ({!phases['Planning']})
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-dot" style="background-color: #0070d2;"></span>
+                                    Development ({!phases['Development']})
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-dot" style="background-color: #9050e9;"></span>
+                                    Testing ({!phases['Testing']})
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-dot" style="background-color: #e8a300;"></span>
+                                    UAT ({!phases['UAT']})
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-dot" style="background-color: #04844b;"></span>
+                                    Deployment ({!phases['Deployment']})
+                                </div>
+                            </div>
+                        </apex:outputPanel>
+                        <apex:outputPanel rendered="{!phaseTotal == 0}">
+                            <div class="empty-state">No active items in the pipeline.</div>
+                        </apex:outputPanel>
+                    </div>
+
+                    <!-- Recent Completions -->
+                    <div class="completions-section">
+                        <div class="section-title">Recent Completions</div>
+                        <apex:outputPanel rendered="{!hasRecentCompletions}">
+                            <apex:repeat value="{!completionItems}" var="item">
+                                <div class="completion-item">
+                                    <div class="completion-title">
+                                        <span class="completion-check">&#10003;</span>
+                                        {!item.title}
+                                    </div>
+                                    <div class="completion-date">{!item.completedDate}</div>
+                                </div>
+                            </apex:repeat>
+                        </apex:outputPanel>
+                        <apex:outputPanel rendered="{!NOT(hasRecentCompletions)}">
+                            <div class="empty-state">No completed items yet.</div>
+                        </apex:outputPanel>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="footer">
+                        Powered by <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Delivery Hub</a> | <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Cloud Nimbus LLC</a>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </body>
+    </html>
+</apex:page>
