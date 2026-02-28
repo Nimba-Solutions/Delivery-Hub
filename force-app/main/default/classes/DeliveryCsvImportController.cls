@@ -10,6 +10,58 @@ public with sharing class DeliveryCsvImportController {
 
     private static final Integer BATCH_SIZE = 200;
 
+    /** @description Cached schema field map for WorkItem__c, set once per transaction. */
+    private static Map<String, Schema.SObjectField> cachedFieldMap;
+
+    /**
+     * @description Wrapper to hold the accumulated import results — success/error
+     *              counts, created Ids, and error details — across all batches.
+     */
+    private class ImportResult {
+        /** @description Number of successfully inserted records. */
+        public Integer successCount = 0;
+        /** @description Number of failed records. */
+        public Integer errorCount = 0;
+        /** @description Per-row error details (row number + message). */
+        public List<Map<String, String>> errorDetails = new List<Map<String, String>>();
+        /** @description Ids of successfully created WorkItem__c records. */
+        public List<String> createdIds = new List<String>();
+
+        /**
+         * @description Converts this wrapper to the Map format expected by the LWC.
+         * @return Map with keys: successCount, errorCount, errors, createdIds.
+         */
+        public Map<String, Object> toMap() {
+            Map<String, Object> resultMap = new Map<String, Object>();
+            resultMap.put('successCount', this.successCount);
+            resultMap.put('errorCount', this.errorCount);
+            resultMap.put('errors', this.errorDetails);
+            resultMap.put('createdIds', this.createdIds);
+            return resultMap;
+        }
+    }
+
+    /**
+     * @description Wrapper that pairs a WorkItem__c record with its original CSV
+     *              row index so error messages can reference the source row.
+     */
+    private class IndexedWorkItem {
+        /** @description The WorkItem__c record built from the CSV row. */
+        public WorkItem__c record;
+        /** @description The zero-based index of the original CSV row. */
+        public Integer rowIndex;
+
+        /**
+         * @description Constructs an IndexedWorkItem.
+         * @param record  The WorkItem__c record.
+         * @param rowIndex  The original CSV row index.
+         */
+        public IndexedWorkItem(WorkItem__c record, Integer rowIndex) {
+            this.record = record;
+            this.rowIndex = rowIndex;
+        }
+    }
+
     /**
      * @description Bulk-inserts WorkItem__c records from a list of field-value maps.
      *              Uses Database.insert with allOrNone=false so partial successes are
@@ -22,43 +74,75 @@ public with sharing class DeliveryCsvImportController {
      */
     @AuraEnabled
     public static Map<String, Object> importWorkItems(List<Map<String, String>> records, String workflowType) {
-        List<Map<String, String>> errorDetails = new List<Map<String, String>>();
-        List<String> createdIds = new List<String>();
-        Integer successCount = 0;
-        Integer errorCount = 0;
+        ImportResult importResult = new ImportResult();
 
         if (records == null || records.isEmpty()) {
-            return buildResultMap(0, 0, errorDetails, createdIds);
+            return importResult.toMap();
         }
 
         String effectiveWorkflowType = String.isBlank(workflowType)
             ? 'Software_Delivery'
             : workflowType;
 
-        Map<String, Schema.SObjectField> fieldMap =
-            Schema.SObjectType.WorkItem__c.fields.getMap();
+        cachedFieldMap = Schema.SObjectType.WorkItem__c.fields.getMap();
 
-        List<WorkItem__c> batch = new List<WorkItem__c>();
-        List<Integer> batchRowIndices = new List<Integer>();
-
+        // Build all records first (no DML in this loop)
+        List<IndexedWorkItem> indexedItems = new List<IndexedWorkItem>();
         for (Integer i = 0; i < records.size(); i++) {
-            batch.add(buildWorkItem(records[i], effectiveWorkflowType, fieldMap));
-            batchRowIndices.add(i);
-
-            if (batch.size() >= BATCH_SIZE || i == records.size() - 1) {
-                List<Database.SaveResult> results =
-                    Database.insert(batch, false, AccessLevel.SYSTEM_MODE);
-                Map<String, Integer> counts = processBatchResults(
-                    results, batchRowIndices, createdIds, errorDetails);
-                successCount += counts.get('success');
-                errorCount += counts.get('error');
-
-                batch.clear();
-                batchRowIndices.clear();
-            }
+            WorkItem__c wi = buildWorkItem(records[i], effectiveWorkflowType);
+            indexedItems.add(new IndexedWorkItem(wi, i));
         }
 
-        return buildResultMap(successCount, errorCount, errorDetails, createdIds);
+        // Split into batches, then insert each batch
+        List<List<IndexedWorkItem>> batches = splitIntoBatches(indexedItems);
+        for (List<IndexedWorkItem> batch : batches) {
+            insertBatch(batch, importResult);
+        }
+
+        return importResult.toMap();
+    }
+
+    /**
+     * @description Splits the full list of IndexedWorkItem records into sub-lists
+     *              of up to BATCH_SIZE for governor-friendly DML.
+     * @param items  The full list of indexed work items.
+     * @return List of batches, each containing up to BATCH_SIZE items.
+     */
+    private static List<List<IndexedWorkItem>> splitIntoBatches(List<IndexedWorkItem> items) {
+        List<List<IndexedWorkItem>> batches = new List<List<IndexedWorkItem>>();
+        List<IndexedWorkItem> currentBatch = new List<IndexedWorkItem>();
+
+        for (IndexedWorkItem item : items) {
+            currentBatch.add(item);
+            if (currentBatch.size() >= BATCH_SIZE) {
+                batches.add(currentBatch);
+                currentBatch = new List<IndexedWorkItem>();
+            }
+        }
+        if (!currentBatch.isEmpty()) {
+            batches.add(currentBatch);
+        }
+        return batches;
+    }
+
+    /**
+     * @description Inserts a single batch of IndexedWorkItem records and accumulates
+     *              results into the ImportResult wrapper.
+     * @param batch  The batch of indexed work items to insert.
+     * @param importResult  The result wrapper to accumulate into.
+     */
+    private static void insertBatch(List<IndexedWorkItem> batch, ImportResult importResult) {
+        List<WorkItem__c> records = new List<WorkItem__c>();
+        List<Integer> rowIndices = new List<Integer>();
+
+        for (IndexedWorkItem item : batch) {
+            records.add(item.record);
+            rowIndices.add(item.rowIndex);
+        }
+
+        List<Database.SaveResult> results =
+            Database.insert(records, false, AccessLevel.SYSTEM_MODE);
+        processBatchResults(results, rowIndices, importResult);
     }
 
     /**
@@ -98,14 +182,9 @@ public with sharing class DeliveryCsvImportController {
      *              string values to their target Apex types.
      * @param csvRow  Map of field API names to string values from one CSV row.
      * @param workflowType  The effective workflow type to stamp on the record.
-     * @param fieldMap  Schema field map for WorkItem__c.
      * @return A populated WorkItem__c ready for insertion.
      */
-    private static WorkItem__c buildWorkItem(
-        Map<String, String> csvRow,
-        String workflowType,
-        Map<String, Schema.SObjectField> fieldMap
-    ) {
+    private static WorkItem__c buildWorkItem(Map<String, String> csvRow, String workflowType) {
         WorkItem__c wi = new WorkItem__c();
         wi.WorkflowTypeTxt__c = workflowType;
         wi.IsActiveBool__c = true;
@@ -115,7 +194,7 @@ public with sharing class DeliveryCsvImportController {
             if (String.isBlank(val)) {
                 continue;
             }
-            applyFieldValue(wi, fieldName, val, fieldMap);
+            applyFieldValue(wi, fieldName, val);
         }
 
         return wi;
@@ -125,18 +204,13 @@ public with sharing class DeliveryCsvImportController {
      * @description Resolves a single field by name, validates it is createable,
      *              coerces the string value, and sets it on the WorkItem__c record.
      *              Silently skips unknown, non-createable, or un-coercible fields.
+     *              Uses the class-level cachedFieldMap for schema resolution.
      * @param wi  The WorkItem__c record to populate.
      * @param fieldName  The field API name from the CSV header.
      * @param val  The string value from the CSV cell.
-     * @param fieldMap  Schema field map for WorkItem__c.
      */
-    private static void applyFieldValue(
-        WorkItem__c wi,
-        String fieldName,
-        String val,
-        Map<String, Schema.SObjectField> fieldMap
-    ) {
-        Schema.SObjectField sField = resolveField(fieldName, fieldMap);
+    private static void applyFieldValue(WorkItem__c wi, String fieldName, String val) {
+        Schema.SObjectField sField = resolveField(fieldName);
         if (sField == null) {
             return;
         }
@@ -156,19 +230,15 @@ public with sharing class DeliveryCsvImportController {
     }
 
     /**
-     * @description Case-insensitive lookup of a field name against the schema map.
+     * @description Case-insensitive lookup of a field name against the cached schema map.
      * @param fieldName  The field API name to resolve.
-     * @param fieldMap  Schema field map for WorkItem__c.
      * @return The matched SObjectField, or null if not found.
      */
-    private static Schema.SObjectField resolveField(
-        String fieldName,
-        Map<String, Schema.SObjectField> fieldMap
-    ) {
+    private static Schema.SObjectField resolveField(String fieldName) {
         String fieldNameLower = fieldName.toLowerCase();
-        for (String key : fieldMap.keySet()) {
+        for (String key : cachedFieldMap.keySet()) {
             if (key.toLowerCase() == fieldNameLower) {
-                return fieldMap.get(key);
+                return cachedFieldMap.get(key);
             }
         }
         return null;
@@ -177,28 +247,22 @@ public with sharing class DeliveryCsvImportController {
     /**
      * @description Iterates over Database.SaveResult entries, accumulates success
      *              and error counts, and populates the createdIds and errorDetails
-     *              output lists.
+     *              in the ImportResult wrapper.
      * @param results  The SaveResult list from Database.insert.
      * @param rowIndices  The original CSV row indices for each batch item.
-     * @param createdIds  Output list to append successfully created record Ids.
-     * @param errorDetails  Output list to append error row/message maps.
-     * @return Map with 'success' and 'error' Integer counts for this batch.
+     * @param importResult  The ImportResult wrapper to accumulate into.
      */
-    private static Map<String, Integer> processBatchResults(
+    private static void processBatchResults(
         List<Database.SaveResult> results,
         List<Integer> rowIndices,
-        List<String> createdIds,
-        List<Map<String, String>> errorDetails
+        ImportResult importResult
     ) {
-        Integer batchSuccess = 0;
-        Integer batchError = 0;
-
         for (Integer j = 0; j < results.size(); j++) {
             if (results[j].isSuccess()) {
-                batchSuccess++;
-                createdIds.add(results[j].getId());
+                importResult.successCount++;
+                importResult.createdIds.add(results[j].getId());
             } else {
-                batchError++;
+                importResult.errorCount++;
                 String msg = '';
                 for (Database.Error err : results[j].getErrors()) {
                     msg += err.getMessage() + '; ';
@@ -206,41 +270,17 @@ public with sharing class DeliveryCsvImportController {
                 Map<String, String> errEntry = new Map<String, String>();
                 errEntry.put('row', String.valueOf(rowIndices[j] + 1));
                 errEntry.put('message', msg);
-                errorDetails.add(errEntry);
+                importResult.errorDetails.add(errEntry);
             }
         }
-
-        return new Map<String, Integer>{
-            'success' => batchSuccess,
-            'error' => batchError
-        };
-    }
-
-    /**
-     * @description Assembles the standard result map returned by importWorkItems.
-     * @param successCount  Number of successfully inserted records.
-     * @param errorCount  Number of failed records.
-     * @param errorDetails  List of error row/message maps.
-     * @param createdIds  List of created record Ids.
-     * @return The assembled result map.
-     */
-    private static Map<String, Object> buildResultMap(
-        Integer successCount,
-        Integer errorCount,
-        List<Map<String, String>> errorDetails,
-        List<String> createdIds
-    ) {
-        Map<String, Object> result = new Map<String, Object>();
-        result.put('successCount', successCount);
-        result.put('errorCount', errorCount);
-        result.put('errors', errorDetails);
-        result.put('createdIds', createdIds);
-        return result;
     }
 
     /**
      * @description Coerces a string value to the appropriate Apex type based on
      *              the field describe.
+     * @param dfr  The field describe result.
+     * @param val  The string value to coerce.
+     * @return The coerced Object value.
      */
     private static Object coerceValue(Schema.DescribeFieldResult dfr, String val) {
         Schema.DisplayType dt = dfr.getType();
@@ -269,6 +309,12 @@ public with sharing class DeliveryCsvImportController {
      * @description Comparator for sorting field maps by their label value.
      */
     private class FieldLabelComparator implements System.Comparator<Map<String, String>> {
+        /**
+         * @description Compares two field maps by their 'label' value for sorting.
+         * @param a  First field map.
+         * @param b  Second field map.
+         * @return Negative if a < b, positive if a > b, zero if equal.
+         */
         public Integer compare(Map<String, String> a, Map<String, String> b) {
             String labelA = a.get('label') == null ? '' : a.get('label');
             String labelB = b.get('label') == null ? '' : b.get('label');
