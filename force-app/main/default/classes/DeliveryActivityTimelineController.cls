@@ -6,6 +6,7 @@
  * unified, chronological event feed for a given Work Item.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity')
 public with sharing class DeliveryActivityTimelineController {
 
     private static final Integer PAGE_SIZE = 20;
@@ -215,7 +216,9 @@ public with sharing class DeliveryActivityTimelineController {
                 try {
                     userIds.add((Id) al.UserIdTxt__c);
                 } catch (Exception ex) {
-                    // Non-critical — skip invalid Ids
+                    System.debug(LoggingLevel.FINE,
+                        'Activity Timeline: Skipping invalid User Id "' +
+                        al.UserIdTxt__c + '": ' + ex.getMessage());
                 }
             }
         }
@@ -260,7 +263,9 @@ public with sharing class DeliveryActivityTimelineController {
                 stageInfo.put('detail', oldStage + ' → ' + newStage);
             }
         } catch (Exception ex) {
-            // Non-critical — use default title
+            System.debug(LoggingLevel.FINE,
+                'Activity Timeline: Could not parse stage change context: ' +
+                ex.getMessage());
         }
         return stageInfo;
     }
@@ -286,12 +291,22 @@ public with sharing class DeliveryActivityTimelineController {
         public Integer compare(Map<String, Object> a, Map<String, Object> b) {
             Datetime tsA = (Datetime) a.get('timestamp');
             Datetime tsB = (Datetime) b.get('timestamp');
-            if (tsA == null && tsB == null) return 0;
-            if (tsA == null) return 1;
-            if (tsB == null) return -1;
+            if (tsA == null && tsB == null) {
+                return 0;
+            }
+            if (tsA == null) {
+                return 1;
+            }
+            if (tsB == null) {
+                return -1;
+            }
             // Descending: newer first
-            if (tsB > tsA) return 1;
-            if (tsB < tsA) return -1;
+            if (tsB > tsA) {
+                return 1;
+            }
+            if (tsB < tsA) {
+                return -1;
+            }
             return 0;
         }
     }
