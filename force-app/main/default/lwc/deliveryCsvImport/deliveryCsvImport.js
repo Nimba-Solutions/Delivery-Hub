@@ -161,6 +161,10 @@ export default class DeliveryCsvImport extends NavigationMixin(LightningElement)
         return this.mappedColumnCount > 0;
     }
 
+    get hasNoMappedColumns() {
+        return !this.hasMappedColumns;
+    }
+
     get progressPercent() {
         return this.importTotal > 0
             ? Math.round((this.importProgress / this.importTotal) * 100)
