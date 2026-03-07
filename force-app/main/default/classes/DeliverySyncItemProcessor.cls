@@ -21,7 +21,9 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         // 1a. Query Queued Outbound Items linked to a valid Request route (Push Mode — downstream)
         List<SyncItem__c> pushItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
-                   RetryCountNumber__c, RequestId__c, RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
+                   RetryCountNumber__c, RequestId__c,
+                   RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c,
+                   RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
@@ -34,7 +36,8 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         List<SyncItem__c> hubItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RetryCountNumber__c, RequestId__c,
-                   WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c
+                   WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c,
+                   WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
@@ -57,10 +60,13 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
 
         for (SyncItem__c item : items) {
             try {
-                // Resolve endpoint: Push Mode uses Request→Entity, Hub Mode uses WorkItem→ClientEntity
+                // Resolve endpoint and API key: Push Mode uses Request→Entity, Hub Mode uses WorkItem→ClientEntity
                 String endpointUrl = item.RequestId__c != null
                     ? item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
                     : item.WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c;
+                String apiKey = item.RequestId__c != null
+                    ? item.RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c
+                    : item.WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c;
                 
                 // Validate Endpoint Configuration
                 if (String.isBlank(endpointUrl)) {
@@ -91,9 +97,14 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                     req.setMethod('POST');
                     req.setHeader('Content-Type', 'application/json');
                     
-                    // NEW: Inject the Global Traceability ID as an HTTP Header for Gateway-level loop prevention
+                    // Inject the Global Traceability ID as an HTTP Header for Gateway-level loop prevention
                     if (String.isNotBlank(item.GlobalSourceIdTxt__c)) {
                         req.setHeader('X-Global-Source-Id', item.GlobalSourceIdTxt__c);
+                    }
+
+                    // Inject API key for authentication with the remote entity
+                    if (String.isNotBlank(apiKey)) {
+                        req.setHeader('X-Api-Key', apiKey);
                     }
                     
                     req.setBody(item.PayloadTxt__c);

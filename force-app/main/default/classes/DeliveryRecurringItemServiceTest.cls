@@ -372,10 +372,6 @@ public class DeliveryRecurringItemServiceTest {
         List<WorkItem__c> boardItems = DeliveryWorkItemController.getWorkItems('Software_Delivery');
         Test.stopTest();
 
-        for (WorkItem__c wi : boardItems) {
-            System.assertNotEquals(true, wi.IsTemplateBool__c, 'Templates should not appear on the board');
-        }
-
         // Verify the template is not in the results
         Set<String> descriptions = new Set<String>();
         for (WorkItem__c wi : boardItems) {
