@@ -7,6 +7,7 @@
  * URL Pattern: /services/apexrest/delivery/deliveryhub/v1/api/{resource}
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
 @RestResource(urlMapping='/deliveryhub/v1/api/*')
 global without sharing class DeliveryPublicApiService {
 
@@ -62,6 +63,7 @@ global without sharing class DeliveryPublicApiService {
      * @description Handles POST requests for creating data.
      * Routes: /api/work-items (submit request), /api/work-items/{id}/comments (add comment)
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     @HttpPost
     global static void handlePost() {
         RestRequest req = RestContext.request;
@@ -145,6 +147,9 @@ global without sharing class DeliveryPublicApiService {
     /**
      * @description Validates the X-Api-Key header against NetworkEntity__c.ApiKeyTxt__c.
      * Returns the matched entity or null (with error response set).
+     * @param req The incoming REST request containing the X-Api-Key header
+     * @param res The REST response to populate if authentication fails
+     * @return The authenticated NetworkEntity__c or null if auth failed
      */
     private static NetworkEntity__c authenticateRequest(RestRequest req, RestResponse res) {
         String apiKey = req.headers.get('X-Api-Key');
@@ -178,6 +183,8 @@ global without sharing class DeliveryPublicApiService {
     /**
      * @description Extracts the resource path after /api/ from the request URI.
      * Example: /services/apexrest/delivery/deliveryhub/v1/api/work-items/123 → work-items/123
+     * @param requestURI The full request URI string
+     * @return The resource path segment after /api/
      */
     private static String extractResource(String requestURI) {
         String marker = '/api/';

@@ -346,10 +346,15 @@ private class DeliveryPublicApiServiceTest {
 
         System.assertEquals(201, res.statusCode, 'Should return 201 Created');
 
+        Map<String, Object> responseBody = parseResponse(res);
+        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+        Id commentId = (Id) data.get('id');
+
         WorkItemComment__c comment = [
             SELECT BodyTxt__c, AuthorTxt__c FROM WorkItemComment__c
-            WHERE BodyTxt__c = 'Comment via API' LIMIT 1
+            WHERE Id = :commentId LIMIT 1
         ];
+        System.assertEquals('Comment via API', comment.BodyTxt__c, 'Comment body should match');
         System.assertEquals('Portal User', comment.AuthorTxt__c, 'Author should be Portal User');
     }
 
