@@ -47,9 +47,10 @@ private class DeliveryHubSyncServiceTest {
         );
         
         // 5. V2 ARCHITECTURE: Stage an Outbound Hub Item for the GET tests
+        // StatusPk__c = 'Staged' means this item is waiting for a client poll
         insert new SyncItem__c(
             DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Queued',
+            StatusPk__c = 'Staged',
             RequestId__c = null, // Null indicates Hub Mode
             WorkItemId__c = t.Id,  // Mandatory for routing
             ObjectTypePk__c = 'WorkItem__c',
