@@ -37,4 +37,14 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWeeklyDigestServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityTimelineControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryPortalControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryPublicApiServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryBurndownControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryCsvImportControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryCycleTimeControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDependencyGraphControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryEmailNotificationServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryRecurringItemServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryReleaseNotesControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliverySLAServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkloadControllerTest</testClassName>
 </ApexTestSuite>

@@ -75,6 +75,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
+        <field>NetworkEntity__c.ApiKeyTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>NetworkEntity__c.ConnectionStatusPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>NetworkEntity__c.EntityTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -125,6 +135,14 @@
         <object>WorkItemComment__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
+    <classAccesses>
+        <apexClass>DeliveryPublicApiService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryPortalController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <pageAccesses>
         <apexPage>DeliveryStatusPage</apexPage>
         <enabled>true</enabled>
