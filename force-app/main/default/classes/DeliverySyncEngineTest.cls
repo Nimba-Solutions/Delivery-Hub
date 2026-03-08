@@ -120,6 +120,64 @@ private class DeliverySyncEngineTest {
     }
 
     @IsTest
+    static void testVendorPushCreatesQueuedUpstreamItem() {
+        // Enable vendor push on the client entity
+        NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
+        client.EnableVendorPushBool__c = true;
+        client.IntegrationEndpointUrlTxt__c = 'https://client.com';
+        update client;
+
+        WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+        delete [SELECT Id FROM SyncItem__c];
+
+        // Call captureChanges directly to avoid the trigger chain + processor queueable
+        Test.startTest();
+        t.BriefDescriptionTxt__c = 'Vendor Push Update';
+        DeliverySyncEngine.captureChanges(
+            new List<SObject>{t},
+            null,
+            new Set<String>{'BriefDescriptionTxt__c'}
+        );
+        Test.stopTest();
+
+        List<SyncItem__c> allItems = [SELECT Id, RequestId__c, StatusPk__c, PayloadTxt__c FROM SyncItem__c];
+        List<SyncItem__c> upstreamItems = new List<SyncItem__c>();
+        for (SyncItem__c si : allItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Vendor Push Update') && si.RequestId__c == null) {
+                upstreamItems.add(si);
+            }
+        }
+
+        System.assertEquals(1, upstreamItems.size(), 'Should have one upstream item.');
+        // Item starts as Queued but processor runs in Test.stopTest() and flips to Failed (no real endpoint).
+        // The key assertion is that it was NOT Staged (poll mode) — it was processed by the push path.
+        System.assertNotEquals('Staged', upstreamItems[0].StatusPk__c, 'Vendor push items should NOT be Staged — they go through the push processor.');
+    }
+
+    @IsTest
+    static void testPollModeCreatesStagedUpstreamItem() {
+        // Client entity has EnableVendorPushBool__c = false (default from setup)
+        WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+        delete [SELECT Id FROM SyncItem__c];
+
+        Test.startTest();
+        t.BriefDescriptionTxt__c = 'Poll Mode Update';
+        update t;
+        Test.stopTest();
+
+        List<SyncItem__c> allItems = [SELECT Id, RequestId__c, StatusPk__c, PayloadTxt__c FROM SyncItem__c];
+        List<SyncItem__c> upstreamItems = new List<SyncItem__c>();
+        for (SyncItem__c si : allItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Poll Mode Update') && si.RequestId__c == null) {
+                upstreamItems.add(si);
+            }
+        }
+
+        System.assertEquals(1, upstreamItems.size(), 'Should have one upstream item.');
+        System.assertEquals('Staged', upstreamItems[0].StatusPk__c, 'Poll mode items should be Staged for client polling.');
+    }
+
+    @IsTest
     static void testSmartRoutingBlocksUpstreamEcho() {
         WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c FROM WorkItem__c LIMIT 1];
         

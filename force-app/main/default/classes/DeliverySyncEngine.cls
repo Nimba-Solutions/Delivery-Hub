@@ -74,8 +74,10 @@ public without sharing class DeliverySyncEngine {
 
             // 2. Evaluate Upstream Routing Edges (The Parent Work Items)
             Map<Id, WorkItem__c> parentWorkItems = new Map<Id, WorkItem__c>([
-                SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c 
-                FROM WorkItem__c 
+                SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c,
+                       ClientNetworkEntityId__r.EnableVendorPushBool__c,
+                       ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c
+                FROM WorkItem__c
                 WHERE Id IN :workItemIds
                 WITH SYSTEM_MODE
             ]);
@@ -125,24 +127,27 @@ public without sharing class DeliverySyncEngine {
                         if (blockedOrigins.contains((String)req.Id) || req.RemoteWorkItemIdTxt__c == globalSourceId) {
                             continue;
                         } 
-                        itemsToInsert.add(createSyncItem(rec, req, allowedFields, globalSourceId));
+                        itemsToInsert.add(createSyncItem(rec, req, allowedFields, globalSourceId, false));
                     }
                 }
 
                 // ==========================================
-                // FAN OUT UPSTREAM (Stage for Client Poller)
+                // FAN OUT UPSTREAM (Push to Client or Stage for Poller)
                 // ==========================================
                 if (parentWorkItem != null && parentWorkItem.ClientNetworkEntityId__c != null) {
                     String entityType = parentWorkItem.ClientNetworkEntityId__r.EntityTypePk__c;
-                    
+
                     if (entityType == 'Client' || entityType == 'Both') {
-                        // Kill-Switch: Do not stage for Client if they are the Global Source or sent this to us
-                        if (blockedOrigins.contains((String)parentWorkItem.ClientNetworkEntityId__c) || 
+                        // Kill-Switch: Do not sync to Client if they are the Global Source or sent this to us
+                        if (blockedOrigins.contains((String)parentWorkItem.ClientNetworkEntityId__c) ||
                             (String)parentWorkItem.ClientNetworkEntityId__c == globalSourceId) {
                             continue;
                         }
-                        
-                        itemsToInsert.add(createSyncItem(rec, null, allowedFields, globalSourceId));
+
+                        Boolean vendorPushEnabled = parentWorkItem.ClientNetworkEntityId__r.EnableVendorPushBool__c == true
+                            && String.isNotBlank(parentWorkItem.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c);
+
+                        itemsToInsert.add(createSyncItem(rec, null, allowedFields, globalSourceId, vendorPushEnabled));
                     }
                 }
             }
@@ -192,9 +197,9 @@ public without sharing class DeliverySyncEngine {
     }
 
     @SuppressWarnings('PMD.ExcessiveParameterList')
-    private static SyncItem__c createSyncItem(SObject rec, WorkRequest__c req, Set<String> allowedFields, String globalSourceId) {
+    private static SyncItem__c createSyncItem(SObject rec, WorkRequest__c req, Set<String> allowedFields, String globalSourceId, Boolean vendorPush) {
         SyncItem__c item = new SyncItem__c(
-            StatusPk__c = 'Queued', 
+            StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
             GlobalSourceIdTxt__c = globalSourceId
         );
@@ -208,24 +213,28 @@ public without sharing class DeliverySyncEngine {
         populateLookupField(item, cleanName, rec.Id);
 
         Map<String, Object> payload = new Map<String, Object>();
-        for (String f : allowedFields) { 
-            payload.put(f, getSafeValue(rec, f)); 
+        for (String f : allowedFields) {
+            payload.put(f, getSafeValue(rec, f));
         }
-        payload.put('SourceId', rec.Id); 
-        payload.put('GlobalSourceId', globalSourceId); // Pass the passport stamp
-        
-        // NEW: Inject the Sender Identity so the receiver knows exactly who pushed this payload
-        payload.put('SenderOrgId', UserInfo.getOrganizationId()); 
-        
+        payload.put('SourceId', rec.Id);
+        payload.put('GlobalSourceId', globalSourceId);
+        payload.put('SenderOrgId', UserInfo.getOrganizationId());
+
         if (req != null) {
             // Push Mode: Explicit Downstream Route
-            item.RequestId__c = req.Id; 
-            payload.put('TargetId', req.RemoteWorkItemIdTxt__c); 
+            item.RequestId__c = req.Id;
+            payload.put('TargetId', req.RemoteWorkItemIdTxt__c);
+        } else if (vendorPush) {
+            // Vendor Push Mode: Real-time push upstream to client
+            // RequestId stays null — processor resolves endpoint from WorkItem→ClientNetworkEntity
+            payload.put('TargetId', item.WorkItemId__c);
+            payload.put('VendorPush', true);
         } else {
-            // Hub Mode: Upstream Stage
+            // Poll Mode: Staged for client to pull via GET /sync/changes
+            item.StatusPk__c = 'Staged';
             payload.put('TargetId', item.WorkItemId__c);
         }
-        
+
         item.PayloadTxt__c = JSON.serialize(payload);
         return item;
     }
