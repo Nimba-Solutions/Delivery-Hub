@@ -205,4 +205,113 @@ private class DeliveryHubSyncServiceTest {
 
         System.assertEquals(404, res.statusCode, 'Should return 404 Not Found for incorrect GET paths');
     }
+
+    // ==========================================
+    // API KEY AUTHENTICATION TESTS
+    // ==========================================
+
+    @IsTest
+    static void testPostWithValidApiKey() {
+        // Set up an entity with an API key
+        NetworkEntity__c authedEntity = new NetworkEntity__c(
+            Name = 'Authed Partner',
+            StatusPk__c = 'Active',
+            EntityTypePk__c = 'Vendor',
+            ApiKeyTxt__c = 'valid-sync-key-12345',
+            ConnectionStatusPk__c = 'Connected'
+        );
+        insert authedEntity;
+
+        String remoteId = 'REMOTE-WORKITEM-123';
+        RestRequest req = new RestRequest();
+        RestResponse res = new RestResponse();
+
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
+        req.httpMethod = 'POST';
+        req.addHeader('X-Api-Key', 'valid-sync-key-12345');
+        req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+            'SourceId' => remoteId,
+            'BriefDescriptionTxt__c' => 'Authed Update'
+        }));
+
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryHubSyncService.handleIncomingSync();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Valid API key should be accepted');
+    }
+
+    @IsTest
+    static void testPostWithInvalidApiKey() {
+        RestRequest req = new RestRequest();
+        RestResponse res = new RestResponse();
+
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
+        req.httpMethod = 'POST';
+        req.addHeader('X-Api-Key', 'totally-wrong-key');
+        req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+            'SourceId' => '123',
+            'BriefDescriptionTxt__c' => 'Should Not Work'
+        }));
+
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryHubSyncService.handleIncomingSync();
+        Test.stopTest();
+
+        System.assertEquals(401, res.statusCode, 'Invalid API key should return 401');
+    }
+
+    @IsTest
+    static void testPostWithNoApiKeyBackwardCompatible() {
+        // No X-Api-Key header = legacy connection, should still work
+        String remoteId = 'REMOTE-WORKITEM-123';
+        RestRequest req = new RestRequest();
+        RestResponse res = new RestResponse();
+
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
+        req.httpMethod = 'POST';
+        // No X-Api-Key header
+        req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+            'SourceId' => remoteId,
+            'BriefDescriptionTxt__c' => 'Legacy Update'
+        }));
+
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryHubSyncService.handleIncomingSync();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'No API key should be backward compatible (200)');
+    }
+
+    @IsTest
+    static void testGetWithInvalidApiKey() {
+        NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
+
+        RestRequest req = new RestRequest();
+        RestResponse res = new RestResponse();
+
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/changes';
+        req.httpMethod = 'GET';
+        req.addHeader('X-Api-Key', 'wrong-key-for-get');
+        req.addParameter('clientId', client.Id);
+        req.addParameter('since', '2000-01-01T00:00:00Z');
+
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryHubSyncService.handleOutgoingSync();
+        Test.stopTest();
+
+        System.assertEquals(401, res.statusCode, 'Invalid API key on GET should return 401');
+    }
 }
