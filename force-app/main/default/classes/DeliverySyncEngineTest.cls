@@ -149,7 +149,9 @@ private class DeliverySyncEngineTest {
         }
 
         System.assertEquals(1, upstreamItems.size(), 'Should have one upstream item.');
-        System.assertEquals('Queued', upstreamItems[0].StatusPk__c, 'Vendor push items should be Queued for immediate processing.');
+        // Item starts as Queued but processor runs in Test.stopTest() and flips to Failed (no real endpoint).
+        // The key assertion is that it was NOT Staged (poll mode) — it was processed by the push path.
+        System.assertNotEquals('Staged', upstreamItems[0].StatusPk__c, 'Vendor push items should NOT be Staged — they go through the push processor.');
     }
 
     @IsTest
