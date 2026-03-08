@@ -12,17 +12,24 @@ global without sharing class DeliveryHubSyncService {
     /**
      * @description Handles incoming HTTP POST requests containing sync payloads (The Push Flow).
      * Identifies the object type from the URL path and delegates processing to the ingestor.
+     * Supports opt-in API key validation: if the sender has an ApiKeyTxt__c configured,
+     * the X-Api-Key header must match. No key on the entity = open access (backward compatible).
      * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/WorkItem__c
      */
     @HttpPost
     global static void handleIncomingSync() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
-        
+
         try {
+            // 0. Opt-in API Key Validation
+            if (!validateSyncApiKey(req, res)) {
+                return; // Response already set
+            }
+
             // 1. Identify Object Type from URL
             String objectType = req.requestURI.substring(req.requestURI.lastIndexOf('/') + 1);
-            
+
             // 2. Parse Body
             String jsonBody = req.requestBody.toString();
             if (String.isBlank(jsonBody)) {
@@ -66,6 +73,7 @@ global without sharing class DeliveryHubSyncService {
     /**
      * @description Handles incoming HTTP GET requests for the Pull Flow (Passive Hub).
      * Enforces Multi-Tenant Data Segregation via the clientId parameter.
+     * Supports opt-in API key validation via X-Api-Key header.
      * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/changes?since=1900-01-01+00:00:00&clientId=a03di00000abcde
      */
     @HttpGet
@@ -74,6 +82,11 @@ global without sharing class DeliveryHubSyncService {
         RestResponse res = RestContext.response;
 
         try {
+            // Opt-in API Key Validation
+            if (!validateSyncApiKey(req, res)) {
+                return;
+            }
+
             String path = req.requestURI.substring(req.requestURI.lastIndexOf('/') + 1);
             
             // Route Validation: Ensure they are hitting the /changes endpoint
@@ -138,5 +151,47 @@ global without sharing class DeliveryHubSyncService {
             res.statusCode = 500;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => e.getMessage() }));
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Opt-in API Key Validation
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Validates the X-Api-Key header if an API key is present.
+     * Backward compatible: if no X-Api-Key header is sent, allow the request
+     * (existing connections without keys continue to work). If the header IS
+     * sent, it must match a Connected NetworkEntity's ApiKeyTxt__c.
+     * @param req The incoming REST request
+     * @param res The REST response (populated with error if validation fails)
+     * @return true if validation passes, false if rejected
+     */
+    private static Boolean validateSyncApiKey(RestRequest req, RestResponse res) {
+        String apiKey = req.headers.get('X-Api-Key');
+
+        // No key sent = legacy connection, allow through (backward compatible)
+        if (String.isBlank(apiKey)) {
+            return true;
+        }
+
+        // Key sent = validate it against NetworkEntity records
+        List<NetworkEntity__c> entities = [
+            SELECT Id
+            FROM NetworkEntity__c
+            WHERE ApiKeyTxt__c = :apiKey
+            AND ConnectionStatusPk__c = 'Connected'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        if (entities.isEmpty()) {
+            res.statusCode = 401;
+            res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{
+                'error' => 'Invalid API key or entity not connected.'
+            }));
+            return false;
+        }
+
+        return true;
     }
 }
