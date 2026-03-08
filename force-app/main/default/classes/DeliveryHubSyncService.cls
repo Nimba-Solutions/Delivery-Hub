@@ -119,12 +119,14 @@ global without sharing class DeliveryHubSyncService {
                 sinceDate = DateTime.newInstance(1900, 1, 1);
             }
 
-            // Query Unrouted Outbound Items (Passive Hub Mode)
-            // V2 Architecture Rule: Must strictly filter by WorkItemId__r.ClientNetworkEntityId__c
+            // Query Staged Outbound Items (Poll Mode — client pulls updates)
+            // Items with StatusPk__c = 'Staged' are waiting for client poll.
+            // Items with StatusPk__c = 'Queued' are being pushed by the processor.
             List<SyncItem__c> items = [
                 SELECT Id, ObjectTypePk__c, PayloadTxt__c, CreatedDate
                 FROM SyncItem__c
                 WHERE DirectionPk__c = 'Outbound'
+                AND StatusPk__c = 'Staged'
                 AND RequestId__c = NULL
                 AND CreatedDate > :sinceDate
                 AND WorkItemId__r.ClientNetworkEntityId__c = :clientId
@@ -135,6 +137,7 @@ global without sharing class DeliveryHubSyncService {
 
             // Package the waiting items into a clean JSON array
             List<Map<String, Object>> responseList = new List<Map<String, Object>>();
+            List<SyncItem__c> itemsToMarkSynced = new List<SyncItem__c>();
             for (SyncItem__c item : items) {
                 Map<String, Object> itemData = new Map<String, Object>();
                 itemData.put('objectType', item.ObjectTypePk__c);
@@ -142,6 +145,12 @@ global without sharing class DeliveryHubSyncService {
                 itemData.put('syncItemId', item.Id);
                 itemData.put('createdDate', item.CreatedDate);
                 responseList.add(itemData);
+                itemsToMarkSynced.add(new SyncItem__c(Id = item.Id, StatusPk__c = 'Synced'));
+            }
+
+            // Mark polled items as Synced so they aren't re-delivered
+            if (!itemsToMarkSynced.isEmpty()) {
+                Database.update(itemsToMarkSynced, AccessLevel.SYSTEM_MODE);
             }
 
             res.statusCode = 200;
