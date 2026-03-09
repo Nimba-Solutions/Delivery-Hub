@@ -314,7 +314,7 @@ public with sharing class DeliveryHubBoardController {
                    DeveloperDaysSizeNumber__c, TotalLoggedHoursNumber__c,
                    EstimatedHoursNumber__c, CalculatedETADate__c,
                    Tags__c, WorkflowTypeTxt__c, CreatedDate, LastModifiedDate,
-                   Developer__c, Developer__r.Name, Epic__c, Epic__r.Name,
+                   Developer__c, Developer__r.Name, Epic__c,
                    ProjectedUATReadyDate__c, ClientIntentionPk__c
             FROM WorkItem__c
             WHERE Id = :workItemId

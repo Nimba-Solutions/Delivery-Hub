@@ -40,20 +40,32 @@ public with sharing class DeliveryScoreService {
      * @return DeliveryScoreResult with score, grade, color, and factor breakdown.
      */
     @AuraEnabled(cacheable=true)
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static DeliveryScoreResult getDeliveryScore(Id entityId) {
-        // Build query
-        String query = 'SELECT Id, StageNamePk__c, PriorityPk__c, WorkflowTypeTxt__c, '
-                      + 'ClientNetworkEntityId__c, LastModifiedDate, '
-                      + '(SELECT Id FROM WorkItemComments__r) '
-                      + 'FROM WorkItem__c '
-                      + 'WHERE IsTemplateBool__c = false ';
-
+        // Use static SOQL so CCI namespace-injects the child relationship name
+        List<WorkItem__c> items;
         if (entityId != null) {
-            query += 'AND ClientNetworkEntityId__c = :entityId ';
+            items = [
+                SELECT Id, StageNamePk__c, PriorityPk__c, WorkflowTypeTxt__c,
+                       ClientNetworkEntityId__c, LastModifiedDate,
+                       (SELECT Id FROM WorkItemComments__r)
+                FROM WorkItem__c
+                WHERE IsTemplateBool__c = false
+                AND ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+            ];
+        } else {
+            items = [
+                SELECT Id, StageNamePk__c, PriorityPk__c, WorkflowTypeTxt__c,
+                       ClientNetworkEntityId__c, LastModifiedDate,
+                       (SELECT Id FROM WorkItemComments__r)
+                FROM WorkItem__c
+                WHERE IsTemplateBool__c = false
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+            ];
         }
-        query += 'WITH SYSTEM_MODE ORDER BY CreatedDate DESC';
-
-        List<WorkItem__c> items = Database.query(query);
 
         // Determine workflow type from items, default to Software_Delivery
         String workflowType = 'Software_Delivery';
@@ -205,6 +217,7 @@ public with sharing class DeliveryScoreService {
     // Factor 2: WIP Balance (20%)
     // -------------------------------------------------------------------------
 
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     private static ScoreFactor calcWipBalance(
         Map<String, List<WorkItem__c>> itemsByPhase,
         Map<String, String> stagePhaseMap,
@@ -348,6 +361,7 @@ public with sharing class DeliveryScoreService {
     // Factor 5: Priority Balance (10%)
     // -------------------------------------------------------------------------
 
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     private static ScoreFactor calcPriorityBalance(
         List<WorkItem__c> nonTerminalItems, Map<String, String> stagePhaseMap
     ) {
@@ -455,38 +469,38 @@ public with sharing class DeliveryScoreService {
 
     @TestVisible
     private static String getGrade(Integer score) {
-        if (score >= 90) return 'A+';
-        if (score >= 80) return 'A';
-        if (score >= 70) return 'B+';
-        if (score >= 60) return 'B';
-        if (score >= 50) return 'C+';
-        if (score >= 40) return 'C';
-        if (score >= 30) return 'D';
+        if (score >= 90) { return 'A+'; }
+        if (score >= 80) { return 'A'; }
+        if (score >= 70) { return 'B+'; }
+        if (score >= 60) { return 'B'; }
+        if (score >= 50) { return 'C+'; }
+        if (score >= 40) { return 'C'; }
+        if (score >= 30) { return 'D'; }
         return 'F';
     }
 
     @TestVisible
     private static String getColor(Integer score) {
-        if (score >= 80) return '#22c55e'; // green
-        if (score >= 60) return '#0ea5e9'; // sky
-        if (score >= 40) return '#f59e0b'; // amber
-        return '#ef4444';                  // red
+        if (score >= 80) { return '#22c55e'; } // green
+        if (score >= 60) { return '#0ea5e9'; } // sky
+        if (score >= 40) { return '#f59e0b'; } // amber
+        return '#ef4444';                       // red
     }
 
     private static String getGradeLabel(Integer score) {
-        if (score >= 90) return 'Exceptional';
-        if (score >= 80) return 'Excellent';
-        if (score >= 70) return 'Good';
-        if (score >= 60) return 'Solid';
-        if (score >= 50) return 'Needs Work';
-        if (score >= 40) return 'At Risk';
-        if (score >= 30) return 'Critical';
+        if (score >= 90) { return 'Exceptional'; }
+        if (score >= 80) { return 'Excellent'; }
+        if (score >= 70) { return 'Good'; }
+        if (score >= 60) { return 'Solid'; }
+        if (score >= 50) { return 'Needs Work'; }
+        if (score >= 40) { return 'At Risk'; }
+        if (score >= 30) { return 'Critical'; }
         return 'Emergency';
     }
 
     private static String getStatus(Integer score) {
-        if (score >= 70) return 'good';
-        if (score >= 40) return 'warning';
+        if (score >= 70) { return 'good'; }
+        if (score >= 40) { return 'warning'; }
         return 'critical';
     }
 }
