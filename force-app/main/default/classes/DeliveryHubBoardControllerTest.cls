@@ -141,4 +141,45 @@ public class DeliveryHubBoardControllerTest {
         System.assertNotEquals(null, metrics, 'Metrics should be returned for null workflow type');
         System.assert(metrics.containsKey('activeCount'), 'Should default to Software_Delivery');
     }
+
+    @isTest
+    static void testGetWorkItemDetail() {
+        WorkItem__c workItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Stage Test' LIMIT 1];
+
+        // Add a comment for richer coverage
+        insert new WorkItemComment__c(
+            WorkItemId__c = workItem.Id,
+            BodyTxt__c = 'Test panel comment',
+            AuthorTxt__c = 'Test User'
+        );
+
+        Test.startTest();
+        Map<String, Object> detail = DeliveryHubBoardController.getWorkItemDetail(workItem.Id);
+        Test.stopTest();
+
+        System.assertNotEquals(null, detail, 'Detail map should not be null');
+        System.assert(detail.containsKey('workItem'), 'Should contain workItem key');
+        System.assert(detail.containsKey('comments'), 'Should contain comments key');
+        System.assert(detail.containsKey('files'), 'Should contain files key');
+
+        WorkItem__c returnedItem = (WorkItem__c) detail.get('workItem');
+        System.assertEquals('Stage Test', returnedItem.BriefDescriptionTxt__c);
+
+        List<WorkItemComment__c> comments = (List<WorkItemComment__c>) detail.get('comments');
+        System.assertEquals(1, comments.size(), 'Should return one comment');
+    }
+
+    @isTest
+    static void testGetWorkItemDetailNotFound() {
+        // Use a fake Id that does not exist
+        Id fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000001';
+        try {
+            Test.startTest();
+            DeliveryHubBoardController.getWorkItemDetail(fakeId);
+            Test.stopTest();
+            System.assert(false, 'Expected AuraHandledException for missing record');
+        } catch (AuraHandledException e) {
+            System.assert(e.getMessage() != null);
+        }
+    }
 }

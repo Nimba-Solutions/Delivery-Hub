@@ -35,6 +35,7 @@ import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%Deliv
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
 import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTypes';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
+import getWorkItemDetail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.getWorkItemDetail';
 
 // --- NAMESPACE BRIDGE ---
 const FIELDS = {
@@ -131,6 +132,21 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     isWeeklyLoading = false;
     weeklyError = '';
     weeklyCopied = false;
+
+    // --- Detail Panel State ---
+    showDetailPanel = false;
+    detailPanelVisible = false; // drives CSS transition
+    @track detailWorkItem = null;
+    @track detailComments = [];
+    @track detailFiles = [];
+    isDetailLoading = false;
+
+    // --- Phase Accordion State ---
+    boardViewMode = 'columns'; // 'columns' | 'phases'
+    @track _collapsedPhases = {};
+
+    // --- Quick-filter Pill Bar State ---
+    activeQuickFilter = 'all';
 
     workItemsWire;
     _empSubscription = {};
@@ -642,7 +658,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
         const { type, stages, personaViews } = this.workflowConfig;
         const stageMap = this._stageMap;
-        const enriched = this.enrichedWorkItems || [];
+        const enriched = this.filteredWorkItems || [];
 
         // Phase-group filters for overallFilter
         const PREDEV_PHASES  = new Set(['Planning', 'Approval']);
@@ -843,13 +859,6 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleSizeModeChange(e) { this.sizeMode = e.detail ? e.detail.value : e.target.value; }
     handleDisplayModeChange(e) { this.displayMode = e.detail ? e.detail.value : e.target.value; }
     
-    handleTitleClick(e) {
-        const id = e.currentTarget.dataset.id;
-        if (id) {
-            this[NavigationMixin.Navigate]({ type: "standard__recordPage", attributes: { recordId: id, objectApiName: "WorkItem__c", actionName: "view" } });
-        }
-    }
-
     handleCardClick(e) {
         const id = e.currentTarget?.dataset?.id || e.target?.dataset?.id;
         this.selectedRecord = (this.realRecords || []).find((r) => r.Id === id);
@@ -1476,12 +1485,273 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     showToast(title, message, variant) {
         this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
     }
-    
+
     // [Modal & Transition Handlers]
     closeTransitionModal() {
         this.showTransitionModal = false;
         this.transitionWorkItemId = null;
         this.transitionTargetStage = null;
         this.transitionRequiredFields = [];
+    }
+
+    // =====================================================================
+    // FEATURE 1: Slide-out Detail Panel
+    // =====================================================================
+
+    get detailPanelClass() {
+        return this.detailPanelVisible
+            ? 'detail-panel detail-panel--open'
+            : 'detail-panel';
+    }
+
+    get detailTitle() { return this.detailWorkItem?.BriefDescriptionTxt__c || this.detailWorkItem?.delivery__BriefDescriptionTxt__c || ''; }
+    get detailDescription() { return this.detailWorkItem?.DetailsTxt__c || this.detailWorkItem?.delivery__DetailsTxt__c || 'No description provided.'; }
+    get detailStage() { return this.detailWorkItem?.StageNamePk__c || this.detailWorkItem?.delivery__StageNamePk__c || ''; }
+    get detailPriority() { return this.detailWorkItem?.PriorityPk__c || this.detailWorkItem?.delivery__PriorityPk__c || ''; }
+    get detailOwner() { return this.detailWorkItem?.Owner?.Name || ''; }
+    get detailName() { return this.detailWorkItem?.Name || ''; }
+    get detailHasComments() { return this.detailComments.length > 0; }
+    get detailHasFiles() { return this.detailFiles.length > 0; }
+    get detailPriorityClass() {
+        const p = (this.detailPriority || '').toLowerCase();
+        return `priority-badge priority-${p}`;
+    }
+    get detailEpicName() { return this.detailWorkItem?.Epic__r?.Name || this.detailWorkItem?.delivery__Epic__r?.Name || ''; }
+    get detailDeveloperName() { return this.detailWorkItem?.Developer__r?.Name || this.detailWorkItem?.delivery__Developer__r?.Name || ''; }
+    get hasDetailEpic() { return !!this.detailEpicName; }
+    get hasDetailDeveloper() { return !!this.detailDeveloperName; }
+    get isDetailLoaded() { return !this.isDetailLoading; }
+
+    handleTitleClick(e) {
+        e.stopPropagation();
+        const id = e.currentTarget.dataset.id;
+        if (id) {
+            this.openDetailPanel(id);
+        }
+    }
+
+    async openDetailPanel(workItemId) {
+        this.showDetailPanel = true;
+        this.isDetailLoading = true;
+        this.detailWorkItem = null;
+        this.detailComments = [];
+        this.detailFiles = [];
+
+        // Trigger CSS transition after DOM renders
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        requestAnimationFrame(() => {
+            this.detailPanelVisible = true;
+        });
+
+        try {
+            const result = await getWorkItemDetail({ workItemId });
+            this.detailWorkItem = result.workItem;
+            this.detailComments = result.comments || [];
+            this.detailFiles = result.files || [];
+        } catch (error) {
+            console.error('[DetailPanel] Load error:', error);
+            this.showToast('Error', 'Failed to load work item details.', 'error');
+        } finally {
+            this.isDetailLoading = false;
+        }
+    }
+
+    closeDetailPanel() {
+        this.detailPanelVisible = false;
+        // Wait for CSS transition to finish before removing from DOM
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        setTimeout(() => {
+            this.showDetailPanel = false;
+        }, 300);
+    }
+
+    handleDetailBackdropClick() {
+        this.closeDetailPanel();
+    }
+
+    handleDetailEdit() {
+        const id = this.detailWorkItem?.Id;
+        if (id) {
+            this.closeDetailPanel();
+            this[NavigationMixin.Navigate]({
+                type: 'standard__recordPage',
+                attributes: { recordId: id, objectApiName: 'WorkItem__c', actionName: 'edit' }
+            });
+        }
+    }
+
+    handleDetailView() {
+        const id = this.detailWorkItem?.Id;
+        if (id) {
+            this.closeDetailPanel();
+            this[NavigationMixin.Navigate]({
+                type: 'standard__recordPage',
+                attributes: { recordId: id, objectApiName: 'WorkItem__c', actionName: 'view' }
+            });
+        }
+    }
+
+    get detailFormattedComments() {
+        return (this.detailComments || []).map(c => ({
+            id: c.Id,
+            body: c.BodyTxt__c || c.delivery__BodyTxt__c || '',
+            author: c.AuthorTxt__c || c.delivery__AuthorTxt__c || 'Unknown',
+            source: c.SourcePk__c || c.delivery__SourcePk__c || '',
+            date: c.CreatedDate ? new Date(c.CreatedDate).toLocaleString() : ''
+        }));
+    }
+
+    get detailFormattedFiles() {
+        return (this.detailFiles || []).map(f => ({
+            id: f.documentId,
+            title: f.title || 'Untitled',
+            extension: f.extension || '',
+            size: f.fileSize ? this.formatFileSize(f.fileSize) : ''
+        }));
+    }
+
+    formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    // =====================================================================
+    // FEATURE 2: Phase Accordion View
+    // =====================================================================
+
+    get isColumnsView() { return this.boardViewMode === 'columns'; }
+    get isPhasesView() { return this.boardViewMode === 'phases'; }
+
+    get columnsButtonClass() {
+        return this.boardViewMode === 'columns' ? 'toolbar-button active' : 'toolbar-button';
+    }
+    get phasesButtonClass() {
+        return this.boardViewMode === 'phases' ? 'toolbar-button active' : 'toolbar-button';
+    }
+
+    handleBoardViewModeChange(event) {
+        this.boardViewMode = event.currentTarget.dataset.mode;
+    }
+
+    get phaseGroups() {
+        if (!this.workflowConfig?.stages) return [];
+
+        const enriched = this.filteredWorkItems || [];
+        const stageMap = this._stageMap;
+
+        // Collect unique phases in order
+        const phaseOrder = [];
+        const phaseSet = new Set();
+        for (const s of this.workflowConfig.stages) {
+            if (s.phase && !phaseSet.has(s.phase)) {
+                phaseSet.add(s.phase);
+                phaseOrder.push(s.phase);
+            }
+        }
+
+        return phaseOrder.map(phase => {
+            const phaseStages = this.workflowConfig.stages.filter(s => s.phase === phase);
+            const stageApiValues = phaseStages.map(s => s.apiValue);
+            const phaseItems = enriched.filter(wi => stageApiValues.includes(wi.uiStage));
+            const isCollapsed = !!this._collapsedPhases[phase];
+
+            // Group items by their specific stage within the phase
+            const stageSubgroups = phaseStages
+                .map(s => ({
+                    stage: s.apiValue,
+                    displayName: s.displayName || s.apiValue,
+                    dotStyle: `background-color: ${s.headerBgColor || '#e5e7eb'};`,
+                    items: phaseItems.filter(wi => wi.uiStage === s.apiValue)
+                }))
+                .filter(sg => sg.items.length > 0);
+
+            // Determine primary color from first stage in phase
+            const primaryColor = phaseStages[0]?.headerBgColor || '#e5e7eb';
+
+            return {
+                phase,
+                count: phaseItems.length,
+                isCollapsed,
+                isExpanded: !isCollapsed,
+                chevronIcon: isCollapsed ? 'utility:chevronright' : 'utility:chevrondown',
+                headerStyle: `border-left: 4px solid ${primaryColor};`,
+                stageSubgroups,
+                headerClass: `phase-accordion-header ${isCollapsed ? '' : 'phase-accordion-header--expanded'}`
+            };
+        });
+    }
+
+    handleTogglePhase(event) {
+        const phase = event.currentTarget.dataset.phase;
+        this._collapsedPhases = {
+            ...this._collapsedPhases,
+            [phase]: !this._collapsedPhases[phase]
+        };
+    }
+
+    // =====================================================================
+    // FEATURE 3: Quick-filter Pill Bar
+    // =====================================================================
+
+    get quickFilterPills() {
+        const pills = [
+            { key: 'all', label: 'All' },
+            { key: 'myItems', label: 'My Items' },
+            { key: 'attention', label: 'Needs Attention' },
+            { key: 'highPriority', label: 'High Priority' },
+            { key: 'recentlyUpdated', label: 'Recently Updated' }
+        ];
+        return pills.map(p => ({
+            ...p,
+            pillClass: p.key === this.activeQuickFilter
+                ? 'quick-filter-pill quick-filter-pill--active'
+                : 'quick-filter-pill'
+        }));
+    }
+
+    handleQuickFilterClick(event) {
+        this.activeQuickFilter = event.currentTarget.dataset.filter;
+    }
+
+    /**
+     * Returns work items filtered by the active quick-filter pill.
+     * This is used by both stageColumns (columns view) and phaseGroups (phases view).
+     */
+    get filteredWorkItems() {
+        const enriched = this.enrichedWorkItems || [];
+        if (this.activeQuickFilter === 'all') return enriched;
+
+        const uid = (USER_ID || '').substring(0, 15);
+        const now = Date.now();
+        const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+
+        // Pre-compute attention stages from config
+        const attentionStages = new Set(
+            (this.workflowConfig?.stages || [])
+                .filter(s => s.isAttentionState)
+                .map(s => s.apiValue)
+        );
+
+        switch (this.activeQuickFilter) {
+            case 'myItems':
+                return enriched.filter(wi =>
+                    (wi.uiOwnerId || '').substring(0, 15) === uid ||
+                    (wi.uiDeveloperId || '').substring(0, 15) === uid
+                );
+            case 'attention':
+                return enriched.filter(wi => attentionStages.has(wi.uiStage));
+            case 'highPriority':
+                return enriched.filter(wi => wi.isHighPriority);
+            case 'recentlyUpdated': {
+                return enriched.filter(wi => {
+                    const lastMod = wi.LastModifiedDate || wi.delivery__LastModifiedDate;
+                    if (!lastMod) return false;
+                    return (now - new Date(lastMod).getTime()) <= fortyEightHoursMs;
+                });
+            }
+            default:
+                return enriched;
+        }
     }
 }
