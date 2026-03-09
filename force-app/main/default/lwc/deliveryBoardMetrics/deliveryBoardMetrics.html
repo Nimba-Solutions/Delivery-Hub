@@ -1,0 +1,257 @@
+<template>
+
+    <!-- ============================================================ -->
+    <!-- COMPACT MODE — single row of key numbers                     -->
+    <!-- ============================================================ -->
+    <template lwc:if={isCompact}>
+        <div class="compact-strip">
+            <template lwc:if={isLoaded}>
+                <template lwc:if={hasMetrics}>
+                    <div class="compact-metric" title="Avg items completed per week (last 4 wks)">
+                        <span class="compact-value">{compactVelocity}</span>
+                        <span class="compact-label">Velocity/wk</span>
+                    </div>
+                    <div class="compact-divider"></div>
+                    <div class="compact-metric" title="Avg days to complete (last 30 days)">
+                        <span class="compact-value">{throughputValue}</span>
+                        <span class="compact-label">Avg Days</span>
+                        <span class={throughputTrendClass}>
+                            <lightning-icon icon-name={throughputArrow} size="xx-small"></lightning-icon>
+                        </span>
+                    </div>
+                    <div class="compact-divider"></div>
+                    <div class="compact-metric" title="Items in non-terminal stages">
+                        <span class={wipGaugeClass}>{wipCount}</span>
+                        <span class="compact-label">WIP</span>
+                    </div>
+                    <div class="compact-divider"></div>
+                    <template lwc:if={hasAgingItems}>
+                        <div class="compact-metric compact-metric--alert" title="Items stuck 3+ days">
+                            <span class="compact-value compact-value--warning">{agingCount}</span>
+                            <span class="compact-label">Aging</span>
+                        </div>
+                        <div class="compact-divider"></div>
+                    </template>
+                    <div class="compact-metric" title="Completion rate (last 30 days)">
+                        <span class="compact-value">{completionRate}%</span>
+                        <span class="compact-label">Done</span>
+                    </div>
+                </template>
+            </template>
+            <template lwc:if={isLoading}>
+                <div class="compact-loading">
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </div>
+            </template>
+        </div>
+    </template>
+
+    <!-- ============================================================ -->
+    <!-- FULL MODE — complete dashboard with cards                    -->
+    <!-- ============================================================ -->
+    <template lwc:if={isFull}>
+        <lightning-card title={cardTitle} icon-name={cardIconName}>
+
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                slot="actions"
+                variant="border-filled"
+                onclick={handleRefresh}
+                alternative-text="Refresh Metrics">
+            </lightning-button-icon>
+
+            <template lwc:if={isLoading}>
+                <div class="slds-p-around_large slds-text-align_center">
+                    <lightning-spinner alternative-text="Loading metrics" size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:if={isLoaded}>
+                <template lwc:if={hasMetrics}>
+                    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+                        <!-- ROW 1: Velocity + Throughput + WIP -->
+                        <div class="slds-grid slds-wrap slds-gutters_small slds-m-bottom_small">
+
+                            <!-- Velocity Sparkline -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-m-bottom_small">
+                                <div class="metric-card">
+                                    <div class="metric-card-header">
+                                        <span class="metric-card-title">Velocity</span>
+                                        <span class="metric-card-subtitle">Completed/week</span>
+                                    </div>
+                                    <div class="metric-card-value">{avgVelocity}<span class="metric-card-unit"> avg</span></div>
+                                    <div class="sparkline-container">
+                                        <template for:each={velocityBars} for:item="bar">
+                                            <div key={bar.weekLabel} class="sparkline-col" title={bar.title}>
+                                                <div class={bar.barClass} style={bar.barStyle}></div>
+                                                <span class="sparkline-label">{bar.weekLabel}</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Throughput -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-m-bottom_small">
+                                <div class="metric-card">
+                                    <div class="metric-card-header">
+                                        <span class="metric-card-title">Throughput</span>
+                                        <span class="metric-card-subtitle">Avg days to complete</span>
+                                    </div>
+                                    <div class="metric-card-value-row">
+                                        <span class="metric-card-value">{throughputValue}<span class="metric-card-unit"> days</span></span>
+                                        <span class={throughputTrendClass} title={throughputTrendLabel}>
+                                            <lightning-icon icon-name={throughputArrow} size="xx-small"></lightning-icon>
+                                        </span>
+                                    </div>
+                                    <div class="throughput-context">
+                                        <span class="metric-card-subtitle">vs last 30-day period</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- WIP Gauge -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-m-bottom_small">
+                                <div class="metric-card">
+                                    <div class="metric-card-header">
+                                        <span class="metric-card-title">Work In Progress</span>
+                                        <span class="metric-card-subtitle">{wipLabel}</span>
+                                    </div>
+                                    <div class={wipGaugeClass}>{wipCount}</div>
+                                    <div class="gauge-bar">
+                                        <div class={wipGaugeBarClass} style={wipGaugeBarStyle}></div>
+                                    </div>
+                                    <div class="gauge-scale">
+                                        <span>0</span>
+                                        <span>10</span>
+                                        <span>20</span>
+                                        <span>40+</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ROW 2: Stage Distribution -->
+                        <template lwc:if={hasStageDistribution}>
+                            <div class="metric-card slds-m-bottom_small">
+                                <div class="metric-card-header">
+                                    <span class="metric-card-title">Stage Distribution</span>
+                                    <span class="metric-card-subtitle">Items by phase</span>
+                                </div>
+                                <div class="stacked-bar">
+                                    <template for:each={phaseDistribution} for:item="seg">
+                                        <div key={seg.phase}
+                                             class="stacked-bar-segment"
+                                             style={seg.segmentStyle}
+                                             title={seg.title}>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="legend-row">
+                                    <template for:each={phaseDistribution} for:item="seg">
+                                        <div key={seg.phase} class="legend-item">
+                                            <span class="legend-dot" style={seg.legendColor}></span>
+                                            <span class="legend-text">{seg.phase}</span>
+                                            <span class="legend-count">{seg.count}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- ROW 3: Aging Alerts + Priority + Completion -->
+                        <div class="slds-grid slds-wrap slds-gutters_small">
+
+                            <!-- Aging Alerts -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-m-bottom_small">
+                                <div class="metric-card">
+                                    <div class="metric-card-header">
+                                        <span class="metric-card-title">Aging Items</span>
+                                        <span class="metric-card-subtitle">Stuck 3+ days</span>
+                                    </div>
+                                    <template lwc:if={hasAgingItems}>
+                                        <div class={agingBadgeClass}>{agingCount}</div>
+                                        <ul class="aging-list">
+                                            <template for:each={topAgingItems} for:item="item">
+                                                <li key={item.id} class="aging-list-item">
+                                                    <span class="aging-item-name" title={item.title}>{item.name}</span>
+                                                    <span class="aging-item-days">{item.daysInStage}d</span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                        <button class="slds-button slds-button_neutral slds-button_stretch view-aging-btn" onclick={handleViewAgingItems}>
+                                            View All
+                                        </button>
+                                    </template>
+                                    <template lwc:else>
+                                        <div class="no-aging">
+                                            <lightning-icon icon-name="utility:check" size="small"
+                                                class="no-aging-icon"></lightning-icon>
+                                            <span class="no-aging-text">No stuck items</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Priority Breakdown -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-m-bottom_small">
+                                <div class="metric-card">
+                                    <div class="metric-card-header">
+                                        <span class="metric-card-title">Priority Mix</span>
+                                        <span class="metric-card-subtitle">Active items by priority</span>
+                                    </div>
+                                    <template lwc:if={hasPriorityData}>
+                                        <div class="priority-bars">
+                                            <template for:each={prioritySegments} for:item="seg">
+                                                <div key={seg.priority} class="priority-bar-row">
+                                                    <div class="priority-bar-label">
+                                                        <span class="legend-dot" style={seg.legendColor}></span>
+                                                        <span>{seg.priority}</span>
+                                                    </div>
+                                                    <div class="priority-bar-track">
+                                                        <div class="priority-bar-fill" style={seg.barStyle}></div>
+                                                    </div>
+                                                    <span class="priority-bar-count">{seg.count}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template lwc:else>
+                                        <div class="no-data-text">No active items</div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Completion Rate -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-m-bottom_small">
+                                <div class="metric-card">
+                                    <div class="metric-card-header">
+                                        <span class="metric-card-title">Completion Rate</span>
+                                        <span class="metric-card-subtitle">Last 30 days</span>
+                                    </div>
+                                    <div class="completion-value">{completionRate}<span class="completion-pct">%</span></div>
+                                    <div class="completion-bar">
+                                        <div class={completionBarClass} style={completionBarStyle}></div>
+                                    </div>
+                                    <div class="completion-detail">
+                                        <span>{completedCount} completed</span>
+                                        <span>of {totalCount} created</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </template>
+
+                <template lwc:if={hasError}>
+                    <div class="slds-p-around_medium slds-text-color_error slds-text-align_center">
+                        Unable to load metrics. Please try refreshing.
+                    </div>
+                </template>
+            </template>
+        </lightning-card>
+    </template>
+
+</template>

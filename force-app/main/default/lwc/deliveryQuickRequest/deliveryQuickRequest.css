@@ -1,0 +1,86 @@
+/* ── Form Container ── */
+.qr-form {
+    padding: 0.25rem 0;
+}
+
+/* ── Priority Pills ── */
+.qr-priority-pills {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.qr-pill {
+    padding: 0.35rem 1rem;
+    border-radius: 1rem;
+    border: 2px solid transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #f3f3f3;
+    color: #444;
+    line-height: 1.2;
+}
+
+.qr-pill:hover {
+    filter: brightness(0.95);
+}
+
+.qr-pill-high {
+    border-color: #ea580c;
+    color: #9a3412;
+    background: #fff7ed;
+}
+.qr-pill-high.qr-pill-selected {
+    background: #ea580c;
+    color: #fff;
+}
+
+.qr-pill-medium {
+    border-color: #ca8a04;
+    color: #854d0e;
+    background: #fefce8;
+}
+.qr-pill-medium.qr-pill-selected {
+    background: #ca8a04;
+    color: #fff;
+}
+
+.qr-pill-low {
+    border-color: #16a34a;
+    color: #166534;
+    background: #f0fdf4;
+}
+.qr-pill-low.qr-pill-selected {
+    background: #16a34a;
+    color: #fff;
+}
+
+/* ── Add Description Link ── */
+.qr-add-description {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #0176d3;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.25rem 0;
+}
+.qr-add-description:hover {
+    text-decoration: underline;
+    color: #014486;
+}
+
+/* ── AI Processing Indicator ── */
+.qr-ai-indicator {
+    display: flex;
+    align-items: center;
+    background: #eef6ff;
+    border: 1px solid #b8d4f0;
+    border-radius: 0.375rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8125rem;
+    color: #0b5394;
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Delivery Quick Request</masterLabel>
+    <description>Global Quick Action for creating work requests from any page in Salesforce, with optional AI enhancement.</description>
+    <targets>
+        <target>lightning__GlobalAction</target>
+    </targets>
+</LightningComponentBundle>

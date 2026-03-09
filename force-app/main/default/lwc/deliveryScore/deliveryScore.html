@@ -1,0 +1,134 @@
+<template>
+    <lightning-card title="Delivery Score" icon-name="standard:calibration">
+
+        <!-- Loading spinner -->
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_large slds-align_absolute-center">
+                <lightning-spinner alternative-text="Loading score" size="medium"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error state -->
+        <template lwc:if={error}>
+            <div class="slds-p-around_medium">
+                <div class="slds-text-color_error slds-text-body_small">
+                    Unable to calculate delivery score.
+                </div>
+            </div>
+        </template>
+
+        <!-- Score display -->
+        <template lwc:if={hasResult}>
+            <div class="score-container">
+
+                <!-- Grade label -->
+                <div class="grade-label slds-text-title_caps slds-text-color_weak slds-text-align_center">
+                    {gradeLabel}
+                </div>
+
+                <!-- Circular gauge -->
+                <div class="gauge-wrapper">
+                    <!-- Glow effect -->
+                    <div class="gauge-glow" style={glowStyle}></div>
+
+                    <!-- SVG gauge -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="gauge-svg"
+                         width={gaugeSize}
+                         height={gaugeSize}
+                         viewBox={gaugeViewBox}>
+
+                        <!-- Background track -->
+                        <circle
+                            cx={gaugeCenter}
+                            cy={gaugeCenter}
+                            r={gaugeRadius}
+                            fill="none"
+                            stroke={trackStroke}
+                            stroke-width={gaugeStrokeWidth}
+                            opacity="0.4"
+                        />
+
+                        <!-- Score arc -->
+                        <circle
+                            class="gauge-arc"
+                            cx={gaugeCenter}
+                            cy={gaugeCenter}
+                            r={gaugeRadius}
+                            fill="none"
+                            stroke={arcStroke}
+                            stroke-width={gaugeStrokeWidth}
+                            stroke-linecap="round"
+                            stroke-dasharray={gaugeDashArray}
+                            stroke-dashoffset={gaugeDashOffset}
+                        />
+                    </svg>
+
+                    <!-- Center content -->
+                    <div class="gauge-center">
+                        <span class="score-number" style={scoreNumberStyle}>{animatedScore}</span>
+                        <span class="score-grade" style={gradeStyle}>{grade}</span>
+                    </div>
+                </div>
+
+                <!-- Factor breakdown -->
+                <template lwc:if={showBreakdown}>
+                    <div class="breakdown-container">
+                        <div class="breakdown-divider"></div>
+                        <p class="breakdown-title slds-text-title_caps slds-text-color_weak">
+                            Score Breakdown
+                        </p>
+
+                        <div class="factors-list">
+                            <template for:each={factors} for:item="factor">
+                                <div key={factor.key} class="factor-item">
+                                    <div class="factor-row"
+                                         data-name={factor.name}
+                                         onclick={handleToggleFactor}
+                                         role="button"
+                                         tabindex="0">
+
+                                        <!-- Status icon -->
+                                        <span class={factor.statusColorClass}>
+                                            {factor.statusIcon}
+                                        </span>
+
+                                        <!-- Name, weight, score, bar -->
+                                        <div class="factor-content">
+                                            <div class="factor-header">
+                                                <span class="factor-name">{factor.name}</span>
+                                                <div class="factor-meta">
+                                                    <span class="factor-weight">{factor.weightPct}</span>
+                                                    <span class="factor-score">{factor.score}</span>
+                                                </div>
+                                            </div>
+                                            <div class="factor-bar-track">
+                                                <div class={factor.barColorClass} style={factor.barStyle}></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Expand chevron -->
+                                        <svg class={factor.chevronClass}
+                                             xmlns="http://www.w3.org/2000/svg"
+                                             viewBox="0 0 24 24"
+                                             fill="none"
+                                             stroke="currentColor"
+                                             stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                        </svg>
+
+                                    </div>
+
+                                    <!-- Expanded detail -->
+                                    <div class={factor.detailClass}>
+                                        <p class="factor-detail-text">{factor.detail}</p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </lightning-card>
+</template>
