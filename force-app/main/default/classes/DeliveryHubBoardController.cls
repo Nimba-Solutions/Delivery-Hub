@@ -294,6 +294,49 @@ public with sharing class DeliveryHubBoardController {
         return metrics;
     }
 
+    /**
+     * @description Returns full work item detail for the slide-out panel including
+     *              comments and attached files. Reuses existing controller methods
+     *              for comments (DeliveryHubCommentController) and files
+     *              (DeliveryHubFilesController) to avoid duplicating SOQL.
+     * @param workItemId The WorkItem__c record Id.
+     * @return Map containing workItem, comments, and files keys.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    @AuraEnabled
+    public static Map<String, Object> getWorkItemDetail(Id workItemId) {
+        Map<String, Object> result = new Map<String, Object>();
+
+        // 1. Fetch the work item with key fields
+        List<WorkItem__c> items = [
+            SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
+                   StageNamePk__c, PriorityPk__c, Owner.Name, OwnerId,
+                   DeveloperDaysSizeNumber__c, TotalLoggedHoursNumber__c,
+                   EstimatedHoursNumber__c, CalculatedETADate__c,
+                   Tags__c, WorkflowTypeTxt__c, CreatedDate, LastModifiedDate,
+                   Developer__c, Developer__r.Name, Epic__c, Epic__r.Name,
+                   ProjectedUATReadyDate__c, ClientIntentionPk__c
+            FROM WorkItem__c
+            WHERE Id = :workItemId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (items.isEmpty()) {
+            throw createAuraException('Work item not found.');
+        }
+        result.put('workItem', items[0]);
+
+        // 2. Fetch comments via existing controller
+        List<WorkItemComment__c> comments = DeliveryHubCommentController.getLiveComments(workItemId);
+        result.put('comments', comments);
+
+        // 3. Fetch files via existing controller
+        List<DeliveryHubFilesController.FileItem> files = DeliveryHubFilesController.getWorkItemFiles(workItemId);
+        result.put('files', files);
+
+        return result;
+    }
+
     private static AuraHandledException createAuraException(String message) {
         AuraHandledException e = new AuraHandledException(message);
         e.setMessage(message);

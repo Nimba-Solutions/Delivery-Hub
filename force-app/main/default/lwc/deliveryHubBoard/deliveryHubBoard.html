@@ -83,6 +83,27 @@
                         My Work
                     </button>
                 </div>
+                <div class="filter-group">
+                    <div class="button-group">
+                        <button class={columnsButtonClass} data-mode="columns" onclick={handleBoardViewModeChange}>
+                            <lightning-icon icon-name="utility:kanban" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                            Columns
+                        </button>
+                        <button class={phasesButtonClass} data-mode="phases" onclick={handleBoardViewModeChange}>
+                            <lightning-icon icon-name="utility:steps" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                            Phases
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick-filter Pill Bar -->
+            <div class="quick-filter-bar">
+                <template for:each={quickFilterPills} for:item="pill">
+                    <button key={pill.key} class={pill.pillClass} data-filter={pill.key} onclick={handleQuickFilterClick}>
+                        {pill.label}
+                    </button>
+                </template>
             </div>
         </div>
 
@@ -118,124 +139,182 @@
 
         <!-- ── DESKTOP BOARD (Kanban columns with drag-and-drop) ── -->
         <template lwc:if={isDesktop}>
-            <div class="kanban-board js-kanban-board">
-                <div class="kanban-columns-container">
-                    <template for:each={stageColumns} for:item="col">
-                        <div key={col.stage} class="kanban-column" role="list" aria-label={col.displayName} ondrop={handleDrop} ondragover={handleDragOver} ondragleave={handleDragLeave} data-stage={col.stage}>
+            <!-- Columns View (default) -->
+            <template lwc:if={isColumnsView}>
+                <div class="kanban-board js-kanban-board">
+                    <div class="kanban-columns-container">
+                        <template for:each={stageColumns} for:item="col">
+                            <div key={col.stage} class="kanban-column" role="list" aria-label={col.displayName} ondrop={handleDrop} ondragover={handleDragOver} ondragleave={handleDragLeave} data-stage={col.stage}>
 
-                            <div class="kanban-column-header" style={col.headerStyle}>
-                                <h2 class="column-title">{col.displayName}</h2>
-                                <span class="work-item-count-badge">{col.workItems.length}</span>
-                            </div>
+                                <div class="kanban-column-header" style={col.headerStyle}>
+                                    <h2 class="column-title">{col.displayName}</h2>
+                                    <span class="work-item-count-badge">{col.workItems.length}</span>
+                                </div>
 
-                            <div class={col.bodyClasses}>
-                                <template lwc:if={col.workItems.length}>
-                                    <template for:each={col.workItems} for:item="wi">
-                                        <div key={wi.uiId} class={wi.cardClasses} role="listitem" draggable="true" aria-label={wi.uiTitle} style={wi.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={wi.uiId}>
+                                <div class={col.bodyClasses}>
+                                    <template lwc:if={col.workItems.length}>
+                                        <template for:each={col.workItems} for:item="wi">
+                                            <div key={wi.uiId} class={wi.cardClasses} role="listitem" draggable="true" aria-label={wi.uiTitle} style={wi.cardStyle} ondragstart={handleDragStart} ondragend={handleDragEnd} data-id={wi.uiId}>
 
-                                            <template lwc:if={wi.isHighPriority}>
-                                                <div class="priority-indicator">
-                                                    <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
-                                                </div>
-                                            </template>
-
-                                            <h3 class="work-item-title-text" data-id={wi.uiId} onclick={handleTitleClick}>
-                                                {wi.uiTitle}
-                                            </h3>
-
-                                            <p class="work-item-description">{wi.uiDescription}</p>
-
-                                            <div class="work-item-metadata-grid">
-                                                <div class="meta-row">
-                                                    <div class="meta-item" title="Billed / Estimated Hours">
-                                                        <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-icon-text-light"></lightning-icon>
-                                                        <span>{wi.uiHours}</span>
+                                                <template lwc:if={wi.isHighPriority}>
+                                                    <div class="priority-indicator">
+                                                        <lightning-icon icon-name="utility:warning" variant="error" size="x-small"></lightning-icon>
                                                     </div>
-                                                    <div title="Size in Days">
-                                                        <span class="slds-badge meta-badge">{wi.uiSize}d</span>
-                                                    </div>
-                                                </div>
+                                                </template>
 
-                                                <div class="meta-row">
-                                                    <div class="meta-item" title={wi.dateTooltip}>
-                                                        <lightning-icon icon-name="utility:event" size="xx-small" class="slds-icon-text-light"></lightning-icon>
-                                                        <span>ETA: {wi.calculatedETA}</span>
-                                                        <template lwc:if={wi.hasConfidence}>
-                                                            <span class={wi.confidenceClass} title="ETA confidence">{wi.confidenceLabel}</span>
+                                                <h3 class="work-item-title-text" data-id={wi.uiId} onclick={handleTitleClick}>
+                                                    {wi.uiTitle}
+                                                </h3>
+
+                                                <p class="work-item-description">{wi.uiDescription}</p>
+
+                                                <div class="work-item-metadata-grid">
+                                                    <div class="meta-row">
+                                                        <div class="meta-item" title="Billed / Estimated Hours">
+                                                            <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-icon-text-light"></lightning-icon>
+                                                            <span>{wi.uiHours}</span>
+                                                        </div>
+                                                        <div title="Size in Days">
+                                                            <span class="slds-badge meta-badge">{wi.uiSize}d</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="meta-row">
+                                                        <div class="meta-item" title={wi.dateTooltip}>
+                                                            <lightning-icon icon-name="utility:event" size="xx-small" class="slds-icon-text-light"></lightning-icon>
+                                                            <span>ETA: {wi.calculatedETA}</span>
+                                                            <template lwc:if={wi.hasConfidence}>
+                                                                <span class={wi.confidenceClass} title="ETA confidence">{wi.confidenceLabel}</span>
+                                                            </template>
+                                                        </div>
+
+                                                        <template lwc:if={wi.uiUat}>
+                                                            <div class="meta-item uat-date" title="Target UAT Date">
+                                                                <span>UAT: {wi.uiUat}</span>
+                                                            </div>
                                                         </template>
                                                     </div>
+                                                </div>
 
-                                                    <template lwc:if={wi.uiUat}>
-                                                        <div class="meta-item uat-date" title="Target UAT Date">
-                                                            <span>UAT: {wi.uiUat}</span>
+                                                <template lwc:if={wi.tags.length}>
+                                                    <div class="work-item-tags">
+                                                        <template for:each={wi.tags} for:item="tag">
+                                                            <span key={tag} class="tag-badge">{tag}</span>
+                                                        </template>
+                                                    </div>
+                                                </template>
+
+                                                <div class="work-item-footer">
+                                                    <template lwc:if={wi.uiPriority}>
+                                                        <span class={wi.priorityClasses}>{wi.uiPriority}</span>
+                                                    </template>
+
+                                                    <button class="work-item-action-button" title="Move Work Item" data-id={wi.uiId} onclick={handleCardClick}>
+                                                        <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
+                                                    </button>
+
+                                                    <button class="work-item-block-button" title="Manage Dependencies" data-id={wi.uiId} onclick={handleManageDependenciesClick}>
+                                                        <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Dependencies"></lightning-icon>
+                                                    </button>
+
+                                                    <template lwc:if={wi.hasComments}>
+                                                        <div class="card-badge" title="Comments">
+                                                            <lightning-icon icon-name="utility:comments" size="xx-small" class="slds-icon-text-light"></lightning-icon>
+                                                            <span>{wi.commentLabel}</span>
+                                                        </div>
+                                                    </template>
+
+                                                    <template lwc:if={wi.hasAging}>
+                                                        <span class={wi.agingClass} title="No activity for {wi.agingLabel}"></span>
+                                                    </template>
+
+                                                    <template lwc:if={wi.OwnerName}>
+                                                        <div class="assignee">
+                                                            <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
+                                                            <span>{wi.OwnerName}</span>
+                                                        </div>
+                                                    </template>
+
+                                                    <template lwc:if={wi.isCurrentlyBlocked}>
+                                                        <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This work item is blocked."></lightning-icon>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </template>
+
+                                    <template lwc:else>
+                                        <div class="empty-column-placeholder">
+                                            <div class="empty-col-dots">
+                                                <span class="empty-dot"></span>
+                                                <span class="empty-dot"></span>
+                                                <span class="empty-dot"></span>
+                                            </div>
+                                            <div class="placeholder-text">Empty</div>
+                                            <div class="placeholder-subtext">Drop work items here</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Phases View (accordion grouped by phase) -->
+            <template lwc:if={isPhasesView}>
+                <div class="phase-board">
+                    <template for:each={phaseGroups} for:item="pg">
+                        <div key={pg.phase} class="phase-accordion">
+                            <div class={pg.headerClass} style={pg.headerStyle} data-phase={pg.phase} onclick={handleTogglePhase}>
+                                <lightning-icon icon-name={pg.chevronIcon} size="xx-small" class="collapse-chevron"></lightning-icon>
+                                <h2 class="phase-title">{pg.phase}</h2>
+                                <span class="work-item-count-badge">{pg.count}</span>
+                            </div>
+
+                            <template lwc:if={pg.isExpanded}>
+                                <div class="phase-accordion-body">
+                                    <template lwc:if={pg.count}>
+                                        <template for:each={pg.stageSubgroups} for:item="sg">
+                                            <div key={sg.stage} class="phase-stage-group">
+                                                <div class="phase-stage-label">
+                                                    <span class="phase-stage-dot" style={sg.dotStyle}></span>
+                                                    {sg.displayName}
+                                                    <span class="phase-stage-count">({sg.items.length})</span>
+                                                </div>
+                                                <div class="phase-stage-cards">
+                                                    <template for:each={sg.items} for:item="wi">
+                                                        <div key={wi.uiId} class="work-item-card" style={wi.cardStyle} data-id={wi.uiId}>
+                                                            <h3 class="work-item-title-text" data-id={wi.uiId} onclick={handleTitleClick}>{wi.uiTitle}</h3>
+                                                            <div class="work-item-footer">
+                                                                <template lwc:if={wi.uiPriority}>
+                                                                    <span class={wi.priorityClasses}>{wi.uiPriority}</span>
+                                                                </template>
+                                                                <template lwc:if={wi.OwnerName}>
+                                                                    <div class="assignee">
+                                                                        <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
+                                                                        <span>{wi.OwnerName}</span>
+                                                                    </div>
+                                                                </template>
+                                                                <button class="work-item-action-button" title="Move Work Item" data-id={wi.uiId} onclick={handleCardClick}>
+                                                                    <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </template>
                                                 </div>
                                             </div>
-
-                                            <template lwc:if={wi.tags.length}>
-                                                <div class="work-item-tags">
-                                                    <template for:each={wi.tags} for:item="tag">
-                                                        <span key={tag} class="tag-badge">{tag}</span>
-                                                    </template>
-                                                </div>
-                                            </template>
-
-                                            <div class="work-item-footer">
-                                                <template lwc:if={wi.uiPriority}>
-                                                    <span class={wi.priorityClasses}>{wi.uiPriority}</span>
-                                                </template>
-
-                                                <button class="work-item-action-button" title="Move Work Item" data-id={wi.uiId} onclick={handleCardClick}>
-                                                    <lightning-icon icon-name="utility:edit_gpt" size="xx-small" alternative-text="Change Status"></lightning-icon>
-                                                </button>
-
-                                                <button class="work-item-block-button" title="Manage Dependencies" data-id={wi.uiId} onclick={handleManageDependenciesClick}>
-                                                    <lightning-icon icon-name="utility:block_visitor" size="xx-small" alternative-text="Dependencies"></lightning-icon>
-                                                </button>
-
-                                                <template lwc:if={wi.hasComments}>
-                                                    <div class="card-badge" title="Comments">
-                                                        <lightning-icon icon-name="utility:comments" size="xx-small" class="slds-icon-text-light"></lightning-icon>
-                                                        <span>{wi.commentLabel}</span>
-                                                    </div>
-                                                </template>
-
-                                                <template lwc:if={wi.hasAging}>
-                                                    <span class={wi.agingClass} title="No activity for {wi.agingLabel}"></span>
-                                                </template>
-
-                                                <template lwc:if={wi.OwnerName}>
-                                                    <div class="assignee">
-                                                        <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
-                                                        <span>{wi.OwnerName}</span>
-                                                    </div>
-                                                </template>
-
-                                                <template lwc:if={wi.isCurrentlyBlocked}>
-                                                    <lightning-icon icon-name="utility:lock" variant="error" size="x-small" title="This work item is blocked."></lightning-icon>
-                                                </template>
-                                            </div>
-                                        </div>
+                                        </template>
                                     </template>
-                                </template>
-
-                                <template lwc:else>
-                                    <div class="empty-column-placeholder">
-                                        <div class="empty-col-dots">
-                                            <span class="empty-dot"></span>
-                                            <span class="empty-dot"></span>
-                                            <span class="empty-dot"></span>
-                                        </div>
-                                        <div class="placeholder-text">Empty</div>
-                                        <div class="placeholder-subtext">Drop work items here</div>
-                                    </div>
-                                </template>
-                            </div>
+                                    <template lwc:else>
+                                        <div class="empty-stage-mobile">No items in this phase</div>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
-            </div>
+            </template>
         </template>
 
         <!-- ── MOBILE BOARD (single-column, collapsible stages, swipe cards) ── -->
@@ -595,5 +674,122 @@
             </div>
         </section>
         <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- ── Slide-out Detail Panel ── -->
+    <template lwc:if={showDetailPanel}>
+        <div class="detail-panel-backdrop" onclick={handleDetailBackdropClick}></div>
+        <div class={detailPanelClass}>
+            <div class="detail-panel-header">
+                <div class="detail-panel-header-left">
+                    <span class="detail-panel-record-name">{detailName}</span>
+                </div>
+                <button class="detail-panel-close" onclick={closeDetailPanel} title="Close">
+                    <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
+                </button>
+            </div>
+
+            <template lwc:if={isDetailLoading}>
+                <div class="detail-panel-loading">
+                    <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:if={isDetailLoaded}>
+                <div class="detail-panel-body">
+                    <!-- Title & Stage -->
+                    <h2 class="detail-panel-title">{detailTitle}</h2>
+
+                    <div class="detail-panel-meta">
+                        <div class="detail-meta-item">
+                            <span class="detail-meta-label">Stage</span>
+                            <span class="detail-meta-value">{detailStage}</span>
+                        </div>
+                        <div class="detail-meta-item">
+                            <span class="detail-meta-label">Priority</span>
+                            <span class={detailPriorityClass}>{detailPriority}</span>
+                        </div>
+                        <div class="detail-meta-item">
+                            <span class="detail-meta-label">Assignee</span>
+                            <span class="detail-meta-value">{detailOwner}</span>
+                        </div>
+                        <template lwc:if={hasDetailDeveloper}>
+                            <div class="detail-meta-item">
+                                <span class="detail-meta-label">Developer</span>
+                                <span class="detail-meta-value">{detailDeveloperName}</span>
+                            </div>
+                        </template>
+                        <template lwc:if={hasDetailEpic}>
+                            <div class="detail-meta-item">
+                                <span class="detail-meta-label">Epic</span>
+                                <span class="detail-meta-value">{detailEpicName}</span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="detail-section">
+                        <h3 class="detail-section-heading">Description</h3>
+                        <p class="detail-description">{detailDescription}</p>
+                    </div>
+
+                    <!-- Comments -->
+                    <div class="detail-section">
+                        <h3 class="detail-section-heading">
+                            Comments
+                            <template lwc:if={detailHasComments}>
+                                <span class="detail-section-count">({detailComments.length})</span>
+                            </template>
+                        </h3>
+                        <template lwc:if={detailHasComments}>
+                            <div class="detail-comments-list">
+                                <template for:each={detailFormattedComments} for:item="comment">
+                                    <div key={comment.id} class="detail-comment">
+                                        <div class="detail-comment-header">
+                                            <span class="detail-comment-author">{comment.author}</span>
+                                            <span class="detail-comment-date">{comment.date}</span>
+                                        </div>
+                                        <p class="detail-comment-body">{comment.body}</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template lwc:else>
+                            <p class="detail-empty-text">No comments yet.</p>
+                        </template>
+                    </div>
+
+                    <!-- Files -->
+                    <div class="detail-section">
+                        <h3 class="detail-section-heading">
+                            Files
+                            <template lwc:if={detailHasFiles}>
+                                <span class="detail-section-count">({detailFiles.length})</span>
+                            </template>
+                        </h3>
+                        <template lwc:if={detailHasFiles}>
+                            <div class="detail-files-list">
+                                <template for:each={detailFormattedFiles} for:item="file">
+                                    <div key={file.id} class="detail-file">
+                                        <lightning-icon icon-name="utility:file" size="xx-small" class="slds-m-right_x-small"></lightning-icon>
+                                        <span class="detail-file-name">{file.title}</span>
+                                        <span class="detail-file-size">{file.size}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template lwc:else>
+                            <p class="detail-empty-text">No files attached.</p>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Panel Footer -->
+                <div class="detail-panel-footer">
+                    <lightning-button variant="neutral" label="View Record" onclick={handleDetailView}></lightning-button>
+                    <lightning-button variant="brand" label="Edit" onclick={handleDetailEdit} class="slds-m-left_x-small"></lightning-button>
+                </div>
+            </template>
+        </div>
     </template>
 </template>
