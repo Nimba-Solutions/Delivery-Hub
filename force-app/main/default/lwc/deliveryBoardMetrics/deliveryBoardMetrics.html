@@ -83,7 +83,7 @@
                                     <div class="metric-card-value">{avgVelocity}<span class="metric-card-unit"> avg</span></div>
                                     <div class="sparkline-container">
                                         <template for:each={velocityBars} for:item="bar">
-                                            <div key={bar.weekLabel} class="sparkline-col" title="{bar.weekLabel}: {bar.count}">
+                                            <div key={bar.weekLabel} class="sparkline-col" title={bar.title}>
                                                 <div class={bar.barClass} style={bar.barStyle}></div>
                                                 <span class="sparkline-label">{bar.weekLabel}</span>
                                             </div>
@@ -144,7 +144,7 @@
                                         <div key={seg.phase}
                                              class="stacked-bar-segment"
                                              style={seg.segmentStyle}
-                                             title="{seg.phase}: {seg.count}">
+                                             title={seg.title}>
                                         </div>
                                     </template>
                                 </div>

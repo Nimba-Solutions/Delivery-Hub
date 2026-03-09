@@ -7,6 +7,7 @@
  *               completion rate data.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.ApexDoc, PMD.ExcessivePublicCount')
 public with sharing class DeliveryMetricsService {
 
     // -------------------------------------------------------------------------

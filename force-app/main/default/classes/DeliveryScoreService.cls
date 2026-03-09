@@ -7,6 +7,7 @@
  *               Ported from the cloudnimbusllc.com website scoring algorithm.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount')
 public with sharing class DeliveryScoreService {
 
     // -------------------------------------------------------------------------
@@ -134,7 +135,7 @@ public with sharing class DeliveryScoreService {
         for (ScoreFactor f : factors) {
             weightedScore += f.score * f.weight;
         }
-        Integer finalScore = Math.round(weightedScore).intValue();
+        Integer finalScore = (Integer)Math.round(weightedScore);
 
         DeliveryScoreResult result = new DeliveryScoreResult();
         result.score = finalScore;
@@ -191,16 +192,17 @@ public with sharing class DeliveryScoreService {
             if (mean > 0) {
                 Decimal variance = 0;
                 for (Integer c : phaseCounts) {
-                    variance += Math.pow(c - mean, 2);
+                    Decimal diff = c - mean;
+                    variance += diff * diff;
                 }
                 variance /= phaseCounts.size();
-                Decimal cv = Math.sqrt(variance.doubleValue()) / mean.doubleValue();
+                Decimal cv = (Decimal)Math.sqrt(variance.doubleValue()) / mean;
                 distributionScore = Math.max(0, 100 - cv * 40);
             }
         }
 
         // 60% active ratio bonus + 40% distribution evenness
-        f.score = Math.round(Math.min(100, activeRatio * 100 * 0.6 + distributionScore * 0.4)).intValue();
+        f.score = (Integer)Math.round(Math.min(100, activeRatio * 100 * 0.6 + distributionScore * 0.4));
 
         if (f.score >= 70) {
             f.detail = activePhaseItems + ' of ' + totalItems + ' items are in active stages. Work is flowing well.';
@@ -261,12 +263,12 @@ public with sharing class DeliveryScoreService {
             } else if (count <= 5) {
                 totalScore += 70;
             } else {
-                totalScore += Math.max(0, 40 - (count - 5) * 10).intValue();
+                totalScore += (Integer)Math.max(0, 40 - (count - 5) * 10);
                 overloaded++;
             }
         }
 
-        f.score = Math.round((Decimal)totalScore / stageCounts.size()).intValue();
+        f.score = (Integer)Math.round((Decimal)totalScore / stageCounts.size());
 
         if (overloaded == 0) {
             f.detail = 'All columns have healthy WIP counts. Team is managing capacity well.';
@@ -294,9 +296,9 @@ public with sharing class DeliveryScoreService {
         }
 
         Decimal ratio = (Decimal)doneItems / totalItems;
-        f.score = Math.round(Math.min(100, ratio * 160)).intValue();
+        f.score = (Integer)Math.round(Math.min(100, ratio * 160));
 
-        Integer pct = Math.round(ratio * 100).intValue();
+        Integer pct = (Integer)Math.round(ratio * 100);
         if (pct >= 50) {
             f.detail = doneItems + ' of ' + totalItems + ' items completed (' + pct + '%). Strong execution.';
         } else if (pct >= 25) {
@@ -342,10 +344,10 @@ public with sharing class DeliveryScoreService {
         } else if (backlogRatio <= 0.40) {
             f.score = 60;
         } else {
-            f.score = Math.max(0, Math.round(40 - (backlogRatio - 0.40) * 100)).intValue();
+            f.score = (Integer)Math.max(0, Math.round(40 - (backlogRatio - 0.40) * 100));
         }
 
-        Integer pct = Math.round(backlogRatio * 100).intValue();
+        Integer pct = (Integer)Math.round(backlogRatio * 100);
         if (f.score >= 70) {
             f.detail = 'Backlog is ' + pct + '% of all items. Lean and focused.';
         } else if (f.score >= 40) {
@@ -405,7 +407,7 @@ public with sharing class DeliveryScoreService {
             }
         }
 
-        f.score = Math.round((Decimal)totalScore / highPriItems.size()).intValue();
+        f.score = (Integer)Math.round((Decimal)totalScore / highPriItems.size());
 
         if (earlyItems == 0) {
             f.detail = 'All ' + highPriItems.size() + ' high-priority items are progressing through the pipeline.';
@@ -450,7 +452,7 @@ public with sharing class DeliveryScoreService {
         Decimal coverageScore = commentRatio * 100;
         Decimal volumeScore = Math.min(100, ((Decimal)totalComments / totalItems) * 50);
 
-        f.score = Math.round(coverageScore * 0.6 + volumeScore * 0.4).intValue();
+        f.score = (Integer)Math.round(coverageScore * 0.6 + volumeScore * 0.4);
 
         if (f.score >= 70) {
             f.detail = totalComments + ' comments across ' + itemsWithComments + ' items. Active collaboration.';

@@ -5,6 +5,7 @@
  *              Creates work items with optional AI enhancement via OpenAI.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.ExcessiveParameterList')
 public with sharing class DeliveryQuickRequestController {
 
     /**

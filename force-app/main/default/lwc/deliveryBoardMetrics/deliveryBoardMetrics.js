@@ -92,6 +92,7 @@ export default class DeliveryBoardMetrics extends NavigationMixin(LightningEleme
         return this.metrics.velocity.map(v => ({
             weekLabel: v.weekLabel,
             count: v.count,
+            title: `${v.weekLabel}: ${v.count}`,
             heightPercent: Math.round((v.count / max) * 100),
             barStyle: `height: ${Math.max(Math.round((v.count / max) * 100), 4)}%`,
             barClass: v.count > 0 ? 'sparkline-bar sparkline-bar--active' : 'sparkline-bar sparkline-bar--empty'
@@ -209,6 +210,7 @@ export default class DeliveryBoardMetrics extends NavigationMixin(LightningEleme
                 segments.push({
                     phase,
                     count,
+                    title: `${phase}: ${count}`,
                     percent: pct,
                     segmentStyle: `width: ${Math.max(pct, 2)}%; background-color: ${PHASE_COLORS[phase] || PHASE_COLORS['Other']}`,
                     legendColor: `background-color: ${PHASE_COLORS[phase] || PHASE_COLORS['Other']}`

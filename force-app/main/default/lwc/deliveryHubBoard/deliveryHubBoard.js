@@ -1538,7 +1538,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.detailFiles = [];
 
         // Trigger CSS transition after DOM renders
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
+
         requestAnimationFrame(() => {
             this.detailPanelVisible = true;
         });
@@ -1559,7 +1559,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     closeDetailPanel() {
         this.detailPanelVisible = false;
         // Wait for CSS transition to finish before removing from DOM
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
+
         setTimeout(() => {
             this.showDetailPanel = false;
         }, 300);
@@ -1638,7 +1638,6 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         if (!this.workflowConfig?.stages) return [];
 
         const enriched = this.filteredWorkItems || [];
-        const stageMap = this._stageMap;
 
         // Collect unique phases in order
         const phaseOrder = [];
