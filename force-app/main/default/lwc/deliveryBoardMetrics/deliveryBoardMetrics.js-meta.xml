@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Board Metrics</masterLabel>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__AppPage,lightning__HomePage,lightning__RecordPage">
+            <property name="displayMode" type="String" default="full" label="Display Mode" description="compact = single-row key numbers for embedding; full = complete dashboard with charts and details." />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
