@@ -44,10 +44,8 @@ Meanwhile your CRM &mdash; the system that already knows every account, contact,
 
 | Environment | Link |
 |---|---|
-| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04t) |
-| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04t) |
-
-> Replace `04t` in the links above with the full package version ID from [the latest release](https://github.com/Nimba-Solutions/Delivery-Hub/releases/latest).
+| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
+| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
 
 **Setup takes about 3 minutes:**
 
@@ -172,6 +170,37 @@ Every pull request automatically spins up a namespaced scratch org, deploys the 
 cci flow run release_unlocked_beta --org dev
 cci flow run release_unlocked_production --org dev
 ```
+
+---
+
+## Public API
+
+Delivery Hub exposes a REST API for non-Salesforce clients (websites, mobile apps, external platforms) to read and write delivery data.
+
+**Base URL**: `/services/apexrest/delivery/deliveryhub/v1/api/`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/dashboard` | Dashboard with active counts, phase distribution, recent activity |
+| GET | `/api/work-items` | List work items (filter: `?status=active`, `completed`, `attention`) |
+| GET | `/api/work-items/{id}` | Full work item detail with comments and file count |
+| POST | `/api/work-items` | Submit a new work item request |
+| POST | `/api/work-items/{id}/comments` | Add a comment to a work item |
+
+All requests require an `X-Api-Key` header matched against a NetworkEntity record. See the [Public API Guide](docs/PUBLIC_API_GUIDE.md) for complete documentation.
+
+For org-to-org synchronization, see the [Sync API Guide](docs/SYNC_API_GUIDE.md).
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Getting Started](docs/GETTING_STARTED.md) | Installation, setup wizard, first work item, and optional sync configuration |
+| [Architecture](docs/ARCHITECTURE.md) | Object model, sync engine, API layer, LWC components, and permission model |
+| [Public API Guide](docs/PUBLIC_API_GUIDE.md) | REST API for websites and external apps &mdash; endpoints, auth, response schemas |
+| [Sync API Guide](docs/SYNC_API_GUIDE.md) | Org-to-org synchronization &mdash; push/pull flows, echo suppression, setup steps |
 
 ---
 
