@@ -1,0 +1,89 @@
+<template>
+    <lightning-quick-action-panel header="New Work Request">
+        <div class="qr-form">
+            <!-- Title -->
+            <lightning-input
+                label="Title"
+                placeholder="e.g., Add dark mode to the dashboard..."
+                value={title}
+                onchange={handleTitleChange}
+                required
+                class="slds-m-bottom_small">
+            </lightning-input>
+
+            <!-- Priority Pills -->
+            <div class="slds-form-element slds-m-bottom_small">
+                <label class="slds-form-element__label">Priority</label>
+                <div class="qr-priority-pills">
+                    <button
+                        class={highPillClass}
+                        data-priority="High"
+                        onclick={handlePriorityClick}>
+                        High
+                    </button>
+                    <button
+                        class={mediumPillClass}
+                        data-priority="Medium"
+                        onclick={handlePriorityClick}>
+                        Medium
+                    </button>
+                    <button
+                        class={lowPillClass}
+                        data-priority="Low"
+                        onclick={handlePriorityClick}>
+                        Low
+                    </button>
+                </div>
+            </div>
+
+            <!-- Description Toggle -->
+            <template lwc:if={showDescription}>
+                <lightning-textarea
+                    label="Description"
+                    placeholder="Additional details, steps to reproduce, requirements..."
+                    value={description}
+                    onchange={handleDescriptionChange}
+                    class="slds-m-bottom_small"
+                    rows="4">
+                </lightning-textarea>
+            </template>
+            <template lwc:else>
+                <button class="qr-add-description slds-m-bottom_small" onclick={toggleDescription}>
+                    <lightning-icon icon-name="utility:add" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                    Add description
+                </button>
+            </template>
+
+            <!-- AI Indicator -->
+            <template lwc:if={isProcessing}>
+                <div class="qr-ai-indicator slds-m-bottom_small">
+                    <lightning-spinner alternative-text="Creating..." size="small"></lightning-spinner>
+                    <span class="slds-m-left_small">{processingMessage}</span>
+                </div>
+            </template>
+        </div>
+
+        <div slot="footer">
+            <lightning-button
+                label="Cancel"
+                onclick={handleCancel}
+                class="slds-m-right_small"
+                disabled={isProcessing}>
+            </lightning-button>
+            <lightning-button
+                label="Create"
+                variant="neutral"
+                onclick={handleCreate}
+                disabled={isCreateDisabled}
+                class="slds-m-right_small">
+            </lightning-button>
+            <lightning-button
+                label="Create + AI Enhance"
+                variant="brand"
+                onclick={handleCreateWithAi}
+                disabled={isCreateDisabled}
+                icon-name="utility:magicwand">
+            </lightning-button>
+        </div>
+    </lightning-quick-action-panel>
+</template>
