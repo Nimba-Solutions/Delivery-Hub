@@ -11,8 +11,23 @@
         <valueSetDefinition>
             <sorted>false</sorted>
             <value>
-                <fullName>Email_Owner</fullName>
+                <fullName>Email</fullName>
                 <default>true</default>
+                <label>Email</label>
+            </value>
+            <value>
+                <fullName>Chatter</fullName>
+                <default>false</default>
+                <label>Chatter</label>
+            </value>
+            <value>
+                <fullName>Both</fullName>
+                <default>false</default>
+                <label>Both</label>
+            </value>
+            <value>
+                <fullName>Email_Owner</fullName>
+                <default>false</default>
                 <label>Email Owner</label>
             </value>
             <value>

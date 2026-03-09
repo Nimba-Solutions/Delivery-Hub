@@ -1,9 +1,9 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Tests for DeliveryEscalationService. Uses the @TestVisible overload
- *               that accepts rules as a parameter, since Custom Metadata records
- *               cannot be inserted via DML in tests.
+ * @description  Tests for DeliveryEscalationService and DeliveryEscalationJob.
+ *               Uses the @TestVisible overload that accepts rules as a parameter,
+ *               since Custom Metadata records cannot be inserted via DML in tests.
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -54,6 +54,15 @@ private class DeliveryEscalationServiceTest {
             WorkflowTypeTxt__c = 'Software_Delivery'
         ));
 
+        // Item in In Development for summary/severity tests
+        items.add(new WorkItem__c(
+            BriefDescriptionTxt__c = 'Dev in progress item',
+            StageNamePk__c = 'In Development',
+            PriorityPk__c = 'Medium',
+            WorkflowTypeTxt__c = 'Software_Delivery',
+            Developer__c = UserInfo.getUserId()
+        ));
+
         insert items;
 
         // Backdate LastModifiedDate by manipulating via a field update in the past
@@ -74,7 +83,8 @@ private class DeliveryEscalationServiceTest {
             0, // threshold 0 so freshly created items match
             'Email_Owner',
             null,
-            null
+            null,
+            'Warning'
         ));
 
         Test.startTest();
@@ -94,6 +104,118 @@ private class DeliveryEscalationServiceTest {
     }
 
     /**
+     * @description Verifies the new Email action type works (simplified picklist value).
+     */
+    @IsTest
+    static void testEmailAction() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Email Action',
+            'Software_Delivery',
+            'In Development',
+            0,
+            'Email',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!logs.isEmpty(), 'Should create activity log for Email action');
+        System.assert(logs[0].ContextDataTxt__c.contains('"action":"Email"'),
+            'Log should reference Email action');
+    }
+
+    /**
+     * @description Verifies the Chatter action posts a FeedItem on the work item.
+     */
+    @IsTest
+    static void testChatterAction() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Chatter Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Chatter',
+            null,
+            null,
+            'Critical'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'Dev Blocked'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+
+        List<FeedItem> feeds = [
+            SELECT Body FROM FeedItem
+            WHERE ParentId = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!feeds.isEmpty(), 'Chatter post should be created on the work item');
+        System.assert(feeds[0].Body.contains('ESCALATION'),
+            'Chatter post should contain ESCALATION text');
+    }
+
+    /**
+     * @description Verifies the Both action sends both email and Chatter post.
+     */
+    @IsTest
+    static void testBothAction() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Both Rule',
+            'Software_Delivery',
+            'In Development',
+            0,
+            'Both',
+            null,
+            null,
+            'Critical'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'In Development'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+
+        // Verify Chatter post was created (email send is verified by no exceptions)
+        List<FeedItem> feeds = [
+            SELECT Body FROM FeedItem
+            WHERE ParentId = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!feeds.isEmpty(), 'Both action should create a Chatter post');
+
+        // Verify activity log was created
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!logs.isEmpty(), 'Both action should create activity log');
+    }
+
+    /**
      * @description Verifies Bump_Priority action increments priority from Low to Medium.
      */
     @IsTest
@@ -106,7 +228,8 @@ private class DeliveryEscalationServiceTest {
             0,
             'Bump_Priority',
             null,
-            null
+            null,
+            'Warning'
         ));
 
         Test.startTest();
@@ -135,7 +258,8 @@ private class DeliveryEscalationServiceTest {
             0,
             'Move_Stage',
             'Ready for Development',
-            null
+            null,
+            'Warning'
         ));
 
         Test.startTest();
@@ -170,7 +294,8 @@ private class DeliveryEscalationServiceTest {
             0,
             'Slack_Alert',
             null,
-            null
+            null,
+            'Warning'
         ));
 
         Test.setMock(HttpCalloutMock.class, new SlackMockResponse());
@@ -203,7 +328,8 @@ private class DeliveryEscalationServiceTest {
             0,
             'Reassign',
             String.valueOf(currentUserId),
-            null
+            null,
+            'Warning'
         ));
 
         Test.startTest();
@@ -232,7 +358,8 @@ private class DeliveryEscalationServiceTest {
             0,
             'Bump_Priority',
             null,
-            'High' // Only High priority — our Dev Blocked item is Low, should NOT match
+            'High', // Only High priority — our Dev Blocked item is Low, should NOT match
+            'Warning'
         ));
 
         Test.startTest();
@@ -261,7 +388,8 @@ private class DeliveryEscalationServiceTest {
             0,
             'Bump_Priority',
             null,
-            null
+            null,
+            'Warning'
         ));
 
         Test.startTest();
@@ -308,6 +436,18 @@ private class DeliveryEscalationServiceTest {
     }
 
     /**
+     * @description Verifies evaluateRules() runs without error.
+     */
+    @IsTest
+    static void testEvaluateRules() {
+        Test.startTest();
+        DeliveryEscalationService.evaluateRules();
+        Test.stopTest();
+
+        System.assert(true, 'evaluateRules() should not throw');
+    }
+
+    /**
      * @description Verifies that Bump_Priority does not exceed Critical.
      */
     @IsTest
@@ -330,7 +470,8 @@ private class DeliveryEscalationServiceTest {
             0,
             'Bump_Priority',
             null,
-            null
+            null,
+            'Warning'
         ));
 
         Test.startTest();
@@ -361,6 +502,247 @@ private class DeliveryEscalationServiceTest {
         System.assert(html.contains('Escalation Alert'), 'HTML must contain escalation header');
     }
 
+    /**
+     * @description Verifies severity-aware HTML builder includes severity details.
+     */
+    @IsTest
+    static void testBuildEscalationHtmlWithSeverity() {
+        String html = DeliveryEscalationService.buildEscalationHtml(
+            'WI-0100', 'Critical bug', 'In Development',
+            'https://test.salesforce.com/lightning/r/WorkItem__c/002/view',
+            'Critical', 5, 'Dev Stuck 3 Days'
+        );
+        System.assert(html.contains('CRITICAL'), 'HTML must indicate critical severity');
+        System.assert(html.contains('5 day(s)'), 'HTML must contain days in stage');
+        System.assert(html.contains('Dev Stuck 3 Days'), 'HTML must contain rule name');
+        System.assert(html.contains('#ba1b1b'), 'Critical should use red header color');
+
+        // Also test Warning severity
+        String warningHtml = DeliveryEscalationService.buildEscalationHtml(
+            'WI-0101', 'Slow item', 'QA In Progress',
+            'https://test.salesforce.com/lightning/r/WorkItem__c/003/view',
+            'Warning', 2, 'QA Stuck 2 Days'
+        );
+        System.assert(warningHtml.contains('#e67e22'), 'Warning should use orange header color');
+        System.assert(!warningHtml.contains('CRITICAL'), 'Warning HTML should not say CRITICAL');
+    }
+
+    /**
+     * @description Verifies getEscalationSummary returns items in breach.
+     */
+    @IsTest
+    static void testGetEscalationSummary() {
+        // Use buildSummary with injected rules since getEscalationSummary queries CMT
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Summary Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Email',
+            null,
+            null,
+            'Critical'
+        ));
+
+        Test.startTest();
+        List<DeliveryEscalationService.EscalationSummary> summaries =
+            DeliveryEscalationService.buildSummary(rules);
+        Test.stopTest();
+
+        System.assert(!summaries.isEmpty(), 'Should return at least one breached item');
+        DeliveryEscalationService.EscalationSummary first = summaries[0];
+        System.assertNotEquals(null, first.workItemId, 'workItemId should be populated');
+        System.assertNotEquals(null, first.workItemName, 'workItemName should be populated');
+        System.assertEquals('Test Summary Rule', first.ruleName, 'ruleName should match the rule');
+        System.assertEquals('Critical', first.severityLevel, 'severityLevel should be Critical');
+        System.assertEquals('Dev Blocked', first.stageName, 'stageName should be Dev Blocked');
+    }
+
+    /**
+     * @description Verifies getEscalationSummary returns empty for items within SLA.
+     */
+    @IsTest
+    static void testGetEscalationSummaryNoFalsePositives() {
+        // Use a high threshold that freshly created items will not breach
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'High Threshold Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            999, // 999 days — no item will breach this
+            'Email',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        List<DeliveryEscalationService.EscalationSummary> summaries =
+            DeliveryEscalationService.buildSummary(rules);
+        Test.stopTest();
+
+        System.assertEquals(0, summaries.size(),
+            'No items should be in breach with a 999-day threshold');
+    }
+
+    /**
+     * @description Verifies that items within SLA threshold are not escalated.
+     */
+    @IsTest
+    static void testNoFalsePositivesWithThreshold() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'High Threshold Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            999, // Freshly created items are 0 days old, won't match
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c unchanged = [
+            SELECT PriorityPk__c FROM WorkItem__c
+            WHERE StageNamePk__c = 'Dev Blocked'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        System.assertEquals('Low', unchanged.PriorityPk__c,
+            'Priority should remain Low because item has not breached the 999-day threshold');
+    }
+
+    /**
+     * @description Verifies that the escalation cooldown prevents duplicate notifications.
+     *              An item with a recent LastEscalatedDateTime__c should be skipped.
+     */
+    @IsTest
+    static void testCooldownPreventsReescalation() {
+        // Set LastEscalatedDateTime__c to now — should prevent re-escalation
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'In Development'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        wi.LastEscalatedDateTime__c = DateTime.now();
+        update wi;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Cooldown Rule',
+            'Software_Delivery',
+            'In Development',
+            0,
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c unchanged = [
+            SELECT PriorityPk__c FROM WorkItem__c
+            WHERE Id = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals('Medium', unchanged.PriorityPk__c,
+            'Priority should remain Medium because cooldown prevented re-escalation');
+    }
+
+    /**
+     * @description Verifies LastEscalatedDateTime__c is set when an escalation fires.
+     */
+    @IsTest
+    static void testLastEscalatedDateTimeIsSet() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Timestamp Rule',
+            'Software_Delivery',
+            'In Development',
+            0,
+            'Email',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c updated = [
+            SELECT LastEscalatedDateTime__c FROM WorkItem__c
+            WHERE StageNamePk__c = 'In Development'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        System.assertNotEquals(null, updated.LastEscalatedDateTime__c,
+            'LastEscalatedDateTime__c should be set after escalation');
+    }
+
+    /**
+     * @description Verifies DeliveryEscalationJob.execute() runs without error.
+     */
+    @IsTest
+    static void testDeliveryEscalationJobExecute() {
+        Test.startTest();
+        new DeliveryEscalationJob().execute(null);
+        Test.stopTest();
+
+        System.assert(true, 'DeliveryEscalationJob.execute() should not throw');
+    }
+
+    /**
+     * @description Verifies the getEscalationSummary AuraEnabled method runs without error.
+     */
+    @IsTest
+    static void testGetEscalationSummaryAuraEnabled() {
+        Test.startTest();
+        List<DeliveryEscalationService.EscalationSummary> results =
+            DeliveryEscalationService.getEscalationSummary();
+        Test.stopTest();
+
+        // May or may not return results depending on CMT rules and test data timing
+        System.assertNotEquals(null, results, 'Should return a list (possibly empty)');
+    }
+
+    /**
+     * @description Verifies severity metadata is included in log context.
+     */
+    @IsTest
+    static void testSeverityInLogContext() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Critical Severity Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Email',
+            null,
+            null,
+            'Critical'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!logs.isEmpty(), 'Should create activity log');
+        System.assert(logs[0].ContextDataTxt__c.contains('"severity":"Critical"'),
+            'Log context should include severity level');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
@@ -386,6 +768,7 @@ private class DeliveryEscalationServiceTest {
      * @param actionType The action to take
      * @param targetValue Target value for the action
      * @param priorityFilter Priority filter (or null for all)
+     * @param severity Severity level (Warning or Critical)
      * @return WorkflowEscalationRule__mdt record
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
@@ -396,7 +779,8 @@ private class DeliveryEscalationServiceTest {
         Integer daysThreshold,
         String actionType,
         String targetValue,
-        String priorityFilter
+        String priorityFilter,
+        String severity
     ) {
         String ns = getNamespace();
         Map<String, Object> fieldMap = new Map<String, Object>{
@@ -407,6 +791,7 @@ private class DeliveryEscalationServiceTest {
             ns + 'ActionTypePk__c' => actionType,
             ns + 'TargetValueTxt__c' => targetValue,
             ns + 'PriorityFilterTxt__c' => priorityFilter,
+            ns + 'SeverityLevelPk__c' => severity,
             ns + 'IsActiveBool__c' => true,
             ns + 'SortOrderNum__c' => 1
         };

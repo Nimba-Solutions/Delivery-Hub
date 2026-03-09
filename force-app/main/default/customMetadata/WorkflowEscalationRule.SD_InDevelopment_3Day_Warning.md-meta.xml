@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-    <label>SD - Clarification Requested 3-Day Email</label>
+    <label>SD - Dev Stuck 3 Days</label>
     <protected>false</protected>
     <values>
         <field>WorkflowTypeTxt__c</field>
@@ -8,7 +8,7 @@
     </values>
     <values>
         <field>TriggerStageTxt__c</field>
-        <value xsi:type="xsd:string">Clarification Requested (Pre-Dev)</value>
+        <value xsi:type="xsd:string">In Development</value>
     </values>
     <values>
         <field>DaysThresholdNum__c</field>
@@ -16,7 +16,7 @@
     </values>
     <values>
         <field>ActionTypePk__c</field>
-        <value xsi:type="xsd:string">Email_Owner</value>
+        <value xsi:type="xsd:string">Email</value>
     </values>
     <values>
         <field>TargetValueTxt__c</field>
@@ -28,7 +28,7 @@
     </values>
     <values>
         <field>NotifyFieldTxt__c</field>
-        <value xsi:type="xsd:string">OwnerId</value>
+        <value xsi:type="xsd:string">Developer__c</value>
     </values>
     <values>
         <field>SeverityLevelPk__c</field>
@@ -40,6 +40,6 @@
     </values>
     <values>
         <field>SortOrderNum__c</field>
-        <value xsi:type="xsd:double">1.0</value>
+        <value xsi:type="xsd:double">10.0</value>
     </values>
 </CustomMetadata>

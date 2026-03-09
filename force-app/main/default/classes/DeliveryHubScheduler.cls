@@ -26,11 +26,11 @@ public without sharing class DeliveryHubScheduler implements Schedulable {
 
     /**
      * @description Evaluates CMT-driven escalation rules against stalled work items
-     * and executes automated actions (email, Slack, bump priority, move stage, reassign).
+     * and executes automated actions (email, Chatter, Slack, bump priority, move stage, reassign).
      */
     private static void processEscalations() {
         try {
-            DeliveryEscalationService.processEscalations();
+            DeliveryEscalationService.evaluateRules();
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR,
                 'Delivery Hub Escalation Processing Failed: ' + e.getMessage());
