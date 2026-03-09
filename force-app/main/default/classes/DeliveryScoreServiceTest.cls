@@ -171,7 +171,7 @@ private class DeliveryScoreServiceTest {
         for (DeliveryScoreService.ScoreFactor f : result.factors) {
             expected += f.score * f.weight;
         }
-        Integer expectedRounded = Math.round(expected).intValue();
+        Integer expectedRounded = (Integer)Math.round(expected);
 
         System.assertEquals(expectedRounded, result.score,
             'Overall score must equal weighted sum of factors');
