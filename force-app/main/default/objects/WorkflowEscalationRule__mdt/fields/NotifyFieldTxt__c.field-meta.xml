@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NotifyFieldTxt__c</fullName>
+    <description>Field API name on WorkItem__c that contains the user or email to notify (e.g. Developer__c, OwnerId). Leave blank to default to OwnerId and Developer__c.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Notify Field</label>
+    <length>80</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastEscalatedDateTime__c</fullName>
+    <description>Timestamp of the last escalation action taken on this work item. Used to prevent duplicate notifications within the same escalation cycle.</description>
+    <inlineHelpText>When this work item was last escalated by the automated escalation engine.</inlineHelpText>
+    <label>Last Escalated</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
