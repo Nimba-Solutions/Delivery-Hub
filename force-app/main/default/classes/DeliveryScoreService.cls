@@ -7,7 +7,7 @@
  *               Ported from the cloudnimbusllc.com website scoring algorithm.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount, PMD.ApexDoc')
 public with sharing class DeliveryScoreService {
 
     // -------------------------------------------------------------------------

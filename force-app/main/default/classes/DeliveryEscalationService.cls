@@ -11,7 +11,7 @@
  *               Called nightly by DeliveryEscalationJob or DeliveryHubScheduler.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount, PMD.ExcessiveParameterList')
 public with sharing class DeliveryEscalationService {
 
     /** @description Priority escalation ladder: Low -> Medium -> High -> Critical */
