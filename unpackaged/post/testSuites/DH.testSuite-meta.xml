@@ -48,4 +48,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySLAServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkloadControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryQuickRequestControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryMetricsServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationJobTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryScoreServiceTest</testClassName>
 </ApexTestSuite>

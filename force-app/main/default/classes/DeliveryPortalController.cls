@@ -205,17 +205,24 @@ public without sharing class DeliveryPortalController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
-    public static Map<String, Object> getPortalWorkItemDetail(Id workItemId) {
-        WorkItem__c wi = [
+    public static Map<String, Object> getPortalWorkItemDetail(Id workItemId, Id networkEntityId) {
+        validateEntityAccess(networkEntityId);
+
+        List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                    LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
                    CreatedDate, ClientNetworkEntityId__c, DeveloperDaysSizeNumber__c,
                    EstimatedHoursNumber__c, TotalLoggedHoursNumber__c
             FROM WorkItem__c
             WHERE Id = :workItemId
+            AND ClientNetworkEntityId__c = :networkEntityId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
+        if (items.isEmpty()) {
+            throw createAuraException('Work item not found or access denied.');
+        }
+        WorkItem__c wi = items[0];
 
         Map<String, Object> result = new Map<String, Object>();
         result.put('id', wi.Id);
