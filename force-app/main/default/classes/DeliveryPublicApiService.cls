@@ -39,14 +39,13 @@ global without sharing class DeliveryPublicApiService {
 
             } else if (resource.startsWith('work-items/')) {
                 String workItemId = resource.substringAfter('work-items/');
-                Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(workItemId);
-
-                // Verify the work item belongs to this entity
-                if (detail.get('networkEntityId') != entity.Id) {
+                try {
+                    Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(workItemId, entity.Id);
+                    sendSuccess(res, detail);
+                } catch (Exception e) {
                     sendError(res, 403, 'Access denied. This work item does not belong to your entity.');
                     return;
                 }
-                sendSuccess(res, detail);
 
             } else {
                 sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}');
@@ -110,13 +109,9 @@ global without sharing class DeliveryPublicApiService {
 
                 // Verify work item belongs to this entity before allowing comment
                 try {
-                    Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(workItemId);
-                    if (detail.get('networkEntityId') != entity.Id) {
-                        sendError(res, 403, 'Access denied. This work item does not belong to your entity.');
-                        return;
-                    }
+                    DeliveryPortalController.getPortalWorkItemDetail(workItemId, entity.Id);
                 } catch (Exception e) {
-                    sendError(res, 404, 'Work item not found.');
+                    sendError(res, 403, 'Access denied. This work item does not belong to your entity.');
                     return;
                 }
 

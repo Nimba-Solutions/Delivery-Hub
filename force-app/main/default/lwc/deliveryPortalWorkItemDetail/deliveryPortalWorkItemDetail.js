@@ -48,7 +48,7 @@ export default class DeliveryPortalWorkItemDetail extends LightningElement {
 
     loadDetail() {
         this.isLoading = true;
-        getPortalWorkItemDetail({ workItemId: this.workItemId })
+        getPortalWorkItemDetail({ workItemId: this.workItemId, networkEntityId: this.networkEntityId })
             .then(data => {
                 this.detail = data;
                 this.error = undefined;

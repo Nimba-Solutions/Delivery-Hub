@@ -75,11 +75,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>NetworkEntity__c.ApiKeyTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
         <field>NetworkEntity__c.ConnectionStatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>

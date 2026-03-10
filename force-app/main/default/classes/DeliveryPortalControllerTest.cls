@@ -183,12 +183,13 @@ private class DeliveryPortalControllerTest {
 
     @IsTest
     static void testGetPortalWorkItemDetail() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Acme Corp' LIMIT 1];
         WorkItem__c item = [
             SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Active Item 1' LIMIT 1
         ];
 
         Test.startTest();
-        Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(item.Id);
+        Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(item.Id, entityA.Id);
         Test.stopTest();
 
         System.assertEquals('Active Item 1', (String) detail.get('title'), 'Title should match');
@@ -203,6 +204,28 @@ private class DeliveryPortalControllerTest {
 
         Integer fileCount = (Integer) detail.get('fileCount');
         System.assertEquals(0, fileCount, 'Should have 0 files');
+    }
+
+    @IsTest
+    static void testGetPortalWorkItemDetailCrossEntityDenied() {
+        NetworkEntity__c entityB = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Globex Inc' LIMIT 1];
+        WorkItem__c acmeItem = [
+            SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Active Item 1' LIMIT 1
+        ];
+
+        Boolean exceptionThrown = false;
+
+        Test.startTest();
+        try {
+            // Globex trying to access Acme's work item should be denied
+            DeliveryPortalController.getPortalWorkItemDetail(acmeItem.Id, entityB.Id);
+        } catch (AuraHandledException e) {
+            exceptionThrown = true;
+            System.assert(e.getMessage().contains('not found or access denied'), 'Should get access denied error');
+        }
+        Test.stopTest();
+
+        System.assert(exceptionThrown, 'Should throw exception for cross-entity access');
     }
 
     @IsTest
