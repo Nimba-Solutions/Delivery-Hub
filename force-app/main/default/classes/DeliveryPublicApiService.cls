@@ -39,8 +39,13 @@ global without sharing class DeliveryPublicApiService {
 
             } else if (resource.startsWith('work-items/')) {
                 String workItemId = resource.substringAfter('work-items/');
-                Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(workItemId, entity.Id);
-                sendSuccess(res, detail);
+                try {
+                    Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(workItemId, entity.Id);
+                    sendSuccess(res, detail);
+                } catch (Exception e) {
+                    sendError(res, 403, 'Access denied. This work item does not belong to your entity.');
+                    return;
+                }
 
             } else {
                 sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}');
@@ -106,7 +111,7 @@ global without sharing class DeliveryPublicApiService {
                 try {
                     DeliveryPortalController.getPortalWorkItemDetail(workItemId, entity.Id);
                 } catch (Exception e) {
-                    sendError(res, 404, 'Work item not found or access denied.');
+                    sendError(res, 403, 'Access denied. This work item does not belong to your entity.');
                     return;
                 }
 
