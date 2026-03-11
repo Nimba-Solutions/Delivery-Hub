@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
-public inherited sharing class DeliverySyncItemProcessor implements Queueable, Database.AllowsCallouts {
+global inherited sharing class DeliverySyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
     /**
      * @description Processes queued outbound Sync Items by resolving endpoints, performing HTTP
@@ -16,7 +16,7 @@ public inherited sharing class DeliverySyncItemProcessor implements Queueable, D
      * @param context The QueueableContext provided by the Apex runtime.
      */
     @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
-    public void execute(QueueableContext context) {
+    global void execute(QueueableContext context) {
 
         // 1a. Query Queued Outbound Items linked to a valid Request route (Push Mode — downstream)
         List<SyncItem__c> pushItems = [

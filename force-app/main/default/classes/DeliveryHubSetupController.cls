@@ -186,17 +186,24 @@ public without sharing class DeliveryHubSetupController {
                 StagesToAutoShareWithDevTeamTxt__c = 'All'
             );
             insert settings;
+        } else {
+            // Ensure sync settings are enabled when handshake runs on existing orgs
+            Boolean needsUpdate = false;
+            if (!settings.AutoSyncNetworkEntityBool__c) {
+                settings.AutoSyncNetworkEntityBool__c = true;
+                needsUpdate = true;
+            }
+            if (!settings.AutoCreateWorkRequestBool__c) {
+                settings.AutoCreateWorkRequestBool__c = true;
+                needsUpdate = true;
+            }
+            if (needsUpdate) {
+                update settings;
+            }
         }
     }
 
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     private static void scheduleSyncJobs() {
-        List<CronTrigger> jobs = [SELECT Id FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'];
-        if (jobs.isEmpty()) {
-            System.schedule('Delivery Hub Sync - :00', '0 0 * * * ?', new DeliveryHubScheduler());
-            System.schedule('Delivery Hub Sync - :15', '0 15 * * * ?', new DeliveryHubScheduler());
-            System.schedule('Delivery Hub Sync - :30', '0 30 * * * ?', new DeliveryHubScheduler());
-            System.schedule('Delivery Hub Sync - :45', '0 45 * * * ?', new DeliveryHubScheduler());
-        }
+        DeliveryHubScheduler.scheduleAll();
     }
 }

@@ -60,6 +60,23 @@ private class DeliveryHubSchedulerTest {
     }
 
     /**
+     * @description Verifies that scheduleAll() creates four cron jobs and is idempotent.
+     */
+    @IsTest
+    static void testScheduleAll() {
+        Test.startTest();
+        DeliveryHubScheduler.scheduleAll();
+        Test.stopTest();
+
+        List<CronTrigger> jobs = [
+            SELECT Id, CronJobDetail.Name
+            FROM CronTrigger
+            WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync -%'
+        ];
+        System.assertEquals(4, jobs.size(), 'scheduleAll should create 4 cron jobs');
+    }
+
+    /**
      * @description Mock implementation for the sync handshake.
      */
     public class MockResponse implements HttpCalloutMock {

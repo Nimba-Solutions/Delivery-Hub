@@ -7,7 +7,7 @@
  * create recurring items, and deliver periodic status summaries.
  * @author Cloud Nimbus LLC
  */
-public without sharing class DeliveryHubScheduler implements Schedulable {
+global without sharing class DeliveryHubScheduler implements Schedulable {
 
     /**
      * @description Schedulable execute method.
@@ -16,7 +16,7 @@ public without sharing class DeliveryHubScheduler implements Schedulable {
      * digest email if today is the configured digest day.
      * @param sc The SchedulableContext (standard system parameter).
      */
-    public void execute(SchedulableContext sc) {
+    global void execute(SchedulableContext sc) {
         requeueFailedItems();
         processEscalations();
         processRecurringItems();
@@ -95,6 +95,29 @@ public without sharing class DeliveryHubScheduler implements Schedulable {
      * @description Future method to perform the HTTP Callout to the Mothership.
      * Required because SchedulableContext cannot perform synchronous callouts.
      */
+    /**
+     * @description Schedules the four standard Delivery Hub cron jobs (:00, :15, :30, :45).
+     * Callable from anonymous Apex in subscriber orgs:
+     *   delivery.DeliveryHubScheduler.scheduleAll();
+     */
+    global static void scheduleAll() {
+        String[] cronSlots = new String[]{
+            '0 0 * * * ?',
+            '0 15 * * * ?',
+            '0 30 * * * ?',
+            '0 45 * * * ?'
+        };
+        String[] slotNames = new String[]{ ':00', ':15', ':30', ':45' };
+        for (Integer i = 0; i < cronSlots.size(); i++) {
+            String jobName = 'Delivery Hub Sync - ' + slotNames[i];
+            // Abort existing job with same name to avoid duplicates
+            for (CronTrigger ct : [SELECT Id FROM CronTrigger WHERE CronJobDetail.Name = :jobName]) {
+                System.abortJob(ct.Id);
+            }
+            System.schedule(jobName, cronSlots[i], new DeliveryHubScheduler());
+        }
+    }
+
     @future(callout=true)
     public static void runSyncAsync() {
         // Triggers the poller logic to fetch delta updates
