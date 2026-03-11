@@ -40,6 +40,18 @@ global without sharing class DeliveryPublicApiService {
                 return;
             }
 
+            // Admin route: list all portal users grouped by entity
+            if (resource == 'portal-users') {
+                String portalEmail = req.headers.get('X-Portal-User');
+                if (String.isBlank(portalEmail)) {
+                    sendError(res, 400, 'X-Portal-User header is required for portal-users.');
+                    return;
+                }
+                List<Map<String, Object>> usersByEntity = DeliveryPortalAccessService.getPortalUsersByEntity(portalEmail);
+                sendSuccess(res, usersByEntity);
+                return;
+            }
+
             // Resolve the effective entity: portal user override or authenticated entity
             Id effectiveEntityId = resolveEffectiveEntity(req, res, entity.Id);
             if (effectiveEntityId == null) {
@@ -66,7 +78,7 @@ global without sharing class DeliveryPublicApiService {
                 }
 
             } else {
-                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}, my-entities');
+                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}, my-entities, portal-users');
             }
 
         } catch (AuraHandledException e) {
