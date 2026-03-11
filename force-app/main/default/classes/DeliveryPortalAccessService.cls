@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryPortalAccessService {
+public without sharing class DeliveryPortalAccessService {
 
     /**
      * @description Returns the list of NetworkEntities that the given email has access to,
