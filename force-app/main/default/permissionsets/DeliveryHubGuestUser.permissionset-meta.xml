@@ -103,6 +103,16 @@
         <field>WorkItemComment__c.SourcePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>PortalAccess__c.EmailTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>PortalAccess__c.RolePk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>false</allowDelete>
@@ -139,16 +149,6 @@
         <object>PortalAccess__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>PortalAccess__c.EmailTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>PortalAccess__c.RolePk__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
     <classAccesses>
         <apexClass>DeliveryPublicApiService</apexClass>
         <enabled>true</enabled>

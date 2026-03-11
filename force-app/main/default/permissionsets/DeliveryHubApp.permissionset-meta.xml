@@ -430,6 +430,16 @@
         <field>WorkLog__c.WorkDescriptionTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>PortalAccess__c.EmailTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>PortalAccess__c.RolePk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub App</label>
     <objectPermissions>
@@ -513,16 +523,6 @@
         <object>PortalAccess__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>PortalAccess__c.EmailTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>PortalAccess__c.RolePk__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
     <tabSettings>
         <tab>Delivery_Board</tab>
         <visibility>Visible</visibility>
