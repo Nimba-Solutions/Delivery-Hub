@@ -220,6 +220,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
+    min-height: 3.25rem;
     border-top-left-radius: var(--radius);
     border-top-right-radius: var(--radius);
     border-bottom: 1px solid var(--gray-200);
