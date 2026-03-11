@@ -13,7 +13,7 @@ global without sharing class DeliveryPublicApiService {
 
     /**
      * @description Handles GET requests for reading data.
-     * Routes: /api/dashboard, /api/work-items, /api/work-items/{id}
+     * Routes: /api/dashboard, /api/work-items, /api/work-items/{id}, /api/my-entities
      */
     @HttpGet
     global static void handleGet() {
@@ -28,19 +28,37 @@ global without sharing class DeliveryPublicApiService {
 
             String resource = extractResource(req.requestURI);
 
+            // Portal user entity switching: my-entities route
+            if (resource == 'my-entities') {
+                String portalEmail = req.headers.get('X-Portal-User');
+                if (String.isBlank(portalEmail)) {
+                    sendError(res, 400, 'X-Portal-User header is required for my-entities.');
+                    return;
+                }
+                List<Map<String, Object>> entities = DeliveryPortalAccessService.getEntitiesForEmail(portalEmail);
+                sendSuccess(res, entities);
+                return;
+            }
+
+            // Resolve the effective entity: portal user override or authenticated entity
+            Id effectiveEntityId = resolveEffectiveEntity(req, res, entity.Id);
+            if (effectiveEntityId == null) {
+                return; // Response already set (403)
+            }
+
             if (resource == 'dashboard') {
-                Map<String, Object> dashboard = DeliveryPortalController.getPortalDashboard(entity.Id);
+                Map<String, Object> dashboard = DeliveryPortalController.getPortalDashboard(effectiveEntityId);
                 sendSuccess(res, dashboard);
 
             } else if (resource == 'work-items') {
                 String statusFilter = req.params.get('status');
-                List<Map<String, Object>> items = DeliveryPortalController.getPortalWorkItems(entity.Id, statusFilter);
+                List<Map<String, Object>> items = DeliveryPortalController.getPortalWorkItems(effectiveEntityId, statusFilter);
                 sendSuccess(res, items);
 
             } else if (resource.startsWith('work-items/')) {
                 String workItemId = resource.substringAfter('work-items/');
                 try {
-                    Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(workItemId, entity.Id);
+                    Map<String, Object> detail = DeliveryPortalController.getPortalWorkItemDetail(workItemId, effectiveEntityId);
                     sendSuccess(res, detail);
                 } catch (Exception e) {
                     sendError(res, 403, 'Access denied. This work item does not belong to your entity.');
@@ -48,7 +66,7 @@ global without sharing class DeliveryPublicApiService {
                 }
 
             } else {
-                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}');
+                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}, my-entities');
             }
 
         } catch (AuraHandledException e) {
@@ -74,6 +92,12 @@ global without sharing class DeliveryPublicApiService {
                 return;
             }
 
+            // Resolve the effective entity: portal user override or authenticated entity
+            Id effectiveEntityId = resolveEffectiveEntity(req, res, entity.Id);
+            if (effectiveEntityId == null) {
+                return; // Response already set (403)
+            }
+
             String resource = extractResource(req.requestURI);
             String jsonBody = req.requestBody != null ? req.requestBody.toString() : '';
 
@@ -90,7 +114,7 @@ global without sharing class DeliveryPublicApiService {
                 requestData.put('description', (String) bodyMap.get('description'));
                 requestData.put('priority', (String) bodyMap.get('priority'));
                 requestData.put('type', (String) bodyMap.get('type'));
-                requestData.put('networkEntityId', entity.Id);
+                requestData.put('networkEntityId', effectiveEntityId);
 
                 Id newItemId = DeliveryPortalController.submitPortalRequest(requestData);
                 sendSuccess(res, new Map<String, Object>{
@@ -109,7 +133,7 @@ global without sharing class DeliveryPublicApiService {
 
                 // Verify work item belongs to this entity before allowing comment
                 try {
-                    DeliveryPortalController.getPortalWorkItemDetail(workItemId, entity.Id);
+                    DeliveryPortalController.getPortalWorkItemDetail(workItemId, effectiveEntityId);
                 } catch (Exception e) {
                     sendError(res, 403, 'Access denied. This work item does not belong to your entity.');
                     return;
@@ -133,6 +157,47 @@ global without sharing class DeliveryPublicApiService {
         } catch (Exception e) {
             sendError(res, 500, e.getMessage());
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Portal Access Resolution
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Resolves the effective NetworkEntity Id for the request.
+     * If X-Portal-User header and entityId query param are both present,
+     * validates that the portal user has PortalAccess to the requested entity.
+     * If neither is present, falls back to the authenticated entity Id (backward compatible).
+     * Returns null and sets a 403 error response if access is denied.
+     * @param req The incoming REST request
+     * @param res The REST response to populate if access is denied
+     * @param authenticatedEntityId The entity Id from API key authentication
+     * @return The effective entity Id, or null if access denied
+     */
+    private static Id resolveEffectiveEntity(RestRequest req, RestResponse res, Id authenticatedEntityId) {
+        String portalEmail = req.headers.get('X-Portal-User');
+        String entityIdParam = req.params.get('entityId');
+
+        // If both portal headers are present, validate portal access
+        if (String.isNotBlank(portalEmail) && String.isNotBlank(entityIdParam)) {
+            Id requestedEntityId;
+            try {
+                requestedEntityId = Id.valueOf(entityIdParam);
+            } catch (Exception e) {
+                sendError(res, 400, 'Invalid entityId parameter.');
+                return null;
+            }
+
+            if (!DeliveryPortalAccessService.validateAccess(portalEmail, requestedEntityId)) {
+                sendError(res, 403, 'Portal user does not have access to the requested entity.');
+                return null;
+            }
+
+            return requestedEntityId;
+        }
+
+        // Fall back to the authenticated entity (backward compatible)
+        return authenticatedEntityId;
     }
 
     // -------------------------------------------------------------------------

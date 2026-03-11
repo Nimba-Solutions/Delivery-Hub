@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RolePk__c</fullName>
+    <description>The role assigned to this portal user within the Network Entity.</description>
+    <inlineHelpText>Select the role for this portal user. Admins can manage access; Members have standard access.</inlineHelpText>
+    <label>Role</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Admin</fullName>
+                <default>false</default>
+                <label>Admin</label>
+            </value>
+            <value>
+                <fullName>Member</fullName>
+                <default>true</default>
+                <label>Member</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

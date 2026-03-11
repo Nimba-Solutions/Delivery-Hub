@@ -51,4 +51,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryMetricsServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationJobTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryScoreServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryPortalAccessServiceTest</testClassName>
 </ApexTestSuite>
