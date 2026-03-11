@@ -38,6 +38,21 @@ private class DeliveryPublicApiServiceTest {
         );
         insert new List<NetworkEntity__c>{ entityA, entityB, entityC };
 
+        // Portal access records for multi-tenant testing
+        List<PortalAccess__c> portalAccessRecords = new List<PortalAccess__c>{
+            new PortalAccess__c(
+                NetworkEntityId__c = entityA.Id,
+                EmailTxt__c = 'portal@example.com',
+                RolePk__c = 'Admin'
+            ),
+            new PortalAccess__c(
+                NetworkEntityId__c = entityB.Id,
+                EmailTxt__c = 'portal@example.com',
+                RolePk__c = 'Member'
+            )
+        };
+        insert portalAccessRecords;
+
         // Work items for Entity A
         List<WorkItem__c> items = new List<WorkItem__c>{
             new WorkItem__c(
@@ -417,6 +432,123 @@ private class DeliveryPublicApiServiceTest {
 
         System.assertEquals(64, key1.length(), 'API key should be 64 hex characters');
         System.assertNotEquals(key1, key2, 'Generated keys should be unique');
+    }
+
+    // ==========================================
+    // PORTAL ACCESS — MY ENTITIES
+    // ==========================================
+
+    @IsTest
+    static void testGetMyEntities() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/my-entities');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        req.addHeader('X-Portal-User', 'portal@example.com');
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'), 'Should be successful');
+
+        List<Object> data = (List<Object>) body.get('data');
+        System.assertEquals(2, data.size(), 'portal@example.com should have access to 2 entities');
+    }
+
+    @IsTest
+    static void testGetMyEntitiesMissingHeader() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/my-entities');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        // No X-Portal-User header
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(400, res.statusCode, 'Should return 400 when X-Portal-User is missing');
+        assertErrorResponse(res, 'X-Portal-User header is required');
+    }
+
+    // ==========================================
+    // PORTAL ACCESS — ENTITY SWITCHING
+    // ==========================================
+
+    @IsTest
+    static void testGetDashboardWithEntityId() {
+        NetworkEntity__c entityB = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Other Corp' LIMIT 1];
+
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        req.addHeader('X-Portal-User', 'portal@example.com');
+        req.addParameter('entityId', entityB.Id);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200 for authorized portal user');
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'), 'Should be successful');
+
+        Map<String, Object> data = (Map<String, Object>) body.get('data');
+        System.assertEquals('Other Corp', data.get('entityName'), 'Should show Other Corp dashboard');
+    }
+
+    @IsTest
+    static void testGetDashboardUnauthorizedEntity() {
+        // Create an entity that portal@example.com does NOT have access to
+        NetworkEntity__c noAccessEntity = new NetworkEntity__c(
+            Name = 'No Access Corp',
+            EntityTypePk__c = 'Client',
+            StatusPk__c = 'Active',
+            ApiKeyTxt__c = 'no-access-key-111',
+            ConnectionStatusPk__c = 'Connected'
+        );
+        insert noAccessEntity;
+
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        req.addHeader('X-Portal-User', 'portal@example.com');
+        req.addParameter('entityId', noAccessEntity.Id);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(403, res.statusCode, 'Should return 403 for unauthorized entity access');
+        assertErrorResponse(res, 'Portal user does not have access');
+    }
+
+    @IsTest
+    static void testGetDashboardBackwardCompatible() {
+        // Without X-Portal-User and entityId, should fall back to API key entity
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200 with backward-compatible behavior');
+        Map<String, Object> body = parseResponse(res);
+        Map<String, Object> data = (Map<String, Object>) body.get('data');
+        System.assertEquals('API Client Corp', data.get('entityName'), 'Should fall back to authenticated entity');
     }
 
     // ==========================================

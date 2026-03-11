@@ -103,6 +103,11 @@
         <field>WorkItemComment__c.SourcePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>PortalAccess__c.RolePk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>false</allowDelete>
@@ -130,8 +135,21 @@
         <object>WorkItemComment__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
+    <objectPermissions>
+        <allowCreate>false</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>false</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>PortalAccess__c</object>
+        <viewAllRecords>false</viewAllRecords>
+    </objectPermissions>
     <classAccesses>
         <apexClass>DeliveryPublicApiService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryPortalAccessService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>

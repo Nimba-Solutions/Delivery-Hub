@@ -1,0 +1,168 @@
+/**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description Test class for DeliveryPortalAccessService.
+ * Validates email-to-entity access lookups and access validation.
+ * @author Cloud Nimbus LLC
+ */
+@IsTest
+private class DeliveryPortalAccessServiceTest {
+
+    @TestSetup
+    static void setupData() {
+        // Two network entities
+        NetworkEntity__c entityA = new NetworkEntity__c(
+            Name = 'Alpha Corp',
+            EntityTypePk__c = 'Client',
+            StatusPk__c = 'Active'
+        );
+        NetworkEntity__c entityB = new NetworkEntity__c(
+            Name = 'Beta Inc',
+            EntityTypePk__c = 'Client',
+            StatusPk__c = 'Active'
+        );
+        insert new List<NetworkEntity__c>{ entityA, entityB };
+
+        // User with access to both entities (different roles)
+        // User with access to only one entity
+        List<PortalAccess__c> accessRecords = new List<PortalAccess__c>{
+            new PortalAccess__c(
+                NetworkEntityId__c = entityA.Id,
+                EmailTxt__c = 'multiuser@example.com',
+                RolePk__c = 'Admin'
+            ),
+            new PortalAccess__c(
+                NetworkEntityId__c = entityB.Id,
+                EmailTxt__c = 'multiuser@example.com',
+                RolePk__c = 'Member'
+            ),
+            new PortalAccess__c(
+                NetworkEntityId__c = entityA.Id,
+                EmailTxt__c = 'singleuser@example.com',
+                RolePk__c = 'Member'
+            )
+        };
+        insert accessRecords;
+    }
+
+    @IsTest
+    static void testGetEntitiesForEmailMultipleEntities() {
+        Test.startTest();
+        List<Map<String, Object>> entities = DeliveryPortalAccessService.getEntitiesForEmail('multiuser@example.com');
+        Test.stopTest();
+
+        System.assertEquals(2, entities.size(), 'Multi-access user should see 2 entities');
+
+        // Results are ordered by name ASC: Alpha Corp, Beta Inc
+        System.assertEquals('Alpha Corp', entities[0].get('name'), 'First entity should be Alpha Corp');
+        System.assertEquals('Admin', entities[0].get('role'), 'Role for Alpha Corp should be Admin');
+        System.assertEquals('Beta Inc', entities[1].get('name'), 'Second entity should be Beta Inc');
+        System.assertEquals('Member', entities[1].get('role'), 'Role for Beta Inc should be Member');
+
+        // Verify ids are present
+        System.assertNotEquals(null, entities[0].get('id'), 'Entity id should not be null');
+        System.assertNotEquals(null, entities[1].get('id'), 'Entity id should not be null');
+    }
+
+    @IsTest
+    static void testGetEntitiesForEmailSingleEntity() {
+        Test.startTest();
+        List<Map<String, Object>> entities = DeliveryPortalAccessService.getEntitiesForEmail('singleuser@example.com');
+        Test.stopTest();
+
+        System.assertEquals(1, entities.size(), 'Single-access user should see 1 entity');
+        System.assertEquals('Alpha Corp', entities[0].get('name'), 'Should be Alpha Corp');
+        System.assertEquals('Member', entities[0].get('role'), 'Role should be Member');
+    }
+
+    @IsTest
+    static void testGetEntitiesForEmailUnknown() {
+        Test.startTest();
+        List<Map<String, Object>> entities = DeliveryPortalAccessService.getEntitiesForEmail('unknown@example.com');
+        Test.stopTest();
+
+        System.assertEquals(0, entities.size(), 'Unknown email should return empty list');
+    }
+
+    @IsTest
+    static void testGetEntitiesForEmailBlank() {
+        Test.startTest();
+        List<Map<String, Object>> entities = DeliveryPortalAccessService.getEntitiesForEmail('');
+        Test.stopTest();
+
+        System.assertEquals(0, entities.size(), 'Blank email should return empty list');
+    }
+
+    @IsTest
+    static void testGetEntitiesForEmailNull() {
+        Test.startTest();
+        List<Map<String, Object>> entities = DeliveryPortalAccessService.getEntitiesForEmail(null);
+        Test.stopTest();
+
+        System.assertEquals(0, entities.size(), 'Null email should return empty list');
+    }
+
+    @IsTest
+    static void testValidateAccessGranted() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Alpha Corp' LIMIT 1];
+
+        Test.startTest();
+        Boolean hasAccess = DeliveryPortalAccessService.validateAccess('multiuser@example.com', entityA.Id);
+        Test.stopTest();
+
+        System.assertEquals(true, hasAccess, 'multiuser@example.com should have access to Alpha Corp');
+    }
+
+    @IsTest
+    static void testValidateAccessGrantedSecondEntity() {
+        NetworkEntity__c entityB = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Beta Inc' LIMIT 1];
+
+        Test.startTest();
+        Boolean hasAccess = DeliveryPortalAccessService.validateAccess('multiuser@example.com', entityB.Id);
+        Test.stopTest();
+
+        System.assertEquals(true, hasAccess, 'multiuser@example.com should have access to Beta Inc');
+    }
+
+    @IsTest
+    static void testValidateAccessDenied() {
+        NetworkEntity__c entityB = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Beta Inc' LIMIT 1];
+
+        Test.startTest();
+        Boolean hasAccess = DeliveryPortalAccessService.validateAccess('singleuser@example.com', entityB.Id);
+        Test.stopTest();
+
+        System.assertEquals(false, hasAccess, 'singleuser@example.com should NOT have access to Beta Inc');
+    }
+
+    @IsTest
+    static void testValidateAccessUnknownEmail() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Alpha Corp' LIMIT 1];
+
+        Test.startTest();
+        Boolean hasAccess = DeliveryPortalAccessService.validateAccess('nobody@example.com', entityA.Id);
+        Test.stopTest();
+
+        System.assertEquals(false, hasAccess, 'Unknown email should not have access');
+    }
+
+    @IsTest
+    static void testValidateAccessBlankEmail() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Alpha Corp' LIMIT 1];
+
+        Test.startTest();
+        Boolean hasAccess = DeliveryPortalAccessService.validateAccess('', entityA.Id);
+        Test.stopTest();
+
+        System.assertEquals(false, hasAccess, 'Blank email should return false');
+    }
+
+    @IsTest
+    static void testValidateAccessNullParams() {
+        Test.startTest();
+        Boolean hasAccess = DeliveryPortalAccessService.validateAccess(null, null);
+        Test.stopTest();
+
+        System.assertEquals(false, hasAccess, 'Null params should return false');
+    }
+}

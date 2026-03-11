@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EmailTxt__c</fullName>
+    <description>Email address of the portal user being granted access.</description>
+    <inlineHelpText>The email address of the external user who will access the portal.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Email</label>
+    <length>255</length>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
