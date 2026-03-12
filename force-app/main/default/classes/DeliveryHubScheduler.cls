@@ -7,7 +7,7 @@
  * create recurring items, and deliver periodic status summaries.
  * @author Cloud Nimbus LLC
  */
-public without sharing class DeliveryHubScheduler implements Schedulable {
+global without sharing class DeliveryHubScheduler implements Schedulable {
 
     /**
      * @description Schedulable execute method.
@@ -16,7 +16,7 @@ public without sharing class DeliveryHubScheduler implements Schedulable {
      * digest email if today is the configured digest day.
      * @param sc The SchedulableContext (standard system parameter).
      */
-    public void execute(SchedulableContext sc) {
+    global void execute(SchedulableContext sc) {
         requeueFailedItems();
         processEscalations();
         processRecurringItems();
@@ -88,6 +88,40 @@ public without sharing class DeliveryHubScheduler implements Schedulable {
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryHubScheduler] Weekly digest enqueue failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Schedules the four standard Delivery Hub cron jobs (:00, :15, :30, :45).
+     * Callable from anonymous Apex in subscriber orgs:
+     *   delivery.DeliveryHubScheduler.scheduleAll();
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation, PMD.OperationWithLimitsInLoop')
+    global static void scheduleAll() {
+        String[] cronSlots = new String[]{
+            '0 0 * * * ?',
+            '0 15 * * * ?',
+            '0 30 * * * ?',
+            '0 45 * * * ?'
+        };
+        String[] slotNames = new String[]{ ':00', ':15', ':30', ':45' };
+
+        // Abort all existing Delivery Hub Sync jobs in one query (avoid SOQL in loop)
+        Map<String, Id> existingJobs = new Map<String, Id>();
+        for (CronTrigger ct : [
+            SELECT Id, CronJobDetail.Name FROM CronTrigger
+            WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync -%'
+            WITH SYSTEM_MODE
+        ]) {
+            existingJobs.put(ct.CronJobDetail.Name, ct.Id);
+        }
+
+        for (Integer i = 0; i < cronSlots.size(); i++) {
+            String jobName = 'Delivery Hub Sync - ' + slotNames[i];
+            if (existingJobs.containsKey(jobName)) {
+                System.abortJob(existingJobs.get(jobName));
+            }
+            System.schedule(jobName, cronSlots[i], new DeliveryHubScheduler());
         }
     }
 
