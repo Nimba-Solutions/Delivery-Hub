@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Delivery Stage History</masterLabel>
+    <description>Vertical timeline of stage transitions for a Work Item, showing old/new stage, user, duration, and relative time.</description>
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <objects>
+                <object>WorkItem__c</object>
+            </objects>
+            <property name="workItemId" type="String" label="Work Item Id" description="Override the record Id (leave blank to use the page record Id)" />
+        </targetConfig>
+        <targetConfig targets="lightning__AppPage">
+            <property name="workItemId" type="String" label="Work Item Id" description="The Work Item Id to display stage history for" />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

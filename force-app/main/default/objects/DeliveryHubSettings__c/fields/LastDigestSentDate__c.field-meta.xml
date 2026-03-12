@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastDigestSentDate__c</fullName>
+    <description>Tracks the last date the weekly digest was sent, preventing duplicate sends on the same day when the scheduler runs every 15 minutes.</description>
+    <inlineHelpText>Date the weekly digest was last sent. Used to prevent duplicate sends.</inlineHelpText>
+    <label>Last Digest Sent Date</label>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+    <required>false</required>
+</CustomField>

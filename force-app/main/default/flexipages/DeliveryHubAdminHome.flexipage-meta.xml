@@ -23,6 +23,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryDocumentViewer</componentName>
+                <identifier>c_deliveryDocumentViewer</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryGanttChart</componentName>
                 <identifier>c_deliveryGanttChart</identifier>
             </componentInstance>

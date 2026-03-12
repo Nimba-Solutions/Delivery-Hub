@@ -102,6 +102,57 @@ public with sharing class DeliveryDocumentController {
     }
 
     /**
+     * @description Retrieves a document's full data by its record Id.
+     *              Used by the embedded LWC viewer (admin context, authenticated).
+     * @param documentId The DeliveryDocument__c Id.
+     * @return Map containing the document record fields and parsed snapshot.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getDocumentById(Id documentId) {
+        List<DeliveryDocument__c> docs = [
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__c,
+                   NetworkEntityId__r.Name, NetworkEntityId__r.DefaultHourlyRateCurrency__c,
+                   PeriodStartDate__c, PeriodEndDate__c,
+                   StatusPk__c, PublicTokenTxt__c,
+                   AiNarrativeTxt__c, SnapshotTxt__c,
+                   TotalHoursNumber__c, TotalCurrency__c,
+                   SentDateTime__c, ViewedDateTime__c,
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        if (docs.isEmpty()) {
+            throw new AuraHandledException('Document not found.');
+        }
+
+        DeliveryDocument__c doc = docs[0];
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('id', doc.Id);
+        result.put('name', doc.Name);
+        result.put('template', doc.TemplatePk__c);
+        result.put('entityName', doc.NetworkEntityId__r.Name);
+        result.put('entityId', doc.NetworkEntityId__c);
+        result.put('defaultRate', doc.NetworkEntityId__r.DefaultHourlyRateCurrency__c);
+        result.put('periodStart', doc.PeriodStartDate__c);
+        result.put('periodEnd', doc.PeriodEndDate__c);
+        result.put('status', doc.StatusPk__c);
+        result.put('publicToken', doc.PublicTokenTxt__c);
+        result.put('aiNarrative', doc.AiNarrativeTxt__c);
+        result.put('totalHours', doc.TotalHoursNumber__c);
+        result.put('totalCost', doc.TotalCurrency__c);
+        result.put('sentDate', doc.SentDateTime__c);
+        result.put('viewedDate', doc.ViewedDateTime__c);
+        result.put('dueDate', doc.DueDateDate__c);
+        result.put('terms', doc.TermsTxt__c);
+        result.put('metadata', doc.MetadataTxt__c);
+        result.put('snapshot', doc.SnapshotTxt__c);
+        return result;
+    }
+
+    /**
      * @description Lists all documents for a given entity, ordered by creation date.
      * @param entityId The NetworkEntity__c Id.
      * @return List of document summary maps.

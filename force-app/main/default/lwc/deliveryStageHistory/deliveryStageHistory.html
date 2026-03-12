@@ -1,0 +1,74 @@
+<template>
+    <lightning-card title="Stage History" icon-name="standard:record">
+        <!-- Summary badge -->
+        <template lwc:if={hasEntries}>
+            <span slot="actions" class="summary-badge" title={totalTimeLabel}>
+                {transitionCount}
+            </span>
+        </template>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_large slds-align_absolute-center">
+                <lightning-spinner alternative-text="Loading stage history" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Empty State -->
+        <template lwc:if={showEmpty}>
+            <div class="slds-p-around_large slds-align_absolute-center empty-state">
+                <div class="slds-text-align_center">
+                    <lightning-icon
+                        icon-name="utility:info"
+                        size="large"
+                        class="slds-m-bottom_small empty-icon"
+                    ></lightning-icon>
+                    <p class="slds-text-heading_small slds-text-color_weak">
+                        No stage changes recorded yet
+                    </p>
+                </div>
+            </div>
+        </template>
+
+        <!-- Timeline -->
+        <template lwc:if={hasEntries}>
+            <div class="timeline-scroll">
+                <!-- Total time label -->
+                <template lwc:if={totalTimeLabel}>
+                    <div class="total-time-bar">
+                        {totalTimeLabel}
+                    </div>
+                </template>
+
+                <div class="timeline-container">
+                    <template for:each={timelineEntries} for:item="entry">
+                        <div key={entry.id} class="timeline-item">
+                            <!-- Dot on the line -->
+                            <div class="timeline-dot"></div>
+
+                            <!-- Content -->
+                            <div class="timeline-content">
+                                <div class="timeline-heading">{entry.heading}</div>
+                                <div class="timeline-subtitle" title={entry.formattedTime}>
+                                    {entry.subtitle}
+                                </div>
+                                <template lwc:if={entry.hasDuration}>
+                                    <div class="timeline-duration">{entry.durationLabel}</div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={error}>
+            <div class="slds-p-around_medium">
+                <div class="slds-text-color_error slds-text-body_small">
+                    Unable to load stage history. Please try refreshing.
+                </div>
+            </div>
+        </template>
+    </lightning-card>
+</template>

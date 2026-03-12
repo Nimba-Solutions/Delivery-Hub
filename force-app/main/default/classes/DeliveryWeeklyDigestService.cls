@@ -28,6 +28,13 @@ public with sharing class DeliveryWeeklyDigestService {
             return;
         }
 
+        // Guard: only send once per day (scheduler runs every 15 min = up to 96 times)
+        if (settings.LastDigestSentDate__c == Date.today()) {
+            System.debug(LoggingLevel.INFO,
+                '[DeliveryWeeklyDigestService] Digest already sent today — skipping.');
+            return;
+        }
+
         DigestData data = gatherDigestData(settings);
         String htmlBody = buildDigestHtml(data);
         List<String> recipients = resolveRecipients(settings);
@@ -39,6 +46,10 @@ public with sharing class DeliveryWeeklyDigestService {
         }
 
         dispatchDigest(recipients, htmlBody);
+
+        // Stamp today's date to prevent duplicate sends
+        settings.LastDigestSentDate__c = Date.today();
+        upsert settings;
     }
 
     /**

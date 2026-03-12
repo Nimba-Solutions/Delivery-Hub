@@ -1,0 +1,455 @@
+/**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description  Embedded document/invoice viewer. Supports list mode (all documents
+ *               for an entity) and preview mode (full invoice/report rendering).
+ * @author Cloud Nimbus LLC
+ */
+import { LightningElement, api, wire, track } from 'lwc';
+import { refreshApex } from '@salesforce/apex';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import getDocumentsForEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentsForEntity';
+import generateDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.generateDocument';
+import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
+import getDocumentById from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentById';
+
+const CURRENCY_FMT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+const STATUS_CONFIG = {
+    Draft:    { label: 'Draft',    cssClass: 'status-badge status-badge--draft' },
+    Ready:    { label: 'Ready',    cssClass: 'status-badge status-badge--ready' },
+    Sent:     { label: 'Sent',     cssClass: 'status-badge status-badge--sent' },
+    Viewed:   { label: 'Viewed',   cssClass: 'status-badge status-badge--viewed' },
+    Paid:     { label: 'Paid',     cssClass: 'status-badge status-badge--paid' },
+    Overdue:  { label: 'Overdue',  cssClass: 'status-badge status-badge--overdue' },
+    Disputed: { label: 'Disputed', cssClass: 'status-badge status-badge--disputed' }
+};
+
+const TEMPLATE_OPTIONS = [
+    { label: 'Invoice',           value: 'Invoice' },
+    { label: 'Status Report',     value: 'Status_Report' },
+    { label: 'Proposal',          value: 'Proposal' },
+    { label: 'Executive Summary', value: 'Executive_Summary' },
+    { label: 'Meeting Brief',     value: 'Meeting_Brief' },
+    { label: 'Weekly Digest',     value: 'Weekly_Digest' }
+];
+
+export default class DeliveryDocumentViewer extends LightningElement {
+    @api networkEntityId;
+    @api documentId;
+
+    // ── State ──
+    @track documents = [];
+    @track isLoading = true;
+    @track error = null;
+    @track mode = 'list'; // 'list' or 'preview'
+
+    // Generate form state
+    @track showGenerateForm = false;
+    @track genTemplate = 'Invoice';
+    @track genPeriodStart = '';
+    @track genPeriodEnd = '';
+    @track isGenerating = false;
+
+    // Preview state
+    @track previewDoc = null;
+    @track snapshot = null;
+    @track isLoadingPreview = false;
+    @track isUpdatingStatus = false;
+
+    _wiredDocsResult;
+
+    // ═══════════════════════════════════════════════════════════
+    //  LIFECYCLE
+    // ═══════════════════════════════════════════════════════════
+
+    connectedCallback() {
+        if (this.documentId) {
+            this.mode = 'preview';
+            this._loadDocumentById(this.documentId);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  WIRE: Document List
+    // ═══════════════════════════════════════════════════════════
+
+    @wire(getDocumentsForEntity, { entityId: '$networkEntityId' })
+    wiredDocuments(result) {
+        this._wiredDocsResult = result;
+        const { data, error } = result;
+        if (data) {
+            this.documents = data.map(d => this._enrichDocument(d));
+            this.error = null;
+        } else if (error) {
+            this.error = this._extractError(error);
+            this.documents = [];
+        }
+        this.isLoading = false;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  GETTERS
+    // ═══════════════════════════════════════════════════════════
+
+    get isListMode()    { return this.mode === 'list'; }
+    get isPreviewMode() { return this.mode === 'preview'; }
+    get isLoaded()      { return !this.isLoading; }
+    get hasDocuments()  { return this.documents && this.documents.length > 0; }
+    get hasError()      { return !!this.error; }
+    get templateOptions() { return TEMPLATE_OPTIONS; }
+
+    get cardTitle() {
+        return this.isListMode ? 'Documents' : (this.previewDoc?.name || 'Document Preview');
+    }
+
+    get documentCount() {
+        return this.documents ? this.documents.length : 0;
+    }
+
+    // Generate form validation
+    get isGenerateDisabled() {
+        return !this.genTemplate || !this.genPeriodStart || !this.genPeriodEnd || this.isGenerating;
+    }
+
+    get generateButtonLabel() {
+        return this.isGenerating ? 'Generating...' : 'Generate';
+    }
+
+    // ── Preview getters ──
+
+    get hasPreviewDoc() { return this.previewDoc != null; }
+
+    get previewStatusConfig() {
+        return STATUS_CONFIG[this.previewDoc?.status] || STATUS_CONFIG.Draft;
+    }
+
+    get previewPeriod() {
+        if (!this.previewDoc) return '';
+        return `${this._formatDate(this.previewDoc.periodStart)} - ${this._formatDate(this.previewDoc.periodEnd)}`;
+    }
+
+    get isInvoiceTemplate() {
+        return this.previewDoc?.template === 'Invoice';
+    }
+
+    get formattedTotalCost() {
+        return CURRENCY_FMT.format(this.previewDoc?.totalCost || 0);
+    }
+
+    get formattedTotalHours() {
+        const h = this.previewDoc?.totalHours || 0;
+        return `${h.toFixed(1)} hrs`;
+    }
+
+    get entityName() {
+        return this.snapshot?.entity?.name || this.previewDoc?.entityName || '';
+    }
+
+    get entityAddress() {
+        return this.snapshot?.entity?.address || '';
+    }
+
+    get entityEmail() {
+        return this.snapshot?.entity?.email || '';
+    }
+
+    get entityPhone() {
+        return this.snapshot?.entity?.phone || '';
+    }
+
+    get entityDefaultRate() {
+        const r = this.snapshot?.entity?.defaultRate;
+        return r ? CURRENCY_FMT.format(r) + '/hr' : '';
+    }
+
+    get hasEntityContact() {
+        return this.entityAddress || this.entityEmail || this.entityPhone;
+    }
+
+    get snapshotWorkItems() {
+        if (!this.snapshot?.workItems) return [];
+        return this.snapshot.workItems.map(wi => {
+            const hours = wi.totalLoggedHours || 0;
+            const rate = wi.billableRate || this.snapshot?.entity?.defaultRate || 0;
+            const subtotal = hours * rate;
+            return {
+                id: wi.id,
+                name: wi.name,
+                description: wi.description || '--',
+                stage: wi.stage || '--',
+                hours: hours.toFixed(1),
+                rate: CURRENCY_FMT.format(rate),
+                subtotal: CURRENCY_FMT.format(subtotal)
+            };
+        });
+    }
+
+    get hasWorkItems() {
+        return this.snapshotWorkItems.length > 0;
+    }
+
+    get snapshotWorkLogs() {
+        if (!this.snapshot?.workLogs) return [];
+        return this.snapshot.workLogs.map(wl => ({
+            id: wl.id,
+            workItemName: wl.workItemName || '--',
+            hours: (wl.hours || 0).toFixed(1),
+            date: this._formatDate(wl.date),
+            description: wl.description || '--'
+        }));
+    }
+
+    get hasWorkLogs() {
+        return this.snapshotWorkLogs.length > 0;
+    }
+
+    get snapshotWorkRequests() {
+        if (!this.snapshot?.workRequests) return [];
+        return this.snapshot.workRequests.map(wr => ({
+            id: wr.id,
+            workItemName: wr.workItemName || '--',
+            status: wr.status || '--',
+            hourlyRate: wr.hourlyRate ? CURRENCY_FMT.format(wr.hourlyRate) : '--',
+            totalLoggedHours: (wr.totalLoggedHours || 0).toFixed(1),
+            vendorEntityName: wr.vendorEntityName || '--'
+        }));
+    }
+
+    get hasWorkRequests() {
+        return this.snapshotWorkRequests.length > 0;
+    }
+
+    get aiNarrative() {
+        return this.previewDoc?.aiNarrative || '';
+    }
+
+    get hasAiNarrative() {
+        return !!this.aiNarrative;
+    }
+
+    get documentTerms() {
+        return this.previewDoc?.terms || 'Net 30';
+    }
+
+    get canMarkReady() {
+        return this.previewDoc?.status === 'Draft';
+    }
+
+    get canMarkSent() {
+        return this.previewDoc?.status === 'Ready';
+    }
+
+    get canMarkPaid() {
+        return this.previewDoc?.status === 'Sent' || this.previewDoc?.status === 'Viewed';
+    }
+
+    get templateDisplayName() {
+        if (!this.previewDoc?.template) return '';
+        return this.previewDoc.template.replace(/_/g, ' ');
+    }
+
+    get generatedAt() {
+        return this.snapshot?.generatedAt ? this._formatDate(this.snapshot.generatedAt) : '';
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  HANDLERS: List Mode
+    // ═══════════════════════════════════════════════════════════
+
+    handleDocumentClick(event) {
+        const docId = event.currentTarget.dataset.id;
+        const doc = this.documents.find(d => d.id === docId);
+        if (doc) {
+            this._loadDocumentById(docId);
+        }
+    }
+
+    handleOpenGenerateForm() {
+        this.showGenerateForm = true;
+        // Default period: first and last of current month
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+        this.genPeriodStart = `${y}-${m}-01`;
+        this.genPeriodEnd = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    handleCloseGenerateForm() {
+        this.showGenerateForm = false;
+        this._resetGenerateForm();
+    }
+
+    handleGenTemplateChange(event) {
+        this.genTemplate = event.detail.value;
+    }
+
+    handleGenPeriodStartChange(event) {
+        this.genPeriodStart = event.detail.value;
+    }
+
+    handleGenPeriodEndChange(event) {
+        this.genPeriodEnd = event.detail.value;
+    }
+
+    async handleGenerate() {
+        this.isGenerating = true;
+        try {
+            const newDocId = await generateDocument({
+                entityId: this.networkEntityId,
+                templateType: this.genTemplate,
+                periodStart: this.genPeriodStart,
+                periodEnd: this.genPeriodEnd,
+                metadata: null
+            });
+            this._showToast('Success', 'Document generated successfully.', 'success');
+            this.showGenerateForm = false;
+            this._resetGenerateForm();
+            await refreshApex(this._wiredDocsResult);
+            // Navigate to preview
+            this._loadDocumentById(newDocId);
+        } catch (err) {
+            this._showToast('Error', this._extractError(err), 'error');
+        } finally {
+            this.isGenerating = false;
+        }
+    }
+
+    handleRefreshList() {
+        this.isLoading = true;
+        refreshApex(this._wiredDocsResult).then(() => {
+            this.isLoading = false;
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  HANDLERS: Preview Mode
+    // ═══════════════════════════════════════════════════════════
+
+    handleBackToList() {
+        this.mode = 'list';
+        this.previewDoc = null;
+        this.snapshot = null;
+    }
+
+    async handleMarkReady() {
+        await this._updateStatus('Ready');
+    }
+
+    async handleMarkSent() {
+        await this._updateStatus('Sent');
+    }
+
+    async handleMarkPaid() {
+        await this._updateStatus('Paid');
+    }
+
+    handlePrint() {
+        window.print();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PRIVATE
+    // ═══════════════════════════════════════════════════════════
+
+    async _loadDocumentById(docId) {
+        this.mode = 'preview';
+        this.isLoadingPreview = true;
+        this.previewDoc = null;
+        this.snapshot = null;
+
+        try {
+            const result = await getDocumentById({ documentId: docId });
+            this.previewDoc = {
+                id: result.id,
+                name: result.name,
+                template: result.template,
+                periodStart: result.periodStart,
+                periodEnd: result.periodEnd,
+                status: result.status,
+                totalHours: result.totalHours,
+                totalCost: result.totalCost,
+                entityName: result.entityName,
+                aiNarrative: result.aiNarrative,
+                terms: result.terms,
+                publicToken: result.publicToken
+            };
+            if (result.snapshot) {
+                this.snapshot = JSON.parse(result.snapshot);
+            }
+        } catch (err) {
+            this._showToast('Error', this._extractError(err), 'error');
+        } finally {
+            this.isLoadingPreview = false;
+        }
+    }
+
+    async _updateStatus(newStatus) {
+        if (!this.previewDoc?.id) return;
+        this.isUpdatingStatus = true;
+        try {
+            await updateDocumentStatus({
+                documentId: this.previewDoc.id,
+                newStatus: newStatus
+            });
+            this.previewDoc = { ...this.previewDoc, status: newStatus };
+            this._showToast('Success', `Document marked as ${newStatus}.`, 'success');
+            // Refresh the list so it reflects updated status
+            refreshApex(this._wiredDocsResult);
+        } catch (err) {
+            this._showToast('Error', this._extractError(err), 'error');
+        } finally {
+            this.isUpdatingStatus = false;
+        }
+    }
+
+    _enrichDocument(d) {
+        const sc = STATUS_CONFIG[d.status] || STATUS_CONFIG.Draft;
+        return {
+            id: d.id,
+            name: d.name,
+            template: d.template,
+            templateDisplay: (d.template || '').replace(/_/g, ' '),
+            periodStart: d.periodStart,
+            periodEnd: d.periodEnd,
+            periodDisplay: `${this._formatDate(d.periodStart)} - ${this._formatDate(d.periodEnd)}`,
+            status: d.status,
+            statusLabel: sc.label,
+            statusClass: sc.cssClass,
+            totalHours: d.totalHours || 0,
+            hoursDisplay: `${(d.totalHours || 0).toFixed(1)} hrs`,
+            totalCost: d.totalCost || 0,
+            costDisplay: CURRENCY_FMT.format(d.totalCost || 0),
+            createdDate: d.createdDate,
+            createdDateDisplay: this._formatDate(d.createdDate)
+        };
+    }
+
+    _formatDate(val) {
+        if (!val) return '--';
+        try {
+            const d = new Date(val);
+            return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return String(val);
+        }
+    }
+
+    _resetGenerateForm() {
+        this.genTemplate = 'Invoice';
+        this.genPeriodStart = '';
+        this.genPeriodEnd = '';
+    }
+
+    _extractError(err) {
+        if (typeof err === 'string') return err;
+        if (err?.body?.message) return err.body.message;
+        if (err?.message) return err.message;
+        return 'An unexpected error occurred.';
+    }
+
+    _showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+    }
+}
