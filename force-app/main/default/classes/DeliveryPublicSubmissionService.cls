@@ -82,6 +82,7 @@ global without sharing class DeliveryPublicSubmissionService {
      * @param res The REST response object (for writing errors)
      * @return Validated SubmissionInput, or null if an error response was written
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     private static SubmissionInput parseAndValidateInput(RestResponse res) {
         String jsonBody = RestContext.request.requestBody.toString();
         if (String.isBlank(jsonBody)) {

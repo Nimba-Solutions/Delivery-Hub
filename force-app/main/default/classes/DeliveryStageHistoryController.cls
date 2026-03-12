@@ -57,7 +57,7 @@ public with sharing class DeliveryStageHistoryController {
                 try {
                     userIds.add((Id) log.UserIdTxt__c);
                 } catch (Exception ex) {
-                    // Invalid Id format — skip silently
+                    System.debug(LoggingLevel.FINE, 'Skipping invalid user Id: ' + log.UserIdTxt__c);
                 }
             }
         }
@@ -107,7 +107,7 @@ public with sharing class DeliveryStageHistoryController {
                     entry.put('workItemName', ctx.get('workItemName'));
                 }
             } catch (Exception ex) {
-                // Malformed JSON — return entry with defaults
+                System.debug(LoggingLevel.FINE, 'Malformed context JSON for log ' + log.Id + ': ' + ex.getMessage());
             }
         }
 

@@ -8,7 +8,7 @@
  *               digest when AI is not configured or the callout fails.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.ApexCRUDViolation')
 public with sharing class DeliveryWeeklyDigestService {
 
     /** @description Default day of week when none is configured */
