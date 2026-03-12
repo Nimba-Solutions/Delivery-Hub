@@ -12,6 +12,8 @@ private class DeliveryDocumentControllerTest {
 
     @TestSetup
     static void setup() {
+        insert new DeliveryHubSettings__c(AutoCreateWorkRequestBool__c = false);
+
         NetworkEntity__c entity = new NetworkEntity__c(
             Name = 'Test Client Corp',
             EntityTypePk__c = 'Client',
@@ -319,9 +321,20 @@ private class DeliveryDocumentControllerTest {
         );
         insert itemNoRate;
 
+        // Create a WorkRequest with NO rate for the no-rate item (Master-Detail requires parent)
+        NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Test Vendor LLC' LIMIT 1];
+        WorkRequest__c reqNoRate = new WorkRequest__c(
+            WorkItemId__c = itemNoRate.Id,
+            DeliveryEntityId__c = vendor.Id,
+            StatusPk__c = 'In Progress'
+            // HourlyRateCurrency__c intentionally omitted — rate hierarchy falls through to entity default
+        );
+        insert reqNoRate;
+
         // Log 2 hours on the no-rate item within the period
         insert new WorkLog__c(
             WorkItemId__c = itemNoRate.Id,
+            RequestId__c = reqNoRate.Id,
             HoursLoggedNumber__c = 2,
             WorkDateDate__c = Date.newInstance(2026, 3, 5),
             WorkDescriptionTxt__c = 'Work on unrated item'
@@ -346,7 +359,7 @@ private class DeliveryDocumentControllerTest {
         // Cost breakdown:
         //   item1 logs (8 + 4.5 = 12.5h): has WorkRequest rate 175 → 12.5 * 175 = 2187.50
         //   item2 logs (5h): has WorkRequest rate 175 → 5 * 175 = 875
-        //   itemNoRate logs (2h): no request, no item rate → entity default 100 → 2 * 100 = 200
+        //   itemNoRate logs (2h): request has no rate, no item rate → entity default 100 → 2 * 100 = 200
         //   Total: 2187.50 + 875 + 200 = 3262.50
         System.assertEquals(3262.50, doc.TotalCurrency__c, 'Cost should reflect rate hierarchy: request > item > entity default');
     }
