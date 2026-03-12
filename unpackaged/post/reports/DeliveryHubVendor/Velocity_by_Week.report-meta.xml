@@ -4,15 +4,15 @@
         <field>CUST_NAME</field>
     </columns>
     <columns>
-        <field>WorkItem__c.BriefDescriptionTxt__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
     </columns>
     <description>Work items completed (Done stage) grouped by Calculated ETA date week. Shows delivery cadence and burn rate over time — adjust the date filter window as needed.</description>
     <filter>
         <criteriaItems>
-            <column>WorkItem__c.StageNamePk__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
@@ -22,11 +22,11 @@
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Week</dateGranularity>
-        <field>WorkItem__c.CalculatedETADate__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%CalculatedETADate__c</field>
         <sortOrder>Desc</sortOrder>
     </groupingsDown>
     <name>Velocity — Work Items Completed by Week</name>
-    <reportType>CustomEntity$WorkItem__c</reportType>
+    <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>

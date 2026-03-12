@@ -4,23 +4,23 @@
         <field>CUST_NAME</field>
     </columns>
     <columns>
-        <field>WorkItem__c.BriefDescriptionTxt__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.StageNamePk__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.PriorityPk__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</field>
     </columns>
     <description>Work items grouped by client network entity. Shows each client's work item portfolio and current status at a glance.</description>
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
     <name>Work Items by Client</name>
-    <reportType>CustomEntity$WorkItem__c</reportType>
+    <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>

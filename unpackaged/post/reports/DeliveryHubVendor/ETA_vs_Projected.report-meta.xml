@@ -4,32 +4,32 @@
         <field>CUST_NAME</field>
     </columns>
     <columns>
-        <field>WorkItem__c.BriefDescriptionTxt__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.StageNamePk__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.CalculatedETADate__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%CalculatedETADate__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.ProjectedUATReadyDate__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ProjectedUATReadyDate__c</field>
     </columns>
     <description>Side-by-side view of system-calculated ETA vs. projected UAT-ready date. Use to identify work items where the timeline has slipped or the estimate is no longer realistic.</description>
     <filter>
         <booleanFilter>1 AND 2</booleanFilter>
         <criteriaItems>
-            <column>WorkItem__c.StageNamePk__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>notEqual</operator>
             <value>Done</value>
         </criteriaItems>
         <criteriaItems>
-            <column>WorkItem__c.StageNamePk__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>notEqual</operator>
@@ -38,10 +38,10 @@
     </filter>
     <format>Tabular</format>
     <name>ETA vs Projected — Active Work Items</name>
-    <reportType>CustomEntity$WorkItem__c</reportType>
+    <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>false</showGrandTotal>
-    <sortColumn>WorkItem__c.ProjectedUATReadyDate__c</sortColumn>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ProjectedUATReadyDate__c</sortColumn>
     <sortOrder>Asc</sortOrder>
 </Report>
