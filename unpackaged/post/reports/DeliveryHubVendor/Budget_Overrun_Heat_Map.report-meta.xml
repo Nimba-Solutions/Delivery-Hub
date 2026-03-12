@@ -4,35 +4,35 @@
         <field>CUST_NAME</field>
     </columns>
     <columns>
-        <field>WorkItem__c.BriefDescriptionTxt__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.StageNamePk__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.EstimatedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursNumber__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.HoursVarianceNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%HoursVarianceNumber__c</field>
     </columns>
     <description>Active work items sorted by hours overrun (largest first). Use to prioritize budget conversations and catch scope creep before it escalates.</description>
     <filter>
         <booleanFilter>1 AND 2</booleanFilter>
         <criteriaItems>
-            <column>WorkItem__c.StageNamePk__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>notEqual</operator>
             <value>Done</value>
         </criteriaItems>
         <criteriaItems>
-            <column>WorkItem__c.StageNamePk__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>notEqual</operator>
@@ -41,10 +41,10 @@
     </filter>
     <format>Tabular</format>
     <name>Budget Overrun Heat Map</name>
-    <reportType>CustomEntity$WorkItem__c</reportType>
+    <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
-    <sortColumn>WorkItem__c.HoursVarianceNumber__c</sortColumn>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%HoursVarianceNumber__c</sortColumn>
     <sortOrder>Desc</sortOrder>
 </Report>

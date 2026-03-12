@@ -4,24 +4,24 @@
         <field>CUST_NAME</field>
     </columns>
     <columns>
-        <field>WorkItem__c.BriefDescriptionTxt__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.StageNamePk__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.EstimatedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>
     </columns>
     <columns>
-        <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursNumber__c</field>
     </columns>
     <description>Successfully delivered work items. Review completed work and track delivery throughput over time.</description>
     <filter>
         <criteriaItems>
-            <column>WorkItem__c.StageNamePk__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
@@ -30,7 +30,7 @@
     </filter>
     <format>Tabular</format>
     <name>Completed Deliveries</name>
-    <reportType>CustomEntity$WorkItem__c</reportType>
+    <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
