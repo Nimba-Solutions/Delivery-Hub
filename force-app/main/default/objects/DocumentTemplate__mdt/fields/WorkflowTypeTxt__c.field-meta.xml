@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkflowTypeTxt__c</fullName>
+    <description>Optional workflow type restriction. When set, this template only appears for work items of the specified workflow type.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Leave blank for universal templates. Set to a workflow type API name to restrict availability.</inlineHelpText>
+    <label>Workflow Type</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

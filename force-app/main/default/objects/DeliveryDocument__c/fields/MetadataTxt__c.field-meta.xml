@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>MetadataTxt__c</fullName>
+    <description>Template-specific configuration stored as JSON. Allows each template type to carry custom parameters without requiring additional fields.</description>
+    <inlineHelpText>JSON configuration specific to this document's template (e.g., prior balance, tax rate, custom notes).</inlineHelpText>
+    <label>Metadata</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

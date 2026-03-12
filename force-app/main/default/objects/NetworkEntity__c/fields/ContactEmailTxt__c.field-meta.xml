@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ContactEmailTxt__c</fullName>
+    <description>Primary contact email for this network entity. Used for document delivery and communications.</description>
+    <inlineHelpText>Email address used for sending documents and notifications to this entity.</inlineHelpText>
+    <label>Contact Email</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

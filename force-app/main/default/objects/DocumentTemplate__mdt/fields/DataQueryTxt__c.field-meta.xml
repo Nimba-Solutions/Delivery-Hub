@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DataQueryTxt__c</fullName>
+    <description>JSON configuration defining which Salesforce data to package for this template. Specifies objects, fields, and filter criteria.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>JSON schema defining data requirements: which objects to query, fields to include, and how to filter.</inlineHelpText>
+    <label>Data Query Config</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

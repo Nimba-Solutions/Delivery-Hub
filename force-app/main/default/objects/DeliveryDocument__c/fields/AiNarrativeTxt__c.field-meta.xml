@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AiNarrativeTxt__c</fullName>
+    <description>AI-generated narrative summary of the document content. Stored after generation so it persists without re-calling the AI API.</description>
+    <inlineHelpText>Executive summary written by AI based on the work items, hours, and activity in this document's period.</inlineHelpText>
+    <label>AI Narrative</label>
+    <length>131072</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>8</visibleLines>
+</CustomField>
