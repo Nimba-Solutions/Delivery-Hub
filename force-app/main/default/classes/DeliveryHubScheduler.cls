@@ -92,14 +92,11 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
     }
 
     /**
-     * @description Future method to perform the HTTP Callout to the Mothership.
-     * Required because SchedulableContext cannot perform synchronous callouts.
-     */
-    /**
      * @description Schedules the four standard Delivery Hub cron jobs (:00, :15, :30, :45).
      * Callable from anonymous Apex in subscriber orgs:
      *   delivery.DeliveryHubScheduler.scheduleAll();
      */
+    @SuppressWarnings('PMD.ApexCRUDViolation, PMD.OperationWithLimitsInLoop')
     global static void scheduleAll() {
         String[] cronSlots = new String[]{
             '0 0 * * * ?',
@@ -108,16 +105,30 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
             '0 45 * * * ?'
         };
         String[] slotNames = new String[]{ ':00', ':15', ':30', ':45' };
+
+        // Abort all existing Delivery Hub Sync jobs in one query (avoid SOQL in loop)
+        Map<String, Id> existingJobs = new Map<String, Id>();
+        for (CronTrigger ct : [
+            SELECT Id, CronJobDetail.Name FROM CronTrigger
+            WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync -%'
+            WITH SYSTEM_MODE
+        ]) {
+            existingJobs.put(ct.CronJobDetail.Name, ct.Id);
+        }
+
         for (Integer i = 0; i < cronSlots.size(); i++) {
             String jobName = 'Delivery Hub Sync - ' + slotNames[i];
-            // Abort existing job with same name to avoid duplicates
-            for (CronTrigger ct : [SELECT Id FROM CronTrigger WHERE CronJobDetail.Name = :jobName]) {
-                System.abortJob(ct.Id);
+            if (existingJobs.containsKey(jobName)) {
+                System.abortJob(existingJobs.get(jobName));
             }
             System.schedule(jobName, cronSlots[i], new DeliveryHubScheduler());
         }
     }
 
+    /**
+     * @description Future method to perform the HTTP Callout to the Mothership.
+     * Required because SchedulableContext cannot perform synchronous callouts.
+     */
     @future(callout=true)
     public static void runSyncAsync() {
         // Triggers the poller logic to fetch delta updates
