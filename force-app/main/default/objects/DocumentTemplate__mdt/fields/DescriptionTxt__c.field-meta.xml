@@ -5,7 +5,7 @@
     <fieldManageability>DeveloperControlled</fieldManageability>
     <inlineHelpText>Describes this template's purpose and typical use case.</inlineHelpText>
     <label>Description</label>
-    <length>500</length>
+    <length>255</length>
     <required>false</required>
     <type>Text</type>
     <unique>false</unique>

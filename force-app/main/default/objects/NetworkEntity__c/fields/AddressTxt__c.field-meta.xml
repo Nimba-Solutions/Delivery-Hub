@@ -4,7 +4,7 @@
     <description>Mailing or billing address for this network entity. Used on generated documents such as invoices.</description>
     <inlineHelpText>Full address displayed on documents and communications.</inlineHelpText>
     <label>Address</label>
-    <length>500</length>
+    <length>255</length>
     <required>false</required>
     <trackTrending>false</trackTrending>
     <type>Text</type>
