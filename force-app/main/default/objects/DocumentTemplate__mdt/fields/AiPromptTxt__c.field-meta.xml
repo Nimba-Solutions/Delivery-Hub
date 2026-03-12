@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AiPromptTxt__c</fullName>
+    <description>Optional prompt template for AI narrative generation. When populated, the document engine calls the AI API with this prompt and the packaged data to produce an executive narrative.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>AI prompt used to generate the executive narrative. Leave blank to skip AI enhancement.</inlineHelpText>
+    <label>AI Prompt</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

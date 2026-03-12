@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DueDateDate__c</fullName>
+    <description>Payment due date for financial documents. Typically derived from sent date plus payment terms.</description>
+    <inlineHelpText>Date payment is expected. For Net 30 terms, this is 30 days after the sent date.</inlineHelpText>
+    <label>Due Date</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

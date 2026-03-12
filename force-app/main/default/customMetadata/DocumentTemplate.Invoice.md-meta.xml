@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Invoice</label>
+    <protected>false</protected>
+    <values>
+        <field>PortalComponentTxt__c</field>
+        <value xsi:type="xsd:string">InvoiceDocument</value>
+    </values>
+    <values>
+        <field>DataQueryTxt__c</field>
+        <value xsi:type="xsd:string">{"objects":["WorkLog__c","WorkItem__c","WorkRequest__c","NetworkEntity__c"],"groupBy":"WorkItem","sortBy":"WorkDateDate__c"}</value>
+    </values>
+    <values>
+        <field>AiPromptTxt__c</field>
+        <value xsi:type="xsd:string">You are writing an executive narrative for a professional services invoice. Summarize the work performed during the billing period, organized by work item. Highlight key achievements, progress made, and any recommendations. Keep it concise (2-3 paragraphs), professional, and focused on value delivered rather than hours burned. Do not mention the AI or that this was auto-generated.</value>
+    </values>
+    <values>
+        <field>WorkflowTypeTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>OutputFormatsTxt__c</field>
+        <value xsi:type="xsd:string">web,pdf,email</value>
+    </values>
+    <values>
+        <field>DescriptionTxt__c</field>
+        <value xsi:type="xsd:string">Professional invoice with AI-generated executive narrative. Groups work logs by work item, shows hours, rates, descriptions, and item status. Includes period summary and payment terms.</value>
+    </values>
+</CustomMetadata>

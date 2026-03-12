@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PeriodEndDate__c</fullName>
+    <description>End of the period covered by this document.</description>
+    <inlineHelpText>The last day of the billing or reporting period.</inlineHelpText>
+    <label>Period End</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

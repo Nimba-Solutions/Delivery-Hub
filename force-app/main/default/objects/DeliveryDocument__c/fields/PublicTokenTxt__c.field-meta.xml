@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PublicTokenTxt__c</fullName>
+    <caseSensitive>true</caseSensitive>
+    <description>Unique token enabling unauthenticated access to view this document via the portal.</description>
+    <inlineHelpText>Auto-generated UUID. Share the portal URL with this token to grant view access without login.</inlineHelpText>
+    <externalId>true</externalId>
+    <label>Public Token</label>
+    <length>64</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>
