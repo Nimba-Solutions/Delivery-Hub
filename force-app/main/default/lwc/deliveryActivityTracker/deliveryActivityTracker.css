@@ -1,0 +1,4 @@
+/* deliveryActivityTracker — invisible utility bar component, no visible DOM */
+:host {
+    display: none;
+}

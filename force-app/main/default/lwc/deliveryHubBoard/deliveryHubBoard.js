@@ -148,6 +148,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     // --- Quick-filter Pill Bar State ---
     activeQuickFilter = 'all';
 
+    // --- Table View State ---
+    @track tableSortColumn = 'stageProgress';
+    @track tableSortDirection = 'asc';
+
     workItemsWire;
     _empSubscription = {};
 
@@ -449,6 +453,72 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     get displayModeOptions() { return [{ label: "Kanban", value: "kanban" }, { label: "Compact", value: "compact" }, { label: "Table", value: "table" }]; }
     get mainBoardClass() { if (this.displayMode === "table") return "table-board"; if (this.displayMode === "compact") return "stage-columns compact"; return "stage-columns"; }
     get isTableMode() { return this.displayMode === "table"; }
+
+    // =====================================================================
+    // TABLE VIEW — sortable list mode
+    // =====================================================================
+
+    get tableWorkItems() {
+        const stages = this.workflowConfig?.stages || [];
+        const nonTerminal = stages.filter(s => !s.isTerminal);
+        const total = nonTerminal.length || 1;
+
+        const items = [...(this.filteredWorkItems || this.enrichedWorkItems || [])];
+
+        // Enrich with progress
+        const enriched = items.map(wi => {
+            const stageIdx = nonTerminal.findIndex(s => s.apiValue === wi.uiStage);
+            const isTerminal = stages.find(s => s.apiValue === wi.uiStage)?.isTerminal;
+            const progress = isTerminal ? 100 : (stageIdx >= 0 ? Math.round(((stageIdx + 1) / total) * 100) : 0);
+            const stageData = this._stageMap[wi.uiStage];
+            return {
+                ...wi,
+                stageProgress: progress,
+                stageProgressStyle: `width:${progress}%;background:${stageData?.headerBgColor || '#0070d2'};`,
+                stageDisplayName: stageData?.displayName || wi.uiStage,
+                rowClass: `table-row${wi.isCurrentlyBlocked ? ' table-row--blocked' : ''}${wi.isHighPriority ? ' table-row--high-priority' : ''}`
+            };
+        });
+
+        // Sort
+        const col = this.tableSortColumn;
+        const dir = this.tableSortDirection === 'asc' ? 1 : -1;
+        enriched.sort((a, b) => {
+            let va = a[col], vb = b[col];
+            if (col === 'stageProgress' || col === 'agingDays') {
+                va = va || 0; vb = vb || 0;
+                return (va - vb) * dir;
+            }
+            va = (va || '').toString().toLowerCase();
+            vb = (vb || '').toString().toLowerCase();
+            return va < vb ? -1 * dir : va > vb ? 1 * dir : 0;
+        });
+
+        return enriched;
+    }
+
+    get tableSortNameIcon() { return this.tableSortColumn === 'Name' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+    get tableSortTitleIcon() { return this.tableSortColumn === 'uiTitle' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+    get tableSortStageIcon() { return this.tableSortColumn === 'stageProgress' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+    get tableSortPriorityIcon() { return this.tableSortColumn === 'uiPriority' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+    get tableSortOwnerIcon() { return this.tableSortColumn === 'OwnerName' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+    get tableSortETAIcon() { return this.tableSortColumn === 'calculatedETA' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+    get tableSortHoursIcon() { return this.tableSortColumn === 'uiHours' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+    get tableSortAgingIcon() { return this.tableSortColumn === 'agingDays' ? (this.tableSortDirection === 'asc' ? 'utility:arrowup' : 'utility:arrowdown') : 'utility:sort'; }
+
+    handleTableSort(event) {
+        const column = event.currentTarget.dataset.column;
+        if (this.tableSortColumn === column) {
+            this.tableSortDirection = this.tableSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.tableSortColumn = column;
+            this.tableSortDirection = 'asc';
+        }
+    }
+
+    get hasTableWorkItems() {
+        return (this.tableWorkItems || []).length > 0;
+    }
 
     // --- ENRICHED WORK ITEMS (Namespace Agnostic & Sorted) ---
     get enrichedWorkItems() {

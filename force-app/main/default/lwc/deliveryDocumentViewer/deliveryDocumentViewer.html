@@ -1,0 +1,447 @@
+<template>
+    <!-- ════════════════════════════════════════════════════
+         LOADING STATE
+         ════════════════════════════════════════════════════ -->
+    <template lwc:if={isLoading}>
+        <lightning-card title="Documents">
+            <div class="slds-is-relative slds-p-around_large" style="min-height:200px;">
+                <lightning-spinner alternative-text="Loading documents" size="medium"></lightning-spinner>
+            </div>
+        </lightning-card>
+    </template>
+
+    <!-- ════════════════════════════════════════════════════
+         ERROR STATE
+         ════════════════════════════════════════════════════ -->
+    <template lwc:elseif={hasError}>
+        <lightning-card title="Documents">
+            <div class="slds-p-around_medium">
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <span class="slds-assistive-text">Error</span>
+                    <p>{error}</p>
+                </div>
+            </div>
+        </lightning-card>
+    </template>
+
+    <!-- ════════════════════════════════════════════════════
+         LIST MODE
+         ════════════════════════════════════════════════════ -->
+    <template lwc:elseif={isListMode}>
+            <lightning-card title="Documents" icon-name="standard:document">
+                <!-- Header actions -->
+                <div slot="actions" class="doc-header-actions">
+                    <lightning-button
+                        label="Refresh"
+                        icon-name="utility:refresh"
+                        variant="neutral"
+                        onclick={handleRefreshList}
+                        class="slds-m-right_x-small"
+                    ></lightning-button>
+                    <lightning-button
+                        label="Generate Document"
+                        icon-name="utility:add"
+                        variant="brand"
+                        onclick={handleOpenGenerateForm}
+                    ></lightning-button>
+                </div>
+
+                <!-- Generate Document Form (inline) -->
+                <template lwc:if={showGenerateForm}>
+                    <div class="gen-form-container">
+                        <div class="gen-form-header">
+                            <h3 class="gen-form-title">Generate New Document</h3>
+                            <lightning-button-icon
+                                icon-name="utility:close"
+                                alternative-text="Close"
+                                variant="bare"
+                                onclick={handleCloseGenerateForm}
+                            ></lightning-button-icon>
+                        </div>
+                        <div class="gen-form-body">
+                            <div class="slds-grid slds-gutters slds-wrap">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                                    <lightning-combobox
+                                        label="Template"
+                                        value={genTemplate}
+                                        options={templateOptions}
+                                        onchange={handleGenTemplateChange}
+                                        required
+                                    ></lightning-combobox>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3 slds-p-bottom_small">
+                                    <lightning-input
+                                        type="date"
+                                        label="Period Start"
+                                        value={genPeriodStart}
+                                        onchange={handleGenPeriodStartChange}
+                                        required
+                                    ></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3 slds-p-bottom_small">
+                                    <lightning-input
+                                        type="date"
+                                        label="Period End"
+                                        value={genPeriodEnd}
+                                        onchange={handleGenPeriodEndChange}
+                                        required
+                                    ></lightning-input>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gen-form-footer">
+                            <lightning-button
+                                label="Cancel"
+                                variant="neutral"
+                                onclick={handleCloseGenerateForm}
+                                class="slds-m-right_x-small"
+                            ></lightning-button>
+                            <lightning-button
+                                label={generateButtonLabel}
+                                variant="brand"
+                                onclick={handleGenerate}
+                                disabled={isGenerateDisabled}
+                            ></lightning-button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Document List -->
+                <template lwc:if={hasDocuments}>
+                    <!-- Table header -->
+                    <div class="doc-table-header">
+                        <div class="doc-col doc-col--name">Document</div>
+                        <div class="doc-col doc-col--template">Template</div>
+                        <div class="doc-col doc-col--period">Period</div>
+                        <div class="doc-col doc-col--hours">Hours</div>
+                        <div class="doc-col doc-col--cost">Cost</div>
+                        <div class="doc-col doc-col--status">Status</div>
+                        <div class="doc-col doc-col--date">Created</div>
+                    </div>
+
+                    <!-- Table rows -->
+                    <template for:each={documents} for:item="doc">
+                        <div
+                            key={doc.id}
+                            class="doc-row"
+                            data-id={doc.id}
+                            onclick={handleDocumentClick}
+                        >
+                            <div class="doc-col doc-col--name">
+                                <span class="doc-name-text">{doc.name}</span>
+                            </div>
+                            <div class="doc-col doc-col--template">
+                                <span class="template-pill">{doc.templateDisplay}</span>
+                            </div>
+                            <div class="doc-col doc-col--period">{doc.periodDisplay}</div>
+                            <div class="doc-col doc-col--hours">{doc.hoursDisplay}</div>
+                            <div class="doc-col doc-col--cost">{doc.costDisplay}</div>
+                            <div class="doc-col doc-col--status">
+                                <span class={doc.statusClass}>{doc.statusLabel}</span>
+                            </div>
+                            <div class="doc-col doc-col--date">{doc.createdDateDisplay}</div>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- Empty state -->
+                <template lwc:else>
+                    <div class="empty-state slds-p-around_large">
+                        <div class="empty-state-icon-wrapper empty-state-icon--neutral">
+                            <lightning-icon icon-name="standard:document" size="large"></lightning-icon>
+                        </div>
+                        <p class="slds-text-heading_small slds-m-top_medium">No documents yet</p>
+                        <p class="slds-text-body_regular slds-text-color_weak slds-m-top_xx-small">
+                            Generate your first document to get started.
+                        </p>
+                    </div>
+                </template>
+            </lightning-card>
+    </template>
+
+    <!-- ════════════════════════════════════════════════════
+         PREVIEW MODE
+         ════════════════════════════════════════════════════ -->
+    <template lwc:elseif={isPreviewMode}>
+        <lightning-card>
+            <!-- Loading overlay for preview -->
+            <template lwc:if={isLoadingPreview}>
+                <div class="slds-is-relative slds-p-around_large" style="min-height:300px;">
+                    <lightning-spinner alternative-text="Loading document" size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:if={hasPreviewDoc}>
+                <!-- ── Toolbar ── -->
+                <div class="preview-toolbar no-print">
+                    <div class="preview-toolbar-left">
+                        <lightning-button
+                            label="Back to List"
+                            icon-name="utility:back"
+                            variant="neutral"
+                            onclick={handleBackToList}
+                        ></lightning-button>
+                    </div>
+                    <div class="preview-toolbar-right">
+                        <template lwc:if={canMarkReady}>
+                            <lightning-button
+                                label="Mark as Ready"
+                                icon-name="utility:check"
+                                variant="brand-outline"
+                                onclick={handleMarkReady}
+                                disabled={isUpdatingStatus}
+                            ></lightning-button>
+                        </template>
+                        <template lwc:if={canMarkSent}>
+                            <lightning-button
+                                label="Mark as Sent"
+                                icon-name="utility:email"
+                                variant="brand"
+                                onclick={handleMarkSent}
+                                disabled={isUpdatingStatus}
+                            ></lightning-button>
+                        </template>
+                        <template lwc:if={canMarkPaid}>
+                            <lightning-button
+                                label="Mark as Paid"
+                                icon-name="utility:currency"
+                                variant="success"
+                                onclick={handleMarkPaid}
+                                disabled={isUpdatingStatus}
+                            ></lightning-button>
+                        </template>
+                        <lightning-button-icon
+                            icon-name="utility:print"
+                            alternative-text="Print"
+                            variant="border-filled"
+                            onclick={handlePrint}
+                        ></lightning-button-icon>
+                    </div>
+                </div>
+
+                <!-- ── Document Content ── -->
+                <div class="document-content">
+                    <!-- Document Header -->
+                    <div class="doc-preview-header">
+                        <div class="doc-preview-header-left">
+                            <h1 class="doc-preview-title">{previewDoc.name}</h1>
+                            <span class="doc-preview-template">{templateDisplayName}</span>
+                        </div>
+                        <div class="doc-preview-header-right">
+                            <span class={previewStatusConfig.cssClass}>{previewStatusConfig.label}</span>
+                        </div>
+                    </div>
+
+                    <!-- Period & Meta -->
+                    <div class="doc-meta-bar">
+                        <div class="doc-meta-item">
+                            <span class="doc-meta-label">Period</span>
+                            <span class="doc-meta-value">{previewPeriod}</span>
+                        </div>
+                        <div class="doc-meta-item">
+                            <span class="doc-meta-label">Total Hours</span>
+                            <span class="doc-meta-value">{formattedTotalHours}</span>
+                        </div>
+                        <div class="doc-meta-item">
+                            <span class="doc-meta-label">Total Cost</span>
+                            <span class="doc-meta-value doc-meta-value--accent">{formattedTotalCost}</span>
+                        </div>
+                    </div>
+
+                    <!-- ── Invoice Template ── -->
+                    <template lwc:if={isInvoiceTemplate}>
+                        <!-- Bill To Section -->
+                        <template lwc:if={hasEntityContact}>
+                            <div class="invoice-parties">
+                                <div class="invoice-party">
+                                    <h3 class="invoice-party-label">Bill To</h3>
+                                    <p class="invoice-party-name">{entityName}</p>
+                                    <template lwc:if={entityAddress}>
+                                        <p class="invoice-party-detail">{entityAddress}</p>
+                                    </template>
+                                    <template lwc:if={entityEmail}>
+                                        <p class="invoice-party-detail">{entityEmail}</p>
+                                    </template>
+                                    <template lwc:if={entityPhone}>
+                                        <p class="invoice-party-detail">{entityPhone}</p>
+                                    </template>
+                                </div>
+                                <div class="invoice-party invoice-party--right">
+                                    <h3 class="invoice-party-label">Rate</h3>
+                                    <p class="invoice-party-detail">{entityDefaultRate}</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Work Items Table -->
+                        <template lwc:if={hasWorkItems}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">Work Items</h3>
+                                <div class="invoice-table">
+                                    <div class="invoice-table-header">
+                                        <div class="inv-col inv-col--name">Name</div>
+                                        <div class="inv-col inv-col--desc">Description</div>
+                                        <div class="inv-col inv-col--hours">Hours</div>
+                                        <div class="inv-col inv-col--rate">Rate</div>
+                                        <div class="inv-col inv-col--subtotal">Subtotal</div>
+                                    </div>
+                                    <template for:each={snapshotWorkItems} for:item="wi">
+                                        <div key={wi.id} class="invoice-table-row">
+                                            <div class="inv-col inv-col--name">{wi.name}</div>
+                                            <div class="inv-col inv-col--desc">{wi.description}</div>
+                                            <div class="inv-col inv-col--hours">{wi.hours}</div>
+                                            <div class="inv-col inv-col--rate">{wi.rate}</div>
+                                            <div class="inv-col inv-col--subtotal">{wi.subtotal}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Work Logs Table -->
+                        <template lwc:if={hasWorkLogs}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">Time Log Detail</h3>
+                                <div class="invoice-table">
+                                    <div class="invoice-table-header">
+                                        <div class="inv-col inv-col--date">Date</div>
+                                        <div class="inv-col inv-col--item">Work Item</div>
+                                        <div class="inv-col inv-col--log-hours">Hours</div>
+                                        <div class="inv-col inv-col--log-desc">Description</div>
+                                    </div>
+                                    <template for:each={snapshotWorkLogs} for:item="wl">
+                                        <div key={wl.id} class="invoice-table-row">
+                                            <div class="inv-col inv-col--date">{wl.date}</div>
+                                            <div class="inv-col inv-col--item">{wl.workItemName}</div>
+                                            <div class="inv-col inv-col--log-hours">{wl.hours}</div>
+                                            <div class="inv-col inv-col--log-desc">{wl.description}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- AI Narrative -->
+                        <template lwc:if={hasAiNarrative}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">Summary</h3>
+                                <div class="ai-narrative-box">
+                                    <p class="ai-narrative-text">{aiNarrative}</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Footer -->
+                        <div class="invoice-footer">
+                            <div class="invoice-footer-terms">
+                                <span class="invoice-footer-label">Terms:</span> {documentTerms}
+                            </div>
+                            <div class="invoice-footer-total">
+                                <span class="invoice-footer-label">Total Due:</span>
+                                <span class="invoice-footer-amount">{formattedTotalCost}</span>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ── Non-Invoice Templates ── -->
+                    <template lwc:else>
+                        <!-- Work Requests -->
+                        <template lwc:if={hasWorkRequests}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">Work Requests</h3>
+                                <div class="invoice-table">
+                                    <div class="invoice-table-header">
+                                        <div class="inv-col inv-col--name">Work Item</div>
+                                        <div class="inv-col inv-col--desc">Vendor</div>
+                                        <div class="inv-col inv-col--hours">Hours</div>
+                                        <div class="inv-col inv-col--rate">Rate</div>
+                                        <div class="inv-col inv-col--subtotal">Status</div>
+                                    </div>
+                                    <template for:each={snapshotWorkRequests} for:item="wr">
+                                        <div key={wr.id} class="invoice-table-row">
+                                            <div class="inv-col inv-col--name">{wr.workItemName}</div>
+                                            <div class="inv-col inv-col--desc">{wr.vendorEntityName}</div>
+                                            <div class="inv-col inv-col--hours">{wr.totalLoggedHours}</div>
+                                            <div class="inv-col inv-col--rate">{wr.hourlyRate}</div>
+                                            <div class="inv-col inv-col--subtotal">{wr.status}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Work Items Summary -->
+                        <template lwc:if={hasWorkItems}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">Work Items</h3>
+                                <div class="invoice-table">
+                                    <div class="invoice-table-header">
+                                        <div class="inv-col inv-col--name">Name</div>
+                                        <div class="inv-col inv-col--desc">Description</div>
+                                        <div class="inv-col inv-col--hours">Hours</div>
+                                        <div class="inv-col inv-col--rate">Stage</div>
+                                        <div class="inv-col inv-col--subtotal">Subtotal</div>
+                                    </div>
+                                    <template for:each={snapshotWorkItems} for:item="wi">
+                                        <div key={wi.id} class="invoice-table-row">
+                                            <div class="inv-col inv-col--name">{wi.name}</div>
+                                            <div class="inv-col inv-col--desc">{wi.description}</div>
+                                            <div class="inv-col inv-col--hours">{wi.hours}</div>
+                                            <div class="inv-col inv-col--rate">{wi.stage}</div>
+                                            <div class="inv-col inv-col--subtotal">{wi.subtotal}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Work Logs -->
+                        <template lwc:if={hasWorkLogs}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">Time Logs</h3>
+                                <div class="invoice-table">
+                                    <div class="invoice-table-header">
+                                        <div class="inv-col inv-col--date">Date</div>
+                                        <div class="inv-col inv-col--item">Work Item</div>
+                                        <div class="inv-col inv-col--log-hours">Hours</div>
+                                        <div class="inv-col inv-col--log-desc">Description</div>
+                                    </div>
+                                    <template for:each={snapshotWorkLogs} for:item="wl">
+                                        <div key={wl.id} class="invoice-table-row">
+                                            <div class="inv-col inv-col--date">{wl.date}</div>
+                                            <div class="inv-col inv-col--item">{wl.workItemName}</div>
+                                            <div class="inv-col inv-col--log-hours">{wl.hours}</div>
+                                            <div class="inv-col inv-col--log-desc">{wl.description}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- AI Narrative -->
+                        <template lwc:if={hasAiNarrative}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">AI Summary</h3>
+                                <div class="ai-narrative-box">
+                                    <p class="ai-narrative-text">{aiNarrative}</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Document info footer -->
+                        <div class="invoice-footer">
+                            <div class="invoice-footer-terms">
+                                <span class="invoice-footer-label">Generated:</span> {generatedAt}
+                            </div>
+                            <div class="invoice-footer-total">
+                                <span class="invoice-footer-label">Total Hours:</span>
+                                <span class="invoice-footer-amount">{formattedTotalHours}</span>
+                            </div>
+                        </div>
+                    </template>
+
+                </div>
+            </template>
+        </lightning-card>
+    </template>
+</template>

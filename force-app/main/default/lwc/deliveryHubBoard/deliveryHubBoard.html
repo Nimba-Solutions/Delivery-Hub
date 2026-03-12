@@ -315,6 +315,126 @@
                     </template>
                 </div>
             </template>
+
+            <!-- Table View (sortable list) -->
+            <template lwc:if={isTableMode}>
+                <div class="table-board-container">
+                    <template lwc:if={hasTableWorkItems}>
+                        <div class="table-wrapper">
+                            <table class="hub-table">
+                                <thead>
+                                    <tr>
+                                        <th class="table-th table-th--name" data-column="Name" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                Name
+                                                <lightning-icon icon-name={tableSortNameIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                        <th class="table-th table-th--title" data-column="uiTitle" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                Title
+                                                <lightning-icon icon-name={tableSortTitleIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                        <th class="table-th table-th--stage" data-column="stageProgress" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                Stage
+                                                <lightning-icon icon-name={tableSortStageIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                        <th class="table-th table-th--priority" data-column="uiPriority" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                Priority
+                                                <lightning-icon icon-name={tableSortPriorityIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                        <th class="table-th table-th--owner" data-column="OwnerName" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                Owner
+                                                <lightning-icon icon-name={tableSortOwnerIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                        <th class="table-th table-th--eta" data-column="calculatedETA" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                ETA
+                                                <lightning-icon icon-name={tableSortETAIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                        <th class="table-th table-th--hours" data-column="uiHours" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                Hours
+                                                <lightning-icon icon-name={tableSortHoursIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                        <th class="table-th table-th--aging" data-column="agingDays" onclick={handleTableSort}>
+                                            <span class="table-th-content">
+                                                Days in Stage
+                                                <lightning-icon icon-name={tableSortAgingIcon} size="xx-small" class="sort-icon"></lightning-icon>
+                                            </span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={tableWorkItems} for:item="wi">
+                                        <tr key={wi.uiId} class={wi.rowClass} data-id={wi.uiId} onclick={handleTitleClick}>
+                                            <td class="table-td table-td--name">
+                                                <span class="table-name-link" data-id={wi.uiId}>{wi.Name}</span>
+                                            </td>
+                                            <td class="table-td table-td--title">
+                                                <div class="table-title-cell">
+                                                    <template lwc:if={wi.isHighPriority}>
+                                                        <lightning-icon icon-name="utility:warning" size="xx-small" class="table-warning-icon" alternative-text="High Priority"></lightning-icon>
+                                                    </template>
+                                                    <span class="table-title-text">{wi.uiTitle}</span>
+                                                </div>
+                                            </td>
+                                            <td class="table-td table-td--stage">
+                                                <div class="table-stage-cell">
+                                                    <span class="table-stage-name">{wi.stageDisplayName}</span>
+                                                    <div class="table-progress-track">
+                                                        <div class="table-progress-bar" style={wi.stageProgressStyle}></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="table-td table-td--priority">
+                                                <template lwc:if={wi.uiPriority}>
+                                                    <span class={wi.priorityClasses}>{wi.uiPriority}</span>
+                                                </template>
+                                            </td>
+                                            <td class="table-td table-td--owner">
+                                                <template lwc:if={wi.OwnerName}>
+                                                    <span class="table-owner">{wi.OwnerName}</span>
+                                                </template>
+                                            </td>
+                                            <td class="table-td table-td--eta">
+                                                <span class="table-eta">{wi.calculatedETA}</span>
+                                            </td>
+                                            <td class="table-td table-td--hours">
+                                                <span class="table-hours">{wi.uiHours}</span>
+                                            </td>
+                                            <td class="table-td table-td--aging">
+                                                <div class="table-aging-cell">
+                                                    <template lwc:if={wi.hasAging}>
+                                                        <span class={wi.agingClass}></span>
+                                                    </template>
+                                                    <span>{wi.agingDays}d</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                    <template lwc:else>
+                        <div class="table-empty-state">
+                            <lightning-icon icon-name="utility:table" size="large" class="table-empty-icon"></lightning-icon>
+                            <p class="table-empty-text">No work items to display</p>
+                            <p class="table-empty-subtext">Adjust your filters or create a new work item</p>
+                        </div>
+                    </template>
+                </div>
+            </template>
         </template>
 
         <!-- ── MOBILE BOARD (single-column, collapsible stages, swipe cards) ── -->

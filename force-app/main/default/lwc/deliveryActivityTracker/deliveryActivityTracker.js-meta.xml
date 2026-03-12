@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Delivery Activity Tracker</masterLabel>
+    <description>Invisible utility bar component that tracks page navigation and feature usage to ActivityLog__c for user activity analytics.</description>
+    <targets>
+        <target>lightning__UtilityBar</target>
+    </targets>
+</LightningComponentBundle>

@@ -70,6 +70,29 @@ public class DeliveryWorkItemTriggerHandlerTest {
     }
 
     @IsTest
+    static void testStageChangeActivityLog() {
+        WorkItem__c t = [SELECT Id, StageNamePk__c, StageEnteredDateTime__c FROM WorkItem__c LIMIT 1];
+
+        Test.startTest();
+        t.StageNamePk__c = 'Ready for QA';
+        update t;
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ActionTypePk__c, RecordIdTxt__c, ContextDataTxt__c, UserIdTxt__c
+            FROM ActivityLog__c
+            WHERE ActionTypePk__c = 'Stage_Change' AND RecordIdTxt__c = :t.Id
+        ];
+        System.assert(!logs.isEmpty(), 'Stage change should create an ActivityLog record');
+        System.assertEquals(t.Id, logs[0].RecordIdTxt__c, 'RecordId should match work item');
+
+        Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(logs[0].ContextDataTxt__c);
+        System.assertEquals('In Development', (String) ctx.get('oldStage'), 'Should capture old stage');
+        System.assertEquals('Ready for QA', (String) ctx.get('newStage'), 'Should capture new stage');
+        System.assert(ctx.containsKey('durationHours'), 'Should capture duration');
+    }
+
+    @IsTest
     static void testBlockedDependencyValidation() {
         WorkItem__c blocker = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocker' LIMIT 1];
 

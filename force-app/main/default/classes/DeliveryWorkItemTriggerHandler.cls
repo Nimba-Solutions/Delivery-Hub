@@ -37,8 +37,10 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         }
 
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
+        //    + Activity Log history for time-study analytics
         if (isUpdate) {
             publishStageChangeEvents(newRows, oldMap);
+            logStageChanges(newRows, oldMap);
         }
 
         // 3. UNIFIED SYNC ENGINE (High-Water Mark)
@@ -152,17 +154,25 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             }
         }
 
+        // Platform Event publish stays outside the notification toggle
+        // (it powers real-time board refresh, not user notifications)
         if (!events.isEmpty()) {
             EventBus.publish(events);
         }
 
-        if (!slackChanges.isEmpty()) {
-            DeliverySlackService.postStageChanges(slackChanges);
-        }
+        // Respect the master notification toggle
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+        Boolean notificationsEnabled = settings.Id != null && settings.EnableNotificationsBool__c;
 
-        // Email notifications for stage changes
-        if (!changedIds.isEmpty()) {
-            DeliveryEmailNotificationService.sendStageChangeEmails(changedIds, emailStageMap);
+        if (notificationsEnabled) {
+            if (!slackChanges.isEmpty()) {
+                DeliverySlackService.postStageChanges(slackChanges);
+            }
+
+            // Email notifications for stage changes
+            if (!changedIds.isEmpty()) {
+                DeliveryEmailNotificationService.sendStageChangeEmails(changedIds, emailStageMap);
+            }
         }
     }
 
@@ -243,6 +253,56 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             if (workItem.StageEnteredDateTime__c == null) {
                 workItem.StageEnteredDateTime__c = now;
             }
+        }
+    }
+
+    /**
+     * @description Creates ActivityLog__c records for every stage transition, capturing
+     *              old stage, new stage, duration in previous stage, and the user who
+     *              made the change. Powers time-study analytics and audit trails.
+     * @param newRows List of updated WorkItem__c records
+     * @param oldMap  Map of pre-update WorkItem__c records
+     */
+    private static void logStageChanges(
+        List<WorkItem__c> newRows,
+        Map<Id, WorkItem__c> oldMap
+    ) {
+        List<ActivityLog__c> logs = new List<ActivityLog__c>();
+        Datetime now = Datetime.now();
+        String userId = UserInfo.getUserId();
+
+        for (WorkItem__c t : newRows) {
+            WorkItem__c old = oldMap.get(t.Id);
+            if (old == null || t.StageNamePk__c == old.StageNamePk__c) {
+                continue;
+            }
+
+            Decimal durationHours = 0;
+            if (old.StageEnteredDateTime__c != null) {
+                Long ms = now.getTime() - old.StageEnteredDateTime__c.getTime();
+                durationHours = (Decimal.valueOf(ms) / 3600000).setScale(2, RoundingMode.HALF_UP);
+            }
+
+            Map<String, Object> ctx = new Map<String, Object>{
+                'workItemId' => t.Id,
+                'workItemName' => t.Name,
+                'oldStage' => old.StageNamePk__c,
+                'newStage' => t.StageNamePk__c,
+                'durationHours' => durationHours,
+                'oldStageEnteredAt' => String.valueOf(old.StageEnteredDateTime__c)
+            };
+
+            logs.add(new ActivityLog__c(
+                ActionTypePk__c     = 'Stage_Change',
+                ComponentNameTxt__c = 'DeliveryWorkItemTrigger',
+                UserIdTxt__c        = userId,
+                RecordIdTxt__c      = t.Id,
+                ContextDataTxt__c   = JSON.serialize(ctx)
+            ));
+        }
+
+        if (!logs.isEmpty()) {
+            Database.insert(logs, AccessLevel.SYSTEM_MODE);
         }
     }
 

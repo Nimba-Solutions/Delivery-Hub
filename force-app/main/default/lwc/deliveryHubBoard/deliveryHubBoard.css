@@ -1395,3 +1395,274 @@
     border-color: #4338ca;
     color: var(--white, #ffffff);
 }
+
+/* ========================================================================
+ * FEATURE 4: TABLE / LIST VIEW MODE
+ * ======================================================================== */
+
+.table-board-container {
+    padding: 1.5rem;
+    flex-grow: 1;
+    overflow: auto;
+}
+
+.table-wrapper {
+    background: var(--white, #ffffff);
+    border-radius: var(--radius, 0.75rem);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.hub-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+/* ── Table Header ── */
+.hub-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-th {
+    background: #f8fafc;
+    border-bottom: 2px solid var(--gray-200, #e5e7eb);
+    padding: 0.65rem 0.75rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500, #6b7280);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: background-color 0.15s;
+}
+
+.table-th:hover {
+    background: #f1f5f9;
+    color: var(--gray-800, #1f2937);
+}
+
+.table-th-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.sort-icon {
+    --sds-c-icon-color-foreground-default: var(--gray-400, #9ca3af);
+    flex-shrink: 0;
+}
+
+.table-th:hover .sort-icon {
+    --sds-c-icon-color-foreground-default: var(--gray-600, #4b5563);
+}
+
+/* Column widths */
+.table-th--name { width: 100px; }
+.table-th--title { min-width: 200px; }
+.table-th--stage { width: 180px; }
+.table-th--priority { width: 90px; }
+.table-th--owner { width: 130px; }
+.table-th--eta { width: 130px; }
+.table-th--hours { width: 90px; }
+.table-th--aging { width: 110px; }
+
+/* ── Table Rows ── */
+.table-row {
+    border-bottom: 1px solid var(--gray-200, #e5e7eb);
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.table-row:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+.table-row:hover {
+    background-color: #eef2ff;
+}
+
+.table-row:last-child {
+    border-bottom: none;
+}
+
+/* Blocked row — red left border */
+.table-row--blocked {
+    box-shadow: inset 3px 0 0 0 var(--red-500, #ef4444);
+}
+
+.table-row--blocked:nth-child(even) {
+    background-color: #fef2f2;
+}
+
+.table-row--blocked:hover {
+    background-color: #fee2e2;
+}
+
+/* High priority row — subtle warm background */
+.table-row--high-priority {
+    background-color: #fffbeb;
+}
+
+.table-row--high-priority:nth-child(even) {
+    background-color: #fef9e7;
+}
+
+.table-row--high-priority:hover {
+    background-color: #fef3c7;
+}
+
+/* ── Table Cells ── */
+.table-td {
+    padding: 0.6rem 0.75rem;
+    vertical-align: middle;
+    color: var(--gray-800, #1f2937);
+}
+
+/* Name cell — record number link */
+.table-name-link {
+    font-weight: 600;
+    color: var(--brand-primary, #4f46e5);
+    font-size: 0.8rem;
+    letter-spacing: 0.01em;
+}
+
+.table-row:hover .table-name-link {
+    text-decoration: underline;
+}
+
+/* Title cell */
+.table-title-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.table-warning-icon {
+    --sds-c-icon-color-foreground-default: #f59e0b;
+    flex-shrink: 0;
+}
+
+.table-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+    font-weight: 500;
+    color: var(--gray-900, #11182c);
+}
+
+/* Stage cell — name + progress bar */
+.table-stage-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.table-stage-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--gray-800, #1f2937);
+}
+
+.table-progress-track {
+    width: 100%;
+    height: 4px;
+    background: var(--gray-200, #e5e7eb);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.table-progress-bar {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+}
+
+/* Owner cell */
+.table-owner {
+    font-size: 0.8rem;
+    color: var(--gray-500, #6b7280);
+}
+
+/* ETA cell */
+.table-eta {
+    font-size: 0.8rem;
+    color: var(--gray-500, #6b7280);
+    white-space: nowrap;
+}
+
+/* Hours cell */
+.table-hours {
+    font-size: 0.8rem;
+    color: var(--gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Aging cell */
+.table-aging-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Table Empty State ── */
+.table-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    background: var(--white, #ffffff);
+    border-radius: var(--radius, 0.75rem);
+    box-shadow: var(--shadow-sm);
+}
+
+.table-empty-icon {
+    --sds-c-icon-color-foreground-default: var(--gray-300, #d1d5db);
+    margin-bottom: 1rem;
+}
+
+.table-empty-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-500, #6b7280);
+    margin: 0 0 0.25rem 0;
+}
+
+.table-empty-subtext {
+    font-size: 0.85rem;
+    color: var(--gray-400, #9ca3af);
+    margin: 0;
+}
+
+/* ── Table Responsive ── */
+@media (max-width: 1024px) {
+    .table-title-text {
+        max-width: 180px;
+    }
+    .table-th--eta,
+    .table-td--eta {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .table-th--hours,
+    .table-td--hours,
+    .table-th--owner,
+    .table-td--owner {
+        display: none;
+    }
+    .table-title-text {
+        max-width: 140px;
+    }
+}
