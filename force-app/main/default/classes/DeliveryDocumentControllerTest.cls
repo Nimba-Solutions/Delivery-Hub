@@ -12,7 +12,8 @@ private class DeliveryDocumentControllerTest {
 
     @TestSetup
     static void setup() {
-        insert new DeliveryHubSettings__c(AutoCreateWorkRequestBool__c = false);
+        // Prevent trigger from auto-creating WorkRequests during test data setup
+        DeliveryTriggerControl.runAfterLogic = false;
 
         NetworkEntity__c entity = new NetworkEntity__c(
             Name = 'Test Client Corp',
@@ -310,6 +311,9 @@ private class DeliveryDocumentControllerTest {
     @isTest
     static void testCostCalculation() {
         NetworkEntity__c entity = getEntity();
+
+        // Prevent trigger from auto-creating WorkRequests for this test item
+        DeliveryTriggerControl.runAfterLogic = false;
 
         // Create a third work item with NO billable rate (should use entity default of 100)
         WorkItem__c itemNoRate = new WorkItem__c(
