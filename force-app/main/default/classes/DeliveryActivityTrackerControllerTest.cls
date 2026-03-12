@@ -24,7 +24,7 @@ private class DeliveryActivityTrackerControllerTest {
         DeliveryActivityTrackerController.logActivity(
             'Navigation',
             'Account (view)',
-            '001000000000001',
+            'test-record-ref',
             '{"url":"https://test.lightning.force.com"}',
             'test-session-001'
         );
@@ -38,10 +38,14 @@ private class DeliveryActivityTrackerControllerTest {
     static void testLogActivityPersistsWhenEnabled() {
         enableActivityLogging();
 
+        // Create a real Account to use its ID
+        Account testAcct = new Account(Name = 'Test Activity Account');
+        insert testAcct;
+
         String contextJson = JSON.serialize(new Map<String, Object>{
-            'url' => 'https://test.lightning.force.com/lightning/r/Account/001000000000001/view',
+            'url' => 'https://test.lightning.force.com/lightning/r/Account/' + testAcct.Id + '/view',
             'objectApiName' => 'Account',
-            'recordId' => '001000000000001',
+            'recordId' => testAcct.Id,
             'actionName' => 'view',
             'timestamp' => '2026-03-12T10:00:00.000Z',
             'appName' => 'DeliveryHub'
@@ -51,7 +55,7 @@ private class DeliveryActivityTrackerControllerTest {
         DeliveryActivityTrackerController.logActivity(
             'Navigation',
             'Account (view)',
-            '001000000000001',
+            testAcct.Id,
             contextJson,
             'session-uuid-abc-123'
         );
@@ -65,7 +69,7 @@ private class DeliveryActivityTrackerControllerTest {
         System.assertEquals(1, logs.size(), 'One activity log should be persisted');
         System.assertEquals('Navigation', logs[0].ActionTypePk__c, 'Action type should match');
         System.assertEquals('Account (view)', logs[0].ComponentNameTxt__c, 'Component name should match');
-        System.assertEquals('001000000000001', logs[0].RecordIdTxt__c, 'Record ID should match');
+        System.assertEquals(testAcct.Id, logs[0].RecordIdTxt__c, 'Record ID should match');
         System.assertEquals(UserInfo.getUserId(), logs[0].UserIdTxt__c, 'User ID should be set automatically');
         System.assertEquals('session-uuid-abc-123', logs[0].SessionIdTxt__c, 'Session ID should match');
         System.assert(logs[0].ContextDataTxt__c.contains('Account'), 'Context should contain object name');

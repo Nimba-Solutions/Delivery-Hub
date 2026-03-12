@@ -52,6 +52,12 @@ private class DeliveryPublicSubmissionServiceTest {
         RestContext.response = res;
     }
 
+    private static Map<String, Object> parseResponse() {
+        return (Map<String, Object>) JSON.deserializeUntyped(
+            RestContext.response.responseBody.toString()
+        );
+    }
+
     // -------------------------------------------------------------------------
     // Success scenarios
     // -------------------------------------------------------------------------
@@ -73,9 +79,10 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed');
         System.assertNotEquals(null, result.get('workItemId'), 'Should return a work item Id');
         System.assertNotEquals(null, result.get('workItemNumber'), 'Should return the auto-number');
@@ -85,7 +92,7 @@ private class DeliveryPublicSubmissionServiceTest {
                    StageNamePk__c, PriorityPk__c, RequestTypePk__c, Tags__c,
                    IsActiveBool__c, StatusPk__c, ClientNetworkEntityId__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
 
@@ -112,21 +119,21 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed with minimal fields');
 
         WorkItem__c created = [
             SELECT PriorityPk__c, RequestTypePk__c, ClientNetworkEntityId__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
 
         System.assertEquals('Medium', created.PriorityPk__c, 'Default priority should be Medium');
         System.assertEquals('Public Lead', created.RequestTypePk__c, 'Default request type should be Public Lead');
-        // Should resolve to the first active Client entity
         NetworkEntity__c clientEntity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Public Submissions Client' LIMIT 1];
         System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should fall back to default Client entity');
     }
@@ -141,15 +148,16 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed');
 
         WorkItem__c created = [
             SELECT DetailsTxt__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
 
@@ -169,9 +177,10 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(false, result.get('success'), 'Should fail without title');
         System.assertEquals('Title is required.', result.get('error'), 'Should return title required error');
         System.assertEquals(400, RestContext.response.statusCode, 'Should return 400');
@@ -185,9 +194,10 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(false, result.get('success'), 'Should fail without email');
         System.assertEquals('Email is required.', result.get('error'), 'Should return email required error');
         System.assertEquals(400, RestContext.response.statusCode, 'Should return 400');
@@ -202,9 +212,10 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(false, result.get('success'), 'Should fail with invalid email');
         System.assertEquals('A valid email address is required.', result.get('error'), 'Should return email validation error');
         System.assertEquals(400, RestContext.response.statusCode, 'Should return 400');
@@ -215,9 +226,10 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContextRaw('');
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(false, result.get('success'), 'Should fail with empty body');
         System.assertEquals(400, RestContext.response.statusCode, 'Should return 400');
     }
@@ -230,7 +242,6 @@ private class DeliveryPublicSubmissionServiceTest {
     static void testRateLimiting() {
         String rateLimitEmail = 'spammer@example.com';
 
-        // Pre-create 5 recent work items from this email to simulate hitting the limit
         List<WorkItem__c> existingItems = new List<WorkItem__c>();
         for (Integer i = 0; i < 5; i++) {
             existingItems.add(new WorkItem__c(
@@ -243,7 +254,6 @@ private class DeliveryPublicSubmissionServiceTest {
         }
         Database.insert(existingItems, AccessLevel.SYSTEM_MODE);
 
-        // Now attempt a 6th submission via the REST endpoint
         Map<String, Object> body = new Map<String, Object>{
             'title' => 'One more request',
             'email' => rateLimitEmail
@@ -251,9 +261,10 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(false, result.get('success'), 'Should fail due to rate limiting');
         System.assertEquals('Rate limit exceeded. Please try again later.', result.get('error'), 'Should return rate limit error');
         System.assertEquals(429, RestContext.response.statusCode, 'Should return 429');
@@ -263,7 +274,6 @@ private class DeliveryPublicSubmissionServiceTest {
     static void testRateLimitAllowsUnderThreshold() {
         String legitimateEmail = 'legitimate@example.com';
 
-        // Pre-create 4 recent work items (under the limit of 5)
         List<WorkItem__c> existingItems = new List<WorkItem__c>();
         for (Integer i = 0; i < 4; i++) {
             existingItems.add(new WorkItem__c(
@@ -276,7 +286,6 @@ private class DeliveryPublicSubmissionServiceTest {
         }
         Database.insert(existingItems, AccessLevel.SYSTEM_MODE);
 
-        // 5th submission should still be allowed
         Map<String, Object> body = new Map<String, Object>{
             'title' => 'Fifth request',
             'email' => legitimateEmail
@@ -284,9 +293,10 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed at 5th submission (limit not yet exceeded)');
     }
 
@@ -306,15 +316,16 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed');
 
         WorkItem__c created = [
             SELECT ClientNetworkEntityId__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
         System.assertEquals(entity.Id, created.ClientNetworkEntityId__c, 'Should be linked to the specified entity');
@@ -322,7 +333,6 @@ private class DeliveryPublicSubmissionServiceTest {
 
     @IsTest
     static void testWithVendorEntityIdFallsBack() {
-        // Vendor entity should not be accepted; should fall back to default Client entity
         NetworkEntity__c vendorEntity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Vendor Only' LIMIT 1];
         NetworkEntity__c clientEntity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Public Submissions Client' LIMIT 1];
 
@@ -334,15 +344,16 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed');
 
         WorkItem__c created = [
             SELECT ClientNetworkEntityId__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
         System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should fall back to the Client entity');
@@ -360,15 +371,16 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed with fallback entity');
 
         WorkItem__c created = [
             SELECT ClientNetworkEntityId__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
         System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should fall back to default Client entity');
@@ -385,15 +397,16 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed');
 
         WorkItem__c created = [
             SELECT ClientNetworkEntityId__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
         System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should auto-resolve to the first active Client entity');
@@ -412,15 +425,16 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed');
 
         WorkItem__c created = [
             SELECT BriefDescriptionTxt__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
         System.assert(!created.BriefDescriptionTxt__c.contains('<script>'), 'HTML should be stripped from title');
@@ -437,15 +451,16 @@ private class DeliveryPublicSubmissionServiceTest {
         setupRestContext(body);
 
         Test.startTest();
-        Map<String, Object> result = DeliveryPublicSubmissionService.submitWorkItem();
+        DeliveryPublicSubmissionService.submitWorkItem();
         Test.stopTest();
 
+        Map<String, Object> result = parseResponse();
         System.assertEquals(true, result.get('success'), 'Should succeed');
 
         WorkItem__c created = [
             SELECT PriorityPk__c
             FROM WorkItem__c
-            WHERE Id = :(Id) result.get('workItemId')
+            WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
         ];
         System.assertEquals('Medium', created.PriorityPk__c, 'Invalid priority should default to Medium');

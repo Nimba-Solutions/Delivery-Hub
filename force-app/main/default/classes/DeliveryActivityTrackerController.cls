@@ -21,6 +21,7 @@ public with sharing class DeliveryActivityTrackerController {
      * @param contextData   JSON string with extended context (url, objectApiName, etc.)
      * @param sessionId     Browser session UUID from sessionStorage
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
     public static void logActivity(
         String actionType,
