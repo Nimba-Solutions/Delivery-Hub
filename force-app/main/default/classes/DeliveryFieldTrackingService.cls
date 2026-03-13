@@ -41,7 +41,7 @@ public with sharing class DeliveryFieldTrackingService {
         }
 
         // Determine the SObject type from the first record
-        String objectApiName = newRecords[0].getSObjectType().getDescribe().getName();
+        String objectApiName = newRecords[0].getSObjectType().getDescribe().getLocalName();
 
         // Get tracked fields for this object
         List<TrackedField__mdt> trackedFields = getTrackedFieldsForObject(objectApiName);
