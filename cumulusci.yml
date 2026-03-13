@@ -68,6 +68,8 @@ tasks:
     deploy_post:
         class_path: tasks.deploy.Deploy
         options:
+            namespace_inject: delivery
+            unmanaged: False
             transforms:
                 - transform: find_replace
                   options:
