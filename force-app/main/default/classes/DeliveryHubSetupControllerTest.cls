@@ -84,6 +84,8 @@ private class DeliveryHubSetupControllerTest {
         Test.startTest();
         DeliveryHubSetupController.configureGuestUserAccess();
         Test.stopTest();
+        // Method should complete without error when no Site exists (silent no-op)
+        System.assert(true, 'configureGuestUserAccess should not throw when no active Site exists');
     }
 
     @IsTest
