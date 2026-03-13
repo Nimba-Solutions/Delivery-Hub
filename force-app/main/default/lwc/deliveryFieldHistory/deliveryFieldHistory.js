@@ -93,7 +93,9 @@ export default class DeliveryFieldHistory extends LightningElement {
      * is true, otherwise undefined to prevent the wire from firing.
      */
     get trendFieldName() {
-        return this.showChart ? this.fieldName : undefined;
+        // Normalize boolean — App Builder may pass string "true"/"false"
+        const chartEnabled = this.showChart === true || this.showChart === 'true';
+        return chartEnabled ? this.fieldName : undefined;
     }
 
     // ── Loading / Empty / Error Getters ────────────────────────────────
@@ -161,7 +163,8 @@ export default class DeliveryFieldHistory extends LightningElement {
     // ── Chart Data (SVG trend line) ────────────────────────────────────
 
     get hasTrendData() {
-        return this.showChart && this._trendData.length >= 2;
+        const chartEnabled = this.showChart === true || this.showChart === 'true';
+        return chartEnabled && this._trendData.length >= 2;
     }
 
     get chartViewBox() {

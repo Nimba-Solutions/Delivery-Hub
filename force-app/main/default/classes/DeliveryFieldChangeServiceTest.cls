@@ -265,6 +265,35 @@ private class DeliveryFieldChangeServiceTest {
         System.assert(first.containsKey('label'), 'Should have label');
     }
 
+    // ── 7. Malformed extraContext JSON handled gracefully ────────────
+
+    @IsTest
+    static void testCaptureFieldChange_malformedExtraContext() {
+        Account testAcct = new Account(Name = 'Malformed Context Test');
+        insert testAcct;
+
+        DeliveryFieldChangeService.FieldChangeRequest req = buildRequest(
+            testAcct.Id, 'Status__c', 'Draft', 'Active'
+        );
+        req.extraContext = 'not valid json {';
+
+        Test.startTest();
+        DeliveryFieldChangeService.captureFieldChanges(
+            new List<DeliveryFieldChangeService.FieldChangeRequest>{ req }
+        );
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c
+            FROM ActivityLog__c
+            WHERE ActionTypePk__c = 'Field_Change'
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(1, logs.size(), 'Log should still be created with malformed extraContext');
+        System.assert(logs[0].ContextDataTxt__c.contains('not valid json'),
+            'Malformed extraContext should be stored as raw string');
+    }
+
     // ── Null recordId returns empty ──────────────────────────────────
 
     @IsTest

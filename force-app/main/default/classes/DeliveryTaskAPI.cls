@@ -4,16 +4,19 @@
  * @description  REST API for external task management. Provides endpoints to
  *               list, update, and comment on Work Items from non-Salesforce
  *               clients (CI/CD tools, AI agents, dashboards, etc.).
- *               URL Pattern: /services/apexrest/delivery/delivery/tasks/*
+ *               URL Pattern: /services/apexrest/delivery/tasks/*
+ *               (In namespaced package: /services/apexrest/delivery/delivery/tasks/*)
+ *               Authenticates via X-Api-Key header matched against NetworkEntity__c.ApiKeyTxt__c.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 @RestResource(urlMapping='/delivery/tasks/*')
-global with sharing class DeliveryTaskAPI {
+global without sharing class DeliveryTaskAPI {
 
     /**
      * @description Lists work items with optional filters.
      *              Query params: assignee, status, workflowType, limit
+     *              Authenticates via X-Api-Key header matched against NetworkEntity__c.ApiKeyTxt__c.
      */
     @HttpGet
     global static void handleGet() {
@@ -21,6 +24,10 @@ global with sharing class DeliveryTaskAPI {
         RestResponse res = RestContext.response;
 
         try {
+            if (!authenticateRequest(req, res)) {
+                return;
+            }
+
             String assignee    = req.params.get('assignee');
             String status      = req.params.get('status');
             String workflowType = req.params.get('workflowType');
@@ -38,6 +45,17 @@ global with sharing class DeliveryTaskAPI {
                 }
             }
 
+            // Validate assignee is a valid Id if it's not a special keyword
+            Id assigneeId = null;
+            if (String.isNotBlank(assignee) && assignee != 'ai') {
+                try {
+                    assigneeId = Id.valueOf(assignee);
+                } catch (Exception ex) {
+                    sendError(res, 400, 'Invalid assignee ID format.');
+                    return;
+                }
+            }
+
             String soql = 'SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, '
                 + 'AcceptanceCriteriaTxt__c, StageNamePk__c, PriorityPk__c, '
                 + 'WorkflowTypeTxt__c, EstimatedHoursNumber__c, ParentWorkItemId__c, '
@@ -48,8 +66,8 @@ global with sharing class DeliveryTaskAPI {
 
             if (assignee == 'ai') {
                 conditions.add('Developer__c != null');
-            } else if (String.isNotBlank(assignee)) {
-                conditions.add('Developer__c = :assignee');
+            } else if (assigneeId != null) {
+                conditions.add('Developer__c = :assigneeId');
             }
 
             if (String.isNotBlank(status)) {
@@ -83,7 +101,7 @@ global with sharing class DeliveryTaskAPI {
     /**
      * @description Updates a work item. Expects the work item ID as the last
      *              path segment: PATCH /delivery/tasks/{id}
-     *              Body JSON: { stage, priority, notes }
+     *              Body JSON: { stage, priority }
      */
     @HttpPatch
     global static void handlePatch() {
@@ -91,10 +109,22 @@ global with sharing class DeliveryTaskAPI {
         RestResponse res = RestContext.response;
 
         try {
+            if (!authenticateRequest(req, res)) {
+                return;
+            }
+
             String workItemId = extractLastPathSegment(req.requestURI);
 
             if (String.isBlank(workItemId)) {
                 sendError(res, 400, 'Work item ID is required in URL path.');
+                return;
+            }
+
+            // Validate ID format before querying
+            try {
+                Id.valueOf(workItemId);
+            } catch (Exception ex) {
+                sendError(res, 400, 'Invalid work item ID format.');
                 return;
             }
 
@@ -108,7 +138,7 @@ global with sharing class DeliveryTaskAPI {
             ];
 
             if (existing.isEmpty()) {
-                sendError(res, 404, 'Work item not found: ' + workItemId);
+                sendError(res, 404, 'Work item not found.');
                 return;
             }
 
@@ -170,12 +200,24 @@ global with sharing class DeliveryTaskAPI {
         RestResponse res = RestContext.response;
 
         try {
+            if (!authenticateRequest(req, res)) {
+                return;
+            }
+
             // Extract work item ID: URL = .../tasks/{id}/comments
             String path = req.requestURI;
             String workItemId = extractWorkItemIdFromCommentPath(path);
 
             if (String.isBlank(workItemId)) {
                 sendError(res, 400, 'Work item ID is required. URL pattern: /delivery/tasks/{id}/comments');
+                return;
+            }
+
+            // Validate ID format before querying
+            try {
+                Id.valueOf(workItemId);
+            } catch (Exception ex) {
+                sendError(res, 400, 'Invalid work item ID format.');
                 return;
             }
 
@@ -188,7 +230,7 @@ global with sharing class DeliveryTaskAPI {
             ];
 
             if (existing.isEmpty()) {
-                sendError(res, 404, 'Work item not found: ' + workItemId);
+                sendError(res, 404, 'Work item not found.');
                 return;
             }
 
@@ -239,8 +281,42 @@ global with sharing class DeliveryTaskAPI {
             'priority'           => item.PriorityPk__c,
             'workflowType'       => item.WorkflowTypeTxt__c,
             'estimatedHours'     => item.EstimatedHoursNumber__c,
-            'parentWorkItemId'   => item.ParentWorkItemId__c
+            'parentWorkItemId'   => item.ParentWorkItemId__c,
+            'assignee'           => item.Developer__c
         };
+    }
+
+    // ── Authentication ────────────────────────────────────────────────────
+
+    /**
+     * @description Validates the X-Api-Key header against NetworkEntity__c.ApiKeyTxt__c.
+     * @param req The incoming REST request
+     * @param res The REST response to populate if authentication fails
+     * @return true if authenticated, false if auth failed (response already set)
+     */
+    private static Boolean authenticateRequest(RestRequest req, RestResponse res) {
+        String apiKey = req.headers.get('X-Api-Key');
+
+        if (String.isBlank(apiKey)) {
+            sendError(res, 401, 'Missing X-Api-Key header.');
+            return false;
+        }
+
+        List<NetworkEntity__c> entities = [
+            SELECT Id, Name
+            FROM NetworkEntity__c
+            WHERE ApiKeyTxt__c = :apiKey
+            AND StatusPk__c = 'Active'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        if (entities.isEmpty()) {
+            sendError(res, 401, 'Invalid API key.');
+            return false;
+        }
+
+        return true;
     }
 
     private static String extractLastPathSegment(String requestURI) {

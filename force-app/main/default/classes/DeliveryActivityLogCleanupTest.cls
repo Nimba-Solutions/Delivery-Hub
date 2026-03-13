@@ -101,6 +101,40 @@ private class DeliveryActivityLogCleanupTest {
     }
 
     @IsTest
+    static void testPurgePreservesFieldChangeLogs() {
+        // Insert a Field_Change log and backdate it beyond retention
+        ActivityLog__c fieldChangeLog = new ActivityLog__c(
+            ActionTypePk__c = 'Field_Change',
+            ComponentNameTxt__c = 'IUW_Risk_Rating__c',
+            UserIdTxt__c = UserInfo.getUserId(),
+            RecordIdTxt__c = '001000000000001',
+            ContextDataTxt__c = '{"fieldName":"IUW_Risk_Rating__c","oldValue":"3","newValue":"4"}'
+        );
+        insert fieldChangeLog;
+        Test.setCreatedDate(fieldChangeLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+
+        // Insert an old Navigation log that SHOULD be purged
+        ActivityLog__c oldNavLog = new ActivityLog__c(
+            ActionTypePk__c = 'Navigation',
+            ComponentNameTxt__c = 'deliveryHubBoard',
+            UserIdTxt__c = UserInfo.getUserId()
+        );
+        insert oldNavLog;
+        Test.setCreatedDate(oldNavLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+
+        Test.startTest();
+        Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
+        Test.stopTest();
+
+        List<ActivityLog__c> remaining = [
+            SELECT Id, ActionTypePk__c FROM ActivityLog__c WITH SYSTEM_MODE
+        ];
+        System.assertEquals(1, remaining.size(), 'Only the Field_Change log should survive');
+        System.assertEquals('Field_Change', remaining[0].ActionTypePk__c,
+            'Surviving record should be the Field_Change log');
+    }
+
+    @IsTest
     static void testSchedulableEntryPoint() {
         Test.startTest();
         String jobId = System.schedule(

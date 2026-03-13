@@ -9,8 +9,19 @@
 @IsTest
 private class DeliveryTaskAPITest {
 
+    private static final String TEST_API_KEY = 'test-api-key-12345';
+
     @TestSetup
     static void setupData() {
+        // Create an active network entity with API key for auth
+        NetworkEntity__c entity = new NetworkEntity__c(
+            Name = 'Test API Client',
+            EntityTypePk__c = 'Client',
+            StatusPk__c = 'Active',
+            ApiKeyTxt__c = TEST_API_KEY
+        );
+        insert entity;
+
         // Work items with different stages and priorities
         List<WorkItem__c> items = new List<WorkItem__c>{
             new WorkItem__c(
@@ -242,6 +253,7 @@ private class DeliveryTaskAPITest {
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/delivery/delivery/tasks/' + item.Id;
         req.httpMethod = 'PATCH';
+        req.headers.put('X-Api-Key', TEST_API_KEY);
         RestResponse res = new RestResponse();
         RestContext.request = req;
         RestContext.response = res;
@@ -387,10 +399,107 @@ private class DeliveryTaskAPITest {
     // HELPERS
     // ==========================================
 
+    // ==========================================
+    // Auth — missing API key returns 401
+    // ==========================================
+
+    @IsTest
+    static void testGetMissingApiKey() {
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/delivery/delivery/tasks';
+        req.httpMethod = 'GET';
+        // No X-Api-Key header
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryTaskAPI.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(401, res.statusCode, 'Should return 401 for missing API key');
+    }
+
+    // ==========================================
+    // PATCH — non-existent work item returns 404
+    // ==========================================
+
+    @IsTest
+    static void testPatchNonExistentWorkItem() {
+        // Use a valid ID format that doesn't exist in DB
+        String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
+        RestRequest req = buildPatchRequest(
+            '/services/apexrest/delivery/delivery/tasks/' + fakeId,
+            new Map<String, Object>{ 'stage' => 'Done' }
+        );
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryTaskAPI.handlePatch();
+        Test.stopTest();
+
+        System.assertEquals(404, res.statusCode, 'Should return 404 for non-existent work item');
+    }
+
+    // ==========================================
+    // PATCH — no valid update fields returns 400
+    // ==========================================
+
+    @IsTest
+    static void testPatchNoValidFields() {
+        WorkItem__c item = [
+            SELECT Id FROM WorkItem__c
+            WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
+        ];
+
+        RestRequest req = buildPatchRequest(
+            '/services/apexrest/delivery/delivery/tasks/' + item.Id,
+            new Map<String, Object>{ 'someUnknownField' => 'value' }
+        );
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryTaskAPI.handlePatch();
+        Test.stopTest();
+
+        System.assertEquals(400, res.statusCode, 'Should return 400 when no valid fields provided');
+    }
+
+    // ==========================================
+    // POST — non-existent work item returns 404
+    // ==========================================
+
+    @IsTest
+    static void testPostCommentNonExistentWorkItem() {
+        String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
+        RestRequest req = buildPostRequest(
+            '/services/apexrest/delivery/delivery/tasks/' + fakeId + '/comments',
+            new Map<String, Object>{ 'body' => 'orphan comment' }
+        );
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryTaskAPI.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(404, res.statusCode, 'Should return 404 for non-existent work item');
+    }
+
+    // ==========================================
+    // HELPERS
+    // ==========================================
+
     private static RestRequest buildGetRequest(String uri) {
         RestRequest req = new RestRequest();
         req.requestURI = uri;
         req.httpMethod = 'GET';
+        req.headers.put('X-Api-Key', TEST_API_KEY);
         return req;
     }
 
@@ -399,6 +508,7 @@ private class DeliveryTaskAPITest {
         req.requestURI = uri;
         req.httpMethod = 'PATCH';
         req.requestBody = Blob.valueOf(JSON.serialize(body));
+        req.headers.put('X-Api-Key', TEST_API_KEY);
         return req;
     }
 
@@ -407,6 +517,7 @@ private class DeliveryTaskAPITest {
         req.requestURI = uri;
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serialize(body));
+        req.headers.put('X-Api-Key', TEST_API_KEY);
         return req;
     }
 

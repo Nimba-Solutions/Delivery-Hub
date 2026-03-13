@@ -82,14 +82,3 @@
     overflow-y: auto;
 }
 
-/* ── Delta Colors (applied via cellAttributes) ───────────────────── */
-
-:host .delta-positive {
-    color: #059669;
-    font-weight: 600;
-}
-
-:host .delta-negative {
-    color: #dc2626;
-    font-weight: 600;
-}
