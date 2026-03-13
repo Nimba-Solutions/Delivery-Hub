@@ -208,6 +208,75 @@ private class DeliveryHubSyncServiceTest {
     }
 
     // ==========================================
+    // CONNECTION APPROVAL TESTS
+    // ==========================================
+
+    @IsTest
+    static void testPostRejectedForPendingApprovalEntity() {
+        NetworkEntity__c pendingEntity = new NetworkEntity__c(
+            Name = 'Pending Client',
+            StatusPk__c = 'Active',
+            EntityTypePk__c = 'Client',
+            OrgIdTxt__c = '00DPENDING12345',
+            ConnectionStatusPk__c = 'Pending Approval'
+        );
+        insert pendingEntity;
+
+        RestRequest req = new RestRequest();
+        RestResponse res = new RestResponse();
+
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
+        req.httpMethod = 'POST';
+        req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+            'SourceId' => 'REMOTE-999',
+            'BriefDescriptionTxt__c' => 'Should Be Blocked',
+            'SenderOrgId' => '00DPENDING12345'
+        }));
+
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryHubSyncService.handleIncomingSync();
+        Test.stopTest();
+
+        System.assertEquals(403, res.statusCode, 'Should return 403 for Pending Approval entity');
+        System.assert(res.responseBody.toString().contains('pending approval'), 'Response should mention pending approval');
+    }
+
+    @IsTest
+    static void testNetworkEntitySyncAllowedDuringHandshake() {
+        RestRequest req = new RestRequest();
+        RestResponse res = new RestResponse();
+
+        req.requestURI = '/services/apexrest/deliveryhub/v1/sync/NetworkEntity__c';
+        req.httpMethod = 'POST';
+        req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+            'SourceId' => 'REMOTE-ENTITY-1',
+            'Name' => 'New Client Org',
+            'EntityTypePk__c' => 'Client',
+            'StatusPk__c' => 'Active',
+            'SenderOrgId' => '00DNEWCLIENT123'
+        }));
+
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryHubSyncService.handleIncomingSync();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'NetworkEntity sync (handshake) should be allowed');
+
+        List<NetworkEntity__c> created = [
+            SELECT ConnectionStatusPk__c FROM NetworkEntity__c
+            WHERE Name = 'New Client Org' LIMIT 1
+        ];
+        System.assertEquals(1, created.size(), 'NetworkEntity should be created');
+        System.assertEquals('Pending Approval', created[0].ConnectionStatusPk__c, 'New entity should be Pending Approval');
+    }
+
+    // ==========================================
     // API KEY AUTHENTICATION TESTS
     // ==========================================
 

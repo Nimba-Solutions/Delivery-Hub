@@ -57,7 +57,20 @@ global without sharing class DeliveryHubSyncService {
 
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
 
-            // 3. Hand off to Ingestor 
+            // 2b. Connection Approval Gate: Reject sync from Pending Approval entities
+            // (NetworkEntity__c inbound is exempt — that IS the handshake itself)
+            if (!objectType.endsWithIgnoreCase('NetworkEntity__c')) {
+                String senderOrgId = (String) payload.get('SenderOrgId');
+                if (String.isNotBlank(senderOrgId) && isSenderPendingApproval(senderOrgId)) {
+                    res.statusCode = 403;
+                    res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{
+                        'error' => 'Connection pending approval'
+                    }));
+                    return;
+                }
+            }
+
+            // 3. Hand off to Ingestor
             Id processedId = DeliverySyncItemIngestor.processInboundItem(objectType, payload);
 
             // 4. Respond
@@ -160,6 +173,32 @@ global without sharing class DeliveryHubSyncService {
             res.statusCode = 500;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => e.getMessage() }));
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Connection Approval Validation
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Checks whether the sender org has a NetworkEntity with Pending Approval status.
+     * If so, the sync request should be rejected until the admin approves the connection.
+     * @param senderOrgId The Organization ID of the sender
+     * @return true if the sender is pending approval, false otherwise
+     */
+    private static Boolean isSenderPendingApproval(String senderOrgId) {
+        if (String.isBlank(senderOrgId)) {
+            return false;
+        }
+        String baseOrgId = senderOrgId.length() >= 15 ? senderOrgId.substring(0, 15) + '%' : senderOrgId;
+        List<NetworkEntity__c> entities = [
+            SELECT Id, ConnectionStatusPk__c
+            FROM NetworkEntity__c
+            WHERE (OrgIdTxt__c LIKE :baseOrgId OR RemoteExternalIdTxt__c LIKE :baseOrgId)
+            AND ConnectionStatusPk__c = 'Pending Approval'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        return !entities.isEmpty();
     }
 
     // -------------------------------------------------------------------------

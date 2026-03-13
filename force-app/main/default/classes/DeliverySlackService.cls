@@ -44,6 +44,22 @@ public with sharing class DeliverySlackService {
     }
 
     /**
+     * @description Asynchronously posts a connection-approval notification to Slack
+     *              when a new NetworkEntity arrives with Pending Approval status.
+     *              Accepts a JSON string with keys: entityName, recordUrl.
+     * @param approvalContextJson JSON containing connection approval context
+     */
+    @future(callout=true)
+    public static void postConnectionApprovalRequest(String approvalContextJson) {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+            return;
+        }
+        Map<String, String> ctx = (Map<String, String>) JSON.deserialize(approvalContextJson, Map<String, String>.class);
+        post(settings.SlackWebhookUrl__c, buildConnectionApprovalPayload(ctx));
+    }
+
+    /**
      * @description Tests the provided Slack webhook by posting a confirmation message.
      *              Called directly from the settings LWC via user action (no DML context).
      * @param webhookUrl The Slack Incoming Webhook URL to test
@@ -167,6 +183,65 @@ public with sharing class DeliverySlackService {
                     new Map<String, Object>{
                         'type' => 'mrkdwn',
                         'text' => ':clock3: Moved at ' + Datetime.now().format('MMM d, h:mm a')
+                    }
+                }
+            }
+        };
+
+        return JSON.serialize(new Map<String, Object>{
+            'text' => headerText,
+            'blocks' => blocks
+        });
+    }
+
+    /**
+     * @description Builds a Slack Block Kit payload for a new pending connection request.
+     * @param ctx Map with keys: entityName, recordUrl
+     * @return Serialised JSON string
+     */
+    private static String buildConnectionApprovalPayload(Map<String, String> ctx) {
+        String entityName = ctx.get('entityName');
+        String recordUrl = ctx.get('recordUrl');
+
+        String headerText = ':bell: *New Connection Request: ' + entityName + '*';
+        String bodyText = '*' + entityName + '* has requested a connection to your Delivery Hub.'
+            + '\nThe connection is currently *Pending Approval*. Please review and approve or reject in Salesforce.';
+
+        List<Object> blocks = new List<Object>{
+            new Map<String, Object>{
+                'type' => 'header',
+                'text' => new Map<String, Object>{
+                    'type' => 'plain_text',
+                    'text' => 'New Connection Request'
+                }
+            },
+            new Map<String, Object>{
+                'type' => 'section',
+                'text' => new Map<String, Object>{
+                    'type' => 'mrkdwn',
+                    'text' => bodyText
+                }
+            },
+            new Map<String, Object>{
+                'type' => 'actions',
+                'elements' => new List<Object>{
+                    new Map<String, Object>{
+                        'type' => 'button',
+                        'text' => new Map<String, Object>{
+                            'type' => 'plain_text',
+                            'text' => 'Review in Salesforce'
+                        },
+                        'url' => recordUrl,
+                        'style' => 'primary'
+                    }
+                }
+            },
+            new Map<String, Object>{
+                'type' => 'context',
+                'elements' => new List<Object>{
+                    new Map<String, Object>{
+                        'type' => 'mrkdwn',
+                        'text' => ':clock3: Received at ' + Datetime.now().format('MMM d, h:mm a')
                     }
                 }
             }

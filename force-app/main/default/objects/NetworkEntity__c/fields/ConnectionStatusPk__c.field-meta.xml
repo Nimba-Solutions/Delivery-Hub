@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ConnectionStatusPk__c</fullName>
-    <description>Tracks the API connection lifecycle for this entity. Pending = awaiting key exchange, Connected = actively syncing, Disabled = API access revoked.</description>
+    <description>Tracks the API connection lifecycle for this entity. Pending = awaiting key exchange, Pending Approval = handshake completed but admin has not yet approved, Connected = actively syncing, Disabled = API access revoked.</description>
     <inlineHelpText>Current state of the API connection with this entity.</inlineHelpText>
     <label>Connection Status</label>
     <required>false</required>
@@ -15,6 +15,11 @@
                 <fullName>Pending</fullName>
                 <default>true</default>
                 <label>Pending</label>
+            </value>
+            <value>
+                <fullName>Pending Approval</fullName>
+                <default>false</default>
+                <label>Pending Approval</label>
             </value>
             <value>
                 <fullName>Connected</fullName>

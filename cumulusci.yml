@@ -81,6 +81,12 @@ tasks:
         options:
             api_names: DeliveryHubAdmin
 
+    configure_guest_user_access:
+        description: Assign DeliveryHubGuestUser permission set to the Site guest user for REST API access
+        class_path: cumulusci.tasks.apex.anon.AnonymousApexTask
+        options:
+            apex: DeliveryHubSetupController.configureGuestUserAccess();
+
     create_package_version:
         options:
             namespace: delivery
@@ -90,11 +96,15 @@ flows:
         steps:
             3.0:
                 task: assign_permission_set_groups
+            3.1:
+                task: configure_guest_user_access
 
     config_qa:
         steps:
             3.0:
                 task: assign_permission_set_groups
+            3.1:
+                task: configure_guest_user_access
 
 plans:
     install:
@@ -113,3 +123,7 @@ plans:
                 task: assign_permission_set_groups
                 ui_options:
                     name: Assign the "DeliveryHubAdmin" Permission Set Group to the current user.
+            3:
+                task: configure_guest_user_access
+                ui_options:
+                    name: Configure Site guest user access for REST API endpoints.
