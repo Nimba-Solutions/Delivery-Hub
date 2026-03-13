@@ -167,7 +167,7 @@ private class DeliveryActivityLogCleanupTest {
     static void testFieldChangeRetentionPurgesOldFieldChanges() {
         // Configure retention to 30 days
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.FieldChangeRetentionDays__c = 30;
+        settings.FieldChangeRetentionDaysNumber__c = 30;
         upsert settings;
 
         Account testAcct = new Account(Name = 'Retention Purge Test');
@@ -210,9 +210,9 @@ private class DeliveryActivityLogCleanupTest {
 
     @IsTest
     static void testFieldChangeRetentionNullPreservesFieldChanges() {
-        // Ensure FieldChangeRetentionDays__c is null (default) — Field_Change preserved
+        // Ensure FieldChangeRetentionDaysNumber__c is null (default) — Field_Change preserved
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.FieldChangeRetentionDays__c = null;
+        settings.FieldChangeRetentionDaysNumber__c = null;
         upsert settings;
 
         Account testAcct = new Account(Name = 'Retention Null Test');
@@ -252,9 +252,9 @@ private class DeliveryActivityLogCleanupTest {
 
     @IsTest
     static void testFieldChangeRetentionZeroPreservesFieldChanges() {
-        // FieldChangeRetentionDays__c = 0 should behave same as null (preserve Field_Changes)
+        // FieldChangeRetentionDaysNumber__c = 0 should behave same as null (preserve Field_Changes)
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.FieldChangeRetentionDays__c = 0;
+        settings.FieldChangeRetentionDaysNumber__c = 0;
         upsert settings;
 
         Account testAcct = new Account(Name = 'Retention Zero Test');

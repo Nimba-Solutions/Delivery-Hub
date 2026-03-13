@@ -15,11 +15,11 @@
         <value xsi:type="xsd:string">Developer</value>
     </values>
     <values>
-        <field>IsEnabled__c</field>
+        <field>IsEnabledBool__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">3</value>
     </values>
 </CustomMetadata>

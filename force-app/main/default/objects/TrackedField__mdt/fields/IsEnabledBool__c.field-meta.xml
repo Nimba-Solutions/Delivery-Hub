@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>IsEnabled__c</fullName>
+    <fullName>IsEnabledBool__c</fullName>
     <description>Toggle tracking on or off for this field without deleting the record.</description>
     <defaultValue>true</defaultValue>
     <externalId>false</externalId>

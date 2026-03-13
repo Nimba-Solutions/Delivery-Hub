@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>FieldChangeRetentionDays__c</fullName>
+    <fullName>FieldChangeRetentionDaysNumber__c</fullName>
     <description>Number of days to retain Field_Change activity logs. Leave blank or 0 for indefinite retention.</description>
     <inlineHelpText>How many days to keep field change logs before purging. Leave blank or 0 to keep them forever.</inlineHelpText>
     <label>Field Change Retention Days</label>

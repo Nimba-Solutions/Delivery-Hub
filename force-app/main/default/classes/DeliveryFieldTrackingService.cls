@@ -7,7 +7,7 @@
  *               Designed to be called from trigger handlers (after update context).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryFieldTrackingService {
 
     /** @description Cached list of enabled tracked field configurations, queried once per transaction. */
@@ -85,16 +85,16 @@ public with sharing class DeliveryFieldTrackingService {
      *              the given object API name. Uses a static cache to avoid repeated
      *              SOQL queries within the same transaction.
      * @param objectApiName The API name of the SObject to filter by.
-     * @return List of matching TrackedField__mdt records, sorted by SortOrder__c.
+     * @return List of matching TrackedField__mdt records, sorted by SortOrderNumber__c.
      */
     private static List<TrackedField__mdt> getTrackedFieldsForObject(String objectApiName) {
         if (cachedTrackedFields == null) {
             cachedTrackedFields = [
-                SELECT ObjectApiName__c, FieldApiName__c, FieldLabel__c, SortOrder__c
+                SELECT ObjectApiName__c, FieldApiName__c, FieldLabel__c, SortOrderNumber__c
                 FROM TrackedField__mdt
-                WHERE IsEnabled__c = true
+                WHERE IsEnabledBool__c = true
                 WITH SYSTEM_MODE
-                ORDER BY SortOrder__c ASC
+                ORDER BY SortOrderNumber__c ASC
             ];
         }
 
