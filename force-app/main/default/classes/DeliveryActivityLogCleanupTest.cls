@@ -102,12 +102,16 @@ private class DeliveryActivityLogCleanupTest {
 
     @IsTest
     static void testPurgePreservesFieldChangeLogs() {
+        // Use a real Account Id to avoid PMD AvoidHardcodingId
+        Account testAcct = new Account(Name = 'Field Change Retention Test');
+        insert testAcct;
+
         // Insert a Field_Change log and backdate it beyond retention
         ActivityLog__c fieldChangeLog = new ActivityLog__c(
             ActionTypePk__c = 'Field_Change',
             ComponentNameTxt__c = 'IUW_Risk_Rating__c',
             UserIdTxt__c = UserInfo.getUserId(),
-            RecordIdTxt__c = '001000000000001',
+            RecordIdTxt__c = testAcct.Id,
             ContextDataTxt__c = '{"fieldName":"IUW_Risk_Rating__c","oldValue":"3","newValue":"4"}'
         );
         insert fieldChangeLog;

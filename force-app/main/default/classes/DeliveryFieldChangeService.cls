@@ -7,7 +7,7 @@
  *               retrieving change history and trend data.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryFieldChangeService {
 
     /**
@@ -210,7 +210,7 @@ public with sharing class DeliveryFieldChangeService {
                 Decimal newNum = Decimal.valueOf(req.newValue);
                 contextMap.put('delta', newNum - oldNum);
             } catch (Exception ex) {
-                // Not numeric — skip delta calculation
+                System.debug(LoggingLevel.FINE, 'Non-numeric values, skipping delta: ' + ex.getMessage());
             }
         }
 

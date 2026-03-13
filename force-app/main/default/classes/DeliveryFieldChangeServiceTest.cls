@@ -6,6 +6,7 @@
  *               history queries, field filtering, and trend ordering.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.ExcessiveParameterList')
 @IsTest
 private class DeliveryFieldChangeServiceTest {
 
@@ -40,7 +41,7 @@ private class DeliveryFieldChangeServiceTest {
     // ── 1. Basic capture ──────────────────────────────────────────────
 
     @IsTest
-    static void testCaptureFieldChange_basic() {
+    static void testCaptureFieldChangeBasic() {
         Account testAcct = new Account(Name = 'Field Change Test Account');
         insert testAcct;
 
@@ -74,7 +75,7 @@ private class DeliveryFieldChangeServiceTest {
     // ── 2. Numeric delta calculation ─────────────────────────────────
 
     @IsTest
-    static void testCaptureFieldChange_numericDelta() {
+    static void testCaptureFieldChangeNumericDelta() {
         Account testAcct = new Account(Name = 'Delta Test Account');
         insert testAcct;
 
@@ -105,7 +106,7 @@ private class DeliveryFieldChangeServiceTest {
     // ── 3. Logging disabled → no records ─────────────────────────────
 
     @IsTest
-    static void testCaptureFieldChange_loggingDisabled() {
+    static void testCaptureFieldChangeLoggingDisabled() {
         // Override settings to disable logging
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.EnableActivityLoggingBool__c = false;
@@ -175,7 +176,7 @@ private class DeliveryFieldChangeServiceTest {
     // ── 5. getFieldChangeHistory filters by field ────────────────────
 
     @IsTest
-    static void testGetFieldChangeHistory_filterByField() {
+    static void testGetFieldChangeHistoryFilterByField() {
         Account testAcct = new Account(Name = 'Filter Test Account');
         insert testAcct;
 
@@ -268,7 +269,7 @@ private class DeliveryFieldChangeServiceTest {
     // ── 7. Malformed extraContext JSON handled gracefully ────────────
 
     @IsTest
-    static void testCaptureFieldChange_malformedExtraContext() {
+    static void testCaptureFieldChangeMalformedExtraContext() {
         Account testAcct = new Account(Name = 'Malformed Context Test');
         insert testAcct;
 

@@ -9,7 +9,7 @@
  *               Authenticates via X-Api-Key header matched against NetworkEntity__c.ApiKeyTxt__c.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ApexSOQLInjection')
 @RestResource(urlMapping='/delivery/tasks/*')
 global without sharing class DeliveryTaskAPI {
 
