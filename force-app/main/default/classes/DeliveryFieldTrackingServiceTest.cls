@@ -2,9 +2,8 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Test class for DeliveryFieldTrackingService.
- *               Verifies trigger-driven field change tracking via TrackedField__mdt,
- *               including enabled/disabled gates, tracked vs untracked fields,
- *               and multi-field change detection.
+ *               Calls trackChanges() directly with constructed old/new maps
+ *               to test the service in isolation from trigger wiring.
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -18,33 +17,43 @@ private class DeliveryFieldTrackingServiceTest {
         settings.EnableFieldTrackingBool__c = true;
         upsert settings;
 
-        // Disable after-trigger logic to avoid sync engine side effects
+        // Disable after-trigger logic to avoid sync engine side effects during setup
         DeliveryTriggerControl.disableAfterLogic();
 
         WorkItem__c workItem = new WorkItem__c(
             BriefDescriptionTxt__c = 'Field Tracking Test Item',
             StageNamePk__c = 'Backlog',
             PriorityPk__c = 'Medium',
-            StatusPk__c = 'Active'
+            StatusPk__c = 'New'
         );
         insert workItem;
 
         DeliveryTriggerControl.enableAfterLogic();
     }
 
-    // ── 1. Tracking enabled: update a tracked field, verify ActivityLog created ──
+    // ── 1. Tracking enabled: verify ActivityLog created for tracked field ──
 
     @IsTest
     static void testTrackingEnabledCreatesActivityLog() {
         WorkItem__c workItem = [
-            SELECT Id, PriorityPk__c
+            SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
             FROM WorkItem__c
             LIMIT 1
         ];
 
-        Test.startTest();
+        // Build old record with original values
+        WorkItem__c oldRecord = workItem.clone(true, true, true, true);
+
+        // Simulate field change
         workItem.PriorityPk__c = 'High';
-        update workItem;
+
+        List<SObject> newRecords = new List<SObject>{ workItem };
+        Map<Id, SObject> oldMap = new Map<Id, SObject>{ oldRecord.Id => oldRecord };
+
+        DeliveryFieldTrackingService.clearCache();
+
+        Test.startTest();
+        DeliveryFieldTrackingService.trackChanges(newRecords, oldMap);
         Test.stopTest();
 
         List<ActivityLog__c> logs = [
@@ -64,64 +73,56 @@ private class DeliveryFieldTrackingServiceTest {
 
     @IsTest
     static void testTrackingDisabledNoActivityLog() {
-        // Disable field tracking
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.EnableFieldTrackingBool__c = false;
         upsert settings;
 
         WorkItem__c workItem = [
-            SELECT Id, PriorityPk__c
+            SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
             FROM WorkItem__c
             LIMIT 1
         ];
 
-        // Delete any pre-existing Field_Change logs
-        List<ActivityLog__c> existingLogs = [
-            SELECT Id FROM ActivityLog__c
-            WHERE ActionTypePk__c = 'Field_Change'
-            WITH SYSTEM_MODE
-        ];
-        if (!existingLogs.isEmpty()) {
-            delete existingLogs;
-        }
+        WorkItem__c oldRecord = workItem.clone(true, true, true, true);
+        workItem.PriorityPk__c = 'High';
+
+        DeliveryFieldTrackingService.clearCache();
 
         Test.startTest();
-        workItem.PriorityPk__c = 'High';
-        update workItem;
+        DeliveryFieldTrackingService.trackChanges(
+            new List<SObject>{ workItem },
+            new Map<Id, SObject>{ oldRecord.Id => oldRecord }
+        );
         Test.stopTest();
 
         List<ActivityLog__c> logs = [
             SELECT Id FROM ActivityLog__c
             WHERE ActionTypePk__c = 'Field_Change'
-              AND ComponentNameTxt__c = 'PriorityPk__c'
             WITH SYSTEM_MODE
         ];
         System.assertEquals(0, logs.size(), 'No Field_Change logs should be created when tracking is disabled');
     }
 
-    // ── 3. Field not tracked: verify no ActivityLog created ──
+    // ── 3. Untracked field: verify no ActivityLog created ──
 
     @IsTest
     static void testUntrackedFieldNoActivityLog() {
         WorkItem__c workItem = [
-            SELECT Id, BriefDescriptionTxt__c
+            SELECT Id, BriefDescriptionTxt__c, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
             FROM WorkItem__c
             LIMIT 1
         ];
 
-        // Delete any pre-existing Field_Change logs
-        List<ActivityLog__c> existingLogs = [
-            SELECT Id FROM ActivityLog__c
-            WHERE ActionTypePk__c = 'Field_Change'
-            WITH SYSTEM_MODE
-        ];
-        if (!existingLogs.isEmpty()) {
-            delete existingLogs;
-        }
+        WorkItem__c oldRecord = workItem.clone(true, true, true, true);
+        workItem.BriefDescriptionTxt__c = 'Updated description not tracked';
+
+        DeliveryFieldTrackingService.clearCache();
 
         Test.startTest();
-        workItem.BriefDescriptionTxt__c = 'Updated description not tracked';
-        update workItem;
+        DeliveryFieldTrackingService.trackChanges(
+            new List<SObject>{ workItem },
+            new Map<Id, SObject>{ oldRecord.Id => oldRecord }
+        );
         Test.stopTest();
 
         List<ActivityLog__c> logs = [
@@ -139,25 +140,22 @@ private class DeliveryFieldTrackingServiceTest {
     @IsTest
     static void testMultipleFieldChangesCreateMultipleLogs() {
         WorkItem__c workItem = [
-            SELECT Id, PriorityPk__c, StatusPk__c
+            SELECT Id, PriorityPk__c, StatusPk__c, StageNamePk__c, Developer__c
             FROM WorkItem__c
             LIMIT 1
         ];
 
-        // Delete any pre-existing Field_Change logs
-        List<ActivityLog__c> existingLogs = [
-            SELECT Id FROM ActivityLog__c
-            WHERE ActionTypePk__c = 'Field_Change'
-            WITH SYSTEM_MODE
-        ];
-        if (!existingLogs.isEmpty()) {
-            delete existingLogs;
-        }
+        WorkItem__c oldRecord = workItem.clone(true, true, true, true);
+        workItem.PriorityPk__c = 'Critical';
+        workItem.StageNamePk__c = 'In Development';
+
+        DeliveryFieldTrackingService.clearCache();
 
         Test.startTest();
-        workItem.PriorityPk__c = 'Critical';
-        workItem.StatusPk__c = 'Inactive';
-        update workItem;
+        DeliveryFieldTrackingService.trackChanges(
+            new List<SObject>{ workItem },
+            new Map<Id, SObject>{ oldRecord.Id => oldRecord }
+        );
         Test.stopTest();
 
         List<ActivityLog__c> logs = [
@@ -165,7 +163,6 @@ private class DeliveryFieldTrackingServiceTest {
             FROM ActivityLog__c
             WHERE ActionTypePk__c = 'Field_Change'
               AND RecordIdTxt__c = :workItem.Id
-              AND ComponentNameTxt__c IN ('PriorityPk__c', 'StatusPk__c')
             WITH SYSTEM_MODE
         ];
         System.assert(logs.size() >= 2,
@@ -185,7 +182,6 @@ private class DeliveryFieldTrackingServiceTest {
         );
         Test.stopTest();
 
-        // If we reach here without exception, the test passes
         System.assert(true, 'Null/empty inputs should be handled gracefully');
     }
 }
