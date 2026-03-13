@@ -27,6 +27,9 @@ export default class DeliveryGhostRecorder extends LightningElement {
     
     currentPageRef;
     currentUserId = userId;
+    _sessionId = '';
+    _lastLoggedUrl = '';
+    _lastLoggedTime = 0;
 
     @wire(getAttentionCount)
     wiredAttentionCount;
@@ -83,14 +86,13 @@ export default class DeliveryGhostRecorder extends LightningElement {
         return this.uploadedFileIds.length;
     }
 
-    // ... (Keep Context gathering Logic same as before) ...
     get contextDisplayName() {
-        if (!this.currentPageRef) return 'General';
-        const attrs = this.currentPageRef.attributes;
-        if (attrs.objectApiName) return attrs.objectApiName;
-        if (attrs.name) return attrs.name; 
-        if (this.currentPageRef.type === 'standard__namedPage') return 'Page: ' + attrs.pageName;
-        return 'General Context';
+        try {
+            const parsed = this._parseUrlContext();
+            return parsed.pageLabel || 'General';
+        } catch (e) {
+            return 'General';
+        }
     }
     
     @wire(CurrentPageReference)
@@ -102,6 +104,7 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     connectedCallback() {
+        this._sessionId = this._generateSessionId();
         if (this.enableShortcut) {
             window.addEventListener('keydown', this.handleShortcut);
         }
@@ -118,11 +121,23 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     handleNavigationLog() {
-        const context = this.gatherContext();
-        logActivity({ 
-            actionType: 'Navigation',
-            contextData: JSON.stringify(context) 
-        }).catch(err => console.error('Ghost log failed', err));
+        try {
+            const href = window.location.href;
+            const now = Date.now();
+            if (href === this._lastLoggedUrl && (now - this._lastLoggedTime) < 3000) {
+                return;
+            }
+            this._lastLoggedUrl = href;
+            this._lastLoggedTime = now;
+
+            const context = this.gatherContext();
+            logActivity({
+                actionType: 'Navigation',
+                contextData: JSON.stringify(context)
+            }).catch(() => { /* silent */ });
+        } catch (e) {
+            // Never break user experience
+        }
     }
 
     togglePanel() {
@@ -225,16 +240,78 @@ export default class DeliveryGhostRecorder extends LightningElement {
     }
 
     gatherContext() {
-        let objName = this.currentPageRef?.attributes?.objectApiName;
-        let recId = this.currentPageRef?.attributes?.recordId;
-        if (!objName && this.currentPageRef?.attributes?.name) {
-            objName = this.currentPageRef.attributes.name;
+        try {
+            const parsed = this._parseUrlContext();
+            return {
+                url: window.location.href,
+                browser: navigator.userAgent,
+                objectName: parsed.objectName,
+                recordId: parsed.recordId,
+                pageLabel: parsed.pageLabel,
+                sessionId: this._sessionId
+            };
+        } catch (e) {
+            return {
+                url: window.location.href || '',
+                browser: '',
+                objectName: 'Unknown',
+                recordId: '',
+                pageLabel: 'Unknown',
+                sessionId: ''
+            };
         }
+    }
+
+    _parseUrlContext() {
+        const href = window.location.href;
+        // Pattern: /lightning/r/{objectApiName}/{recordId}/view
+        const recordMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/view/);
+        if (recordMatch) {
+            return { objectName: recordMatch[1], recordId: recordMatch[2], pageLabel: recordMatch[1] };
+        }
+        // Pattern: /lightning/o/{objectApiName}/home (list view)
+        const listMatch = href.match(/\/lightning\/o\/([^/]+)\/home/);
+        if (listMatch) {
+            return { objectName: listMatch[1], recordId: '', pageLabel: listMatch[1] + ' List' };
+        }
+        // Pattern: /lightning/o/{objectApiName}/list
+        const listMatch2 = href.match(/\/lightning\/o\/([^/]+)\/list/);
+        if (listMatch2) {
+            return { objectName: listMatch2[1], recordId: '', pageLabel: listMatch2[1] + ' List' };
+        }
+        // Pattern: /lightning/page/home
+        if (href.includes('/lightning/page/home')) {
+            return { objectName: 'Home', recordId: '', pageLabel: 'Home' };
+        }
+        // Pattern: /lightning/page/chatter
+        if (href.includes('/lightning/page/chatter')) {
+            return { objectName: 'Chatter', recordId: '', pageLabel: 'Chatter' };
+        }
+        // Pattern: /lightning/setup/...
+        if (href.includes('/lightning/setup/')) {
+            return { objectName: 'Setup', recordId: '', pageLabel: 'Setup' };
+        }
+        // Pattern: /lightning/r/{objectApiName}/{recordId}/related/...
+        const relatedMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/related/);
+        if (relatedMatch) {
+            return { objectName: relatedMatch[1], recordId: relatedMatch[2], pageLabel: relatedMatch[1] + ' Related' };
+        }
+        // Fallback: try CurrentPageReference attributes
+        const attrs = this.currentPageRef?.attributes || {};
         return {
-            url: window.location.href,
-            browser: navigator.userAgent,
-            objectName: objName || 'Unknown',
-            recordId: recId || ''
+            objectName: attrs.objectApiName || attrs.name || 'Unknown',
+            recordId: attrs.recordId || '',
+            pageLabel: attrs.objectApiName || attrs.name || 'Unknown'
         };
+    }
+
+    _generateSessionId() {
+        try {
+            return 'xxxxxxxx-xxxx-4xxx'.replace(/[x]/g, () =>
+                (Math.random() * 16 | 0).toString(16)
+            );
+        } catch (e) {
+            return 'unknown';
+        }
     }
 }

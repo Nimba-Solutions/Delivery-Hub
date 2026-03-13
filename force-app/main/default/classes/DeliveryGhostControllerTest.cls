@@ -109,4 +109,90 @@ private class DeliveryGhostControllerTest {
         System.assertEquals('Error', logs[0].ActionTypePk__c, 'Action type should still be set');
         System.assertEquals('not-valid-json', logs[0].ContextDataTxt__c, 'Raw context should be stored as-is');
     }
+
+    @IsTest
+    static void testLogUserActivityPopulatesRecordIdAndUrl() {
+        enableActivityLogging();
+
+        Map<String, Object> contextMap = new Map<String, Object>{
+            'url' => 'https://myorg.lightning.force.com/lightning/r/Account/001000000000001/view',
+            'browser' => 'Chrome',
+            'objectName' => 'Account',
+            'recordId' => '001000000000001AAA',
+            'pageLabel' => 'Account',
+            'sessionId' => 'sess-abc-123'
+        };
+        String contextJson = JSON.serialize(contextMap);
+
+        Test.startTest();
+        DeliveryGhostController.logUserActivity('Navigation', contextJson);
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT RecordIdTxt__c, PageUrlTxt__c, ComponentNameTxt__c, SessionIdTxt__c
+            FROM ActivityLog__c
+        ];
+        System.assertEquals(1, logs.size(), 'One activity log should be persisted');
+        System.assertEquals('001000000000001AAA', logs[0].RecordIdTxt__c, 'RecordId should be extracted from context');
+        System.assertEquals('https://myorg.lightning.force.com/lightning/r/Account/001000000000001/view', logs[0].PageUrlTxt__c, 'Page URL should be extracted from context');
+        System.assertEquals('Account', logs[0].ComponentNameTxt__c, 'Component name should use pageLabel');
+        System.assertEquals('sess-abc-123', logs[0].SessionIdTxt__c, 'Session ID should be extracted from context');
+    }
+
+    @IsTest
+    static void testLogUserActivityTruncatesLongUrl() {
+        enableActivityLogging();
+
+        // Build a URL longer than 255 characters
+        String longUrl = 'https://myorg.lightning.force.com/lightning/r/Account/001000000000001/view?';
+        while (longUrl.length() < 310) {
+            longUrl += 'param=value&';
+        }
+        System.assert(longUrl.length() > 255, 'Test URL should exceed 255 chars');
+
+        Map<String, Object> contextMap = new Map<String, Object>{
+            'url' => longUrl,
+            'browser' => 'Chrome',
+            'objectName' => 'Account',
+            'recordId' => '001000000000001AAA',
+            'pageLabel' => 'Account',
+            'sessionId' => 'sess-trunc-test'
+        };
+        String contextJson = JSON.serialize(contextMap);
+
+        Test.startTest();
+        DeliveryGhostController.logUserActivity('Navigation', contextJson);
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT PageUrlTxt__c
+            FROM ActivityLog__c
+        ];
+        System.assertEquals(1, logs.size(), 'Record should be created even with long URL');
+        System.assertEquals(255, logs[0].PageUrlTxt__c.length(), 'Page URL should be truncated to 255 chars');
+    }
+
+    @IsTest
+    static void testLogUserActivityPageLabelFallsBackToObjectName() {
+        enableActivityLogging();
+
+        // Context without pageLabel — should fall back to objectName
+        Map<String, Object> contextMap = new Map<String, Object>{
+            'url' => 'https://myorg.lightning.force.com/lightning/o/WorkItem__c/home',
+            'browser' => 'Firefox',
+            'objectName' => 'WorkItem__c'
+        };
+        String contextJson = JSON.serialize(contextMap);
+
+        Test.startTest();
+        DeliveryGhostController.logUserActivity('Navigation', contextJson);
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ComponentNameTxt__c
+            FROM ActivityLog__c
+        ];
+        System.assertEquals(1, logs.size(), 'One activity log should be persisted');
+        System.assertEquals('WorkItem__c', logs[0].ComponentNameTxt__c, 'Component should fall back to objectName when pageLabel is absent');
+    }
 }
