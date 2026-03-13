@@ -49,6 +49,7 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
             SELECT Id
             FROM ActivityLog__c
             WHERE CreatedDate < :cutoff
+            AND ActionTypePk__c != 'Field_Change'
             WITH SYSTEM_MODE
         ]);
     }

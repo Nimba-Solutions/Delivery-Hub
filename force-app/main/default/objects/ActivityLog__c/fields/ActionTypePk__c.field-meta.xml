@@ -16,6 +16,7 @@
             <value><fullName>Stage_Change</fullName><default>false</default><label>Stage Change</label></value>
             <value><fullName>Search</fullName><default>false</default><label>Search</label></value>
             <value><fullName>Error</fullName><default>false</default><label>Error</label></value>
+            <value><fullName>Field_Change</fullName><default>false</default><label>Field Change</label></value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
