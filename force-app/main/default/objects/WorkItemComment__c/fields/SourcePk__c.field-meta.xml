@@ -36,6 +36,11 @@
                 <default>false</default>
                 <label>Vendor</label>
             </value>
+            <value>
+                <fullName>API</fullName>
+                <default>false</default>
+                <label>API</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

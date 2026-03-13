@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Delivery Field History</masterLabel>
+    <description>Displays field change history with optional trend chart for tracked fields on any record.</description>
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage,lightning__AppPage,lightning__HomePage">
+            <property name="fieldName" type="String" label="Field API Name" description="API name of the tracked field (e.g., IUW_Risk_Rating__c). Leave blank to show all field changes." />
+            <property name="metricLabel" type="String" label="Metric Label" description="Display label for the metric (e.g., IUW Risk Rating)" default="Field History" />
+            <property name="maxRecords" type="Integer" label="Max Records" description="Maximum number of history records to display" default="25" />
+            <property name="showChart" type="Boolean" label="Show Trend Chart" description="Display a trend line chart above the history table" default="false" />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
