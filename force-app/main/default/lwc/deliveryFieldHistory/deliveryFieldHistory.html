@@ -1,0 +1,118 @@
+<template>
+    <lightning-card title={metricLabel} icon-name="standard:metrics">
+        <!-- Record count badge -->
+        <template lwc:if={hasEntries}>
+            <span slot="actions" class="summary-badge">
+                {recordCount}
+            </span>
+        </template>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_large slds-align_absolute-center">
+                <lightning-spinner alternative-text="Loading field history" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Empty State -->
+        <template lwc:if={showEmpty}>
+            <div class="slds-p-around_large slds-align_absolute-center empty-state">
+                <div class="slds-text-align_center">
+                    <lightning-icon
+                        icon-name="utility:info"
+                        size="large"
+                        class="slds-m-bottom_small empty-icon"
+                    ></lightning-icon>
+                    <p class="slds-text-heading_small slds-text-color_weak">
+                        No field change history found
+                    </p>
+                </div>
+            </div>
+        </template>
+
+        <!-- Content -->
+        <template lwc:if={hasEntries}>
+            <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+                <!-- Trend Chart -->
+                <template lwc:if={hasTrendData}>
+                    <div class="chart-container slds-m-bottom_small">
+                        <svg class="trend-chart"
+                             xmlns="http://www.w3.org/2000/svg"
+                             viewBox={chartViewBox}
+                             preserveAspectRatio="xMidYMid meet">
+
+                            <!-- Grid lines -->
+                            <template for:each={chartElements.gridLines} for:item="line">
+                                <line key={line.key}
+                                      x1={line.x1} y1={line.y1}
+                                      x2={line.x2} y2={line.y2}
+                                      class="chart-grid-line"></line>
+                            </template>
+
+                            <!-- Axis line -->
+                            <line x1={chartElements.axisLine.x1}
+                                  y1={chartElements.axisLine.y1}
+                                  x2={chartElements.axisLine.x2}
+                                  y2={chartElements.axisLine.y2}
+                                  class="chart-axis-line"></line>
+
+                            <!-- Trend line -->
+                            <polyline points={chartElements.polylinePoints}
+                                      class="chart-trend-line"></polyline>
+
+                            <!-- Data dots -->
+                            <template for:each={chartElements.dots} for:item="dot">
+                                <circle key={dot.key}
+                                        cx={dot.cx}
+                                        cy={dot.cy}
+                                        r="4"
+                                        class="chart-dot">
+                                    <title>{dot.title}</title>
+                                </circle>
+                            </template>
+
+                            <!-- Y-axis labels -->
+                            <template for:each={chartElements.yLabels} for:item="label">
+                                <text key={label.key}
+                                      x={label.x}
+                                      y={label.y}
+                                      text-anchor={label.anchor}
+                                      class="chart-label">{label.text}</text>
+                            </template>
+
+                            <!-- X-axis labels -->
+                            <template for:each={chartElements.xLabels} for:item="label">
+                                <text key={label.key}
+                                      x={label.x}
+                                      y={label.y}
+                                      text-anchor="middle"
+                                      class="chart-label">{label.text}</text>
+                            </template>
+                        </svg>
+                    </div>
+                </template>
+
+                <!-- History Table -->
+                <div class="table-scroll">
+                    <lightning-datatable
+                        key-field="id"
+                        data={tableData}
+                        columns={columns}
+                        hide-checkbox-column
+                        show-row-number-column={false}
+                    ></lightning-datatable>
+                </div>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={hasError}>
+            <div class="slds-p-around_medium">
+                <div class="slds-text-color_error slds-text-body_small">
+                    Unable to load field history. Please try refreshing.
+                </div>
+            </div>
+        </template>
+    </lightning-card>
+</template>
