@@ -114,11 +114,15 @@ private class DeliveryGhostControllerTest {
     static void testLogUserActivityPopulatesRecordIdAndUrl() {
         enableActivityLogging();
 
+        Account testAcct = new Account(Name = 'Ghost Recorder URL Test');
+        insert testAcct;
+        String testUrl = 'https://myorg.lightning.force.com/lightning/r/Account/' + testAcct.Id + '/view';
+
         Map<String, Object> contextMap = new Map<String, Object>{
-            'url' => 'https://myorg.lightning.force.com/lightning/r/Account/001000000000001/view',
+            'url' => testUrl,
             'browser' => 'Chrome',
             'objectName' => 'Account',
-            'recordId' => '001000000000001AAA',
+            'recordId' => testAcct.Id,
             'pageLabel' => 'Account',
             'sessionId' => 'sess-abc-123'
         };
@@ -133,8 +137,8 @@ private class DeliveryGhostControllerTest {
             FROM ActivityLog__c
         ];
         System.assertEquals(1, logs.size(), 'One activity log should be persisted');
-        System.assertEquals('001000000000001AAA', logs[0].RecordIdTxt__c, 'RecordId should be extracted from context');
-        System.assertEquals('https://myorg.lightning.force.com/lightning/r/Account/001000000000001/view', logs[0].PageUrlTxt__c, 'Page URL should be extracted from context');
+        System.assertEquals(testAcct.Id, logs[0].RecordIdTxt__c, 'RecordId should be extracted from context');
+        System.assertEquals(testUrl, logs[0].PageUrlTxt__c, 'Page URL should be extracted from context');
         System.assertEquals('Account', logs[0].ComponentNameTxt__c, 'Component name should use pageLabel');
         System.assertEquals('sess-abc-123', logs[0].SessionIdTxt__c, 'Session ID should be extracted from context');
     }
@@ -143,8 +147,11 @@ private class DeliveryGhostControllerTest {
     static void testLogUserActivityTruncatesLongUrl() {
         enableActivityLogging();
 
+        Account testAcct = new Account(Name = 'Ghost Recorder Truncate Test');
+        insert testAcct;
+
         // Build a URL longer than 255 characters
-        String longUrl = 'https://myorg.lightning.force.com/lightning/r/Account/001000000000001/view?';
+        String longUrl = 'https://myorg.lightning.force.com/lightning/r/Account/' + testAcct.Id + '/view?';
         while (longUrl.length() < 310) {
             longUrl += 'param=value&';
         }
@@ -154,7 +161,7 @@ private class DeliveryGhostControllerTest {
             'url' => longUrl,
             'browser' => 'Chrome',
             'objectName' => 'Account',
-            'recordId' => '001000000000001AAA',
+            'recordId' => testAcct.Id,
             'pageLabel' => 'Account',
             'sessionId' => 'sess-trunc-test'
         };
