@@ -106,6 +106,9 @@ public without sharing class DeliveryHubSetupController {
         CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
         String intakeEndpoint = config.EndpointUrlTxt__c.removeEnd('/') + '/sync/NetworkEntity__c';
 
+        // Generate a shared API key for bidirectional authentication
+        String sharedApiKey = EncodingUtil.convertToHex(Crypto.generateAesKey(256));
+
         Map<String, Object> packet = new Map<String, Object>{
             'SourceId' => localEntityId,
             'RemoteExternalIdTxt__c' => localEntityId,
@@ -113,15 +116,17 @@ public without sharing class DeliveryHubSetupController {
             'OrgIdTxt__c' => UserInfo.getOrganizationId(),
             'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
             'EntityTypePk__c' => 'Client',
-            'StatusPk__c' => 'Active'
+            'StatusPk__c' => 'Active',
+            'ApiKeyTxt__c' => sharedApiKey,
+            'ConnectionStatusPk__c' => 'Connected'
         };
 
         HttpRequest req = new HttpRequest();
-        req.setEndpoint(intakeEndpoint); 
+        req.setEndpoint(intakeEndpoint);
         req.setMethod('POST');
         req.setHeader('Content-Type', 'application/json');
         req.setBody(JSON.serialize(packet));
-        req.setTimeout(60000); 
+        req.setTimeout(60000);
 
         Http http = new Http();
         HttpResponse res = http.send(req);
@@ -133,21 +138,26 @@ public without sharing class DeliveryHubSetupController {
         Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
         String remoteEntityId = (String) responseMap.get('processedId');
         String remoteOrgId = (String) responseMap.get('orgId');
-        
-        if (String.isNotBlank(remoteEntityId) || String.isNotBlank(remoteOrgId)) {
-            NetworkEntity__c mothershipToUpdate = new NetworkEntity__c(
-                Id = localEntityId,
-                OrgIdTxt__c = remoteOrgId,
-                RemoteExternalIdTxt__c = remoteEntityId
-            );
-            update mothershipToUpdate;
+
+        NetworkEntity__c mothershipToUpdate = new NetworkEntity__c(
+            Id = localEntityId,
+            ApiKeyTxt__c = sharedApiKey,
+            ConnectionStatusPk__c = 'Connected'
+        );
+        if (String.isNotBlank(remoteEntityId)) {
+            mothershipToUpdate.RemoteExternalIdTxt__c = remoteEntityId;
         }
+        if (String.isNotBlank(remoteOrgId)) {
+            mothershipToUpdate.OrgIdTxt__c = remoteOrgId;
+        }
+        update mothershipToUpdate;
 
         initializeDefaultSettings();
-        
+        configureGuestUserAccess();
+
         List<WorkItem__c> existingWorkItems = [
-            SELECT Id FROM WorkItem__c 
-            WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.' 
+            SELECT Id FROM WorkItem__c
+            WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.'
             LIMIT 1
         ];
 
@@ -156,7 +166,7 @@ public without sharing class DeliveryHubSetupController {
                 BriefDescriptionTxt__c = 'Connection Established Successfully.',
                 StageNamePk__c = 'Backlog'
             );
-            
+
             insert newWorkItem;
         }
 
@@ -202,6 +212,145 @@ public without sharing class DeliveryHubSetupController {
             if (needsUpdate) {
                 update settings;
             }
+        }
+    }
+
+    /**
+     * @description Returns the count of NetworkEntity__c records with Pending Approval status.
+     * @return Integer count of pending approval connections
+     */
+    @AuraEnabled(cacheable=true)
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static Integer getPendingApprovalCount() {
+        return [
+            SELECT Count()
+            FROM NetworkEntity__c
+            WHERE ConnectionStatusPk__c = 'Pending Approval'
+            WITH SYSTEM_MODE
+        ];
+    }
+
+    /**
+     * @description Returns NetworkEntity__c records with Pending Approval status
+     * so admins can review and approve/reject incoming connection requests.
+     * @return List of NetworkEntity__c records pending approval
+     */
+    @AuraEnabled(cacheable=true)
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static List<NetworkEntity__c> getPendingApprovals() {
+        return [
+            SELECT Id, Name, EntityTypePk__c, OrgIdTxt__c, IntegrationEndpointUrlTxt__c,
+                   ConnectionStatusPk__c, CreatedDate
+            FROM NetworkEntity__c
+            WHERE ConnectionStatusPk__c = 'Pending Approval'
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 100
+        ];
+    }
+
+    /**
+     * @description Approves a pending connection request by setting ConnectionStatusPk__c to Connected.
+     * @param networkEntityId The Id of the NetworkEntity__c to approve
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static void approveConnection(Id networkEntityId) {
+        if (networkEntityId == null) {
+            throw new AuraHandledException('Network Entity ID is required.');
+        }
+        List<NetworkEntity__c> entities = [
+            SELECT Id, ConnectionStatusPk__c
+            FROM NetworkEntity__c
+            WHERE Id = :networkEntityId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (entities.isEmpty()) {
+            throw new AuraHandledException('Network Entity not found.');
+        }
+        NetworkEntity__c entity = entities[0];
+        if (entity.ConnectionStatusPk__c != 'Pending Approval') {
+            throw new AuraHandledException('Only connections with Pending Approval status can be approved.');
+        }
+        entity.ConnectionStatusPk__c = 'Connected';
+        Database.update(entity, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description Rejects a pending connection request by setting ConnectionStatusPk__c to Disabled.
+     * @param networkEntityId The Id of the NetworkEntity__c to reject
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static void rejectConnection(Id networkEntityId) {
+        if (networkEntityId == null) {
+            throw new AuraHandledException('Network Entity ID is required.');
+        }
+        List<NetworkEntity__c> entities = [
+            SELECT Id, ConnectionStatusPk__c
+            FROM NetworkEntity__c
+            WHERE Id = :networkEntityId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (entities.isEmpty()) {
+            throw new AuraHandledException('Network Entity not found.');
+        }
+        NetworkEntity__c entity = entities[0];
+        if (entity.ConnectionStatusPk__c != 'Pending Approval') {
+            throw new AuraHandledException('Only connections with Pending Approval status can be rejected.');
+        }
+        entity.ConnectionStatusPk__c = 'Disabled';
+        Database.update(entity, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description Assigns the DeliveryHubGuestUser permission set to the Delivery Hub
+     * Site's guest user for REST API access. Safe to call multiple times.
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static void configureGuestUserAccess() {
+        try {
+            List<Site> sites = [
+                SELECT GuestUserId FROM Site
+                WHERE Name = 'Delivery_Hub' AND Status = 'Active'
+                WITH SYSTEM_MODE LIMIT 1
+            ];
+            if (sites.isEmpty() || sites[0].GuestUserId == null) {
+                return;
+            }
+            Id guestUserId = sites[0].GuestUserId;
+
+            String psName = 'DeliveryHubGuestUser';
+            String nsPrefix = 'delivery__';
+            List<PermissionSet> permSets = [
+                SELECT Id FROM PermissionSet
+                WHERE Name = :psName OR Name = :(nsPrefix + psName)
+                WITH SYSTEM_MODE LIMIT 1
+            ];
+            if (permSets.isEmpty()) {
+                return;
+            }
+            Id permSetId = permSets[0].Id;
+
+            List<PermissionSetAssignment> existing = [
+                SELECT Id FROM PermissionSetAssignment
+                WHERE AssigneeId = :guestUserId AND PermissionSetId = :permSetId
+                WITH SYSTEM_MODE LIMIT 1
+            ];
+            if (!existing.isEmpty()) {
+                return;
+            }
+
+            insert new PermissionSetAssignment(
+                AssigneeId = guestUserId,
+                PermissionSetId = permSetId
+            );
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                'Failed to auto-configure guest user access: ' + e.getMessage());
         }
     }
 

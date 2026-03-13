@@ -19,30 +19,36 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
     global void execute(QueueableContext context) {
 
         // 1a. Query Queued Outbound Items linked to a valid Request route (Push Mode — downstream)
+        // Excludes entities with 'Pending Approval' connection status
         List<SyncItem__c> pushItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RetryCountNumber__c, RequestId__c,
                    RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c,
-                   RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c
+                   RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c,
+                   RequestId__r.DeliveryEntityId__r.ConnectionStatusPk__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
             AND RequestId__c != NULL
+            AND RequestId__r.DeliveryEntityId__r.ConnectionStatusPk__c != 'Pending Approval'
             WITH SYSTEM_MODE
             LIMIT 50
         ];
 
         // 1b. Query Queued Outbound Items with no Request (Hub Mode — upstream to client)
+        // Excludes entities with 'Pending Approval' connection status
         List<SyncItem__c> hubItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RetryCountNumber__c, RequestId__c,
                    WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c,
-                   WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c
+                   WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c,
+                   WorkItemId__r.ClientNetworkEntityId__r.ConnectionStatusPk__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
             AND RequestId__c = NULL
             AND WorkItemId__r.ClientNetworkEntityId__c != NULL
+            AND WorkItemId__r.ClientNetworkEntityId__r.ConnectionStatusPk__c != 'Pending Approval'
             WITH SYSTEM_MODE
             LIMIT 50
         ];

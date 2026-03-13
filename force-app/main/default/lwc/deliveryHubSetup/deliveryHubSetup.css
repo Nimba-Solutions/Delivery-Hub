@@ -40,6 +40,46 @@
     font-weight: 500;
 }
 
+/* ── Pending Approval ── */
+.hs-pending-badge {
+    --sds-c-badge-color-background: #fef3c7;
+    --sds-c-badge-text-color: #92400e;
+    font-weight: 600;
+}
+.hs-pending-section {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 0.75rem;
+}
+.hs-pending-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.hs-pending-row:last-child {
+    border-bottom: none;
+}
+.hs-pending-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.hs-pending-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+.hs-pending-type {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+.hs-pending-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
 /* ── Powered by footer ── */
 .hs-powered-by {
     text-align: center;

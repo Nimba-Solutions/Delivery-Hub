@@ -26,6 +26,9 @@
                 <template lwc:if={status.isConnected}>
                     <lightning-card icon-name="utility:connected_apps">
                         <span slot="title">Delivery Hub</span>
+                        <template lwc:if={hasPendingApprovals}>
+                            <lightning-badge slot="actions" label={pendingApprovalCount} class="hs-pending-badge"></lightning-badge>
+                        </template>
                         <div class="slds-p-around_medium">
 
                             <div class="hs-connected-banner">
@@ -47,6 +50,38 @@
                                     <span class="hs-detail-val">Every 15 min</span>
                                 </div>
                             </div>
+
+                            <!-- Pending Approval Section -->
+                            <template lwc:if={hasPendingApprovals}>
+                                <div class="hs-pending-section slds-m-top_medium">
+                                    <h3 class="slds-text-heading_small slds-m-bottom_small">Pending Connection Requests</h3>
+                                    <template for:each={pendingApprovals} for:item="pending">
+                                        <div key={pending.Id} class="hs-pending-row">
+                                            <div class="hs-pending-info">
+                                                <span class="hs-pending-name">{pending.Name}</span>
+                                                <span class="hs-pending-type">{pending.EntityTypePk__c}</span>
+                                            </div>
+                                            <div class="hs-pending-actions">
+                                                <lightning-button
+                                                    label="Approve"
+                                                    variant="success"
+                                                    data-id={pending.Id}
+                                                    onclick={handleApprove}
+                                                    disabled={isProcessingApproval}
+                                                    class="slds-m-right_x-small">
+                                                </lightning-button>
+                                                <lightning-button
+                                                    label="Reject"
+                                                    variant="destructive"
+                                                    data-id={pending.Id}
+                                                    onclick={handleReject}
+                                                    disabled={isProcessingApproval}>
+                                                </lightning-button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
 
                         </div>
                     </lightning-card>

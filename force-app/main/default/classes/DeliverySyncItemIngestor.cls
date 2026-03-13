@@ -138,11 +138,21 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
+        // Connection Approval: New inbound NetworkEntity records require admin approval
+        if (objectType.endsWithIgnoreCase('NetworkEntity__c') && recordToUpsert.Id == null) {
+            putSafe(recordToUpsert, 'ConnectionStatusPk__c', 'Pending Approval');
+        }
+
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
             Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
-            
+
+            // Notify admins of pending connection requests
+            if (objectType.endsWithIgnoreCase('NetworkEntity__c')) {
+                notifyPendingConnection(recordToUpsert);
+            }
+
             // Pass the localRequestId and globalSourceId down to link the Sync Item
             createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
             
@@ -297,6 +307,33 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
         return false;
+    }
+
+    /**
+     * @description Sends a Slack notification when a new NetworkEntity arrives with
+     * Pending Approval status so admins are aware of incoming connection requests.
+     * @param entity The newly inserted NetworkEntity__c SObject
+     */
+    private static void notifyPendingConnection(SObject entity) {
+        try {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+                return;
+            }
+            String entityName = (String) entity.get('Name');
+            if (String.isBlank(entityName)) {
+                entityName = 'Unknown Org';
+            }
+            String orgUrl = Url.getOrgDomainUrl().toExternalForm();
+            String recordUrl = orgUrl + '/lightning/r/' + entity.getSObjectType().getDescribe().getName() + '/' + entity.Id + '/view';
+            Map<String, String> notificationContext = new Map<String, String>{
+                'entityName' => entityName,
+                'recordUrl' => recordUrl
+            };
+            DeliverySlackService.postConnectionApprovalRequest(JSON.serialize(notificationContext));
+        } catch (Exception e) {
+            System.debug(LoggingLevel.FINE, 'Failed to notify pending connection: ' + e.getMessage());
+        }
     }
 
     private static Schema.SObjectType findSObjectType(String apiName) {

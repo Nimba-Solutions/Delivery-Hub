@@ -145,7 +145,7 @@
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <classAccesses>
-        <apexClass>DeliveryPublicApiService</apexClass>
+        <apexClass>DeliveryHubSyncService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
@@ -156,6 +156,22 @@
         <apexClass>DeliveryPortalController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryPublicApiService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryPublicSubmissionService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryStatusPageController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <pageAccesses>
+        <apexPage>DeliveryHubSite</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
     <pageAccesses>
         <apexPage>DeliveryStatusPage</apexPage>
         <enabled>true</enabled>

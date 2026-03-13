@@ -32,7 +32,7 @@ private class DeliveryPublicSubmissionServiceTest {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
-        req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/submit';
+        req.requestURI = '/services/apexrest/deliveryhub/v1/submit';
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serialize(body));
 
@@ -44,7 +44,7 @@ private class DeliveryPublicSubmissionServiceTest {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
 
-        req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/submit';
+        req.requestURI = '/services/apexrest/deliveryhub/v1/submit';
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(rawBody);
 

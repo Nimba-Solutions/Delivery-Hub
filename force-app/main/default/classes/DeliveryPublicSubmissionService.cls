@@ -8,7 +8,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-@RestResource(urlMapping='/delivery/deliveryhub/v1/submit')
+@RestResource(urlMapping='/deliveryhub/v1/submit')
 global without sharing class DeliveryPublicSubmissionService {
 
     /** Maximum submissions allowed per email address within the rate limit window. */
