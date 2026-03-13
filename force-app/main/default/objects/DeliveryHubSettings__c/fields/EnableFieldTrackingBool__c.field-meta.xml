@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableFieldTrackingBool__c</fullName>
+    <description>When enabled, the DeliveryFieldTrackingService automatically logs field value changes on configured objects (via TrackedField__mdt) to ActivityLog__c. Default is OFF.</description>
+    <inlineHelpText>Enable automatic field change tracking for objects configured in Tracked Fields custom metadata.</inlineHelpText>
+    <defaultValue>false</defaultValue>
+    <externalId>false</externalId>
+    <label>Enable Field Tracking</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

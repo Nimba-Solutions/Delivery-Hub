@@ -162,4 +162,124 @@ private class DeliveryActivityLogCleanupTest {
         System.assertEquals(null, entity.UsageAnalyticsJsonTxt__c,
             'Analytics should remain null when no activity logs exist');
     }
+
+    @IsTest
+    static void testFieldChangeRetentionPurgesOldFieldChanges() {
+        // Configure retention to 30 days
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.FieldChangeRetentionDaysNumber__c = 30;
+        upsert settings;
+
+        Account testAcct = new Account(Name = 'Retention Purge Test');
+        insert testAcct;
+
+        // Insert a Field_Change log older than 30 days — should be purged
+        ActivityLog__c oldFieldChange = new ActivityLog__c(
+            ActionTypePk__c = 'Field_Change',
+            ComponentNameTxt__c = 'PriorityPk__c',
+            UserIdTxt__c = UserInfo.getUserId(),
+            RecordIdTxt__c = testAcct.Id,
+            ContextDataTxt__c = '{"fieldName":"PriorityPk__c","oldValue":"Low","newValue":"High"}'
+        );
+        insert oldFieldChange;
+        Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-31));
+
+        // Insert a recent Field_Change log — should survive
+        ActivityLog__c recentFieldChange = new ActivityLog__c(
+            ActionTypePk__c = 'Field_Change',
+            ComponentNameTxt__c = 'StatusPk__c',
+            UserIdTxt__c = UserInfo.getUserId(),
+            RecordIdTxt__c = testAcct.Id,
+            ContextDataTxt__c = '{"fieldName":"StatusPk__c","oldValue":"Draft","newValue":"Active"}'
+        );
+        insert recentFieldChange;
+
+        Test.startTest();
+        Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
+        Test.stopTest();
+
+        List<ActivityLog__c> remaining = [
+            SELECT Id, ActionTypePk__c, ComponentNameTxt__c
+            FROM ActivityLog__c
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(1, remaining.size(), 'Only the recent Field_Change log should survive');
+        System.assertEquals(recentFieldChange.Id, remaining[0].Id,
+            'Surviving record should be the recent Field_Change log');
+    }
+
+    @IsTest
+    static void testFieldChangeRetentionNullPreservesFieldChanges() {
+        // Ensure FieldChangeRetentionDaysNumber__c is null (default) — Field_Change preserved
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.FieldChangeRetentionDaysNumber__c = null;
+        upsert settings;
+
+        Account testAcct = new Account(Name = 'Retention Null Test');
+        insert testAcct;
+
+        // Insert an old Field_Change log — should NOT be purged
+        ActivityLog__c oldFieldChange = new ActivityLog__c(
+            ActionTypePk__c = 'Field_Change',
+            ComponentNameTxt__c = 'StageNamePk__c',
+            UserIdTxt__c = UserInfo.getUserId(),
+            RecordIdTxt__c = testAcct.Id,
+            ContextDataTxt__c = '{"fieldName":"StageNamePk__c","oldValue":"Backlog","newValue":"Done"}'
+        );
+        insert oldFieldChange;
+        Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+
+        // Insert an old Navigation log — should be purged
+        ActivityLog__c oldNavLog = new ActivityLog__c(
+            ActionTypePk__c = 'Navigation',
+            ComponentNameTxt__c = 'deliveryHubBoard',
+            UserIdTxt__c = UserInfo.getUserId()
+        );
+        insert oldNavLog;
+        Test.setCreatedDate(oldNavLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+
+        Test.startTest();
+        Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
+        Test.stopTest();
+
+        List<ActivityLog__c> remaining = [
+            SELECT Id, ActionTypePk__c FROM ActivityLog__c WITH SYSTEM_MODE
+        ];
+        System.assertEquals(1, remaining.size(), 'Only the Field_Change log should survive');
+        System.assertEquals('Field_Change', remaining[0].ActionTypePk__c,
+            'Surviving record should be the Field_Change log');
+    }
+
+    @IsTest
+    static void testFieldChangeRetentionZeroPreservesFieldChanges() {
+        // FieldChangeRetentionDaysNumber__c = 0 should behave same as null (preserve Field_Changes)
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.FieldChangeRetentionDaysNumber__c = 0;
+        upsert settings;
+
+        Account testAcct = new Account(Name = 'Retention Zero Test');
+        insert testAcct;
+
+        // Insert an old Field_Change log — should NOT be purged
+        ActivityLog__c oldFieldChange = new ActivityLog__c(
+            ActionTypePk__c = 'Field_Change',
+            ComponentNameTxt__c = 'Developer__c',
+            UserIdTxt__c = UserInfo.getUserId(),
+            RecordIdTxt__c = testAcct.Id,
+            ContextDataTxt__c = '{"fieldName":"Developer__c","oldValue":"User A","newValue":"User B"}'
+        );
+        insert oldFieldChange;
+        Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+
+        Test.startTest();
+        Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
+        Test.stopTest();
+
+        List<ActivityLog__c> remaining = [
+            SELECT Id, ActionTypePk__c FROM ActivityLog__c WITH SYSTEM_MODE
+        ];
+        System.assertEquals(1, remaining.size(), 'Field_Change log should survive when retention is 0');
+        System.assertEquals('Field_Change', remaining[0].ActionTypePk__c,
+            'Surviving record should be the Field_Change log');
+    }
 }

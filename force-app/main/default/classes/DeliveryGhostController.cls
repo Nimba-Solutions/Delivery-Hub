@@ -28,17 +28,54 @@ public with sharing class DeliveryGhostController {
             log.ContextDataTxt__c = contextData;
             log.UserIdTxt__c = UserInfo.getUserId();
 
-            // Extract component/object name from the context JSON when available
+            // Extract structured fields from the context JSON when available
             if (String.isNotBlank(contextData)) {
                 try {
                     Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextData);
-                    String objName = (String) ctx.get('objectName');
-                    if (String.isNotBlank(objName)) {
-                        log.ComponentNameTxt__c = objName;
+
+                    // Use pageLabel for component name (falls back to objectName)
+                    try {
+                        String pageLabel = (String) ctx.get('pageLabel');
+                        if (String.isNotBlank(pageLabel)) {
+                            log.ComponentNameTxt__c = pageLabel;
+                        } else {
+                            String objName = (String) ctx.get('objectName');
+                            if (String.isNotBlank(objName)) {
+                                log.ComponentNameTxt__c = objName;
+                            }
+                        }
+                    } catch (Exception labelEx) {
+                        System.debug(LoggingLevel.FINE, 'pageLabel parse skipped: ' + labelEx.getMessage());
                     }
-                    String sessionId = (String) ctx.get('sessionId');
-                    if (String.isNotBlank(sessionId)) {
-                        log.SessionIdTxt__c = sessionId;
+
+                    // Extract recordId
+                    try {
+                        String recordId = (String) ctx.get('recordId');
+                        if (String.isNotBlank(recordId)) {
+                            log.RecordIdTxt__c = recordId;
+                        }
+                    } catch (Exception recEx) {
+                        System.debug(LoggingLevel.FINE, 'recordId parse skipped: ' + recEx.getMessage());
+                    }
+
+                    // Extract URL — truncate to 255 chars for Text field
+                    try {
+                        String url = (String) ctx.get('url');
+                        if (String.isNotBlank(url)) {
+                            log.PageUrlTxt__c = url.length() > 255 ? url.substring(0, 255) : url;
+                        }
+                    } catch (Exception urlEx) {
+                        System.debug(LoggingLevel.FINE, 'url parse skipped: ' + urlEx.getMessage());
+                    }
+
+                    // Extract sessionId
+                    try {
+                        String sessionId = (String) ctx.get('sessionId');
+                        if (String.isNotBlank(sessionId)) {
+                            log.SessionIdTxt__c = sessionId;
+                        }
+                    } catch (Exception sessEx) {
+                        System.debug(LoggingLevel.FINE, 'sessionId parse skipped: ' + sessEx.getMessage());
                     }
                 } catch (Exception parseEx) {
                     // Non-critical — context is best-effort
