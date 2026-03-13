@@ -15,7 +15,7 @@
  *
  * @author Cloud Nimbus LLC
  */
-public without sharing class DeliveryActivityLogCleanup implements Schedulable, Database.Batchable<SObject> {
+global without sharing class DeliveryActivityLogCleanup implements Schedulable, Database.Batchable<SObject> {
 
     @TestVisible
     private static final Integer RETENTION_DAYS = 90;
@@ -29,7 +29,7 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
      * @description Runs usage aggregation then kicks off the batch purge of old activity logs.
      * @param sc The SchedulableContext provided by the platform.
      */
-    public void execute(SchedulableContext sc) {
+    global void execute(SchedulableContext sc) {
         aggregateUsageAnalytics();
         Database.executeBatch(new DeliveryActivityLogCleanup(), 2000);
     }
