@@ -38,9 +38,11 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
         //    + Activity Log history for time-study analytics
+        //    + Configurable field change tracking via TrackedField__mdt
         if (isUpdate) {
             publishStageChangeEvents(newRows, oldMap);
             logStageChanges(newRows, oldMap);
+            DeliveryFieldTrackingService.trackChanges(newRows, oldMap);
         }
 
         // 3. UNIFIED SYNC ENGINE (High-Water Mark)

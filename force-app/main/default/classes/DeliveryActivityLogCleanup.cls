@@ -40,11 +40,28 @@ public without sharing class DeliveryActivityLogCleanup implements Schedulable, 
 
     /**
      * @description Returns a query locator for ActivityLog__c records older than the retention window.
+     *              Field_Change records are excluded from purge unless FieldChangeRetentionDays__c
+     *              is set to a positive value, in which case they are purged after that many days.
      * @param bc The BatchableContext provided by the platform.
      * @return QueryLocator targeting expired activity log records.
      */
     public Database.QueryLocator start(Database.BatchableContext bc) {
         DateTime cutoff = DateTime.now().addDays(-RETENTION_DAYS);
+
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+        Decimal retentionDays = (settings != null) ? settings.FieldChangeRetentionDays__c : null;
+
+        if (retentionDays != null && retentionDays > 0) {
+            DateTime fieldChangeCutoff = DateTime.now().addDays(-retentionDays.intValue());
+            return Database.getQueryLocator([
+                SELECT Id
+                FROM ActivityLog__c
+                WHERE (CreatedDate < :cutoff AND ActionTypePk__c != 'Field_Change')
+                   OR (CreatedDate < :fieldChangeCutoff AND ActionTypePk__c = 'Field_Change')
+                WITH SYSTEM_MODE
+            ]);
+        }
+
         return Database.getQueryLocator([
             SELECT Id
             FROM ActivityLog__c

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FieldLabel__c</fullName>
+    <description>Human-readable label for the tracked field, used in change history display.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Field Label</label>
+    <length>80</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
