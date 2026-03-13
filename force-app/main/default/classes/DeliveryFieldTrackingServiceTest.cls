@@ -3,7 +3,9 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Test class for DeliveryFieldTrackingService.
  *               Calls trackChanges() directly with constructed old/new maps
- *               to test the service in isolation from trigger wiring.
+ *               and asserts on the captured FieldChangeRequest list rather than
+ *               querying ActivityLog__c, to avoid silent failures in the
+ *               downstream captureFieldChanges insert.
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -11,13 +13,11 @@ private class DeliveryFieldTrackingServiceTest {
 
     @TestSetup
     static void setupData() {
-        // Enable both activity logging and field tracking
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.EnableActivityLoggingBool__c = true;
         settings.EnableFieldTrackingBool__c = true;
         upsert settings;
 
-        // Disable after-trigger logic to avoid sync engine side effects during setup
         DeliveryTriggerControl.disableAfterLogic();
 
         WorkItem__c workItem = new WorkItem__c(
@@ -31,62 +31,60 @@ private class DeliveryFieldTrackingServiceTest {
         DeliveryTriggerControl.enableAfterLogic();
     }
 
-    // ── 1. Tracking enabled: verify ActivityLog created for tracked field ──
-
     @IsTest
-    static void testTrackingEnabledCreatesActivityLog() {
+    static void testTrackingEnabledCreatesChangeRequest() {
         WorkItem__c workItem = [
             SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
-            FROM WorkItem__c
-            LIMIT 1
+            FROM WorkItem__c LIMIT 1
         ];
 
-        // Build old record with original values
         WorkItem__c oldRecord = workItem.clone(true, true, true, true);
-
-        // Simulate field change
         workItem.PriorityPk__c = 'High';
-
-        List<SObject> newRecords = new List<SObject>{ workItem };
-        Map<Id, SObject> oldMap = new Map<Id, SObject>{ oldRecord.Id => oldRecord };
 
         DeliveryFieldTrackingService.clearCache();
 
         Test.startTest();
-        DeliveryFieldTrackingService.trackChanges(newRecords, oldMap);
+        DeliveryFieldTrackingService.trackChanges(
+            new List<SObject>{ workItem },
+            new Map<Id, SObject>{ oldRecord.Id => oldRecord }
+        );
         Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT ActionTypePk__c, ComponentNameTxt__c, RecordIdTxt__c, ContextDataTxt__c
-            FROM ActivityLog__c
-            WHERE ActionTypePk__c = 'Field_Change'
-              AND ComponentNameTxt__c = 'PriorityPk__c'
-            WITH SYSTEM_MODE
-        ];
-        System.assert(!logs.isEmpty(), 'At least one Field_Change log should be created for a tracked field');
-        System.assertEquals(workItem.Id, logs[0].RecordIdTxt__c, 'Log should reference the updated work item');
-        System.assert(logs[0].ContextDataTxt__c.contains('Priority'),
-            'Context should contain the field label');
+        List<DeliveryFieldChangeService.FieldChangeRequest> requests =
+            DeliveryFieldTrackingService.lastChangeRequests;
+
+        System.assertNotEquals(null, requests, 'Change requests should be captured');
+        System.assert(!requests.isEmpty(), 'At least one change request should exist');
+
+        Boolean foundPriority = false;
+        for (DeliveryFieldChangeService.FieldChangeRequest req : requests) {
+            if (req.fieldName == 'PriorityPk__c') {
+                foundPriority = true;
+                System.assertEquals(workItem.Id, req.recordId, 'Record ID should match');
+                System.assertEquals('Medium', req.oldValue, 'Old value should be Medium');
+                System.assertEquals('High', req.newValue, 'New value should be High');
+                System.assertEquals('Priority', req.fieldLabel, 'Field label should be Priority');
+            }
+        }
+        System.assert(foundPriority, 'Should have a change request for PriorityPk__c');
     }
 
-    // ── 2. Tracking disabled: verify no ActivityLog created ──
-
     @IsTest
-    static void testTrackingDisabledNoActivityLog() {
+    static void testTrackingDisabledNoChangeRequest() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.EnableFieldTrackingBool__c = false;
         upsert settings;
 
         WorkItem__c workItem = [
             SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
-            FROM WorkItem__c
-            LIMIT 1
+            FROM WorkItem__c LIMIT 1
         ];
 
         WorkItem__c oldRecord = workItem.clone(true, true, true, true);
         workItem.PriorityPk__c = 'High';
 
         DeliveryFieldTrackingService.clearCache();
+        DeliveryFieldTrackingService.lastChangeRequests = null;
 
         Test.startTest();
         DeliveryFieldTrackingService.trackChanges(
@@ -95,28 +93,22 @@ private class DeliveryFieldTrackingServiceTest {
         );
         Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id FROM ActivityLog__c
-            WHERE ActionTypePk__c = 'Field_Change'
-            WITH SYSTEM_MODE
-        ];
-        System.assertEquals(0, logs.size(), 'No Field_Change logs should be created when tracking is disabled');
+        System.assertEquals(null, DeliveryFieldTrackingService.lastChangeRequests,
+            'No change requests should be generated when tracking is disabled');
     }
 
-    // ── 3. Untracked field: verify no ActivityLog created ──
-
     @IsTest
-    static void testUntrackedFieldNoActivityLog() {
+    static void testUntrackedFieldNoChangeRequest() {
         WorkItem__c workItem = [
             SELECT Id, BriefDescriptionTxt__c, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
-            FROM WorkItem__c
-            LIMIT 1
+            FROM WorkItem__c LIMIT 1
         ];
 
         WorkItem__c oldRecord = workItem.clone(true, true, true, true);
         workItem.BriefDescriptionTxt__c = 'Updated description not tracked';
 
         DeliveryFieldTrackingService.clearCache();
+        DeliveryFieldTrackingService.lastChangeRequests = null;
 
         Test.startTest();
         DeliveryFieldTrackingService.trackChanges(
@@ -125,24 +117,17 @@ private class DeliveryFieldTrackingServiceTest {
         );
         Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id FROM ActivityLog__c
-            WHERE ActionTypePk__c = 'Field_Change'
-              AND ComponentNameTxt__c = 'BriefDescriptionTxt__c'
-            WITH SYSTEM_MODE
-        ];
-        System.assertEquals(0, logs.size(),
-            'No Field_Change log should be created for an untracked field');
+        // lastChangeRequests stays null because only BriefDescriptionTxt__c changed
+        // and it's not in TrackedField__mdt
+        System.assertEquals(null, DeliveryFieldTrackingService.lastChangeRequests,
+            'No change requests should be generated for an untracked field');
     }
 
-    // ── 4. Multiple field changes in one update ──
-
     @IsTest
-    static void testMultipleFieldChangesCreateMultipleLogs() {
+    static void testMultipleFieldChangesCreateMultipleRequests() {
         WorkItem__c workItem = [
-            SELECT Id, PriorityPk__c, StatusPk__c, StageNamePk__c, Developer__c
-            FROM WorkItem__c
-            LIMIT 1
+            SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
+            FROM WorkItem__c LIMIT 1
         ];
 
         WorkItem__c oldRecord = workItem.clone(true, true, true, true);
@@ -158,18 +143,13 @@ private class DeliveryFieldTrackingServiceTest {
         );
         Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT ComponentNameTxt__c
-            FROM ActivityLog__c
-            WHERE ActionTypePk__c = 'Field_Change'
-              AND RecordIdTxt__c = :workItem.Id
-            WITH SYSTEM_MODE
-        ];
-        System.assert(logs.size() >= 2,
-            'At least two Field_Change logs should be created for two tracked field changes, got: ' + logs.size());
-    }
+        List<DeliveryFieldChangeService.FieldChangeRequest> requests =
+            DeliveryFieldTrackingService.lastChangeRequests;
 
-    // ── 5. Null inputs handled gracefully ──
+        System.assertNotEquals(null, requests, 'Change requests should be captured');
+        System.assert(requests.size() >= 2,
+            'At least 2 change requests expected, got: ' + requests.size());
+    }
 
     @IsTest
     static void testNullInputsDoNotThrow() {

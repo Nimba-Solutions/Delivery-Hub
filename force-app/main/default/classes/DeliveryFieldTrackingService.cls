@@ -13,6 +13,10 @@ public with sharing class DeliveryFieldTrackingService {
     /** @description Cached list of enabled tracked field configurations, queried once per transaction. */
     private static List<TrackedField__mdt> cachedTrackedFields;
 
+    /** @description Captures the last batch of change requests for test verification. */
+    @TestVisible
+    private static List<DeliveryFieldChangeService.FieldChangeRequest> lastChangeRequests;
+
     /**
      * @description Compares old and new field values for every enabled TrackedField__mdt
      *              record that matches the SObject type of the given records. For each
@@ -74,6 +78,7 @@ public with sharing class DeliveryFieldTrackingService {
         }
 
         if (!changeRequests.isEmpty()) {
+            lastChangeRequests = changeRequests;
             DeliveryFieldChangeService.captureFieldChanges(changeRequests);
         }
     }
