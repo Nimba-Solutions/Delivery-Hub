@@ -714,6 +714,148 @@ private class DeliveryPublicApiServiceTest {
     }
 
     // ==========================================
+    // GET WORK-LOGS
+    // ==========================================
+
+    @IsTest
+    static void testGetWorkLogs() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-logs');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode);
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'));
+    }
+
+    // ==========================================
+    // GET FILES
+    // ==========================================
+
+    @IsTest
+    static void testGetFiles() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/files');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode);
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'));
+    }
+
+    // ==========================================
+    // GET BOARD-SUMMARY
+    // ==========================================
+
+    @IsTest
+    static void testGetBoardSummary() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/board-summary');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        // Board summary may return null summary if AI is not configured — that's OK
+        System.assertEquals(200, res.statusCode);
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'));
+    }
+
+    // ==========================================
+    // GET DOCUMENTS
+    // ==========================================
+
+    @IsTest
+    static void testGetDocuments() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/documents');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode);
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'));
+    }
+
+    // ==========================================
+    // POST LOG-HOURS
+    // ==========================================
+
+    @IsTest
+    static void testPostLogHours() {
+        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+
+        Map<String, Object> body = new Map<String, Object>{
+            'workItemId' => item.Id,
+            'hours' => 2.5,
+            'workNotes' => 'Portal time entry',
+            'workDate' => String.valueOf(Date.today())
+        };
+
+        RestRequest req = buildPostRequest(
+            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+            body
+        );
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(201, res.statusCode);
+        Map<String, Object> responseBody = parseResponse(res);
+        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+        System.assertEquals('Logged', data.get('status'));
+    }
+
+    @IsTest
+    static void testPostLogHoursMissingFields() {
+        Map<String, Object> body = new Map<String, Object>{
+            'workItemId' => null,
+            'hours' => null
+        };
+
+        RestRequest req = buildPostRequest(
+            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+            body
+        );
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(400, res.statusCode);
+    }
+
+    // ==========================================
     // HELPERS
     // ==========================================
 

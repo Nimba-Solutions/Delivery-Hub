@@ -112,8 +112,84 @@ global without sharing class DeliveryPublicApiService {
                 );
                 sendSuccess(res, approvals);
 
+            } else if (resource == 'work-logs') {
+                List<WorkLog__c> logs = [
+                    SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                           HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
+                           StatusPk__c, CreatedDate, CreatedBy.Name
+                    FROM WorkLog__c
+                    WHERE WorkItemId__r.ClientNetworkEntityId__c = :effectiveEntityId
+                    WITH SYSTEM_MODE
+                    ORDER BY CreatedDate DESC
+                    LIMIT 200
+                ];
+                List<Map<String, Object>> result = new List<Map<String, Object>>();
+                for (WorkLog__c wl : logs) {
+                    result.add(new Map<String, Object>{
+                        'id' => wl.Id,
+                        'workItemId' => wl.WorkItemId__c,
+                        'workItemName' => wl.WorkItemId__r.Name,
+                        'workItemTitle' => wl.WorkItemId__r.BriefDescriptionTxt__c,
+                        'hours' => wl.HoursLoggedNumber__c,
+                        'workDate' => wl.WorkDateDate__c,
+                        'description' => wl.WorkDescriptionTxt__c,
+                        'status' => wl.StatusPk__c,
+                        'userName' => wl.CreatedBy.Name,
+                        'createdDate' => wl.CreatedDate
+                    });
+                }
+                sendSuccess(res, result);
+
+            } else if (resource == 'files') {
+                String workItemIdParam = req.params.get('workItemId');
+                List<WorkItem__c> scopedItems;
+                if (String.isNotBlank(workItemIdParam)) {
+                    scopedItems = [SELECT Id FROM WorkItem__c WHERE Id = :workItemIdParam AND ClientNetworkEntityId__c = :effectiveEntityId WITH SYSTEM_MODE];
+                } else {
+                    scopedItems = [SELECT Id FROM WorkItem__c WHERE ClientNetworkEntityId__c = :effectiveEntityId WITH SYSTEM_MODE LIMIT 500];
+                }
+                Set<Id> workItemIds = new Set<Id>();
+                for (WorkItem__c wi : scopedItems) {
+                    workItemIds.add(wi.Id);
+                }
+                List<ContentDocumentLink> links = [
+                    SELECT ContentDocument.Title, ContentDocument.FileExtension,
+                           ContentDocument.ContentSize, ContentDocument.CreatedDate,
+                           ContentDocument.LatestPublishedVersionId,
+                           LinkedEntityId
+                    FROM ContentDocumentLink
+                    WHERE LinkedEntityId IN :workItemIds
+                    WITH SYSTEM_MODE
+                    ORDER BY ContentDocument.CreatedDate DESC
+                    LIMIT 500
+                ];
+                List<Map<String, Object>> files = new List<Map<String, Object>>();
+                for (ContentDocumentLink cdl : links) {
+                    files.add(new Map<String, Object>{
+                        'id' => cdl.ContentDocument.LatestPublishedVersionId,
+                        'name' => cdl.ContentDocument.Title,
+                        'extension' => cdl.ContentDocument.FileExtension,
+                        'size' => cdl.ContentDocument.ContentSize,
+                        'createdDate' => cdl.ContentDocument.CreatedDate,
+                        'workItemId' => cdl.LinkedEntityId
+                    });
+                }
+                sendSuccess(res, files);
+
+            } else if (resource == 'board-summary') {
+                try {
+                    String summary = DeliveryAiController.draftBoardSummary();
+                    sendSuccess(res, new Map<String, Object>{ 'summary' => summary });
+                } catch (Exception e) {
+                    sendSuccess(res, new Map<String, Object>{ 'summary' => null });
+                }
+
+            } else if (resource == 'documents') {
+                List<Map<String, Object>> docs = DeliveryDocumentController.getDocumentsForEntity(effectiveEntityId);
+                sendSuccess(res, docs);
+
             } else {
-                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}, my-entities, portal-users, activity-feed, conversations, pending-approvals');
+                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}, my-entities, portal-users, activity-feed, conversations, pending-approvals, work-logs, files, board-summary, documents');
             }
 
         } catch (AuraHandledException e) {
@@ -226,8 +302,27 @@ global without sharing class DeliveryPublicApiService {
                     'count' => workLogIds.size()
                 });
 
+            } else if (resource == 'log-hours') {
+                Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+                String workItemId = (String) bodyMap.get('workItemId');
+                Decimal hours = bodyMap.get('hours') != null ? (Decimal) bodyMap.get('hours') : null;
+                String workNotes = (String) bodyMap.get('workNotes');
+                String workDateStr = (String) bodyMap.get('workDate');
+                Date workDate = String.isNotBlank(workDateStr) ? Date.valueOf(workDateStr) : null;
+
+                if (String.isBlank(workItemId) || hours == null || hours <= 0) {
+                    sendError(res, 400, 'workItemId and positive hours are required.');
+                    return;
+                }
+
+                DeliveryTimeLoggerController.logHours(Id.valueOf(workItemId), hours, workNotes, workDate);
+                sendSuccess(res, new Map<String, Object>{
+                    'status' => 'Logged',
+                    'hours' => hours
+                }, 201);
+
             } else {
-                sendError(res, 404, 'Unknown resource: ' + resource + '. POST available: work-items, work-items/{id}/comments, approve-worklogs, reject-worklogs');
+                sendError(res, 404, 'Unknown resource: ' + resource + '. POST available: work-items, work-items/{id}/comments, approve-worklogs, reject-worklogs, log-hours');
             }
 
         } catch (AuraHandledException e) {
