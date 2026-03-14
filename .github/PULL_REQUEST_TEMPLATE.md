@@ -1,7 +1,18 @@
+## Summary
 
+<!-- What changed and why? -->
 
-# Critical Changes
+## Test plan
 
-# Changes
+<!-- How to verify this works? -->
 
-# Issues Closed
+## Checklist
+
+- [ ] PMD clean (`cci task run pmd`)
+- [ ] All Apex tests pass
+- [ ] No `console.log` left in LWC code
+- [ ] Backward compatible (no breaking changes to public APIs or field names)
+
+## Issues closed
+
+<!-- e.g., Closes #123 -->
