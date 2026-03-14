@@ -55,6 +55,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryDataLineage</componentName>
+                <identifier>c_deliveryDataLineage</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliverySyncRetryPanel</componentName>
                 <identifier>c_deliverySyncRetryPanel</identifier>
             </componentInstance>
