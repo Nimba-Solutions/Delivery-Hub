@@ -134,10 +134,10 @@ The engine is retry-aware (up to 3 attempts), handles namespace translation for 
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | ~79 (51 production + 28 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
-| **LWC Components** | ~42 | deliveryHubBoard, deliveryClientDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
-| **Custom Objects** | 8 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, DeliveryHubSettings\_\_c |
-| **Custom Metadata** | 6 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt |
+| **Apex Classes** | 124 (63 production + 61 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
+| **LWC Components** | 53 | deliveryHubBoard, deliveryClientDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
+| **Custom Objects** | 9 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryHubSettings\_\_c |
+| **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt |
 | **Triggers** | 4 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger |
 
 ---
@@ -169,7 +169,7 @@ cci task run retrieve_changes --org dev
 git push origin feature/your-feature
 ```
 
-Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 370+ Apex tests (75%+ coverage enforced), runs PMD static analysis (zero violations enforced), and tears everything down.
+Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 580+ Apex tests (75%+ coverage enforced), runs PMD static analysis (zero violations enforced), and tears everything down.
 
 ### Releasing
 
