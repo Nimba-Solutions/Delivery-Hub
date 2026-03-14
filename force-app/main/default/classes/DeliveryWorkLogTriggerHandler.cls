@@ -3,8 +3,9 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description Trigger handler for WorkLog__c. On insert, queues an outbound SyncItem__c
  *              for each WorkLog whose parent Work Item has a client Network Entity linked.
- *              This seeds the sync queue so the scheduled processor can push logged hours
- *              to the client org once the sync pipeline supports WorkLog payloads.
+ *              When approval is required (RequireWorkLogApprovalDate__c is set), only
+ *              Approved WorkLogs generate SyncItems. Draft logs sync on approval via
+ *              onAfterUpdate.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
@@ -12,15 +13,50 @@ public with sharing class DeliveryWorkLogTriggerHandler {
 
     /**
      * @description Processes newly inserted WorkLog records and creates outbound sync items
-     *              for those tied to client-linked work items.
+     *              for those tied to client-linked work items. When approval is required,
+     *              only logs with StatusPk__c = 'Approved' (or null for backward compat)
+     *              generate sync items.
      * @param newLogs List of newly inserted WorkLog__c records.
      */
     public static void onAfterInsert(List<WorkLog__c> newLogs) {
         if (!DeliveryTriggerControl.runAfterLogic) {
             return;
         }
-        Set<Id> workItemIds = new Set<Id>();
+        List<WorkLog__c> eligible = filterEligibleForSync(newLogs);
+        if (eligible.isEmpty()) {
+            return;
+        }
+        createSyncItemsForLogs(eligible);
+    }
+
+    /**
+     * @description Processes updated WorkLog records. When a log transitions to 'Approved',
+     *              creates outbound sync items (the approval → sync trigger).
+     * @param newLogs List of updated WorkLog__c records.
+     * @param oldMap Map of old WorkLog__c records keyed by Id.
+     */
+    public static void onAfterUpdate(List<WorkLog__c> newLogs, Map<Id, WorkLog__c> oldMap) {
+        if (!DeliveryTriggerControl.runAfterLogic) {
+            return;
+        }
+        List<WorkLog__c> newlyApproved = new List<WorkLog__c>();
         for (WorkLog__c wl : newLogs) {
+            WorkLog__c old = oldMap.get(wl.Id);
+            if (wl.StatusPk__c == 'Approved' && old.StatusPk__c != 'Approved') {
+                newlyApproved.add(wl);
+            }
+        }
+        if (newlyApproved.isEmpty()) {
+            return;
+        }
+        createSyncItemsForLogs(newlyApproved);
+    }
+
+    // ── Shared sync item creation ──────────────────────────────────────
+
+    private static void createSyncItemsForLogs(List<WorkLog__c> logs) {
+        Set<Id> workItemIds = new Set<Id>();
+        for (WorkLog__c wl : logs) {
             if (wl.WorkItemId__c != null) {
                 workItemIds.add(wl.WorkItemId__c);
             }
@@ -41,11 +77,42 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
 
-        List<SyncItem__c> syncItems = buildSyncItems(newLogs, clientWorkItems);
+        List<SyncItem__c> syncItems = buildSyncItems(logs, clientWorkItems);
         if (!syncItems.isEmpty()) {
-            // FIX: SYSTEM_MODE to prevent packaging test failures on namespaced fields
             Database.insert(syncItems, AccessLevel.SYSTEM_MODE);
         }
+    }
+
+    // ── Approval gate filter ───────────────────────────────────────────
+
+    /**
+     * @description Filters WorkLogs eligible for immediate sync on insert.
+     *              When approval is required, only 'Approved' logs pass.
+     *              When approval is NOT required (default), all logs pass
+     *              (null StatusPk__c treated as Approved for backward compat).
+     */
+    private static List<WorkLog__c> filterEligibleForSync(List<WorkLog__c> logs) {
+        if (!isApprovalRequired()) {
+            return logs;
+        }
+        List<WorkLog__c> eligible = new List<WorkLog__c>();
+        for (WorkLog__c wl : logs) {
+            // Null status = legacy log created before approval was enabled → treat as Approved
+            if (wl.StatusPk__c == null || wl.StatusPk__c == 'Approved') {
+                eligible.add(wl);
+            }
+        }
+        return eligible;
+    }
+
+    /**
+     * @description Checks whether WorkLog approval is required based on the
+     *              org-level DeliveryHubSettings__c.RequireWorkLogApprovalDate__c.
+     * @return true when the DateTime field is populated (approval policy is active).
+     */
+    public static Boolean isApprovalRequired() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        return settings.RequireWorkLogApprovalDate__c != null;
     }
 
     /**

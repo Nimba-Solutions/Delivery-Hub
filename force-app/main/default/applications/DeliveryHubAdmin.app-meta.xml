@@ -96,6 +96,7 @@
     <tabs>standard-home</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>Delivery_Board</tabs>
+    <tabs>Delivery_Activity</tabs>
     <tabs>NetworkEntity__c</tabs>
     <tabs>WorkRequest__c</tabs>
     <tabs>WorkItemComment__c</tabs>

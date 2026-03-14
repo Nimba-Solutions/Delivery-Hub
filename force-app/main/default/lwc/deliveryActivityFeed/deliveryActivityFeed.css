@@ -1,0 +1,356 @@
+/* ═══ Title ═══ */
+.af-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.af-card-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* ═══ Tab bar ═══ */
+.af-tab-bar {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0;
+    margin-bottom: 1rem;
+}
+.af-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+}
+.af-tab:hover {
+    color: #334155;
+}
+.af-tab--active {
+    color: #4f46e5;
+    border-bottom-color: #4f46e5;
+}
+
+/* ═══ Badge ═══ */
+.af-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    margin-left: 0.35rem;
+}
+.af-badge--pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+.af-badge--draft {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.6875rem;
+    padding: 2px 8px;
+    margin-left: 0.5rem;
+}
+
+/* ═══ Loading ═══ */
+.af-loading {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+/* ═══ Date groups ═══ */
+.af-date-group {
+    margin-bottom: 1.25rem;
+}
+.af-date-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 0.5rem;
+}
+
+/* ═══ Events ═══ */
+.af-event {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid #f8fafc;
+}
+.af-event:last-child {
+    border-bottom: none;
+}
+.af-event-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #f1f5f9;
+}
+.af-event-icon--comment { background: #dbeafe; }
+.af-event-icon--worklog { background: #d1fae5; }
+.af-event-icon--stage_change { background: #e0e7ff; }
+.af-event-icon--field_change { background: #fce7f3; }
+
+.af-event-body {
+    flex: 1;
+    min-width: 0;
+}
+.af-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+.af-event-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+.af-event-time {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+.af-event-detail {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin-top: 0.2rem;
+    line-height: 1.4;
+}
+
+/* ═══ Work item pill ═══ */
+.af-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 1px 10px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #4f46e5;
+    cursor: pointer;
+    margin-top: 0.25rem;
+    transition: background 0.1s;
+}
+.af-pill:hover {
+    background: #e0e7ff;
+}
+.af-pill--thread {
+    font-size: 0.75rem;
+}
+
+/* ═══ Pending approvals ═══ */
+.af-pending-section {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+}
+.af-pending-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.af-section-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #92400e;
+}
+.af-pending-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+.af-approval-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.af-approval-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid #fef3c7;
+}
+.af-approval-row:last-child {
+    border-bottom: none;
+}
+.af-approval-check {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.af-approval-detail {
+    flex: 1;
+    min-width: 0;
+}
+.af-approval-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.af-approval-hours {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.af-approval-user {
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+.af-approval-date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+.af-approval-desc {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin-top: 0.15rem;
+}
+
+/* ═══ Conversations ═══ */
+.af-thread {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.15s;
+}
+.af-thread:hover {
+    border-color: #cbd5e1;
+}
+.af-thread-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+.af-thread-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.af-thread-desc {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+.af-thread-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+.af-thread-count {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #64748b;
+}
+.af-thread-time {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+}
+.af-thread-preview {
+    font-size: 0.8125rem;
+    color: #475569;
+    margin-top: 0.375rem;
+    line-height: 1.4;
+}
+.af-thread-preview strong {
+    color: #1e293b;
+}
+
+.af-thread-comments {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
+}
+.af-comment {
+    padding: 0.375rem 0;
+    border-bottom: 1px solid #f8fafc;
+}
+.af-comment:last-child {
+    border-bottom: none;
+}
+.af-comment-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+}
+.af-comment-author {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+.af-comment-source {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+}
+.af-comment-time {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+    margin-left: auto;
+}
+.af-comment-body {
+    font-size: 0.8125rem;
+    color: #475569;
+    margin-top: 0.15rem;
+    line-height: 1.4;
+}
+
+/* ═══ Reply ═══ */
+.af-reply {
+    margin-top: 0.5rem;
+}
+.af-reply-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+.af-reply-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ═══ Empty state ═══ */
+.af-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+/* ═══ Load more ═══ */
+.af-load-more {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+}

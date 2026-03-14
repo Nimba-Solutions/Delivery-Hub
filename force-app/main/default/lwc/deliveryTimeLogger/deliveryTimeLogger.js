@@ -7,6 +7,7 @@ import { LightningElement, api, wire, track } from 'lwc';
 import { getRecord, getFieldValue, refreshApex } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import logHours from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTimeLoggerController.logHours';
+import isApprovalRequired from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTimeLoggerController.isApprovalRequired';
 import TOTAL_LOGGED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.TotalLoggedHoursNumber__c';
 import CLIENT_ENTITY_FIELD from '@salesforce/schema/WorkItem__c.ClientNetworkEntityId__c';
 
@@ -16,14 +17,31 @@ export default class DeliveryTimeLogger extends LightningElement {
     @api recordId;
     @track hoursValue = 1;
     @track notesValue = '';
+    @track workDateValue;
     @track selectedPreset = 1;
     @track isSubmitting = false;
+    @track approvalRequired = false;
+    @track showDraftBadge = false;
 
     wiredWorkItem;
+
+    connectedCallback() {
+        this.workDateValue = this.todayDate;
+    }
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
     wiredWorkItemHandler(result) {
         this.wiredWorkItem = result;
+    }
+
+    @wire(isApprovalRequired)
+    wiredApproval({ data, error }) {
+        if (data !== undefined) {
+            this.approvalRequired = data;
+        }
+        if (error) {
+            this.approvalRequired = false;
+        }
     }
 
     get hasClientEntity() {
@@ -34,6 +52,13 @@ export default class DeliveryTimeLogger extends LightningElement {
     get currentHours() {
         const val = getFieldValue(this.wiredWorkItem && this.wiredWorkItem.data, TOTAL_LOGGED_HOURS_FIELD);
         return val != null ? val : 0;
+    }
+
+    get todayDate() {
+        const now = new Date();
+        return now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0');
     }
 
     get presetOptions() {
@@ -66,6 +91,10 @@ export default class DeliveryTimeLogger extends LightningElement {
         this.notesValue = event.detail.value;
     }
 
+    handleDateChange(event) {
+        this.workDateValue = event.detail.value;
+    }
+
     async handleSubmit() {
         if (!this.hoursValue || this.hoursValue <= 0) {
             this.dispatchEvent(new ShowToastEvent({
@@ -81,16 +110,28 @@ export default class DeliveryTimeLogger extends LightningElement {
             await logHours({
                 workItemId: this.recordId,
                 hours: this.hoursValue,
-                workNotes: this.notesValue || null
+                workNotes: this.notesValue || null,
+                workDate: this.workDateValue || null
             });
+
+            const msg = this.approvalRequired
+                ? `${this.hoursValue}h saved as draft — pending approval.`
+                : `${this.hoursValue}h added to this work item.`;
+
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Time Logged',
-                message: `${this.hoursValue}h added to this work item.`,
+                message: msg,
                 variant: 'success'
             }));
+
+            if (this.approvalRequired) {
+                this.showDraftBadge = true;
+            }
+
             this.hoursValue = 1;
             this.notesValue = '';
             this.selectedPreset = 1;
+            this.workDateValue = this.todayDate;
             await refreshApex(this.wiredWorkItem);
         } catch (error) {
             this.dispatchEvent(new ShowToastEvent({
