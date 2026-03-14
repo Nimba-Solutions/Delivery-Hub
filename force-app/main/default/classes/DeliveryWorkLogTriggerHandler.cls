@@ -90,6 +90,8 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      *              When approval is required, only 'Approved' logs pass.
      *              When approval is NOT required (default), all logs pass
      *              (null StatusPk__c treated as Approved for backward compat).
+     * @param logs The WorkLog records to filter.
+     * @return Filtered list of WorkLogs eligible for sync.
      */
     private static List<WorkLog__c> filterEligibleForSync(List<WorkLog__c> logs) {
         if (!isApprovalRequired()) {
