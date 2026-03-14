@@ -13,7 +13,8 @@ global without sharing class DeliveryPublicApiService {
 
     /**
      * @description Handles GET requests for reading data.
-     * Routes: /api/dashboard, /api/work-items, /api/work-items/{id}, /api/my-entities
+     * Routes: /api/dashboard, /api/work-items, /api/work-items/{id}, /api/my-entities,
+     *         /api/activity-feed, /api/conversations, /api/pending-approvals
      */
     @HttpGet
     global static void handleGet() {
@@ -77,8 +78,42 @@ global without sharing class DeliveryPublicApiService {
                     return;
                 }
 
+            } else if (resource == 'activity-feed') {
+                String filterType = req.params.get('filterType');
+                if (String.isBlank(filterType)) {
+                    filterType = 'all';
+                }
+                Integer pageOffset = 0;
+                if (String.isNotBlank(req.params.get('pageOffset'))) {
+                    pageOffset = Integer.valueOf(req.params.get('pageOffset'));
+                }
+                Map<String, Object> feed = DeliveryActivityFeedController.getActivityFeed(
+                    filterType, pageOffset, effectiveEntityId, null, null, null
+                );
+                sendSuccess(res, feed);
+
+            } else if (resource == 'conversations') {
+                Integer pageOffset = 0;
+                if (String.isNotBlank(req.params.get('pageOffset'))) {
+                    pageOffset = Integer.valueOf(req.params.get('pageOffset'));
+                }
+                List<Map<String, Object>> conversations = DeliveryActivityFeedController.getConversations(
+                    pageOffset, effectiveEntityId
+                );
+                sendSuccess(res, conversations);
+
+            } else if (resource == 'pending-approvals') {
+                Integer pageOffset = 0;
+                if (String.isNotBlank(req.params.get('pageOffset'))) {
+                    pageOffset = Integer.valueOf(req.params.get('pageOffset'));
+                }
+                Map<String, Object> approvals = DeliveryActivityFeedController.getPendingApprovals(
+                    pageOffset, effectiveEntityId
+                );
+                sendSuccess(res, approvals);
+
             } else {
-                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}, my-entities, portal-users');
+                sendError(res, 404, 'Unknown resource: ' + resource + '. Available: dashboard, work-items, work-items/{id}, my-entities, portal-users, activity-feed, conversations, pending-approvals');
             }
 
         } catch (AuraHandledException e) {
@@ -90,7 +125,8 @@ global without sharing class DeliveryPublicApiService {
 
     /**
      * @description Handles POST requests for creating data.
-     * Routes: /api/work-items (submit request), /api/work-items/{id}/comments (add comment)
+     * Routes: /api/work-items (submit request), /api/work-items/{id}/comments (add comment),
+     *         /api/approve-worklogs, /api/reject-worklogs
      */
     @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     @HttpPost
@@ -160,8 +196,38 @@ global without sharing class DeliveryPublicApiService {
                     'status' => 'Created'
                 }, 201);
 
+            } else if (resource == 'approve-worklogs') {
+                Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+                List<Object> rawIds = (List<Object>) bodyMap.get('workLogIds');
+                List<Id> workLogIds = new List<Id>();
+                if (rawIds != null) {
+                    for (Object rawId : rawIds) {
+                        workLogIds.add(Id.valueOf((String) rawId));
+                    }
+                }
+                DeliveryActivityFeedController.approveWorkLogs(workLogIds);
+                sendSuccess(res, new Map<String, Object>{
+                    'status' => 'Approved',
+                    'count' => workLogIds.size()
+                });
+
+            } else if (resource == 'reject-worklogs') {
+                Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+                List<Object> rawIds = (List<Object>) bodyMap.get('workLogIds');
+                List<Id> workLogIds = new List<Id>();
+                if (rawIds != null) {
+                    for (Object rawId : rawIds) {
+                        workLogIds.add(Id.valueOf((String) rawId));
+                    }
+                }
+                DeliveryActivityFeedController.rejectWorkLogs(workLogIds);
+                sendSuccess(res, new Map<String, Object>{
+                    'status' => 'Rejected',
+                    'count' => workLogIds.size()
+                });
+
             } else {
-                sendError(res, 404, 'Unknown resource: ' + resource + '. POST available: work-items, work-items/{id}/comments');
+                sendError(res, 404, 'Unknown resource: ' + resource + '. POST available: work-items, work-items/{id}/comments, approve-worklogs, reject-worklogs');
             }
 
         } catch (AuraHandledException e) {
