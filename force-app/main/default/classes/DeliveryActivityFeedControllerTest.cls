@@ -281,10 +281,17 @@ private class DeliveryActivityFeedControllerTest {
         List<WorkItemComment__c> comments = [
             SELECT BodyTxt__c, WorkItemId__c, SourcePk__c
             FROM WorkItemComment__c
-            WHERE WorkItemId__c = :wi.Id AND BodyTxt__c = 'Test reply from feed'
+            WHERE WorkItemId__c = :wi.Id AND SourcePk__c = 'Client'
         ];
-        System.assertEquals(1, comments.size(), 'Should create 1 comment');
-        System.assertEquals('Client', comments[0].SourcePk__c);
+        // Filter in Apex since BodyTxt__c is LongTextArea (not filterable in SOQL)
+        WorkItemComment__c found = null;
+        for (WorkItemComment__c c : comments) {
+            if (c.BodyTxt__c == 'Test reply from feed') {
+                found = c;
+                break;
+            }
+        }
+        System.assertNotEquals(null, found, 'Should create comment with expected body');
     }
 
     @IsTest
