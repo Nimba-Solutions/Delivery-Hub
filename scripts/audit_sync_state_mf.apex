@@ -6,7 +6,7 @@
 System.debug('========== NETWORK ENTITIES ==========');
 for (delivery__NetworkEntity__c ne : [
     SELECT Name, delivery__EntityTypePk__c, delivery__StatusPk__c,
-           delivery__EndpointUrlTxt__c, delivery__OrgIdTxt__c,
+           delivery__IntegrationEndpointUrlTxt__c, delivery__OrgIdTxt__c,
            delivery__EnableVendorPushBool__c
     FROM delivery__NetworkEntity__c
     ORDER BY delivery__EntityTypePk__c, Name
@@ -14,7 +14,7 @@ for (delivery__NetworkEntity__c ne : [
     System.debug('Entity: ' + ne.Name
         + ' | Type: ' + ne.delivery__EntityTypePk__c
         + ' | Status: ' + ne.delivery__StatusPk__c
-        + ' | Endpoint: ' + ne.delivery__EndpointUrlTxt__c
+        + ' | Endpoint: ' + ne.delivery__IntegrationEndpointUrlTxt__c
         + ' | OrgId: ' + ne.delivery__OrgIdTxt__c
         + ' | VendorPush: ' + ne.delivery__EnableVendorPushBool__c);
 }
@@ -70,12 +70,12 @@ for (delivery__WorkItem__c wi : [
 
 System.debug('========== DUPLICATE CHECK (by BriefDescription) ==========');
 for (AggregateResult ar : [
-    SELECT delivery__BriefDescriptionTxt__c desc, COUNT(Id) cnt
+    SELECT delivery__BriefDescriptionTxt__c briefDesc, COUNT(Id) cnt
     FROM delivery__WorkItem__c
     GROUP BY delivery__BriefDescriptionTxt__c
     HAVING COUNT(Id) > 1
 ]) {
-    System.debug('DUPLICATE: "' + ar.get('desc') + '" appears ' + ar.get('cnt') + ' times');
+    System.debug('DUPLICATE: "' + ar.get('briefDesc') + '" appears ' + ar.get('cnt') + ' times');
 }
 
 System.debug('========== WORK LOGS (summary) ==========');
