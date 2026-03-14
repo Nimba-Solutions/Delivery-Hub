@@ -84,6 +84,21 @@ private class DeliveryPublicApiServiceTest {
         };
         insert items;
 
+        // Work request for first item (needed for WorkLog master-detail)
+        NetworkEntity__c vendorForReq = new NetworkEntity__c(
+            Name = 'API Test Vendor', EntityTypePk__c = 'Vendor', StatusPk__c = 'Active'
+        );
+        insert vendorForReq;
+
+        WorkRequest__c req = new WorkRequest__c(
+            WorkItemId__c = items[0].Id,
+            DeliveryEntityId__c = vendorForReq.Id,
+            QuotedHoursNumber__c = 20,
+            HourlyRateCurrency__c = 100,
+            StatusPk__c = 'Accepted'
+        );
+        insert req;
+
         // Comment on first item
         insert new WorkItemComment__c(
             WorkItemId__c = items[0].Id,
@@ -94,6 +109,7 @@ private class DeliveryPublicApiServiceTest {
 
         // Draft work log on first item (for pending-approvals / approve / reject tests)
         insert new WorkLog__c(
+            RequestId__c = req.Id,
             WorkItemId__c = items[0].Id,
             HoursLoggedNumber__c = 2.5,
             WorkDateDate__c = Date.today(),
