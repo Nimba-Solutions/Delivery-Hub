@@ -84,8 +84,8 @@
                 </div>
             </template>
 
-            <template lwc:if={!hasEntities}>
-                <template lwc:if={!isLoading}>
+            <template lwc:if={showEmpty}>
+                <template lwc:if={showEmpty}>
                     <div class="dl-empty">
                         <lightning-icon icon-name="utility:info" size="small" class="slds-m-right_small"></lightning-icon>
                         <span>No connected entities. Complete the Getting Started wizard to establish your first connection.</span>

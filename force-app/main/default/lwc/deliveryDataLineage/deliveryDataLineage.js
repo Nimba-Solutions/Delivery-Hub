@@ -42,6 +42,10 @@ export default class DeliveryDataLineage extends LightningElement {
         return this.entities.length > 0;
     }
 
+    get showEmpty() {
+        return !this.isLoading && !this.hasEntities;
+    }
+
     get clientEntities() {
         return this.entities.filter(e => e.isClient);
     }
