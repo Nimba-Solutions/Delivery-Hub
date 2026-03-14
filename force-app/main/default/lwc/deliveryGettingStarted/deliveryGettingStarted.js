@@ -3,6 +3,7 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description Interactive onboarding wizard for Delivery Hub.
  * 5-step guided flow: Org Type → Workflow → Partner Config → Test Ping → Connected.
+ * Step 4 includes prerequisite checks for Site, Guest User, and Remote Site Settings.
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
@@ -10,6 +11,8 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getSetupStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.getSetupStatus';
 import prepareLocalEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.prepareLocalEntity';
 import performHandshake from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.performHandshake';
+import checkPrerequisites from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.checkPrerequisites';
+import configureGuestUserAccess from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.configureGuestUserAccess';
 
 const STEPS = [
     { index: 1, label: 'Org Type' },
@@ -30,6 +33,11 @@ export default class DeliveryGettingStarted extends LightningElement {
     @track isMothership = false;
     @track isCheckingStatus = false;
     @track selectedWorkflowType = '';
+
+    // Prerequisites state
+    @track isCheckingPrereqs = false;
+    @track prereqs = null;
+    @track prereqsChecked = false;
 
     steps = STEPS;
 
@@ -92,6 +100,57 @@ export default class DeliveryGettingStarted extends LightningElement {
         }));
     }
 
+    // Prerequisites computed getters
+    get showPrereqs() {
+        return this.isStep4 && this.isClientOrg;
+    }
+
+    get prereqSiteClass() {
+        if (!this.prereqs) return 'prereq-item';
+        return this.prereqs.siteActive ? 'prereq-item prereq-item--pass' : 'prereq-item prereq-item--fail';
+    }
+    get prereqGuestClass() {
+        if (!this.prereqs) return 'prereq-item';
+        return this.prereqs.guestUserConfigured ? 'prereq-item prereq-item--pass' : 'prereq-item prereq-item--fail';
+    }
+    get prereqRemoteClass() {
+        if (!this.prereqs) return 'prereq-item';
+        return this.prereqs.remoteSiteReachable ? 'prereq-item prereq-item--pass' : 'prereq-item prereq-item--fail';
+    }
+
+    get prereqSiteIcon() {
+        return this.prereqs && this.prereqs.siteActive ? 'utility:check' : 'utility:close';
+    }
+    get prereqGuestIcon() {
+        return this.prereqs && this.prereqs.guestUserConfigured ? 'utility:check' : 'utility:close';
+    }
+    get prereqRemoteIcon() {
+        return this.prereqs && this.prereqs.remoteSiteReachable ? 'utility:check' : 'utility:close';
+    }
+
+    get canConnect() {
+        if (this.isVendorOrg) return true;
+        return this.prereqs && this.prereqs.allPassed;
+    }
+
+    get connectDisabled() {
+        return this.isConnecting || !this.canConnect;
+    }
+
+    get showSiteHelp() {
+        return this.prereqs && !this.prereqs.siteActive;
+    }
+    get showGuestHelp() {
+        return this.prereqs && this.prereqs.siteActive && !this.prereqs.guestUserConfigured;
+    }
+    get showRemoteHelp() {
+        return this.prereqs && !this.prereqs.remoteSiteReachable;
+    }
+
+    get remoteSiteUrl() {
+        return this.prereqs ? this.prereqs.remoteSiteUrl : '';
+    }
+
     // ── Handlers ──
 
     handleToggle() {
@@ -112,6 +171,10 @@ export default class DeliveryGettingStarted extends LightningElement {
     handleNext() {
         if (this.currentStep < 5) {
             this.currentStep++;
+            // Auto-run prereqs when entering Step 4 for client orgs
+            if (this.currentStep === 4 && this.isClientOrg) {
+                this._runPrerequisiteCheck();
+            }
         }
     }
 
@@ -153,5 +216,57 @@ export default class DeliveryGettingStarted extends LightningElement {
 
     handleRecheck() {
         this._checkExistingConnection();
+    }
+
+    handleRecheckPrereqs() {
+        this._runPrerequisiteCheck();
+    }
+
+    handleFixGuestUser() {
+        configureGuestUserAccess()
+            .then(() => {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Guest User Configured',
+                    message: 'Permission set assigned to the Site guest user.',
+                    variant: 'success'
+                }));
+                this._runPrerequisiteCheck();
+            })
+            .catch(error => {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Error',
+                    message: error.body?.message || error.message || 'Failed to configure guest user.',
+                    variant: 'error'
+                }));
+            });
+    }
+
+    handleCopyUrl() {
+        const url = this.prereqs ? this.prereqs.remoteSiteUrl : '';
+        if (url && navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Copied',
+                    message: 'URL copied to clipboard.',
+                    variant: 'success'
+                }));
+            });
+        }
+    }
+
+    // ── Prerequisites ──
+
+    _runPrerequisiteCheck() {
+        this.isCheckingPrereqs = true;
+        this.prereqsChecked = false;
+        checkPrerequisites()
+            .then(result => {
+                this.prereqs = result;
+                this.prereqsChecked = true;
+            })
+            .catch(error => {
+                this.connectionError = error.body?.message || 'Failed to check prerequisites.';
+            })
+            .finally(() => { this.isCheckingPrereqs = false; });
     }
 }
