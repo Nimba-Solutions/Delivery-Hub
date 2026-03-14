@@ -87,7 +87,6 @@ public with sharing class DeliveryDataLineageController {
             FROM SyncItem__c
             WHERE WorkItemId__r.ClientNetworkEntityId__c != null
             GROUP BY WorkItemId__r.ClientNetworkEntityId__c, StatusPk__c
-            WITH SYSTEM_MODE
         ]) {
             Id entityId = (Id) ar.get('entityId');
             String status = (String) ar.get('status');
@@ -103,7 +102,7 @@ public with sharing class DeliveryDataLineageController {
     }
 
     private static String buildOrgDisplayName() {
-        List<Organization> orgs = [SELECT IsSandbox, Name FROM Organization WITH SYSTEM_MODE LIMIT 1];
+        List<Organization> orgs = [SELECT IsSandbox, Name FROM Organization LIMIT 1];
         if (orgs.isEmpty()) {
             return UserInfo.getOrganizationName();
         }
