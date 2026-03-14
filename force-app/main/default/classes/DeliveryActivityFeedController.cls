@@ -15,6 +15,16 @@ public with sharing class DeliveryActivityFeedController {
 
     // ── Unified Activity Feed ──────────────────────────────────────────
 
+    /**
+     * @description Returns a unified, chronologically-sorted activity feed.
+     * @param filterType One of: 'all', 'comments', 'hours', 'changes'.
+     * @param pageOffset Zero-based page offset (0 = first page).
+     * @param networkEntityId Optional NetworkEntity__c Id to scope by client.
+     * @param workItemId Optional WorkItem__c Id to filter to a single item.
+     * @param startDate Optional start date filter.
+     * @param endDate Optional end date filter.
+     * @return Map containing events list, totalCount, and hasMore flag.
+     */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getActivityFeed(
         String filterType,
@@ -50,19 +60,25 @@ public with sharing class DeliveryActivityFeedController {
     ) {
         List<Map<String, Object>> events = new List<Map<String, Object>>();
         if (filterType == 'all' || filterType == 'comments') {
-            events.addAll(queryFeedComments(scopedWorkItemIds, startDate, endDate));
+            events.addAll(queryFeedComments(scopedWorkItemIds));
         }
         if (filterType == 'all' || filterType == 'hours') {
-            events.addAll(queryFeedWorkLogs(scopedWorkItemIds, startDate, endDate));
+            events.addAll(queryFeedWorkLogs(scopedWorkItemIds));
         }
         if (filterType == 'all' || filterType == 'changes') {
-            events.addAll(queryFeedActivityLogs(scopedWorkItemIds, startDate, endDate));
+            events.addAll(queryFeedActivityLogs(scopedWorkItemIds));
         }
         return events;
     }
 
     // ── Conversations (grouped by WorkItem) ────────────────────────────
 
+    /**
+     * @description Returns comments grouped by work item for a conversation view.
+     * @param pageOffset Zero-based page offset.
+     * @param networkEntityId Optional NetworkEntity filter.
+     * @return List of conversation thread maps.
+     */
     @AuraEnabled(cacheable=true)
     public static List<Map<String, Object>> getConversations(
         Integer pageOffset,
@@ -71,15 +87,28 @@ public with sharing class DeliveryActivityFeedController {
         pageOffset = sanitizeOffset(pageOffset);
         Set<Id> scopedWorkItemIds = resolveWorkItemScope(networkEntityId, null);
 
-        String query = 'SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, '
-            + 'WorkItemId__c, CreatedBy.Name '
-            + 'FROM WorkItemComment__c ';
+        List<WorkItemComment__c> comments;
         if (scopedWorkItemIds != null) {
-            query += 'WHERE WorkItemId__c IN :scopedWorkItemIds ';
+            comments = [
+                SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
+                       WorkItemId__c, CreatedBy.Name
+                FROM WorkItemComment__c
+                WHERE WorkItemId__c IN :scopedWorkItemIds
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 500
+            ];
+        } else {
+            comments = [
+                SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
+                       WorkItemId__c, CreatedBy.Name
+                FROM WorkItemComment__c
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 500
+            ];
         }
-        query += 'ORDER BY CreatedDate DESC LIMIT 500';
 
-        List<WorkItemComment__c> comments = Database.query(query);
         Map<Id, List<WorkItemComment__c>> grouped = groupCommentsByWorkItem(comments);
         Map<Id, WorkItem__c> workItemMap = resolveWorkItemNames(grouped.keySet());
         List<Map<String, Object>> threads = buildThreads(grouped, workItemMap);
@@ -144,6 +173,12 @@ public with sharing class DeliveryActivityFeedController {
 
     // ── Pending Approvals ──────────────────────────────────────────────
 
+    /**
+     * @description Returns Draft WorkLogs pending approval.
+     * @param pageOffset Zero-based page offset.
+     * @param networkEntityId Optional NetworkEntity filter.
+     * @return Map containing approvals list and totalCount.
+     */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getPendingApprovals(
         Integer pageOffset,
@@ -152,16 +187,28 @@ public with sharing class DeliveryActivityFeedController {
         pageOffset = sanitizeOffset(pageOffset);
         Set<Id> scopedWorkItemIds = resolveWorkItemScope(networkEntityId, null);
 
-        String query = 'SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c, '
-            + 'WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c '
-            + 'FROM WorkLog__c '
-            + 'WHERE StatusPk__c = \'Draft\' ';
+        List<WorkLog__c> logs;
         if (scopedWorkItemIds != null) {
-            query += 'AND WorkItemId__c IN :scopedWorkItemIds ';
+            logs = [
+                SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                FROM WorkLog__c
+                WHERE StatusPk__c = 'Draft' AND WorkItemId__c IN :scopedWorkItemIds
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
+        } else {
+            logs = [
+                SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                FROM WorkLog__c
+                WHERE StatusPk__c = 'Draft'
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
         }
-        query += 'ORDER BY CreatedDate DESC LIMIT 200';
-
-        List<WorkLog__c> logs = Database.query(query);
 
         Set<Id> wiIds = new Set<Id>();
         for (WorkLog__c wl : logs) {
@@ -198,11 +245,19 @@ public with sharing class DeliveryActivityFeedController {
 
     // ── Approval Actions ───────────────────────────────────────────────
 
+    /**
+     * @description Batch-approves WorkLogs.
+     * @param workLogIds List of WorkLog__c Ids to approve.
+     */
     @AuraEnabled
     public static void approveWorkLogs(List<Id> workLogIds) {
         DeliveryTimeLoggerController.approveWorkLogs(workLogIds);
     }
 
+    /**
+     * @description Batch-rejects WorkLogs.
+     * @param workLogIds List of WorkLog__c Ids to reject.
+     */
     @AuraEnabled
     public static void rejectWorkLogs(List<Id> workLogIds) {
         DeliveryTimeLoggerController.rejectWorkLogs(workLogIds);
@@ -210,6 +265,11 @@ public with sharing class DeliveryActivityFeedController {
 
     // ── Post Comment from Feed ─────────────────────────────────────────
 
+    /**
+     * @description Posts a new comment on a work item from the activity feed.
+     * @param workItemId The WorkItem__c Id to comment on.
+     * @param body The comment text.
+     */
     @AuraEnabled
     public static void postCommentFromFeed(Id workItemId, String body) {
         if (workItemId == null || String.isBlank(body)) {
@@ -224,41 +284,33 @@ public with sharing class DeliveryActivityFeedController {
         Database.insert(comment, AccessLevel.SYSTEM_MODE);
     }
 
-    // ── Query Helpers ──────────────────────────────────────────────────
+    // ── Query Methods (static SOQL — no injection risk) ────────────────
 
-    private static String buildWhereClause(List<String> conditions) {
-        if (conditions.isEmpty()) {
-            return '';
-        }
-        return 'WHERE ' + String.join(conditions, ' AND ') + ' ';
-    }
-
-    private static void addDateConditions(List<String> conditions, Date startDate, Date endDate) {
-        if (startDate != null) {
-            conditions.add('CreatedDate >= :startDate');
-        }
-        if (endDate != null) {
-            conditions.add('CreatedDate < :endDate');
-        }
-    }
-
-    private static List<Map<String, Object>> queryFeedComments(
-        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
-    ) {
-        List<String> conditions = new List<String>();
+    private static List<Map<String, Object>> queryFeedComments(Set<Id> scopedWorkItemIds) {
+        List<WorkItemComment__c> records;
         if (scopedWorkItemIds != null) {
-            conditions.add('WorkItemId__c IN :scopedWorkItemIds');
+            records = [
+                SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
+                       WorkItemId__c, CreatedBy.Name
+                FROM WorkItemComment__c
+                WHERE WorkItemId__c IN :scopedWorkItemIds
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
+        } else {
+            records = [
+                SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
+                       WorkItemId__c, CreatedBy.Name
+                FROM WorkItemComment__c
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
         }
-        addDateConditions(conditions, startDate, endDate);
-
-        String query = 'SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, '
-            + 'WorkItemId__c, CreatedBy.Name '
-            + 'FROM WorkItemComment__c '
-            + buildWhereClause(conditions)
-            + 'ORDER BY CreatedDate DESC LIMIT 200';
 
         List<Map<String, Object>> results = new List<Map<String, Object>>();
-        for (WorkItemComment__c c : Database.query(query)) {
+        for (WorkItemComment__c c : records) {
             results.add(buildCommentEvent(c));
         }
         return results;
@@ -286,23 +338,31 @@ public with sharing class DeliveryActivityFeedController {
         };
     }
 
-    private static List<Map<String, Object>> queryFeedWorkLogs(
-        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
-    ) {
-        List<String> conditions = new List<String>();
+    private static List<Map<String, Object>> queryFeedWorkLogs(Set<Id> scopedWorkItemIds) {
+        List<WorkLog__c> records;
         if (scopedWorkItemIds != null) {
-            conditions.add('WorkItemId__c IN :scopedWorkItemIds');
+            records = [
+                SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                FROM WorkLog__c
+                WHERE WorkItemId__c IN :scopedWorkItemIds
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
+        } else {
+            records = [
+                SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                FROM WorkLog__c
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
         }
-        addDateConditions(conditions, startDate, endDate);
-
-        String query = 'SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c, '
-            + 'WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c '
-            + 'FROM WorkLog__c '
-            + buildWhereClause(conditions)
-            + 'ORDER BY CreatedDate DESC LIMIT 200';
 
         List<Map<String, Object>> results = new List<Map<String, Object>>();
-        for (WorkLog__c wl : Database.query(query)) {
+        for (WorkLog__c wl : records) {
             results.add(buildWorkLogEvent(wl));
         }
         return results;
@@ -338,24 +398,33 @@ public with sharing class DeliveryActivityFeedController {
             : 'Work date: ' + dateStr;
     }
 
-    private static List<Map<String, Object>> queryFeedActivityLogs(
-        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
-    ) {
-        List<String> conditions = new List<String>();
-        conditions.add('ActionTypePk__c IN (\'Stage_Change\', \'Field_Change\')');
+    private static List<Map<String, Object>> queryFeedActivityLogs(Set<Id> scopedWorkItemIds) {
         Set<String> idStrings = toStringSet(scopedWorkItemIds);
+
+        List<ActivityLog__c> logs;
         if (idStrings != null) {
-            conditions.add('RecordIdTxt__c IN :idStrings');
+            logs = [
+                SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c,
+                       ContextDataTxt__c, RecordIdTxt__c
+                FROM ActivityLog__c
+                WHERE ActionTypePk__c IN ('Stage_Change', 'Field_Change')
+                AND RecordIdTxt__c IN :idStrings
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
+        } else {
+            logs = [
+                SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c,
+                       ContextDataTxt__c, RecordIdTxt__c
+                FROM ActivityLog__c
+                WHERE ActionTypePk__c IN ('Stage_Change', 'Field_Change')
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 200
+            ];
         }
-        addDateConditions(conditions, startDate, endDate);
 
-        String query = 'SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c, '
-            + 'ContextDataTxt__c, RecordIdTxt__c '
-            + 'FROM ActivityLog__c '
-            + buildWhereClause(conditions)
-            + 'ORDER BY CreatedDate DESC LIMIT 200';
-
-        List<ActivityLog__c> logs = Database.query(query);
         Map<Id, String> userNameMap = resolveUserNames(logs);
 
         List<Map<String, Object>> results = new List<Map<String, Object>>();
@@ -379,10 +448,9 @@ public with sharing class DeliveryActivityFeedController {
     private static Map<Id, String> resolveUserNames(List<ActivityLog__c> logs) {
         Set<Id> userIds = new Set<Id>();
         for (ActivityLog__c al : logs) {
-            if (String.isNotBlank(al.UserIdTxt__c)) {
-                try {
-                    userIds.add((Id) al.UserIdTxt__c);
-                } catch (Exception ex) { /* skip invalid */ }
+            Id userId = safeToId(al.UserIdTxt__c);
+            if (userId != null) {
+                userIds.add(userId);
             }
         }
         Map<Id, String> userNameMap = new Map<Id, String>();
@@ -424,7 +492,8 @@ public with sharing class DeliveryActivityFeedController {
         }
         try {
             return (Id) idString;
-        } catch (Exception ex) {
+        } catch (StringException ex) {
+            System.debug(LoggingLevel.FINE, 'Invalid Id string: ' + idString);
             return null;
         }
     }
@@ -444,7 +513,7 @@ public with sharing class DeliveryActivityFeedController {
             } else {
                 parseFieldChange(ctx, info);
             }
-        } catch (Exception ex) {
+        } catch (JSONException ex) {
             System.debug(LoggingLevel.FINE, 'Activity Feed: Could not parse context: ' + ex.getMessage());
         }
         return info;
@@ -553,6 +622,12 @@ public with sharing class DeliveryActivityFeedController {
     }
 
     private class EventComparator implements Comparator<Map<String, Object>> {
+        /**
+         * @description Compares two event maps by timestamp descending (newest first).
+         * @param a First event map.
+         * @param b Second event map.
+         * @return Negative if a is newer, positive if b is newer, zero if equal.
+         */
         public Integer compare(Map<String, Object> a, Map<String, Object> b) {
             Datetime tsA = getTimestamp(a);
             Datetime tsB = getTimestamp(b);
