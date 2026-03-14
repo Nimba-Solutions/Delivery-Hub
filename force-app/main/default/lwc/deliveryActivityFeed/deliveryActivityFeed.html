@@ -1,0 +1,216 @@
+<template>
+    <lightning-card icon-name="standard:feed">
+        <div slot="title" class="af-title-wrapper">
+            <span class="af-card-title">Activity Feed</span>
+        </div>
+        <div slot="actions">
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                alternative-text="Refresh"
+                onclick={handleRefresh}
+                class="slds-m-right_x-small">
+            </lightning-button-icon>
+        </div>
+
+        <div class="slds-p-around_medium">
+
+            <!-- Tab bar -->
+            <div class="af-tab-bar">
+                <template for:each={computedTabs} for:item="tab">
+                    <button key={tab.value} class={tab.cssClass}
+                            data-value={tab.value} onclick={handleTabClick}>
+                        <lightning-icon icon-name={tab.icon} size="x-small"
+                                        class="slds-m-right_xx-small"></lightning-icon>
+                        {tab.label}
+                        <template lwc:if={tab.hasBadge}>
+                            <span class="af-badge af-badge--pending">{tab.badgeCount}</span>
+                        </template>
+                    </button>
+                </template>
+            </div>
+
+            <!-- Loading spinner -->
+            <template lwc:if={isLoading}>
+                <div class="af-loading">
+                    <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <!-- ═══ All Activity / Hours / Changes tabs ═══ -->
+            <template lwc:if={showFeed}>
+
+                <!-- Pending approvals section (Hours tab only) -->
+                <template lwc:if={isHoursTab}>
+                    <template lwc:if={hasPendingApprovals}>
+                        <div class="af-pending-section">
+                            <div class="af-pending-header">
+                                <h3 class="af-section-title">Pending Approval ({pendingCount})</h3>
+                                <div class="af-pending-actions">
+                                    <lightning-button label="Select All" variant="neutral"
+                                                      size="small" onclick={handleSelectAll}></lightning-button>
+                                    <template lwc:if={hasSelectedApprovals}>
+                                        <lightning-button label="Deselect" variant="neutral"
+                                                          size="small" onclick={handleDeselectAll}></lightning-button>
+                                        <lightning-button label={approveLabel} variant="success"
+                                                          size="small" onclick={handleBatchApprove}
+                                                          disabled={isProcessingApproval}></lightning-button>
+                                        <lightning-button label="Reject" variant="destructive"
+                                                          size="small" onclick={handleBatchReject}
+                                                          disabled={isProcessingApproval}></lightning-button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="af-approval-list">
+                                <template for:each={pendingApprovals} for:item="approval">
+                                    <div key={approval.id} class="af-approval-row">
+                                        <lightning-input type="checkbox" data-id={approval.id}
+                                                         checked={approval.isSelected}
+                                                         onchange={handleApprovalSelect}
+                                                         class="af-approval-check"
+                                                         label="" variant="label-hidden"></lightning-input>
+                                        <div class="af-approval-detail">
+                                            <div class="af-approval-top">
+                                                <span class="af-approval-hours">{approval.hours}h</span>
+                                                <span class="af-approval-user">{approval.userName}</span>
+                                                <span class="af-approval-date">{approval.formattedDate}</span>
+                                                <button class="af-pill" data-id={approval.workItemId}
+                                                        onclick={handleWorkItemClick}>
+                                                    {approval.workItemName}
+                                                </button>
+                                            </div>
+                                            <template lwc:if={approval.description}>
+                                                <div class="af-approval-desc">{approval.description}</div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- Event groups -->
+                <template lwc:if={hasEvents}>
+                    <template for:each={displayGroups} for:item="group">
+                        <div key={group.dateKey} class="af-date-group">
+                            <div class="af-date-label">{group.dateLabel}</div>
+                            <template for:each={group.events} for:item="event">
+                                <div key={event.id} class="af-event">
+                                    <div class={event.typeClass}>
+                                        <lightning-icon icon-name={event.icon} size="x-small"></lightning-icon>
+                                    </div>
+                                    <div class="af-event-body">
+                                        <div class="af-event-header">
+                                            <span class="af-event-title">{event.title}</span>
+                                            <span class="af-event-time">{event.relativeTime}</span>
+                                        </div>
+                                        <template lwc:if={event.hasDetail}>
+                                            <div class="af-event-detail">{event.detail}</div>
+                                        </template>
+                                        <template lwc:if={event.hasWorkItem}>
+                                            <button class="af-pill" data-id={event.workItemId}
+                                                    onclick={handleWorkItemClick}>
+                                                {event.workItemName}
+                                            </button>
+                                        </template>
+                                        <template lwc:if={event.isDraft}>
+                                            <span class="af-badge af-badge--draft">Draft</span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+
+                <template lwc:if={showEmpty}>
+                    <div class="af-empty">
+                        <lightning-icon icon-name="utility:info" size="small" class="slds-m-right_small"></lightning-icon>
+                        <span>No activity found.</span>
+                    </div>
+                </template>
+
+                <template lwc:if={showLoadMore}>
+                    <div class="af-load-more">
+                        <lightning-button label={loadMoreLabel} variant="neutral"
+                                          onclick={handleLoadMore} disabled={isLoadingMore}></lightning-button>
+                    </div>
+                </template>
+            </template>
+
+            <!-- ═══ Conversations tab ═══ -->
+            <template lwc:if={isConversationsTab}>
+                <template lwc:if={hasConversations}>
+                    <template for:each={conversations} for:item="thread">
+                        <div key={thread.workItemId} class="af-thread">
+                            <div class="af-thread-header" data-id={thread.workItemId}
+                                 onclick={handleToggleThread}>
+                                <div class="af-thread-info">
+                                    <button class="af-pill af-pill--thread" data-id={thread.workItemId}
+                                            onclick={handleWorkItemClick}>
+                                        {thread.workItemName}
+                                    </button>
+                                    <span class="af-thread-desc">{thread.workItemDescription}</span>
+                                </div>
+                                <div class="af-thread-meta">
+                                    <span class="af-thread-count">{thread.commentCount} comments</span>
+                                    <span class="af-thread-time">{thread.relativeTime}</span>
+                                </div>
+                            </div>
+                            <div class="af-thread-preview">
+                                <strong>{thread.latestAuthor}:</strong> {thread.latestPreview}
+                            </div>
+
+                            <template lwc:if={thread.isExpanded}>
+                                <div class="af-thread-comments">
+                                    <template for:each={thread.comments} for:item="comment">
+                                        <div key={comment.id} class="af-comment">
+                                            <div class="af-comment-header">
+                                                <span class="af-comment-author">{comment.author}</span>
+                                                <span class="af-comment-source">({comment.source})</span>
+                                                <span class="af-comment-time">{comment.relativeTime}</span>
+                                            </div>
+                                            <div class="af-comment-body">{comment.body}</div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Inline reply -->
+                                    <div class="af-reply">
+                                        <template lwc:if={thread.isExpanded}>
+                                            <div class="af-reply-form">
+                                                <lightning-textarea
+                                                    label="Reply"
+                                                    placeholder="Write a reply..."
+                                                    value={replyBody}
+                                                    onchange={handleReplyInput}
+                                                    rows="2"
+                                                    variant="label-hidden">
+                                                </lightning-textarea>
+                                                <div class="af-reply-actions">
+                                                    <lightning-button label="Send" variant="brand"
+                                                                      size="small"
+                                                                      data-id={thread.workItemId}
+                                                                      onclick={handleReplySend}
+                                                                      disabled={isSendingReply}></lightning-button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+
+                <template lwc:if={showConvoEmpty}>
+                    <div class="af-empty">
+                        <lightning-icon icon-name="utility:info" size="small" class="slds-m-right_small"></lightning-icon>
+                        <span>No conversations yet.</span>
+                    </div>
+                </template>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

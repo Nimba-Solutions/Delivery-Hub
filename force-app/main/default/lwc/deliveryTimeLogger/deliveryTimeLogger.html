@@ -10,6 +10,14 @@
 
         <div class="slds-p-around_medium">
 
+            <!-- Draft status badge -->
+            <template lwc:if={showDraftBadge}>
+                <div class="tl-draft-banner">
+                    <lightning-icon icon-name="utility:info" size="x-small" alternative-text="Info"></lightning-icon>
+                    <span class="slds-m-left_x-small">Saved as Draft — pending approval</span>
+                </div>
+            </template>
+
             <!-- Quick-select preset buttons -->
             <div class="tl-preset-row">
                 <template for:each={presetOptions} for:item="preset">
@@ -32,6 +40,17 @@
                 value={hoursValue}
                 onchange={handleHoursChange}
                 class="slds-m-top_small tl-hours-input"
+                variant="label-stacked">
+            </lightning-input>
+
+            <!-- Work date picker -->
+            <lightning-input
+                type="date"
+                label="Work Date"
+                value={workDateValue}
+                max={todayDate}
+                onchange={handleDateChange}
+                class="slds-m-top_small tl-date-input"
                 variant="label-stacked">
             </lightning-input>
 

@@ -39,7 +39,7 @@ private class DeliveryTimeLoggerControllerTest {
         WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
         Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 2.5, 'Test work notes');
+        DeliveryTimeLoggerController.logHours(t.Id, 2.5, 'Test work notes', null);
         Test.stopTest();
 
         List<WorkLog__c> logs = [
@@ -61,7 +61,7 @@ private class DeliveryTimeLoggerControllerTest {
         WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
         Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 0.25, null);
+        DeliveryTimeLoggerController.logHours(t.Id, 0.25, null, null);
         Test.stopTest();
 
         List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
@@ -77,8 +77,8 @@ private class DeliveryTimeLoggerControllerTest {
         WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
         Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Morning session');
-        DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Afternoon session');
+        DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Morning session', null);
+        DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Afternoon session', null);
         Test.stopTest();
 
         List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
@@ -95,7 +95,7 @@ private class DeliveryTimeLoggerControllerTest {
 
         Test.startTest();
         try {
-            DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Should fail');
+            DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Should fail', null);
             System.assert(false, 'Should have thrown AuraHandledException');
         } catch (AuraHandledException e) {
             System.assert(true, 'Correctly threw when no accepted request exists');
