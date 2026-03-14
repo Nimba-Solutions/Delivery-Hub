@@ -8,23 +8,13 @@
  *               WorkLog approval workflows.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.AvoidDebugStatements,PMD.ExcessiveParameterList')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidDebugStatements,PMD.ExcessiveParameterList')
 public with sharing class DeliveryActivityFeedController {
 
     private static final Integer PAGE_SIZE = 25;
 
     // ── Unified Activity Feed ──────────────────────────────────────────
 
-    /**
-     * @description Returns a unified, chronologically-sorted activity feed.
-     * @param filterType One of: 'all', 'comments', 'hours', 'changes'.
-     * @param pageOffset Zero-based page offset (0 = first page).
-     * @param networkEntityId Optional NetworkEntity__c Id to scope by client.
-     * @param workItemId Optional WorkItem__c Id to filter to a single item.
-     * @param startDate Optional start date filter.
-     * @param endDate Optional end date filter.
-     * @return List of event maps, sorted newest-first.
-     */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getActivityFeed(
         String filterType,
@@ -35,29 +25,15 @@ public with sharing class DeliveryActivityFeedController {
         Date endDate
     ) {
         filterType = String.isBlank(filterType) ? 'all' : filterType;
-        pageOffset = (pageOffset == null || pageOffset < 0) ? 0 : pageOffset;
+        pageOffset = sanitizeOffset(pageOffset);
 
-        // Resolve work item scope
         Set<Id> scopedWorkItemIds = resolveWorkItemScope(networkEntityId, workItemId);
+        List<Map<String, Object>> events = collectEvents(filterType, scopedWorkItemIds, startDate, endDate);
 
-        List<Map<String, Object>> events = new List<Map<String, Object>>();
-
-        if (filterType == 'all' || filterType == 'comments') {
-            events.addAll(queryFeedComments(scopedWorkItemIds, startDate, endDate));
-        }
-        if (filterType == 'all' || filterType == 'hours') {
-            events.addAll(queryFeedWorkLogs(scopedWorkItemIds, startDate, endDate));
-        }
-        if (filterType == 'all' || filterType == 'changes') {
-            events.addAll(queryFeedActivityLogs(scopedWorkItemIds, startDate, endDate));
-        }
-
-        // Resolve work item names for display
         Set<Id> allWorkItemIds = collectWorkItemIds(events);
         Map<Id, WorkItem__c> workItemMap = resolveWorkItemNames(allWorkItemIds);
         decorateWithWorkItemInfo(events, workItemMap);
 
-        // Sort newest first and paginate
         events.sort(new EventComparator());
         Integer totalCount = events.size();
         List<Map<String, Object>> page = paginateEvents(events, pageOffset);
@@ -69,23 +45,32 @@ public with sharing class DeliveryActivityFeedController {
         };
     }
 
+    private static List<Map<String, Object>> collectEvents(
+        String filterType, Set<Id> scopedWorkItemIds, Date startDate, Date endDate
+    ) {
+        List<Map<String, Object>> events = new List<Map<String, Object>>();
+        if (filterType == 'all' || filterType == 'comments') {
+            events.addAll(queryFeedComments(scopedWorkItemIds, startDate, endDate));
+        }
+        if (filterType == 'all' || filterType == 'hours') {
+            events.addAll(queryFeedWorkLogs(scopedWorkItemIds, startDate, endDate));
+        }
+        if (filterType == 'all' || filterType == 'changes') {
+            events.addAll(queryFeedActivityLogs(scopedWorkItemIds, startDate, endDate));
+        }
+        return events;
+    }
+
     // ── Conversations (grouped by WorkItem) ────────────────────────────
 
-    /**
-     * @description Returns comments grouped by work item for a conversation view.
-     * @param pageOffset Zero-based page offset.
-     * @param networkEntityId Optional NetworkEntity filter.
-     * @return List of conversation thread maps.
-     */
     @AuraEnabled(cacheable=true)
     public static List<Map<String, Object>> getConversations(
         Integer pageOffset,
         Id networkEntityId
     ) {
-        pageOffset = (pageOffset == null || pageOffset < 0) ? 0 : pageOffset;
+        pageOffset = sanitizeOffset(pageOffset);
         Set<Id> scopedWorkItemIds = resolveWorkItemScope(networkEntityId, null);
 
-        // Query comments for scoped work items
         String query = 'SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, '
             + 'WorkItemId__c, CreatedBy.Name '
             + 'FROM WorkItemComment__c ';
@@ -95,8 +80,15 @@ public with sharing class DeliveryActivityFeedController {
         query += 'ORDER BY CreatedDate DESC LIMIT 500';
 
         List<WorkItemComment__c> comments = Database.query(query);
+        Map<Id, List<WorkItemComment__c>> grouped = groupCommentsByWorkItem(comments);
+        Map<Id, WorkItem__c> workItemMap = resolveWorkItemNames(grouped.keySet());
+        List<Map<String, Object>> threads = buildThreads(grouped, workItemMap);
 
-        // Group by WorkItemId
+        threads.sort(new EventComparator());
+        return paginateEvents(threads, pageOffset);
+    }
+
+    private static Map<Id, List<WorkItemComment__c>> groupCommentsByWorkItem(List<WorkItemComment__c> comments) {
         Map<Id, List<WorkItemComment__c>> grouped = new Map<Id, List<WorkItemComment__c>>();
         for (WorkItemComment__c c : comments) {
             if (!grouped.containsKey(c.WorkItemId__c)) {
@@ -104,31 +96,18 @@ public with sharing class DeliveryActivityFeedController {
             }
             grouped.get(c.WorkItemId__c).add(c);
         }
+        return grouped;
+    }
 
-        // Resolve work item names
-        Map<Id, WorkItem__c> workItemMap = resolveWorkItemNames(grouped.keySet());
-
-        // Build conversation threads sorted by latest activity
+    private static List<Map<String, Object>> buildThreads(
+        Map<Id, List<WorkItemComment__c>> grouped,
+        Map<Id, WorkItem__c> workItemMap
+    ) {
         List<Map<String, Object>> threads = new List<Map<String, Object>>();
         for (Id wiId : grouped.keySet()) {
             List<WorkItemComment__c> threadComments = grouped.get(wiId);
             WorkItem__c wi = workItemMap.get(wiId);
-
-            List<Map<String, Object>> commentMaps = new List<Map<String, Object>>();
-            for (WorkItemComment__c c : threadComments) {
-                String author = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : c.CreatedBy.Name;
-                String body = c.BodyTxt__c;
-                if (String.isNotBlank(body)) {
-                    body = body.stripHtmlTags();
-                }
-                commentMaps.add(new Map<String, Object>{
-                    'id' => c.Id,
-                    'author' => author,
-                    'body' => body,
-                    'source' => String.isNotBlank(c.SourcePk__c) ? c.SourcePk__c : 'Salesforce',
-                    'timestamp' => c.CreatedDate
-                });
-            }
+            List<Map<String, Object>> commentMaps = buildCommentMaps(threadComments);
 
             threads.add(new Map<String, Object>{
                 'workItemId' => wiId,
@@ -141,37 +120,36 @@ public with sharing class DeliveryActivityFeedController {
                 'comments' => commentMaps
             });
         }
+        return threads;
+    }
 
-        // Sort threads by latest activity (newest first)
-        threads.sort(new EventComparator());
-
-        // Paginate
-        Integer startIdx = pageOffset * PAGE_SIZE;
-        if (startIdx >= threads.size()) {
-            return new List<Map<String, Object>>();
+    private static List<Map<String, Object>> buildCommentMaps(List<WorkItemComment__c> comments) {
+        List<Map<String, Object>> maps = new List<Map<String, Object>>();
+        for (WorkItemComment__c c : comments) {
+            String author = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : c.CreatedBy.Name;
+            String body = c.BodyTxt__c;
+            if (String.isNotBlank(body)) {
+                body = body.stripHtmlTags();
+            }
+            maps.add(new Map<String, Object>{
+                'id' => c.Id,
+                'author' => author,
+                'body' => body,
+                'source' => String.isNotBlank(c.SourcePk__c) ? c.SourcePk__c : 'Salesforce',
+                'timestamp' => c.CreatedDate
+            });
         }
-        Integer endIdx = Math.min(startIdx + PAGE_SIZE, threads.size());
-        List<Map<String, Object>> page = new List<Map<String, Object>>();
-        for (Integer i = startIdx; i < endIdx; i++) {
-            page.add(threads[i]);
-        }
-        return page;
+        return maps;
     }
 
     // ── Pending Approvals ──────────────────────────────────────────────
 
-    /**
-     * @description Returns Draft WorkLogs pending approval.
-     * @param pageOffset Zero-based page offset.
-     * @param networkEntityId Optional NetworkEntity filter.
-     * @return List of pending work log maps.
-     */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getPendingApprovals(
         Integer pageOffset,
         Id networkEntityId
     ) {
-        pageOffset = (pageOffset == null || pageOffset < 0) ? 0 : pageOffset;
+        pageOffset = sanitizeOffset(pageOffset);
         Set<Id> scopedWorkItemIds = resolveWorkItemScope(networkEntityId, null);
 
         String query = 'SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c, '
@@ -185,7 +163,6 @@ public with sharing class DeliveryActivityFeedController {
 
         List<WorkLog__c> logs = Database.query(query);
 
-        // Resolve work item names
         Set<Id> wiIds = new Set<Id>();
         for (WorkLog__c wl : logs) {
             wiIds.add(wl.WorkItemId__c);
@@ -194,24 +171,28 @@ public with sharing class DeliveryActivityFeedController {
 
         List<Map<String, Object>> results = new List<Map<String, Object>>();
         for (WorkLog__c wl : logs) {
-            WorkItem__c wi = workItemMap.get(wl.WorkItemId__c);
-            results.add(new Map<String, Object>{
-                'id' => wl.Id,
-                'workItemId' => wl.WorkItemId__c,
-                'workItemName' => wi != null ? wi.Name : '',
-                'workItemDescription' => wi != null ? wi.BriefDescriptionTxt__c : '',
-                'hours' => wl.HoursLoggedNumber__c,
-                'workDate' => wl.WorkDateDate__c,
-                'description' => wl.WorkDescriptionTxt__c,
-                'userName' => wl.CreatedBy.Name,
-                'timestamp' => wl.CreatedDate,
-                'status' => wl.StatusPk__c
-            });
+            results.add(buildApprovalMap(wl, workItemMap));
         }
 
         return new Map<String, Object>{
             'approvals' => results,
             'totalCount' => results.size()
+        };
+    }
+
+    private static Map<String, Object> buildApprovalMap(WorkLog__c wl, Map<Id, WorkItem__c> workItemMap) {
+        WorkItem__c wi = workItemMap.get(wl.WorkItemId__c);
+        return new Map<String, Object>{
+            'id' => wl.Id,
+            'workItemId' => wl.WorkItemId__c,
+            'workItemName' => wi != null ? wi.Name : '',
+            'workItemDescription' => wi != null ? wi.BriefDescriptionTxt__c : '',
+            'hours' => wl.HoursLoggedNumber__c,
+            'workDate' => wl.WorkDateDate__c,
+            'description' => wl.WorkDescriptionTxt__c,
+            'userName' => wl.CreatedBy.Name,
+            'timestamp' => wl.CreatedDate,
+            'status' => wl.StatusPk__c
         };
     }
 
@@ -229,11 +210,6 @@ public with sharing class DeliveryActivityFeedController {
 
     // ── Post Comment from Feed ─────────────────────────────────────────
 
-    /**
-     * @description Posts a new comment on a work item from the activity feed.
-     * @param workItemId The WorkItem__c Id to comment on.
-     * @param body The comment text.
-     */
     @AuraEnabled
     public static void postCommentFromFeed(Id workItemId, String body) {
         if (workItemId == null || String.isBlank(body)) {
@@ -248,12 +224,261 @@ public with sharing class DeliveryActivityFeedController {
         Database.insert(comment, AccessLevel.SYSTEM_MODE);
     }
 
-    // ── Private Helpers ────────────────────────────────────────────────
+    // ── Query Helpers ──────────────────────────────────────────────────
 
-    /**
-     * @description Resolves the set of WorkItem Ids in scope based on filters.
-     *              Returns null when no filter is applied (query all).
-     */
+    private static String buildWhereClause(List<String> conditions) {
+        if (conditions.isEmpty()) {
+            return '';
+        }
+        return 'WHERE ' + String.join(conditions, ' AND ') + ' ';
+    }
+
+    private static void addDateConditions(List<String> conditions, Date startDate, Date endDate) {
+        if (startDate != null) {
+            conditions.add('CreatedDate >= :startDate');
+        }
+        if (endDate != null) {
+            conditions.add('CreatedDate < :endDate');
+        }
+    }
+
+    private static List<Map<String, Object>> queryFeedComments(
+        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
+    ) {
+        List<String> conditions = new List<String>();
+        if (scopedWorkItemIds != null) {
+            conditions.add('WorkItemId__c IN :scopedWorkItemIds');
+        }
+        addDateConditions(conditions, startDate, endDate);
+
+        String query = 'SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, '
+            + 'WorkItemId__c, CreatedBy.Name '
+            + 'FROM WorkItemComment__c '
+            + buildWhereClause(conditions)
+            + 'ORDER BY CreatedDate DESC LIMIT 200';
+
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+        for (WorkItemComment__c c : Database.query(query)) {
+            results.add(buildCommentEvent(c));
+        }
+        return results;
+    }
+
+    private static Map<String, Object> buildCommentEvent(WorkItemComment__c c) {
+        String author = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : c.CreatedBy.Name;
+        String bodyPreview = c.BodyTxt__c;
+        if (String.isNotBlank(bodyPreview)) {
+            bodyPreview = bodyPreview.stripHtmlTags();
+            if (bodyPreview.length() > 200) {
+                bodyPreview = bodyPreview.substring(0, 200) + '...';
+            }
+        }
+        return new Map<String, Object>{
+            'id' => c.Id,
+            'type' => 'comment',
+            'timestamp' => c.CreatedDate,
+            'userName' => author,
+            'title' => 'Comment by ' + author,
+            'detail' => bodyPreview,
+            'icon' => 'standard:feedback',
+            'workItemId' => c.WorkItemId__c,
+            'source' => String.isNotBlank(c.SourcePk__c) ? c.SourcePk__c : 'Salesforce'
+        };
+    }
+
+    private static List<Map<String, Object>> queryFeedWorkLogs(
+        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
+    ) {
+        List<String> conditions = new List<String>();
+        if (scopedWorkItemIds != null) {
+            conditions.add('WorkItemId__c IN :scopedWorkItemIds');
+        }
+        addDateConditions(conditions, startDate, endDate);
+
+        String query = 'SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c, '
+            + 'WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c '
+            + 'FROM WorkLog__c '
+            + buildWhereClause(conditions)
+            + 'ORDER BY CreatedDate DESC LIMIT 200';
+
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+        for (WorkLog__c wl : Database.query(query)) {
+            results.add(buildWorkLogEvent(wl));
+        }
+        return results;
+    }
+
+    private static Map<String, Object> buildWorkLogEvent(WorkLog__c wl) {
+        Decimal hours = wl.HoursLoggedNumber__c != null ? wl.HoursLoggedNumber__c : 0;
+        String statusLabel = String.isNotBlank(wl.StatusPk__c) ? wl.StatusPk__c : 'Approved';
+        String detail = buildWorkLogDetail(wl);
+
+        return new Map<String, Object>{
+            'id' => wl.Id,
+            'type' => 'worklog',
+            'timestamp' => wl.CreatedDate,
+            'userName' => wl.CreatedBy.Name,
+            'title' => hours + 'h logged by ' + wl.CreatedBy.Name,
+            'detail' => detail,
+            'icon' => 'standard:timesheet',
+            'workItemId' => wl.WorkItemId__c,
+            'hours' => hours,
+            'status' => statusLabel
+        };
+    }
+
+    private static String buildWorkLogDetail(WorkLog__c wl) {
+        String detail = String.isNotBlank(wl.WorkDescriptionTxt__c) ? wl.WorkDescriptionTxt__c : '';
+        if (wl.WorkDateDate__c == null) {
+            return detail;
+        }
+        String dateStr = String.valueOf(wl.WorkDateDate__c);
+        return String.isNotBlank(detail)
+            ? detail + ' (Work date: ' + dateStr + ')'
+            : 'Work date: ' + dateStr;
+    }
+
+    private static List<Map<String, Object>> queryFeedActivityLogs(
+        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
+    ) {
+        List<String> conditions = new List<String>();
+        conditions.add('ActionTypePk__c IN (\'Stage_Change\', \'Field_Change\')');
+        Set<String> idStrings = toStringSet(scopedWorkItemIds);
+        if (idStrings != null) {
+            conditions.add('RecordIdTxt__c IN :idStrings');
+        }
+        addDateConditions(conditions, startDate, endDate);
+
+        String query = 'SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c, '
+            + 'ContextDataTxt__c, RecordIdTxt__c '
+            + 'FROM ActivityLog__c '
+            + buildWhereClause(conditions)
+            + 'ORDER BY CreatedDate DESC LIMIT 200';
+
+        List<ActivityLog__c> logs = Database.query(query);
+        Map<Id, String> userNameMap = resolveUserNames(logs);
+
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+        for (ActivityLog__c al : logs) {
+            results.add(buildActivityLogEvent(al, userNameMap));
+        }
+        return results;
+    }
+
+    private static Set<String> toStringSet(Set<Id> ids) {
+        if (ids == null) {
+            return null;
+        }
+        Set<String> strings = new Set<String>();
+        for (Id i : ids) {
+            strings.add(String.valueOf(i));
+        }
+        return strings;
+    }
+
+    private static Map<Id, String> resolveUserNames(List<ActivityLog__c> logs) {
+        Set<Id> userIds = new Set<Id>();
+        for (ActivityLog__c al : logs) {
+            if (String.isNotBlank(al.UserIdTxt__c)) {
+                try {
+                    userIds.add((Id) al.UserIdTxt__c);
+                } catch (Exception ex) { /* skip invalid */ }
+            }
+        }
+        Map<Id, String> userNameMap = new Map<Id, String>();
+        if (!userIds.isEmpty()) {
+            for (User u : [SELECT Id, Name FROM User WHERE Id IN :userIds WITH SYSTEM_MODE]) {
+                userNameMap.put(u.Id, u.Name);
+            }
+        }
+        return userNameMap;
+    }
+
+    private static Map<String, Object> buildActivityLogEvent(ActivityLog__c al, Map<Id, String> userNameMap) {
+        String userName = resolveUserName(al.UserIdTxt__c, userNameMap);
+        Map<String, String> changeInfo = parseChangeContext(al.ContextDataTxt__c, al.ActionTypePk__c);
+        Id recordId = safeToId(al.RecordIdTxt__c);
+
+        return new Map<String, Object>{
+            'id' => al.Id,
+            'type' => al.ActionTypePk__c == 'Stage_Change' ? 'stage_change' : 'field_change',
+            'timestamp' => al.CreatedDate,
+            'userName' => userName,
+            'title' => changeInfo.get('title'),
+            'detail' => changeInfo.get('detail'),
+            'icon' => al.ActionTypePk__c == 'Stage_Change' ? 'standard:record' : 'standard:custom_notification',
+            'workItemId' => recordId
+        };
+    }
+
+    private static String resolveUserName(String userIdTxt, Map<Id, String> userNameMap) {
+        if (String.isNotBlank(userIdTxt) && userIdTxt instanceof Id && userNameMap.containsKey(userIdTxt)) {
+            return userNameMap.get(userIdTxt);
+        }
+        return 'System';
+    }
+
+    private static Id safeToId(String idString) {
+        if (String.isBlank(idString)) {
+            return null;
+        }
+        try {
+            return (Id) idString;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static Map<String, String> parseChangeContext(String contextDataJson, String actionType) {
+        Map<String, String> info = new Map<String, String>{
+            'title' => actionType == 'Stage_Change' ? 'Stage changed' : 'Field changed',
+            'detail' => ''
+        };
+        if (String.isBlank(contextDataJson)) {
+            return info;
+        }
+        try {
+            Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextDataJson);
+            if (actionType == 'Stage_Change') {
+                parseStageChange(ctx, info);
+            } else {
+                parseFieldChange(ctx, info);
+            }
+        } catch (Exception ex) {
+            System.debug(LoggingLevel.FINE, 'Activity Feed: Could not parse context: ' + ex.getMessage());
+        }
+        return info;
+    }
+
+    private static void parseStageChange(Map<String, Object> ctx, Map<String, String> info) {
+        String newStage = (String) ctx.get('newStage');
+        String oldStage = (String) ctx.get('oldStage');
+        if (String.isNotBlank(newStage)) {
+            info.put('title', 'Stage changed to ' + newStage);
+        }
+        if (String.isNotBlank(oldStage) && String.isNotBlank(newStage)) {
+            info.put('detail', oldStage + ' \u2192 ' + newStage);
+        }
+    }
+
+    private static void parseFieldChange(Map<String, Object> ctx, Map<String, String> info) {
+        String fieldLabel = (String) ctx.get('fieldLabel');
+        String oldValue = String.valueOf(ctx.get('oldValue'));
+        String newValue = String.valueOf(ctx.get('newValue'));
+        if (String.isNotBlank(fieldLabel)) {
+            info.put('title', fieldLabel + ' changed');
+        }
+        if (oldValue != null && newValue != null) {
+            info.put('detail', oldValue + ' \u2192 ' + newValue);
+        }
+    }
+
+    // ── Shared Helpers ─────────────────────────────────────────────────
+
+    private static Integer sanitizeOffset(Integer pageOffset) {
+        return (pageOffset == null || pageOffset < 0) ? 0 : pageOffset;
+    }
+
     private static Set<Id> resolveWorkItemScope(Id networkEntityId, Id workItemId) {
         if (workItemId != null) {
             return new Set<Id>{ workItemId };
@@ -270,221 +495,7 @@ public with sharing class DeliveryActivityFeedController {
             }
             return ids;
         }
-        return null; // No filter — all items
-    }
-
-    private static List<Map<String, Object>> queryFeedComments(
-        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
-    ) {
-        List<Map<String, Object>> results = new List<Map<String, Object>>();
-        String query = 'SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, '
-            + 'WorkItemId__c, CreatedBy.Name '
-            + 'FROM WorkItemComment__c ';
-        List<String> conditions = new List<String>();
-        if (scopedWorkItemIds != null) {
-            conditions.add('WorkItemId__c IN :scopedWorkItemIds');
-        }
-        if (startDate != null) {
-            conditions.add('CreatedDate >= :startDate');
-        }
-        if (endDate != null) {
-            Datetime endDt = Datetime.newInstance(endDate.addDays(1), Time.newInstance(0, 0, 0, 0));
-            conditions.add('CreatedDate < :endDt');
-        }
-        if (!conditions.isEmpty()) {
-            query += 'WHERE ' + String.join(conditions, ' AND ') + ' ';
-        }
-        query += 'ORDER BY CreatedDate DESC LIMIT 200';
-
-        for (WorkItemComment__c c : Database.query(query)) {
-            String author = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : c.CreatedBy.Name;
-            String bodyPreview = c.BodyTxt__c;
-            if (String.isNotBlank(bodyPreview)) {
-                bodyPreview = bodyPreview.stripHtmlTags();
-                if (bodyPreview.length() > 200) {
-                    bodyPreview = bodyPreview.substring(0, 200) + '...';
-                }
-            }
-            results.add(new Map<String, Object>{
-                'id' => c.Id,
-                'type' => 'comment',
-                'timestamp' => c.CreatedDate,
-                'userName' => author,
-                'title' => 'Comment by ' + author,
-                'detail' => bodyPreview,
-                'icon' => 'standard:feedback',
-                'workItemId' => c.WorkItemId__c,
-                'source' => String.isNotBlank(c.SourcePk__c) ? c.SourcePk__c : 'Salesforce'
-            });
-        }
-        return results;
-    }
-
-    private static List<Map<String, Object>> queryFeedWorkLogs(
-        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
-    ) {
-        List<Map<String, Object>> results = new List<Map<String, Object>>();
-        String query = 'SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c, '
-            + 'WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c '
-            + 'FROM WorkLog__c ';
-        List<String> conditions = new List<String>();
-        if (scopedWorkItemIds != null) {
-            conditions.add('WorkItemId__c IN :scopedWorkItemIds');
-        }
-        if (startDate != null) {
-            conditions.add('CreatedDate >= :startDate');
-        }
-        if (endDate != null) {
-            Datetime endDt = Datetime.newInstance(endDate.addDays(1), Time.newInstance(0, 0, 0, 0));
-            conditions.add('CreatedDate < :endDt');
-        }
-        if (!conditions.isEmpty()) {
-            query += 'WHERE ' + String.join(conditions, ' AND ') + ' ';
-        }
-        query += 'ORDER BY CreatedDate DESC LIMIT 200';
-
-        for (WorkLog__c wl : Database.query(query)) {
-            Decimal hours = wl.HoursLoggedNumber__c != null ? wl.HoursLoggedNumber__c : 0;
-            String statusLabel = String.isNotBlank(wl.StatusPk__c) ? wl.StatusPk__c : 'Approved';
-            String detail = String.isNotBlank(wl.WorkDescriptionTxt__c) ? wl.WorkDescriptionTxt__c : '';
-            if (wl.WorkDateDate__c != null) {
-                String dateStr = String.valueOf(wl.WorkDateDate__c);
-                detail = String.isNotBlank(detail)
-                    ? detail + ' (Work date: ' + dateStr + ')'
-                    : 'Work date: ' + dateStr;
-            }
-
-            results.add(new Map<String, Object>{
-                'id' => wl.Id,
-                'type' => 'worklog',
-                'timestamp' => wl.CreatedDate,
-                'userName' => wl.CreatedBy.Name,
-                'title' => hours + 'h logged by ' + wl.CreatedBy.Name,
-                'detail' => detail,
-                'icon' => 'standard:timesheet',
-                'workItemId' => wl.WorkItemId__c,
-                'hours' => hours,
-                'status' => statusLabel
-            });
-        }
-        return results;
-    }
-
-    private static List<Map<String, Object>> queryFeedActivityLogs(
-        Set<Id> scopedWorkItemIds, Date startDate, Date endDate
-    ) {
-        List<Map<String, Object>> results = new List<Map<String, Object>>();
-
-        // RecordIdTxt__c is ExternalId (indexed) — efficient query
-        String query = 'SELECT Id, CreatedDate, UserIdTxt__c, ActionTypePk__c, '
-            + 'ContextDataTxt__c, RecordIdTxt__c '
-            + 'FROM ActivityLog__c ';
-        List<String> conditions = new List<String>();
-        conditions.add('ActionTypePk__c IN (\'Stage_Change\', \'Field_Change\')');
-        if (scopedWorkItemIds != null) {
-            Set<String> idStrings = new Set<String>();
-            for (Id wiId : scopedWorkItemIds) {
-                idStrings.add(String.valueOf(wiId));
-            }
-            conditions.add('RecordIdTxt__c IN :idStrings');
-        }
-        if (startDate != null) {
-            conditions.add('CreatedDate >= :startDate');
-        }
-        if (endDate != null) {
-            Datetime endDt = Datetime.newInstance(endDate.addDays(1), Time.newInstance(0, 0, 0, 0));
-            conditions.add('CreatedDate < :endDt');
-        }
-        if (!conditions.isEmpty()) {
-            query += 'WHERE ' + String.join(conditions, ' AND ') + ' ';
-        }
-        query += 'ORDER BY CreatedDate DESC LIMIT 200';
-
-        List<ActivityLog__c> logs = Database.query(query);
-
-        // Resolve user names
-        Set<Id> userIds = new Set<Id>();
-        for (ActivityLog__c al : logs) {
-            if (String.isNotBlank(al.UserIdTxt__c)) {
-                try {
-                    userIds.add((Id) al.UserIdTxt__c);
-                } catch (Exception ex) {
-                    // Skip invalid user IDs
-                }
-            }
-        }
-        Map<Id, String> userNameMap = new Map<Id, String>();
-        if (!userIds.isEmpty()) {
-            for (User u : [SELECT Id, Name FROM User WHERE Id IN :userIds WITH SYSTEM_MODE]) {
-                userNameMap.put(u.Id, u.Name);
-            }
-        }
-
-        for (ActivityLog__c al : logs) {
-            String userName = 'System';
-            if (String.isNotBlank(al.UserIdTxt__c) && al.UserIdTxt__c instanceof Id && userNameMap.containsKey(al.UserIdTxt__c)) {
-                userName = userNameMap.get(al.UserIdTxt__c);
-            }
-
-            Map<String, String> changeInfo = parseChangeContext(al.ContextDataTxt__c, al.ActionTypePk__c);
-            Id recordId = null;
-            if (String.isNotBlank(al.RecordIdTxt__c)) {
-                try {
-                    recordId = (Id) al.RecordIdTxt__c;
-                } catch (Exception ex) {
-                    // Skip invalid record IDs
-                }
-            }
-
-            results.add(new Map<String, Object>{
-                'id' => al.Id,
-                'type' => al.ActionTypePk__c == 'Stage_Change' ? 'stage_change' : 'field_change',
-                'timestamp' => al.CreatedDate,
-                'userName' => userName,
-                'title' => changeInfo.get('title'),
-                'detail' => changeInfo.get('detail'),
-                'icon' => al.ActionTypePk__c == 'Stage_Change' ? 'standard:record' : 'standard:custom_notification',
-                'workItemId' => recordId
-            });
-        }
-        return results;
-    }
-
-    private static Map<String, String> parseChangeContext(String contextDataJson, String actionType) {
-        Map<String, String> info = new Map<String, String>{
-            'title' => actionType == 'Stage_Change' ? 'Stage changed' : 'Field changed',
-            'detail' => ''
-        };
-        if (String.isBlank(contextDataJson)) {
-            return info;
-        }
-        try {
-            Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextDataJson);
-            if (actionType == 'Stage_Change') {
-                String newStage = (String) ctx.get('newStage');
-                String oldStage = (String) ctx.get('oldStage');
-                if (String.isNotBlank(newStage)) {
-                    info.put('title', 'Stage changed to ' + newStage);
-                }
-                if (String.isNotBlank(oldStage) && String.isNotBlank(newStage)) {
-                    info.put('detail', oldStage + ' \u2192 ' + newStage);
-                }
-            } else {
-                // Field change
-                String fieldLabel = (String) ctx.get('fieldLabel');
-                String oldValue = String.valueOf(ctx.get('oldValue'));
-                String newValue = String.valueOf(ctx.get('newValue'));
-                if (String.isNotBlank(fieldLabel)) {
-                    info.put('title', fieldLabel + ' changed');
-                }
-                if (oldValue != null && newValue != null) {
-                    info.put('detail', oldValue + ' \u2192 ' + newValue);
-                }
-            }
-        } catch (Exception ex) {
-            System.debug(LoggingLevel.FINE, 'Activity Feed: Could not parse context: ' + ex.getMessage());
-        }
-        return info;
+        return null;
     }
 
     private static Set<Id> collectWorkItemIds(List<Map<String, Object>> events) {
@@ -541,10 +552,6 @@ public with sharing class DeliveryActivityFeedController {
         return page;
     }
 
-    /**
-     * @description Sorts events by timestamp descending (newest first).
-     *              For conversations, sorts by latestTimestamp.
-     */
     private class EventComparator implements Comparator<Map<String, Object>> {
         public Integer compare(Map<String, Object> a, Map<String, Object> b) {
             Datetime tsA = getTimestamp(a);
@@ -558,7 +565,6 @@ public with sharing class DeliveryActivityFeedController {
         }
 
         private Datetime getTimestamp(Map<String, Object> m) {
-            // Conversations use latestTimestamp; events use timestamp
             Object ts = m.get('latestTimestamp');
             if (ts == null) {
                 ts = m.get('timestamp');
