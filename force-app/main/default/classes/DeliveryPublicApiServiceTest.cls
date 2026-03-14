@@ -91,6 +91,15 @@ private class DeliveryPublicApiServiceTest {
             AuthorTxt__c = 'Developer',
             SourcePk__c = 'Salesforce'
         );
+
+        // Draft work log on first item (for pending-approvals / approve / reject tests)
+        insert new WorkLog__c(
+            WorkItemId__c = items[0].Id,
+            HoursLoggedNumber__c = 2.5,
+            WorkDateDate__c = Date.today(),
+            WorkDescriptionTxt__c = 'Draft work log for API test',
+            StatusPk__c = 'Draft'
+        );
     }
 
     // ==========================================
@@ -417,6 +426,159 @@ private class DeliveryPublicApiServiceTest {
         Test.stopTest();
 
         System.assertEquals(404, res.statusCode, 'Should return 404 for unknown POST resource');
+    }
+
+    // ==========================================
+    // GET ACTIVITY FEED
+    // ==========================================
+
+    @IsTest
+    static void testGetActivityFeed() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/activity-feed');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'), 'Should be successful');
+
+        Map<String, Object> data = (Map<String, Object>) body.get('data');
+        System.assert(data.containsKey('events'), 'Response should contain events');
+        System.assert(data.containsKey('totalCount'), 'Response should contain totalCount');
+        System.assert(data.containsKey('hasMore'), 'Response should contain hasMore');
+    }
+
+    @IsTest
+    static void testGetActivityFeedWithParams() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/activity-feed');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        req.addParameter('filterType', 'comments');
+        req.addParameter('pageOffset', '0');
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'), 'Should be successful');
+    }
+
+    // ==========================================
+    // GET CONVERSATIONS
+    // ==========================================
+
+    @IsTest
+    static void testGetConversations() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/conversations');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'), 'Should be successful');
+    }
+
+    // ==========================================
+    // GET PENDING APPROVALS
+    // ==========================================
+
+    @IsTest
+    static void testGetPendingApprovals() {
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/pending-approvals');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'), 'Should be successful');
+
+        Map<String, Object> data = (Map<String, Object>) body.get('data');
+        System.assert(data.containsKey('approvals'), 'Response should contain approvals');
+        System.assert(data.containsKey('totalCount'), 'Response should contain totalCount');
+    }
+
+    // ==========================================
+    // POST APPROVE WORKLOGS
+    // ==========================================
+
+    @IsTest
+    static void testPostApproveWorkLogs() {
+        WorkLog__c wl = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
+
+        Map<String, Object> body = new Map<String, Object>{
+            'workLogIds' => new List<String>{ wl.Id }
+        };
+
+        RestRequest req = buildPostRequest(
+            '/services/apexrest/delivery/deliveryhub/v1/api/approve-worklogs',
+            body
+        );
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> responseBody = parseResponse(res);
+        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+        System.assertEquals('Approved', data.get('status'), 'Status should be Approved');
+    }
+
+    // ==========================================
+    // POST REJECT WORKLOGS
+    // ==========================================
+
+    @IsTest
+    static void testPostRejectWorkLogs() {
+        WorkLog__c wl = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
+
+        Map<String, Object> body = new Map<String, Object>{
+            'workLogIds' => new List<String>{ wl.Id }
+        };
+
+        RestRequest req = buildPostRequest(
+            '/services/apexrest/delivery/deliveryhub/v1/api/reject-worklogs',
+            body
+        );
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> responseBody = parseResponse(res);
+        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+        System.assertEquals('Rejected', data.get('status'), 'Status should be Rejected');
     }
 
     // ==========================================
