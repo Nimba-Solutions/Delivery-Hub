@@ -18,6 +18,19 @@ public without sharing class DeliveryHubSetupController {
         @AuraEnabled public NetworkEntity__c entity;
     }
 
+    /** @description DTO holding prerequisite check results for the setup wizard. */
+    public class PrerequisiteStatus {
+        @AuraEnabled public Boolean siteExists;
+        @AuraEnabled public Boolean siteActive;
+        @AuraEnabled public Boolean guestUserConfigured;
+        @AuraEnabled public Boolean remoteSiteReachable;
+        @AuraEnabled public String remoteSiteUrl;
+        @AuraEnabled public String orgDomain;
+        @AuraEnabled public String siteSetupUrl;
+        @AuraEnabled public String remoteSiteSetupUrl;
+        @AuraEnabled public Boolean allPassed;
+    }
+
     /**
      * @description Retrieves the current Delivery Hub setup status including connection state,
      * mothership detection, and the required Remote Site URL.
@@ -356,5 +369,94 @@ public without sharing class DeliveryHubSetupController {
 
     private static void scheduleSyncJobs() {
         DeliveryHubScheduler.scheduleAll();
+    }
+
+    // ── Prerequisites Check ────────────────────────────────────────────
+
+    /**
+     * @description Checks all prerequisites for a successful connection: Salesforce Site
+     *              existence/activation, guest user permission set, and Remote Site Setting
+     *              reachability. Returns status + deep links for any missing items.
+     * @return PrerequisiteStatus with check results and Setup page URLs.
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static PrerequisiteStatus checkPrerequisites() {
+        PrerequisiteStatus prereqs = new PrerequisiteStatus();
+
+        // Org domain for deep links
+        String orgDomain = Url.getOrgDomainUrl().toExternalForm();
+        prereqs.orgDomain = orgDomain;
+        prereqs.siteSetupUrl = orgDomain + '/lightning/setup/CustomDomain/home';
+        prereqs.remoteSiteSetupUrl = orgDomain + '/lightning/setup/SecurityRemoteProxy/home';
+
+        // Remote Site URL from config
+        CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
+        prereqs.remoteSiteUrl = (config != null && String.isNotBlank(config.EndpointUrlTxt__c))
+            ? config.EndpointUrlTxt__c.removeEnd('/')
+            : '';
+
+        // Check 1: Salesforce Site exists
+        List<Site> sites = [
+            SELECT Id, Status, GuestUserId FROM Site
+            WHERE Name = 'Delivery_Hub'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        prereqs.siteExists = !sites.isEmpty();
+        prereqs.siteActive = !sites.isEmpty() && sites[0].Status == 'Active';
+
+        // Check 2: Guest user has permission set assigned
+        prereqs.guestUserConfigured = false;
+        if (prereqs.siteActive && sites[0].GuestUserId != null) {
+            prereqs.guestUserConfigured = isGuestUserConfigured(sites[0].GuestUserId);
+        }
+
+        // Check 3: Remote Site Setting is reachable (test callout)
+        prereqs.remoteSiteReachable = testRemoteSiteReachability(prereqs.remoteSiteUrl);
+
+        prereqs.allPassed = prereqs.siteActive
+            && prereqs.guestUserConfigured
+            && prereqs.remoteSiteReachable;
+
+        return prereqs;
+    }
+
+    /**
+     * @description Checks if the guest user has the DeliveryHubGuestUser permission set assigned.
+     * @param guestUserId The Id of the Site's guest user.
+     * @return true if the permission set is assigned.
+     */
+    private static Boolean isGuestUserConfigured(Id guestUserId) {
+        String psName = 'DeliveryHubGuestUser';
+        String nsPrefix = 'delivery__';
+        List<PermissionSetAssignment> assignments = [
+            SELECT Id FROM PermissionSetAssignment
+            WHERE AssigneeId = :guestUserId
+            AND (PermissionSet.Name = :psName OR PermissionSet.Name = :(nsPrefix + psName))
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        return !assignments.isEmpty();
+    }
+
+    /**
+     * @description Tests whether the Remote Site Setting is configured by attempting a callout.
+     * @param endpointUrl The URL to test.
+     * @return true if the callout succeeds (any HTTP response), false if blocked.
+     */
+    private static Boolean testRemoteSiteReachability(String endpointUrl) {
+        if (String.isBlank(endpointUrl)) {
+            return false;
+        }
+        try {
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint(endpointUrl);
+            req.setMethod('GET');
+            req.setTimeout(10000);
+            new Http().send(req);
+            return true;
+        } catch (System.CalloutException ex) {
+            // "Unauthorized endpoint" = Remote Site Setting missing
+            return false;
+        }
     }
 }

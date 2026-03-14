@@ -211,3 +211,98 @@
 .wiz-success-icon {
     margin-bottom: 0.75rem;
 }
+
+/* ── Prerequisites checklist ── */
+.prereq-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+.prereq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.prereq-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 0.8rem;
+}
+.prereq-item--pass {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+.prereq-item--pass lightning-icon {
+    --lwc-colorTextIconDefault: #059669;
+}
+.prereq-item--fail {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+.prereq-item--fail lightning-icon {
+    --lwc-colorTextIconDefault: #dc2626;
+}
+.prereq-label {
+    font-weight: 600;
+    color: #1e293b;
+}
+.prereq-help {
+    width: 100%;
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    font-size: 0.75rem;
+    color: #64748b;
+}
+.prereq-help p {
+    margin: 0 0 0.35rem;
+}
+.prereq-url-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+}
+.prereq-url {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.7rem;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    word-break: break-all;
+    flex: 1;
+}
+.prereq-link {
+    font-size: 0.75rem;
+    color: #4f46e5;
+    text-decoration: none;
+    font-weight: 600;
+}
+.prereq-link:hover {
+    text-decoration: underline;
+}
+.prereq-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.prereq-ready {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #059669;
+}

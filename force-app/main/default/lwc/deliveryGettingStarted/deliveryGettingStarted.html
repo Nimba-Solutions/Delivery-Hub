@@ -114,9 +114,85 @@
                 <template lwc:if={isStep4}>
                     <div class="wiz-content">
                         <h3 class="wiz-heading">Establish connection</h3>
-                        <template lwc:if={isClientOrg}>
-                            <p class="wiz-sub">Click the button below to register your org with Cloud Nimbus LLC and set up sync jobs.</p>
+
+                        <!-- Prerequisites checklist (client orgs only) -->
+                        <template lwc:if={showPrereqs}>
+                            <p class="wiz-sub">Before connecting, let's verify your org is ready.</p>
+
+                            <template lwc:if={isCheckingPrereqs}>
+                                <div class="prereq-loading">
+                                    <lightning-spinner size="small" alternative-text="Checking..."></lightning-spinner>
+                                    <span>Checking prerequisites...</span>
+                                </div>
+                            </template>
+
+                            <template lwc:if={prereqsChecked}>
+                                <div class="prereq-list">
+                                    <!-- 1. Salesforce Site -->
+                                    <div class={prereqSiteClass}>
+                                        <lightning-icon icon-name={prereqSiteIcon} size="xx-small"></lightning-icon>
+                                        <span class="prereq-label">Salesforce Site (Delivery_Hub)</span>
+                                        <template lwc:if={showSiteHelp}>
+                                            <div class="prereq-help">
+                                                <p>Create a Salesforce Site named <strong>Delivery_Hub</strong> in Setup.</p>
+                                                <a href={prereqs.siteSetupUrl} target="_blank" class="prereq-link">
+                                                    Open Sites Setup
+                                                </a>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <!-- 2. Guest User Permissions -->
+                                    <div class={prereqGuestClass}>
+                                        <lightning-icon icon-name={prereqGuestIcon} size="xx-small"></lightning-icon>
+                                        <span class="prereq-label">Guest user permissions</span>
+                                        <template lwc:if={showGuestHelp}>
+                                            <div class="prereq-help">
+                                                <p>The Site's guest user needs the DeliveryHubGuestUser permission set.</p>
+                                                <lightning-button label="Fix Automatically" variant="brand"
+                                                                  size="small" onclick={handleFixGuestUser}></lightning-button>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <!-- 3. Remote Site Setting -->
+                                    <div class={prereqRemoteClass}>
+                                        <lightning-icon icon-name={prereqRemoteIcon} size="xx-small"></lightning-icon>
+                                        <span class="prereq-label">Remote Site Setting</span>
+                                        <template lwc:if={showRemoteHelp}>
+                                            <div class="prereq-help">
+                                                <p>Add this URL as a Remote Site Setting:</p>
+                                                <div class="prereq-url-row">
+                                                    <code class="prereq-url">{remoteSiteUrl}</code>
+                                                    <lightning-button-icon icon-name="utility:copy"
+                                                                           alternative-text="Copy URL"
+                                                                           onclick={handleCopyUrl}
+                                                                           size="small"></lightning-button-icon>
+                                                </div>
+                                                <a href={prereqs.remoteSiteSetupUrl} target="_blank" class="prereq-link">
+                                                    Open Remote Site Settings
+                                                </a>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="prereq-actions">
+                                    <lightning-button label="Recheck" variant="neutral"
+                                                      icon-name="utility:refresh"
+                                                      onclick={handleRecheckPrereqs}
+                                                      disabled={isCheckingPrereqs}></lightning-button>
+                                    <template lwc:if={prereqs.allPassed}>
+                                        <div class="prereq-ready">
+                                            <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
+                                            <span>All prerequisites passed</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
                         </template>
+
+                        <!-- Vendor orgs skip prerequisites -->
                         <template lwc:if={isVendorOrg}>
                             <p class="wiz-sub">Click the button below to initialize default settings and schedule sync jobs.</p>
                         </template>
@@ -131,7 +207,7 @@
                         <div class="wiz-actions wiz-actions--center">
                             <lightning-button label="Back" variant="neutral" onclick={handleBack}></lightning-button>
                             <lightning-button label="Connect Now" variant="brand" onclick={handleConnect}
-                                              disabled={isConnecting}
+                                              disabled={connectDisabled}
                                               icon-name="utility:connected_apps"></lightning-button>
                             <template lwc:if={isConnecting}>
                                 <lightning-spinner size="small" alternative-text="Connecting..."></lightning-spinner>

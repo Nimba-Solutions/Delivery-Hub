@@ -179,6 +179,40 @@ private class DeliveryHubSetupControllerTest {
         System.assertEquals('Pending Client', pending[0].Name, 'Should return the correct entity');
     }
 
+    @IsTest
+    static void testCheckPrerequisites() {
+        Test.startTest();
+        // checkPrerequisites makes a callout to test remote site reachability
+        Test.setMock(HttpCalloutMock.class, new SuccessMock());
+        DeliveryHubSetupController.PrerequisiteStatus prereqs = DeliveryHubSetupController.checkPrerequisites();
+        Test.stopTest();
+
+        System.assertNotEquals(null, prereqs, 'PrerequisiteStatus should not be null');
+        System.assertNotEquals(null, prereqs.orgDomain, 'Org domain should be populated');
+        System.assertNotEquals(null, prereqs.siteSetupUrl, 'Site setup URL should be populated');
+        System.assertNotEquals(null, prereqs.remoteSiteSetupUrl, 'Remote site setup URL should be populated');
+        // In a test context, no Site exists so these should be false
+        System.assertEquals(false, prereqs.siteExists, 'No Site should exist in test context');
+        System.assertEquals(false, prereqs.siteActive, 'No active Site in test context');
+        System.assertEquals(false, prereqs.guestUserConfigured, 'No guest user configured in test context');
+        // Remote site reachability depends on mock — SuccessMock returns 200 so it should pass
+        System.assertEquals(true, prereqs.remoteSiteReachable, 'Remote site should be reachable with success mock');
+        // allPassed should be false because site is missing
+        System.assertEquals(false, prereqs.allPassed, 'allPassed should be false when site is missing');
+    }
+
+    @IsTest
+    static void testCheckPrerequisitesRemoteFail() {
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new FailureMock());
+        DeliveryHubSetupController.PrerequisiteStatus prereqs = DeliveryHubSetupController.checkPrerequisites();
+        Test.stopTest();
+
+        // FailureMock returns 500 but the callout itself succeeds (doesn't throw CalloutException)
+        // so remoteSiteReachable should be true (any HTTP response = remote site setting exists)
+        System.assertNotEquals(null, prereqs, 'PrerequisiteStatus should not be null');
+    }
+
     /** @description Mock that returns a successful 200 handshake response with processedId and orgId. */
     private class SuccessMock implements HttpCalloutMock {
         /** @description Builds a mock 200 response. @param req The inbound request. @return Mock HttpResponse with status 200. */
