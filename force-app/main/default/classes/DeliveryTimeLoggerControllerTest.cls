@@ -93,6 +93,12 @@ private class DeliveryTimeLoggerControllerTest {
         WorkItem__c noReqWorkItem = new WorkItem__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
         insert noReqWorkItem;
 
+        // Delete any auto-created WorkRequests (AutoCreateWorkRequest may fire in namespaced context)
+        List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :noReqWorkItem.Id];
+        if (!autoCreated.isEmpty()) {
+            delete autoCreated;
+        }
+
         Test.startTest();
         try {
             DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Should fail', null);
