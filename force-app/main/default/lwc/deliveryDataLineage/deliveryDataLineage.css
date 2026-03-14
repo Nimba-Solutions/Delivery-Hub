@@ -1,0 +1,129 @@
+.dl-title {
+    font-weight: 700;
+    font-size: 1rem;
+}
+.dl-loading {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+}
+.dl-chain {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+.dl-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.dl-group-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    text-align: center;
+}
+.dl-node {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    background: #f8fafc;
+}
+.dl-node--connected {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+.dl-node--disconnected {
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+.dl-node--self {
+    border-color: #a5b4fc;
+    background: #eef2ff;
+    border-width: 2px;
+}
+.dl-node-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.dl-node-name {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.dl-node-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+.dl-node-type {
+    font-size: 0.6875rem;
+    color: #64748b;
+}
+.dl-node-orgid {
+    font-size: 0.6rem;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: #94a3b8;
+}
+.dl-node-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+.dl-node-status {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #475569;
+}
+.dl-node-sync {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+}
+.dl-health {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 9999px;
+}
+.dl-health--green {
+    background: #d1fae5;
+    color: #065f46;
+}
+.dl-health--yellow {
+    background: #fef3c7;
+    color: #92400e;
+}
+.dl-health--red {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.dl-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.25rem 0;
+    color: #94a3b8;
+}
+.dl-arrow-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+}
+.dl-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    color: #94a3b8;
+    font-size: 0.8125rem;
+}

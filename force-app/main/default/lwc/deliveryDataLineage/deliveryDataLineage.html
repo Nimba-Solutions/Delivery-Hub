@@ -1,0 +1,97 @@
+<template>
+    <lightning-card icon-name="utility:flow">
+        <div slot="title" class="dl-title">Data Flow</div>
+
+        <div class="slds-p-around_medium">
+            <template lwc:if={isLoading}>
+                <div class="dl-loading">
+                    <lightning-spinner size="small" alternative-text="Loading..."></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:if={hasEntities}>
+                <div class="dl-chain">
+
+                    <!-- Vendor / Upstream nodes -->
+                    <template lwc:if={hasVendors}>
+                        <div class="dl-group">
+                            <div class="dl-group-label">Upstream (Vendors)</div>
+                            <template for:each={vendorEntities} for:item="entity">
+                                <div key={entity.id} class={entity.statusClass}>
+                                    <div class="dl-node-header">
+                                        <lightning-icon icon-name="standard:partners" size="x-small"></lightning-icon>
+                                        <span class="dl-node-name">{entity.name}</span>
+                                    </div>
+                                    <div class="dl-node-meta">
+                                        <span class="dl-node-type">{entity.entityType}</span>
+                                        <span class={entity.healthClass}>{entity.healthLabel}</span>
+                                    </div>
+                                    <div class="dl-node-detail">
+                                        <span class="dl-node-status">{entity.connectionStatus}</span>
+                                        <span class="dl-node-sync">Last sync: {entity.lastSyncLabel}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Arrow down -->
+                        <div class="dl-arrow">
+                            <lightning-icon icon-name="utility:arrowdown" size="x-small"></lightning-icon>
+                            <span class="dl-arrow-label">Pull</span>
+                        </div>
+                    </template>
+
+                    <!-- This Org (center) -->
+                    <div class="dl-node dl-node--self">
+                        <div class="dl-node-header">
+                            <lightning-icon icon-name="standard:home" size="x-small"></lightning-icon>
+                            <span class="dl-node-name">{localOrgName}</span>
+                        </div>
+                        <div class="dl-node-meta">
+                            <span class="dl-node-type">This Org</span>
+                            <span class="dl-node-orgid">{localOrgId}</span>
+                        </div>
+                    </div>
+
+                    <!-- Arrow down to clients -->
+                    <template lwc:if={hasClients}>
+                        <div class="dl-arrow">
+                            <lightning-icon icon-name="utility:arrowdown" size="x-small"></lightning-icon>
+                            <span class="dl-arrow-label">Push</span>
+                        </div>
+
+                        <!-- Client / Downstream nodes -->
+                        <div class="dl-group">
+                            <div class="dl-group-label">Downstream (Clients)</div>
+                            <template for:each={clientEntities} for:item="entity">
+                                <div key={entity.id} class={entity.statusClass}>
+                                    <div class="dl-node-header">
+                                        <lightning-icon icon-name="standard:account" size="x-small"></lightning-icon>
+                                        <span class="dl-node-name">{entity.name}</span>
+                                    </div>
+                                    <div class="dl-node-meta">
+                                        <span class="dl-node-type">{entity.entityType}</span>
+                                        <span class={entity.healthClass}>{entity.healthLabel}</span>
+                                    </div>
+                                    <div class="dl-node-detail">
+                                        <span class="dl-node-status">{entity.connectionStatus}</span>
+                                        <span class="dl-node-sync">Last sync: {entity.lastSyncLabel}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <template lwc:if={!hasEntities}>
+                <template lwc:if={!isLoading}>
+                    <div class="dl-empty">
+                        <lightning-icon icon-name="utility:info" size="small" class="slds-m-right_small"></lightning-icon>
+                        <span>No connected entities. Complete the Getting Started wizard to establish your first connection.</span>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>
