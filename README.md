@@ -34,6 +34,7 @@ Meanwhile your CRM &mdash; the system that already knows every account, contact,
 | Vendor work tracked in a separate spreadsheet | Cross-org sync sends it to their Salesforce org automatically |
 | VP asks for status &mdash; you open 4 spreadsheets | System Pulse shows everything live, right now |
 | Developer guesses hours at end of week | Time Logger captures it on the work item as they go |
+| Hours logged but no approval trail | WorkLog approval workflow with Draft &rarr; Approved &rarr; Sync pipeline |
 | "We need a portal" = 5 days writing requirements | AI generates description, acceptance criteria, and estimate from one line |
 | Blocked item sits for days before anyone notices | Escalation engine auto-alerts when SLA targets are missed |
 | Weekly status email takes an hour to write | AI digest compiles and sends it automatically |
@@ -96,6 +97,12 @@ Recurring items auto-create work items on configurable schedules &mdash; daily s
 
 CSV import wizard maps spreadsheet columns to work item fields and creates items in bulk. Dependency graph visualizes blocking relationships so you can see the critical path. Release notes generator compiles completed items into formatted summaries.
 
+### Billing & Approval
+
+WorkLog approval workflow gates logged hours behind a Draft &rarr; Approved &rarr; Synced pipeline. Enable the `RequireWorkLogApprovalDate__c` setting and all new hours save as Draft until a manager approves them. Batch approve or reject directly from the Activity Feed. When the setting is null, existing behavior is unchanged &mdash; hours sync immediately.
+
+The Activity Feed provides a unified, cross-item timeline of comments, hours, and stage/field changes. Date-grouped entries, conversation threads with inline reply, batch WorkLog approval actions, and 30-second polling keep the entire team on the same page without switching between records.
+
 ### Configurable Workflows
 
 Not just software delivery &mdash; the workflow engine supports any stage-based process. Ships with Software Delivery (40+ stages) and Loan Approval (8 stages) out of the box. Define your own workflow types, stages, personas, and transitions through Custom Metadata.
@@ -127,8 +134,8 @@ The engine is retry-aware (up to 3 attempts), handles namespace translation for 
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 73 (47 production + 26 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
-| **LWC Components** | 40 | deliveryHubBoard, deliveryClientDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryGhostRecorder |
+| **Apex Classes** | ~79 (51 production + 28 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
+| **LWC Components** | ~42 | deliveryHubBoard, deliveryClientDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
 | **Custom Objects** | 8 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, DeliveryHubSettings\_\_c |
 | **Custom Metadata** | 6 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt |
 | **Triggers** | 4 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger |
@@ -162,7 +169,7 @@ cci task run retrieve_changes --org dev
 git push origin feature/your-feature
 ```
 
-Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 300+ Apex tests (75%+ coverage enforced), runs PMD static analysis (zero violations enforced), and tears everything down.
+Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 370+ Apex tests (75%+ coverage enforced), runs PMD static analysis (zero violations enforced), and tears everything down.
 
 ### Releasing
 
@@ -236,7 +243,10 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Real-Time Chat** | Polling-based comments with file attachment indicators |
 | **File Rollup** | All files from work item + comments + requests in one panel |
 | **Activity Timeline** | Full audit trail of every change on a work item |
-| **Time Logger** | Quick hour logging, creates WorkLog entries |
+| **Time Logger** | Quick hour logging with date picker, creates WorkLog entries |
+| **WorkLog Approval** | Draft &rarr; Approved &rarr; Synced pipeline, gated by org setting |
+| **Activity Feed** | Cross-item unified timeline of comments, hours, and changes with inline reply |
+| **Data Lineage** | Visual sync chain with per-entity health metrics on admin home |
 | **Ghost Recorder** | Floating submission form with keyboard shortcut |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
 | **Public Status Page** | Shareable delivery status view &mdash; no Salesforce login required |
@@ -248,7 +258,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **CSV Import** | Bulk import work items from spreadsheets |
 | **Release Notes** | Auto-generate formatted release summaries from completed items |
 | **Configurable Workflows** | Custom stages, personas, and transitions via metadata |
-| **Setup Wizard** | One-click connection with automatic scheduler provisioning |
+| **Setup Wizard** | One-click connection with automatic scheduler provisioning and real-time prerequisites checklist |
 | **Native Reports** | Full Salesforce reporting on all delivery data |
 
 ---
