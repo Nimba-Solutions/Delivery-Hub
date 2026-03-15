@@ -53,13 +53,13 @@ global without sharing class DeliveryPublicApiService {
     private static Boolean handlePreEntityRoutes(String resource) {
         if (resource == 'my-entities') {
             String email = getPortalEmail();
-            if (String.isBlank(email)) { sendError(400, 'X-Portal-User header required.'); return true; }
+            if (String.isBlank(email)) { sendError(400, 'X-Portal-User header is required.'); return true; }
             sendSuccess(DeliveryPortalAccessService.getEntitiesForEmail(email));
             return true;
         }
         if (resource == 'portal-users') {
             String email = getPortalEmail();
-            if (String.isBlank(email)) { sendError(400, 'X-Portal-User header required.'); return true; }
+            if (String.isBlank(email)) { sendError(400, 'X-Portal-User header is required.'); return true; }
             sendSuccess(DeliveryPortalAccessService.getPortalUsersByEntity(email));
             return true;
         }
