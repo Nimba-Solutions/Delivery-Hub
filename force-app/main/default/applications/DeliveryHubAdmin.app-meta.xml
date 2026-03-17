@@ -103,6 +103,7 @@
     <tabs>SyncItem__c</tabs>
     <tabs>ActivityLog__c</tabs>
     <tabs>DeliveryHubSettings</tabs>
+    <tabs>Delivery_Guide</tabs>
     <tabs>standard-report</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubAdmin_UtilityBar</utilityBar>

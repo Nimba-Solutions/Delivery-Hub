@@ -1,0 +1,446 @@
+/* ── Container ── */
+.dg-container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+}
+
+/* ── Hero ── */
+.dg-hero {
+    background: linear-gradient(135deg, #1a2d4a 0%, #2d4a7a 100%);
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+}
+
+.dg-hero-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: #ffffff;
+}
+
+.dg-hero-subtitle {
+    font-size: 0.95rem;
+    color: #cbd5e1;
+    margin: 0 0 1.25rem;
+    line-height: 1.5;
+}
+
+.dg-hero-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ── Quick Links ── */
+.dg-quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.dg-quick-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.dg-quick-link:hover {
+    border-color: #4f46e5;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
+    transform: translateY(-1px);
+}
+
+/* ── Section ── */
+.dg-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.dg-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.1s ease;
+}
+
+.dg-section-header:hover {
+    background-color: #f8fafc;
+}
+
+.dg-section-header:focus {
+    outline: 2px solid #4f46e5;
+    outline-offset: -2px;
+}
+
+.dg-section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dg-section-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.dg-section-body {
+    padding: 0 1.5rem 1.5rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* ── Content Elements ── */
+.dg-description {
+    font-size: 0.925rem;
+    color: #475569;
+    line-height: 1.6;
+    margin: 1rem 0;
+}
+
+.dg-subsection {
+    margin-top: 1.25rem;
+}
+
+.dg-subsection-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 2px solid #eef2ff;
+}
+
+.dg-list {
+    margin: 0.5rem 0;
+    padding-left: 1.25rem;
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.7;
+}
+
+.dg-list li {
+    margin-bottom: 0.25rem;
+}
+
+/* ── Steps ── */
+.dg-steps {
+    margin: 0.75rem 0;
+}
+
+.dg-step {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    align-items: flex-start;
+}
+
+.dg-step-number {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #4f46e5;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+}
+
+.dg-step-content {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #334155;
+}
+
+.dg-step-content strong {
+    display: block;
+    margin-bottom: 0.15rem;
+}
+
+.dg-step-content p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+/* ── Stage Flow ── */
+.dg-stage-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 6px;
+}
+
+.dg-stage-pill {
+    padding: 0.25rem 0.625rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.dg-stage-pill--planning { background: #e0e7ff; color: #3730a3; }
+.dg-stage-pill--approval { background: #fef3c7; color: #92400e; }
+.dg-stage-pill--dev { background: #dbeafe; color: #1e40af; }
+.dg-stage-pill--testing { background: #fce7f3; color: #9d174d; }
+.dg-stage-pill--uat { background: #ede9fe; color: #5b21b6; }
+.dg-stage-pill--deploy { background: #fed7aa; color: #9a3412; }
+.dg-stage-pill--complete { background: #d1fae5; color: #065f46; }
+.dg-stage-pill--blocked { background: #fecaca; color: #991b1b; }
+
+.dg-stage-arrow {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ── Field Table ── */
+.dg-field-table {
+    margin: 0.5rem 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.dg-field-row {
+    display: flex;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+}
+
+.dg-field-row:last-child {
+    border-bottom: none;
+}
+
+.dg-field-name {
+    flex: 0 0 180px;
+    padding: 0.625rem 0.875rem;
+    background: #f8fafc;
+    font-weight: 600;
+    color: #334155;
+    border-right: 1px solid #e2e8f0;
+}
+
+.dg-field-desc {
+    flex: 1;
+    padding: 0.625rem 0.875rem;
+    color: #475569;
+    line-height: 1.5;
+}
+
+/* ── Feature Grid ── */
+.dg-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 0.75rem;
+    margin: 0.75rem 0;
+}
+
+.dg-feature-card {
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.5;
+}
+
+.dg-feature-card strong {
+    display: block;
+    margin: 0.5rem 0 0.25rem;
+    color: #1e293b;
+}
+
+.dg-feature-card p {
+    margin: 0;
+}
+
+/* ── Tip / Info Box ── */
+.dg-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #3730a3;
+    line-height: 1.5;
+}
+
+/* ── Ghost Recorder App List ── */
+.dg-app-list {
+    margin: 0.75rem 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.dg-app-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+}
+
+.dg-app-status:last-child {
+    border-bottom: none;
+}
+
+.dg-app-status--installed {
+    background: #f0fdf4;
+}
+
+.dg-app-status--missing {
+    background: #fef2f2;
+}
+
+.dg-app-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dg-app-label {
+    font-weight: 500;
+    color: #334155;
+}
+
+.dg-app-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+}
+
+.dg-app-status--installed .dg-app-badge {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.dg-app-status--missing .dg-app-badge {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+/* ── Success / Warning Boxes ── */
+.dg-success-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #065f46;
+    margin: 0.75rem 0;
+}
+
+.dg-warning-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #fefce8;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #92400e;
+    line-height: 1.5;
+    margin: 0.75rem 0;
+}
+
+/* ── Urgency Dots ── */
+.dg-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.25rem;
+    vertical-align: middle;
+}
+
+.dg-dot--red { background: #ef4444; }
+.dg-dot--yellow { background: #f59e0b; }
+.dg-dot--green { background: #22c55e; }
+
+/* ── Footer ── */
+.dg-footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    font-size: 0.825rem;
+    color: #94a3b8;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 1rem;
+}
+
+.dg-footer p {
+    margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .dg-hero {
+        padding: 1.5rem;
+    }
+
+    .dg-hero-title {
+        font-size: 1.375rem;
+    }
+
+    .dg-quick-links {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .dg-feature-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dg-stage-flow {
+        flex-wrap: wrap;
+    }
+
+    .dg-field-row {
+        flex-direction: column;
+    }
+
+    .dg-field-name {
+        flex: none;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+    }
+}
