@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
-    <customObject>false</customObject>
-    <motif>Custom51: Pencil</motif>
+    <description>Delivery Hub Guide</description>
+    <label>Delivery Guide</label>
     <lwcComponent>deliveryGuide</lwcComponent>
+    <motif>Custom51: Pencil</motif>
 </CustomTab>
