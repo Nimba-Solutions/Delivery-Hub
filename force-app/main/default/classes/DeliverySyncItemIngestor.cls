@@ -70,6 +70,7 @@ public without sharing class DeliverySyncItemIngestor {
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
         
         // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId)
+        // and strip cross-org lookup IDs BEFORE mapFields runs (applies to both insert and update)
         String parentWorkItemRef = targetId;
         if (objectType.endsWithIgnoreCase('WorkLog__c')) {
             String wiRef = (String) payload.get('WorkItemId__c');
@@ -79,6 +80,11 @@ public without sharing class DeliverySyncItemIngestor {
             if (String.isNotBlank(wiRef)) {
                 parentWorkItemRef = wiRef;
             }
+            // Always strip remote lookup IDs — they are invalid cross-org references
+            payload.remove('WorkItemId__c');
+            payload.remove('delivery__WorkItemId__c');
+            payload.remove('RequestId__c');
+            payload.remove('delivery__RequestId__c');
         }
 
         Id localParentId = null;
@@ -125,11 +131,6 @@ public without sharing class DeliverySyncItemIngestor {
                 if (!localRequests.isEmpty()) {
                     putSafe(recordToUpsert, 'RequestId__c', localRequests[0].Id);
                 }
-                // Remove remote IDs from payload so mapFields doesn't overwrite with invalid cross-org IDs
-                payload.remove('WorkItemId__c');
-                payload.remove('delivery__WorkItemId__c');
-                payload.remove('RequestId__c');
-                payload.remove('delivery__RequestId__c');
             }
         }
 
