@@ -68,6 +68,25 @@ Error responses:
 
 ## Endpoints
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/dashboard` | Portal dashboard with counts and phase distribution |
+| GET | `/api/work-items` | List work items, optionally filtered by status |
+| GET | `/api/work-items/{id}` | Full detail for a single work item |
+| POST | `/api/work-items` | Create a new work item request |
+| POST | `/api/work-items/{id}/comments` | Add a comment to a work item |
+| GET | `/api/activity-feed` | Unified timeline of comments, work logs, and changes |
+| GET | `/api/work-logs` | All work logs for the authenticated entity |
+| POST | `/api/log-hours` | Create a new work log entry |
+| GET | `/api/pending-approvals` | Draft work logs awaiting approval |
+| POST | `/api/approve-worklogs` | Batch approve draft work logs |
+| POST | `/api/reject-worklogs` | Batch reject draft work logs |
+| GET | `/api/board-summary` | AI-generated board summary |
+| GET | `/api/files` | Files attached to the entity's work items |
+| GET | `/api/documents` | Generated documents (invoices, statements) for the entity |
+
+---
+
 ### GET /api/dashboard
 
 Returns a portal dashboard scoped to the authenticated NetworkEntity. Includes active/completed/attention counts, phase distribution, recently completed items, and a recent activity feed.
@@ -387,6 +406,520 @@ Comments created via the API are automatically tagged with `AuthorTxt__c = 'Port
 
 ---
 
+### GET /api/activity-feed
+
+Returns a unified, chronologically-sorted timeline of comments, work logs, and activity logs (stage/field changes) across all work items for the authenticated entity. Supports filtering by event type and pagination.
+
+**Query parameters**:
+
+| Parameter | Required | Values | Description |
+|-----------|----------|--------|-------------|
+| `filterType` | No | `all`, `comments`, `hours`, `changes` | Filter by event type. Defaults to `all`. |
+| `pageOffset` | No | Integer (0-based) | Page offset for pagination. Defaults to `0`. |
+
+**Request**:
+
+```bash
+# All activity
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/activity-feed"
+
+# Filtered to comments only, page 2
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/activity-feed?filterType=comments&pageOffset=1"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "events": [
+            {
+                "id": "a04xx0000000001AAA",
+                "type": "comment",
+                "timestamp": "2026-03-10T14:30:00.000Z",
+                "userName": "Glen Bradford",
+                "title": "Comment by Glen Bradford",
+                "detail": "Started working on the OAuth integration.",
+                "icon": "standard:feedback",
+                "workItemId": "a00xx0000000001AAA",
+                "workItemName": "WI-0042",
+                "workItemDescription": "Deploy analytics dashboard",
+                "source": "Salesforce"
+            },
+            {
+                "id": "a05xx0000000001AAA",
+                "type": "worklog",
+                "timestamp": "2026-03-10T12:00:00.000Z",
+                "userName": "Jane Smith",
+                "title": "2.5h logged by Jane Smith",
+                "detail": "Implemented login flow (Work date: 2026-03-10)",
+                "icon": "standard:timesheet",
+                "workItemId": "a00xx0000000002AAA",
+                "workItemName": "WI-0043",
+                "workItemDescription": "Build login page",
+                "hours": 2.5,
+                "status": "Draft"
+            },
+            {
+                "id": "a06xx0000000001AAA",
+                "type": "stage_change",
+                "timestamp": "2026-03-09T16:45:00.000Z",
+                "userName": "System",
+                "title": "Stage changed to In Development",
+                "detail": "Ready for Development \u2192 In Development",
+                "icon": "standard:record",
+                "workItemId": "a00xx0000000001AAA",
+                "workItemName": "WI-0042",
+                "workItemDescription": "Deploy analytics dashboard"
+            }
+        ],
+        "totalCount": 87,
+        "hasMore": true
+    }
+}
+```
+
+**Response fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `events` | Array | Paginated list of activity events (25 per page), sorted newest first |
+| `events[].id` | String | Record ID of the source record (comment, work log, or activity log) |
+| `events[].type` | String | Event type: `comment`, `worklog`, `stage_change`, or `field_change` |
+| `events[].timestamp` | DateTime | When the event occurred |
+| `events[].userName` | String | User who performed the action (defaults to "System" if unknown) |
+| `events[].title` | String | Human-readable summary of the event |
+| `events[].detail` | String | Additional detail (comment preview, hour description, change values) |
+| `events[].icon` | String | SLDS icon name for rendering |
+| `events[].workItemId` | String | Associated WorkItem ID |
+| `events[].workItemName` | String | Work item auto-number (e.g., WI-0042) |
+| `events[].workItemDescription` | String | Work item title / brief description |
+| `events[].source` | String | Comment source: Salesforce, Client, Sync, Portal (comments only) |
+| `events[].hours` | Decimal | Hours logged (work log events only) |
+| `events[].status` | String | Work log status: Draft, Approved, Rejected (work log events only) |
+| `totalCount` | Integer | Total number of events matching the filter (before pagination) |
+| `hasMore` | Boolean | Whether more pages are available |
+
+---
+
+### GET /api/work-logs
+
+Returns all work logs for the authenticated entity's work items, ordered by creation date descending.
+
+**Request**:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/work-logs"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": "a05xx0000000001AAA",
+            "workItemId": "a00xx0000000001AAA",
+            "workItemName": "WI-0042",
+            "workItemTitle": "Deploy analytics dashboard",
+            "hours": 2.5,
+            "workDate": "2026-03-10",
+            "description": "Implemented OAuth login flow",
+            "status": "Draft",
+            "userName": "Jane Smith",
+            "createdDate": "2026-03-10T14:30:00.000Z"
+        }
+    ]
+}
+```
+
+**Response fields per item**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | String | WorkLog record ID |
+| `workItemId` | String | Parent WorkItem ID |
+| `workItemName` | String | Work item auto-number (e.g., WI-0042) |
+| `workItemTitle` | String | Work item brief description / title |
+| `hours` | Decimal | Hours logged |
+| `workDate` | Date | The date the work was performed |
+| `description` | String | Work description / notes |
+| `status` | String | Work log status: Draft, Approved, or Rejected |
+| `userName` | String | Name of the user who created the log |
+| `createdDate` | DateTime | Record creation timestamp |
+
+**Limit**: Returns up to 200 work logs per request.
+
+---
+
+### POST /api/log-hours
+
+Creates a new work log entry for a work item.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workItemId": "a00xx0000000001AAA",
+    "hours": 2.5,
+    "workDate": "2026-03-10",
+    "workNotes": "Implemented OAuth login flow"
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/log-hours"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `workItemId` | Yes | String | The WorkItem ID to log hours against |
+| `hours` | Yes | Decimal | Number of hours to log. Must be greater than 0. |
+| `workDate` | No | Date (YYYY-MM-DD) | The date the work was performed. Defaults to today if omitted. |
+| `workNotes` | No | String | Description of the work performed |
+
+**Response** (201):
+
+```json
+{
+    "success": true,
+    "data": {
+        "status": "Logged",
+        "hours": 2.5
+    }
+}
+```
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Missing request body, missing `workItemId`, or `hours` is null/zero/negative |
+
+---
+
+### GET /api/pending-approvals
+
+Returns draft work logs pending approval for the authenticated entity's work items, ordered by creation date descending.
+
+**Query parameters**:
+
+| Parameter | Required | Values | Description |
+|-----------|----------|--------|-------------|
+| `pageOffset` | No | Integer (0-based) | Page offset for pagination. Defaults to `0`. |
+
+**Request**:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/pending-approvals"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "approvals": [
+            {
+                "id": "a05xx0000000001AAA",
+                "workItemId": "a00xx0000000001AAA",
+                "workItemName": "WI-0042",
+                "workItemDescription": "Deploy analytics dashboard",
+                "hours": 2.5,
+                "workDate": "2026-03-10",
+                "description": "Implemented OAuth login flow",
+                "userName": "Jane Smith",
+                "timestamp": "2026-03-10T14:30:00.000Z",
+                "status": "Draft"
+            }
+        ],
+        "totalCount": 5
+    }
+}
+```
+
+**Response fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `approvals` | Array | List of draft work logs awaiting approval |
+| `approvals[].id` | String | WorkLog record ID |
+| `approvals[].workItemId` | String | Parent WorkItem ID |
+| `approvals[].workItemName` | String | Work item auto-number (e.g., WI-0042) |
+| `approvals[].workItemDescription` | String | Work item title / brief description |
+| `approvals[].hours` | Decimal | Hours logged |
+| `approvals[].workDate` | Date | The date the work was performed |
+| `approvals[].description` | String | Work description / notes |
+| `approvals[].userName` | String | Name of the user who created the log |
+| `approvals[].timestamp` | DateTime | Work log creation timestamp |
+| `approvals[].status` | String | Always `Draft` for pending approvals |
+| `totalCount` | Integer | Total number of pending approvals |
+
+**Limit**: Returns up to 200 pending approvals per request.
+
+---
+
+### POST /api/approve-worklogs
+
+Batch approves one or more draft work logs. Changes their status from `Draft` to `Approved`.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workLogIds": ["a05xx0000000001AAA", "a05xx0000000002AAA"]
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/approve-worklogs"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `workLogIds` | Yes | Array of Strings | List of WorkLog IDs to approve |
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "status": "Approved",
+        "count": 2
+    }
+}
+```
+
+**Response fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Always `Approved` |
+| `count` | Integer | Number of work logs that were approved |
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Missing request body |
+
+---
+
+### POST /api/reject-worklogs
+
+Batch rejects one or more draft work logs. Changes their status from `Draft` to `Rejected`.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workLogIds": ["a05xx0000000003AAA"]
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/reject-worklogs"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `workLogIds` | Yes | Array of Strings | List of WorkLog IDs to reject |
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "status": "Rejected",
+        "count": 1
+    }
+}
+```
+
+**Response fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Always `Rejected` |
+| `count` | Integer | Number of work logs that were rejected |
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Missing request body |
+
+---
+
+### GET /api/board-summary
+
+Returns an AI-generated summary of the current board state. Uses the `DeliveryAiController.draftBoardSummary()` method internally. If AI generation fails, returns `null` for the summary field instead of an error.
+
+**Request**:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/board-summary"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "summary": "The board has 12 active items across 3 clients. Development phase has the highest concentration with 5 items. 2 items are blocked awaiting client feedback. WI-0042 and WI-0045 were completed this week."
+    }
+}
+```
+
+**Response fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `summary` | String or null | AI-generated board summary text. Returns `null` if AI generation is unavailable. |
+
+---
+
+### GET /api/files
+
+Returns files attached to the authenticated entity's work items. Optionally filter to a single work item.
+
+**Query parameters**:
+
+| Parameter | Required | Values | Description |
+|-----------|----------|--------|-------------|
+| `workItemId` | No | Salesforce ID | Filter to files attached to a specific work item. Omit for all files. |
+
+**Request**:
+
+```bash
+# All files for the entity
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/files"
+
+# Files for a specific work item
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/files?workItemId=a00xx0000000001AAA"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": "068xx0000000001AAA",
+            "name": "Architecture Diagram",
+            "extension": "png",
+            "size": 245760,
+            "createdDate": "2026-03-05T10:30:00.000Z",
+            "workItemId": "a00xx0000000001AAA"
+        }
+    ]
+}
+```
+
+**Response fields per item**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | String | ContentVersion ID (latest published version) |
+| `name` | String | File title / name |
+| `extension` | String | File extension (e.g., png, pdf, docx) |
+| `size` | Integer | File size in bytes |
+| `createdDate` | DateTime | File upload timestamp |
+| `workItemId` | String | The WorkItem ID the file is attached to |
+
+**Limit**: Returns up to 500 files per request.
+
+---
+
+### GET /api/documents
+
+Returns generated documents (invoices, statements, reports) for the authenticated entity, ordered by creation date descending.
+
+**Request**:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/documents"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": "a07xx0000000001AAA",
+            "name": "INV-0001",
+            "template": "Invoice",
+            "periodStart": "2026-03-01",
+            "periodEnd": "2026-03-31",
+            "status": "Draft",
+            "totalHours": 42.5,
+            "totalCost": 3825.00,
+            "createdDate": "2026-03-15T09:00:00.000Z"
+        }
+    ]
+}
+```
+
+**Response fields per item**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | String | DeliveryDocument record ID |
+| `name` | String | Document name / number (e.g., INV-0001) |
+| `template` | String | Document template type (e.g., Invoice, Statement, Account_Statement) |
+| `periodStart` | Date | Billing period start date |
+| `periodEnd` | Date | Billing period end date |
+| `status` | String | Document status: Draft, Sent, Paid, Overdue, Cancelled |
+| `totalHours` | Decimal | Total hours covered by the document |
+| `totalCost` | Decimal | Total monetary amount |
+| `createdDate` | DateTime | Document creation timestamp |
+
+**Limit**: Returns up to 100 documents per request.
+
+---
+
 ## Authentication
 
 ### How It Works
@@ -444,7 +977,7 @@ All data is scoped to the authenticated NetworkEntity. The API key determines wh
 | HTTP Status | Meaning | Common Causes |
 |-------------|---------|---------------|
 | 200 | Success | Request processed normally |
-| 201 | Created | Resource created (POST work-items, POST comments) |
+| 201 | Created | Resource created (POST work-items, POST comments, POST log-hours) |
 | 400 | Bad Request | Missing body, blank required field, invalid parameters |
 | 401 | Unauthorized | Missing `X-Api-Key` header, invalid key, or entity not Connected |
 | 403 | Forbidden | Work item belongs to a different NetworkEntity |
