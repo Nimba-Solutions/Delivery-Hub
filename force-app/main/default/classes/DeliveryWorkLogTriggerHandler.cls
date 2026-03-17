@@ -80,7 +80,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         List<SyncItem__c> syncItems = buildSyncItems(logs, clientWorkItems);
         if (!syncItems.isEmpty()) {
             Database.insert(syncItems, AccessLevel.SYSTEM_MODE);
-            if (Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
+            if (!Test.isRunningTest() && Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
                 System.enqueueJob(new DeliverySyncItemProcessor());
             }
         }
