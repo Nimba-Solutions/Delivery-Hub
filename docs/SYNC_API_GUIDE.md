@@ -265,6 +265,129 @@ When `EnableVendorPushBool__c = true` on the client NetworkEntity and an endpoin
 
 ---
 
+## WorkLog Sync with Approval Gate
+
+WorkLog records (hours logged against a Work Item) participate in the sync pipeline. An optional approval gate controls when WorkLogs become eligible for synchronization.
+
+### How Approval Works
+
+The approval gate is controlled by the org-level custom setting `DeliveryHubSettings__c.RequireWorkLogApprovalDate__c`. When this DateTime field is populated, the approval policy is active.
+
+| Approval Setting | Insert Behavior | Update Behavior |
+|-------------------|-----------------|-----------------|
+| **Not set** (default) | All WorkLogs sync immediately on insert (backward compatible) | No sync-relevant update handling needed |
+| **Set** (approval required) | Only WorkLogs with `StatusPk__c = 'Approved'` (or `null` for legacy records) create SyncItems on insert. Draft WorkLogs are blocked. | When a WorkLog transitions to `Approved`, `onAfterUpdate` detects the `Draft -> Approved` change and creates a SyncItem |
+
+### Lifecycle with Approval Enabled
+
+```
+1. User logs hours → WorkLog__c created with StatusPk__c = 'Draft'
+2. onAfterInsert fires → filterEligibleForSync() blocks Draft logs → NO SyncItem created
+3. Manager approves → StatusPk__c updated to 'Approved'
+4. onAfterUpdate fires → detects old.StatusPk__c != 'Approved' AND new.StatusPk__c == 'Approved'
+5. createSyncItemsForLogs() queries parent WorkItem for ClientNetworkEntityId__c
+6. If ClientNetworkEntityId__c is set → SyncItem__c created with StatusPk__c = 'Queued'
+7. DeliverySyncItemProcessor picks up the SyncItem and pushes it to the remote org
+```
+
+### Rejected WorkLogs
+
+WorkLogs with `StatusPk__c = 'Rejected'` never create SyncItems. The `onAfterUpdate` handler only acts on the transition **to** `Approved`, so a log that moves to `Rejected` (or any other non-Approved status) is ignored.
+
+### SyncItem Payload
+
+The outbound SyncItem payload for a WorkLog includes:
+
+| Payload Field | Source Field | Description |
+|---------------|-------------|-------------|
+| `WorkItemId__c` | `WorkLog__c.WorkItemId__c` | Parent Work Item reference |
+| `HoursLoggedNumber__c` | `WorkLog__c.HoursLoggedNumber__c` | Number of hours logged |
+| `WorkDateDate__c` | `WorkLog__c.WorkDateDate__c` | Date the work was performed |
+| `WorkDescriptionTxt__c` | `WorkLog__c.WorkDescriptionTxt__c` | Description of the work done |
+
+### Filtering Rules
+
+- Only WorkLogs whose parent Work Item has `ClientNetworkEntityId__c != null` generate SyncItems
+- The handler queries `WorkItem__c` to confirm the client entity link before creating any SyncItem
+- When approval is **not** enabled, all WorkLogs on client-linked Work Items sync immediately on insert
+
+---
+
+## ContentDocumentLink Sync
+
+Files attached to Work Items are synced through the `ContentDocumentLinkTrigger` and its handler `DeliveryContentDocLinkTriggerHandler`.
+
+### Trigger Flow
+
+```
+1. User attaches a file to a WorkItem__c → ContentDocumentLink inserted
+2. handleAfterInsert() fires
+3. Echo suppression check: if DeliverySyncEngine.isSyncContext is true, abort (prevents re-syncing inbound files)
+4. Handler identifies links where LinkedEntityId is a WorkItem__c
+5. Queries ContentVersion (IsLatest = true) to get file data: Title, VersionData, PathOnClient, FileExtension, FileType
+6. Queries WorkRequest__c routes for the parent Work Item (same pattern as DeliverySyncEngine)
+7. Builds SyncItem__c with ObjectTypePk__c = 'ContentVersion' and StatusPk__c = 'Queued'
+8. Enqueues DeliverySyncItemProcessor to push the file to the remote org
+```
+
+### Payload Contents
+
+The ContentVersion sync payload includes:
+
+| Payload Field | Description |
+|---------------|-------------|
+| `Title` | File name/title |
+| `PathOnClient` | Original file path |
+| `VersionData` | Base64-encoded file content |
+| `SourceId` | ContentVersion record ID in the sending org |
+| `TargetId` | Remote Work Item ID or local Work Item ID (depending on routing model) |
+| `GlobalSourceId` | ContentVersion ID for echo suppression tracing |
+| `SenderOrgId` | Organization ID of the sending org |
+
+### Routing Models
+
+The handler supports two routing models, matching the same patterns used by the core sync engine:
+
+- **Push Model (Client Side)**: Routes through `WorkRequest__c` bridge records. Each request with a `RemoteWorkItemIdTxt__c` gets its own SyncItem.
+- **Hub Model (Vendor Side)**: When no routed WorkRequest exists (or routes have blank remote IDs), creates a passive SyncItem using the local Work Item ID as the target. The hub processor resolves routing at delivery time.
+
+### Size Limitation
+
+File content is Base64-encoded into the `PayloadTxt__c` field, which is a Long Text Area. Salesforce Long Text Area fields support approximately 131,000 characters, which limits the maximum file size that can be synced inline. Larger files may be truncated or fail to sync.
+
+---
+
+## Conflict Resolution
+
+The sync architecture uses a **last-write-wins** strategy with echo suppression to handle conflicts and prevent synchronization loops.
+
+### Last-Write-Wins
+
+When the same record is modified in both orgs, the most recent inbound sync payload overwrites the local field values. There is no merge or field-level conflict detection. The `SyncItem__c` ledger provides an audit trail of all changes for manual review if needed.
+
+### Echo Suppression
+
+Echo suppression operates at two levels to prevent bounce-back loops:
+
+1. **Gateway-level (HTTP header)**: The `X-Global-Source-Id` header is checked on inbound requests. If the receiving org finds a matching outbound SyncItem with that GlobalSourceId, the payload is suppressed immediately with an "Echo suppressed" response.
+
+2. **In-memory (transaction-scoped)**: During inbound processing, `DeliverySyncItemIngestor` registers the origin route in `DeliverySyncEngine.blockedOrigins`. This static Set prevents the after-trigger from creating a new outbound SyncItem back to the same origin within the same transaction.
+
+### GlobalSourceIdTxt__c Origin Tracking
+
+The `GlobalSourceIdTxt__c` field on `SyncItem__c` tracks the original record that initiated the sync chain. This enables loop prevention across multi-hop topologies:
+
+```
+Org A (origin) → Org B → Org C
+                         ↓
+              Org C checks GlobalSourceId against Org A's original ID
+              → Match found → Echo suppressed (no sync back to Org A)
+```
+
+When the sync engine creates outbound SyncItems for a record that was itself synced from another org, it inherits the existing GlobalSourceId rather than replacing it with the local record ID. This ensures the original origin is preserved across any number of hops.
+
+---
+
 ## Record Resolution (Inbound)
 
 When processing an inbound sync payload, the ingestor resolves the local record using a multi-step strategy:

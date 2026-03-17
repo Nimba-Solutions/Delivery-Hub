@@ -64,15 +64,25 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
             LIMIT 50
         ];
 
-        if (failedItems.isEmpty()) {
-            return;
+        if (!failedItems.isEmpty()) {
+            for (SyncItem__c item : failedItems) {
+                item.StatusPk__c = 'Queued';
+            }
+            Database.update(failedItems, AccessLevel.SYSTEM_MODE);
         }
 
-        for (SyncItem__c item : failedItems) {
-            item.StatusPk__c = 'Queued';
+        // Safety net: enqueue processor if ANY Queued outbound items exist (catches orphaned items)
+        Integer queuedCount = [
+            SELECT COUNT()
+            FROM SyncItem__c
+            WHERE StatusPk__c = 'Queued'
+            AND DirectionPk__c = 'Outbound'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (queuedCount > 0) {
+            System.enqueueJob(new DeliverySyncItemProcessor());
         }
-        Database.update(failedItems, AccessLevel.SYSTEM_MODE);
-        System.enqueueJob(new DeliverySyncItemProcessor());
     }
 
     /**
