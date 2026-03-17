@@ -51,8 +51,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     handleQuickLink(event) {
         const key = event.currentTarget.dataset.key;
         this._expanded = { ...this._expanded, [key]: true };
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
-        setTimeout(() => {
+        setTimeout(() => { // NOSONAR - scroll after DOM update
             const el = this.template.querySelector(`[data-section="${key}"]`);
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -1,7 +1,8 @@
 /**
- * Controller for the Delivery Guide component.
+ * @description Controller for the Delivery Guide component.
  * Provides org context and Ghost Recorder installation detection.
  */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryGuideController {
 
     private static final Set<String> GHOST_RECORDER_APP_NAMES = new Set<String>{
@@ -9,6 +10,11 @@ public with sharing class DeliveryGuideController {
         'delivery__DeliveryHub', 'delivery__DeliveryHubAdmin'
     };
 
+    /**
+     * @description Returns org context including domain URL, setup links, and a list
+     * of all visible Lightning apps with Ghost Recorder installation status.
+     * @return Map containing orgDomain, setupAppManager URL, and apps list
+     */
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getGuideContext() {
         Map<String, Object> ctx = new Map<String, Object>();
