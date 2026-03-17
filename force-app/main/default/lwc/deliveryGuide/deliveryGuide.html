@@ -1,0 +1,856 @@
+<template>
+    <div class="dg-container">
+
+        <!-- Hero -->
+        <div class="dg-hero">
+            <div class="dg-hero-content">
+                <h1 class="dg-hero-title">Delivery Guide</h1>
+                <p class="dg-hero-subtitle">
+                    Everything you need to know about using Delivery Hub to manage projects, track time, generate invoices, and keep your team in sync.
+                </p>
+                <div class="dg-hero-actions">
+                    <lightning-button label="Expand All" variant="neutral" onclick={handleExpandAll}></lightning-button>
+                    <lightning-button label="Collapse All" variant="neutral" onclick={handleCollapseAll}></lightning-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="dg-quick-links">
+            <div class="dg-quick-link" data-key="board" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:kanban" size="small"></lightning-icon>
+                <span>The Board</span>
+            </div>
+            <div class="dg-quick-link" data-key="workItems" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:task" size="small"></lightning-icon>
+                <span>Work Items</span>
+            </div>
+            <div class="dg-quick-link" data-key="timeTracking" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:timesheet" size="small"></lightning-icon>
+                <span>Time Tracking</span>
+            </div>
+            <div class="dg-quick-link" data-key="documents" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:document" size="small"></lightning-icon>
+                <span>Documents</span>
+            </div>
+            <div class="dg-quick-link" data-key="ghostRecorder" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:record" size="small"></lightning-icon>
+                <span>Ghost Recorder</span>
+            </div>
+            <div class="dg-quick-link" data-key="sync" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:connected_apps" size="small"></lightning-icon>
+                <span>Sync</span>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Welcome -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="welcome">
+            <div class="dg-section-header" data-key="welcome" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:home" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Welcome to Delivery Hub</h2>
+                </div>
+                <lightning-icon icon-name={welcomeChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={welcomeExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Delivery Hub is a project delivery management platform built on Salesforce. It helps teams track work items, log hours, generate invoices, and keep multiple organizations in sync &mdash; all from one place.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Key Capabilities</h3>
+                        <div class="dg-feature-grid">
+                            <div class="dg-feature-card">
+                                <lightning-icon icon-name="standard:kanban" size="small"></lightning-icon>
+                                <strong>Kanban Board</strong>
+                                <p>Visual board with configurable stages, drag-and-drop, and persona-based views.</p>
+                            </div>
+                            <div class="dg-feature-card">
+                                <lightning-icon icon-name="standard:timesheet" size="small"></lightning-icon>
+                                <strong>Time Tracking</strong>
+                                <p>Log hours against work items with optional approval workflow and budget tracking.</p>
+                            </div>
+                            <div class="dg-feature-card">
+                                <lightning-icon icon-name="standard:document" size="small"></lightning-icon>
+                                <strong>Document Engine</strong>
+                                <p>Generate invoices, status reports, and proposals with AI-powered narrative summaries.</p>
+                            </div>
+                            <div class="dg-feature-card">
+                                <lightning-icon icon-name="standard:connected_apps" size="small"></lightning-icon>
+                                <strong>Multi-Org Sync</strong>
+                                <p>Real-time synchronization of work items, comments, and hours between Salesforce orgs.</p>
+                            </div>
+                            <div class="dg-feature-card">
+                                <lightning-icon icon-name="standard:portal" size="small"></lightning-icon>
+                                <strong>Client Portal</strong>
+                                <p>Web portal for clients to view work items, activity, hours, and documents without Salesforce access.</p>
+                            </div>
+                            <div class="dg-feature-card">
+                                <lightning-icon icon-name="standard:record" size="small"></lightning-icon>
+                                <strong>Ghost Recorder</strong>
+                                <p>Background activity tracking and quick bug/feature reporting from any page.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Two App Experiences</h3>
+                        <p>Delivery Hub ships with two Lightning apps:</p>
+                        <ul class="dg-list">
+                            <li><strong>Delivery Hub</strong> &mdash; Streamlined view for team members. Shows the Home dashboard, Board, Activity Feed, and Work Items.</li>
+                            <li><strong>Delivery Hub Admin</strong> &mdash; Full admin view with additional tabs for Network Entities, Work Requests, Sync Items, Activity Logs, Settings, and Reports.</li>
+                        </ul>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: The Board -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="board">
+            <div class="dg-section-header" data-key="board" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:kanban" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">The Board</h2>
+                </div>
+                <lightning-icon icon-name={boardChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={boardExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        The Delivery Board is a Kanban-style view that shows all work items organized by their current stage. Use it to visualize progress, move items through your workflow, and spot bottlenecks.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">How Stages Work</h3>
+                        <p>Work items move through stages that represent your delivery pipeline. The default Software Delivery workflow includes:</p>
+                        <div class="dg-stage-flow">
+                            <span class="dg-stage-pill dg-stage-pill--planning">Planning</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--approval">Approval</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--dev">Development</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--testing">Testing</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--uat">UAT</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--deploy">Deployment</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--complete">Complete</span>
+                        </div>
+                        <p>Stages are fully configurable through Custom Metadata. Your admin can create entirely new workflows with different stages, colors, and transitions.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Persona Views</h3>
+                        <p>Different team members see different columns on the board based on their role:</p>
+                        <ul class="dg-list">
+                            <li><strong>Stakeholder</strong> &mdash; High-level view showing major phases (Planning, In Progress, Review, Complete).</li>
+                            <li><strong>Developer</strong> &mdash; Detailed view of development stages (Ready, In Progress, Code Review, Testing).</li>
+                            <li><strong>QA</strong> &mdash; Focused on testing stages (Ready for QA, In Testing, Bugs Found, Passed).</li>
+                            <li><strong>Project Manager</strong> &mdash; Overview of all stages across the pipeline.</li>
+                        </ul>
+                        <p>Switch your persona view using the dropdown in the board header.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Using the Board</h3>
+                        <div class="dg-steps">
+                            <div class="dg-step">
+                                <span class="dg-step-number">1</span>
+                                <div class="dg-step-content">
+                                    <strong>Navigate to the Board tab</strong>
+                                    <p>Click "Delivery Board" in the app navigation.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">2</span>
+                                <div class="dg-step-content">
+                                    <strong>Choose your persona</strong>
+                                    <p>Select the view that matches your role from the persona dropdown.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">3</span>
+                                <div class="dg-step-content">
+                                    <strong>Move items between stages</strong>
+                                    <p>Click on a work item card to open it and change its stage, or use the stage picker on the card.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">4</span>
+                                <div class="dg-step-content">
+                                    <strong>Click a card for details</strong>
+                                    <p>Clicking a work item card opens the full record page with description, comments, hours, and files.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> The board auto-refreshes. If you need to force a refresh, click the refresh button in the board header.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Work Items -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="workItems">
+            <div class="dg-section-header" data-key="workItems" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:task" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Work Items</h2>
+                </div>
+                <lightning-icon icon-name={workItemsChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={workItemsExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        A Work Item is the fundamental unit of work in Delivery Hub. It represents a task, feature, bug fix, or any deliverable that needs tracking.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Key Fields</h3>
+                        <div class="dg-field-table">
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Number</span>
+                                <span class="dg-field-desc">Auto-generated identifier (e.g., T-0042). Used for reference across systems.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Title</span>
+                                <span class="dg-field-desc">Brief description of the work to be done.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Stage</span>
+                                <span class="dg-field-desc">Current position in the workflow pipeline (e.g., Development, Testing).</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Priority</span>
+                                <span class="dg-field-desc">Urgency level: Critical, High, Medium, or Low.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Estimated Hours</span>
+                                <span class="dg-field-desc">Expected effort. Compared against actual logged hours for budget tracking.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Assigned To</span>
+                                <span class="dg-field-desc">The team member responsible for this work item.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Creating a Work Item</h3>
+                        <div class="dg-steps">
+                            <div class="dg-step">
+                                <span class="dg-step-number">1</span>
+                                <div class="dg-step-content">
+                                    <strong>Click New on the Work Items tab</strong>
+                                    <p>Or use the Ghost Recorder to quickly submit a bug or feature request from any page.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">2</span>
+                                <div class="dg-step-content">
+                                    <strong>Fill in the details</strong>
+                                    <p>Provide a title, description, priority, and estimated hours. AI can auto-generate descriptions from just a title if enabled.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">3</span>
+                                <div class="dg-step-content">
+                                    <strong>Save</strong>
+                                    <p>The item appears on the board in its initial stage and syncs to connected orgs automatically.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Work Requests</h3>
+                        <p>Work Requests link work items to Network Entities (clients, vendors). They define the contractual relationship: who the work is for, the billing rate, and pre-approved hours. Each work item can have multiple Work Requests &mdash; one per entity it&rsquo;s shared with.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Attention Scoring</h3>
+                        <p>The Home dashboard highlights items that need your attention using colored urgency dots:</p>
+                        <ul class="dg-list">
+                            <li><span class="dg-dot dg-dot--red"></span> <strong>Red</strong> &mdash; Critical: blocked items, past-due, or budget exceeded.</li>
+                            <li><span class="dg-dot dg-dot--yellow"></span> <strong>Yellow</strong> &mdash; Warning: approaching deadline or budget threshold.</li>
+                            <li><span class="dg-dot dg-dot--green"></span> <strong>Green</strong> &mdash; On track with no immediate concerns.</li>
+                        </ul>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Time Tracking -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="timeTracking">
+            <div class="dg-section-header" data-key="timeTracking" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:timesheet" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Time Tracking</h2>
+                </div>
+                <lightning-icon icon-name={timeTrackingChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={timeTrackingExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Log hours against work items to track effort, monitor budgets, and generate invoices. Hours flow through an optional approval gate before syncing to client orgs.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Logging Hours</h3>
+                        <div class="dg-steps">
+                            <div class="dg-step">
+                                <span class="dg-step-number">1</span>
+                                <div class="dg-step-content">
+                                    <strong>Open the Time Logger</strong>
+                                    <p>Find it on the work item record page or in the Home sidebar.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">2</span>
+                                <div class="dg-step-content">
+                                    <strong>Enter your hours</strong>
+                                    <p>Provide the hours worked, the date, and a brief description of what you did.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">3</span>
+                                <div class="dg-step-content">
+                                    <strong>Submit</strong>
+                                    <p>Your hours are saved as a Work Log. Depending on settings, they may sync immediately or await approval.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Approval Workflow</h3>
+                        <p>When hour approval is enabled, work logs follow this lifecycle:</p>
+                        <div class="dg-stage-flow">
+                            <span class="dg-stage-pill dg-stage-pill--planning">Draft</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--complete">Approved</span>
+                            <span class="dg-stage-arrow">&nbsp;or&nbsp;</span>
+                            <span class="dg-stage-pill dg-stage-pill--blocked">Rejected</span>
+                        </div>
+                        <ul class="dg-list">
+                            <li><strong>Draft</strong> &mdash; Hours are recorded but not visible to clients. They won&rsquo;t sync until approved.</li>
+                            <li><strong>Approved</strong> &mdash; Hours are confirmed and sync to connected client orgs. They appear in invoices.</li>
+                            <li><strong>Rejected</strong> &mdash; Hours are declined and will not sync or appear in documents.</li>
+                        </ul>
+                        <p>Admins can approve or reject hours from the Activity Feed&rsquo;s &ldquo;Pending Approvals&rdquo; section.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Budget Tracking</h3>
+                        <p>Delivery Hub automatically tracks budget utilization:</p>
+                        <ul class="dg-list">
+                            <li><strong>Estimated Hours</strong> on a work item vs. <strong>Actual Hours</strong> logged.</li>
+                            <li><strong>Hours Variance</strong> shows whether you&rsquo;re over or under estimate.</li>
+                            <li><strong>Budget Utilization %</strong> on Work Requests shows how much of the pre-approved hours have been consumed.</li>
+                        </ul>
+                        <p>The Budget Summary widget on the Home page gives you a quick overview of spend across all active work.</p>
+                    </div>
+
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Hours can also be logged from the Client Portal. Portal users see only approved hours for their organization.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Documents & Invoicing -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="documents">
+            <div class="dg-section-header" data-key="documents" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:document" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Documents &amp; Invoicing</h2>
+                </div>
+                <lightning-icon icon-name={documentsChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={documentsExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        The Document Engine generates professional documents from your Delivery Hub data. Each document captures a frozen snapshot of work items, hours, and costs for a specific period.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Document Types</h3>
+                        <div class="dg-field-table">
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Invoice</span>
+                                <span class="dg-field-desc">Billing document with hours, rates, line items, and total cost. Includes AI-generated executive narrative.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Status Report</span>
+                                <span class="dg-field-desc">Client-facing progress report showing work items grouped by stage, recent activity, and blockers.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Proposal</span>
+                                <span class="dg-field-desc">Scope of work document for prospective engagements.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Executive Summary</span>
+                                <span class="dg-field-desc">High-level overview of project status for leadership audiences.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Weekly Digest</span>
+                                <span class="dg-field-desc">Automated weekly summary of activity, completions, and upcoming work.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Generating a Document</h3>
+                        <div class="dg-steps">
+                            <div class="dg-step">
+                                <span class="dg-step-number">1</span>
+                                <div class="dg-step-content">
+                                    <strong>Open the Document Viewer</strong>
+                                    <p>Find it on the Admin Home page or on a Network Entity record page.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">2</span>
+                                <div class="dg-step-content">
+                                    <strong>Click &ldquo;Generate Document&rdquo;</strong>
+                                    <p>Select the template type (Invoice, Status Report, etc.).</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">3</span>
+                                <div class="dg-step-content">
+                                    <strong>Set the billing period</strong>
+                                    <p>Choose start and end dates. The engine captures all work items and hours within that window.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">4</span>
+                                <div class="dg-step-content">
+                                    <strong>Review and send</strong>
+                                    <p>Preview the document, then update its status from Draft &rarr; Ready &rarr; Sent. Clients can view it via a unique portal link.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Document Lifecycle</h3>
+                        <div class="dg-stage-flow">
+                            <span class="dg-stage-pill dg-stage-pill--planning">Draft</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--approval">Ready</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--dev">Sent</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--testing">Viewed</span>
+                            <span class="dg-stage-arrow">&rarr;</span>
+                            <span class="dg-stage-pill dg-stage-pill--complete">Paid</span>
+                        </div>
+                        <p>When you mark a document as Sent, the system records the sent date and calculates the due date from the payment terms (e.g., &ldquo;Net 30&rdquo;). When a client first views the document via their portal link, the status automatically updates to Viewed.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Rate Hierarchy</h3>
+                        <p>Invoices calculate costs using a three-tier rate hierarchy:</p>
+                        <ol class="dg-list">
+                            <li><strong>Work Request rate</strong> (highest priority) &mdash; Rate set on the specific engagement contract.</li>
+                            <li><strong>Work Item rate</strong> &mdash; Billable rate on the individual item.</li>
+                            <li><strong>Entity default rate</strong> (fallback) &mdash; Default hourly rate on the Network Entity.</li>
+                        </ol>
+                    </div>
+
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Documents are immutable once generated. The JSON snapshot preserves the exact data at generation time, so later changes to work items won&rsquo;t alter existing documents.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Activity Feed -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="activityFeed">
+            <div class="dg-section-header" data-key="activityFeed" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:feed" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Activity Feed</h2>
+                </div>
+                <lightning-icon icon-name={activityFeedChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={activityFeedExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        The Activity Feed is a unified timeline showing everything happening across your work items: comments, hour logs, stage changes, and field updates.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">What It Shows</h3>
+                        <ul class="dg-list">
+                            <li><strong>Comments</strong> &mdash; Messages posted on work items by team members.</li>
+                            <li><strong>Work Logs</strong> &mdash; Hours logged with descriptions of work performed.</li>
+                            <li><strong>Activity Logs</strong> &mdash; Field changes, stage transitions, and system events.</li>
+                        </ul>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Filtering</h3>
+                        <p>Use the filter buttons at the top to narrow the feed:</p>
+                        <ul class="dg-list">
+                            <li><strong>All</strong> &mdash; Everything in one stream.</li>
+                            <li><strong>Comments</strong> &mdash; Only comment activity.</li>
+                            <li><strong>Hours</strong> &mdash; Only time logging events.</li>
+                            <li><strong>Changes</strong> &mdash; Only field changes and stage transitions.</li>
+                        </ul>
+                        <p>You can also filter by date range and specific Network Entity to scope the feed to a single client&rsquo;s activity.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Pending Approvals</h3>
+                        <p>When hour approval is enabled, the Activity Feed shows a &ldquo;Pending Approvals&rdquo; section at the top. Admins can review, approve, or reject work logs directly from this view without navigating to individual records.</p>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Ghost Recorder -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="ghostRecorder">
+            <div class="dg-section-header" data-key="ghostRecorder" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:record" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Ghost Recorder</h2>
+                </div>
+                <lightning-icon icon-name={ghostRecorderChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={ghostRecorderExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Ghost Recorder runs silently in the background, tracking which pages users visit across Salesforce. It also provides a quick-submit form for reporting bugs or requesting features without leaving the page you&rsquo;re on.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">What It Does</h3>
+                        <ul class="dg-list">
+                            <li><strong>Navigation Tracking</strong> &mdash; Automatically logs page visits (object type, record IDs, page labels) as Activity Log entries. This data helps identify which parts of Salesforce your team uses most.</li>
+                            <li><strong>Quick Bug Reporting</strong> &mdash; Submit a bug report with subject, priority, and details. The current page context is automatically captured.</li>
+                            <li><strong>Feature Requests</strong> &mdash; Switch to &ldquo;Feature&rdquo; mode to submit enhancement ideas the same way.</li>
+                            <li><strong>File Attachments</strong> &mdash; Attach screenshots or files to your submissions.</li>
+                        </ul>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Keyboard Shortcut</h3>
+                        <p>Press <strong>Alt + B</strong> from any page to instantly open the Ghost Recorder panel. This works when the shortcut is enabled in the utility bar configuration.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Installation Status</h3>
+                        <p>Ghost Recorder is installed as a utility bar item in your Lightning apps. Here&rsquo;s the current status across your apps:</p>
+
+                        <template lwc:if={ghostRecorderApps.length}>
+                            <div class="dg-app-list">
+                                <template for:each={ghostRecorderApps} for:item="app">
+                                    <div key={app.id} class={app.statusClass}>
+                                        <div class="dg-app-info">
+                                            <lightning-icon icon-name={app.statusIcon} size="xx-small"
+                                                            variant={app.statusVariant}></lightning-icon>
+                                            <span class="dg-app-label">{app.label}</span>
+                                        </div>
+                                        <span class="dg-app-badge">{app.statusLabel}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <template lwc:if={allAppsHaveGhostRecorder}>
+                            <div class="dg-success-box">
+                                <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                                <span>Ghost Recorder is installed in all your Lightning apps.</span>
+                            </div>
+                        </template>
+
+                        <template lwc:if={hasAppsWithoutGhostRecorder}>
+                            <div class="dg-warning-box">
+                                <lightning-icon icon-name="utility:warning" size="x-small"></lightning-icon>
+                                <span><strong>{missingAppCount} app(s)</strong> don&rsquo;t have Ghost Recorder installed. User activity in those apps won&rsquo;t be tracked. Follow the steps below to add it.</span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Adding Ghost Recorder to Other Apps</h3>
+                        <div class="dg-steps">
+                            <div class="dg-step">
+                                <span class="dg-step-number">1</span>
+                                <div class="dg-step-content">
+                                    <strong>Open the App Manager</strong>
+                                    <p>
+                                        Go to Setup &rarr; App Manager, or
+                                        <lightning-button label="Open App Manager" variant="base" onclick={handleOpenSetup}></lightning-button>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">2</span>
+                                <div class="dg-step-content">
+                                    <strong>Edit the target app</strong>
+                                    <p>Find the app in the list, click the dropdown arrow on the right, and select &ldquo;Edit&rdquo;.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">3</span>
+                                <div class="dg-step-content">
+                                    <strong>Go to Utility Items</strong>
+                                    <p>In the app settings sidebar, click &ldquo;Utility Items (Desktop Only)&rdquo;.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">4</span>
+                                <div class="dg-step-content">
+                                    <strong>Add the Ghost Recorder</strong>
+                                    <p>Click &ldquo;Add Utility Item&rdquo;, search for <strong>deliveryGhostRecorder</strong>, and select it.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">5</span>
+                                <div class="dg-step-content">
+                                    <strong>Configure the properties</strong>
+                                    <p>Set Panel Width to <strong>340</strong>, Panel Height to <strong>480</strong>. Enable &ldquo;Start automatically&rdquo; if you want background tracking to begin immediately. Set the Label to &ldquo;Report Issue&rdquo; or &ldquo;Ghost Recorder&rdquo;.</p>
+                                </div>
+                            </div>
+                            <div class="dg-step">
+                                <span class="dg-step-number">6</span>
+                                <div class="dg-step-content">
+                                    <strong>Save the app</strong>
+                                    <p>Click Save. Users will see the Ghost Recorder in the utility bar the next time they load the app.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Sync & Connections -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="sync">
+            <div class="dg-section-header" data-key="sync" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:connected_apps" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Sync &amp; Connections</h2>
+                </div>
+                <lightning-icon icon-name={syncChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={syncExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Delivery Hub synchronizes data between Salesforce orgs in real time. When a work item is created or updated in one org, it automatically appears in connected orgs within seconds.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">How It Works</h3>
+                        <ol class="dg-list">
+                            <li>A work item is created or updated, triggering the Sync Engine.</li>
+                            <li>The engine checks if the change is significant and identifies target orgs via Work Requests.</li>
+                            <li>A Sync Item record is created with status <strong>Queued</strong>.</li>
+                            <li>The Sync Item Processor sends the data to the target org via a secure API call.</li>
+                            <li>On success, the Sync Item status updates to <strong>Synced</strong>. On failure, it retries up to 3 times.</li>
+                        </ol>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">What Syncs</h3>
+                        <ul class="dg-list">
+                            <li><strong>Work Items</strong> &mdash; Title, description, stage, priority, and all tracked fields.</li>
+                            <li><strong>Comments</strong> &mdash; Messages posted on work items sync in both directions.</li>
+                            <li><strong>Work Logs</strong> &mdash; Hours sync to client orgs after approval (if approval is enabled).</li>
+                        </ul>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Getting Started Wizard</h3>
+                        <p>New orgs connect via the Getting Started wizard on the Home page. The wizard walks through:</p>
+                        <ol class="dg-list">
+                            <li>Choosing your org type (Client or Vendor).</li>
+                            <li>Selecting a workflow template.</li>
+                            <li>Configuring partner connection details.</li>
+                            <li>Running prerequisite checks (Salesforce Site, guest user permissions, remote site settings).</li>
+                            <li>Establishing the connection handshake.</li>
+                        </ol>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Monitoring Sync Health</h3>
+                        <p>Admins can monitor sync status from several places:</p>
+                        <ul class="dg-list">
+                            <li><strong>Sync Items tab</strong> (Admin app) &mdash; Full list of all sync items with status filters.</li>
+                            <li><strong>Budget Summary</strong> widget &mdash; Shows connection health percentage on the Home sidebar.</li>
+                            <li><strong>Sync Retry Panel</strong> (Admin Home) &mdash; Shows failed items with retry options.</li>
+                            <li><strong>Data Lineage</strong> widget &mdash; Visualizes the data flow between orgs.</li>
+                        </ul>
+                    </div>
+
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> The scheduler runs every 15 minutes to retry failed sync items. If you see persistent failures, check the Sync Retry Panel for error details.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Client Portal -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="portal">
+            <div class="dg-section-header" data-key="portal" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:portal" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Client Portal</h2>
+                </div>
+                <lightning-icon icon-name={portalChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={portalExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        The Client Portal is a web application that gives clients visibility into their projects without needing a Salesforce license. Clients can view work items, activity, hours, files, and documents through a browser.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">What Clients Can Do</h3>
+                        <ul class="dg-list">
+                            <li><strong>View the Board</strong> &mdash; See work items on a Kanban board filtered to their organization.</li>
+                            <li><strong>Track Activity</strong> &mdash; Browse comments, hour logs, and status changes in a unified feed.</li>
+                            <li><strong>Review Hours</strong> &mdash; See hours logged against their work items (approved hours only).</li>
+                            <li><strong>Log Hours</strong> &mdash; Submit their own time entries from the portal.</li>
+                            <li><strong>Approve/Reject Hours</strong> &mdash; Review and approve pending work logs if they have admin access.</li>
+                            <li><strong>View Documents</strong> &mdash; Access invoices, status reports, and other documents shared with them.</li>
+                            <li><strong>Browse Files</strong> &mdash; View files attached to their work items.</li>
+                        </ul>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Authentication</h3>
+                        <p>Portal users authenticate using one of three methods:</p>
+                        <ul class="dg-list">
+                            <li><strong>Passkey/WebAuthn</strong> &mdash; Biometric or hardware key (default when browser supports it).</li>
+                            <li><strong>Password</strong> &mdash; Traditional email + password login.</li>
+                            <li><strong>Magic Link</strong> &mdash; Passwordless login via email link.</li>
+                        </ul>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Managing Portal Access</h3>
+                        <p>Portal access is controlled through <strong>PortalAccess</strong> records in Salesforce. Each record links an email address to a Network Entity and defines their access level. Create these records in the admin app to grant portal access to new users.</p>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Settings -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="settings">
+            <div class="dg-section-header" data-key="settings" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="custom:custom32" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Settings &amp; Configuration</h2>
+                </div>
+                <lightning-icon icon-name={settingsChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={settingsExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Delivery Hub settings are managed from the Settings tab in the Admin app. The settings page is organized into cards covering different configuration areas.
+                    </p>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">General Settings</h3>
+                        <div class="dg-field-table">
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Enable Notifications</span>
+                                <span class="dg-field-desc">Send notifications when work items are updated or comments are posted.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Auto Sync</span>
+                                <span class="dg-field-desc">Automatically sync changes to connected orgs. Disable to require manual sync.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Auto Create Work Requests</span>
+                                <span class="dg-field-desc">Automatically create Work Requests when new work items are assigned to a client entity.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Slack Webhook</span>
+                                <span class="dg-field-desc">Send notifications to a Slack channel when significant events occur.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Board Metrics</span>
+                                <span class="dg-field-desc">Show cycle time and throughput metrics on the Kanban board.</span>
+                            </div>
+                            <div class="dg-field-row">
+                                <span class="dg-field-name">Require Work Log Approval</span>
+                                <span class="dg-field-desc">When enabled, new work logs start as Draft and must be approved before syncing.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">AI Settings</h3>
+                        <p>Delivery Hub can use AI to enhance your workflow:</p>
+                        <ul class="dg-list">
+                            <li><strong>Auto-Generate Descriptions</strong> &mdash; Automatically generate detailed descriptions from a work item title.</li>
+                            <li><strong>Board Summary</strong> &mdash; Generate AI-powered weekly summaries of board activity.</li>
+                            <li><strong>Document Narratives</strong> &mdash; Add AI-generated executive narratives to invoices and reports.</li>
+                        </ul>
+                        <p>AI features require an OpenAI API key configured in the AI Settings card.</p>
+                    </div>
+
+                    <div class="dg-subsection">
+                        <h3 class="dg-subsection-title">Partner Settings</h3>
+                        <p>Configure vendor connection details, API endpoints, and authentication keys for the sync engine. These are typically set up during the Getting Started wizard and rarely need manual changes.</p>
+                    </div>
+
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Settings are stored in a Custom Setting (DeliveryHubSettings__c) and apply org-wide. Changes take effect immediately.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Footer -->
+        <div class="dg-footer">
+            <p>Delivery Hub is built by <strong>Cloud Nimbus LLC</strong>. For support, contact your project administrator.</p>
+        </div>
+
+    </div>
+</template>
