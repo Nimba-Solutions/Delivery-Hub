@@ -98,6 +98,7 @@
     <tabs>Delivery_Activity</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>WorkItemComment__c</tabs>
+    <tabs>Delivery_Guide</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
 </CustomApplication>
