@@ -69,28 +69,40 @@ public without sharing class DeliverySyncItemIngestor {
 
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
         
+        // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId)
+        String parentWorkItemRef = targetId;
+        if (objectType.endsWithIgnoreCase('WorkLog__c')) {
+            String wiRef = (String) payload.get('WorkItemId__c');
+            if (String.isBlank(wiRef)) {
+                wiRef = (String) payload.get('delivery__WorkItemId__c');
+            }
+            if (String.isNotBlank(wiRef)) {
+                parentWorkItemRef = wiRef;
+            }
+        }
+
         Id localParentId = null;
-        if (localRecordId == null && String.isNotBlank(targetId) && (objectType.containsIgnoreCase('WorkItemComment__c') || objectType.equalsIgnoreCase('ContentVersion'))) {
+        if (localRecordId == null && String.isNotBlank(parentWorkItemRef) && (objectType.containsIgnoreCase('WorkItemComment__c') || objectType.equalsIgnoreCase('ContentVersion') || objectType.endsWithIgnoreCase('WorkLog__c'))) {
             
             // 1. Try to find parent via Request Bridge (Downstream Origin)
-            WorkRequest__c parentBridge = findWorkItemBridge(targetId);
+            WorkRequest__c parentBridge = findWorkItemBridge(parentWorkItemRef);
             if (parentBridge != null) {
                 localParentId = parentBridge.WorkItemId__c;
-                localRequestId = parentBridge.Id; 
+                localRequestId = parentBridge.Id;
             }
 
             // 2. Try to find parent via the Ledger (Upstream Origin)
             if (localParentId == null) {
-                List<SyncItem__c> ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = :targetId AND ObjectTypePk__c = 'WorkItem__c' WITH SYSTEM_MODE LIMIT 1];
+                List<SyncItem__c> ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = :parentWorkItemRef AND ObjectTypePk__c = 'WorkItem__c' WITH SYSTEM_MODE LIMIT 1];
                 if (!ledger.isEmpty()) {
                     localParentId = (Id)ledger[0].LocalRecordIdTxt__c;
                 }
             }
 
-            // 3. Fallback: Check if targetId is actually a local ID
+            // 3. Fallback: Check if parentWorkItemRef is actually a local ID
             if (localParentId == null) {
                 try {
-                    Id castId = (Id) targetId;
+                    Id castId = (Id) parentWorkItemRef;
                     if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
                         localParentId = castId;
                     }
@@ -101,6 +113,23 @@ public without sharing class DeliverySyncItemIngestor {
 
             if (localParentId != null && objectType.containsIgnoreCase('WorkItemComment__c')) {
                 putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
+            }
+            if (localParentId != null && objectType.endsWithIgnoreCase('WorkLog__c')) {
+                putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
+                // Find a local WorkRequest for the Master-Detail parent
+                List<WorkRequest__c> localRequests = [
+                    SELECT Id FROM WorkRequest__c
+                    WHERE WorkItemId__c = :localParentId
+                    WITH SYSTEM_MODE LIMIT 1
+                ];
+                if (!localRequests.isEmpty()) {
+                    putSafe(recordToUpsert, 'RequestId__c', localRequests[0].Id);
+                }
+                // Remove remote IDs from payload so mapFields doesn't overwrite with invalid cross-org IDs
+                payload.remove('WorkItemId__c');
+                payload.remove('delivery__WorkItemId__c');
+                payload.remove('RequestId__c');
+                payload.remove('delivery__RequestId__c');
             }
         }
 
