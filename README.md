@@ -134,10 +134,10 @@ The engine is retry-aware (up to 3 attempts), handles namespace translation for 
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 124 (63 production + 61 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
-| **LWC Components** | 53 | deliveryHubBoard, deliveryClientDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
-| **Custom Objects** | 9 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryHubSettings\_\_c |
-| **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt |
+| **Apex Classes** | 126 (64 production + 62 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
+| **LWC Components** | 54 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
+| **Custom Objects** | 11 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c |
+| **Custom Metadata** | 12 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, ScheduledJobConfig\_\_mdt |
 | **Triggers** | 4 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger |
 
 ---
@@ -193,6 +193,14 @@ Delivery Hub exposes a REST API for non-Salesforce clients (websites, mobile app
 | GET | `/api/work-items/{id}` | Full work item detail with comments and file count |
 | POST | `/api/work-items` | Submit a new work item request |
 | POST | `/api/work-items/{id}/comments` | Add a comment to a work item |
+| GET | `/api/activity-feed` | Unified timeline of comments, hours, and changes |
+| GET | `/api/work-logs` | List work logs for the authenticated entity |
+| POST | `/api/log-hours` | Create a new work log entry |
+| POST | `/api/approve-worklogs` | Batch approve draft work logs |
+| POST | `/api/reject-worklogs` | Batch reject draft work logs |
+| GET | `/api/board-summary` | AI-generated board summary |
+| GET | `/api/files` | Files attached to entity work items |
+| GET | `/api/documents` | Documents generated for the entity |
 
 All requests require an `X-Api-Key` header matched against a NetworkEntity record. See the [Public API Guide](docs/PUBLIC_API_GUIDE.md) for complete documentation.
 
@@ -247,7 +255,9 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **WorkLog Approval** | Draft &rarr; Approved &rarr; Synced pipeline, gated by org setting |
 | **Activity Feed** | Cross-item unified timeline of comments, hours, and changes with inline reply |
 | **Data Lineage** | Visual sync chain with per-entity health metrics on admin home |
-| **Ghost Recorder** | Floating submission form with keyboard shortcut |
+| **Document Engine** | Generate invoices, status reports, proposals with AI narratives and public portal links |
+| **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking |
+| **Delivery Guide** | In-app documentation with Ghost Recorder utility bar detection across all Lightning apps |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
 | **Public Status Page** | Shareable delivery status view &mdash; no Salesforce login required |
 | **System Pulse** | Live work items, hours, sync health |

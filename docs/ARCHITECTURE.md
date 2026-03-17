@@ -22,7 +22,9 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **WorkItemDependency\_\_c** | Blocking relationship between two work items | BlockingWorkItemId\_\_c, DependentWorkItemId\_\_c |
 | **WorkLog\_\_c** | Time logging entries | WorkItemId\_\_c, HoursNumber\_\_c, DateDt\_\_c, DescriptionTxt\_\_c |
 | **DeliveryHubSettings\_\_c** | Org-level settings (hierarchy custom setting) | Scheduling, polling, AI config |
-| **ActivityLog\_\_c** | Audit trail of changes on work items | WorkItemId\_\_c, action, old/new values |
+| **ActivityLog\_\_c** | Audit trail of changes on work items | WorkItemId\_\_c, ActionTypePk\_\_c, ComponentNameTxt\_\_c, ContextDataTxt\_\_c, PageUrlTxt\_\_c, NetworkEntityId\_\_c, SessionIdTxt\_\_c |
+| **DeliveryDocument\_\_c** | Generated documents (invoices, status reports) | NetworkEntityId\_\_c (MD), TemplatePk\_\_c, StatusPk\_\_c, SnapshotTxt\_\_c (131072 LTA), TotalHoursNumber\_\_c, TotalCurrency\_\_c, AiNarrativeTxt\_\_c, PublicTokenTxt\_\_c (External ID), PeriodStartDate\_\_c, PeriodEndDate\_\_c, TermsTxt\_\_c, DueDateDate\_\_c |
+| **PortalAccess\_\_c** | Controls portal user access; links email to NetworkEntity with access level | NetworkEntityId\_\_c (MD), EmailTxt\_\_c, RolePk\_\_c |
 
 ### Custom Metadata Types
 
@@ -36,6 +38,8 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **SLARule\_\_mdt** | SLA target definitions | Response/resolution time targets |
 | **CloudNimbusGlobalSettings\_\_mdt** | Global configuration defaults | Default vendor settings |
 | **OpenAIConfiguration\_\_mdt** | AI integration settings | API key, model, endpoint |
+| **DocumentTemplate\_\_mdt** | Registry of document templates (Invoice, Status\_Report) | PortalComponentTxt\_\_c, DataQueryTxt\_\_c, OutputFormatsTxt\_\_c, AiPromptTxt\_\_c, WorkflowTypeTxt\_\_c, DescriptionTxt\_\_c |
+| **TrackedField\_\_mdt** | Defines which fields the Activity Tracking system monitors for change logging. Records: WorkItem\_Developer, WorkItem\_Priority, WorkItem\_Stage, WorkItem\_Status | ObjectApiName\_\_c, FieldApiName\_\_c, FieldLabel\_\_c, IsEnabledBool\_\_c, SortOrderNumber\_\_c |
 
 ### Platform Events
 
@@ -54,6 +58,8 @@ WorkflowType__mdt
 NetworkEntity__c
   |-- WorkItem__c.ClientNetworkEntityId__c (client owns work items)
   |-- WorkRequest__c.DeliveryEntityId__c (vendor receives work)
+  |-- DeliveryDocument__c.NetworkEntityId__c (generated documents)
+  |-- PortalAccess__c.NetworkEntityId__c (portal user access)
 
 WorkItem__c
   |-- WorkItemComment__c.WorkItemId__c (comments)
@@ -138,6 +144,18 @@ For websites, mobile apps, and external platforms. Authenticated via `X-Api-Key`
 | GET | `/api/work-items/{id}` | `DeliveryPortalController.getPortalWorkItemDetail()` |
 | POST | `/api/work-items` | `DeliveryPortalController.submitPortalRequest()` |
 | POST | `/api/work-items/{id}/comments` | `DeliveryPortalController.addPortalComment()` |
+| GET | `/api/activity-feed` | Activity feed for an entity |
+| GET | `/api/work-logs` | Work log entries for an entity |
+| POST | `/api/log-hours` | Submit a new time log entry |
+| POST | `/api/approve-worklogs` | Approve pending work log entries |
+| POST | `/api/reject-worklogs` | Reject pending work log entries |
+| GET | `/api/board-summary` | AI-generated board summary |
+| GET | `/api/files` | Files attached to entity work items |
+| GET | `/api/documents` | `DeliveryDocumentController.getDocumentsForEntity()` |
+| GET | `/api/conversations` | Comment threads for entity work items |
+| GET | `/api/pending-approvals` | Work logs awaiting approval |
+| GET | `/api/my-entities` | Entities accessible by the authenticated portal user |
+| GET | `/api/portal-users` | Portal users for an entity |
 
 See [Public API Guide](PUBLIC_API_GUIDE.md) for full documentation.
 
@@ -321,3 +339,87 @@ The board UI is entirely data-driven. No stage names, colors, transitions, or pe
 |------|--------|----------|----------|
 | Software_Delivery | 40+ | Client, Consultant, Developer, QA | Full software delivery lifecycle |
 | Loan_Approval | 8 | Borrower, Processor, Admin | Simplified loan processing |
+
+---
+
+## Activity Tracking System
+
+The activity tracking system captures both explicit field changes and implicit navigation patterns for audit and analytics.
+
+### Components
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryGhostRecorder** (LWC) | Floating UI widget that captures navigation patterns. Logs page visits as `ActivityLog__c` records with page URL, component name, and session context. |
+| **DeliveryActivityLogCleanup** | Global schedulable job that purges old navigation/activity logs on a configurable retention schedule. |
+| **TrackedField\_\_mdt** | Custom Metadata Type that defines which fields on which objects generate change log entries. Ships with 4 records: WorkItem\_Developer, WorkItem\_Priority, WorkItem\_Stage, WorkItem\_Status. |
+
+### How It Works
+
+1. **Navigation tracking**: The `deliveryGhostRecorder` LWC listens for page navigation events and writes `ActivityLog__c` records with `ActionTypePk__c`, `PageUrlTxt__c`, `ComponentNameTxt__c`, and session/user context.
+2. **Field change tracking**: When a tracked field (defined in `TrackedField__mdt`) changes on a work item, the system logs the old and new values as an `ActivityLog__c` record with the relevant `RecordIdTxt__c`.
+3. **Cleanup**: `DeliveryActivityLogCleanup` runs on a schedule to purge stale navigation logs, keeping the `ActivityLog__c` table lean.
+
+### ActivityLog\_\_c Fields
+
+| Field | Purpose |
+|-------|---------|
+| ActionTypePk\_\_c | Type of action (page\_view, field\_change, etc.) |
+| ComponentNameTxt\_\_c | LWC component that generated the log |
+| PageUrlTxt\_\_c | URL of the page visited |
+| ContextDataTxt\_\_c | Additional context (JSON) |
+| RecordIdTxt\_\_c | Related record ID |
+| NetworkEntityId\_\_c | Scoping to a network entity |
+| SessionIdTxt\_\_c | Browser session identifier |
+| UserIdTxt\_\_c | User who performed the action |
+
+---
+
+## Document Engine
+
+The Document Engine generates structured documents (invoices, status reports) from live Salesforce data, stores them as snapshots, and exposes them through the portal API.
+
+### Components
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryDocumentController** | Core controller. Generates documents by querying work items, work logs, work requests, and entity data. Builds a JSON snapshot stored on `DeliveryDocument__c.SnapshotTxt__c`. Supports retrieval by ID or public token. |
+| **DocumentTemplate\_\_mdt** | Registry of document templates. Each record defines a portal component, data query shape, output formats, and an optional AI prompt. Ships with Invoice and Status\_Report records. |
+
+### Rate Hierarchy
+
+When calculating totals for invoices, the engine resolves hourly rates using a three-tier fallback:
+
+1. **WorkRequest** rate (`HourlyRateCurrency__c`) -- highest priority, set per vendor assignment
+2. **WorkItem** rate (`BillableRateCurrency__c`) -- item-level override
+3. **NetworkEntity** default rate (`DefaultHourlyRateCurrency__c`) -- org-wide fallback
+
+Total is computed as `SUM(hours * resolved_rate)` across all work log entries in the document period.
+
+### Public Token Access
+
+Each generated document receives a unique `PublicTokenTxt__c` (External ID). This token enables unauthenticated access through the portal API, allowing recipients to view invoices and status reports without logging in.
+
+### Generation Flow
+
+```
+DeliveryDocumentController.generateDocument(entityId, templateType, periodStart, periodEnd)
+  -> Query NetworkEntity, WorkItems, WorkLogs, WorkRequests for the period
+  -> Build JSON snapshot with entity, items, logs, requests, and computed totals
+  -> Create DeliveryDocument__c record with snapshot, totals, and public token
+  -> Return document Id for immediate rendering or portal sharing
+```
+
+---
+
+## Package Summary
+
+| Category | Count |
+|----------|-------|
+| Apex classes | 126 (64 production + 62 test) |
+| LWC components | 54 |
+| Custom Objects | 11 |
+| Custom Metadata Types | 10 |
+| Platform Events | 1 |
+| Permission Sets | 3 |
+| Triggers | 4 |
