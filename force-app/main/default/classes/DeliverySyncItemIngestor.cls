@@ -230,9 +230,12 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
+        if (String.isBlank(remoteId)) {
+            return null;
+        }
         String objName = type.getDescribe().getName();
         String cleanName = stripNamespace(objName);
-        
+
         if (!cleanName.endsWithIgnoreCase('WorkItem__c') || cleanName.endsWithIgnoreCase('WorkItemComment__c')) {
             List<SyncItem__c> ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
             return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
