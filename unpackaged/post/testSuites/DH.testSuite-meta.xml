@@ -52,4 +52,14 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationJobTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryScoreServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryPortalAccessServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityFeedControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityTrackerControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDataLineageControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocumentControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFieldChangeServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFieldTrackingServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryGuideControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryPublicSubmissionServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryStageHistoryControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTaskAPITest</testClassName>
 </ApexTestSuite>
