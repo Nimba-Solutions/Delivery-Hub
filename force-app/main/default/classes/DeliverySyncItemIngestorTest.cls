@@ -109,6 +109,75 @@ private class DeliverySyncItemIngestorTest {
     }
 
     @IsTest
+    static void testProcessInboundWorkLogResolvesParentViaLedger() {
+        // Simulates a WorkLog arriving from a client org where:
+        // - The parent WorkItem already exists locally (via prior sync)
+        // - The payload references the remote WorkItem ID
+        // - Cross-org lookup IDs in payload must be stripped before insert
+        WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+        WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
+
+        Map<String, Object> payload = new Map<String, Object>{
+            'SourceId' => 'REMOTE-WORKLOG-001',
+            'SenderOrgId' => '00D_MOCK_ORG_ID',
+            'GlobalSourceId' => 'REMOTE-WORKLOG-001',
+            'WorkItemId__c' => 'REMOTE-CLIENT-WORKITEM-1',  // remote ID — resolved via Ledger
+            'RequestId__c' => 'REMOTE-REQUEST-INVALID',      // cross-org ID — must be stripped
+            'HoursLoggedNumber__c' => 4.5,
+            'WorkDateDate__c' => String.valueOf(Date.today()),
+            'WorkDescriptionTxt__c' => 'Inbound work log test'
+        };
+
+        Test.startTest();
+        Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+        Test.stopTest();
+
+        System.assertNotEquals(null, resultId, 'WorkLog should have been created');
+
+        WorkLog__c wl = [SELECT HoursLoggedNumber__c, WorkItemId__c, RequestId__c, WorkDescriptionTxt__c FROM WorkLog__c WHERE Id = :resultId];
+        System.assertEquals(4.5, wl.HoursLoggedNumber__c, 'Hours should be mapped from payload');
+        System.assertEquals(localItem.Id, wl.WorkItemId__c, 'Parent WorkItem should resolve to local ID via Ledger');
+        System.assertEquals(localReq.Id, wl.RequestId__c, 'RequestId should resolve to local WorkRequest, not the remote ID');
+        System.assertEquals('Inbound work log test', wl.WorkDescriptionTxt__c, 'Description should be mapped');
+
+        // Verify ledger entry was created
+        SyncItem__c ledger = [SELECT RemoteExternalIdTxt__c, ObjectTypePk__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = 'REMOTE-WORKLOG-001' LIMIT 1];
+        System.assert(ledger.ObjectTypePk__c.contains('WorkLog__c'), 'Ledger entry should be created for the WorkLog');
+    }
+
+    @IsTest
+    static void testFindLocalIdIgnoresNullSourceId() {
+        // When SourceId is null (e.g., from older payloads missing routing metadata),
+        // findLocalId must return null — NOT match ledger entries with null RemoteExternalIdTxt__c
+        Map<String, Object> payload = new Map<String, Object>{
+            'WorkItemId__c' => 'REMOTE-CLIENT-WORKITEM-1',
+            'HoursLoggedNumber__c' => 2.0,
+            'WorkDateDate__c' => String.valueOf(Date.today()),
+            'WorkDescriptionTxt__c' => 'First log without SourceId'
+        };
+
+        Test.startTest();
+        Id firstId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+
+        // Second call with a different payload but also no SourceId
+        Map<String, Object> payload2 = new Map<String, Object>{
+            'WorkItemId__c' => 'REMOTE-CLIENT-WORKITEM-1',
+            'HoursLoggedNumber__c' => 3.0,
+            'WorkDateDate__c' => String.valueOf(Date.today().addDays(-1)),
+            'WorkDescriptionTxt__c' => 'Second log without SourceId'
+        };
+        Id secondId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload2);
+        Test.stopTest();
+
+        System.assertNotEquals(null, firstId, 'First WorkLog should be created');
+        System.assertNotEquals(null, secondId, 'Second WorkLog should be created');
+        System.assertNotEquals(firstId, secondId, 'Each call must create a SEPARATE WorkLog — null SourceId must not match existing ledger entries');
+
+        Integer logCount = [SELECT COUNT() FROM WorkLog__c];
+        System.assertEquals(2, logCount, 'Two distinct WorkLogs must exist');
+    }
+
+    @IsTest
     static void testProcessInboundWorkItemAutoParentsClient() {
         // 1. Setup a Client Network Entity with a simulated Org ID
         String simulatedOrgId = '00D_MOCK_ORG_ID';
