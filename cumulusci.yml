@@ -114,6 +114,12 @@ flows:
             3.1:
                 task: configure_guest_user_access
 
+    config_apextest:
+        steps:
+            1:
+                options:
+                    unmanaged: True
+
 plans:
     install:
         tier: primary
