@@ -68,6 +68,11 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.mode = 'preview';
             this._loadDocumentById(this.documentId);
         }
+        // When no entityId is configured (e.g., Admin Home), explicitly set null
+        // so the wire fires and returns all documents across entities
+        if (this.networkEntityId === undefined) {
+            this.networkEntityId = null;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
