@@ -153,27 +153,31 @@ public with sharing class DeliveryDocumentController {
     }
 
     /**
-     * @description Lists all documents for a given entity, ordered by creation date.
-     * @param entityId The NetworkEntity__c Id.
+     * @description Lists documents ordered by creation date. When entityId is provided,
+     *              returns documents for that entity. When null, returns all documents
+     *              (useful for Admin Home where no entity context is available).
+     * @param entityId The NetworkEntity__c Id, or null for all documents.
      * @return List of document summary maps.
      */
     @AuraEnabled(cacheable=true)
     public static List<Map<String, Object>> getDocumentsForEntity(Id entityId) {
         List<Map<String, Object>> results = new List<Map<String, Object>>();
 
-        for (DeliveryDocument__c doc : [
-            SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c,
-                   StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, CreatedDate
-            FROM DeliveryDocument__c
-            WHERE NetworkEntityId__c = :entityId
-            WITH SYSTEM_MODE
-            ORDER BY CreatedDate DESC
-            LIMIT 100
-        ]) {
+        String query = 'SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c, '
+            + 'StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, CreatedDate, '
+            + 'NetworkEntityId__r.Name '
+            + 'FROM DeliveryDocument__c ';
+        if (entityId != null) {
+            query += 'WHERE NetworkEntityId__c = :entityId ';
+        }
+        query += 'ORDER BY CreatedDate DESC LIMIT 100';
+
+        for (DeliveryDocument__c doc : Database.query(query)) { // NOPMD
             Map<String, Object> item = new Map<String, Object>();
             item.put('id', doc.Id);
             item.put('name', doc.Name);
             item.put('template', doc.TemplatePk__c);
+            item.put('entityName', doc.NetworkEntityId__r.Name);
             item.put('periodStart', doc.PeriodStartDate__c);
             item.put('periodEnd', doc.PeriodEndDate__c);
             item.put('status', doc.StatusPk__c);
