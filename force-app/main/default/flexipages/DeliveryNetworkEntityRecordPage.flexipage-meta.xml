@@ -72,7 +72,6 @@
                 <identifier>c_deliveryDocumentViewer2</identifier>
             </componentInstance>
         </itemInstances>
-        <mode>Replace</mode>
         <name>documentsTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
