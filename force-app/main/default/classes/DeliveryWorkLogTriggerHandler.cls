@@ -127,13 +127,17 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      * @return List of SyncItem__c records ready for insert.
      */
     private static List<SyncItem__c> buildSyncItems(List<WorkLog__c> logs, Map<Id, WorkItem__c> clientWorkItems) {
+        String senderOrgId = UserInfo.getOrganizationId();
         List<SyncItem__c> items = new List<SyncItem__c>();
         for (WorkLog__c wl : logs) {
             if (!clientWorkItems.containsKey(wl.WorkItemId__c)) {
                 continue;
             }
             Map<String, Object> payload = new Map<String, Object>{
-                'WorkItemId__c'            => wl.WorkItemId__c,
+                'SourceId'               => wl.Id,
+                'SenderOrgId'            => senderOrgId,
+                'GlobalSourceId'         => (String) wl.Id,
+                'WorkItemId__c'          => wl.WorkItemId__c,
                 'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
                 'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
                 'WorkDescriptionTxt__c'  => wl.WorkDescriptionTxt__c
@@ -141,9 +145,10 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             items.add(new SyncItem__c(
                 ObjectTypePk__c         = 'WorkLog__c',
                 LocalRecordIdTxt__c     = wl.Id,
-                WorkItemId__c             = wl.WorkItemId__c,
+                WorkItemId__c           = wl.WorkItemId__c,
                 DirectionPk__c          = 'Outbound',
                 StatusPk__c             = 'Queued',
+                GlobalSourceIdTxt__c    = (String) wl.Id,
                 PayloadTxt__c           = JSON.serialize(payload)
             ));
         }
