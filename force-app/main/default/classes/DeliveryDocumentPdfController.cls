@@ -160,7 +160,6 @@ public without sharing class DeliveryDocumentPdfController {
         totalCost = 0;
         priorBalance = 0;
         amountDue = 0;
-
         // ?pdf=true triggers server-side PDF rendering
         renderAsPdf = ApexPages.currentPage().getParameters().get('pdf') == 'true';
 
