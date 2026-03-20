@@ -119,11 +119,16 @@ public with sharing class DeliveryDocumentPdfController {
         doc = docs[0];
 
         // Auto-mark as Viewed on first public token access
+        // Skip DML on Sites (guest user context) — GET requests don't allow DML
         if (String.isNotBlank(publicToken) && doc.ViewedDateTime__c == null
             && doc.StatusPk__c == 'Sent') {
-            doc.ViewedDateTime__c = Datetime.now();
-            doc.StatusPk__c = 'Viewed';
-            Database.update(doc, AccessLevel.SYSTEM_MODE);
+            try {
+                doc.ViewedDateTime__c = Datetime.now();
+                doc.StatusPk__c = 'Viewed';
+                Database.update(doc, AccessLevel.SYSTEM_MODE);
+            } catch (Exception e) {
+                // Silently skip — DML not allowed in guest GET context on Sites
+            }
         }
 
         documentName = doc.Name;

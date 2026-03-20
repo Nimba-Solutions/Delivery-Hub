@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Document - Cloud Nimbus LLC</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="doc-root">
+    <div id="loading-state" class="loading">
+        <div class="loading-spinner"></div>
+        <p>Loading document...</p>
+    </div>
+    <div id="error-state" class="error-container" style="display:none;">
+        <h2>Document Not Found</h2>
+        <p id="error-message">The document you're looking for doesn't exist or the link has expired.</p>
+    </div>
+    <div id="document-container" style="display:none;"></div>
+</div>
+<script src="renderer.js"></script>
+<script src="html2pdf.bundle.min.js"></script>
+</body>
+</html>
