@@ -269,8 +269,7 @@ public with sharing class DeliveryDocumentPdfController {
             NetworkEntity__c v = vendors[0];
             vendorName = v.Name;
             if (String.isNotBlank(v.AddressTxt__c)) {
-                // Convert comma-separated or newline address to <br/> for PDF
-                vendorAddress = v.AddressTxt__c.replace('\n', '<br/>').replace(', ', '<br/>');
+                vendorAddress = formatAddressForPdf(v.AddressTxt__c);
             }
             if (String.isNotBlank(v.ContactEmailTxt__c)) {
                 vendorEmail = v.ContactEmailTxt__c;
@@ -497,6 +496,24 @@ public with sharing class DeliveryDocumentPdfController {
             return '$0.00';
         }
         return '$' + amount.setScale(2).format();
+    }
+
+    private static String formatAddressForPdf(String addr) {
+        if (String.isBlank(addr)) {
+            return '';
+        }
+        // If the address already has newlines, just convert to <br/>
+        if (addr.contains('\n')) {
+            return addr.replace('\n', '<br/>');
+        }
+        // Single-line comma-separated: split on commas, but keep city/state/zip together.
+        // Pattern: "Street, City, ST ZIP" → "Street<br/>City, ST ZIP"
+        // Only break on the FIRST comma to preserve "City, ST ZIP" grouping.
+        Integer firstComma = addr.indexOf(',');
+        if (firstComma > 0) {
+            return addr.substring(0, firstComma).trim() + '<br/>' + addr.substring(firstComma + 1).trim();
+        }
+        return addr;
     }
 
     private static String formatDate(Date d) {
