@@ -120,7 +120,10 @@ public without sharing class DeliverySyncItemIngestor {
             if (localParentId != null && objectType.containsIgnoreCase('WorkItemComment__c')) {
                 putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
             }
-            if (localParentId != null && objectType.endsWithIgnoreCase('WorkLog__c')) {
+            if (objectType.endsWithIgnoreCase('WorkLog__c')) {
+                if (localParentId == null) {
+                    throw new DeliverySyncEngine.SyncException('Cannot resolve parent WorkItem for WorkLog. Parent ref: ' + parentWorkItemRef + '. The parent WorkItem may not have synced yet.');
+                }
                 putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
                 // Find a local WorkRequest for the Master-Detail parent
                 List<WorkRequest__c> localRequests = [

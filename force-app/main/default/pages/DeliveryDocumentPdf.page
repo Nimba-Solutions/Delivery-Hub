@@ -3,6 +3,8 @@
 <style>
     body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #222222; margin: 0; padding: 20px 30px; }
     table { border-collapse: collapse; }
+    tr { page-break-inside: avoid; }
+    @page { margin: 0.5in 0.4in; }
 </style>
 </head>
 
@@ -12,15 +14,18 @@
 <table style="width: 100%; border-bottom: 3px solid #333333; padding-bottom: 8px; margin-bottom: 12px;" cellpadding="0" cellspacing="0">
     <tr>
         <td style="vertical-align: top; width: 55%;">
-            <div style="font-size: 16pt; font-weight: bold; color: #333333;">Cloud Nimbus LLC</div>
+            <div style="font-size: 16pt; font-weight: bold; color: #333333;">{!vendorName}</div>
             <div style="font-size: 8pt; color: #555555; line-height: 1.5;">
-                2301 Collins Ave Apt 1420<br/>
-                Miami Beach, FL 33139
+                <apex:outputText value="{!vendorAddress}" escape="false" />
             </div>
         </td>
         <td style="vertical-align: top; width: 20%; text-align: left;">
-            <div style="font-size: 8pt; color: #555555; padding-top: 4px;">(305) 204-0580</div>
-            <div style="font-size: 8pt; color: #555555;">cloudnimbusllc.com</div>
+            <apex:outputPanel rendered="{!vendorPhone != null}">
+                <div style="font-size: 8pt; color: #555555; padding-top: 4px;">{!vendorPhone}</div>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!vendorEmail != null}">
+                <div style="font-size: 8pt; color: #555555;">{!vendorEmail}</div>
+            </apex:outputPanel>
         </td>
         <td style="vertical-align: top; width: 25%; text-align: right;">
             <div style="font-size: 18pt; font-weight: bold; font-style: italic; color: #333333;">{!templateDisplay}</div>
@@ -146,7 +151,7 @@
     <table style="width: 100%; margin-top: 40px;" cellpadding="0" cellspacing="0">
         <tr>
             <td style="width: 42%; padding-right: 16%;">
-                <div style="border-top: 1px solid #222222; padding-top: 4px; font-size: 7.5pt; color: #888888;">Cloud Nimbus LLC - Authorized Signature</div>
+                <div style="border-top: 1px solid #222222; padding-top: 4px; font-size: 7.5pt; color: #888888;">{!vendorName} - Authorized Signature</div>
                 <div style="border-top: 1px solid #222222; padding-top: 4px; font-size: 7.5pt; color: #888888; margin-top: 30px;">Date</div>
             </td>
             <td style="width: 42%;">
@@ -219,18 +224,16 @@
         <td style="width: 35%; vertical-align: top; padding-right: 12px;">
             <div style="font-size: 7.5pt; font-weight: bold; color: #333333; margin-bottom: 3px;">DIRECT ALL INQUIRIES TO:</div>
             <div style="font-size: 8pt; color: #555555; line-height: 1.5;">
-                Glen Bradford<br/>
-                (305) 204-0580<br/>
-                glen.bradford@nimbasolutions.com
+                <apex:outputPanel rendered="{!vendorPhone != null}">{!vendorPhone}<br/></apex:outputPanel>
+                <apex:outputPanel rendered="{!vendorEmail != null}">{!vendorEmail}</apex:outputPanel>
             </div>
         </td>
         <td style="width: 35%; vertical-align: top;">
             <div style="font-size: 7.5pt; font-weight: bold; color: #333333; margin-bottom: 3px;">MAKE ALL CHECKS PAYABLE TO:</div>
             <div style="font-size: 8pt; color: #555555; line-height: 1.5;">
-                Cloud Nimbus LLC<br/>
+                {!vendorName}<br/>
                 Attn: Accounts Receivable<br/>
-                2301 Collins Ave Apt 1420<br/>
-                Miami Beach, FL 33139
+                <apex:outputText value="{!vendorAddress}" escape="false" />
             </div>
         </td>
         <td style="width: 30%; vertical-align: top; text-align: right;">

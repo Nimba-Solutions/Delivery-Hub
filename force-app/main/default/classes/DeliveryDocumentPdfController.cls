@@ -35,7 +35,13 @@ public with sharing class DeliveryDocumentPdfController {
     // ── Unpaid invoices summary ──
     public List<UnpaidInvoiceRow> unpaidInvoiceRows { get; private set; }
 
-    // ── Entity details ──
+    // ── Vendor (issuer) details ──
+    public String vendorName { get; private set; }
+    public String vendorAddress { get; private set; }
+    public String vendorEmail { get; private set; }
+    public String vendorPhone { get; private set; }
+
+    // ── Entity (client/bill-to) details ──
     public String entityName { get; private set; }
     public String entityAddress { get; private set; }
     public String entityEmail { get; private set; }
@@ -159,12 +165,21 @@ public with sharing class DeliveryDocumentPdfController {
         aiNarrative = doc.AiNarrativeTxt__c;
 
         if (doc.PeriodStartDate__c != null && doc.PeriodEndDate__c != null) {
-            formattedPeriod = doc.PeriodStartDate__c.format() + ' \u2013 ' + doc.PeriodEndDate__c.format();
+            formattedPeriod = formatDate(doc.PeriodStartDate__c) + ' \u2013 ' + formatDate(doc.PeriodEndDate__c);
         }
 
         if (String.isNotBlank(doc.SnapshotTxt__c)) {
             Map<String, Object> snapshot = (Map<String, Object>) JSON.deserializeUntyped(doc.SnapshotTxt__c);
-            generatedAt = (String) snapshot.get('generatedAt');
+            // Format generated-at as a readable date (not raw ISO timestamp)
+            String rawGenAt = (String) snapshot.get('generatedAt');
+            if (String.isNotBlank(rawGenAt)) {
+                try {
+                    Datetime genDt = Datetime.valueOf(rawGenAt.replace('T', ' '));
+                    generatedAt = formatDate(genDt.date());
+                } catch (Exception e) {
+                    generatedAt = rawGenAt;
+                }
+            }
             parseEntity(snapshot);
             parseWorkItems(snapshot);
             parseWorkLogs(snapshot);
@@ -186,7 +201,11 @@ public with sharing class DeliveryDocumentPdfController {
                     row.name = (String) inv.get('name');
                     String pStart = (String) inv.get('periodStart');
                     String pEnd = (String) inv.get('periodEnd');
-                    row.period = (pStart != null ? pStart : '') + ' - ' + (pEnd != null ? pEnd : '');
+                    String fStart = '';
+                    String fEnd = '';
+                    try { fStart = formatDate(Date.valueOf(pStart)); } catch (Exception e) { fStart = pStart != null ? pStart : ''; }
+                    try { fEnd = formatDate(Date.valueOf(pEnd)); } catch (Exception e) { fEnd = pEnd != null ? pEnd : ''; }
+                    row.period = fStart + ' \u2013 ' + fEnd;
                     row.formattedTotal = formatCurrency(inv.get('total') != null ? (Decimal) inv.get('total') : 0);
                     row.formattedPaid = formatCurrency(inv.get('paid') != null ? (Decimal) inv.get('paid') : 0);
                     row.formattedOutstanding = formatCurrency(inv.get('outstanding') != null ? (Decimal) inv.get('outstanding') : 0);
@@ -198,6 +217,40 @@ public with sharing class DeliveryDocumentPdfController {
         amountDue = totalCost + priorBalance;
         formattedPriorBalance = formatCurrency(priorBalance);
         formattedAmountDue = formatCurrency(amountDue);
+
+        // Load vendor (issuer) entity — the "self" entity with type Vendor or Both
+        loadVendorEntity();
+    }
+
+    private void loadVendorEntity() {
+        // Default fallback
+        vendorName = 'Cloud Nimbus LLC';
+        vendorAddress = '2301 Collins Ave Apt 1420<br/>Miami Beach, FL 33139';
+        vendorEmail = 'glen.bradford@nimbasolutions.com';
+        vendorPhone = '(305) 204-0580';
+
+        List<NetworkEntity__c> vendors = [
+            SELECT Name, AddressTxt__c, ContactEmailTxt__c, ContactPhoneTxt__c
+            FROM NetworkEntity__c
+            WHERE EntityTypePk__c IN ('Vendor', 'Both')
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC
+            LIMIT 1
+        ];
+        if (!vendors.isEmpty()) {
+            NetworkEntity__c v = vendors[0];
+            vendorName = v.Name;
+            if (String.isNotBlank(v.AddressTxt__c)) {
+                // Convert comma-separated or newline address to <br/> for PDF
+                vendorAddress = v.AddressTxt__c.replace('\n', '<br/>').replace(', ', '<br/>');
+            }
+            if (String.isNotBlank(v.ContactEmailTxt__c)) {
+                vendorEmail = v.ContactEmailTxt__c;
+            }
+            if (String.isNotBlank(v.ContactPhoneTxt__c)) {
+                vendorPhone = v.ContactPhoneTxt__c;
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -329,7 +382,14 @@ public with sharing class DeliveryDocumentPdfController {
             WorkLogRow row = new WorkLogRow();
             row.workItemName = (String) log.get('workItemName');
             row.hours = log.get('hours') != null ? (Decimal) log.get('hours') : 0;
-            row.workDate = (String) log.get('date');
+            String rawDate = (String) log.get('date');
+            if (String.isNotBlank(rawDate)) {
+                try {
+                    row.workDate = formatDate(Date.valueOf(rawDate));
+                } catch (Exception e) {
+                    row.workDate = rawDate;
+                }
+            }
             row.description = (String) log.get('description');
             String workItemId = (String) log.get('workItemId');
             row.rate = rateMap.containsKey(workItemId) ? rateMap.get(workItemId) : defaultRate;
@@ -367,5 +427,14 @@ public with sharing class DeliveryDocumentPdfController {
             return '$0.00';
         }
         return '$' + amount.setScale(2).format();
+    }
+
+    private static String formatDate(Date d) {
+        if (d == null) {
+            return '';
+        }
+        // Returns "Mar 1, 2026" style
+        Datetime dt = Datetime.newInstance(d, Time.newInstance(0, 0, 0, 0));
+        return dt.format('MMM d, yyyy');
     }
 }

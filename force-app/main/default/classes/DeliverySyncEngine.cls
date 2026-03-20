@@ -257,4 +257,6 @@ public without sharing class DeliverySyncEngine {
             }
         }
     }
+
+    public class SyncException extends Exception {}
 }
