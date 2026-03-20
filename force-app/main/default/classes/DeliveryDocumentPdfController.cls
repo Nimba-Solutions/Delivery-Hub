@@ -6,91 +6,143 @@
  *               the DeliveryDocumentPdf.page consumes for professional document output.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryDocumentPdfController {
 
-    // ── Core document record ──
+    /** @description The underlying DeliveryDocument__c record. */
     public DeliveryDocument__c doc { get; private set; }
+    /** @description Auto-number name of the document (e.g. DOC-000013). */
     public String documentName { get; private set; }
+    /** @description Template API name (e.g. Invoice, Status_Report). */
     public String templateType { get; private set; }
+    /** @description Human-readable template label for the PDF heading. */
     public String templateDisplay { get; private set; }
+    /** @description Sum of hours across all work logs in the period. */
     public Decimal totalHours { get; private set; }
+    /** @description Sum of (hours x rate) across all work logs. */
     public Decimal totalCost { get; private set; }
+    /** @description Formatted total cost string (e.g. $7,065.00). */
     public String formattedTotalCost { get; private set; }
+    /** @description Formatted period range (e.g. Mar 1, 2026 - Mar 31, 2026). */
     public String formattedPeriod { get; private set; }
+    /** @description Payment terms (e.g. Net 30). */
     public String terms { get; private set; }
+    /** @description Calculated due date based on terms. */
     public Date dueDate { get; private set; }
+    /** @description AI-generated executive narrative. */
     public String aiNarrative { get; private set; }
+    /** @description Formatted date when the document was generated. */
     public String generatedAt { get; private set; }
 
-    // ── Balance tracking ──
+    /** @description Outstanding balance from prior unpaid invoices. */
     public Decimal priorBalance { get; private set; }
+    /** @description Total amount due (current charges + prior balance). */
     public Decimal amountDue { get; private set; }
+    /** @description Formatted prior balance string. */
     public String formattedPriorBalance { get; private set; }
+    /** @description Formatted amount due string. */
     public String formattedAmountDue { get; private set; }
 
-    // ── Render mode ──
+    /** @description Whether to render the page as PDF via Flying Saucer. */
     public Boolean renderAsPdf { get; private set; }
 
-    // ── Unpaid invoices summary ──
+    /** @description List of unpaid prior invoices for the A/R summary table. */
     public List<UnpaidInvoiceRow> unpaidInvoiceRows { get; private set; }
 
-    // ── Vendor (issuer) details ──
+    /** @description Vendor (issuer) company name from NetworkEntity. */
     public String vendorName { get; private set; }
+    /** @description Vendor address formatted with br tags for PDF. */
     public String vendorAddress { get; private set; }
+    /** @description Vendor contact email address. */
     public String vendorEmail { get; private set; }
+    /** @description Vendor contact phone number. */
     public String vendorPhone { get; private set; }
 
-    // ── Entity (client/bill-to) details ──
+    /** @description Client (bill-to) entity name. */
     public String entityName { get; private set; }
+    /** @description Client entity address. */
     public String entityAddress { get; private set; }
+    /** @description Client entity email. */
     public String entityEmail { get; private set; }
+    /** @description Client entity phone. */
     public String entityPhone { get; private set; }
+    /** @description Default hourly rate from the entity record. */
     public Decimal defaultRate { get; private set; }
 
-    // ── Snapshot collections ──
+    /** @description Parsed work item rows for VF iteration. */
     public List<WorkItemRow> workItemRows { get; private set; }
+    /** @description Parsed work log rows for VF iteration. */
     public List<WorkLogRow> workLogRows { get; private set; }
+    /** @description Parsed work request rows for VF iteration. */
     public List<WorkRequestRow> workRequestRows { get; private set; }
 
-    // ── Inner classes for VF iteration ──
-
+    /** @description Row data for work items table in the PDF. */
     public class WorkItemRow {
+        /** @description Work item auto-number name. */
         public String name { get; set; }
+        /** @description Brief description of the work item. */
         public String description { get; set; }
+        /** @description Current workflow stage. */
         public String stage { get; set; }
+        /** @description Total logged hours for this item in the period. */
         public Decimal hours { get; set; }
+        /** @description Billable hourly rate. */
         public Decimal rate { get; set; }
+        /** @description Calculated subtotal (hours x rate). */
         public Decimal subtotal { get; set; }
+        /** @description Formatted rate string. */
         public String formattedRate { get; set; }
+        /** @description Formatted subtotal string. */
         public String formattedSubtotal { get; set; }
     }
 
+    /** @description Row data for time log detail table in the PDF. */
     public class WorkLogRow {
+        /** @description Parent work item name. */
         public String workItemName { get; set; }
+        /** @description Hours logged in this entry. */
         public Decimal hours { get; set; }
+        /** @description Billable rate for this entry. */
         public Decimal rate { get; set; }
+        /** @description Calculated amount (hours x rate). */
         public Decimal amount { get; set; }
+        /** @description Formatted rate string. */
         public String formattedRate { get; set; }
+        /** @description Formatted amount string. */
         public String formattedAmount { get; set; }
+        /** @description Formatted work date. */
         public String workDate { get; set; }
+        /** @description Work description text. */
         public String description { get; set; }
     }
 
+    /** @description Row data for unpaid invoices A/R summary table. */
     public class UnpaidInvoiceRow {
+        /** @description Invoice document name. */
         public String name { get; set; }
+        /** @description Formatted period range. */
         public String period { get; set; }
+        /** @description Formatted invoiced total. */
         public String formattedTotal { get; set; }
+        /** @description Formatted payment received. */
         public String formattedPaid { get; set; }
+        /** @description Formatted outstanding balance. */
         public String formattedOutstanding { get; set; }
+        /** @description Invoice status (Draft, Sent, Viewed, Paid). */
         public String status { get; set; }
     }
 
+    /** @description Row data for work requests table in the PDF. */
     public class WorkRequestRow {
+        /** @description Parent work item name. */
         public String workItemName { get; set; }
+        /** @description Delivery vendor entity name. */
         public String vendorName { get; set; }
+        /** @description Request status. */
         public String status { get; set; }
+        /** @description Total logged hours for this request. */
         public Decimal hours { get; set; }
+        /** @description Formatted hourly rate string. */
         public String formattedRate { get; set; }
     }
 
@@ -188,31 +240,7 @@ public with sharing class DeliveryDocumentPdfController {
 
         // Parse metadata for prior balance, unpaid invoices, etc.
         if (String.isNotBlank(doc.MetadataTxt__c)) {
-            Map<String, Object> meta = (Map<String, Object>) JSON.deserializeUntyped(doc.MetadataTxt__c);
-            if (meta.containsKey('priorBalance') && meta.get('priorBalance') != null) {
-                priorBalance = (Decimal) meta.get('priorBalance');
-            }
-            // Parse unpaid invoices summary
-            if (meta.containsKey('unpaidInvoices') && meta.get('unpaidInvoices') != null) {
-                List<Object> unpaidList = (List<Object>) meta.get('unpaidInvoices');
-                for (Object o : unpaidList) {
-                    Map<String, Object> inv = (Map<String, Object>) o;
-                    UnpaidInvoiceRow row = new UnpaidInvoiceRow();
-                    row.name = (String) inv.get('name');
-                    String pStart = (String) inv.get('periodStart');
-                    String pEnd = (String) inv.get('periodEnd');
-                    String fStart = '';
-                    String fEnd = '';
-                    try { fStart = formatDate(Date.valueOf(pStart)); } catch (Exception e) { fStart = pStart != null ? pStart : ''; }
-                    try { fEnd = formatDate(Date.valueOf(pEnd)); } catch (Exception e) { fEnd = pEnd != null ? pEnd : ''; }
-                    row.period = fStart + ' \u2013 ' + fEnd;
-                    row.formattedTotal = formatCurrency(inv.get('total') != null ? (Decimal) inv.get('total') : 0);
-                    row.formattedPaid = formatCurrency(inv.get('paid') != null ? (Decimal) inv.get('paid') : 0);
-                    row.formattedOutstanding = formatCurrency(inv.get('outstanding') != null ? (Decimal) inv.get('outstanding') : 0);
-                    row.status = (String) inv.get('status');
-                    unpaidInvoiceRows.add(row);
-                }
-            }
+            parseMetadata(doc.MetadataTxt__c);
         }
         amountDue = totalCost + priorBalance;
         formattedPriorBalance = formatCurrency(priorBalance);
@@ -257,62 +285,77 @@ public with sharing class DeliveryDocumentPdfController {
     //  BOOLEAN GETTERS (VF requires explicit getters)
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Whether the template is an Invoice. */
     public Boolean getIsInvoice() {
         return templateType == 'Invoice';
     }
 
+    /** @description Whether the template is a Client or Contractor Agreement. */
     public Boolean getIsAgreement() {
         return templateType == 'Client_Agreement' || templateType == 'Contractor_Agreement';
     }
 
+    /** @description Whether the snapshot contains work items. */
     public Boolean getHasWorkItems() {
         return !workItemRows.isEmpty();
     }
 
+    /** @description Whether the snapshot contains work logs. */
     public Boolean getHasWorkLogs() {
         return !workLogRows.isEmpty();
     }
 
+    /** @description Whether the snapshot contains work requests. */
     public Boolean getHasWorkRequests() {
         return !workRequestRows.isEmpty();
     }
 
+    /** @description Whether an AI narrative exists on the document. */
     public Boolean getHasAiNarrative() {
         return String.isNotBlank(aiNarrative);
     }
 
+    /** @description Whether the entity has any contact info (address, email, phone). */
     public Boolean getHasEntityContact() {
         return String.isNotBlank(entityAddress) || String.isNotBlank(entityEmail) || String.isNotBlank(entityPhone);
     }
 
+    /** @description Whether there are unpaid prior invoices. */
     public Boolean getHasUnpaidInvoices() {
         return !unpaidInvoiceRows.isEmpty();
     }
 
+    /** @description Whether the document has a non-zero prior balance. */
     public Boolean getHasPriorBalance() {
         return priorBalance != null && priorBalance != 0;
     }
 
+    /** @description Whether payment terms are set. */
     public Boolean getHasTerms() {
         return String.isNotBlank(terms);
     }
 
+    /** @description Whether a due date is set. */
     public Boolean getHasDueDate() {
         return dueDate != null;
     }
 
+    /** @description Whether the document record was found. */
     public Boolean getHasDocument() {
         return doc != null;
     }
 
+    /** @description Formatted default hourly rate with /hr suffix. */
     public String getFormattedDefaultRate() {
         return formatCurrency(defaultRate) + '/hr';
     }
 
+    /** @description Formatted due date string. */
     public String getFormattedDueDate() {
         return dueDate != null ? dueDate.format() : '';
     }
 
+    /** @description Formatted total hours with hrs suffix. */
     public String getFormattedTotalHours() {
         return totalHours.setScale(1) + ' hrs';
     }
@@ -320,6 +363,33 @@ public with sharing class DeliveryDocumentPdfController {
     // ═══════════════════════════════════════════════════════════
     //  PRIVATE: Snapshot Parsers
     // ═══════════════════════════════════════════════════════════
+
+    private void parseMetadata(String metadataJson) {
+        Map<String, Object> meta = (Map<String, Object>) JSON.deserializeUntyped(metadataJson);
+        if (meta.containsKey('priorBalance') && meta.get('priorBalance') != null) {
+            priorBalance = (Decimal) meta.get('priorBalance');
+        }
+        if (meta.containsKey('unpaidInvoices') && meta.get('unpaidInvoices') != null) {
+            List<Object> unpaidList = (List<Object>) meta.get('unpaidInvoices');
+            for (Object o : unpaidList) {
+                Map<String, Object> inv = (Map<String, Object>) o;
+                UnpaidInvoiceRow row = new UnpaidInvoiceRow();
+                row.name = (String) inv.get('name');
+                String pStart = (String) inv.get('periodStart');
+                String pEnd = (String) inv.get('periodEnd');
+                String fStart = '';
+                String fEnd = '';
+                try { fStart = formatDate(Date.valueOf(pStart)); } catch (Exception e) { fStart = pStart != null ? pStart : ''; }
+                try { fEnd = formatDate(Date.valueOf(pEnd)); } catch (Exception e) { fEnd = pEnd != null ? pEnd : ''; }
+                row.period = fStart + ' \u2013 ' + fEnd;
+                row.formattedTotal = formatCurrency(inv.get('total') != null ? (Decimal) inv.get('total') : 0);
+                row.formattedPaid = formatCurrency(inv.get('paid') != null ? (Decimal) inv.get('paid') : 0);
+                row.formattedOutstanding = formatCurrency(inv.get('outstanding') != null ? (Decimal) inv.get('outstanding') : 0);
+                row.status = (String) inv.get('status');
+                unpaidInvoiceRows.add(row);
+            }
+        }
+    }
 
     private void parseEntity(Map<String, Object> snapshot) {
         if (!snapshot.containsKey('entity')) {
