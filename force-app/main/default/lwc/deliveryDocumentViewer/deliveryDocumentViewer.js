@@ -440,8 +440,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     handleViewWeb() {
         if (!this.previewDoc?.id) return;
-        // Open VF page as HTML web view in new tab
-        window.open('/apex/DeliveryDocumentPdf?id=' + this.previewDoc.id, '_blank');
+        // Open rich renderer (Static Resource bundle) in new tab
+        window.open('/apex/DeliveryDocumentView?id=' + this.previewDoc.id, '_blank');
     }
 
     handleCopyPublicLink() {
