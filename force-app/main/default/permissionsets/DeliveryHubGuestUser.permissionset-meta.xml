@@ -93,7 +93,22 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
+        <field>NetworkEntity__c.AddressTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>NetworkEntity__c.ConnectionStatusPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>NetworkEntity__c.ContactEmailTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>NetworkEntity__c.ContactPhoneTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
