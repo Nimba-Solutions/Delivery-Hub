@@ -510,7 +510,7 @@ private class DeliveryDocumentControllerTest {
         ];
 
         String html = DeliveryDocumentController.buildDocumentEmailBody(doc, 'Invoice');
-        System.assert(html.contains('Cloud Nimbus LLC'), 'Should contain company name');
+        System.assert(html.contains('Test Vendor LLC'), 'Should contain vendor entity name');
         System.assert(html.contains('Test Client Corp'), 'Should contain entity name');
     }
 
