@@ -6,7 +6,7 @@
  *               the DeliveryDocumentPdf.page consumes for professional document output.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssConstructorCount, PMD.ExcessivePublicCount')
 public without sharing class DeliveryDocumentPdfController {
 
     /** @description The underlying DeliveryDocument__c record. */
@@ -150,6 +150,9 @@ public without sharing class DeliveryDocumentPdfController {
     //  CONSTRUCTOR
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Initializes the VF controller by reading URL parameters, querying the
+     *              DeliveryDocument__c record, and parsing its JSON snapshot into typed properties.
+     */
     public DeliveryDocumentPdfController() {
         workItemRows = new List<WorkItemRow>();
         workLogRows = new List<WorkLogRow>();
@@ -184,7 +187,7 @@ public without sharing class DeliveryDocumentPdfController {
         }
         query += ' WITH SYSTEM_MODE LIMIT 1';
 
-        List<DeliveryDocument__c> docs = Database.query(query);
+        List<DeliveryDocument__c> docs = Database.query(query); // NOPMD — bind variables (:docId, :publicToken) are safe
 
         if (docs.isEmpty()) {
             return;
@@ -201,7 +204,8 @@ public without sharing class DeliveryDocumentPdfController {
                 doc.StatusPk__c = 'Viewed';
                 Database.update(doc, AccessLevel.SYSTEM_MODE);
             } catch (Exception e) {
-                // Silently skip — DML not allowed in guest GET context on Sites
+                // DML not allowed in guest GET context on Sites — log and skip
+                System.debug(LoggingLevel.FINE, 'Document view-mark skipped (guest context): ' + e.getMessage());
             }
         }
 
@@ -283,77 +287,107 @@ public without sharing class DeliveryDocumentPdfController {
     //  BOOLEAN GETTERS (VF requires explicit getters)
     // ═══════════════════════════════════════════════════════════
 
-    /** @description Whether the template is an Invoice. */
+    /** @description Whether the template is an Invoice.
+     *  @return True if templateType equals Invoice.
+     */
     public Boolean getIsInvoice() {
         return templateType == 'Invoice';
     }
 
-    /** @description Whether the template is a Client or Contractor Agreement. */
+    /** @description Whether the template is a Client or Contractor Agreement.
+     *  @return True if templateType equals Client_Agreement or Contractor_Agreement.
+     */
     public Boolean getIsAgreement() {
         return templateType == 'Client_Agreement' || templateType == 'Contractor_Agreement';
     }
 
-    /** @description Whether the snapshot contains work items. */
+    /** @description Whether the snapshot contains work items.
+     *  @return True if workItemRows is not empty.
+     */
     public Boolean getHasWorkItems() {
         return !workItemRows.isEmpty();
     }
 
-    /** @description Whether the snapshot contains work logs. */
+    /** @description Whether the snapshot contains work logs.
+     *  @return True if workLogRows is not empty.
+     */
     public Boolean getHasWorkLogs() {
         return !workLogRows.isEmpty();
     }
 
-    /** @description Whether the snapshot contains work requests. */
+    /** @description Whether the snapshot contains work requests.
+     *  @return True if workRequestRows is not empty.
+     */
     public Boolean getHasWorkRequests() {
         return !workRequestRows.isEmpty();
     }
 
-    /** @description Whether an AI narrative exists on the document. */
+    /** @description Whether an AI narrative exists on the document.
+     *  @return True if aiNarrative is not blank.
+     */
     public Boolean getHasAiNarrative() {
         return String.isNotBlank(aiNarrative);
     }
 
-    /** @description Whether the entity has any contact info (address, email, phone). */
+    /** @description Whether the entity has any contact info (address, email, phone).
+     *  @return True if entityAddress, entityEmail, or entityPhone is not blank.
+     */
     public Boolean getHasEntityContact() {
         return String.isNotBlank(entityAddress) || String.isNotBlank(entityEmail) || String.isNotBlank(entityPhone);
     }
 
-    /** @description Whether there are unpaid prior invoices. */
+    /** @description Whether there are unpaid prior invoices.
+     *  @return True if unpaidInvoiceRows is not empty.
+     */
     public Boolean getHasUnpaidInvoices() {
         return !unpaidInvoiceRows.isEmpty();
     }
 
-    /** @description Whether the document has a non-zero prior balance. */
+    /** @description Whether the document has a non-zero prior balance.
+     *  @return True if priorBalance is not null and not zero.
+     */
     public Boolean getHasPriorBalance() {
         return priorBalance != null && priorBalance != 0;
     }
 
-    /** @description Whether payment terms are set. */
+    /** @description Whether payment terms are set.
+     *  @return True if terms is not blank.
+     */
     public Boolean getHasTerms() {
         return String.isNotBlank(terms);
     }
 
-    /** @description Whether a due date is set. */
+    /** @description Whether a due date is set.
+     *  @return True if dueDate is not null.
+     */
     public Boolean getHasDueDate() {
         return dueDate != null;
     }
 
-    /** @description Whether the document record was found. */
+    /** @description Whether the document record was found.
+     *  @return True if doc is not null.
+     */
     public Boolean getHasDocument() {
         return doc != null;
     }
 
-    /** @description Formatted default hourly rate with /hr suffix. */
+    /** @description Formatted default hourly rate with /hr suffix.
+     *  @return Currency-formatted defaultRate followed by /hr.
+     */
     public String getFormattedDefaultRate() {
         return formatCurrency(defaultRate) + '/hr';
     }
 
-    /** @description Formatted due date string. */
+    /** @description Formatted due date string.
+     *  @return The dueDate formatted as a locale string, or empty string if null.
+     */
     public String getFormattedDueDate() {
         return dueDate != null ? dueDate.format() : '';
     }
 
-    /** @description Formatted total hours with hrs suffix. */
+    /** @description Formatted total hours with hrs suffix.
+     *  @return The totalHours scaled to 1 decimal place followed by hrs.
+     */
     public String getFormattedTotalHours() {
         return totalHours.setScale(1) + ' hrs';
     }

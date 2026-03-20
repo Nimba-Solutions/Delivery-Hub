@@ -133,6 +133,8 @@ public with sharing class DeliveryDocumentController {
     /**
      * @description Builds a summary list of all unpaid invoices for the entity.
      *              Used in the invoice metadata to show A/R breakdown.
+     * @param entityId The NetworkEntity__c Id to query unpaid invoices for.
+     * @return List of maps containing name, period, total, paid, outstanding, and status keys.
      */
     private static List<Map<String, Object>> buildUnpaidInvoicesSummary(Id entityId) {
         List<Map<String, Object>> summary = new List<Map<String, Object>>();
