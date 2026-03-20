@@ -32,6 +32,9 @@ public with sharing class DeliveryDocumentPdfController {
     // ── Render mode ──
     public Boolean renderAsPdf { get; private set; }
 
+    // ── Unpaid invoices summary ──
+    public List<UnpaidInvoiceRow> unpaidInvoiceRows { get; private set; }
+
     // ── Entity details ──
     public String entityName { get; private set; }
     public String entityAddress { get; private set; }
@@ -68,6 +71,15 @@ public with sharing class DeliveryDocumentPdfController {
         public String description { get; set; }
     }
 
+    public class UnpaidInvoiceRow {
+        public String name { get; set; }
+        public String period { get; set; }
+        public String formattedTotal { get; set; }
+        public String formattedPaid { get; set; }
+        public String formattedOutstanding { get; set; }
+        public String status { get; set; }
+    }
+
     public class WorkRequestRow {
         public String workItemName { get; set; }
         public String vendorName { get; set; }
@@ -84,6 +96,7 @@ public with sharing class DeliveryDocumentPdfController {
         workItemRows = new List<WorkItemRow>();
         workLogRows = new List<WorkLogRow>();
         workRequestRows = new List<WorkRequestRow>();
+        unpaidInvoiceRows = new List<UnpaidInvoiceRow>();
         defaultRate = 0;
         totalHours = 0;
         totalCost = 0;
@@ -158,11 +171,28 @@ public with sharing class DeliveryDocumentPdfController {
             parseWorkRequests(snapshot);
         }
 
-        // Parse metadata for prior balance, tax rate, etc.
+        // Parse metadata for prior balance, unpaid invoices, etc.
         if (String.isNotBlank(doc.MetadataTxt__c)) {
             Map<String, Object> meta = (Map<String, Object>) JSON.deserializeUntyped(doc.MetadataTxt__c);
             if (meta.containsKey('priorBalance') && meta.get('priorBalance') != null) {
                 priorBalance = (Decimal) meta.get('priorBalance');
+            }
+            // Parse unpaid invoices summary
+            if (meta.containsKey('unpaidInvoices') && meta.get('unpaidInvoices') != null) {
+                List<Object> unpaidList = (List<Object>) meta.get('unpaidInvoices');
+                for (Object o : unpaidList) {
+                    Map<String, Object> inv = (Map<String, Object>) o;
+                    UnpaidInvoiceRow row = new UnpaidInvoiceRow();
+                    row.name = (String) inv.get('name');
+                    String pStart = (String) inv.get('periodStart');
+                    String pEnd = (String) inv.get('periodEnd');
+                    row.period = (pStart != null ? pStart : '') + ' - ' + (pEnd != null ? pEnd : '');
+                    row.formattedTotal = formatCurrency(inv.get('total') != null ? (Decimal) inv.get('total') : 0);
+                    row.formattedPaid = formatCurrency(inv.get('paid') != null ? (Decimal) inv.get('paid') : 0);
+                    row.formattedOutstanding = formatCurrency(inv.get('outstanding') != null ? (Decimal) inv.get('outstanding') : 0);
+                    row.status = (String) inv.get('status');
+                    unpaidInvoiceRows.add(row);
+                }
             }
         }
         amountDue = totalCost + priorBalance;
@@ -200,6 +230,10 @@ public with sharing class DeliveryDocumentPdfController {
 
     public Boolean getHasEntityContact() {
         return String.isNotBlank(entityAddress) || String.isNotBlank(entityEmail) || String.isNotBlank(entityPhone);
+    }
+
+    public Boolean getHasUnpaidInvoices() {
+        return !unpaidInvoiceRows.isEmpty();
     }
 
     public Boolean getHasPriorBalance() {

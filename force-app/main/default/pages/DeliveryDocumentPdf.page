@@ -157,6 +157,31 @@
     </table>
 </apex:outputPanel>
 
+<!-- ========== UNPAID INVOICES SUMMARY ========== -->
+<apex:outputPanel rendered="{!hasUnpaidInvoices}">
+    <div style="font-size: 8pt; font-weight: bold; color: #333333; margin-top: 10px; margin-bottom: 4px;">ACCOUNT RECEIVABLE SUMMARY</div>
+    <table style="width: 100%; font-size: 8pt; border: 1px solid #999999; margin-bottom: 4px;" cellpadding="0" cellspacing="0">
+        <tr style="background-color: #e8e8e8;">
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 15%;">INVOICE</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 30%;">PERIOD</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 15%;">INVOICED</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 15%;">PAID</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 15%;">OUTSTANDING</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: center; border-bottom: 1px solid #999999; width: 10%;">STATUS</th>
+        </tr>
+        <apex:repeat value="{!unpaidInvoiceRows}" var="inv">
+            <tr>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;">{!inv.name}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee;">{!inv.period}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!inv.formattedTotal}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!inv.formattedPaid}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right; font-weight: bold;">{!inv.formattedOutstanding}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; text-align: center; font-size: 7pt;">{!inv.status}</td>
+            </tr>
+        </apex:repeat>
+    </table>
+</apex:outputPanel>
+
 <!-- ========== TOTALS BOX ========== -->
 <apex:outputPanel rendered="{!NOT(isAgreement)}">
     <table style="width: 100%; margin-top: 8px;" cellpadding="0" cellspacing="0">

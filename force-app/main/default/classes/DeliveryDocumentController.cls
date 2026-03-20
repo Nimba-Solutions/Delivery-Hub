@@ -41,6 +41,11 @@ public with sharing class DeliveryDocumentController {
         metaMap.put('priorBalance', priorBalance);
         metaMap.put('amountDue', currentCharges + priorBalance);
 
+        // Build unpaid invoices summary for the snapshot
+        if (templateType == 'Invoice' && entityId != null) {
+            metaMap.put('unpaidInvoices', buildUnpaidInvoicesSummary(entityId));
+        }
+
         DeliveryDocument__c doc = new DeliveryDocument__c(
             NetworkEntityId__c  = entityId,
             TemplatePk__c       = templateType,
@@ -51,6 +56,7 @@ public with sharing class DeliveryDocumentController {
             SnapshotTxt__c      = JSON.serialize(snapshot),
             TotalHoursNumber__c = calculateTotalHours(snapshot),
             TotalCurrency__c    = currentCharges,
+            TermsTxt__c         = 'Net 30',
             MetadataTxt__c      = JSON.serialize(metaMap)
         );
 
@@ -122,6 +128,42 @@ public with sharing class DeliveryDocumentController {
         }
 
         Database.update(doc, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description Builds a summary list of all unpaid invoices for the entity.
+     *              Used in the invoice metadata to show A/R breakdown.
+     */
+    private static List<Map<String, Object>> buildUnpaidInvoicesSummary(Id entityId) {
+        List<Map<String, Object>> summary = new List<Map<String, Object>>();
+        for (DeliveryDocument__c doc : [
+            SELECT Name, PeriodStartDate__c, PeriodEndDate__c,
+                   TotalCurrency__c, PaymentReceivedCurrency__c, StatusPk__c,
+                   SentDateTime__c
+            FROM DeliveryDocument__c
+            WHERE NetworkEntityId__c = :entityId
+            AND TemplatePk__c = 'Invoice'
+            AND StatusPk__c != 'Paid'
+            WITH SYSTEM_MODE
+            ORDER BY PeriodStartDate__c ASC
+        ]) {
+            Decimal total = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+            Decimal paid = doc.PaymentReceivedCurrency__c != null ? doc.PaymentReceivedCurrency__c : 0;
+            Decimal outstanding = total - paid;
+            if (outstanding <= 0) {
+                continue;
+            }
+            Map<String, Object> item = new Map<String, Object>();
+            item.put('name', doc.Name);
+            item.put('periodStart', String.valueOf(doc.PeriodStartDate__c));
+            item.put('periodEnd', String.valueOf(doc.PeriodEndDate__c));
+            item.put('total', total);
+            item.put('paid', paid);
+            item.put('outstanding', outstanding);
+            item.put('status', doc.StatusPk__c);
+            summary.add(item);
+        }
+        return summary;
     }
 
     /**
