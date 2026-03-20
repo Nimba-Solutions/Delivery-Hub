@@ -4,7 +4,7 @@
 <html>
 <head>
 <style type="text/css">
-    /* ── Reset & Base ── */
+    /* ── Reset and Base ── */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -402,7 +402,7 @@
     </div>
 
     <div class="footer-brand">
-        Cloud Nimbus LLC &bull; cloudnimbusllc.com &bull; Powered by Delivery Hub
+        Cloud Nimbus LLC &#8226; cloudnimbusllc.com &#8226; Powered by Delivery Hub
     </div>
 
 </apex:outputPanel>
