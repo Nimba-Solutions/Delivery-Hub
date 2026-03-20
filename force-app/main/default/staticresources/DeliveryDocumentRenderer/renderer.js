@@ -1,3 +1,4 @@
+/* global html2pdf */
 /**
  * Delivery Hub — Document Renderer
  * Self-contained vanilla JS renderer for public document viewing.
