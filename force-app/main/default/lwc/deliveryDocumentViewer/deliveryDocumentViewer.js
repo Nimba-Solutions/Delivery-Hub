@@ -6,6 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getDocumentsForEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentsForEntity';
@@ -37,6 +38,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @api documentId;
 
     // ── State ──
+    @track _effectiveEntityId = null; // Resolved entity ID used by wire + generate
     @track documents = [];
     @track isLoading = true;
     @track error = null;
@@ -70,20 +72,29 @@ export default class DeliveryDocumentViewer extends LightningElement {
     // ═══════════════════════════════════════════════════════════
 
     connectedCallback() {
+        // Explicit networkEntityId (from flexipage config) takes priority
+        if (this.networkEntityId) {
+            this._effectiveEntityId = this.networkEntityId;
+        }
         if (this.documentId) {
             this.mode = 'preview';
             this._loadDocumentById(this.documentId);
-        }
-        // When no entityId is configured (e.g., Admin Home), explicitly set null
-        // so the wire fires and returns all documents across entities
-        if (this.networkEntityId === undefined) {
-            this.networkEntityId = null;
         }
     }
 
     // ═══════════════════════════════════════════════════════════
     //  WIRE: Document List
     // ═══════════════════════════════════════════════════════════
+
+    @wire(CurrentPageReference)
+    handlePageRef(pageRef) {
+        if (pageRef) {
+            const recId = pageRef.attributes?.recordId || pageRef.state?.recordId;
+            if (recId && !this.networkEntityId) {
+                this._effectiveEntityId = recId;
+            }
+        }
+    }
 
     @wire(getDocumentTemplates)
     wiredTemplates({ data, error }) {
@@ -99,7 +110,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         }
     }
 
-    @wire(getDocumentsForEntity, { entityId: '$networkEntityId' })
+    @wire(getDocumentsForEntity, { entityId: '$_effectiveEntityId' })
     wiredDocuments(result) {
         this._wiredDocsResult = result;
         const { data, error } = result;
@@ -257,6 +268,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return this.previewDoc?.terms || 'Net 30';
     }
 
+    get hasPublicToken() {
+        return !!this.previewDoc?.publicToken;
+    }
+
     get canMarkReady() {
         return this.previewDoc?.status === 'Draft';
     }
@@ -334,7 +349,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.isGenerating = true;
         try {
             const newDocId = await generateDocument({
-                entityId: this.networkEntityId,
+                entityId: this._effectiveEntityId,
                 templateType: this.genTemplate,
                 periodStart: this.genPeriodStart,
                 periodEnd: this.genPeriodEnd,
@@ -415,6 +430,32 @@ export default class DeliveryDocumentViewer extends LightningElement {
         } finally {
             this.isSendingEmail = false;
         }
+    }
+
+    handleViewPdf() {
+        if (!this.previewDoc?.id) return;
+        // Open VF page rendered as actual PDF in new tab
+        window.open('/apex/DeliveryDocumentPdf?id=' + this.previewDoc.id + '&pdf=true', '_blank');
+    }
+
+    handleViewWeb() {
+        if (!this.previewDoc?.id) return;
+        // Open VF page as HTML web view in new tab
+        window.open('/apex/DeliveryDocumentPdf?id=' + this.previewDoc.id, '_blank');
+    }
+
+    handleCopyPublicLink() {
+        if (!this.previewDoc?.publicToken) return;
+        // Copy the public token URL — works for Sites, portals, or any public access
+        const baseUrl = window.location.origin;
+        const url = baseUrl + '/apex/DeliveryDocumentPdf?token=' + this.previewDoc.publicToken;
+        navigator.clipboard.writeText(url).then(() => {
+            this._showToast('Copied', 'Public document link copied to clipboard.', 'success');
+        }).catch(() => {
+            // Fallback: show the URL in a prompt
+            /* eslint-disable-next-line no-alert */
+            window.prompt('Copy this link:', url);
+        });
     }
 
     handlePrint() {

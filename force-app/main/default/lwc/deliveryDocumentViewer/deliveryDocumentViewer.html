@@ -220,6 +220,28 @@
                                 disabled={isUpdatingStatus}
                             ></lightning-button>
                         </template>
+                        <lightning-button
+                            label="Download PDF"
+                            icon-name="utility:pdf_ext"
+                            variant="neutral"
+                            onclick={handleViewPdf}
+                        ></lightning-button>
+                        <lightning-button-icon
+                            icon-name="utility:new_window"
+                            alternative-text="Open Web View"
+                            title="Open as web page"
+                            variant="border-filled"
+                            onclick={handleViewWeb}
+                        ></lightning-button-icon>
+                        <template lwc:if={hasPublicToken}>
+                            <lightning-button-icon
+                                icon-name="utility:link"
+                                alternative-text="Copy Public Link"
+                                title="Copy public document link"
+                                variant="border-filled"
+                                onclick={handleCopyPublicLink}
+                            ></lightning-button-icon>
+                        </template>
                         <lightning-button-icon
                             icon-name="utility:print"
                             alternative-text="Print"

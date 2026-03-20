@@ -1,6 +1,8 @@
 <apex:page controller="DeliveryDocumentPdfController" showHeader="false" sidebar="false"
            standardStylesheets="false" applyHtmlTag="true" applyBodyTag="false"
-           lightningStylesheets="false" docType="html-5.0">
+           lightningStylesheets="false" docType="html-5.0"
+           renderAs="{!IF(renderAsPdf, 'pdf', '')}"
+           contentType="{!IF(renderAsPdf, 'application/pdf', '')}">
 <html>
 <head>
 <style type="text/css">
@@ -395,8 +397,18 @@
         </div>
         <div class="footer-total">
             <apex:outputPanel rendered="{!isInvoice || NOT(isAgreement)}">
+                <apex:outputPanel rendered="{!hasPriorBalance}">
+                    <div style="text-align: right; margin-bottom: 6px;">
+                        <span class="footer-total-label">Prior Balance:</span>
+                        <span style="font-size: 11pt; font-weight: 600; margin-left: 8px;">{!formattedPriorBalance}</span>
+                    </div>
+                    <div style="text-align: right; margin-bottom: 6px;">
+                        <span class="footer-total-label">Current Charges:</span>
+                        <span style="font-size: 11pt; font-weight: 600; margin-left: 8px;">{!formattedTotalCost}</span>
+                    </div>
+                </apex:outputPanel>
                 <div class="footer-total-label">Total Due</div>
-                <div class="footer-total-amount">{!formattedTotalCost}</div>
+                <div class="footer-total-amount">{!formattedAmountDue}</div>
             </apex:outputPanel>
         </div>
     </div>

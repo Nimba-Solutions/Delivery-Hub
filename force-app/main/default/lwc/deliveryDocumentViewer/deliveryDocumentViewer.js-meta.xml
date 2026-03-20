@@ -7,6 +7,8 @@
         <target>lightning__RecordPage</target>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>
+        <target>lightningCommunity__Page</target>
+        <target>lightningCommunity__Default</target>
     </targets>
     <targetConfigs>
         <targetConfig targets="lightning__RecordPage">
@@ -20,5 +22,6 @@
             <property name="networkEntityId" type="String" label="Network Entity Id" description="The Id of the NetworkEntity__c to display documents for." />
             <property name="documentId" type="String" label="Document Id" description="Optional. If set, opens directly in preview mode for this document." />
         </targetConfig>
+
     </targetConfigs>
 </LightningComponentBundle>

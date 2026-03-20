@@ -23,6 +23,15 @@ public with sharing class DeliveryDocumentPdfController {
     public String aiNarrative { get; private set; }
     public String generatedAt { get; private set; }
 
+    // ── Balance tracking ──
+    public Decimal priorBalance { get; private set; }
+    public Decimal amountDue { get; private set; }
+    public String formattedPriorBalance { get; private set; }
+    public String formattedAmountDue { get; private set; }
+
+    // ── Render mode ──
+    public Boolean renderAsPdf { get; private set; }
+
     // ── Entity details ──
     public String entityName { get; private set; }
     public String entityAddress { get; private set; }
@@ -74,29 +83,49 @@ public with sharing class DeliveryDocumentPdfController {
         defaultRate = 0;
         totalHours = 0;
         totalCost = 0;
+        priorBalance = 0;
+        amountDue = 0;
 
+        // ?pdf=true triggers server-side PDF rendering
+        renderAsPdf = ApexPages.currentPage().getParameters().get('pdf') == 'true';
+
+        // Support both authenticated (?id=) and public (?token=) access
         String docId = ApexPages.currentPage().getParameters().get('id');
-        if (String.isBlank(docId)) {
+        String publicToken = ApexPages.currentPage().getParameters().get('token');
+
+        if (String.isBlank(docId) && String.isBlank(publicToken)) {
             return;
         }
 
-        List<DeliveryDocument__c> docs = [
-            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
-                   PeriodStartDate__c, PeriodEndDate__c,
-                   StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
-                   SnapshotTxt__c, AiNarrativeTxt__c, TermsTxt__c,
-                   DueDateDate__c, MetadataTxt__c
-            FROM DeliveryDocument__c
-            WHERE Id = :docId
-            WITH SYSTEM_MODE
-            LIMIT 1
-        ];
+        String query = 'SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name, '
+            + 'PeriodStartDate__c, PeriodEndDate__c, '
+            + 'StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, '
+            + 'SnapshotTxt__c, AiNarrativeTxt__c, TermsTxt__c, '
+            + 'DueDateDate__c, MetadataTxt__c, ViewedDateTime__c '
+            + 'FROM DeliveryDocument__c WHERE ';
+        if (String.isNotBlank(docId)) {
+            query += 'Id = :docId';
+        } else {
+            query += 'PublicTokenTxt__c = :publicToken';
+        }
+        query += ' WITH SYSTEM_MODE LIMIT 1';
+
+        List<DeliveryDocument__c> docs = Database.query(query);
 
         if (docs.isEmpty()) {
             return;
         }
 
         doc = docs[0];
+
+        // Auto-mark as Viewed on first public token access
+        if (String.isNotBlank(publicToken) && doc.ViewedDateTime__c == null
+            && doc.StatusPk__c == 'Sent') {
+            doc.ViewedDateTime__c = Datetime.now();
+            doc.StatusPk__c = 'Viewed';
+            Database.update(doc, AccessLevel.SYSTEM_MODE);
+        }
+
         documentName = doc.Name;
         templateType = doc.TemplatePk__c;
         templateDisplay = doc.TemplatePk__c != null ? doc.TemplatePk__c.replace('_', ' ') : '';
@@ -119,6 +148,17 @@ public with sharing class DeliveryDocumentPdfController {
             parseWorkLogs(snapshot);
             parseWorkRequests(snapshot);
         }
+
+        // Parse metadata for prior balance, tax rate, etc.
+        if (String.isNotBlank(doc.MetadataTxt__c)) {
+            Map<String, Object> meta = (Map<String, Object>) JSON.deserializeUntyped(doc.MetadataTxt__c);
+            if (meta.containsKey('priorBalance') && meta.get('priorBalance') != null) {
+                priorBalance = (Decimal) meta.get('priorBalance');
+            }
+        }
+        amountDue = totalCost + priorBalance;
+        formattedPriorBalance = formatCurrency(priorBalance);
+        formattedAmountDue = formatCurrency(amountDue);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -151,6 +191,10 @@ public with sharing class DeliveryDocumentPdfController {
 
     public Boolean getHasEntityContact() {
         return String.isNotBlank(entityAddress) || String.isNotBlank(entityEmail) || String.isNotBlank(entityPhone);
+    }
+
+    public Boolean getHasPriorBalance() {
+        return priorBalance != null && priorBalance != 0;
     }
 
     public Boolean getHasTerms() {
