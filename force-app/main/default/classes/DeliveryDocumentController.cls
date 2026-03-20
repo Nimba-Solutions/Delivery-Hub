@@ -25,6 +25,21 @@ public with sharing class DeliveryDocumentController {
         Map<String, Object> snapshot = buildSnapshot(entityId, templateType, periodStart, periodEnd);
 
         String publicToken = generateToken();
+        Decimal currentCharges = calculateTotalCost(snapshot);
+
+        // Auto-calculate prior balance for invoices: sum of all unpaid invoices for this entity
+        Decimal priorBalance = 0;
+        if (templateType == 'Invoice' && entityId != null) {
+            priorBalance = calculatePriorBalance(entityId);
+        }
+
+        // Merge A/R data into metadata
+        Map<String, Object> metaMap = new Map<String, Object>();
+        if (String.isNotBlank(metadata)) {
+            metaMap = (Map<String, Object>) JSON.deserializeUntyped(metadata);
+        }
+        metaMap.put('priorBalance', priorBalance);
+        metaMap.put('amountDue', currentCharges + priorBalance);
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
             NetworkEntityId__c  = entityId,
@@ -35,12 +50,38 @@ public with sharing class DeliveryDocumentController {
             PublicTokenTxt__c   = publicToken,
             SnapshotTxt__c      = JSON.serialize(snapshot),
             TotalHoursNumber__c = calculateTotalHours(snapshot),
-            TotalCurrency__c    = calculateTotalCost(snapshot),
-            MetadataTxt__c      = metadata
+            TotalCurrency__c    = currentCharges,
+            MetadataTxt__c      = JSON.serialize(metaMap)
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
         return doc.Id;
+    }
+
+    /**
+     * @description Calculates the outstanding balance from all prior unpaid invoices
+     *              for the given entity. Sums TotalCurrency__c where TemplatePk__c = 'Invoice'
+     *              and StatusPk__c is not 'Paid'.
+     * @param entityId The NetworkEntity__c Id.
+     * @return The total unpaid prior balance.
+     */
+    @TestVisible
+    private static Decimal calculatePriorBalance(Id entityId) {
+        Decimal balance = 0;
+        for (AggregateResult ar : [
+            SELECT SUM(TotalCurrency__c) total
+            FROM DeliveryDocument__c
+            WHERE NetworkEntityId__c = :entityId
+            AND TemplatePk__c = 'Invoice'
+            AND StatusPk__c != 'Paid'
+            WITH SYSTEM_MODE
+        ]) {
+            Object totalObj = ar.get('total');
+            if (totalObj != null) {
+                balance = (Decimal) totalObj;
+            }
+        }
+        return balance;
     }
 
     /**

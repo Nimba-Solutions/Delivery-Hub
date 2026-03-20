@@ -59,9 +59,15 @@
                     </tr>
                 </apex:outputPanel>
                 <tr>
-                    <td style="font-size: 7pt; font-weight: bold; text-transform: uppercase; color: #888888; padding: 5px 8px;">Rate</td>
-                    <td style="font-size: 9pt; font-weight: bold; color: #222222; padding: 5px 8px; text-align: right;">{!formattedDefaultRate}</td>
+                    <td style="font-size: 7pt; font-weight: bold; text-transform: uppercase; color: #888888; padding: 5px 8px; border-bottom: 1px solid #eeeeee;">Rate</td>
+                    <td style="font-size: 9pt; font-weight: bold; color: #222222; padding: 5px 8px; text-align: right; border-bottom: 1px solid #eeeeee;">{!formattedDefaultRate}</td>
                 </tr>
+                <apex:outputPanel rendered="{!hasPriorBalance}">
+                    <tr style="background-color: #f0f0f0;">
+                        <td style="font-size: 7pt; font-weight: bold; text-transform: uppercase; color: #555555; padding: 5px 8px;">Account Balance</td>
+                        <td style="font-size: 10pt; font-weight: bold; color: #0176d3; padding: 5px 8px; text-align: right;">{!formattedPriorBalance}</td>
+                    </tr>
+                </apex:outputPanel>
             </table>
         </td>
     </tr>
@@ -153,32 +159,69 @@
     </table>
 </apex:outputPanel>
 
+<!-- TOTALS BOX (Invoice) -->
+<apex:outputPanel rendered="{!NOT(isAgreement)}">
+    <table style="width: 100%; margin-top: 16px;" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="width: 60%; vertical-align: top;"></td>
+            <td style="width: 40%; vertical-align: top;">
+                <table style="width: 100%; border: 1px solid #cccccc;" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td style="padding: 5px 8px; border-bottom: 1px solid #eeeeee; font-size: 8.5pt; font-weight: bold; text-align: right;">SUBTOTAL</td>
+                        <td style="padding: 5px 8px; border-bottom: 1px solid #eeeeee; font-size: 9pt; text-align: right; width: 35%;">{!formattedTotalCost}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 8px; border-bottom: 1px solid #eeeeee; font-size: 8.5pt; font-weight: bold; text-align: right;">TAX</td>
+                        <td style="padding: 5px 8px; border-bottom: 1px solid #eeeeee; font-size: 9pt; text-align: right;">$0.00</td>
+                    </tr>
+                    <apex:outputPanel rendered="{!hasPriorBalance}">
+                        <tr>
+                            <td style="padding: 5px 8px; border-bottom: 1px solid #eeeeee; font-size: 8.5pt; font-weight: bold; text-align: right;">PRIOR BALANCE</td>
+                            <td style="padding: 5px 8px; border-bottom: 1px solid #eeeeee; font-size: 9pt; text-align: right;">{!formattedPriorBalance}</td>
+                        </tr>
+                    </apex:outputPanel>
+                    <tr style="background-color: #f0f0f0;">
+                        <td style="padding: 6px 8px; font-size: 9pt; font-weight: bold; text-align: right;">PAY THIS AMOUNT</td>
+                        <td style="padding: 6px 8px; font-size: 11pt; font-weight: bold; text-align: right; color: #0176d3;">{!formattedAmountDue}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</apex:outputPanel>
+
 <!-- FOOTER -->
-<table style="width: 100%; border-top: 2px solid #0176d3; padding-top: 10px; margin-top: 20px;" cellpadding="0" cellspacing="0">
+<table style="width: 100%; border-top: 2px solid #0176d3; padding-top: 12px; margin-top: 20px;" cellpadding="0" cellspacing="0">
     <tr>
-        <td style="width: 50%; font-size: 8.5pt; color: #888888; vertical-align: bottom;">
-            <apex:outputPanel rendered="{!hasTerms}">Terms: {!terms}</apex:outputPanel>
+        <td style="width: 40%; vertical-align: top; padding-right: 16px;">
+            <div style="font-size: 8pt; font-weight: bold; color: #222222; margin-bottom: 4px;">DIRECT ALL INQUIRIES TO:</div>
+            <div style="font-size: 8.5pt; color: #555555; line-height: 1.5;">
+                Glen Bradford<br/>
+                (305) 204-0580<br/>
+                glen.bradford@nimbasolutions.com
+            </div>
         </td>
-        <td style="width: 50%; text-align: right; vertical-align: bottom;">
+        <td style="width: 35%; vertical-align: top;">
+            <div style="font-size: 8pt; font-weight: bold; color: #222222; margin-bottom: 4px;">MAKE ALL CHECKS PAYABLE TO:</div>
+            <div style="font-size: 8.5pt; color: #555555; line-height: 1.5;">
+                Cloud Nimbus LLC<br/>
+                Attn: Accounts Receivable<br/>
+                2301 Collins Ave Apt 1420<br/>
+                Miami Beach, FL 33139
+            </div>
+        </td>
+        <td style="width: 25%; vertical-align: top; text-align: right;">
             <apex:outputPanel rendered="{!NOT(isAgreement)}">
-                <apex:outputPanel rendered="{!hasPriorBalance}">
-                    <div style="padding-bottom: 4px;">
-                        <span style="font-size: 8pt; color: #888888;">Prior Balance:</span>
-                        <span style="font-size: 10pt; font-weight: bold; padding-left: 6px;">{!formattedPriorBalance}</span>
-                    </div>
-                    <div style="padding-bottom: 4px;">
-                        <span style="font-size: 8pt; color: #888888;">Current Charges:</span>
-                        <span style="font-size: 10pt; font-weight: bold; padding-left: 6px;">{!formattedTotalCost}</span>
-                    </div>
-                </apex:outputPanel>
-                <div style="font-size: 8pt; color: #888888;">Total Due</div>
-                <div style="font-size: 18pt; font-weight: bold; color: #0176d3;">{!formattedAmountDue}</div>
+                <div style="font-size: 11pt; font-weight: bold; color: #222222;">{!formattedAmountDue}</div>
+                <div style="font-size: 8pt; font-weight: bold; color: #888888;">PAY THIS<br/>AMOUNT</div>
             </apex:outputPanel>
         </td>
     </tr>
 </table>
 
-<div style="font-size: 7pt; color: #bbbbbb; text-align: center; padding-top: 16px;">Cloud Nimbus LLC - cloudnimbusllc.com - Powered by Delivery Hub</div>
+<div style="font-size: 9pt; font-weight: bold; font-style: italic; text-align: center; padding-top: 14px; color: #222222;">THANK YOU FOR YOUR BUSINESS!</div>
+<div style="font-size: 7pt; color: #888888; text-align: left; padding-top: 16px;">*3% a month charge to balance will accrue to overdue balances</div>
+<div style="font-size: 7pt; color: #bbbbbb; text-align: center; padding-top: 8px;">Cloud Nimbus LLC - cloudnimbusllc.com - Powered by Delivery Hub</div>
 
 </apex:outputPanel>
 
