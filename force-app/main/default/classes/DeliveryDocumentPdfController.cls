@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
-public with sharing class DeliveryDocumentPdfController {
+public without sharing class DeliveryDocumentPdfController {
 
     /** @description The underlying DeliveryDocument__c record. */
     public DeliveryDocument__c doc { get; private set; }
