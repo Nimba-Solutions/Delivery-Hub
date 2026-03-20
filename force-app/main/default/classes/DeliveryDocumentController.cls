@@ -60,28 +60,68 @@ public with sharing class DeliveryDocumentController {
 
     /**
      * @description Calculates the outstanding balance from all prior unpaid invoices
-     *              for the given entity. Sums TotalCurrency__c where TemplatePk__c = 'Invoice'
-     *              and StatusPk__c is not 'Paid'.
+     *              for the given entity. Sums (TotalCurrency__c - PaymentReceivedCurrency__c)
+     *              where TemplatePk__c = 'Invoice' and StatusPk__c is not 'Paid'.
+     *              PaymentReceivedCurrency__c is treated as 0 when null.
      * @param entityId The NetworkEntity__c Id.
      * @return The total unpaid prior balance.
      */
     @TestVisible
     private static Decimal calculatePriorBalance(Id entityId) {
         Decimal balance = 0;
-        for (AggregateResult ar : [
-            SELECT SUM(TotalCurrency__c) total
+        for (DeliveryDocument__c doc : [
+            SELECT TotalCurrency__c, PaymentReceivedCurrency__c
             FROM DeliveryDocument__c
             WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
             WITH SYSTEM_MODE
         ]) {
-            Object totalObj = ar.get('total');
-            if (totalObj != null) {
-                balance = (Decimal) totalObj;
-            }
+            Decimal docTotal = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+            Decimal docPaid = doc.PaymentReceivedCurrency__c != null ? doc.PaymentReceivedCurrency__c : 0;
+            balance += (docTotal - docPaid);
         }
         return balance;
+    }
+
+    /**
+     * @description Records a payment against a document. Updates the payment fields and
+     *              auto-transitions status to 'Paid' when the payment covers the full total.
+     * @param documentId The DeliveryDocument__c Id.
+     * @param amount The payment amount received.
+     * @param paymentDate The date the payment was received.
+     * @param note Optional reference number, check number, or note.
+     */
+    @AuraEnabled
+    public static void recordPayment(Id documentId, Decimal amount, Date paymentDate, String note) {
+        if (documentId == null || amount == null || amount <= 0) {
+            throw new AuraHandledException('A valid document ID and positive payment amount are required.');
+        }
+
+        DeliveryDocument__c doc = [
+            SELECT Id, TotalCurrency__c, PaymentReceivedCurrency__c, StatusPk__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        Decimal existingPayment = doc.PaymentReceivedCurrency__c != null ? doc.PaymentReceivedCurrency__c : 0;
+        Decimal newPaymentTotal = existingPayment + amount;
+        doc.PaymentReceivedCurrency__c = newPaymentTotal;
+        doc.PaymentDateDate__c = paymentDate;
+
+        if (String.isNotBlank(note)) {
+            doc.PaymentNoteTxt__c = note;
+        }
+
+        // Auto-mark as Paid when payment covers the total
+        Decimal docTotal = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+        if (newPaymentTotal >= docTotal) {
+            doc.StatusPk__c = 'Paid';
+        }
+
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
     }
 
     /**
@@ -100,7 +140,8 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
+                   PaymentReceivedCurrency__c, PaymentDateDate__c, PaymentNoteTxt__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = :publicToken
             WITH SYSTEM_MODE
@@ -138,6 +179,9 @@ public with sharing class DeliveryDocumentController {
         result.put('dueDate', doc.DueDateDate__c);
         result.put('terms', doc.TermsTxt__c);
         result.put('metadata', doc.MetadataTxt__c);
+        result.put('paymentReceived', doc.PaymentReceivedCurrency__c);
+        result.put('paymentDate', doc.PaymentDateDate__c);
+        result.put('paymentNote', doc.PaymentNoteTxt__c);
         result.put('snapshot', doc.SnapshotTxt__c);
         return result;
     }
@@ -158,7 +202,8 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
+                   PaymentReceivedCurrency__c, PaymentDateDate__c, PaymentNoteTxt__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -189,6 +234,9 @@ public with sharing class DeliveryDocumentController {
         result.put('dueDate', doc.DueDateDate__c);
         result.put('terms', doc.TermsTxt__c);
         result.put('metadata', doc.MetadataTxt__c);
+        result.put('paymentReceived', doc.PaymentReceivedCurrency__c);
+        result.put('paymentDate', doc.PaymentDateDate__c);
+        result.put('paymentNote', doc.PaymentNoteTxt__c);
         result.put('snapshot', doc.SnapshotTxt__c);
         return result;
     }

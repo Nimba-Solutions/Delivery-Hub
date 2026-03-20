@@ -60,6 +60,10 @@ public with sharing class DeliveryDocumentPdfController {
     public class WorkLogRow {
         public String workItemName { get; set; }
         public Decimal hours { get; set; }
+        public Decimal rate { get; set; }
+        public Decimal amount { get; set; }
+        public String formattedRate { get; set; }
+        public String formattedAmount { get; set; }
         public String workDate { get; set; }
         public String description { get; set; }
     }
@@ -266,6 +270,25 @@ public with sharing class DeliveryDocumentPdfController {
         if (!snapshot.containsKey('workLogs')) {
             return;
         }
+        // Build rate map: workItemId -> rate (from items, overridden by requests)
+        Map<String, Decimal> rateMap = new Map<String, Decimal>();
+        if (snapshot.containsKey('workItems')) {
+            for (Object o : (List<Object>) snapshot.get('workItems')) {
+                Map<String, Object> item = (Map<String, Object>) o;
+                String itemId = (String) item.get('id');
+                Decimal itemRate = item.get('billableRate') != null ? (Decimal) item.get('billableRate') : defaultRate;
+                rateMap.put(itemId, itemRate);
+            }
+        }
+        if (snapshot.containsKey('workRequests')) {
+            for (Object o : (List<Object>) snapshot.get('workRequests')) {
+                Map<String, Object> req = (Map<String, Object>) o;
+                if (req.get('hourlyRate') != null) {
+                    rateMap.put((String) req.get('workItemId'), (Decimal) req.get('hourlyRate'));
+                }
+            }
+        }
+
         List<Object> logs = (List<Object>) snapshot.get('workLogs');
         for (Object o : logs) {
             Map<String, Object> log = (Map<String, Object>) o;
@@ -274,6 +297,11 @@ public with sharing class DeliveryDocumentPdfController {
             row.hours = log.get('hours') != null ? (Decimal) log.get('hours') : 0;
             row.workDate = (String) log.get('date');
             row.description = (String) log.get('description');
+            String workItemId = (String) log.get('workItemId');
+            row.rate = rateMap.containsKey(workItemId) ? rateMap.get(workItemId) : defaultRate;
+            row.amount = row.hours * row.rate;
+            row.formattedRate = formatCurrency(row.rate);
+            row.formattedAmount = formatCurrency(row.amount);
             workLogRows.add(row);
         }
     }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PaymentNoteTxt__c</fullName>
+    <description>Reference number, check number, or note about the payment received.</description>
+    <inlineHelpText>Optional reference such as a check number, transaction ID, or payment note.</inlineHelpText>
+    <label>Payment Note</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

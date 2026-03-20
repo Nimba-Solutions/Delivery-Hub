@@ -15,6 +15,7 @@ import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDo
 import getDocumentById from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentById';
 import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.sendDocumentEmail';
 import getDocumentTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTemplates';
+import recordPayment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.recordPayment';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -61,6 +62,13 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track showSendModal = false;
     @track sendRecipientEmail = '';
     @track isSendingEmail = false;
+
+    // Record payment state
+    @track showPaymentModal = false;
+    @track paymentAmount = null;
+    @track paymentDate = '';
+    @track paymentNote = '';
+    @track isRecordingPayment = false;
 
     // Template options loaded from DocumentTemplate__mdt
     @track _templateOptions = DEFAULT_TEMPLATE_OPTIONS;
@@ -296,6 +304,19 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return this.previewDoc?.status === 'Sent' || this.previewDoc?.status === 'Viewed';
     }
 
+    get canRecordPayment() {
+        const s = this.previewDoc?.status;
+        return s === 'Sent' || s === 'Viewed' || s === 'Overdue';
+    }
+
+    get isRecordPaymentDisabled() {
+        return this.isRecordingPayment || !this.paymentAmount || this.paymentAmount <= 0 || !this.paymentDate;
+    }
+
+    get recordPaymentButtonLabel() {
+        return this.isRecordingPayment ? 'Recording...' : 'Record Payment';
+    }
+
     get templateDisplayName() {
         if (!this.previewDoc?.template) return '';
         return this.previewDoc.template.replace(/_/g, ' ');
@@ -432,6 +453,64 @@ export default class DeliveryDocumentViewer extends LightningElement {
         }
     }
 
+    handleOpenPaymentModal() {
+        this.paymentAmount = null;
+        this.paymentDate = new Date().toISOString().split('T')[0];
+        this.paymentNote = '';
+        this.showPaymentModal = true;
+    }
+
+    handleClosePaymentModal() {
+        this.showPaymentModal = false;
+        this.paymentAmount = null;
+        this.paymentDate = '';
+        this.paymentNote = '';
+    }
+
+    handlePaymentAmountChange(event) {
+        this.paymentAmount = event.detail.value ? Number(event.detail.value) : null;
+    }
+
+    handlePaymentDateChange(event) {
+        this.paymentDate = event.detail.value;
+    }
+
+    handlePaymentNoteChange(event) {
+        this.paymentNote = event.detail.value;
+    }
+
+    async handleRecordPayment() {
+        if (!this.previewDoc?.id || !this.paymentAmount || this.paymentAmount <= 0) return;
+        this.isRecordingPayment = true;
+        try {
+            await recordPayment({
+                documentId: this.previewDoc.id,
+                amount: this.paymentAmount,
+                paymentDate: this.paymentDate,
+                note: this.paymentNote
+            });
+            // Determine new status: if payment covers total, it's Paid
+            const existingPayment = this.previewDoc.paymentReceived || 0;
+            const newPaymentTotal = existingPayment + this.paymentAmount;
+            const docTotal = this.previewDoc.totalCost || 0;
+            const newStatus = newPaymentTotal >= docTotal ? 'Paid' : this.previewDoc.status;
+            this.previewDoc = {
+                ...this.previewDoc,
+                status: newStatus,
+                paymentReceived: newPaymentTotal,
+                paymentDate: this.paymentDate,
+                paymentNote: this.paymentNote
+            };
+            this.showPaymentModal = false;
+            this._showToast('Payment Recorded', `Payment of ${CURRENCY_FMT.format(this.paymentAmount)} recorded.`, 'success');
+            refreshApex(this._wiredDocsResult);
+        } catch (err) {
+            this._showToast('Error', this._extractError(err), 'error');
+        } finally {
+            this.isRecordingPayment = false;
+        }
+    }
+
     handleViewPdf() {
         if (!this.previewDoc?.id) return;
         // Open VF page rendered as actual PDF in new tab
@@ -486,7 +565,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
                 entityName: result.entityName,
                 aiNarrative: result.aiNarrative,
                 terms: result.terms,
-                publicToken: result.publicToken
+                publicToken: result.publicToken,
+                paymentReceived: result.paymentReceived,
+                paymentDate: result.paymentDate,
+                paymentNote: result.paymentNote
             };
             if (result.snapshot) {
                 this.snapshot = JSON.parse(result.snapshot);
