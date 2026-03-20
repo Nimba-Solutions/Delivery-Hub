@@ -421,6 +421,118 @@ private class DeliveryDocumentControllerTest {
     }
 
     /**
+     * @description Send a document via email. Verify the status transitions to Sent,
+     *              SentDateTime is populated, and the method returns the recipient email.
+     */
+    @isTest
+    static void testSendDocumentEmail() {
+        NetworkEntity__c entity = getEntity();
+        // Set contact email so the method has a recipient
+        entity.ContactEmailTxt__c = 'danny@atlarge.com';
+        update entity;
+
+        Id docId = generateTestDocument(entity.Id);
+
+        // Set terms for due date calc
+        DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c WHERE Id = :docId];
+        doc.TermsTxt__c = 'Net 30';
+        update doc;
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.sendDocumentEmail(docId, null);
+        Test.stopTest();
+
+        System.assertEquals(true, result.get('success'), 'Should return success');
+        System.assertEquals('danny@atlarge.com', result.get('recipientEmail'), 'Should fall back to entity email');
+
+        doc = [SELECT StatusPk__c, SentDateTime__c, DueDateDate__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.assertEquals('Sent', doc.StatusPk__c, 'Status should be Sent after email');
+        System.assertNotEquals(null, doc.SentDateTime__c, 'SentDateTime should be set');
+        System.assertNotEquals(null, doc.DueDateDate__c, 'DueDate should be calculated');
+    }
+
+    /**
+     * @description Send a document with explicit recipient email override.
+     */
+    @isTest
+    static void testSendDocumentEmailExplicitRecipient() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.sendDocumentEmail(docId, 'override@test.com');
+        Test.stopTest();
+
+        System.assertEquals('override@test.com', result.get('recipientEmail'), 'Should use explicit email');
+    }
+
+    /**
+     * @description Send a document with no recipient and no entity email. Expect error.
+     */
+    @isTest
+    static void testSendDocumentEmailNoRecipient() {
+        NetworkEntity__c entity = getEntity();
+        // Ensure no contact email
+        entity.ContactEmailTxt__c = null;
+        update entity;
+
+        Id docId = generateTestDocument(entity.Id);
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryDocumentController.sendDocumentEmail(docId, null);
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw, 'Should throw when no recipient available');
+    }
+
+    /**
+     * @description Verify buildDocumentEmailBody returns HTML containing key elements.
+     */
+    @isTest
+    static void testBuildDocumentEmailBody() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        DeliveryDocument__c doc = [
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                   NetworkEntityId__r.ContactEmailTxt__c,
+                   PeriodStartDate__c, PeriodEndDate__c,
+                   StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
+                   TermsTxt__c, DueDateDate__c, SentDateTime__c,
+                   PublicTokenTxt__c
+            FROM DeliveryDocument__c
+            WHERE Id = :docId
+        ];
+
+        String html = DeliveryDocumentController.buildDocumentEmailBody(doc, 'Invoice');
+        System.assert(html.contains('Cloud Nimbus LLC'), 'Should contain company name');
+        System.assert(html.contains('Test Client Corp'), 'Should contain entity name');
+    }
+
+    /**
+     * @description Verify getDocumentTemplates returns available templates from CMT.
+     *              The seeded Invoice and Status_Report templates should always be present.
+     */
+    @isTest
+    static void testGetDocumentTemplates() {
+        Test.startTest();
+        List<Map<String, String>> templates = DeliveryDocumentController.getDocumentTemplates();
+        Test.stopTest();
+
+        System.assert(templates.size() >= 2, 'Should have at least Invoice and Status_Report templates');
+        // Verify each template has required keys
+        for (Map<String, String> t : templates) {
+            System.assertNotEquals(null, t.get('value'), 'Each template should have a value');
+            System.assertNotEquals(null, t.get('label'), 'Each template should have a label');
+        }
+    }
+
+    /**
      * @description Verify buildSnapshot returns all expected keys and correct
      *              counts for entity, workItems, workLogs, and workRequests.
      */

@@ -232,6 +232,177 @@ public with sharing class DeliveryDocumentController {
         Database.update(doc, AccessLevel.SYSTEM_MODE);
     }
 
+    /**
+     * @description Returns available document templates from DocumentTemplate__mdt.
+     *              Subscribers can create their own CMT records to add new template types
+     *              without modifying package code. The DeveloperName maps to TemplatePk__c.
+     * @return List of maps with 'value' (DeveloperName), 'label', and 'description' keys.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, String>> getDocumentTemplates() {
+        List<Map<String, String>> templates = new List<Map<String, String>>();
+        for (DocumentTemplate__mdt tmpl : [
+            SELECT DeveloperName, Label, DescriptionTxt__c
+            FROM DocumentTemplate__mdt
+            ORDER BY Label
+        ]) {
+            Map<String, String> t = new Map<String, String>();
+            t.put('value', tmpl.DeveloperName);
+            t.put('label', tmpl.Label);
+            t.put('description', tmpl.DescriptionTxt__c);
+            templates.add(t);
+        }
+        return templates;
+    }
+
+    /**
+     * @description Sends a document as a PDF email attachment and marks it as Sent.
+     *              Generates a PDF via the DeliveryDocumentPdf Visualforce page, attaches it
+     *              to the email, and CCs the address configured in DocumentCcEmailTxt__c.
+     * @param documentId The DeliveryDocument__c Id.
+     * @param recipientEmail The primary recipient email. Falls back to entity contact email.
+     * @return Map with 'success' and 'recipientEmail' keys.
+     */
+    @AuraEnabled
+    public static Map<String, Object> sendDocumentEmail(Id documentId, String recipientEmail) {
+        DeliveryDocument__c doc = [
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                   NetworkEntityId__r.ContactEmailTxt__c,
+                   PeriodStartDate__c, PeriodEndDate__c,
+                   StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
+                   TermsTxt__c, DueDateDate__c, SentDateTime__c,
+                   PublicTokenTxt__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        // Resolve recipient: explicit param > entity contact email
+        String toEmail = String.isNotBlank(recipientEmail)
+            ? recipientEmail.trim()
+            : doc.NetworkEntityId__r.ContactEmailTxt__c;
+
+        if (String.isBlank(toEmail)) {
+            throw new AuraHandledException(
+                'No recipient email provided and the entity has no contact email on file.'
+            );
+        }
+
+        // Generate PDF from Visualforce page
+        PageReference pdfPage = Page.DeliveryDocumentPdf;
+        pdfPage.getParameters().put('id', String.valueOf(documentId));
+        Blob pdfBlob;
+        if (!Test.isRunningTest()) {
+            pdfBlob = pdfPage.getContentAsPDF();
+        } else {
+            pdfBlob = Blob.valueOf('test-pdf-content');
+        }
+
+        // Build attachment
+        String templateDisplay = doc.TemplatePk__c.replace('_', ' ');
+        Messaging.EmailFileAttachment att = new Messaging.EmailFileAttachment();
+        att.setFileName(doc.Name + ' - ' + templateDisplay + '.pdf');
+        att.setContentType('application/pdf');
+        att.setBody(pdfBlob);
+
+        // Build email
+        Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
+        email.setToAddresses(new List<String>{ toEmail });
+
+        // CC from org settings
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings != null && String.isNotBlank(settings.DocumentCcEmailTxt__c)) {
+            email.setCcAddresses(new List<String>{ settings.DocumentCcEmailTxt__c });
+        }
+
+        email.setSubject('Cloud Nimbus \u2014 ' + templateDisplay + ' ' + doc.Name);
+        email.setHtmlBody(buildDocumentEmailBody(doc, templateDisplay));
+        email.setFileAttachments(new List<Messaging.EmailFileAttachment>{ att });
+        email.setSaveAsActivity(false);
+
+        // Send
+        Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ email });
+
+        // Update document status to Sent
+        doc.StatusPk__c = 'Sent';
+        if (doc.SentDateTime__c == null) {
+            doc.SentDateTime__c = Datetime.now();
+        }
+        if (doc.DueDateDate__c == null && String.isNotBlank(doc.TermsTxt__c)) {
+            doc.DueDateDate__c = parseDueDate(doc.TermsTxt__c, Date.today());
+        }
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('success', true);
+        result.put('recipientEmail', toEmail);
+        return result;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PRIVATE: Email Body Builder
+    // ═══════════════════════════════════════════════════════════
+
+    @TestVisible
+    private static String buildDocumentEmailBody(DeliveryDocument__c doc, String templateDisplay) {
+        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
+        Decimal totalHours = doc.TotalHoursNumber__c != null ? doc.TotalHoursNumber__c : 0;
+        Decimal totalCost = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+
+        String body = '<div style="font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto;">'
+            + '<div style="background: #0176d3; padding: 24px 30px; border-radius: 8px 8px 0 0;">'
+            + '<h1 style="color: #fff; font-size: 20px; margin: 0;">Cloud Nimbus LLC</h1>'
+            + '<p style="color: rgba(255,255,255,0.85); font-size: 12px; margin: 4px 0 0;">cloudnimbusllc.com</p>'
+            + '</div>'
+            + '<div style="background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">';
+
+        body += '<h2 style="color: #1a1a2e; font-size: 16px; margin: 0 0 6px;">'
+            + templateDisplay + ' ' + String.valueOf(doc.Name).escapeHtml4() + '</h2>'
+            + '<p style="color: #706e6b; font-size: 13px; margin: 0 0 20px;">Prepared for '
+            + String.valueOf(entityName).escapeHtml4() + '</p>';
+
+        // Summary
+        if (doc.TemplatePk__c != 'Client_Agreement' && doc.TemplatePk__c != 'Contractor_Agreement') {
+            body += '<div style="background: #f3f3f5; border-radius: 6px; padding: 16px 20px; margin-bottom: 20px;">'
+                + '<table style="width: 100%;"><tr>'
+                + '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Total Hours</div>'
+                + '<div style="font-size: 18px; font-weight: 700; color: #1a1a2e;">' + totalHours.setScale(1) + '</div></td>'
+                + '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Total Due</div>'
+                + '<div style="font-size: 18px; font-weight: 700; color: #0176d3;">$' + totalCost.setScale(2).format() + '</div></td>'
+                + '</tr></table></div>';
+        }
+
+        // Period
+        if (doc.PeriodStartDate__c != null && doc.PeriodEndDate__c != null) {
+            body += '<p style="font-size: 13px; color: #444;"><strong>Period:</strong> '
+                + doc.PeriodStartDate__c.format() + ' \u2013 ' + doc.PeriodEndDate__c.format() + '</p>';
+        }
+
+        // Terms
+        if (String.isNotBlank(doc.TermsTxt__c)) {
+            body += '<p style="font-size: 13px; color: #444;"><strong>Terms:</strong> ' + doc.TermsTxt__c + '</p>';
+        }
+
+        // Due date
+        if (doc.DueDateDate__c != null) {
+            body += '<p style="font-size: 13px; color: #444;"><strong>Due Date:</strong> '
+                + doc.DueDateDate__c.format() + '</p>';
+        }
+
+        body += '<p style="font-size: 13px; color: #444; margin-top: 20px;">Please find the attached '
+            + templateDisplay.toLowerCase() + ' for your review. '
+            + 'If you have any questions, please don\'t hesitate to reach out.</p>';
+
+        // Footer
+        body += '<hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />'
+            + '<p style="font-size: 11px; color: #aaa;">This document was generated by Delivery Hub. '
+            + 'Cloud Nimbus LLC &bull; cloudnimbusllc.com</p>'
+            + '</div></div>';
+
+        return body;
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  PRIVATE: Snapshot Builder
     // ═══════════════════════════════════════════════════════════

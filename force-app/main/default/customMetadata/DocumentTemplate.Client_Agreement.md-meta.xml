@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Client Agreement</label>
+    <protected>false</protected>
+    <values>
+        <field>DescriptionTxt__c</field>
+        <value xsi:type="xsd:string">Professional services agreement for new clients. Covers scope, payment terms, confidentiality, and liability. Suitable for self-service onboarding via the Cloud Nimbus portal.</value>
+    </values>
+    <values>
+        <field>PortalComponentTxt__c</field>
+        <value xsi:type="xsd:string">ClientAgreementDocument</value>
+    </values>
+    <values>
+        <field>OutputFormatsTxt__c</field>
+        <value xsi:type="xsd:string">web,pdf,email</value>
+    </values>
+    <values>
+        <field>DataQueryTxt__c</field>
+        <value xsi:type="xsd:string">{"objects":["NetworkEntity__c","WorkRequest__c"],"fields":{"NetworkEntity__c":["Name","ContactEmailTxt__c","AddressTxt__c","ContactPhoneTxt__c"],"WorkRequest__c":["HourlyRateCurrency__c","QuotedHoursNumber__c","StatusPk__c"]}}</value>
+    </values>
+    <values>
+        <field>AiPromptTxt__c</field>
+        <value xsi:type="xsd:string">Generate a professional services agreement summary for a software delivery engagement. Focus on: scope of work, deliverables, timeline expectations, payment schedule, and confidentiality obligations. Keep the tone professional but approachable.</value>
+    </values>
+    <values>
+        <field>WorkflowTypeTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+</CustomMetadata>

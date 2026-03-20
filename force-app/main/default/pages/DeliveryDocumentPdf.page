@@ -1,0 +1,419 @@
+<apex:page controller="DeliveryDocumentPdfController" showHeader="false" sidebar="false"
+           standardStylesheets="false" applyHtmlTag="true" applyBodyTag="false"
+           lightningStylesheets="false" docType="html-5.0">
+<html>
+<head>
+<style type="text/css">
+    /* ── Reset & Base ── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 10pt;
+        color: #1a1a2e;
+        line-height: 1.5;
+        padding: 40px 50px;
+        background: #fff;
+    }
+
+    /* ── Header ── */
+    .doc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 3px solid #0176d3;
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+    }
+    .doc-header-left { }
+    .doc-header-right { text-align: right; }
+    .company-name {
+        font-size: 18pt;
+        font-weight: 700;
+        color: #0176d3;
+        letter-spacing: 0.5px;
+    }
+    .company-url {
+        font-size: 8pt;
+        color: #706e6b;
+        margin-top: 2px;
+    }
+    .doc-type {
+        font-size: 14pt;
+        font-weight: 700;
+        color: #1a1a2e;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .doc-number {
+        font-size: 10pt;
+        color: #706e6b;
+        margin-top: 4px;
+    }
+
+    /* ── Parties / Meta ── */
+    .parties-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 24px;
+    }
+    .party-block { flex: 1; }
+    .party-block--right { text-align: right; }
+    .party-label {
+        font-size: 7pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #706e6b;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+    }
+    .party-name {
+        font-size: 11pt;
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    .party-detail {
+        font-size: 9pt;
+        color: #444;
+        line-height: 1.6;
+    }
+    .meta-value {
+        font-size: 9pt;
+        color: #1a1a2e;
+    }
+    .meta-value--bold {
+        font-weight: 600;
+    }
+
+    /* ── Summary Bar ── */
+    .summary-bar {
+        display: flex;
+        background: #f3f3f5;
+        border-radius: 6px;
+        padding: 14px 20px;
+        margin-bottom: 24px;
+        justify-content: space-between;
+    }
+    .summary-item { text-align: center; flex: 1; }
+    .summary-label {
+        font-size: 7pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #706e6b;
+        letter-spacing: 0.5px;
+    }
+    .summary-value {
+        font-size: 12pt;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-top: 2px;
+    }
+    .summary-value--accent { color: #0176d3; }
+
+    /* ── Section Headings ── */
+    .section-title {
+        font-size: 10pt;
+        font-weight: 700;
+        color: #1a1a2e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 6px;
+        margin-bottom: 10px;
+        margin-top: 20px;
+    }
+
+    /* ── Tables ── */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+        font-size: 9pt;
+    }
+    .data-table th {
+        background: #f3f3f5;
+        font-weight: 700;
+        font-size: 7.5pt;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #706e6b;
+        padding: 8px 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    .data-table th.align-right,
+    .data-table td.align-right { text-align: right; }
+    .data-table td {
+        padding: 7px 10px;
+        border-bottom: 1px solid #eee;
+        vertical-align: top;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table .desc-cell {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ── AI Narrative ── */
+    .narrative-box {
+        background: #f8f9fb;
+        border-left: 3px solid #0176d3;
+        padding: 14px 18px;
+        margin: 16px 0;
+        font-size: 9pt;
+        line-height: 1.7;
+        color: #333;
+    }
+
+    /* ── Footer ── */
+    .doc-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-top: 3px solid #0176d3;
+        padding-top: 16px;
+        margin-top: 30px;
+    }
+    .footer-terms {
+        font-size: 9pt;
+        color: #706e6b;
+    }
+    .footer-total {
+        text-align: right;
+    }
+    .footer-total-label {
+        font-size: 9pt;
+        color: #706e6b;
+    }
+    .footer-total-amount {
+        font-size: 16pt;
+        font-weight: 700;
+        color: #0176d3;
+    }
+    .footer-brand {
+        font-size: 7pt;
+        color: #aaa;
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    /* ── Agreement-specific ── */
+    .agreement-body {
+        font-size: 9.5pt;
+        line-height: 1.8;
+        color: #333;
+        margin: 16px 0;
+    }
+    .signature-block {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 50px;
+        padding-top: 10px;
+    }
+    .signature-party {
+        width: 45%;
+    }
+    .signature-line {
+        border-top: 1px solid #1a1a2e;
+        margin-top: 50px;
+        padding-top: 6px;
+        font-size: 8pt;
+        color: #706e6b;
+    }
+</style>
+</head>
+<body>
+<apex:outputPanel rendered="{!hasDocument}">
+
+    <!-- ════════════════════════════════════════════════
+         HEADER
+         ════════════════════════════════════════════════ -->
+    <div class="doc-header">
+        <div class="doc-header-left">
+            <div class="company-name">Cloud Nimbus LLC</div>
+            <div class="company-url">cloudnimbusllc.com</div>
+        </div>
+        <div class="doc-header-right">
+            <div class="doc-type">{!templateDisplay}</div>
+            <div class="doc-number">{!documentName}</div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════
+         BILL TO / DETAILS
+         ════════════════════════════════════════════════ -->
+    <div class="parties-row">
+        <div class="party-block">
+            <div class="party-label">
+                <apex:outputText value="Bill To" rendered="{!isInvoice}" />
+                <apex:outputText value="Party" rendered="{!isAgreement}" />
+                <apex:outputText value="Prepared For" rendered="{!NOT(isInvoice) && NOT(isAgreement)}" />
+            </div>
+            <div class="party-name">{!entityName}</div>
+            <apex:outputPanel rendered="{!entityAddress != null}">
+                <div class="party-detail">{!entityAddress}</div>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!entityEmail != null}">
+                <div class="party-detail">{!entityEmail}</div>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!entityPhone != null}">
+                <div class="party-detail">{!entityPhone}</div>
+            </apex:outputPanel>
+        </div>
+        <div class="party-block party-block--right">
+            <apex:outputPanel rendered="{!formattedPeriod != null}">
+                <div class="party-label">Period</div>
+                <div class="meta-value">{!formattedPeriod}</div>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!hasTerms}">
+                <div class="party-label" style="margin-top: 8px;">Terms</div>
+                <div class="meta-value meta-value--bold">{!terms}</div>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!hasDueDate}">
+                <div class="party-label" style="margin-top: 8px;">Due Date</div>
+                <div class="meta-value meta-value--bold">{!formattedDueDate}</div>
+            </apex:outputPanel>
+            <div class="party-label" style="margin-top: 8px;">Rate</div>
+            <div class="meta-value meta-value--bold">{!formattedDefaultRate}</div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════
+         SUMMARY BAR
+         ════════════════════════════════════════════════ -->
+    <apex:outputPanel rendered="{!isInvoice || NOT(isAgreement)}">
+        <div class="summary-bar">
+            <div class="summary-item">
+                <div class="summary-label">Total Hours</div>
+                <div class="summary-value">{!formattedTotalHours}</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total Amount</div>
+                <div class="summary-value summary-value--accent">{!formattedTotalCost}</div>
+            </div>
+        </div>
+    </apex:outputPanel>
+
+    <!-- ════════════════════════════════════════════════
+         WORK ITEMS TABLE
+         ════════════════════════════════════════════════ -->
+    <apex:outputPanel rendered="{!hasWorkItems}">
+        <div class="section-title">Work Items</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Stage</th>
+                    <th class="align-right">Hours</th>
+                    <th class="align-right">Rate</th>
+                    <th class="align-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <apex:repeat value="{!workItemRows}" var="wi">
+                    <tr>
+                        <td>{!wi.name}</td>
+                        <td class="desc-cell">{!wi.description}</td>
+                        <td>{!wi.stage}</td>
+                        <td class="align-right">{!wi.hours}</td>
+                        <td class="align-right">{!wi.formattedRate}</td>
+                        <td class="align-right">{!wi.formattedSubtotal}</td>
+                    </tr>
+                </apex:repeat>
+            </tbody>
+        </table>
+    </apex:outputPanel>
+
+    <!-- ════════════════════════════════════════════════
+         WORK LOGS TABLE
+         ════════════════════════════════════════════════ -->
+    <apex:outputPanel rendered="{!hasWorkLogs}">
+        <div class="section-title">Time Log Detail</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Work Item</th>
+                    <th class="align-right">Hours</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <apex:repeat value="{!workLogRows}" var="wl">
+                    <tr>
+                        <td>{!wl.workDate}</td>
+                        <td>{!wl.workItemName}</td>
+                        <td class="align-right">{!wl.hours}</td>
+                        <td class="desc-cell">{!wl.description}</td>
+                    </tr>
+                </apex:repeat>
+            </tbody>
+        </table>
+    </apex:outputPanel>
+
+    <!-- ════════════════════════════════════════════════
+         AI NARRATIVE
+         ════════════════════════════════════════════════ -->
+    <apex:outputPanel rendered="{!hasAiNarrative}">
+        <div class="section-title">Summary</div>
+        <div class="narrative-box">
+            <apex:outputText value="{!aiNarrative}" escape="false" />
+        </div>
+    </apex:outputPanel>
+
+    <!-- ════════════════════════════════════════════════
+         AGREEMENT SIGNATURE BLOCK
+         ════════════════════════════════════════════════ -->
+    <apex:outputPanel rendered="{!isAgreement}">
+        <apex:outputPanel rendered="{!hasAiNarrative}">
+            <div class="agreement-body">
+                <apex:outputText value="{!aiNarrative}" escape="false" />
+            </div>
+        </apex:outputPanel>
+        <div class="signature-block">
+            <div class="signature-party">
+                <div class="signature-line">Cloud Nimbus LLC — Authorized Signature</div>
+                <div class="signature-line" style="margin-top: 20px;">Date</div>
+            </div>
+            <div class="signature-party">
+                <div class="signature-line">{!entityName} — Authorized Signature</div>
+                <div class="signature-line" style="margin-top: 20px;">Date</div>
+            </div>
+        </div>
+    </apex:outputPanel>
+
+    <!-- ════════════════════════════════════════════════
+         FOOTER
+         ════════════════════════════════════════════════ -->
+    <div class="doc-footer">
+        <div class="footer-terms">
+            <apex:outputPanel rendered="{!hasTerms}">
+                Terms: {!terms}
+            </apex:outputPanel>
+        </div>
+        <div class="footer-total">
+            <apex:outputPanel rendered="{!isInvoice || NOT(isAgreement)}">
+                <div class="footer-total-label">Total Due</div>
+                <div class="footer-total-amount">{!formattedTotalCost}</div>
+            </apex:outputPanel>
+        </div>
+    </div>
+
+    <div class="footer-brand">
+        Cloud Nimbus LLC &bull; cloudnimbusllc.com &bull; Powered by Delivery Hub
+    </div>
+
+</apex:outputPanel>
+
+<!-- No document found -->
+<apex:outputPanel rendered="{!NOT(hasDocument)}">
+    <div style="text-align: center; padding: 60px; color: #706e6b;">
+        <p style="font-size: 14pt;">Document not found.</p>
+    </div>
+</apex:outputPanel>
+
+</body>
+</html>
+</apex:page>

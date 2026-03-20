@@ -12,6 +12,8 @@ import getDocumentsForEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryD
 import generateDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.generateDocument';
 import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
 import getDocumentById from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentById';
+import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.sendDocumentEmail';
+import getDocumentTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTemplates';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -25,13 +27,9 @@ const STATUS_CONFIG = {
     Disputed: { label: 'Disputed', cssClass: 'status-badge status-badge--disputed' }
 };
 
-const TEMPLATE_OPTIONS = [
-    { label: 'Invoice',           value: 'Invoice' },
-    { label: 'Status Report',     value: 'Status_Report' },
-    { label: 'Proposal',          value: 'Proposal' },
-    { label: 'Executive Summary', value: 'Executive_Summary' },
-    { label: 'Meeting Brief',     value: 'Meeting_Brief' },
-    { label: 'Weekly Digest',     value: 'Weekly_Digest' }
+// Fallback if CMT query fails or returns empty
+const DEFAULT_TEMPLATE_OPTIONS = [
+    { label: 'Invoice', value: 'Invoice' }
 ];
 
 export default class DeliveryDocumentViewer extends LightningElement {
@@ -57,6 +55,14 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track isLoadingPreview = false;
     @track isUpdatingStatus = false;
 
+    // Send email state
+    @track showSendModal = false;
+    @track sendRecipientEmail = '';
+    @track isSendingEmail = false;
+
+    // Template options loaded from DocumentTemplate__mdt
+    @track _templateOptions = DEFAULT_TEMPLATE_OPTIONS;
+
     _wiredDocsResult;
 
     // ═══════════════════════════════════════════════════════════
@@ -78,6 +84,20 @@ export default class DeliveryDocumentViewer extends LightningElement {
     // ═══════════════════════════════════════════════════════════
     //  WIRE: Document List
     // ═══════════════════════════════════════════════════════════
+
+    @wire(getDocumentTemplates)
+    wiredTemplates({ data, error }) {
+        if (data && data.length > 0) {
+            this._templateOptions = data.map(t => ({ label: t.label, value: t.value }));
+            // Default the generate form to the first template
+            if (!this.genTemplate || !this._templateOptions.some(o => o.value === this.genTemplate)) {
+                this.genTemplate = this._templateOptions[0].value;
+            }
+        } else if (error) {
+            // Silently fall back to defaults
+            this._templateOptions = DEFAULT_TEMPLATE_OPTIONS;
+        }
+    }
 
     @wire(getDocumentsForEntity, { entityId: '$networkEntityId' })
     wiredDocuments(result) {
@@ -102,7 +122,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
     get isLoaded()      { return !this.isLoading; }
     get hasDocuments()  { return this.documents && this.documents.length > 0; }
     get hasError()      { return !!this.error; }
-    get templateOptions() { return TEMPLATE_OPTIONS; }
+    get templateOptions() { return this._templateOptions; }
 
     get cardTitle() {
         return this.isListMode ? 'Documents' : (this.previewDoc?.name || 'Document Preview');
@@ -245,6 +265,18 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return this.previewDoc?.status === 'Ready';
     }
 
+    get canSendEmail() {
+        return this.previewDoc?.status === 'Ready' || this.previewDoc?.status === 'Draft';
+    }
+
+    get isSendDisabled() {
+        return this.isSendingEmail;
+    }
+
+    get sendButtonLabel() {
+        return this.isSendingEmail ? 'Sending...' : 'Send Email';
+    }
+
     get canMarkPaid() {
         return this.previewDoc?.status === 'Sent' || this.previewDoc?.status === 'Viewed';
     }
@@ -348,6 +380,41 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     async handleMarkPaid() {
         await this._updateStatus('Paid');
+    }
+
+    handleOpenSendModal() {
+        // Default recipient to entity contact email from snapshot
+        this.sendRecipientEmail = this.snapshot?.entity?.email || '';
+        this.showSendModal = true;
+    }
+
+    handleCloseSendModal() {
+        this.showSendModal = false;
+        this.sendRecipientEmail = '';
+    }
+
+    handleSendRecipientChange(event) {
+        this.sendRecipientEmail = event.detail.value;
+    }
+
+    async handleSendEmail() {
+        if (!this.previewDoc?.id) return;
+        this.isSendingEmail = true;
+        try {
+            const result = await sendDocumentEmail({
+                documentId: this.previewDoc.id,
+                recipientEmail: this.sendRecipientEmail
+            });
+            this.previewDoc = { ...this.previewDoc, status: 'Sent' };
+            this.showSendModal = false;
+            this.sendRecipientEmail = '';
+            this._showToast('Email Sent', `Document emailed to ${result.recipientEmail}`, 'success');
+            refreshApex(this._wiredDocsResult);
+        } catch (err) {
+            this._showToast('Error', this._extractError(err), 'error');
+        } finally {
+            this.isSendingEmail = false;
+        }
     }
 
     handlePrint() {

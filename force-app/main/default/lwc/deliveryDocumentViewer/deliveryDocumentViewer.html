@@ -192,11 +192,21 @@
                                 disabled={isUpdatingStatus}
                             ></lightning-button>
                         </template>
+                        <template lwc:if={canSendEmail}>
+                            <lightning-button
+                                label={sendButtonLabel}
+                                icon-name="utility:email"
+                                variant="brand"
+                                onclick={handleOpenSendModal}
+                                disabled={isSendDisabled}
+                                class="slds-m-right_x-small"
+                            ></lightning-button>
+                        </template>
                         <template lwc:if={canMarkSent}>
                             <lightning-button
                                 label="Mark as Sent"
                                 icon-name="utility:email"
-                                variant="brand"
+                                variant="brand-outline"
                                 onclick={handleMarkSent}
                                 disabled={isUpdatingStatus}
                             ></lightning-button>
@@ -442,6 +452,54 @@
 
                 </div>
             </template>
+
+            <!-- ── Send Email Modal ── -->
+            <template lwc:if={showSendModal}>
+                <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <lightning-button-icon
+                                icon-name="utility:close"
+                                alternative-text="Close"
+                                variant="bare-inverse"
+                                class="slds-modal__close"
+                                onclick={handleCloseSendModal}
+                            ></lightning-button-icon>
+                            <h2 class="slds-text-heading_medium">Send Document via Email</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium">
+                            <lightning-input
+                                type="email"
+                                label="Recipient Email"
+                                value={sendRecipientEmail}
+                                onchange={handleSendRecipientChange}
+                                placeholder="recipient@example.com"
+                                required
+                            ></lightning-input>
+                            <p class="slds-text-color_weak slds-m-top_small slds-text-body_small">
+                                A PDF of this document will be attached to the email.
+                                You will be CC'd on the email per your org settings.
+                            </p>
+                        </div>
+                        <footer class="slds-modal__footer">
+                            <lightning-button
+                                label="Cancel"
+                                variant="neutral"
+                                onclick={handleCloseSendModal}
+                            ></lightning-button>
+                            <lightning-button
+                                label={sendButtonLabel}
+                                variant="brand"
+                                onclick={handleSendEmail}
+                                disabled={isSendDisabled}
+                                class="slds-m-left_x-small"
+                            ></lightning-button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </template>
+
         </lightning-card>
     </template>
 </template>
