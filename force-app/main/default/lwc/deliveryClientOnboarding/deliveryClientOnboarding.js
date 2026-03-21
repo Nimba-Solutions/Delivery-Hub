@@ -5,6 +5,7 @@
  *               a NetworkEntity, and generates a Client Agreement document.
  * @author Cloud Nimbus LLC
  */
+/* eslint-disable no-ternary, sort-keys */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import onboardClient from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryClientOnboardingController.onboardClient';
@@ -24,7 +25,7 @@ export default class DeliveryClientOnboarding extends LightningElement {
     @track isSending = false;
 
     get hasResult() {
-        return this.result != null;
+        return this.result !== null && this.result !== undefined;
     }
 
     get showEmptyState() {
@@ -32,15 +33,24 @@ export default class DeliveryClientOnboarding extends LightningElement {
     }
 
     get toggleButtonLabel() {
-        return this.showForm ? 'Cancel' : 'New Client';
+        if (this.showForm) {
+            return 'Cancel';
+        }
+        return 'New Client';
     }
 
     get toggleButtonIcon() {
-        return this.showForm ? 'utility:close' : 'utility:add';
+        if (this.showForm) {
+            return 'utility:close';
+        }
+        return 'utility:add';
     }
 
     get toggleButtonVariant() {
-        return this.showForm ? 'neutral' : 'brand';
+        if (this.showForm) {
+            return 'neutral';
+        }
+        return 'brand';
     }
 
     handleToggleForm() {
@@ -70,7 +80,6 @@ export default class DeliveryClientOnboarding extends LightningElement {
     }
 
     async handleSubmit() {
-        // Validate required fields
         const allValid = [...this.template.querySelectorAll('lightning-input')]
             .reduce((valid, input) => {
                 input.reportValidity();
@@ -83,39 +92,36 @@ export default class DeliveryClientOnboarding extends LightningElement {
 
         this.isProcessing = true;
         try {
-            this.result = await onboardClient({
-                clientName: this.clientName,
-                contactEmail: this.contactEmail,
-                hourlyRate: parseFloat(this.hourlyRate),
-                contactPhone: this.contactPhone || null,
-                address: this.address || null
-            });
-
-            this.showForm = false;
-            this.showResult = true;
-
-            this.dispatchEvent(
-                new ShowToastEvent({
-                    title: 'Client Onboarded',
-                    message: `${this.clientName} created with agreement ${this.result.documentName}`,
-                    variant: 'success'
-                })
-            );
+            await this._performOnboarding();
         } catch (error) {
-            this.dispatchEvent(
-                new ShowToastEvent({
-                    title: 'Error',
-                    message: error.body?.message || error.message || 'An error occurred',
-                    variant: 'error'
-                })
-            );
+            this._showError('Error', error);
         } finally {
             this.isProcessing = false;
         }
     }
 
+    async _performOnboarding() {
+        const request = {
+            address: this.address || null,
+            clientName: this.clientName,
+            contactEmail: this.contactEmail,
+            contactPhone: this.contactPhone || null,
+            hourlyRate: parseFloat(this.hourlyRate)
+        };
+        this.result = await onboardClient({ request });
+        this.showForm = false;
+        this.showResult = true;
+        this.dispatchEvent(
+            new ShowToastEvent({
+                message: `${this.clientName} created with agreement ${this.result.documentName}`,
+                title: 'Client Onboarded',
+                variant: 'success'
+            })
+        );
+    }
+
     async handleSendAgreement() {
-        if (!this.result?.documentId) {
+        if (!this.result || !this.result.documentId) {
             return;
         }
 
@@ -128,22 +134,27 @@ export default class DeliveryClientOnboarding extends LightningElement {
 
             this.dispatchEvent(
                 new ShowToastEvent({
-                    title: 'Agreement Sent',
                     message: `Agreement emailed to ${emailResult.recipientEmail}`,
+                    title: 'Agreement Sent',
                     variant: 'success'
                 })
             );
         } catch (error) {
-            this.dispatchEvent(
-                new ShowToastEvent({
-                    title: 'Email Error',
-                    message: error.body?.message || error.message || 'Failed to send email',
-                    variant: 'error'
-                })
-            );
+            this._showError('Email Error', error);
         } finally {
             this.isSending = false;
         }
+    }
+
+    _showError(title, error) {
+        const msg = (error.body && error.body.message) || error.message || 'An error occurred';
+        this.dispatchEvent(
+            new ShowToastEvent({
+                message: msg,
+                title,
+                variant: 'error'
+            })
+        );
     }
 
     handleReset() {

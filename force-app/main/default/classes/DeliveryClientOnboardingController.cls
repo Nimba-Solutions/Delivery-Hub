@@ -8,73 +8,81 @@
 public with sharing class DeliveryClientOnboardingController {
 
     /**
+     * @description Wrapper for client onboarding parameters to avoid excessive parameter lists.
+     */
+    public class OnboardingRequest {
+        /** @description The client company name. */
+        @AuraEnabled public String clientName;
+        /** @description The primary contact email address. */
+        @AuraEnabled public String contactEmail;
+        /** @description The agreed hourly rate. */
+        @AuraEnabled public Decimal hourlyRate;
+        /** @description Optional phone number. */
+        @AuraEnabled public String contactPhone;
+        /** @description Optional mailing address. */
+        @AuraEnabled public String address;
+    }
+
+    /**
      * @description Creates a new client entity and generates a Client Agreement document.
-     * @param clientName The client company name.
-     * @param contactEmail The primary contact email address.
-     * @param hourlyRate The agreed hourly rate.
-     * @param contactPhone Optional phone number.
-     * @param address Optional mailing address.
+     * @param request The onboarding request containing client details.
      * @return Map with entityId, documentId, documentName, and publicToken keys.
      */
     @AuraEnabled
-    public static Map<String, Object> onboardClient(
-        String clientName, String contactEmail, Decimal hourlyRate,
-        String contactPhone, String address
-    ) {
-        if (String.isBlank(clientName)) {
+    public static Map<String, Object> onboardClient(OnboardingRequest request) {
+        validateRequest(request);
+        NetworkEntity__c entity = createEntity(request);
+        return generateAgreement(entity);
+    }
+
+    private static void validateRequest(OnboardingRequest request) {
+        if (String.isBlank(request.clientName)) {
             throw new AuraHandledException('Client name is required.');
         }
-        if (String.isBlank(contactEmail)) {
+        if (String.isBlank(request.contactEmail)) {
             throw new AuraHandledException('Contact email is required.');
         }
-        if (hourlyRate == null || hourlyRate <= 0) {
+        if (request.hourlyRate == null || request.hourlyRate <= 0) {
             throw new AuraHandledException('A valid hourly rate is required.');
         }
-
-        // Check for duplicate entity name
         List<NetworkEntity__c> existing = [
             SELECT Id FROM NetworkEntity__c
-            WHERE Name = :clientName
+            WHERE Name = :request.clientName
             WITH SYSTEM_MODE LIMIT 1
         ];
         if (!existing.isEmpty()) {
-            throw new AuraHandledException('A client named "' + clientName + '" already exists.');
+            throw new AuraHandledException('A client named "' + request.clientName + '" already exists.');
         }
+    }
 
-        // Create the NetworkEntity
+    private static NetworkEntity__c createEntity(OnboardingRequest request) {
         NetworkEntity__c entity = new NetworkEntity__c(
-            Name = clientName,
+            Name = request.clientName,
             EntityTypePk__c = 'Client',
             StatusPk__c = 'Active',
-            DefaultHourlyRateCurrency__c = hourlyRate,
-            ContactEmailTxt__c = contactEmail
+            DefaultHourlyRateCurrency__c = request.hourlyRate,
+            ContactEmailTxt__c = request.contactEmail
         );
-        if (String.isNotBlank(contactPhone)) {
-            entity.ContactPhoneTxt__c = contactPhone;
+        if (String.isNotBlank(request.contactPhone)) {
+            entity.ContactPhoneTxt__c = request.contactPhone;
         }
-        if (String.isNotBlank(address)) {
-            entity.AddressTxt__c = address;
+        if (String.isNotBlank(request.address)) {
+            entity.AddressTxt__c = request.address;
         }
         Database.insert(entity, AccessLevel.SYSTEM_MODE);
+        return entity;
+    }
 
-        // Generate Client Agreement
+    private static Map<String, Object> generateAgreement(NetworkEntity__c entity) {
         Date today = Date.today();
         Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id,
-            'Client_Agreement',
-            today,
-            today.addYears(1),
-            null
+            entity.Id, 'Client_Agreement', today, today.addYears(1), null
         );
-
         DeliveryDocument__c doc = [
             SELECT Name, PublicTokenTxt__c
-            FROM DeliveryDocument__c
-            WHERE Id = :docId
-            WITH SYSTEM_MODE
-            LIMIT 1
+            FROM DeliveryDocument__c WHERE Id = :docId
+            WITH SYSTEM_MODE LIMIT 1
         ];
-
         Map<String, Object> result = new Map<String, Object>();
         result.put('entityId', entity.Id);
         result.put('documentId', docId);
