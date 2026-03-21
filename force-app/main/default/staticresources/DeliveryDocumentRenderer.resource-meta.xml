@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StaticResource xmlns="http://soap.sforce.com/2006/04/metadata">
+    <cacheControl>Public</cacheControl>
+    <contentType>application/zip</contentType>
+    <description>Self-contained document renderer. Fetches document data via public API token, renders with modern CSS, supports client-side PDF generation via html2pdf.js. Used by DeliveryDocumentView.page on Salesforce Sites for beautiful public-facing documents.</description>
+</StaticResource>

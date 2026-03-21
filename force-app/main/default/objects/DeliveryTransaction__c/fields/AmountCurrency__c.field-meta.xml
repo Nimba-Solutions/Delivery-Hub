@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AmountCurrency__c</fullName>
+    <description>The monetary amount of this transaction.</description>
+    <inlineHelpText>The dollar amount for this payment, credit, refund, or adjustment.</inlineHelpText>
+    <label>Amount</label>
+    <precision>18</precision>
+    <required>true</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Currency</type>
+</CustomField>

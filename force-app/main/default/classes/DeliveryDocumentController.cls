@@ -25,6 +25,26 @@ public with sharing class DeliveryDocumentController {
         Map<String, Object> snapshot = buildSnapshot(entityId, templateType, periodStart, periodEnd);
 
         String publicToken = generateToken();
+        Decimal currentCharges = calculateTotalCost(snapshot);
+
+        // Auto-calculate prior balance for invoices: sum of all unpaid invoices for this entity
+        Decimal priorBalance = 0;
+        if (templateType == 'Invoice' && entityId != null) {
+            priorBalance = calculatePriorBalance(entityId);
+        }
+
+        // Merge A/R data into metadata
+        Map<String, Object> metaMap = new Map<String, Object>();
+        if (String.isNotBlank(metadata)) {
+            metaMap = (Map<String, Object>) JSON.deserializeUntyped(metadata);
+        }
+        metaMap.put('priorBalance', priorBalance);
+        metaMap.put('amountDue', currentCharges + priorBalance);
+
+        // Build unpaid invoices summary for the snapshot
+        if (templateType == 'Invoice' && entityId != null) {
+            metaMap.put('unpaidInvoices', buildUnpaidInvoicesSummary(entityId));
+        }
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
             NetworkEntityId__c  = entityId,
@@ -35,12 +55,134 @@ public with sharing class DeliveryDocumentController {
             PublicTokenTxt__c   = publicToken,
             SnapshotTxt__c      = JSON.serialize(snapshot),
             TotalHoursNumber__c = calculateTotalHours(snapshot),
-            TotalCurrency__c    = calculateTotalCost(snapshot),
-            MetadataTxt__c      = metadata
+            TotalCurrency__c    = currentCharges,
+            TermsTxt__c         = 'Net 30',
+            MetadataTxt__c      = JSON.serialize(metaMap)
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
         return doc.Id;
+    }
+
+    /**
+     * @description Calculates the outstanding balance from all prior unpaid invoices
+     *              for the given entity. Queries unpaid invoices and aggregates
+     *              DeliveryTransaction__c amounts per document to compute paid totals.
+     *              Balance = sum of (docTotal - paidTotal) for each unpaid invoice.
+     * @param entityId The NetworkEntity__c Id.
+     * @return The total unpaid prior balance.
+     */
+    @TestVisible
+    private static Decimal calculatePriorBalance(Id entityId) {
+        List<DeliveryDocument__c> unpaidDocs = [
+            SELECT Id, TotalCurrency__c
+            FROM DeliveryDocument__c
+            WHERE NetworkEntityId__c = :entityId
+            AND TemplatePk__c = 'Invoice'
+            AND StatusPk__c != 'Paid'
+            WITH SYSTEM_MODE
+        ];
+        if (unpaidDocs.isEmpty()) {
+            return 0;
+        }
+
+        Set<Id> docIds = new Map<Id, DeliveryDocument__c>(unpaidDocs).keySet();
+        Map<Id, Decimal> paidByDoc = aggregatePaidByDocument(docIds);
+
+        Decimal balance = 0;
+        for (DeliveryDocument__c doc : unpaidDocs) {
+            Decimal docTotal = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+            Decimal docPaid = paidByDoc.containsKey(doc.Id) ? paidByDoc.get(doc.Id) : 0;
+            balance += (docTotal - docPaid);
+        }
+        return balance;
+    }
+
+    /**
+     * @description Records a payment against a document by creating a DeliveryTransaction__c
+     *              record. Auto-transitions the document status to 'Paid' when total
+     *              payments meet or exceed the document total.
+     * @param documentId The DeliveryDocument__c Id.
+     * @param amount The payment amount received.
+     * @param paymentDate The date the payment was received.
+     * @param note Optional reference number, check number, or note.
+     */
+    @AuraEnabled
+    public static void recordPayment(Id documentId, Decimal amount, Date paymentDate, String note) {
+        if (documentId == null || amount == null || amount <= 0) {
+            throw new AuraHandledException('A valid document ID and positive payment amount are required.');
+        }
+
+        DeliveryTransaction__c txn = new DeliveryTransaction__c(
+            DocumentId__c = documentId,
+            TypePk__c = 'Payment',
+            AmountCurrency__c = amount,
+            TransactionDateDate__c = paymentDate,
+            NoteTxt__c = String.isNotBlank(note) ? note : null
+        );
+        Database.insert(txn, AccessLevel.SYSTEM_MODE);
+
+        // Check if total payments now cover the document total → auto-mark Paid
+        DeliveryDocument__c doc = [
+            SELECT Id, TotalCurrency__c, StatusPk__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        Decimal docTotal = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+        Decimal totalPaid = getTotalPaid(documentId);
+        if (totalPaid >= docTotal) {
+            doc.StatusPk__c = 'Paid';
+            Database.update(doc, AccessLevel.SYSTEM_MODE);
+        }
+    }
+
+    /**
+     * @description Builds a summary list of all unpaid invoices for the entity.
+     *              Aggregates DeliveryTransaction__c amounts per document for paid totals.
+     *              Used in the invoice metadata to show A/R breakdown.
+     * @param entityId The NetworkEntity__c Id to query unpaid invoices for.
+     * @return List of maps containing name, period, total, paid, outstanding, and status keys.
+     */
+    private static List<Map<String, Object>> buildUnpaidInvoicesSummary(Id entityId) {
+        List<DeliveryDocument__c> unpaidDocs = [
+            SELECT Id, Name, PeriodStartDate__c, PeriodEndDate__c,
+                   TotalCurrency__c, StatusPk__c, SentDateTime__c
+            FROM DeliveryDocument__c
+            WHERE NetworkEntityId__c = :entityId
+            AND TemplatePk__c = 'Invoice'
+            AND StatusPk__c != 'Paid'
+            WITH SYSTEM_MODE
+            ORDER BY PeriodStartDate__c ASC
+        ];
+        if (unpaidDocs.isEmpty()) {
+            return new List<Map<String, Object>>();
+        }
+
+        Set<Id> docIds = new Map<Id, DeliveryDocument__c>(unpaidDocs).keySet();
+        Map<Id, Decimal> paidByDoc = aggregatePaidByDocument(docIds);
+
+        List<Map<String, Object>> summary = new List<Map<String, Object>>();
+        for (DeliveryDocument__c doc : unpaidDocs) {
+            Decimal total = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+            Decimal paid = paidByDoc.containsKey(doc.Id) ? paidByDoc.get(doc.Id) : 0;
+            Decimal outstanding = total - paid;
+            if (outstanding <= 0) {
+                continue;
+            }
+            Map<String, Object> item = new Map<String, Object>();
+            item.put('name', doc.Name);
+            item.put('periodStart', String.valueOf(doc.PeriodStartDate__c));
+            item.put('periodEnd', String.valueOf(doc.PeriodEndDate__c));
+            item.put('total', total);
+            item.put('paid', paid);
+            item.put('outstanding', outstanding);
+            item.put('status', doc.StatusPk__c);
+            summary.add(item);
+        }
+        return summary;
     }
 
     /**
@@ -97,6 +239,8 @@ public with sharing class DeliveryDocumentController {
         result.put('dueDate', doc.DueDateDate__c);
         result.put('terms', doc.TermsTxt__c);
         result.put('metadata', doc.MetadataTxt__c);
+        result.put('transactions', getTransactionsForDocument(doc.Id));
+        result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
         return result;
     }
@@ -148,6 +292,8 @@ public with sharing class DeliveryDocumentController {
         result.put('dueDate', doc.DueDateDate__c);
         result.put('terms', doc.TermsTxt__c);
         result.put('metadata', doc.MetadataTxt__c);
+        result.put('transactions', getTransactionsForDocument(doc.Id));
+        result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
         return result;
     }
@@ -230,6 +376,277 @@ public with sharing class DeliveryDocumentController {
             AiNarrativeTxt__c = narrative
         );
         Database.update(doc, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description Returns available document templates from DocumentTemplate__mdt.
+     *              Subscribers can create their own CMT records to add new template types
+     *              without modifying package code. The DeveloperName maps to TemplatePk__c.
+     * @return List of maps with 'value' (DeveloperName), 'label', and 'description' keys.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, String>> getDocumentTemplates() {
+        List<Map<String, String>> templates = new List<Map<String, String>>();
+        for (DocumentTemplate__mdt tmpl : [
+            SELECT DeveloperName, Label, DescriptionTxt__c
+            FROM DocumentTemplate__mdt
+            ORDER BY Label
+        ]) {
+            Map<String, String> t = new Map<String, String>();
+            t.put('value', tmpl.DeveloperName);
+            t.put('label', tmpl.Label);
+            t.put('description', tmpl.DescriptionTxt__c);
+            templates.add(t);
+        }
+        return templates;
+    }
+
+    /**
+     * @description Sends a document as a PDF email attachment and marks it as Sent.
+     *              Generates a PDF via the DeliveryDocumentPdf Visualforce page, attaches it
+     *              to the email, and CCs the address configured in DocumentCcEmailTxt__c.
+     * @param documentId The DeliveryDocument__c Id.
+     * @param recipientEmail The primary recipient email. Falls back to entity contact email.
+     * @return Map with 'success' and 'recipientEmail' keys.
+     */
+    @AuraEnabled
+    public static Map<String, Object> sendDocumentEmail(Id documentId, String recipientEmail) {
+        DeliveryDocument__c doc = [
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                   NetworkEntityId__r.ContactEmailTxt__c,
+                   PeriodStartDate__c, PeriodEndDate__c,
+                   StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
+                   TermsTxt__c, DueDateDate__c, SentDateTime__c,
+                   PublicTokenTxt__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        // Resolve recipient: explicit param > entity contact email
+        String toEmail = String.isNotBlank(recipientEmail)
+            ? recipientEmail.trim()
+            : doc.NetworkEntityId__r.ContactEmailTxt__c;
+
+        if (String.isBlank(toEmail)) {
+            throw new AuraHandledException(
+                'No recipient email provided and the entity has no contact email on file.'
+            );
+        }
+
+        // Generate PDF from Visualforce page
+        PageReference pdfPage = Page.DeliveryDocumentPdf;
+        pdfPage.getParameters().put('id', String.valueOf(documentId));
+        Blob pdfBlob;
+        if (!Test.isRunningTest()) {
+            pdfBlob = pdfPage.getContentAsPDF();
+        } else {
+            pdfBlob = Blob.valueOf('test-pdf-content');
+        }
+
+        // Build attachment
+        String templateDisplay = doc.TemplatePk__c.replace('_', ' ');
+        Messaging.EmailFileAttachment att = new Messaging.EmailFileAttachment();
+        att.setFileName(doc.Name + ' - ' + templateDisplay + '.pdf');
+        att.setContentType('application/pdf');
+        att.setBody(pdfBlob);
+
+        // Build email
+        Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
+        email.setToAddresses(new List<String>{ toEmail });
+
+        // CC from org settings
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings != null && String.isNotBlank(settings.DocumentCcEmailTxt__c)) {
+            email.setCcAddresses(new List<String>{ settings.DocumentCcEmailTxt__c });
+        }
+
+        // Resolve vendor name for email subject/body
+        String vendorName = resolveVendorName();
+        email.setSubject(vendorName + ' \u2014 ' + templateDisplay + ' ' + doc.Name);
+        email.setHtmlBody(buildDocumentEmailBody(doc, templateDisplay, vendorName));
+        email.setFileAttachments(new List<Messaging.EmailFileAttachment>{ att });
+        email.setSaveAsActivity(false);
+
+        // Send
+        Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ email });
+
+        // Update document status to Sent
+        doc.StatusPk__c = 'Sent';
+        if (doc.SentDateTime__c == null) {
+            doc.SentDateTime__c = Datetime.now();
+        }
+        if (doc.DueDateDate__c == null && String.isNotBlank(doc.TermsTxt__c)) {
+            doc.DueDateDate__c = parseDueDate(doc.TermsTxt__c, Date.today());
+        }
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('success', true);
+        result.put('recipientEmail', toEmail);
+        return result;
+    }
+
+    /**
+     * @description Retrieves the transaction history for a document. Allows the LWC
+     *              to refresh the transaction list independently after recording a payment.
+     * @param documentId The DeliveryDocument__c Id.
+     * @return List of maps containing transaction fields (id, name, type, amount, date, note, method).
+     */
+    @AuraEnabled
+    public static List<Map<String, Object>> getDocumentTransactions(Id documentId) {
+        return getTransactionsForDocument(documentId);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PRIVATE: Transaction Helpers
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Queries all DeliveryTransaction__c records for a given document
+     *              and returns them as a list of serialized maps.
+     * @param docId The DeliveryDocument__c Id.
+     * @return List of maps with transaction fields.
+     */
+    @TestVisible
+    private static List<Map<String, Object>> getTransactionsForDocument(Id docId) {
+        List<Map<String, Object>> txns = new List<Map<String, Object>>();
+        for (DeliveryTransaction__c t : [
+            SELECT Id, Name, TypePk__c, AmountCurrency__c,
+                   TransactionDateDate__c, NoteTxt__c, MethodPk__c, CreatedDate
+            FROM DeliveryTransaction__c
+            WHERE DocumentId__c = :docId
+            WITH SYSTEM_MODE
+            ORDER BY TransactionDateDate__c ASC, CreatedDate ASC
+        ]) {
+            Map<String, Object> m = new Map<String, Object>();
+            m.put('id', t.Id);
+            m.put('name', t.Name);
+            m.put('type', t.TypePk__c);
+            m.put('amount', t.AmountCurrency__c);
+            m.put('date', t.TransactionDateDate__c);
+            m.put('note', t.NoteTxt__c);
+            m.put('method', t.MethodPk__c);
+            txns.add(m);
+        }
+        return txns;
+    }
+
+    /**
+     * @description Calculates the total paid amount for a document by aggregating
+     *              all DeliveryTransaction__c AmountCurrency__c values.
+     * @param docId The DeliveryDocument__c Id.
+     * @return The sum of all transaction amounts, or 0 if none exist.
+     */
+    @TestVisible
+    private static Decimal getTotalPaid(Id docId) {
+        AggregateResult[] results = [
+            SELECT SUM(AmountCurrency__c) totalPaid
+            FROM DeliveryTransaction__c
+            WHERE DocumentId__c = :docId
+            WITH SYSTEM_MODE
+        ];
+        Object val = results[0].get('totalPaid');
+        return val != null ? (Decimal) val : 0;
+    }
+
+    /**
+     * @description Aggregates paid amounts across multiple documents. Returns a map
+     *              of document Id to total paid amount from DeliveryTransaction__c records.
+     * @param docIds The set of DeliveryDocument__c Ids to aggregate.
+     * @return Map of document Id to total paid Decimal.
+     */
+    private static Map<Id, Decimal> aggregatePaidByDocument(Set<Id> docIds) {
+        Map<Id, Decimal> paidByDoc = new Map<Id, Decimal>();
+        for (AggregateResult ar : [
+            SELECT DocumentId__c docId, SUM(AmountCurrency__c) totalPaid
+            FROM DeliveryTransaction__c
+            WHERE DocumentId__c IN :docIds
+            WITH SYSTEM_MODE
+            GROUP BY DocumentId__c
+        ]) {
+            Id dId = (Id) ar.get('docId');
+            Decimal paid = ar.get('totalPaid') != null ? (Decimal) ar.get('totalPaid') : 0;
+            paidByDoc.put(dId, paid);
+        }
+        return paidByDoc;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PRIVATE: Email Body Builder
+    // ═══════════════════════════════════════════════════════════
+
+    private static String resolveVendorName() {
+        List<NetworkEntity__c> vendors = [
+            SELECT Name FROM NetworkEntity__c
+            WHERE EntityTypePk__c IN ('Vendor', 'Both')
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC LIMIT 1
+        ];
+        return vendors.isEmpty() ? 'Delivery Hub' : vendors[0].Name;
+    }
+
+    @TestVisible
+    private static String buildDocumentEmailBody(DeliveryDocument__c doc, String templateDisplay) {
+        return buildDocumentEmailBody(doc, templateDisplay, resolveVendorName());
+    }
+
+    @TestVisible
+    private static String buildDocumentEmailBody(DeliveryDocument__c doc, String templateDisplay, String vendorName) {
+        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
+        Decimal totalHours = doc.TotalHoursNumber__c != null ? doc.TotalHoursNumber__c : 0;
+        Decimal totalCost = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
+
+        String body = '<div style="font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto;">'
+            + '<div style="background: #0176d3; padding: 24px 30px; border-radius: 8px 8px 0 0;">'
+            + '<h1 style="color: #fff; font-size: 20px; margin: 0;">' + String.valueOf(vendorName).escapeHtml4() + '</h1>'
+            + '</div>'
+            + '<div style="background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">';
+
+        body += '<h2 style="color: #1a1a2e; font-size: 16px; margin: 0 0 6px;">'
+            + templateDisplay + ' ' + String.valueOf(doc.Name).escapeHtml4() + '</h2>'
+            + '<p style="color: #706e6b; font-size: 13px; margin: 0 0 20px;">Prepared for '
+            + String.valueOf(entityName).escapeHtml4() + '</p>';
+
+        // Summary
+        if (doc.TemplatePk__c != 'Client_Agreement' && doc.TemplatePk__c != 'Contractor_Agreement') {
+            body += '<div style="background: #f3f3f5; border-radius: 6px; padding: 16px 20px; margin-bottom: 20px;">'
+                + '<table style="width: 100%;"><tr>'
+                + '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Total Hours</div>'
+                + '<div style="font-size: 18px; font-weight: 700; color: #1a1a2e;">' + totalHours.setScale(1) + '</div></td>'
+                + '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Total Due</div>'
+                + '<div style="font-size: 18px; font-weight: 700; color: #0176d3;">$' + totalCost.setScale(2).format() + '</div></td>'
+                + '</tr></table></div>';
+        }
+
+        // Period
+        if (doc.PeriodStartDate__c != null && doc.PeriodEndDate__c != null) {
+            body += '<p style="font-size: 13px; color: #444;"><strong>Period:</strong> '
+                + doc.PeriodStartDate__c.format() + ' \u2013 ' + doc.PeriodEndDate__c.format() + '</p>';
+        }
+
+        // Terms
+        if (String.isNotBlank(doc.TermsTxt__c)) {
+            body += '<p style="font-size: 13px; color: #444;"><strong>Terms:</strong> ' + doc.TermsTxt__c + '</p>';
+        }
+
+        // Due date
+        if (doc.DueDateDate__c != null) {
+            body += '<p style="font-size: 13px; color: #444;"><strong>Due Date:</strong> '
+                + doc.DueDateDate__c.format() + '</p>';
+        }
+
+        body += '<p style="font-size: 13px; color: #444; margin-top: 20px;">Please find the attached '
+            + templateDisplay.toLowerCase() + ' for your review. '
+            + 'If you have any questions, please don\'t hesitate to reach out.</p>';
+
+        // Footer
+        body += '<hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />'
+            + '<p style="font-size: 11px; color: #aaa;">This document was generated by Delivery Hub.</p>'
+            + '</div></div>';
+
+        return body;
     }
 
     // ═══════════════════════════════════════════════════════════

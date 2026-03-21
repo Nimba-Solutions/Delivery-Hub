@@ -132,7 +132,7 @@ private class DeliveryFieldTrackingServiceTest {
 
         WorkItem__c oldRecord = workItem.clone(true, true, true, true);
         workItem.PriorityPk__c = 'Critical';
-        workItem.StageNamePk__c = 'In Development';
+        workItem.StatusPk__c = 'Blocked';
 
         DeliveryFieldTrackingService.clearCache();
 

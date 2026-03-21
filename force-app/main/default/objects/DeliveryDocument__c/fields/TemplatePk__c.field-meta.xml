@@ -8,7 +8,7 @@
     <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
-        <restricted>true</restricted>
+        <restricted>false</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
             <value><fullName>Invoice</fullName><default>true</default><label>Invoice</label></value>
@@ -17,6 +17,8 @@
             <value><fullName>Executive_Summary</fullName><default>false</default><label>Executive Summary</label></value>
             <value><fullName>Meeting_Brief</fullName><default>false</default><label>Meeting Brief</label></value>
             <value><fullName>Weekly_Digest</fullName><default>false</default><label>Weekly Digest</label></value>
+            <value><fullName>Client_Agreement</fullName><default>false</default><label>Client Agreement</label></value>
+            <value><fullName>Contractor_Agreement</fullName><default>false</default><label>Contractor Agreement</label></value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
