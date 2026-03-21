@@ -66,33 +66,42 @@ public with sharing class DeliveryDocumentController {
 
     /**
      * @description Calculates the outstanding balance from all prior unpaid invoices
-     *              for the given entity. Sums (TotalCurrency__c - PaymentReceivedCurrency__c)
-     *              where TemplatePk__c = 'Invoice' and StatusPk__c is not 'Paid'.
-     *              PaymentReceivedCurrency__c is treated as 0 when null.
+     *              for the given entity. Queries unpaid invoices and aggregates
+     *              DeliveryTransaction__c amounts per document to compute paid totals.
+     *              Balance = sum of (docTotal - paidTotal) for each unpaid invoice.
      * @param entityId The NetworkEntity__c Id.
      * @return The total unpaid prior balance.
      */
     @TestVisible
     private static Decimal calculatePriorBalance(Id entityId) {
-        Decimal balance = 0;
-        for (DeliveryDocument__c doc : [
-            SELECT TotalCurrency__c, PaymentReceivedCurrency__c
+        List<DeliveryDocument__c> unpaidDocs = [
+            SELECT Id, TotalCurrency__c
             FROM DeliveryDocument__c
             WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
             WITH SYSTEM_MODE
-        ]) {
+        ];
+        if (unpaidDocs.isEmpty()) {
+            return 0;
+        }
+
+        Set<Id> docIds = new Map<Id, DeliveryDocument__c>(unpaidDocs).keySet();
+        Map<Id, Decimal> paidByDoc = aggregatePaidByDocument(docIds);
+
+        Decimal balance = 0;
+        for (DeliveryDocument__c doc : unpaidDocs) {
             Decimal docTotal = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
-            Decimal docPaid = doc.PaymentReceivedCurrency__c != null ? doc.PaymentReceivedCurrency__c : 0;
+            Decimal docPaid = paidByDoc.containsKey(doc.Id) ? paidByDoc.get(doc.Id) : 0;
             balance += (docTotal - docPaid);
         }
         return balance;
     }
 
     /**
-     * @description Records a payment against a document. Updates the payment fields and
-     *              auto-transitions status to 'Paid' when the payment covers the full total.
+     * @description Records a payment against a document by creating a DeliveryTransaction__c
+     *              record. Auto-transitions the document status to 'Paid' when total
+     *              payments meet or exceed the document total.
      * @param documentId The DeliveryDocument__c Id.
      * @param amount The payment amount received.
      * @param paymentDate The date the payment was received.
@@ -104,53 +113,61 @@ public with sharing class DeliveryDocumentController {
             throw new AuraHandledException('A valid document ID and positive payment amount are required.');
         }
 
+        DeliveryTransaction__c txn = new DeliveryTransaction__c(
+            DocumentId__c = documentId,
+            TypePk__c = 'Payment',
+            AmountCurrency__c = amount,
+            TransactionDateDate__c = paymentDate,
+            NoteTxt__c = String.isNotBlank(note) ? note : null
+        );
+        Database.insert(txn, AccessLevel.SYSTEM_MODE);
+
+        // Check if total payments now cover the document total → auto-mark Paid
         DeliveryDocument__c doc = [
-            SELECT Id, TotalCurrency__c, PaymentReceivedCurrency__c, StatusPk__c
+            SELECT Id, TotalCurrency__c, StatusPk__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
 
-        Decimal existingPayment = doc.PaymentReceivedCurrency__c != null ? doc.PaymentReceivedCurrency__c : 0;
-        Decimal newPaymentTotal = existingPayment + amount;
-        doc.PaymentReceivedCurrency__c = newPaymentTotal;
-        doc.PaymentDateDate__c = paymentDate;
-
-        if (String.isNotBlank(note)) {
-            doc.PaymentNoteTxt__c = note;
-        }
-
-        // Auto-mark as Paid when payment covers the total
         Decimal docTotal = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
-        if (newPaymentTotal >= docTotal) {
+        Decimal totalPaid = getTotalPaid(documentId);
+        if (totalPaid >= docTotal) {
             doc.StatusPk__c = 'Paid';
+            Database.update(doc, AccessLevel.SYSTEM_MODE);
         }
-
-        Database.update(doc, AccessLevel.SYSTEM_MODE);
     }
 
     /**
      * @description Builds a summary list of all unpaid invoices for the entity.
+     *              Aggregates DeliveryTransaction__c amounts per document for paid totals.
      *              Used in the invoice metadata to show A/R breakdown.
      * @param entityId The NetworkEntity__c Id to query unpaid invoices for.
      * @return List of maps containing name, period, total, paid, outstanding, and status keys.
      */
     private static List<Map<String, Object>> buildUnpaidInvoicesSummary(Id entityId) {
-        List<Map<String, Object>> summary = new List<Map<String, Object>>();
-        for (DeliveryDocument__c doc : [
-            SELECT Name, PeriodStartDate__c, PeriodEndDate__c,
-                   TotalCurrency__c, PaymentReceivedCurrency__c, StatusPk__c,
-                   SentDateTime__c
+        List<DeliveryDocument__c> unpaidDocs = [
+            SELECT Id, Name, PeriodStartDate__c, PeriodEndDate__c,
+                   TotalCurrency__c, StatusPk__c, SentDateTime__c
             FROM DeliveryDocument__c
             WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
             WITH SYSTEM_MODE
             ORDER BY PeriodStartDate__c ASC
-        ]) {
+        ];
+        if (unpaidDocs.isEmpty()) {
+            return new List<Map<String, Object>>();
+        }
+
+        Set<Id> docIds = new Map<Id, DeliveryDocument__c>(unpaidDocs).keySet();
+        Map<Id, Decimal> paidByDoc = aggregatePaidByDocument(docIds);
+
+        List<Map<String, Object>> summary = new List<Map<String, Object>>();
+        for (DeliveryDocument__c doc : unpaidDocs) {
             Decimal total = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
-            Decimal paid = doc.PaymentReceivedCurrency__c != null ? doc.PaymentReceivedCurrency__c : 0;
+            Decimal paid = paidByDoc.containsKey(doc.Id) ? paidByDoc.get(doc.Id) : 0;
             Decimal outstanding = total - paid;
             if (outstanding <= 0) {
                 continue;
@@ -184,8 +201,7 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
-                   PaymentReceivedCurrency__c, PaymentDateDate__c, PaymentNoteTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = :publicToken
             WITH SYSTEM_MODE
@@ -223,9 +239,8 @@ public with sharing class DeliveryDocumentController {
         result.put('dueDate', doc.DueDateDate__c);
         result.put('terms', doc.TermsTxt__c);
         result.put('metadata', doc.MetadataTxt__c);
-        result.put('paymentReceived', doc.PaymentReceivedCurrency__c);
-        result.put('paymentDate', doc.PaymentDateDate__c);
-        result.put('paymentNote', doc.PaymentNoteTxt__c);
+        result.put('transactions', getTransactionsForDocument(doc.Id));
+        result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
         return result;
     }
@@ -246,8 +261,7 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
-                   PaymentReceivedCurrency__c, PaymentDateDate__c, PaymentNoteTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -278,9 +292,8 @@ public with sharing class DeliveryDocumentController {
         result.put('dueDate', doc.DueDateDate__c);
         result.put('terms', doc.TermsTxt__c);
         result.put('metadata', doc.MetadataTxt__c);
-        result.put('paymentReceived', doc.PaymentReceivedCurrency__c);
-        result.put('paymentDate', doc.PaymentDateDate__c);
-        result.put('paymentNote', doc.PaymentNoteTxt__c);
+        result.put('transactions', getTransactionsForDocument(doc.Id));
+        result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
         return result;
     }
@@ -473,6 +486,91 @@ public with sharing class DeliveryDocumentController {
         result.put('success', true);
         result.put('recipientEmail', toEmail);
         return result;
+    }
+
+    /**
+     * @description Retrieves the transaction history for a document. Allows the LWC
+     *              to refresh the transaction list independently after recording a payment.
+     * @param documentId The DeliveryDocument__c Id.
+     * @return List of maps containing transaction fields (id, name, type, amount, date, note, method).
+     */
+    @AuraEnabled
+    public static List<Map<String, Object>> getDocumentTransactions(Id documentId) {
+        return getTransactionsForDocument(documentId);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PRIVATE: Transaction Helpers
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Queries all DeliveryTransaction__c records for a given document
+     *              and returns them as a list of serialized maps.
+     * @param docId The DeliveryDocument__c Id.
+     * @return List of maps with transaction fields.
+     */
+    @TestVisible
+    private static List<Map<String, Object>> getTransactionsForDocument(Id docId) {
+        List<Map<String, Object>> txns = new List<Map<String, Object>>();
+        for (DeliveryTransaction__c t : [
+            SELECT Id, Name, TypePk__c, AmountCurrency__c,
+                   TransactionDateDate__c, NoteTxt__c, MethodPk__c, CreatedDate
+            FROM DeliveryTransaction__c
+            WHERE DocumentId__c = :docId
+            WITH SYSTEM_MODE
+            ORDER BY TransactionDateDate__c ASC, CreatedDate ASC
+        ]) {
+            Map<String, Object> m = new Map<String, Object>();
+            m.put('id', t.Id);
+            m.put('name', t.Name);
+            m.put('type', t.TypePk__c);
+            m.put('amount', t.AmountCurrency__c);
+            m.put('date', t.TransactionDateDate__c);
+            m.put('note', t.NoteTxt__c);
+            m.put('method', t.MethodPk__c);
+            txns.add(m);
+        }
+        return txns;
+    }
+
+    /**
+     * @description Calculates the total paid amount for a document by aggregating
+     *              all DeliveryTransaction__c AmountCurrency__c values.
+     * @param docId The DeliveryDocument__c Id.
+     * @return The sum of all transaction amounts, or 0 if none exist.
+     */
+    @TestVisible
+    private static Decimal getTotalPaid(Id docId) {
+        AggregateResult[] results = [
+            SELECT SUM(AmountCurrency__c) totalPaid
+            FROM DeliveryTransaction__c
+            WHERE DocumentId__c = :docId
+            WITH SYSTEM_MODE
+        ];
+        Object val = results[0].get('totalPaid');
+        return val != null ? (Decimal) val : 0;
+    }
+
+    /**
+     * @description Aggregates paid amounts across multiple documents. Returns a map
+     *              of document Id to total paid amount from DeliveryTransaction__c records.
+     * @param docIds The set of DeliveryDocument__c Ids to aggregate.
+     * @return Map of document Id to total paid Decimal.
+     */
+    private static Map<Id, Decimal> aggregatePaidByDocument(Set<Id> docIds) {
+        Map<Id, Decimal> paidByDoc = new Map<Id, Decimal>();
+        for (AggregateResult ar : [
+            SELECT DocumentId__c docId, SUM(AmountCurrency__c) totalPaid
+            FROM DeliveryTransaction__c
+            WHERE DocumentId__c IN :docIds
+            WITH SYSTEM_MODE
+            GROUP BY DocumentId__c
+        ]) {
+            Id dId = (Id) ar.get('docId');
+            Decimal paid = ar.get('totalPaid') != null ? (Decimal) ar.get('totalPaid') : 0;
+            paidByDoc.put(dId, paid);
+        }
+        return paidByDoc;
     }
 
     // ═══════════════════════════════════════════════════════════

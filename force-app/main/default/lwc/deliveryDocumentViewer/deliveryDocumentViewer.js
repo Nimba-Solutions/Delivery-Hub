@@ -17,6 +17,7 @@ import getDocumentById from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumen
 import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.sendDocumentEmail';
 import getDocumentTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTemplates';
 import recordPayment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.recordPayment';
+import getDocumentTransactions from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTransactions';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -56,6 +57,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
     // Preview state
     @track previewDoc = null;
     @track snapshot = null;
+    @track transactions = [];
+    @track totalPaid = 0;
     @track isLoadingPreview = false;
     @track isUpdatingStatus = false;
 
@@ -281,6 +284,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return !!this.previewDoc?.publicToken;
     }
 
+    get hasTransactions() {
+        return this.transactions && this.transactions.length > 0;
+    }
+
     get canMarkReady() {
         return this.previewDoc?.status === 'Draft';
     }
@@ -405,6 +412,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.mode = 'list';
         this.previewDoc = null;
         this.snapshot = null;
+        this.transactions = [];
+        this.totalPaid = 0;
     }
 
     async handleMarkReady() {
@@ -490,21 +499,25 @@ export default class DeliveryDocumentViewer extends LightningElement {
                 paymentDate: this.paymentDate,
                 note: this.paymentNote
             });
-            // Determine new status: if payment covers total, it's Paid
-            const existingPayment = this.previewDoc.paymentReceived || 0;
-            const newPaymentTotal = existingPayment + this.paymentAmount;
-            const docTotal = this.previewDoc.totalCost || 0;
-            const newStatus = newPaymentTotal >= docTotal ? 'Paid' : this.previewDoc.status;
-            this.previewDoc = {
-                ...this.previewDoc,
-                status: newStatus,
-                paymentReceived: newPaymentTotal,
-                paymentDate: this.paymentDate,
-                paymentNote: this.paymentNote
+            // Optimistically add transaction to local array and recalculate
+            const newTxn = {
+                id: 'pending-' + Date.now(),
+                type: 'Payment',
+                amount: this.paymentAmount,
+                date: this.paymentDate,
+                note: this.paymentNote
             };
+            this.transactions = [...this.transactions, newTxn];
+            this.totalPaid = this.totalPaid + this.paymentAmount;
+            // Determine new status: if payments cover total, it's Paid
+            const docTotal = this.previewDoc.totalCost || 0;
+            const newStatus = this.totalPaid >= docTotal ? 'Paid' : this.previewDoc.status;
+            this.previewDoc = { ...this.previewDoc, status: newStatus };
             this.showPaymentModal = false;
             this._showToast('Payment Recorded', `Payment of ${CURRENCY_FMT.format(this.paymentAmount)} recorded.`, 'success');
             refreshApex(this._wiredDocsResult);
+            // Refresh real transaction list from server
+            this._refreshTransactions();
         } catch (err) {
             this._showToast('Error', this._extractError(err), 'error');
         } finally {
@@ -551,6 +564,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.isLoadingPreview = true;
         this.previewDoc = null;
         this.snapshot = null;
+        this.transactions = [];
+        this.totalPaid = 0;
 
         try {
             const result = await getDocumentById({ documentId: docId });
@@ -566,11 +581,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
                 entityName: result.entityName,
                 aiNarrative: result.aiNarrative,
                 terms: result.terms,
-                publicToken: result.publicToken,
-                paymentReceived: result.paymentReceived,
-                paymentDate: result.paymentDate,
-                paymentNote: result.paymentNote
+                publicToken: result.publicToken
             };
+            this.transactions = result.transactions || [];
+            this.totalPaid = result.totalPaid || 0;
             if (result.snapshot) {
                 this.snapshot = JSON.parse(result.snapshot);
             }
@@ -597,6 +611,18 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this._showToast('Error', this._extractError(err), 'error');
         } finally {
             this.isUpdatingStatus = false;
+        }
+    }
+
+    async _refreshTransactions() {
+        if (!this.previewDoc?.id) return;
+        try {
+            const txns = await getDocumentTransactions({ documentId: this.previewDoc.id });
+            this.transactions = txns || [];
+            // Recalculate totalPaid from real data
+            this.totalPaid = this.transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        } catch (err) {
+            // Silently fail — optimistic data is still in place
         }
     }
 
