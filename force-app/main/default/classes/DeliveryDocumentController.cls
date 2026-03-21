@@ -46,6 +46,12 @@ public with sharing class DeliveryDocumentController {
             metaMap.put('unpaidInvoices', buildUnpaidInvoicesSummary(entityId));
         }
 
+        // Inject default agreement clauses if none provided
+        if ((templateType == 'Client_Agreement' || templateType == 'Contractor_Agreement')
+            && !metaMap.containsKey('clauses')) {
+            metaMap.put('clauses', buildDefaultAgreementClauses(templateType, snapshot));
+        }
+
         DeliveryDocument__c doc = new DeliveryDocument__c(
             NetworkEntityId__c  = entityId,
             TemplatePk__c       = templateType,
@@ -857,6 +863,94 @@ public with sharing class DeliveryDocumentController {
     // ═══════════════════════════════════════════════════════════
     //  PRIVATE: Utilities
     // ═══════════════════════════════════════════════════════════
+
+    @TestVisible
+    private static List<Map<String, String>> buildDefaultAgreementClauses(String templateType, Map<String, Object> snapshot) {
+        Map<String, Object> entity = (Map<String, Object>) snapshot.get('entity');
+        String clientName = entity != null && entity.get('name') != null ? (String) entity.get('name') : '[Client Name]';
+        Decimal rate = entity != null && entity.get('defaultRate') != null ? (Decimal) entity.get('defaultRate') : 0;
+        String vendorName = resolveVendorName();
+        String formattedRate = '$' + rate.setScale(2).format();
+        Boolean isContractor = templateType == 'Contractor_Agreement';
+        String partyA = isContractor ? vendorName : vendorName;
+        String partyB = isContractor ? clientName : clientName;
+        String partyARole = isContractor ? 'Company' : 'Consultant';
+        String partyBRole = isContractor ? 'Contractor' : 'Client';
+
+        List<Map<String, String>> clauses = new List<Map<String, String>>();
+
+        Map<String, String> c1 = new Map<String, String>();
+        c1.put('title', 'Scope of Services');
+        c1.put('body', partyA + ' ("' + partyARole + '") shall provide professional Salesforce development, '
+            + 'administration, and consulting services to ' + partyB + ' ("' + partyBRole + '") as mutually '
+            + 'agreed upon in writing. Services may include but are not limited to: custom development, '
+            + 'system configuration, data migration, integration, training, and ongoing support. The specific '
+            + 'deliverables, timeline, and acceptance criteria for each engagement shall be documented via '
+            + 'Work Items in the Delivery Hub platform.');
+        clauses.add(c1);
+
+        Map<String, String> c2 = new Map<String, String>();
+        c2.put('title', 'Compensation');
+        c2.put('body', partyBRole + ' agrees to pay ' + partyARole + ' at a rate of ' + formattedRate
+            + ' per hour for all services rendered. Invoices are issued monthly and are payable within '
+            + 'thirty (30) days of receipt. Late payments are subject to a finance charge of three percent '
+            + '(3%) per month on outstanding balances. All work hours are tracked and documented in the '
+            + 'Delivery Hub platform and are available for review at any time.');
+        clauses.add(c2);
+
+        Map<String, String> c3 = new Map<String, String>();
+        c3.put('title', 'Term and Termination');
+        c3.put('body', 'This agreement is effective as of the date of last signature below and continues '
+            + 'until terminated by either party with thirty (30) days written notice. Upon termination, '
+            + partyBRole + ' shall pay for all services rendered through the termination date. Any outstanding '
+            + 'Work Items will be documented and transitioned according to a mutually agreed transition plan.');
+        clauses.add(c3);
+
+        Map<String, String> c4 = new Map<String, String>();
+        c4.put('title', 'Confidentiality');
+        c4.put('body', 'Both parties agree to maintain the confidentiality of all proprietary information, '
+            + 'trade secrets, business processes, and technical data shared during the course of this engagement. '
+            + 'This obligation survives termination of this agreement for a period of two (2) years. '
+            + 'Confidential information does not include information that is publicly available, independently '
+            + 'developed, or rightfully received from a third party.');
+        clauses.add(c4);
+
+        Map<String, String> c5 = new Map<String, String>();
+        c5.put('title', 'Intellectual Property');
+        c5.put('body', 'All custom code, configurations, and deliverables created specifically for ' + partyBRole
+            + ' during this engagement shall be the property of ' + partyBRole + ' upon full payment. '
+            + partyARole + ' retains ownership of all pre-existing tools, frameworks, and methodologies, '
+            + 'including the Delivery Hub platform, and grants ' + partyBRole + ' a perpetual license to use '
+            + 'any such tools incorporated into the deliverables.');
+        clauses.add(c5);
+
+        Map<String, String> c6 = new Map<String, String>();
+        c6.put('title', 'Limitation of Liability');
+        c6.put('body', 'In no event shall either party be liable for any indirect, incidental, special, '
+            + 'consequential, or punitive damages. ' + partyARole + '\'s total liability under this agreement '
+            + 'shall not exceed the total fees paid by ' + partyBRole + ' in the twelve (12) months preceding '
+            + 'the claim. ' + partyARole + ' shall not be liable for any delays or failures caused by '
+            + 'Salesforce platform limitations, third-party service outages, or force majeure events.');
+        clauses.add(c6);
+
+        Map<String, String> c7 = new Map<String, String>();
+        c7.put('title', 'Independent Contractor');
+        c7.put('body', partyARole + ' is an independent contractor and nothing in this agreement creates '
+            + 'an employer-employee relationship, partnership, or joint venture. ' + partyARole + ' is '
+            + 'responsible for all taxes, insurance, and benefits related to the performance of services '
+            + 'under this agreement.');
+        clauses.add(c7);
+
+        Map<String, String> c8 = new Map<String, String>();
+        c8.put('title', 'Governing Law');
+        c8.put('body', 'This agreement shall be governed by and construed in accordance with the laws '
+            + 'of the State of Florida, without regard to its conflict of laws principles. Any dispute '
+            + 'arising under this agreement shall first be submitted to good-faith mediation before '
+            + 'either party may pursue other remedies.');
+        clauses.add(c8);
+
+        return clauses;
+    }
 
     private static String generateToken() {
         Blob randomBytes = Crypto.generateAesKey(256);

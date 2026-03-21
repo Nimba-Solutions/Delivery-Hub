@@ -1,0 +1,132 @@
+<template>
+    <lightning-card title="Client Onboarding" icon-name="standard:person_account">
+        <div slot="actions">
+            <lightning-button
+                label={toggleButtonLabel}
+                icon-name={toggleButtonIcon}
+                variant={toggleButtonVariant}
+                onclick={handleToggleForm}
+            ></lightning-button>
+        </div>
+
+        <!-- Onboarding Form -->
+        <template lwc:if={showForm}>
+            <div class="slds-p-around_medium">
+                <div class="slds-text-body_regular slds-m-bottom_medium" style="color: #706e6b;">
+                    Enter the new client's details below. This will create their account
+                    and generate a professional services agreement for review and signing.
+                </div>
+                <div class="slds-grid slds-gutters slds-wrap">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="text"
+                            label="Company Name"
+                            value={clientName}
+                            onchange={handleNameChange}
+                            required
+                            placeholder="e.g. Acme Corp"
+                        ></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="email"
+                            label="Contact Email"
+                            value={contactEmail}
+                            onchange={handleEmailChange}
+                            required
+                            placeholder="e.g. contact@acme.com"
+                        ></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Hourly Rate ($)"
+                            value={hourlyRate}
+                            onchange={handleRateChange}
+                            required
+                            min="1"
+                            step="0.01"
+                            formatter="currency"
+                            placeholder="90.00"
+                        ></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                        <lightning-input
+                            type="tel"
+                            label="Phone (optional)"
+                            value={contactPhone}
+                            onchange={handlePhoneChange}
+                        ></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                        <lightning-input
+                            type="text"
+                            label="Address (optional)"
+                            value={address}
+                            onchange={handleAddressChange}
+                        ></lightning-input>
+                    </div>
+                </div>
+                <div class="slds-m-top_medium">
+                    <lightning-button
+                        label="Create Client & Generate Agreement"
+                        variant="brand"
+                        onclick={handleSubmit}
+                        disabled={isProcessing}
+                    ></lightning-button>
+                    <template lwc:if={isProcessing}>
+                        <lightning-spinner alternative-text="Creating client" size="small" class="slds-m-left_medium"></lightning-spinner>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- Success Result -->
+        <template lwc:if={showResult}>
+            <div class="slds-p-around_medium">
+                <div class="slds-box slds-theme_success slds-m-bottom_medium" style="background: #e8f5e9; border-color: #4caf50; border-radius: 8px; padding: 16px;">
+                    <div class="slds-grid slds-grid_vertical-align-center">
+                        <lightning-icon icon-name="utility:success" variant="success" size="small" class="slds-m-right_small"></lightning-icon>
+                        <div>
+                            <p class="slds-text-heading_small" style="color: #2e7d32; font-weight: 600;">Client Onboarded Successfully</p>
+                            <p style="color: #388e3c; margin-top: 4px;">
+                                <strong>{clientName}</strong> has been created with agreement <strong>{result.documentName}</strong>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col">
+                        <lightning-button
+                            label="Send Agreement Email"
+                            variant="brand"
+                            icon-name="utility:email"
+                            onclick={handleSendAgreement}
+                            disabled={isSending}
+                        ></lightning-button>
+                    </div>
+                    <div class="slds-col">
+                        <lightning-button
+                            label="Onboard Another"
+                            variant="neutral"
+                            icon-name="utility:add"
+                            onclick={handleReset}
+                        ></lightning-button>
+                    </div>
+                </div>
+                <template lwc:if={isSending}>
+                    <div class="slds-m-top_small">
+                        <lightning-spinner alternative-text="Sending agreement" size="small"></lightning-spinner>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Empty State -->
+        <template lwc:if={showEmptyState}>
+            <div class="slds-p-around_medium slds-text-align_center" style="color: #706e6b;">
+                <p>Click <strong>New Client</strong> to onboard a new customer with a signed agreement.</p>
+            </div>
+        </template>
+    </lightning-card>
+</template>

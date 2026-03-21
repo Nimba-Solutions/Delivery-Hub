@@ -23,6 +23,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryClientOnboarding</componentName>
+                <identifier>c_deliveryClientOnboarding</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryDocumentViewer</componentName>
                 <identifier>c_deliveryDocumentViewer</identifier>
             </componentInstance>
