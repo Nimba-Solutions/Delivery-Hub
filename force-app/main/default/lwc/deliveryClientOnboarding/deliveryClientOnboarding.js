@@ -25,7 +25,7 @@ export default class DeliveryClientOnboarding extends LightningElement {
     @track isSending = false;
 
     get hasResult() {
-        return this.result !== null && this.result !== undefined;
+        return this.result !== null;
     }
 
     get showEmptyState() {
@@ -92,15 +92,15 @@ export default class DeliveryClientOnboarding extends LightningElement {
 
         this.isProcessing = true;
         try {
-            await this._performOnboarding();
+            await this.performOnboarding();
         } catch (error) {
-            this._showError('Error', error);
+            this.showError('Error', error);
         } finally {
             this.isProcessing = false;
         }
     }
 
-    async _performOnboarding() {
+    async performOnboarding() {
         const request = {
             address: this.address || null,
             clientName: this.clientName,
@@ -140,13 +140,13 @@ export default class DeliveryClientOnboarding extends LightningElement {
                 })
             );
         } catch (error) {
-            this._showError('Email Error', error);
+            this.showError('Email Error', error);
         } finally {
             this.isSending = false;
         }
     }
 
-    _showError(title, error) {
+    showError(title, error) {
         const msg = (error.body && error.body.message) || error.message || 'An error occurred';
         this.dispatchEvent(
             new ShowToastEvent({

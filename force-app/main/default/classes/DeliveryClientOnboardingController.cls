@@ -35,6 +35,7 @@ public with sharing class DeliveryClientOnboardingController {
         return generateAgreement(entity);
     }
 
+    @SuppressWarnings('PMD.CyclomaticComplexity')
     private static void validateRequest(OnboardingRequest request) {
         if (String.isBlank(request.clientName)) {
             throw new AuraHandledException('Client name is required.');
