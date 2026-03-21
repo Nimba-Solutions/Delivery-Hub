@@ -1,0 +1,51 @@
+<apex:page controller="DeliveryDocumentPdfController" showHeader="false" sidebar="false" standardStylesheets="false" cache="true">
+<!--
+    VF shell page for the rich document renderer.
+    Loads the React-style renderer from DeliveryDocumentRenderer static resource.
+    Can inject document data server-side (avoiding an extra API call) or let the
+    renderer fetch via public token.
+-->
+<head>
+<link rel="stylesheet" href="{!URLFOR($Resource.DeliveryDocumentRenderer, 'styles.css')}" />
+<style>
+    body { margin: 0; padding: 0; }
+</style>
+</head>
+
+<div id="doc-root">
+    <div id="loading-state" class="loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; color: #706e6b; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+        <p>Loading document...</p>
+    </div>
+    <div id="error-state" style="display:none; text-align: center; padding: 80px 20px; color: #706e6b; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+        <h2 style="font-size: 20px; color: #1a1a2e; margin-bottom: 8px;">Document Not Found</h2>
+        <p id="error-message">The document you are looking for does not exist or the link has expired.</p>
+    </div>
+    <div id="document-container" style="display:none;"></div>
+</div>
+
+<!-- Server-side data injection: avoids an extra API call if document is available -->
+<apex:outputPanel rendered="{!hasDocument}">
+<script>
+    window.__DELIVERY_DOC_DATA__ = {
+        id: '{!JSENCODE(doc.Id)}',
+        name: '{!JSENCODE(documentName)}',
+        template: '{!JSENCODE(templateType)}',
+        entityName: '{!JSENCODE(entityName)}',
+        status: '{!JSENCODE(doc.StatusPk__c)}',
+        totalHours: {!totalHours},
+        totalCost: {!totalCost},
+        periodStart: '{!doc.PeriodStartDate__c}',
+        periodEnd: '{!doc.PeriodEndDate__c}',
+        terms: '{!JSENCODE(terms)}',
+        dueDate: '{!doc.DueDateDate__c}',
+        aiNarrative: '{!JSENCODE(aiNarrative)}',
+        metadata: '{!JSENCODE(doc.MetadataTxt__c)}',
+        snapshot: '{!JSENCODE(doc.SnapshotTxt__c)}'
+    };
+</script>
+</apex:outputPanel>
+
+<script src="{!URLFOR($Resource.DeliveryDocumentRenderer, 'html2pdf.bundle.min.js')}"></script>
+<script src="{!URLFOR($Resource.DeliveryDocumentRenderer, 'renderer.js')}"></script>
+
+</apex:page>

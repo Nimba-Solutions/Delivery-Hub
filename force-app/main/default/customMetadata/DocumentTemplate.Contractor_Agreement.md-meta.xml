@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Contractor Agreement</label>
+    <protected>false</protected>
+    <values>
+        <field>DescriptionTxt__c</field>
+        <value xsi:type="xsd:string">Independent contractor agreement for subcontractors performing delivery work. Covers work-for-hire terms, IP assignment, confidentiality, payment rates, and termination conditions.</value>
+    </values>
+    <values>
+        <field>PortalComponentTxt__c</field>
+        <value xsi:type="xsd:string">ContractorAgreementDocument</value>
+    </values>
+    <values>
+        <field>OutputFormatsTxt__c</field>
+        <value xsi:type="xsd:string">web,pdf,email</value>
+    </values>
+    <values>
+        <field>DataQueryTxt__c</field>
+        <value xsi:type="xsd:string">{"objects":["NetworkEntity__c","WorkRequest__c"],"fields":{"NetworkEntity__c":["Name","ContactEmailTxt__c","AddressTxt__c","ContactPhoneTxt__c"],"WorkRequest__c":["HourlyRateCurrency__c","QuotedHoursNumber__c","StatusPk__c"]}}</value>
+    </values>
+    <values>
+        <field>AiPromptTxt__c</field>
+        <value xsi:type="xsd:string">Generate an independent contractor agreement summary. Cover: scope of services, compensation rate, work schedule, IP assignment (work-for-hire), confidentiality, non-solicitation, and termination terms. Professional tone suitable for developer/consultant relationships.</value>
+    </values>
+    <values>
+        <field>WorkflowTypeTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApexPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <availableInTouch>false</availableInTouch>
+    <confirmationTokenRequired>false</confirmationTokenRequired>
+    <label>Delivery Document View</label>
+    <description>Rich document viewer shell page. Loads the DeliveryDocumentRenderer static resource for beautiful public-facing document rendering with client-side PDF generation. Used on Salesforce Sites and for internal preview.</description>
+</ApexPage>

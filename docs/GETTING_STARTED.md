@@ -259,6 +259,8 @@ The **Document Engine** generates professional documents -- invoices, status rep
 |---|---|
 | **Invoice** | Billable hours and rates for a time period |
 | **Status Report** | Progress summary across active work items |
+| **Client Agreement** | Client-facing service agreement |
+| **Contractor Agreement** | Contractor-facing engagement agreement |
 | **Proposal** | Scoped work breakdown with estimated hours |
 | **Executive Summary** | High-level overview for stakeholders |
 | **Meeting Brief** | Agenda and context for upcoming meetings |
@@ -291,6 +293,57 @@ Each document is an **immutable JSON snapshot** -- changing underlying data (hou
 ### Payment Terms
 
 Documents support configurable payment terms such as "Net 30", "Due on Receipt", "Net 15", etc. Due dates are auto-calculated from the document issue date based on the selected terms.
+
+### PDF Rendering
+
+Documents can be rendered as PDF for download or email attachment:
+
+1. Open a generated document in the **Document Viewer**
+2. Click **Download PDF** -- a Visualforce page renders the snapshot data into a professional PDF layout
+3. The PDF includes vendor branding (company name, address, contact details), line-item details, totals, payment terms, due date, and an A/R summary of prior unpaid balances
+
+The PDF rendering is handled server-side by `DeliveryDocumentPdf.page` and works for both authenticated users and public access via Salesforce Sites.
+
+### Sending Documents by Email
+
+To email a document to a client:
+
+1. Open a generated document in the **Document Viewer**
+2. Click **Send Email**
+3. The system sends the document as a PDF attachment to the client contact's email address (from the NetworkEntity)
+4. The document status transitions to **Sent**
+
+### CC Email Configuration
+
+To receive a copy of every outbound document email:
+
+1. Go to **Setup > Custom Settings > DeliveryHubSettings__c**
+2. Set the **DocumentCcEmailTxt__c** field to the desired email address (e.g., `billing@yourcompany.com`)
+3. All future document emails will CC this address automatically
+
+Leave the field blank to disable CC.
+
+### Payment Tracking
+
+Record payments and other financial transactions against a document:
+
+1. Open a **DeliveryDocument__c** record
+2. Create a **DeliveryTransaction__c** child record with:
+   - **Type**: Payment, Credit, Refund, Adjustment, or Write-Off
+   - **Amount**: The transaction amount
+   - **Method**: Payment method (check, ACH, wire, etc.)
+   - **Transaction Date**: When the transaction occurred
+   - **Note**: Optional description
+3. Multiple transactions can be recorded per document
+4. The A/R summary on invoices automatically reflects payment history
+
+### White-Label Vendor Branding
+
+Documents display the vendor entity's branding, not the Salesforce org identity. The vendor is resolved from the WorkRequest linkage. To configure vendor branding:
+
+1. Open the vendor **NetworkEntity** record
+2. Populate the **Name**, **AddressTxt__c**, **ContactEmailTxt__c**, and **ContactPhoneTxt__c** fields
+3. All documents generated for that vendor's work requests will use these details in the header
 
 ### Public Access Tokens
 

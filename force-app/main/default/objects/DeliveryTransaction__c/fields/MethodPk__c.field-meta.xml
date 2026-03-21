@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>MethodPk__c</fullName>
+    <description>The payment method used for this transaction.</description>
+    <inlineHelpText>How the payment was made: Check, Wire, ACH, Credit Card, Cash, or Other.</inlineHelpText>
+    <label>Method</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>false</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>Check</fullName><default>false</default><label>Check</label></value>
+            <value><fullName>Wire</fullName><default>false</default><label>Wire</label></value>
+            <value><fullName>ACH</fullName><default>false</default><label>ACH</label></value>
+            <value><fullName>Credit_Card</fullName><default>false</default><label>Credit Card</label></value>
+            <value><fullName>Cash</fullName><default>false</default><label>Cash</label></value>
+            <value><fullName>Other</fullName><default>false</default><label>Other</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

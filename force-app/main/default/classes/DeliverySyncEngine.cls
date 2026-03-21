@@ -257,4 +257,7 @@ public without sharing class DeliverySyncEngine {
             }
         }
     }
+
+    /** @description Custom exception for sync failures requiring retry. */
+    public class SyncException extends Exception {}
 }
