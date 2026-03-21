@@ -49,6 +49,9 @@ public without sharing class DeliveryDocumentPdfController {
     /** @description List of unpaid prior invoices for the A/R summary table. */
     public List<UnpaidInvoiceRow> unpaidInvoiceRows { get; private set; }
 
+    /** @description Agreement clauses parsed from metadata for contract rendering. */
+    public List<AgreementClauseRow> agreementClauseRows { get; private set; }
+
     /** @description Vendor (issuer) company name from NetworkEntity. */
     public String vendorName { get; private set; }
     /** @description Vendor address formatted with br tags for PDF. */
@@ -146,6 +149,16 @@ public without sharing class DeliveryDocumentPdfController {
         public String formattedRate { get; set; }
     }
 
+    /** @description Row data for agreement clause sections in the PDF. */
+    public class AgreementClauseRow {
+        /** @description Clause sequence (1, 2, 3...). */
+        public Integer seq { get; set; }
+        /** @description Clause title (e.g. Scope of Services). */
+        public String title { get; set; }
+        /** @description Clause body text. */
+        public String body { get; set; }
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  CONSTRUCTOR
     // ═══════════════════════════════════════════════════════════
@@ -158,6 +171,7 @@ public without sharing class DeliveryDocumentPdfController {
         workLogRows = new List<WorkLogRow>();
         workRequestRows = new List<WorkRequestRow>();
         unpaidInvoiceRows = new List<UnpaidInvoiceRow>();
+        agreementClauseRows = new List<AgreementClauseRow>();
         defaultRate = 0;
         totalHours = 0;
         totalCost = 0;
@@ -343,6 +357,13 @@ public without sharing class DeliveryDocumentPdfController {
         return !unpaidInvoiceRows.isEmpty();
     }
 
+    /** @description Whether the document has agreement clauses to render.
+     *  @return True if agreementClauseRows is not empty.
+     */
+    public Boolean getHasAgreementClauses() {
+        return !agreementClauseRows.isEmpty();
+    }
+
     /** @description Whether the document has a non-zero prior balance.
      *  @return True if priorBalance is not null and not zero.
      */
@@ -400,6 +421,18 @@ public without sharing class DeliveryDocumentPdfController {
         Map<String, Object> meta = (Map<String, Object>) JSON.deserializeUntyped(metadataJson);
         if (meta.containsKey('priorBalance') && meta.get('priorBalance') != null) {
             priorBalance = (Decimal) meta.get('priorBalance');
+        }
+        if (meta.containsKey('clauses') && meta.get('clauses') != null) {
+            List<Object> clauseList = (List<Object>) meta.get('clauses');
+            Integer clauseNum = 1;
+            for (Object o : clauseList) {
+                Map<String, Object> cl = (Map<String, Object>) o;
+                AgreementClauseRow row = new AgreementClauseRow();
+                row.seq = clauseNum++;
+                row.title = (String) cl.get('title');
+                row.body = (String) cl.get('body');
+                agreementClauseRows.add(row);
+            }
         }
         if (meta.containsKey('unpaidInvoices') && meta.get('unpaidInvoices') != null) {
             List<Object> unpaidList = (List<Object>) meta.get('unpaidInvoices');
