@@ -24,6 +24,7 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **DeliveryHubSettings\_\_c** | Org-level settings (hierarchy custom setting) | Scheduling, polling, AI config |
 | **ActivityLog\_\_c** | Audit trail of changes on work items | WorkItemId\_\_c, ActionTypePk\_\_c, ComponentNameTxt\_\_c, ContextDataTxt\_\_c, PageUrlTxt\_\_c, NetworkEntityId\_\_c, SessionIdTxt\_\_c |
 | **DeliveryDocument\_\_c** | Generated documents (invoices, status reports) | NetworkEntityId\_\_c (MD), TemplatePk\_\_c, StatusPk\_\_c, SnapshotTxt\_\_c (131072 LTA), TotalHoursNumber\_\_c, TotalCurrency\_\_c, AiNarrativeTxt\_\_c, PublicTokenTxt\_\_c (External ID), PeriodStartDate\_\_c, PeriodEndDate\_\_c, TermsTxt\_\_c, DueDateDate\_\_c |
+| **DeliveryTransaction\_\_c** | Financial transactions against a document (payments, credits, refunds) | DocumentId\_\_c (MD to DeliveryDocument\_\_c), AmountCurrency\_\_c, TypePk\_\_c (Payment/Credit/Refund/Adjustment/Write-Off), MethodPk\_\_c, TransactionDateDate\_\_c, NoteTxt\_\_c |
 | **PortalAccess\_\_c** | Controls portal user access; links email to NetworkEntity with access level | NetworkEntityId\_\_c (MD), EmailTxt\_\_c, RolePk\_\_c |
 
 ### Custom Metadata Types
@@ -59,6 +60,7 @@ NetworkEntity__c
   |-- WorkItem__c.ClientNetworkEntityId__c (client owns work items)
   |-- WorkRequest__c.DeliveryEntityId__c (vendor receives work)
   |-- DeliveryDocument__c.NetworkEntityId__c (generated documents)
+  |     |-- DeliveryTransaction__c.DocumentId__c (payments, credits, refunds)
   |-- PortalAccess__c.NetworkEntityId__c (portal user access)
 
 WorkItem__c
@@ -383,8 +385,9 @@ The Document Engine generates structured documents (invoices, status reports) fr
 
 | Class | Responsibility |
 |-------|---------------|
-| **DeliveryDocumentController** | Core controller. Generates documents by querying work items, work logs, work requests, and entity data. Builds a JSON snapshot stored on `DeliveryDocument__c.SnapshotTxt__c`. Supports retrieval by ID or public token. |
-| **DocumentTemplate\_\_mdt** | Registry of document templates. Each record defines a portal component, data query shape, output formats, and an optional AI prompt. Ships with Invoice and Status\_Report records. |
+| **DeliveryDocumentController** | Core controller. Generates documents by querying work items, work logs, work requests, and entity data. Builds a JSON snapshot stored on `DeliveryDocument__c.SnapshotTxt__c`. Handles email delivery with configurable CC via `DocumentCcEmailTxt__c`. Supports retrieval by ID or public token. |
+| **DeliveryDocumentPdfController** | Visualforce controller for server-side PDF rendering. Parses the frozen JSON snapshot and exposes typed properties (vendor branding, line items, totals, A/R summary, prior balance) that the `DeliveryDocumentPdf.page` consumes. Runs `without sharing` for guest user / Site access. |
+| **DocumentTemplate\_\_mdt** | Registry of document templates. Each record defines a portal component, data query shape, output formats, and an optional AI prompt. Ships with Invoice, Status\_Report, Client\_Agreement, and Contractor\_Agreement records. |
 
 ### Rate Hierarchy
 
@@ -410,15 +413,45 @@ DeliveryDocumentController.generateDocument(entityId, templateType, periodStart,
   -> Return document Id for immediate rendering or portal sharing
 ```
 
+### JSON Snapshot Pattern
+
+Each generated document stores a complete JSON snapshot in `DeliveryDocument__c.SnapshotTxt__c` (131,072-character Long Text Area). The snapshot captures the exact state of all contributing data at generation time: entity details, work items, work logs with resolved rates, work requests, and computed totals. This makes documents **immutable** -- subsequent changes to hours, rates, or descriptions do not alter previously generated documents. The snapshot is parsed at render time by both the LWC document viewer (client-side) and `DeliveryDocumentPdfController` (server-side PDF).
+
+### White-Label Vendor Branding
+
+Documents are issued under the vendor entity's branding, not the Salesforce org's identity. The generation flow resolves the vendor NetworkEntity via `WorkRequest.DeliveryEntityId__c` and pulls:
+
+- **Company name** from `NetworkEntity__c.Name`
+- **Address** from `AddressTxt__c` (formatted with line breaks for PDF)
+- **Email** from `ContactEmailTxt__c`
+- **Phone** from `ContactPhoneTxt__c`
+
+This enables white-label invoicing where the vendor's details appear on the document header regardless of which org generates it.
+
+### Payment Tracking
+
+The `DeliveryTransaction__c` object tracks financial transactions against documents. Each transaction has:
+
+- **TypePk__c**: Payment, Credit, Refund, Adjustment, Write-Off
+- **MethodPk__c**: Payment method (check, ACH, wire, etc.)
+- **AmountCurrency__c**: Transaction amount
+- **TransactionDateDate__c**: When the transaction occurred
+
+Multiple transactions can be recorded per document. The A/R summary on invoices aggregates prior unpaid document balances and transaction totals to show the outstanding amount due.
+
+### Email Delivery
+
+When a document is sent via email, `DeliveryDocumentController` constructs a `Messaging.SingleEmailMessage` with the document PDF attached. The recipient is the client NetworkEntity's contact email. If `DeliveryHubSettings__c.DocumentCcEmailTxt__c` is populated, that address receives a CC copy of every outbound document email.
+
 ---
 
 ## Package Summary
 
 | Category | Count |
 |----------|-------|
-| Apex classes | 126 (64 production + 62 test) |
+| Apex classes | 128 (65 production + 63 test) |
 | LWC components | 54 |
-| Custom Objects | 11 |
+| Custom Objects | 12 |
 | Custom Metadata Types | 10 |
 | Platform Events | 1 |
 | Permission Sets | 3 |
