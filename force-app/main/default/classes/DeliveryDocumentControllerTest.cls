@@ -655,6 +655,60 @@ private class DeliveryDocumentControllerTest {
     }
 
     /**
+     * @description Generate a Client Agreement document. Verify default clauses are
+     *              injected into metadata and the document is created with correct template.
+     */
+    @isTest
+    static void testGenerateClientAgreement() {
+        NetworkEntity__c entity = getEntity();
+
+        Test.startTest();
+        Id docId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Client_Agreement',
+            Date.newInstance(2026, 4, 1), Date.newInstance(2026, 4, 30), null
+        );
+        Test.stopTest();
+
+        DeliveryDocument__c doc = [
+            SELECT TemplatePk__c, StatusPk__c, MetadataTxt__c, SnapshotTxt__c
+            FROM DeliveryDocument__c WHERE Id = :docId
+        ];
+
+        System.assertEquals('Client_Agreement', doc.TemplatePk__c, 'Template should be Client_Agreement');
+        System.assertEquals('Draft', doc.StatusPk__c, 'Should start as Draft');
+        System.assert(doc.MetadataTxt__c.contains('clauses'), 'Metadata should contain default clauses');
+        System.assert(doc.MetadataTxt__c.contains('Scope of Services'), 'Should have Scope clause');
+        System.assert(doc.MetadataTxt__c.contains('Compensation'), 'Should have Compensation clause');
+        System.assert(doc.MetadataTxt__c.contains('Confidentiality'), 'Should have Confidentiality clause');
+        System.assert(doc.MetadataTxt__c.contains('Test Client Corp'), 'Clauses should merge client name');
+    }
+
+    /**
+     * @description Verify buildDefaultAgreementClauses returns all expected clauses
+     *              with dynamic values merged in (client name, rate, vendor name).
+     */
+    @isTest
+    static void testBuildDefaultAgreementClauses() {
+        Map<String, Object> snapshot = new Map<String, Object>();
+        Map<String, Object> entity = new Map<String, Object>();
+        entity.put('name', 'Acme Corp');
+        entity.put('defaultRate', Decimal.valueOf(125));
+        snapshot.put('entity', entity);
+
+        Test.startTest();
+        List<Map<String, String>> clauses = DeliveryDocumentController.buildDefaultAgreementClauses(
+            'Client_Agreement', snapshot
+        );
+        Test.stopTest();
+
+        System.assertEquals(8, clauses.size(), 'Should have 8 default clauses');
+        System.assertEquals('Scope of Services', clauses[0].get('title'), 'First clause should be Scope');
+        System.assert(clauses[0].get('body').contains('Acme Corp'), 'Should contain client name');
+        System.assert(clauses[1].get('body').contains('125'), 'Compensation should contain rate value');
+        System.assertEquals('Governing Law', clauses[7].get('title'), 'Last clause should be Governing Law');
+    }
+
+    /**
      * @description Verify buildSnapshot returns all expected keys and correct
      *              counts for entity, workItems, workLogs, and workRequests.
      */
