@@ -159,6 +159,11 @@ private class DeliveryDocumentPdfControllerTest {
         System.assertEquals(true, ctrl.getIsAgreement(), 'Should be agreement type');
         System.assertEquals(false, ctrl.getIsInvoice(), 'Should not be invoice type');
         System.assertEquals('Client Agreement', ctrl.templateDisplay, 'Template display should be formatted');
+        System.assertEquals(true, ctrl.getHasAgreementClauses(), 'Should have agreement clauses');
+        System.assertEquals(8, ctrl.agreementClauseRows.size(), 'Should have 8 default clauses');
+        System.assertEquals('Scope of Services', ctrl.agreementClauseRows[0].title, 'First clause should be Scope');
+        System.assertEquals(1, ctrl.agreementClauseRows[0].seq, 'First clause number should be 1');
+        System.assert(ctrl.agreementClauseRows[0].body.contains('PDF Test Corp'), 'Clause should contain client name');
     }
 
     /**

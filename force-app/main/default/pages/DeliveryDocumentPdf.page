@@ -89,6 +89,26 @@
     </tr>
 </table>
 
+<!-- ========== AGREEMENT CLAUSES ========== -->
+<apex:outputPanel rendered="{!hasAgreementClauses}">
+    <div style="font-size: 9pt; color: #333333; margin-bottom: 8px; line-height: 1.6;">
+        This Professional Services Agreement ("Agreement") is entered into by and between
+        <strong>{!vendorName}</strong> and <strong>{!entityName}</strong>, effective as of the
+        date of last signature below.
+    </div>
+    <apex:repeat value="{!agreementClauseRows}" var="clause">
+        <div style="margin-bottom: 10px;">
+            <div style="font-size: 9pt; font-weight: bold; color: #333333; margin-bottom: 3px;">
+                {!clause.seq}. {!clause.title}
+            </div>
+            <div style="font-size: 8.5pt; color: #444444; line-height: 1.6; padding-left: 12px;">
+                {!clause.body}
+            </div>
+        </div>
+    </apex:repeat>
+    <div style="border-top: 1px solid #cccccc; margin-top: 6px; margin-bottom: 10px;"></div>
+</apex:outputPanel>
+
 <!-- ========== WORK ITEMS ========== -->
 <apex:outputPanel rendered="{!hasWorkItems}">
     <table style="width: 100%; font-size: 8pt; border: 1px solid #999999; margin-bottom: 4px;" cellpadding="0" cellspacing="0">
