@@ -1,0 +1,2 @@
+# Third-party bundled libraries in static resources
+force-app/main/default/staticresources/DeliveryDocumentRenderer/html2pdf.bundle.min.js

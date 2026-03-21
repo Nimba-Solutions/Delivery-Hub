@@ -192,13 +192,31 @@
                                 disabled={isUpdatingStatus}
                             ></lightning-button>
                         </template>
+                        <template lwc:if={canSendEmail}>
+                            <lightning-button
+                                label={sendButtonLabel}
+                                icon-name="utility:email"
+                                variant="brand"
+                                onclick={handleOpenSendModal}
+                                disabled={isSendDisabled}
+                                class="slds-m-right_x-small"
+                            ></lightning-button>
+                        </template>
                         <template lwc:if={canMarkSent}>
                             <lightning-button
                                 label="Mark as Sent"
                                 icon-name="utility:email"
-                                variant="brand"
+                                variant="brand-outline"
                                 onclick={handleMarkSent}
                                 disabled={isUpdatingStatus}
+                            ></lightning-button>
+                        </template>
+                        <template lwc:if={canRecordPayment}>
+                            <lightning-button
+                                label="Record Payment"
+                                icon-name="utility:money"
+                                variant="success"
+                                onclick={handleOpenPaymentModal}
                             ></lightning-button>
                         </template>
                         <template lwc:if={canMarkPaid}>
@@ -209,6 +227,28 @@
                                 onclick={handleMarkPaid}
                                 disabled={isUpdatingStatus}
                             ></lightning-button>
+                        </template>
+                        <lightning-button
+                            label="Download PDF"
+                            icon-name="utility:pdf_ext"
+                            variant="neutral"
+                            onclick={handleViewPdf}
+                        ></lightning-button>
+                        <lightning-button-icon
+                            icon-name="utility:new_window"
+                            alternative-text="Open Web View"
+                            title="Open as web page"
+                            variant="border-filled"
+                            onclick={handleViewWeb}
+                        ></lightning-button-icon>
+                        <template lwc:if={hasPublicToken}>
+                            <lightning-button-icon
+                                icon-name="utility:link"
+                                alternative-text="Copy Public Link"
+                                title="Copy public document link"
+                                variant="border-filled"
+                                onclick={handleCopyPublicLink}
+                            ></lightning-button-icon>
                         </template>
                         <lightning-button-icon
                             icon-name="utility:print"
@@ -442,6 +482,119 @@
 
                 </div>
             </template>
+
+            <!-- ── Send Email Modal ── -->
+            <template lwc:if={showSendModal}>
+                <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <lightning-button-icon
+                                icon-name="utility:close"
+                                alternative-text="Close"
+                                variant="bare-inverse"
+                                class="slds-modal__close"
+                                onclick={handleCloseSendModal}
+                            ></lightning-button-icon>
+                            <h2 class="slds-text-heading_medium">Send Document via Email</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium">
+                            <lightning-input
+                                type="email"
+                                label="Recipient Email"
+                                value={sendRecipientEmail}
+                                onchange={handleSendRecipientChange}
+                                placeholder="recipient@example.com"
+                                required
+                            ></lightning-input>
+                            <p class="slds-text-color_weak slds-m-top_small slds-text-body_small">
+                                A PDF of this document will be attached to the email.
+                                You will be CC'd on the email per your org settings.
+                            </p>
+                        </div>
+                        <footer class="slds-modal__footer">
+                            <lightning-button
+                                label="Cancel"
+                                variant="neutral"
+                                onclick={handleCloseSendModal}
+                            ></lightning-button>
+                            <lightning-button
+                                label={sendButtonLabel}
+                                variant="brand"
+                                onclick={handleSendEmail}
+                                disabled={isSendDisabled}
+                                class="slds-m-left_x-small"
+                            ></lightning-button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </template>
+
+            <!-- ── Record Payment Modal ── -->
+            <template lwc:if={showPaymentModal}>
+                <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <lightning-button-icon
+                                icon-name="utility:close"
+                                alternative-text="Close"
+                                variant="bare-inverse"
+                                class="slds-modal__close"
+                                onclick={handleClosePaymentModal}
+                            ></lightning-button-icon>
+                            <h2 class="slds-text-heading_medium">Record Payment</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium">
+                            <lightning-input
+                                type="number"
+                                label="Payment Amount"
+                                value={paymentAmount}
+                                onchange={handlePaymentAmountChange}
+                                formatter="currency"
+                                step="0.01"
+                                min="0.01"
+                                required
+                            ></lightning-input>
+                            <lightning-input
+                                type="date"
+                                label="Payment Date"
+                                value={paymentDate}
+                                onchange={handlePaymentDateChange}
+                                required
+                                class="slds-m-top_small"
+                            ></lightning-input>
+                            <lightning-input
+                                type="text"
+                                label="Payment Note"
+                                value={paymentNote}
+                                onchange={handlePaymentNoteChange}
+                                placeholder="Check #, transaction ID, or note"
+                                max-length="255"
+                                class="slds-m-top_small"
+                            ></lightning-input>
+                            <p class="slds-text-color_weak slds-m-top_small slds-text-body_small">
+                                If the payment amount covers the full document total, the status will automatically change to Paid.
+                            </p>
+                        </div>
+                        <footer class="slds-modal__footer">
+                            <lightning-button
+                                label="Cancel"
+                                variant="neutral"
+                                onclick={handleClosePaymentModal}
+                            ></lightning-button>
+                            <lightning-button
+                                label={recordPaymentButtonLabel}
+                                variant="brand"
+                                onclick={handleRecordPayment}
+                                disabled={isRecordPaymentDisabled}
+                                class="slds-m-left_x-small"
+                            ></lightning-button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </template>
+
         </lightning-card>
     </template>
 </template>

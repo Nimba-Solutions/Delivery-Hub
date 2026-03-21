@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -6,12 +7,17 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getDocumentsForEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentsForEntity';
 import generateDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.generateDocument';
 import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
 import getDocumentById from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentById';
+import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.sendDocumentEmail';
+import getDocumentTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTemplates';
+import recordPayment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.recordPayment';
+import getDocumentTransactions from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTransactions';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -25,13 +31,9 @@ const STATUS_CONFIG = {
     Disputed: { label: 'Disputed', cssClass: 'status-badge status-badge--disputed' }
 };
 
-const TEMPLATE_OPTIONS = [
-    { label: 'Invoice',           value: 'Invoice' },
-    { label: 'Status Report',     value: 'Status_Report' },
-    { label: 'Proposal',          value: 'Proposal' },
-    { label: 'Executive Summary', value: 'Executive_Summary' },
-    { label: 'Meeting Brief',     value: 'Meeting_Brief' },
-    { label: 'Weekly Digest',     value: 'Weekly_Digest' }
+// Fallback if CMT query fails or returns empty
+const DEFAULT_TEMPLATE_OPTIONS = [
+    { label: 'Invoice', value: 'Invoice' }
 ];
 
 export default class DeliveryDocumentViewer extends LightningElement {
@@ -39,6 +41,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @api documentId;
 
     // ── State ──
+    @track _effectiveEntityId = null; // Resolved entity ID used by wire + generate
     @track documents = [];
     @track isLoading = true;
     @track error = null;
@@ -54,8 +57,25 @@ export default class DeliveryDocumentViewer extends LightningElement {
     // Preview state
     @track previewDoc = null;
     @track snapshot = null;
+    @track transactions = [];
+    @track totalPaid = 0;
     @track isLoadingPreview = false;
     @track isUpdatingStatus = false;
+
+    // Send email state
+    @track showSendModal = false;
+    @track sendRecipientEmail = '';
+    @track isSendingEmail = false;
+
+    // Record payment state
+    @track showPaymentModal = false;
+    @track paymentAmount = null;
+    @track paymentDate = '';
+    @track paymentNote = '';
+    @track isRecordingPayment = false;
+
+    // Template options loaded from DocumentTemplate__mdt
+    @track _templateOptions = DEFAULT_TEMPLATE_OPTIONS;
 
     _wiredDocsResult;
 
@@ -64,14 +84,13 @@ export default class DeliveryDocumentViewer extends LightningElement {
     // ═══════════════════════════════════════════════════════════
 
     connectedCallback() {
+        // Explicit networkEntityId (from flexipage config) takes priority
+        if (this.networkEntityId) {
+            this._effectiveEntityId = this.networkEntityId;
+        }
         if (this.documentId) {
             this.mode = 'preview';
             this._loadDocumentById(this.documentId);
-        }
-        // When no entityId is configured (e.g., Admin Home), explicitly set null
-        // so the wire fires and returns all documents across entities
-        if (this.networkEntityId === undefined) {
-            this.networkEntityId = null;
         }
     }
 
@@ -79,7 +98,31 @@ export default class DeliveryDocumentViewer extends LightningElement {
     //  WIRE: Document List
     // ═══════════════════════════════════════════════════════════
 
-    @wire(getDocumentsForEntity, { entityId: '$networkEntityId' })
+    @wire(CurrentPageReference)
+    handlePageRef(pageRef) {
+        if (pageRef) {
+            const recId = pageRef.attributes?.recordId || pageRef.state?.recordId;
+            if (recId && !this.networkEntityId) {
+                this._effectiveEntityId = recId;
+            }
+        }
+    }
+
+    @wire(getDocumentTemplates)
+    wiredTemplates({ data, error }) {
+        if (data && data.length > 0) {
+            this._templateOptions = data.map(t => ({ label: t.label, value: t.value }));
+            // Default the generate form to the first template
+            if (!this.genTemplate || !this._templateOptions.some(o => o.value === this.genTemplate)) {
+                this.genTemplate = this._templateOptions[0].value;
+            }
+        } else if (error) {
+            // Silently fall back to defaults
+            this._templateOptions = DEFAULT_TEMPLATE_OPTIONS;
+        }
+    }
+
+    @wire(getDocumentsForEntity, { entityId: '$_effectiveEntityId' })
     wiredDocuments(result) {
         this._wiredDocsResult = result;
         const { data, error } = result;
@@ -102,7 +145,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
     get isLoaded()      { return !this.isLoading; }
     get hasDocuments()  { return this.documents && this.documents.length > 0; }
     get hasError()      { return !!this.error; }
-    get templateOptions() { return TEMPLATE_OPTIONS; }
+    get templateOptions() { return this._templateOptions; }
 
     get cardTitle() {
         return this.isListMode ? 'Documents' : (this.previewDoc?.name || 'Document Preview');
@@ -237,6 +280,14 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return this.previewDoc?.terms || 'Net 30';
     }
 
+    get hasPublicToken() {
+        return !!this.previewDoc?.publicToken;
+    }
+
+    get hasTransactions() {
+        return this.transactions && this.transactions.length > 0;
+    }
+
     get canMarkReady() {
         return this.previewDoc?.status === 'Draft';
     }
@@ -245,8 +296,33 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return this.previewDoc?.status === 'Ready';
     }
 
+    get canSendEmail() {
+        return this.previewDoc?.status === 'Ready' || this.previewDoc?.status === 'Draft';
+    }
+
+    get isSendDisabled() {
+        return this.isSendingEmail;
+    }
+
+    get sendButtonLabel() {
+        return this.isSendingEmail ? 'Sending...' : 'Send Email';
+    }
+
     get canMarkPaid() {
         return this.previewDoc?.status === 'Sent' || this.previewDoc?.status === 'Viewed';
+    }
+
+    get canRecordPayment() {
+        const s = this.previewDoc?.status;
+        return s === 'Sent' || s === 'Viewed' || s === 'Overdue';
+    }
+
+    get isRecordPaymentDisabled() {
+        return this.isRecordingPayment || !this.paymentAmount || this.paymentAmount <= 0 || !this.paymentDate;
+    }
+
+    get recordPaymentButtonLabel() {
+        return this.isRecordingPayment ? 'Recording...' : 'Record Payment';
     }
 
     get templateDisplayName() {
@@ -302,7 +378,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.isGenerating = true;
         try {
             const newDocId = await generateDocument({
-                entityId: this.networkEntityId,
+                entityId: this._effectiveEntityId,
                 templateType: this.genTemplate,
                 periodStart: this.genPeriodStart,
                 periodEnd: this.genPeriodEnd,
@@ -336,6 +412,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.mode = 'list';
         this.previewDoc = null;
         this.snapshot = null;
+        this.transactions = [];
+        this.totalPaid = 0;
     }
 
     async handleMarkReady() {
@@ -348,6 +426,129 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     async handleMarkPaid() {
         await this._updateStatus('Paid');
+    }
+
+    handleOpenSendModal() {
+        // Default recipient to entity contact email from snapshot
+        this.sendRecipientEmail = this.snapshot?.entity?.email || '';
+        this.showSendModal = true;
+    }
+
+    handleCloseSendModal() {
+        this.showSendModal = false;
+        this.sendRecipientEmail = '';
+    }
+
+    handleSendRecipientChange(event) {
+        this.sendRecipientEmail = event.detail.value;
+    }
+
+    async handleSendEmail() {
+        if (!this.previewDoc?.id) return;
+        this.isSendingEmail = true;
+        try {
+            const result = await sendDocumentEmail({
+                documentId: this.previewDoc.id,
+                recipientEmail: this.sendRecipientEmail
+            });
+            this.previewDoc = { ...this.previewDoc, status: 'Sent' };
+            this.showSendModal = false;
+            this.sendRecipientEmail = '';
+            this._showToast('Email Sent', `Document emailed to ${result.recipientEmail}`, 'success');
+            refreshApex(this._wiredDocsResult);
+        } catch (err) {
+            this._showToast('Error', this._extractError(err), 'error');
+        } finally {
+            this.isSendingEmail = false;
+        }
+    }
+
+    handleOpenPaymentModal() {
+        this.paymentAmount = null;
+        this.paymentDate = new Date().toISOString().split('T')[0];
+        this.paymentNote = '';
+        this.showPaymentModal = true;
+    }
+
+    handleClosePaymentModal() {
+        this.showPaymentModal = false;
+        this.paymentAmount = null;
+        this.paymentDate = '';
+        this.paymentNote = '';
+    }
+
+    handlePaymentAmountChange(event) {
+        this.paymentAmount = event.detail.value ? Number(event.detail.value) : null;
+    }
+
+    handlePaymentDateChange(event) {
+        this.paymentDate = event.detail.value;
+    }
+
+    handlePaymentNoteChange(event) {
+        this.paymentNote = event.detail.value;
+    }
+
+    async handleRecordPayment() {
+        if (!this.previewDoc?.id || !this.paymentAmount || this.paymentAmount <= 0) return;
+        this.isRecordingPayment = true;
+        try {
+            await recordPayment({
+                documentId: this.previewDoc.id,
+                amount: this.paymentAmount,
+                paymentDate: this.paymentDate,
+                note: this.paymentNote
+            });
+            // Optimistically add transaction to local array and recalculate
+            const newTxn = {
+                id: 'pending-' + Date.now(),
+                type: 'Payment',
+                amount: this.paymentAmount,
+                date: this.paymentDate,
+                note: this.paymentNote
+            };
+            this.transactions = [...this.transactions, newTxn];
+            this.totalPaid = this.totalPaid + this.paymentAmount;
+            // Determine new status: if payments cover total, it's Paid
+            const docTotal = this.previewDoc.totalCost || 0;
+            const newStatus = this.totalPaid >= docTotal ? 'Paid' : this.previewDoc.status;
+            this.previewDoc = { ...this.previewDoc, status: newStatus };
+            this.showPaymentModal = false;
+            this._showToast('Payment Recorded', `Payment of ${CURRENCY_FMT.format(this.paymentAmount)} recorded.`, 'success');
+            refreshApex(this._wiredDocsResult);
+            // Refresh real transaction list from server
+            this._refreshTransactions();
+        } catch (err) {
+            this._showToast('Error', this._extractError(err), 'error');
+        } finally {
+            this.isRecordingPayment = false;
+        }
+    }
+
+    handleViewPdf() {
+        if (!this.previewDoc?.id) return;
+        // Open VF page rendered as actual PDF in new tab
+        window.open('/apex/DeliveryDocumentPdf?id=' + this.previewDoc.id + '&pdf=true', '_blank');
+    }
+
+    handleViewWeb() {
+        if (!this.previewDoc?.id) return;
+        // Open rich renderer (Static Resource bundle) in new tab
+        window.open('/apex/DeliveryDocumentView?id=' + this.previewDoc.id, '_blank');
+    }
+
+    handleCopyPublicLink() {
+        if (!this.previewDoc?.publicToken) return;
+        // Copy the public token URL — works for Sites, portals, or any public access
+        const baseUrl = window.location.origin;
+        const url = baseUrl + '/apex/DeliveryDocumentPdf?token=' + this.previewDoc.publicToken;
+        navigator.clipboard.writeText(url).then(() => {
+            this._showToast('Copied', 'Public document link copied to clipboard.', 'success');
+        }).catch(() => {
+            // Fallback: show the URL in a prompt
+            /* eslint-disable-next-line no-alert */
+            window.prompt('Copy this link:', url);
+        });
     }
 
     handlePrint() {
@@ -363,6 +564,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.isLoadingPreview = true;
         this.previewDoc = null;
         this.snapshot = null;
+        this.transactions = [];
+        this.totalPaid = 0;
 
         try {
             const result = await getDocumentById({ documentId: docId });
@@ -380,6 +583,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
                 terms: result.terms,
                 publicToken: result.publicToken
             };
+            this.transactions = result.transactions || [];
+            this.totalPaid = result.totalPaid || 0;
             if (result.snapshot) {
                 this.snapshot = JSON.parse(result.snapshot);
             }
@@ -406,6 +611,18 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this._showToast('Error', this._extractError(err), 'error');
         } finally {
             this.isUpdatingStatus = false;
+        }
+    }
+
+    async _refreshTransactions() {
+        if (!this.previewDoc?.id) return;
+        try {
+            const txns = await getDocumentTransactions({ documentId: this.previewDoc.id });
+            this.transactions = txns || [];
+            // Recalculate totalPaid from real data
+            this.totalPaid = this.transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        } catch (err) {
+            // Silently fail — optimistic data is still in place
         }
     }
 

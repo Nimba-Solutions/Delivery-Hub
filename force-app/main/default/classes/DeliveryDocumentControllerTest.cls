@@ -421,6 +421,240 @@ private class DeliveryDocumentControllerTest {
     }
 
     /**
+     * @description Send a document via email. Verify the status transitions to Sent,
+     *              SentDateTime is populated, and the method returns the recipient email.
+     */
+    @isTest
+    static void testSendDocumentEmail() {
+        NetworkEntity__c entity = getEntity();
+        // Set contact email so the method has a recipient
+        entity.ContactEmailTxt__c = 'danny@atlarge.com';
+        update entity;
+
+        Id docId = generateTestDocument(entity.Id);
+
+        // Set terms for due date calc
+        DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c WHERE Id = :docId];
+        doc.TermsTxt__c = 'Net 30';
+        update doc;
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.sendDocumentEmail(docId, null);
+        Test.stopTest();
+
+        System.assertEquals(true, result.get('success'), 'Should return success');
+        System.assertEquals('danny@atlarge.com', result.get('recipientEmail'), 'Should fall back to entity email');
+
+        doc = [SELECT StatusPk__c, SentDateTime__c, DueDateDate__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.assertEquals('Sent', doc.StatusPk__c, 'Status should be Sent after email');
+        System.assertNotEquals(null, doc.SentDateTime__c, 'SentDateTime should be set');
+        System.assertNotEquals(null, doc.DueDateDate__c, 'DueDate should be calculated');
+    }
+
+    /**
+     * @description Send a document with explicit recipient email override.
+     */
+    @isTest
+    static void testSendDocumentEmailExplicitRecipient() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.sendDocumentEmail(docId, 'override@test.com');
+        Test.stopTest();
+
+        System.assertEquals('override@test.com', result.get('recipientEmail'), 'Should use explicit email');
+    }
+
+    /**
+     * @description Send a document with no recipient and no entity email. Expect error.
+     */
+    @isTest
+    static void testSendDocumentEmailNoRecipient() {
+        NetworkEntity__c entity = getEntity();
+        // Ensure no contact email
+        entity.ContactEmailTxt__c = null;
+        update entity;
+
+        Id docId = generateTestDocument(entity.Id);
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryDocumentController.sendDocumentEmail(docId, null);
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw, 'Should throw when no recipient available');
+    }
+
+    /**
+     * @description Verify buildDocumentEmailBody returns HTML containing key elements.
+     */
+    @isTest
+    static void testBuildDocumentEmailBody() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        DeliveryDocument__c doc = [
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                   NetworkEntityId__r.ContactEmailTxt__c,
+                   PeriodStartDate__c, PeriodEndDate__c,
+                   StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
+                   TermsTxt__c, DueDateDate__c, SentDateTime__c,
+                   PublicTokenTxt__c
+            FROM DeliveryDocument__c
+            WHERE Id = :docId
+        ];
+
+        String html = DeliveryDocumentController.buildDocumentEmailBody(doc, 'Invoice');
+        System.assert(html.contains('Test Vendor LLC'), 'Should contain vendor entity name');
+        System.assert(html.contains('Test Client Corp'), 'Should contain entity name');
+    }
+
+    /**
+     * @description Verify getDocumentTemplates returns available templates from CMT.
+     *              The seeded Invoice and Status_Report templates should always be present.
+     */
+    @isTest
+    static void testGetDocumentTemplates() {
+        Test.startTest();
+        List<Map<String, String>> templates = DeliveryDocumentController.getDocumentTemplates();
+        Test.stopTest();
+
+        System.assert(templates.size() >= 2, 'Should have at least Invoice and Status_Report templates');
+        // Verify each template has required keys
+        for (Map<String, String> t : templates) {
+            System.assertNotEquals(null, t.get('value'), 'Each template should have a value');
+            System.assertNotEquals(null, t.get('label'), 'Each template should have a label');
+        }
+    }
+
+    /**
+     * @description Record a single payment and verify a DeliveryTransaction__c record
+     *              is created with the correct fields.
+     */
+    @isTest
+    static void testRecordPaymentCreatesTransaction() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        Test.startTest();
+        DeliveryDocumentController.recordPayment(docId, 500.00, Date.newInstance(2026, 3, 20), 'Check #1234');
+        Test.stopTest();
+
+        List<DeliveryTransaction__c> txns = [
+            SELECT TypePk__c, AmountCurrency__c, TransactionDateDate__c, NoteTxt__c
+            FROM DeliveryTransaction__c
+            WHERE DocumentId__c = :docId
+        ];
+        System.assertEquals(1, txns.size(), 'Should create one transaction record');
+        System.assertEquals('Payment', txns[0].TypePk__c, 'Type should be Payment');
+        System.assertEquals(500.00, txns[0].AmountCurrency__c, 'Amount should match');
+        System.assertEquals(Date.newInstance(2026, 3, 20), txns[0].TransactionDateDate__c, 'Date should match');
+        System.assertEquals('Check #1234', txns[0].NoteTxt__c, 'Note should match');
+
+        // Status should NOT be Paid (500 < total of 3062.50)
+        DeliveryDocument__c doc = [SELECT StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.assertEquals('Draft', doc.StatusPk__c, 'Status should remain Draft for partial payment');
+    }
+
+    /**
+     * @description Record a payment that covers the full document total and verify
+     *              the status auto-transitions to 'Paid'.
+     */
+    @isTest
+    static void testRecordPaymentFullyPaid() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        // Doc total is 3062.50 (17.5 * 175)
+        Test.startTest();
+        DeliveryDocumentController.recordPayment(docId, 3062.50, Date.newInstance(2026, 3, 25), 'Wire transfer');
+        Test.stopTest();
+
+        DeliveryDocument__c doc = [SELECT StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.assertEquals('Paid', doc.StatusPk__c, 'Status should be Paid when payment covers total');
+    }
+
+    /**
+     * @description Record two partial payments and verify both transaction records exist.
+     *              The second payment should push total to cover the doc total, marking it Paid.
+     */
+    @isTest
+    static void testRecordPaymentMultiplePartial() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        // Doc total is 3062.50 (17.5 * 175)
+        Test.startTest();
+        DeliveryDocumentController.recordPayment(docId, 2000.00, Date.newInstance(2026, 3, 15), 'First payment');
+        DeliveryDocumentController.recordPayment(docId, 1062.50, Date.newInstance(2026, 3, 20), 'Final payment');
+        Test.stopTest();
+
+        List<DeliveryTransaction__c> txns = [
+            SELECT AmountCurrency__c FROM DeliveryTransaction__c
+            WHERE DocumentId__c = :docId ORDER BY CreatedDate ASC
+        ];
+        System.assertEquals(2, txns.size(), 'Should have two transaction records');
+        System.assertEquals(2000.00, txns[0].AmountCurrency__c, 'First payment amount should match');
+        System.assertEquals(1062.50, txns[1].AmountCurrency__c, 'Second payment amount should match');
+
+        DeliveryDocument__c doc = [SELECT StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.assertEquals('Paid', doc.StatusPk__c, 'Status should be Paid after total payments cover the amount');
+    }
+
+    /**
+     * @description Attempt to record a payment with invalid input (null amount and
+     *              negative amount). Verify AuraHandledException is thrown.
+     */
+    @isTest
+    static void testRecordPaymentInvalidInput() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        Boolean threwNull = false;
+        Boolean threwNegative = false;
+
+        Test.startTest();
+        try {
+            DeliveryDocumentController.recordPayment(docId, null, Date.today(), 'bad');
+        } catch (AuraHandledException e) {
+            threwNull = true;
+        }
+        try {
+            DeliveryDocumentController.recordPayment(docId, -100, Date.today(), 'bad');
+        } catch (AuraHandledException e) {
+            threwNegative = true;
+        }
+        Test.stopTest();
+
+        System.assert(threwNull, 'Should throw for null amount');
+        System.assert(threwNegative, 'Should throw for negative amount');
+    }
+
+    /**
+     * @description Verify getDocumentTransactions returns transaction list for a document.
+     */
+    @isTest
+    static void testGetDocumentTransactions() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        DeliveryDocumentController.recordPayment(docId, 100.00, Date.newInstance(2026, 3, 10), 'Test txn');
+
+        Test.startTest();
+        List<Map<String, Object>> txns = DeliveryDocumentController.getDocumentTransactions(docId);
+        Test.stopTest();
+
+        System.assertEquals(1, txns.size(), 'Should return 1 transaction');
+        System.assertEquals('Payment', txns[0].get('type'), 'Transaction type should be Payment');
+        System.assertEquals(100.00, (Decimal) txns[0].get('amount'), 'Transaction amount should match');
+    }
+
+    /**
      * @description Verify buildSnapshot returns all expected keys and correct
      *              counts for entity, workItems, workLogs, and workRequests.
      */

@@ -103,6 +103,10 @@ WorkLog approval workflow gates logged hours behind a Draft &rarr; Approved &rar
 
 The Activity Feed provides a unified, cross-item timeline of comments, hours, and stage/field changes. Date-grouped entries, conversation threads with inline reply, batch WorkLog approval actions, and 30-second polling keep the entire team on the same page without switching between records.
 
+### Document Engine
+
+Generate professional invoices, status reports, client agreements, and contractor agreements directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. PDF rendering via Visualforce produces print-ready output. Email delivery sends the document to the client contact with an optional CC address (configurable via `DocumentCcEmailTxt__c`). Payment tracking through `DeliveryTransaction__c` records supports multiple transaction types (payment, credit, refund, adjustment, write-off) per document. The A/R summary on each invoice shows outstanding prior balances. White-label vendor branding pulls the issuing entity's name, address, email, and phone from the vendor NetworkEntity record.
+
 ### Configurable Workflows
 
 Not just software delivery &mdash; the workflow engine supports any stage-based process. Ships with Software Delivery (40+ stages) and Loan Approval (8 stages) out of the box. Define your own workflow types, stages, personas, and transitions through Custom Metadata.
@@ -134,9 +138,9 @@ The engine is retry-aware (up to 3 attempts), handles namespace translation for 
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 126 (64 production + 62 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
+| **Apex Classes** | 128 (65 production + 63 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
 | **LWC Components** | 54 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
-| **Custom Objects** | 11 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c |
+| **Custom Objects** | 12 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c |
 | **Custom Metadata** | 12 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, ScheduledJobConfig\_\_mdt |
 | **Triggers** | 4 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger |
 
@@ -255,7 +259,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **WorkLog Approval** | Draft &rarr; Approved &rarr; Synced pipeline, gated by org setting |
 | **Activity Feed** | Cross-item unified timeline of comments, hours, and changes with inline reply |
 | **Data Lineage** | Visual sync chain with per-entity health metrics on admin home |
-| **Document Engine** | Generate invoices, status reports, proposals with AI narratives and public portal links |
+| **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering, email delivery with CC, payment tracking, A/R balance, and white-label vendor branding |
 | **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking |
 | **Delivery Guide** | In-app documentation with Ghost Recorder utility bar detection across all Lightning apps |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
