@@ -204,11 +204,8 @@ public without sharing class DeliveryBountyService {
     }
 
     private static void validateClaimEligibility(WorkItem__c bounty, String claimantEmail) {
-        if (bounty.BountyStatusPk__c != 'Open' && bounty.BountyStatusPk__c != 'Claimed') {
-            // Allow claims on 'Claimed' too — the max-claims check below will enforce the limit
-            if (bounty.BountyStatusPk__c != 'Claimed') {
-                throw new AuraHandledException('This bounty is not accepting claims (status: ' + bounty.BountyStatusPk__c + ').');
-            }
+        if (bounty.BountyStatusPk__c != 'Open') {
+            throw new AuraHandledException('This bounty is not accepting claims (status: ' + bounty.BountyStatusPk__c + ').');
         }
 
         if (bounty.BountyDeadlineDate__c != null && bounty.BountyDeadlineDate__c < Date.today()) {
