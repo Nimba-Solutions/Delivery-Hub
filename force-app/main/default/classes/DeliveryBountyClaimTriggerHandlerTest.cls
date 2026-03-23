@@ -38,7 +38,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
     }
 
     @IsTest
-    static void testInsertClaim_CreatesSyncItem() {
+    static void testInsertClaimCreatesSyncItem() {
         WorkItem__c bounty = [SELECT Id FROM WorkItem__c WHERE BountyTokenTxt__c = 'sync-test-token-001'];
 
         Test.startTest();
@@ -64,7 +64,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
     }
 
     @IsTest
-    static void testUpdateClaim_CapturesChanges() {
+    static void testUpdateClaimCapturesChanges() {
         WorkItem__c bounty = [SELECT Id FROM WorkItem__c WHERE BountyTokenTxt__c = 'sync-test-token-001'];
 
         BountyClaim__c claim = new BountyClaim__c(
@@ -89,7 +89,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
     }
 
     @IsTest
-    static void testInsertClaim_NoPush_WhenNoEndpoint() {
+    static void testInsertClaimNoPushWhenNoEndpoint() {
         // Create entity without push endpoint
         NetworkEntity__c noPushEntity = new NetworkEntity__c(
             Name = 'No Push Org',

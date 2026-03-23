@@ -13,8 +13,13 @@ public without sharing class DeliveryBountyService {
     /**
      * @description Returns all open bounty work items visible on the marketplace.
      * Supports optional filtering by difficulty and skill.
+     * @param difficulty Optional difficulty level filter (e.g. 'Beginner', 'Advanced').
+     * @param skill Optional skill keyword filter matched against BountySkillsTxt__c.
+     * @return List of bounty maps with token, title, amount, skills, claim count, etc.
      */
     public static List<Map<String, Object>> listOpenBounties(String difficulty, String skill) {
+        String skillFilter = String.isNotBlank(skill) ? '%' + skill + '%' : null;
+
         String query = 'SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, '
             + 'AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c, '
             + 'BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c, '
@@ -28,8 +33,8 @@ public without sharing class DeliveryBountyService {
         if (String.isNotBlank(difficulty)) {
             query += ' AND BountyDifficultyPk__c = :difficulty';
         }
-        if (String.isNotBlank(skill)) {
-            query += ' AND BountySkillsTxt__c LIKE \'%' + String.escapeSingleQuotes(skill) + '%\'';
+        if (skillFilter != null) {
+            query += ' AND BountySkillsTxt__c LIKE :skillFilter';
         }
         query += ' WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100';
 
@@ -45,6 +50,8 @@ public without sharing class DeliveryBountyService {
 
     /**
      * @description Returns a single bounty by its public token, including active claims count.
+     * @param token The public bounty token used in URLs and API calls.
+     * @return Map of bounty fields or null if not found.
      */
     public static Map<String, Object> getBountyByToken(String token) {
         List<WorkItem__c> items = [
@@ -73,7 +80,11 @@ public without sharing class DeliveryBountyService {
     /**
      * @description Creates a new claim against a bounty. Validates that the bounty
      * is open, not expired, and hasn't reached its max claims.
-     * @return The created BountyClaim__c Id
+     * @param token The public bounty token.
+     * @param claimantEmail Email address of the developer claiming the bounty.
+     * @param claimantName Display name of the developer.
+     * @param note Optional note from the developer about their approach.
+     * @return The created BountyClaim__c Id.
      */
     public static Id claimBounty(String token, String claimantEmail, String claimantName, String note) {
         WorkItem__c bounty = getBountyWorkItem(token);
@@ -120,6 +131,10 @@ public without sharing class DeliveryBountyService {
     /**
      * @description Submits completed work for a bounty claim. Moves claim to Submitted
      * and bounty to In Review.
+     * @param token The public bounty token.
+     * @param claimantEmail Email of the developer submitting work.
+     * @param workProofUrl URL to the PR, demo, or proof of completed work.
+     * @param note Optional submission note.
      */
     public static void submitWork(String token, String claimantEmail, String workProofUrl, String note) {
         WorkItem__c bounty = getBountyWorkItem(token);
@@ -151,6 +166,8 @@ public without sharing class DeliveryBountyService {
 
     /**
      * @description Withdraws an active claim. Re-opens the bounty if it was fully claimed.
+     * @param token The public bounty token.
+     * @param claimantEmail Email of the developer withdrawing their claim.
      */
     public static void withdrawClaim(String token, String claimantEmail) {
         WorkItem__c bounty = getBountyWorkItem(token);
@@ -181,6 +198,7 @@ public without sharing class DeliveryBountyService {
 
     /**
      * @description Generates a URL-safe bounty token (20 hex chars).
+     * @return A 20-character hexadecimal string.
      */
     public static String generateBountyToken() {
         return EncodingUtil.convertToHex(Crypto.generateAesKey(128)).substring(0, 20);

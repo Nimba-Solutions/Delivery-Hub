@@ -82,7 +82,7 @@ private class DeliveryBountyServiceTest {
     // ── List Bounties ────────────────────────────────────────────────────
 
     @IsTest
-    static void testListOpenBounties_NoFilters() {
+    static void testListOpenBountiesNoFilters() {
         Test.startTest();
         List<Map<String, Object>> bounties = DeliveryBountyService.listOpenBounties(null, null);
         Test.stopTest();
@@ -95,7 +95,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testListOpenBounties_FilterByDifficulty() {
+    static void testListOpenBountiesFilterByDifficulty() {
         Test.startTest();
         List<Map<String, Object>> bounties = DeliveryBountyService.listOpenBounties('Advanced', null);
         Test.stopTest();
@@ -105,7 +105,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testListOpenBounties_FilterBySkill() {
+    static void testListOpenBountiesFilterBySkill() {
         Test.startTest();
         List<Map<String, Object>> bounties = DeliveryBountyService.listOpenBounties(null, 'LWC');
         Test.stopTest();
@@ -116,7 +116,7 @@ private class DeliveryBountyServiceTest {
     // ── Get Bounty by Token ──────────────────────────────────────────────
 
     @IsTest
-    static void testGetBountyByToken_Found() {
+    static void testGetBountyByTokenFound() {
         Test.startTest();
         Map<String, Object> bounty = DeliveryBountyService.getBountyByToken('tok-lwc-dashboard-001');
         Test.stopTest();
@@ -128,7 +128,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testGetBountyByToken_NotFound() {
+    static void testGetBountyByTokenNotFound() {
         Test.startTest();
         Map<String, Object> bounty = DeliveryBountyService.getBountyByToken('nonexistent-token');
         Test.stopTest();
@@ -139,7 +139,7 @@ private class DeliveryBountyServiceTest {
     // ── Claim Bounty ─────────────────────────────────────────────────────
 
     @IsTest
-    static void testClaimBounty_Success() {
+    static void testClaimBountySuccess() {
         Test.startTest();
         Id claimId = DeliveryBountyService.claimBounty(
             'tok-lwc-dashboard-001', 'dev@example.com', 'Test Dev', 'I can build this!'
@@ -158,7 +158,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testClaimBounty_MaxClaimsReached() {
+    static void testClaimBountyMaxClaimsReached() {
         // tok-apex-batch-002 has maxClaims = 1
         DeliveryBountyService.claimBounty('tok-apex-batch-002', 'first@example.com', 'First', null);
 
@@ -173,7 +173,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testClaimBounty_DuplicateClaim() {
+    static void testClaimBountyDuplicateClaim() {
         DeliveryBountyService.claimBounty('tok-lwc-dashboard-001', 'dev@example.com', 'Dev', null);
 
         Test.startTest();
@@ -187,7 +187,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testClaimBounty_Expired() {
+    static void testClaimBountyExpired() {
         Test.startTest();
         try {
             DeliveryBountyService.claimBounty('tok-expired-003', 'dev@example.com', 'Dev', null);
@@ -199,7 +199,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testClaimBounty_NotFound() {
+    static void testClaimBountyNotFound() {
         Test.startTest();
         try {
             DeliveryBountyService.claimBounty('fake-token', 'dev@example.com', 'Dev', null);
@@ -213,7 +213,7 @@ private class DeliveryBountyServiceTest {
     // ── Submit Work ──────────────────────────────────────────────────────
 
     @IsTest
-    static void testSubmitWork_Success() {
+    static void testSubmitWorkSuccess() {
         DeliveryBountyService.claimBounty('tok-lwc-dashboard-001', 'dev@example.com', 'Dev', null);
 
         Test.startTest();
@@ -239,7 +239,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testSubmitWork_NoClaim() {
+    static void testSubmitWorkNoClaim() {
         Test.startTest();
         try {
             DeliveryBountyService.submitWork(
@@ -256,7 +256,7 @@ private class DeliveryBountyServiceTest {
     // ── Withdraw Claim ───────────────────────────────────────────────────
 
     @IsTest
-    static void testWithdrawClaim_Success() {
+    static void testWithdrawClaimSuccess() {
         DeliveryBountyService.claimBounty('tok-lwc-dashboard-001', 'dev@example.com', 'Dev', null);
 
         Test.startTest();
@@ -272,7 +272,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testWithdrawClaim_NoClaim() {
+    static void testWithdrawClaimNoClaim() {
         Test.startTest();
         try {
             DeliveryBountyService.withdrawClaim('tok-lwc-dashboard-001', 'nobody@example.com');
@@ -315,7 +315,7 @@ private class DeliveryBountyServiceTest {
     // ── Entity Linkage ───────────────────────────────────────────────────
 
     @IsTest
-    static void testClaimBounty_LinksToExistingEntity() {
+    static void testClaimBountyLinksToExistingEntity() {
         Test.startTest();
         Id claimId = DeliveryBountyService.claimBounty(
             'tok-lwc-dashboard-001', 'dev@example.com', 'Dev', null
@@ -332,7 +332,7 @@ private class DeliveryBountyServiceTest {
     // ── Bounty Status Transitions ────────────────────────────────────────
 
     @IsTest
-    static void testClaimBounty_StatusChangesToClaimed() {
+    static void testClaimBountyStatusChangesToClaimed() {
         // tok-apex-batch-002 has maxClaims = 1, so one claim should flip status to Claimed
         Test.startTest();
         DeliveryBountyService.claimBounty('tok-apex-batch-002', 'dev@example.com', 'Dev', null);
@@ -347,7 +347,7 @@ private class DeliveryBountyServiceTest {
     }
 
     @IsTest
-    static void testWithdrawClaim_ReopensBounty() {
+    static void testWithdrawClaimReopensBounty() {
         // Claim the single-slot bounty, then withdraw
         DeliveryBountyService.claimBounty('tok-apex-batch-002', 'dev@example.com', 'Dev', null);
 

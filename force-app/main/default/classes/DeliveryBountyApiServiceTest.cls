@@ -66,7 +66,7 @@ private class DeliveryBountyApiServiceTest {
     }
 
     @IsTest
-    static void testGetListBounties_WithFilters() {
+    static void testGetListBountiesWithFilters() {
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/bounties';
         req.httpMethod = 'GET';
@@ -110,7 +110,7 @@ private class DeliveryBountyApiServiceTest {
     }
 
     @IsTest
-    static void testGetBountyDetail_NotFound() {
+    static void testGetBountyDetailNotFound() {
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/bounties/nonexistent';
         req.httpMethod = 'GET';
@@ -127,7 +127,7 @@ private class DeliveryBountyApiServiceTest {
     // ── POST: Claim Bounty (Authenticated) ───────────────────────────────
 
     @IsTest
-    static void testPostClaimBounty_Success() {
+    static void testPostClaimBountySuccess() {
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/bounties/api-test-token-001/claim';
         req.httpMethod = 'POST';
@@ -155,7 +155,7 @@ private class DeliveryBountyApiServiceTest {
     }
 
     @IsTest
-    static void testPostClaimBounty_NoAuth() {
+    static void testPostClaimBountyNoAuth() {
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/bounties/api-test-token-001/claim';
         req.httpMethod = 'POST';
@@ -172,7 +172,7 @@ private class DeliveryBountyApiServiceTest {
     }
 
     @IsTest
-    static void testPostClaimBounty_InvalidKey() {
+    static void testPostClaimBountyInvalidKey() {
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/bounties/api-test-token-001/claim';
         req.httpMethod = 'POST';
@@ -189,7 +189,7 @@ private class DeliveryBountyApiServiceTest {
     }
 
     @IsTest
-    static void testPostClaimBounty_MissingEmail() {
+    static void testPostClaimBountyMissingEmail() {
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/deliveryhub/v1/bounties/api-test-token-001/claim';
         req.httpMethod = 'POST';
@@ -208,7 +208,7 @@ private class DeliveryBountyApiServiceTest {
     // ── POST: Submit Work (Authenticated) ────────────────────────────────
 
     @IsTest
-    static void testPostSubmitWork_Success() {
+    static void testPostSubmitWorkSuccess() {
         // First create a claim
         DeliveryBountyService.claimBounty('api-test-token-001', 'dev@example.com', 'Dev', null);
 
@@ -232,7 +232,7 @@ private class DeliveryBountyApiServiceTest {
     }
 
     @IsTest
-    static void testPostSubmitWork_MissingProofUrl() {
+    static void testPostSubmitWorkMissingProofUrl() {
         DeliveryBountyService.claimBounty('api-test-token-001', 'dev@example.com', 'Dev', null);
 
         RestRequest req = new RestRequest();
@@ -253,7 +253,7 @@ private class DeliveryBountyApiServiceTest {
     // ── POST: Withdraw Claim (Authenticated) ─────────────────────────────
 
     @IsTest
-    static void testPostWithdrawClaim_Success() {
+    static void testPostWithdrawClaimSuccess() {
         DeliveryBountyService.claimBounty('api-test-token-001', 'dev@example.com', 'Dev', null);
 
         RestRequest req = new RestRequest();
