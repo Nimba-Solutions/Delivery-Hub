@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkItemId__c</fullName>
+    <description>The bounty work item that this claim is against.</description>
+    <externalId>false</externalId>
+    <label>Work Item</label>
+    <referenceTo>WorkItem__c</referenceTo>
+    <relationshipLabel>Bounty Claims</relationshipLabel>
+    <relationshipName>BountyClaims</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>
