@@ -4,10 +4,10 @@
     <description>Semicolon-delimited list of skills required for this bounty (e.g. Apex;LWC;Flow). Used for filtering and matching on the marketplace.</description>
     <inlineHelpText>Skills required to complete this bounty, separated by semicolons (e.g. Apex;LWC;Flow).</inlineHelpText>
     <label>Bounty Skills</label>
-    <length>500</length>
+    <length>255</length>
     <required>false</required>
     <trackHistory>false</trackHistory>
     <trackTrending>false</trackTrending>
-    <type>LongTextArea</type>
-    <visibleLines>2</visibleLines>
+    <type>Text</type>
+    <unique>false</unique>
 </CustomField>
