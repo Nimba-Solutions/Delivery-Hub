@@ -147,6 +147,9 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
 
     /**
      * @description Creates SyncItems for WorkItems that have no Synced outbound record.
+     * @param requests The active WorkRequests linked to the target entity.
+     * @param coveredRequestIds Request IDs that already have a Synced outbound SyncItem.
+     * @param itemsToInsert The accumulator list for new SyncItems to insert.
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private void fillWorkItemGaps(List<WorkRequest__c> requests, Set<Id> coveredRequestIds, List<SyncItem__c> itemsToInsert) {
@@ -188,6 +191,9 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
 
     /**
      * @description Creates SyncItems for WorkLogs that have no Synced outbound record.
+     * @param workItemIds The IDs of WorkItems whose WorkLogs should be checked.
+     * @param workItemToRequest Map from WorkItem ID to its parent WorkRequest for routing.
+     * @param itemsToInsert The accumulator list for new SyncItems to insert.
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private void fillWorkLogGaps(Set<Id> workItemIds, Map<Id, WorkRequest__c> workItemToRequest, List<SyncItem__c> itemsToInsert) {
