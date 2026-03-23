@@ -9,7 +9,7 @@
  * anonymous Apex (DeliverySyncReconciler.reconcileAll()).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount, PMD.AvoidGlobalModifier')
 global without sharing class DeliverySyncReconciler implements Queueable, Database.AllowsCallouts {
 
     /** @description Index into the list of entities to process (supports chaining). */
@@ -185,12 +185,14 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
                             if (itemsToInsert.size() >= BATCH_LIMIT) {
                                 break;
                             }
-                            if (!coveredWorkLogIds.contains((String) wl.Id)) {
-                                WorkRequest__c parentReq = workItemToRequest.get(wl.WorkItemId__c);
-                                if (parentReq != null) {
-                                    itemsToInsert.add(buildWorkLogSyncItem(wl, parentReq, senderOrgId));
-                                }
+                            if (coveredWorkLogIds.contains((String) wl.Id)) {
+                                continue;
                             }
+                            WorkRequest__c parentReq = workItemToRequest.get(wl.WorkItemId__c);
+                            if (parentReq == null) {
+                                continue;
+                            }
+                            itemsToInsert.add(buildWorkLogSyncItem(wl, parentReq, senderOrgId));
                         }
                     }
                 }
