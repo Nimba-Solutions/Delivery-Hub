@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Recently_Completed</fullName>
+    <columns>NAME</columns>
+    <columns>BriefDescriptionTxt__c</columns>
+    <columns>StageNamePk__c</columns>
+    <columns>TotalLoggedHoursNumber__c</columns>
+    <columns>Developer__c</columns>
+    <columns>LAST_UPDATE</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>StageNamePk__c</field>
+        <operation>equals</operation>
+        <value>Done,Deployed to Prod,Cancelled</value>
+    </filters>
+    <label>Recently Completed</label>
+</ListView>
