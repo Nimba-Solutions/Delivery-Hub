@@ -41,6 +41,11 @@
                 <default>false</default>
                 <label>UsageAnalytics</label>
             </value>
+            <value>
+                <fullName>BountyClaim__c</fullName>
+                <default>false</default>
+                <label>BountyClaim__c</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

@@ -14,7 +14,7 @@ private class DeliveryBountyApiServiceTest {
     static void setupData() {
         NetworkEntity__c entity = new NetworkEntity__c(
             Name = 'Bounty Platform',
-            EntityTypePk__c = 'Platform',
+            EntityTypePk__c = 'Vendor',
             StatusPk__c = 'Active',
             ApiKeyTxt__c = TEST_API_KEY,
             ConnectionStatusPk__c = 'Connected',
