@@ -27,12 +27,12 @@
 .kanban-board {
     flex-grow: 1;
     overflow-x: auto;
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 .kanban-columns-container {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem;
     min-width: max-content;
 }
 
@@ -206,7 +206,7 @@
 
 /* Kanban Column */
 .kanban-column {
-    width: 300px;
+    width: 280px;
     flex-shrink: 0;
     background-color: var(--white);
     border-radius: var(--radius);
@@ -240,10 +240,10 @@
 }
 
 .kanban-column-body {
-    padding: 1rem;
+    padding: 0.625rem;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
     height: 100%;
 }
 
@@ -268,7 +268,7 @@
     border: 1px solid var(--gray-200);
     border-left-width: 4px;
     box-shadow: var(--shadow-sm);
-    padding: 0.75rem;
+    padding: 0.5rem 0.625rem;
     cursor: grab;
     transition: box-shadow 0.2s, transform 0.2s;
     position: relative;
