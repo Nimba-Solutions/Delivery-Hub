@@ -86,6 +86,7 @@ public without sharing class DeliveryBountyService {
      * @param note Optional note from the developer about their approach.
      * @return The created BountyClaim__c Id.
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static Id claimBounty(String token, String claimantEmail, String claimantName, String note) {
         WorkItem__c bounty = getBountyWorkItem(token);
         validateClaimEligibility(bounty, claimantEmail);
@@ -136,6 +137,7 @@ public without sharing class DeliveryBountyService {
      * @param workProofUrl URL to the PR, demo, or proof of completed work.
      * @param note Optional submission note.
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static void submitWork(String token, String claimantEmail, String workProofUrl, String note) {
         WorkItem__c bounty = getBountyWorkItem(token);
 

@@ -36,6 +36,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
      * routing them to the origin org via the parent WorkItem's ClientNetworkEntity.
      * @param newClaims List of newly inserted BountyClaim__c records.
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     private static void handleAfterInsert(List<BountyClaim__c> newClaims) {
         if (DeliverySyncEngine.isSyncContext) { return; }
 
