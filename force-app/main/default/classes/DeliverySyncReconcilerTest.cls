@@ -88,15 +88,16 @@ private class DeliverySyncReconcilerTest {
      */
     @IsTest
     static void testReconcileSkipsSyncedItems() {
-        // Clear any noise and pre-create Synced items for BOTH WorkItem and WorkLog
+        // Clear any noise
         delete [SELECT Id FROM SyncItem__c];
 
-        WorkRequest__c req = [SELECT Id, WorkItemId__c FROM WorkRequest__c LIMIT 1];
-        WorkLog__c wl = [SELECT Id FROM WorkLog__c LIMIT 1];
+        // Cover ALL WorkRequests (packaging org may auto-create extras)
+        List<WorkRequest__c> allReqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c];
+        List<WorkLog__c> allWLs = [SELECT Id, WorkItemId__c FROM WorkLog__c];
 
-        // Pre-create Synced outbound items for both object types
-        insert new List<SyncItem__c>{
-            new SyncItem__c(
+        List<SyncItem__c> preCreated = new List<SyncItem__c>();
+        for (WorkRequest__c req : allReqs) {
+            preCreated.add(new SyncItem__c(
                 ObjectTypePk__c     = 'WorkItem__c',
                 LocalRecordIdTxt__c = req.WorkItemId__c,
                 WorkItemId__c       = req.WorkItemId__c,
@@ -104,24 +105,24 @@ private class DeliverySyncReconcilerTest {
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Synced',
                 PayloadTxt__c       = '{"test":"already synced"}'
-            ),
-            new SyncItem__c(
+            ));
+        }
+        for (WorkLog__c wl : allWLs) {
+            preCreated.add(new SyncItem__c(
                 ObjectTypePk__c     = 'WorkLog__c',
                 LocalRecordIdTxt__c = (String) wl.Id,
-                WorkItemId__c       = req.WorkItemId__c,
-                RequestId__c        = req.Id,
+                WorkItemId__c       = wl.WorkItemId__c,
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Synced',
                 PayloadTxt__c       = '{"test":"worklog already synced"}'
-            )
-        };
+            ));
+        }
+        insert preCreated;
 
         Test.startTest();
         System.enqueueJob(new DeliverySyncReconciler());
         Test.stopTest();
 
-        // The reconciler creates Queued items. If it correctly skipped covered records,
-        // there should be zero Queued outbound items (regardless of what triggers created).
         Integer queuedWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
         Integer queuedWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
         System.assertEquals(0, queuedWI, 'Reconciler should NOT create Queued WorkItem SyncItems when Synced item exists.');
