@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Blocked</fullName>
+    <columns>NAME</columns>
+    <columns>BriefDescriptionTxt__c</columns>
+    <columns>StageNamePk__c</columns>
+    <columns>PriorityPk__c</columns>
+    <columns>Developer__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>StageNamePk__c</field>
+        <operation>equals</operation>
+        <value>Blocked</value>
+    </filters>
+    <label>Blocked</label>
+</ListView>
