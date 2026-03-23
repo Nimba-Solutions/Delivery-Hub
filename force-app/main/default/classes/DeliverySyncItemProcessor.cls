@@ -66,6 +66,14 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
 
         for (SyncItem__c item : items) {
             try {
+                // Skip UsageAnalytics items — they are local analytics with no remote handler.
+                // Mark as Synced immediately without attempting a callout.
+                if (item.ObjectTypePk__c == 'UsageAnalytics') {
+                    item.StatusPk__c = 'Synced';
+                    itemsToUpdate.add(item);
+                    continue;
+                }
+
                 // Resolve endpoint and API key: Push Mode uses Request→Entity, Hub Mode uses WorkItem→ClientEntity
                 String endpointUrl = item.RequestId__c != null
                     ? item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
