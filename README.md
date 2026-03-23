@@ -140,9 +140,9 @@ The engine is retry-aware (up to 3 attempts), handles namespace translation for 
 |-------|-------|----------------|
 | **Apex Classes** | 128 (65 production + 63 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService |
 | **LWC Components** | 54 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
-| **Custom Objects** | 12 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c |
+| **Custom Objects** | 13 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c |
 | **Custom Metadata** | 12 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, ScheduledJobConfig\_\_mdt |
-| **Triggers** | 4 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger |
+| **Triggers** | 5 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger |
 
 ---
 
@@ -208,6 +208,20 @@ Delivery Hub exposes a REST API for non-Salesforce clients (websites, mobile app
 
 All requests require an `X-Api-Key` header matched against a NetworkEntity record. See the [Public API Guide](docs/PUBLIC_API_GUIDE.md) for complete documentation.
 
+### Bounty Marketplace API
+
+**Base URL**: `/services/apexrest/delivery/deliveryhub/v1/bounties/`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/bounties` | Public | List open bounties (filter: `?difficulty=X&skill=Y`) |
+| GET | `/bounties/{token}` | Public | Bounty detail with acceptance criteria and active claims |
+| POST | `/bounties/{token}/claim` | X-Api-Key | Claim a bounty |
+| POST | `/bounties/{token}/submit` | X-Api-Key | Submit completed work with proof URL |
+| POST | `/bounties/{token}/withdraw` | X-Api-Key | Withdraw an active claim |
+
+Any WorkItem with `IsBountyBool__c = true` is published to the marketplace. Claims are tracked via `BountyClaim__c` and synced to origin orgs automatically. See the [Bounty API Guide](docs/BOUNTY_API_GUIDE.md) for details.
+
 For org-to-org synchronization, see the [Sync API Guide](docs/SYNC_API_GUIDE.md).
 
 ---
@@ -220,6 +234,7 @@ For org-to-org synchronization, see the [Sync API Guide](docs/SYNC_API_GUIDE.md)
 | [Architecture](docs/ARCHITECTURE.md) | Object model, sync engine, API layer, LWC components, and permission model |
 | [Public API Guide](docs/PUBLIC_API_GUIDE.md) | REST API for websites and external apps &mdash; endpoints, auth, response schemas |
 | [Sync API Guide](docs/SYNC_API_GUIDE.md) | Org-to-org synchronization &mdash; push/pull flows, echo suppression, setup steps |
+| [Bounty API Guide](docs/BOUNTY_API_GUIDE.md) | Bounty marketplace &mdash; publishing bounties, claim lifecycle, sync to origin orgs |
 
 ---
 
@@ -273,6 +288,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Release Notes** | Auto-generate formatted release summaries from completed items |
 | **Configurable Workflows** | Custom stages, personas, and transitions via metadata |
 | **Setup Wizard** | One-click connection with automatic scheduler provisioning and real-time prerequisites checklist |
+| **Bounty Marketplace** | Publish work items as bounties with fixed payouts, skill tags, difficulty ratings, and deadlines. Developers claim, submit work, and get approved through a structured lifecycle. Public API for marketplace browsing, authenticated API for claims. Claims auto-sync to origin orgs. |
 | **Native Reports** | Full Salesforce reporting on all delivery data |
 
 ---
