@@ -59,7 +59,6 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
     @SuppressWarnings('PMD.ApexCRUDViolation')
     global void execute(QueueableContext context) {
         try {
-            // 1. Query all connected downstream entities
             List<NetworkEntity__c> entities = [
                 SELECT Id, Name, IntegrationEndpointUrlTxt__c
                 FROM NetworkEntity__c
@@ -74,147 +73,163 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
                 return;
             }
 
-            NetworkEntity__c entity = entities[entityIndex];
-            List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
+            List<SyncItem__c> itemsToInsert = reconcileEntity(entities[entityIndex]);
 
-            // 2. Find all active WorkRequests linked to this entity
-            List<WorkRequest__c> requests = [
-                SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c
-                FROM WorkRequest__c
-                WHERE DeliveryEntityId__c = :entity.Id
-                AND StatusPk__c != 'Inactive'
-                WITH SYSTEM_MODE
-            ];
-
-            if (!requests.isEmpty()) {
-                // 3. Collect IDs for bulk queries
-                Set<Id> requestIds = new Set<Id>();
-                Set<Id> workItemIds = new Set<Id>();
-                Map<Id, WorkRequest__c> workItemToRequest = new Map<Id, WorkRequest__c>();
-
-                for (WorkRequest__c req : requests) {
-                    requestIds.add(req.Id);
-                    if (req.WorkItemId__c != null) {
-                        workItemIds.add(req.WorkItemId__c);
-                        workItemToRequest.put(req.WorkItemId__c, req);
-                    }
-                }
-
-                // 4. Find which requests already have a Synced outbound WorkItem SyncItem
-                Set<Id> coveredRequestIds = new Set<Id>();
-                for (SyncItem__c existing : [
-                    SELECT RequestId__c
-                    FROM SyncItem__c
-                    WHERE RequestId__c IN :requestIds
-                    AND ObjectTypePk__c = 'WorkItem__c'
-                    AND DirectionPk__c = 'Outbound'
-                    AND StatusPk__c = 'Synced'
-                    WITH SYSTEM_MODE
-                ]) {
-                    coveredRequestIds.add(existing.RequestId__c);
-                }
-
-                // 5. Query full WorkItem data for gap items
-                Set<Id> gapWorkItemIds = new Set<Id>();
-                Map<Id, WorkRequest__c> gapWorkItemToRequest = new Map<Id, WorkRequest__c>();
-                for (WorkRequest__c req : requests) {
-                    if (!coveredRequestIds.contains(req.Id) && req.WorkItemId__c != null) {
-                        gapWorkItemIds.add(req.WorkItemId__c);
-                        gapWorkItemToRequest.put(req.WorkItemId__c, req);
-                    }
-                }
-
-                if (!gapWorkItemIds.isEmpty()) {
-                    Map<Id, WorkItem__c> gapWorkItems = new Map<Id, WorkItem__c>([
-                        SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c, StatusPk__c,
-                               PriorityPk__c, DeveloperDaysSizeNumber__c, EstimatedHoursNumber__c,
-                               ClientPreApprovedHoursNumber__c, Developer__c, CalculatedETADate__c,
-                               ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c, StepsToReproduceTxt__c,
-                               ClientIntentionPk__c, RequestTypePk__c, Tags__c, WorkflowTypeTxt__c,
-                               Epic__c, SLATargetDate__c, IsActiveBool__c, SortOrderNumber__c
-                        FROM WorkItem__c
-                        WHERE Id IN :gapWorkItemIds
-                        WITH SYSTEM_MODE
-                    ]);
-
-                    for (Id wiId : gapWorkItemIds) {
-                        if (itemsToInsert.size() >= BATCH_LIMIT) {
-                            break;
-                        }
-                        WorkItem__c wi = gapWorkItems.get(wiId);
-                        WorkRequest__c req = gapWorkItemToRequest.get(wiId);
-                        if (wi != null && req != null) {
-                            itemsToInsert.add(buildWorkItemSyncItem(wi, req));
-                        }
-                    }
-                }
-
-                // 6. Reconcile WorkLogs for all work items linked via requests
-                if (itemsToInsert.size() < BATCH_LIMIT && !workItemIds.isEmpty()) {
-                    // Find all WorkLogs for these WorkItems
-                    List<WorkLog__c> workLogs = [
-                        SELECT Id, WorkItemId__c, HoursLoggedNumber__c, WorkDateDate__c,
-                               WorkDescriptionTxt__c, StatusPk__c
-                        FROM WorkLog__c
-                        WHERE WorkItemId__c IN :workItemIds
-                        WITH SYSTEM_MODE
-                    ];
-
-                    if (!workLogs.isEmpty()) {
-                        // Find which WorkLogs already have a Synced outbound SyncItem
-                        Set<String> workLogIds = new Set<String>();
-                        for (WorkLog__c wl : workLogs) {
-                            workLogIds.add((String) wl.Id);
-                        }
-
-                        Set<String> coveredWorkLogIds = new Set<String>();
-                        for (SyncItem__c existing : [
-                            SELECT LocalRecordIdTxt__c
-                            FROM SyncItem__c
-                            WHERE LocalRecordIdTxt__c IN :workLogIds
-                            AND ObjectTypePk__c = 'WorkLog__c'
-                            AND DirectionPk__c = 'Outbound'
-                            AND StatusPk__c = 'Synced'
-                            WITH SYSTEM_MODE
-                        ]) {
-                            coveredWorkLogIds.add(existing.LocalRecordIdTxt__c);
-                        }
-
-                        String senderOrgId = UserInfo.getOrganizationId();
-                        for (WorkLog__c wl : workLogs) {
-                            if (itemsToInsert.size() >= BATCH_LIMIT) {
-                                break;
-                            }
-                            if (coveredWorkLogIds.contains((String) wl.Id)) {
-                                continue;
-                            }
-                            WorkRequest__c parentReq = workItemToRequest.get(wl.WorkItemId__c);
-                            if (parentReq == null) {
-                                continue;
-                            }
-                            itemsToInsert.add(buildWorkLogSyncItem(wl, parentReq, senderOrgId));
-                        }
-                    }
-                }
-            }
-
-            // 7. Insert all missing SyncItems
             if (!itemsToInsert.isEmpty()) {
                 Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
-
-                // Enqueue processor to push the new items
                 if (!Test.isRunningTest() && Limits.getQueueableJobs() < 2) {
                     System.enqueueJob(new DeliverySyncItemProcessor());
                 }
             }
 
-            // 8. Chain to next entity if more remain
             if (entityIndex + 1 < entities.size() && !Test.isRunningTest()) {
                 System.enqueueJob(new DeliverySyncReconciler(entityIndex + 1));
             }
 
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'DeliverySyncReconciler Failed: ' + e.getMessage() + ' | ' + e.getStackTraceString());
+        }
+    }
+
+    /**
+     * @description Reconciles a single NetworkEntity by finding WorkItem and WorkLog gaps.
+     * @param entity The connected vendor entity to reconcile against.
+     * @return A list of Queued SyncItems for any missing records.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private List<SyncItem__c> reconcileEntity(NetworkEntity__c entity) {
+        List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
+
+        List<WorkRequest__c> requests = [
+            SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c
+            FROM WorkRequest__c
+            WHERE DeliveryEntityId__c = :entity.Id
+            AND StatusPk__c != 'Inactive'
+            WITH SYSTEM_MODE
+        ];
+
+        if (requests.isEmpty()) {
+            return itemsToInsert;
+        }
+
+        Set<Id> requestIds = new Set<Id>();
+        Set<Id> workItemIds = new Set<Id>();
+        Map<Id, WorkRequest__c> workItemToRequest = new Map<Id, WorkRequest__c>();
+
+        for (WorkRequest__c req : requests) {
+            requestIds.add(req.Id);
+            if (req.WorkItemId__c != null) {
+                workItemIds.add(req.WorkItemId__c);
+                workItemToRequest.put(req.WorkItemId__c, req);
+            }
+        }
+
+        // Find WorkItem gaps
+        Set<Id> coveredRequestIds = new Set<Id>();
+        for (SyncItem__c existing : [
+            SELECT RequestId__c FROM SyncItem__c
+            WHERE RequestId__c IN :requestIds
+            AND ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Synced'
+            WITH SYSTEM_MODE
+        ]) {
+            coveredRequestIds.add(existing.RequestId__c);
+        }
+
+        fillWorkItemGaps(requests, coveredRequestIds, itemsToInsert);
+
+        // Fill WorkLog gaps
+        if (itemsToInsert.size() < BATCH_LIMIT && !workItemIds.isEmpty()) {
+            fillWorkLogGaps(workItemIds, workItemToRequest, itemsToInsert);
+        }
+
+        return itemsToInsert;
+    }
+
+    /**
+     * @description Creates SyncItems for WorkItems that have no Synced outbound record.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private void fillWorkItemGaps(List<WorkRequest__c> requests, Set<Id> coveredRequestIds, List<SyncItem__c> itemsToInsert) {
+        Set<Id> gapWorkItemIds = new Set<Id>();
+        Map<Id, WorkRequest__c> gapWorkItemToRequest = new Map<Id, WorkRequest__c>();
+        for (WorkRequest__c req : requests) {
+            if (!coveredRequestIds.contains(req.Id) && req.WorkItemId__c != null) {
+                gapWorkItemIds.add(req.WorkItemId__c);
+                gapWorkItemToRequest.put(req.WorkItemId__c, req);
+            }
+        }
+
+        if (gapWorkItemIds.isEmpty()) {
+            return;
+        }
+
+        Map<Id, WorkItem__c> gapWorkItems = new Map<Id, WorkItem__c>([
+            SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c, StatusPk__c,
+                   PriorityPk__c, DeveloperDaysSizeNumber__c, EstimatedHoursNumber__c,
+                   ClientPreApprovedHoursNumber__c, Developer__c, CalculatedETADate__c,
+                   ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c, StepsToReproduceTxt__c,
+                   ClientIntentionPk__c, RequestTypePk__c, Tags__c, WorkflowTypeTxt__c,
+                   Epic__c, SLATargetDate__c, IsActiveBool__c, SortOrderNumber__c
+            FROM WorkItem__c WHERE Id IN :gapWorkItemIds
+            WITH SYSTEM_MODE
+        ]);
+
+        for (Id wiId : gapWorkItemIds) {
+            if (itemsToInsert.size() >= BATCH_LIMIT) {
+                break;
+            }
+            WorkItem__c wi = gapWorkItems.get(wiId);
+            WorkRequest__c req = gapWorkItemToRequest.get(wiId);
+            if (wi != null && req != null) {
+                itemsToInsert.add(buildWorkItemSyncItem(wi, req));
+            }
+        }
+    }
+
+    /**
+     * @description Creates SyncItems for WorkLogs that have no Synced outbound record.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private void fillWorkLogGaps(Set<Id> workItemIds, Map<Id, WorkRequest__c> workItemToRequest, List<SyncItem__c> itemsToInsert) {
+        List<WorkLog__c> workLogs = [
+            SELECT Id, WorkItemId__c, HoursLoggedNumber__c, WorkDateDate__c,
+                   WorkDescriptionTxt__c, StatusPk__c
+            FROM WorkLog__c WHERE WorkItemId__c IN :workItemIds
+            WITH SYSTEM_MODE
+        ];
+
+        if (workLogs.isEmpty()) {
+            return;
+        }
+
+        Set<String> workLogIds = new Set<String>();
+        for (WorkLog__c wl : workLogs) {
+            workLogIds.add((String) wl.Id);
+        }
+
+        Set<String> coveredWorkLogIds = new Set<String>();
+        for (SyncItem__c existing : [
+            SELECT LocalRecordIdTxt__c FROM SyncItem__c
+            WHERE LocalRecordIdTxt__c IN :workLogIds
+            AND ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Synced'
+            WITH SYSTEM_MODE
+        ]) {
+            coveredWorkLogIds.add(existing.LocalRecordIdTxt__c);
+        }
+
+        String senderOrgId = UserInfo.getOrganizationId();
+        for (WorkLog__c wl : workLogs) {
+            if (itemsToInsert.size() >= BATCH_LIMIT) {
+                break;
+            }
+            if (coveredWorkLogIds.contains((String) wl.Id)) {
+                continue;
+            }
+            WorkRequest__c parentReq = workItemToRequest.get(wl.WorkItemId__c);
+            if (parentReq == null) {
+                continue;
+            }
+            itemsToInsert.add(buildWorkLogSyncItem(wl, parentReq, senderOrgId));
         }
     }
 
