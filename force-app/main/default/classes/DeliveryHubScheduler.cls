@@ -22,6 +22,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         processRecurringItems();
         runSyncAsync();
         enqueueWeeklyDigestIfDue();
+        runReconciliation();
     }
 
     /**
@@ -133,6 +134,31 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
             }
             System.schedule(jobName, cronSlots[i], new DeliveryHubScheduler());
         }
+    }
+
+    /**
+     * @description Runs the sync reconciliation engine once per day at 6 AM UTC.
+     * Checks the current hour and only enqueues DeliverySyncReconciler if it is
+     * the 6 AM window, preventing redundant reconciliation on the :15/:30/:45 runs.
+     */
+    private static void runReconciliation() {
+        try {
+            Integer currentHour = DateTime.now().hourGmt();
+            if (currentHour == 6) {
+                System.enqueueJob(new DeliverySyncReconciler());
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] Reconciliation enqueue failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Triggers an immediate reconciliation run from anonymous Apex.
+     * Usage: delivery.DeliveryHubScheduler.reconcileNow();
+     */
+    global static void reconcileNow() {
+        DeliverySyncReconciler.reconcileAll();
     }
 
     /**
