@@ -18,6 +18,7 @@ import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocum
 import getDocumentTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTemplates';
 import recordPayment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.recordPayment';
 import getDocumentTransactions from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTransactions';
+import getDefaultBillingEntityId from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDefaultBillingEntityId';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -91,6 +92,21 @@ export default class DeliveryDocumentViewer extends LightningElement {
         if (this.documentId) {
             this.mode = 'preview';
             this._loadDocumentById(this.documentId);
+        }
+        // Fallback: if no entity context, load from DefaultBillingEntityId setting
+        if (!this.networkEntityId && !this.documentId) {
+            this._loadDefaultBillingEntity();
+        }
+    }
+
+    async _loadDefaultBillingEntity() {
+        try {
+            const billingEntityId = await getDefaultBillingEntityId();
+            if (billingEntityId && !this._effectiveEntityId) {
+                this._effectiveEntityId = billingEntityId;
+            }
+        } catch (e) {
+            // Setting not configured — no fallback
         }
     }
 
@@ -528,20 +544,20 @@ export default class DeliveryDocumentViewer extends LightningElement {
     handleViewPdf() {
         if (!this.previewDoc?.id) return;
         // Open VF page rendered as actual PDF in new tab
-        window.open('/apex/DeliveryDocumentPdf?id=' + this.previewDoc.id + '&pdf=true', '_blank');
+        window.open('/apex/%%%NAMESPACE_PREFIX%%%DeliveryDocumentPdf?id=' + this.previewDoc.id + '&pdf=true', '_blank');
     }
 
     handleViewWeb() {
         if (!this.previewDoc?.id) return;
         // Open rich renderer (Static Resource bundle) in new tab
-        window.open('/apex/DeliveryDocumentView?id=' + this.previewDoc.id, '_blank');
+        window.open('/apex/%%%NAMESPACE_PREFIX%%%DeliveryDocumentView?id=' + this.previewDoc.id, '_blank');
     }
 
     handleCopyPublicLink() {
         if (!this.previewDoc?.publicToken) return;
         // Copy the public token URL — works for Sites, portals, or any public access
         const baseUrl = window.location.origin;
-        const url = baseUrl + '/apex/DeliveryDocumentPdf?token=' + this.previewDoc.publicToken;
+        const url = baseUrl + '/apex/%%%NAMESPACE_PREFIX%%%DeliveryDocumentPdf?token=' + this.previewDoc.publicToken;
         navigator.clipboard.writeText(url).then(() => {
             this._showToast('Copied', 'Public document link copied to clipboard.', 'success');
         }).catch(() => {
