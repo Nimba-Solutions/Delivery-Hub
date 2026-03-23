@@ -19,26 +19,63 @@ public without sharing class DeliveryBountyService {
      */
     public static List<Map<String, Object>> listOpenBounties(String difficulty, String skill) {
         String skillFilter = String.isNotBlank(skill) ? '%' + skill + '%' : null;
+        Boolean hasDifficulty = String.isNotBlank(difficulty);
+        Boolean hasSkill = skillFilter != null;
 
-        String query = 'SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, '
-            + 'AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c, '
-            + 'BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c, '
-            + 'BountySkillsTxt__c, BountyMaxClaimsNumber__c, '
-            + 'ClientNetworkEntityId__r.Name, CreatedDate, '
-            + '(SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN (\'Active\', \'Submitted\', \'Under Review\')) '
-            + 'FROM WorkItem__c '
-            + 'WHERE IsBountyBool__c = true AND BountyStatusPk__c = \'Open\' '
-            + 'AND IsActiveBool__c = true';
-
-        if (String.isNotBlank(difficulty)) {
-            query += ' AND BountyDifficultyPk__c = :difficulty';
+        List<WorkItem__c> items;
+        if (hasDifficulty && hasSkill) {
+            items = [
+                SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
+                       AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
+                       BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
+                       BountySkillsTxt__c, BountyMaxClaimsNumber__c,
+                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
+                FROM WorkItem__c
+                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                    AND BountyDifficultyPk__c = :difficulty AND BountySkillsTxt__c LIKE :skillFilter
+                WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
+            ];
+        } else if (hasDifficulty) {
+            items = [
+                SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
+                       AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
+                       BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
+                       BountySkillsTxt__c, BountyMaxClaimsNumber__c,
+                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
+                FROM WorkItem__c
+                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                    AND BountyDifficultyPk__c = :difficulty
+                WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
+            ];
+        } else if (hasSkill) {
+            items = [
+                SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
+                       AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
+                       BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
+                       BountySkillsTxt__c, BountyMaxClaimsNumber__c,
+                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
+                FROM WorkItem__c
+                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                    AND BountySkillsTxt__c LIKE :skillFilter
+                WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
+            ];
+        } else {
+            items = [
+                SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
+                       AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
+                       BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
+                       BountySkillsTxt__c, BountyMaxClaimsNumber__c,
+                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
+                FROM WorkItem__c
+                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
+            ];
         }
-        if (skillFilter != null) {
-            query += ' AND BountySkillsTxt__c LIKE :skillFilter';
-        }
-        query += ' WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100';
 
-        List<WorkItem__c> items = Database.query(query);
         List<Map<String, Object>> results = new List<Map<String, Object>>();
         for (WorkItem__c wi : items) {
             results.add(buildBountyMap(wi));
