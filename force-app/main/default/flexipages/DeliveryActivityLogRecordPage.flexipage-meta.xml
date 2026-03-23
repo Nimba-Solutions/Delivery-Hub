@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- ── Header ── -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -31,6 +32,281 @@
         <name>header</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ══ DYNAMIC FORMS: Level 1 — Field Facets ══ -->
+
+    <!-- Activity Details: Left column (Name, ActionTypePk, NetworkEntityId, UserIdTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.Name</fieldItem>
+                <identifier>RecordNameField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ActionTypePk__c</fieldItem>
+                <identifier>RecordActionTypePk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.NetworkEntityId__c</fieldItem>
+                <identifier>RecordNetworkEntityId_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.UserIdTxt__c</fieldItem>
+                <identifier>RecordUserIdTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0001-000000000001</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Activity Details: Right column (ComponentNameTxt, PageUrlTxt, RecordIdTxt, SessionIdTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ComponentNameTxt__c</fieldItem>
+                <identifier>RecordComponentNameTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.PageUrlTxt__c</fieldItem>
+                <identifier>RecordPageUrlTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RecordIdTxt__c</fieldItem>
+                <identifier>RecordRecordIdTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.SessionIdTxt__c</fieldItem>
+                <identifier>RecordSessionIdTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0001-000000000002</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Context: Single column (ContextDataTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ContextDataTxt__c</fieldItem>
+                <identifier>RecordContextDataTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0001-000000000003</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: Left column (CreatedById) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.CreatedById</fieldItem>
+                <identifier>RecordCreatedByIdField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0001-000000000004</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: Right column (LastModifiedById) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LastModifiedById</fieldItem>
+                <identifier>RecordLastModifiedByIdField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0001-000000000005</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ DYNAMIC FORMS: Level 2 — Column Facets ══ -->
+
+    <!-- Activity Details: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-d4e50001-0001-0001-0001-000000000001</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_actDet1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-d4e50001-0001-0001-0001-000000000002</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_actDet2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0002-000000000001</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Context: 1 column -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-d4e50001-0001-0001-0001-000000000003</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_ctx1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0002-000000000002</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-d4e50001-0001-0001-0001-000000000004</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sys1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-d4e50001-0001-0001-0001-000000000005</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sys2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-d4e50001-0001-0001-0002-000000000003</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ Detail Tab Content — Level 3 field sections ══ -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-d4e50001-0001-0001-0002-000000000001</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Activity Details</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_actDet</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-d4e50001-0001-0001-0002-000000000002</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Context</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_ctx</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-d4e50001-0001-0001-0002-000000000003</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>System</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_sys</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>detailTabContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ Related Lists Tab ══ -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -54,126 +330,9 @@
         <name>relatedTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- ══ Tab Set ══ -->
     <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Activity Details</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_ActivityDetails</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>Name</fieldItem>
-                    <identifier>fieldInstance_Name</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ActionTypePk__c</fieldItem>
-                    <identifier>fieldInstance_ActionType</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ComponentNameTxt__c</fieldItem>
-                    <identifier>fieldInstance_ComponentName</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>UserIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_UserId</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>SessionIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_SessionId</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>PageUrlTxt__c</fieldItem>
-                    <identifier>fieldInstance_PageUrl</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RecordIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_RecordId</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>NetworkEntityId__c</fieldItem>
-                    <identifier>fieldInstance_NetworkEntity</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>ONE</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Context</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_Context</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ContextDataTxt__c</fieldItem>
-                    <identifier>fieldInstance_ContextData</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <mode>Replace</mode>
-        <name>detailTabContent</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>relatedTabContent</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Standard.Tab.relatedLists</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>relatedListsTab</identifier>
-            </componentInstance>
-        </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
@@ -190,6 +349,20 @@
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
                 <identifier>detailTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>relatedTabContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Standard.Tab.relatedLists</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>relatedListsTab</identifier>
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>
@@ -211,11 +384,14 @@
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ══ Sidebar (empty) ══ -->
     <flexiPageRegions>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
+
     <masterLabel>Activity Log Record Page</masterLabel>
     <parentFlexiPage>flexipage__default_rec_L</parentFlexiPage>
     <sobjectType>ActivityLog__c</sobjectType>
