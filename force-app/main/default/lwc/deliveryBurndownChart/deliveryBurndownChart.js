@@ -4,7 +4,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from "lwc";
-import getBurndownData from "@salesforce/apex/DeliveryBurndownController.getBurndownData";
+import getBurndownData from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryBurndownController.getBurndownData";
 
 // SVG layout constants
 const SVG_WIDTH = 700;

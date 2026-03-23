@@ -8,7 +8,7 @@
  */
 import { LightningElement, api, wire } from 'lwc';
 import { CurrentPageReference } from 'lightning/navigation';
-import getStatusPageData from '@salesforce/apex/DeliveryStatusPageController.getStatusPageData';
+import getStatusPageData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryStatusPageController.getStatusPageData';
 
 export default class DeliveryStatusPage extends LightningElement {
     @api entityToken;
