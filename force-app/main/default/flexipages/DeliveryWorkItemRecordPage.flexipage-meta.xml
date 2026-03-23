@@ -39,7 +39,565 @@
         <type>Region</type>
     </flexiPageRegions>
 
-    <!-- ── Main body tab content facets ── -->
+    <!-- ══ DYNAMIC FORMS: Level 1 — Field Facets ══ -->
+
+    <!-- Core Info: Left column (Name, BriefDescriptionTxt, StageNamePk, PriorityPk, Developer) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.Name</fieldItem>
+                <identifier>RecordNameField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.BriefDescriptionTxt__c</fieldItem>
+                <identifier>RecordBriefDescriptionTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.StageNamePk__c</fieldItem>
+                <identifier>RecordStageNamePk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.PriorityPk__c</fieldItem>
+                <identifier>RecordPriorityPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.Developer__c</fieldItem>
+                <identifier>RecordDeveloper_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-core-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Core Info: Right column (StatusPk, Tags, WorkflowTypeTxt, RequestTypePk, ClientIntentionPk) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.StatusPk__c</fieldItem>
+                <identifier>RecordStatusPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.Tags__c</fieldItem>
+                <identifier>RecordTags_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.WorkflowTypeTxt__c</fieldItem>
+                <identifier>RecordWorkflowTypeTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RequestTypePk__c</fieldItem>
+                <identifier>RecordRequestTypePk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ClientIntentionPk__c</fieldItem>
+                <identifier>RecordClientIntentionPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-core-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Description & Criteria: Single column (DetailsTxt, AcceptanceCriteriaTxt, StepsToReproduceTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.DetailsTxt__c</fieldItem>
+                <identifier>RecordDetailsTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.AcceptanceCriteriaTxt__c</fieldItem>
+                <identifier>RecordAcceptanceCriteriaTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.StepsToReproduceTxt__c</fieldItem>
+                <identifier>RecordStepsToReproduceTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-desc-col</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Budget & Hours: Left column (ClientPreApprovedHoursNumber, EstimatedHoursNumber, BillableRateCurrency) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ClientPreApprovedHoursNumber__c</fieldItem>
+                <identifier>RecordClientPreApprovedHoursNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.EstimatedHoursNumber__c</fieldItem>
+                <identifier>RecordEstimatedHoursNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.BillableRateCurrency__c</fieldItem>
+                <identifier>RecordBillableRateCurrency_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-budget-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Budget & Hours: Right column (TotalLoggedHoursNumber, BudgetVarianceNumber, HoursVarianceNumber) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.TotalLoggedHoursNumber__c</fieldItem>
+                <identifier>RecordTotalLoggedHoursNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.BudgetVarianceNumber__c</fieldItem>
+                <identifier>RecordBudgetVarianceNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.HoursVarianceNumber__c</fieldItem>
+                <identifier>RecordHoursVarianceNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-budget-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Dates & Planning: Left column (EstimatedStartDevDate, EstimatedEndDevDate, CalculatedETADate, SLATargetDate) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.EstimatedStartDevDate__c</fieldItem>
+                <identifier>RecordEstimatedStartDevDate_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.EstimatedEndDevDate__c</fieldItem>
+                <identifier>RecordEstimatedEndDevDate_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.CalculatedETADate__c</fieldItem>
+                <identifier>RecordCalculatedETADate_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.SLATargetDate__c</fieldItem>
+                <identifier>RecordSLATargetDate_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-dates-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Dates & Planning: Right column (ProjectedUATReadyDate, SLAStatusTxt, StageEnteredDateTime) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ProjectedUATReadyDate__c</fieldItem>
+                <identifier>RecordProjectedUATReadyDate_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.SLAStatusTxt__c</fieldItem>
+                <identifier>RecordSLAStatusTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.StageEnteredDateTime__c</fieldItem>
+                <identifier>RecordStageEnteredDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-dates-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Relationships: Left column (Epic, ParentWorkItemId) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.Epic__c</fieldItem>
+                <identifier>RecordEpic_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ParentWorkItemId__c</fieldItem>
+                <identifier>RecordParentWorkItemId_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-rel-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Relationships: Right column (ClientNetworkEntityId, DeveloperDaysSizeNumber) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ClientNetworkEntityId__c</fieldItem>
+                <identifier>RecordClientNetworkEntityId_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.DeveloperDaysSizeNumber__c</fieldItem>
+                <identifier>RecordDeveloperDaysSizeNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-rel-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: Left column (CreatedById, IsActiveBool) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.CreatedById</fieldItem>
+                <identifier>RecordCreatedByIdField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.IsActiveBool__c</fieldItem>
+                <identifier>RecordIsActiveBool_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-sys-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: Right column (LastModifiedById, SortOrderNumber) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LastModifiedById</fieldItem>
+                <identifier>RecordLastModifiedByIdField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.SortOrderNumber__c</fieldItem>
+                <identifier>RecordSortOrderNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-sys-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ DYNAMIC FORMS: Level 2 — Column Facets ══ -->
+
+    <!-- Core Info: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-core-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_core1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-core-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_core2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-core-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Description & Criteria: 1 column -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-desc-col</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_desc1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-desc-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Budget & Hours: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-budget-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_budget1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-budget-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_budget2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-budget-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Dates & Planning: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-dates-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_dates1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-dates-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_dates2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-dates-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Relationships: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-rel-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_rel1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-rel-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_rel2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-rel-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-sys-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sys1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-sys-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sys2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-sys-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ Main body tab content facets ══ -->
+
+    <!-- Related Lists tab content -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -63,487 +621,122 @@
         <name>relatedTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- ══ Detail Tab Content — Level 3 field sections ══ -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>TWO</value>
+                    <value>Facet-wi-core-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
                     <value>Core Info</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_CoreInfo</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>Name</fieldItem>
-                    <identifier>fieldInstance_Name</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>BriefDescriptionTxt__c</fieldItem>
-                    <identifier>fieldInstance_BriefDescriptionTxt</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>StageNamePk__c</fieldItem>
-                    <identifier>fieldInstance_StageNamePk</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>StatusPk__c</fieldItem>
-                    <identifier>fieldInstance_StatusPk</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>PriorityPk__c</fieldItem>
-                    <identifier>fieldInstance_PriorityPk</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>Tags__c</fieldItem>
-                    <identifier>fieldInstance_Tags</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>Developer__c</fieldItem>
-                    <identifier>fieldInstance_Developer</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>WorkflowTypeTxt__c</fieldItem>
-                    <identifier>fieldInstance_WorkflowTypeTxt</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RequestTypePk__c</fieldItem>
-                    <identifier>fieldInstance_RequestTypePk</identifier>
-                </fieldInstances>
+                <identifier>flexipage_fieldSection_core</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>ONE</value>
+                    <value>Facet-wi-desc-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
                     <value>Description &amp; Criteria</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_DescCriteria</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>DetailsTxt__c</fieldItem>
-                    <identifier>fieldInstance_DetailsTxt</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>AcceptanceCriteriaTxt__c</fieldItem>
-                    <identifier>fieldInstance_AcceptanceCriteriaTxt</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>StepsToReproduceTxt__c</fieldItem>
-                    <identifier>fieldInstance_StepsToReproduceTxt</identifier>
-                </fieldInstances>
+                <identifier>flexipage_fieldSection_desc</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>TWO</value>
+                    <value>Facet-wi-budget-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
                     <value>Budget &amp; Hours</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_BudgetHours</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ClientPreApprovedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_ClientPreApprovedHours</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>EstimatedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_EstimatedHours</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>TotalLoggedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_TotalLoggedHours</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>BudgetVarianceNumber__c</fieldItem>
-                    <identifier>fieldInstance_BudgetVariance</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>HoursVarianceNumber__c</fieldItem>
-                    <identifier>fieldInstance_HoursVariance</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>BillableRateCurrency__c</fieldItem>
-                    <identifier>fieldInstance_BillableRate</identifier>
-                </fieldInstances>
+                <identifier>flexipage_fieldSection_budget</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>TWO</value>
+                    <value>Facet-wi-dates-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
                     <value>Dates &amp; Planning</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_DatesPlanning</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>EstimatedStartDevDate__c</fieldItem>
-                    <identifier>fieldInstance_EstStartDev</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>EstimatedEndDevDate__c</fieldItem>
-                    <identifier>fieldInstance_EstEndDev</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>CalculatedETADate__c</fieldItem>
-                    <identifier>fieldInstance_CalculatedETA</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ProjectedUATReadyDate__c</fieldItem>
-                    <identifier>fieldInstance_ProjectedUATReady</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>SLATargetDate__c</fieldItem>
-                    <identifier>fieldInstance_SLATarget</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>SLAStatusTxt__c</fieldItem>
-                    <identifier>fieldInstance_SLAStatus</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>StageEnteredDateTime__c</fieldItem>
-                    <identifier>fieldInstance_StageEntered</identifier>
-                </fieldInstances>
+                <identifier>flexipage_fieldSection_dates</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>TWO</value>
+                    <value>Facet-wi-rel-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
                     <value>Relationships</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_Relationships</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>Epic__c</fieldItem>
-                    <identifier>fieldInstance_Epic</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ParentWorkItemId__c</fieldItem>
-                    <identifier>fieldInstance_ParentWorkItem</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ClientNetworkEntityId__c</fieldItem>
-                    <identifier>fieldInstance_ClientNetworkEntity</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ClientIntentionPk__c</fieldItem>
-                    <identifier>fieldInstance_ClientIntention</identifier>
-                </fieldInstances>
+                <identifier>flexipage_fieldSection_rel</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>TWO</value>
+                    <value>Facet-wi-sys-cols</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Recurring</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_Recurring</identifier>
-                <visibilityRule>
-                    <booleanFilter>1</booleanFilter>
-                    <criteria>
-                        <leftValue>{!Record.IsRecurringBool__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                </visibilityRule>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>IsRecurringBool__c</fieldItem>
-                    <identifier>fieldInstance_IsRecurring</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RecurrenceDayTxt__c</fieldItem>
-                    <identifier>fieldInstance_RecurrenceDay</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RecurrenceScheduleTxt__c</fieldItem>
-                    <identifier>fieldInstance_RecurrenceSchedule</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>NextRecurrenceDate__c</fieldItem>
-                    <identifier>fieldInstance_NextRecurrence</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>IsTemplateBool__c</fieldItem>
-                    <identifier>fieldInstance_IsTemplate</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>TemplateSourceId__c</fieldItem>
-                    <identifier>fieldInstance_TemplateSource</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>External Integration</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_ExternalIntegration</identifier>
-                <visibilityRule>
-                    <booleanFilter>1</booleanFilter>
-                    <criteria>
-                        <leftValue>{!Record.ExternalSourceOrgTxt__c}</leftValue>
-                        <operator>ISBLANK</operator>
-                        <rightValue>false</rightValue>
-                    </criteria>
-                </visibilityRule>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ExternalSourceOrgTxt__c</fieldItem>
-                    <identifier>fieldInstance_ExternalSourceOrg</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ExternalRequesterEmailTxt__c</fieldItem>
-                    <identifier>fieldInstance_ExternalRequesterEmail</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>EventReceivedOnDateTime__c</fieldItem>
-                    <identifier>fieldInstance_EventReceivedOn</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>SourceEventReplayIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_SourceEventReplayId</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>isCollapsed</name>
-                    <value>true</value>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
                     <value>System</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_System</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>CreatedById</fieldItem>
-                    <identifier>fieldInstance_CreatedBy</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>LastModifiedById</fieldItem>
-                    <identifier>fieldInstance_LastModifiedBy</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>IsActiveBool__c</fieldItem>
-                    <identifier>fieldInstance_IsActive</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>SortOrderNumber__c</fieldItem>
-                    <identifier>fieldInstance_SortOrder</identifier>
-                </fieldInstances>
+                <identifier>flexipage_fieldSection_sys</identifier>
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>
         <name>detailTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
     <!-- Activity Timeline tab content facet -->
     <flexiPageRegions>
         <itemInstances>
@@ -555,6 +748,8 @@
         <name>timelineTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- ══ Tab Set ══ -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- ── Header ── -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -31,6 +32,453 @@
         <name>header</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ══ DYNAMIC FORMS: Level 1 — Field Facets ══ -->
+
+    <!-- Sync Summary: Left column (Name, ObjectTypePk, DirectionPk, StatusPk) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.Name</fieldItem>
+                <identifier>RecordNameField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ObjectTypePk__c</fieldItem>
+                <identifier>RecordObjectTypePk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.DirectionPk__c</fieldItem>
+                <identifier>RecordDirectionPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.StatusPk__c</fieldItem>
+                <identifier>RecordStatusPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000001</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Sync Summary: Right column (SourceEventTimestampDateTime, GlobalSourceIdTxt, LocalRecordIdTxt, RemoteExternalIDTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.SourceEventTimestampDateTime__c</fieldItem>
+                <identifier>RecordSourceEventTimestampDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.GlobalSourceIdTxt__c</fieldItem>
+                <identifier>RecordGlobalSourceIdTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LocalRecordIdTxt__c</fieldItem>
+                <identifier>RecordLocalRecordIdTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RemoteExternalIDTxt__c</fieldItem>
+                <identifier>RecordRemoteExternalIDTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000002</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Related Context: Left column (WorkItemId, WorkItemCommentId) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.WorkItemId__c</fieldItem>
+                <identifier>RecordWorkItemId_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.WorkItemCommentId__c</fieldItem>
+                <identifier>RecordWorkItemCommentId_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000003</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Related Context: Right column (RequestId) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RequestId__c</fieldItem>
+                <identifier>RecordRequestId_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000004</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Routing & Retry: Left column (RetryCountNumber) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RetryCountNumber__c</fieldItem>
+                <identifier>RecordRetryCountNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000005</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Routing & Retry: Right column (PayloadContextTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.PayloadContextTxt__c</fieldItem>
+                <identifier>RecordPayloadContextTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000006</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Diagnostics: Single column (PayloadTxt, ErrorLogTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.PayloadTxt__c</fieldItem>
+                <identifier>RecordPayloadTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ErrorLogTxt__c</fieldItem>
+                <identifier>RecordErrorLogTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000007</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: Left column (CreatedById) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.CreatedById</fieldItem>
+                <identifier>RecordCreatedByIdField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000008</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: Right column (LastModifiedById) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LastModifiedById</fieldItem>
+                <identifier>RecordLastModifiedByIdField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0001-000000000009</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ DYNAMIC FORMS: Level 2 — Column Facets ══ -->
+
+    <!-- Sync Summary: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000001</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_syncSum1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000002</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_syncSum2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0002-000000000001</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Related Context: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000003</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_relCtx1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000004</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_relCtx2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0002-000000000002</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Routing & Retry: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000005</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_route1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000006</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_route2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0002-000000000003</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Diagnostics: 1 column -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000007</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_diag1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0002-000000000004</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- System: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000008</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sys1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-e5f60001-0001-0001-0001-000000000009</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sys2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-e5f60001-0001-0001-0002-000000000005</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ Detail Tab Content — Level 3 field sections ══ -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-e5f60001-0001-0001-0002-000000000001</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Sync Summary</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_syncSum</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-e5f60001-0001-0001-0002-000000000002</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Related Context</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_relCtx</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-e5f60001-0001-0001-0002-000000000003</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Routing &amp; Retry</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_route</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-e5f60001-0001-0001-0002-000000000004</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Diagnostics</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_diag</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-e5f60001-0001-0001-0002-000000000005</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>System</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_sys</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>detailTabContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ Related Lists Tab ══ -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -54,202 +502,9 @@
         <name>relatedTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- ══ Tab Set ══ -->
     <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Sync Summary</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_SyncSummary</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>Name</fieldItem>
-                    <identifier>fieldInstance_Name</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>StatusPk__c</fieldItem>
-                    <identifier>fieldInstance_Status</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>DirectionPk__c</fieldItem>
-                    <identifier>fieldInstance_Direction</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ObjectTypePk__c</fieldItem>
-                    <identifier>fieldInstance_ObjectType</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>SourceEventTimestampDateTime__c</fieldItem>
-                    <identifier>fieldInstance_SourceEventTimestamp</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Related Context</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_RelatedContext</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>WorkItemId__c</fieldItem>
-                    <identifier>fieldInstance_WorkItem</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>WorkItemCommentId__c</fieldItem>
-                    <identifier>fieldInstance_WorkItemComment</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RequestId__c</fieldItem>
-                    <identifier>fieldInstance_Request</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Routing</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_Routing</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>LocalRecordIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_LocalRecordId</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RemoteExternalIDTxt__c</fieldItem>
-                    <identifier>fieldInstance_RemoteExternalID</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>GlobalSourceIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_GlobalSourceId</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RetryCountNumber__c</fieldItem>
-                    <identifier>fieldInstance_RetryCount</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>ONE</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Diagnostics</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_Diagnostics</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ErrorLogTxt__c</fieldItem>
-                    <identifier>fieldInstance_ErrorLog</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>PayloadContextTxt__c</fieldItem>
-                    <identifier>fieldInstance_PayloadContext</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>PayloadTxt__c</fieldItem>
-                    <identifier>fieldInstance_Payload</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <mode>Replace</mode>
-        <name>detailTabContent</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>relatedTabContent</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Standard.Tab.relatedLists</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>relatedListsTab</identifier>
-            </componentInstance>
-        </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
@@ -266,6 +521,20 @@
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
                 <identifier>detailTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>relatedTabContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Standard.Tab.relatedLists</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>relatedListsTab</identifier>
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>
@@ -287,11 +556,14 @@
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ══ Sidebar (empty) ══ -->
     <flexiPageRegions>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
+
     <masterLabel>Sync Item Record Page</masterLabel>
     <parentFlexiPage>flexipage__default_rec_L</parentFlexiPage>
     <sobjectType>SyncItem__c</sobjectType>
