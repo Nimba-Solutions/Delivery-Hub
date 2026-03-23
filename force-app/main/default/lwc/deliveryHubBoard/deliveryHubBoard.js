@@ -87,10 +87,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     showAllColumns = false;
     showCreateModal = false;
     nextSortOrder = 1;
-    overallFilter = "all";
+    overallFilter = "indev";
     intentionFilter = "all";
     @track uploadedFileIds = [];
-    showMode = "overall";
+    showMode = "active";
     @track draggedItem = {};
     isDragging = false;
     placeholder = null;
