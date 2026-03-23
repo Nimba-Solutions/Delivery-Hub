@@ -63,10 +63,10 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
-                    <value>Request Info</value>
+                    <value>Sync Summary</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_RequestInfo</identifier>
+                <identifier>fieldSection_SyncSummary</identifier>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
@@ -74,22 +74,6 @@
                     </fieldInstanceProperties>
                     <fieldItem>Name</fieldItem>
                     <identifier>fieldInstance_Name</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>WorkItemId__c</fieldItem>
-                    <identifier>fieldInstance_WorkItem</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>DeliveryEntityId__c</fieldItem>
-                    <identifier>fieldInstance_DeliveryEntity</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
@@ -104,8 +88,24 @@
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>StandDownReasonTxt__c</fieldItem>
-                    <identifier>fieldInstance_StandDownReason</identifier>
+                    <fieldItem>DirectionPk__c</fieldItem>
+                    <identifier>fieldInstance_Direction</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>ObjectTypePk__c</fieldItem>
+                    <identifier>fieldInstance_ObjectType</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>SourceEventTimestampDateTime__c</fieldItem>
+                    <identifier>fieldInstance_SourceEventTimestamp</identifier>
                 </fieldInstances>
             </componentInstance>
         </itemInstances>
@@ -117,65 +117,33 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
-                    <value>Budget &amp; Financials</value>
+                    <value>Related Context</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_BudgetFinancials</identifier>
+                <identifier>fieldSection_RelatedContext</identifier>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>HourlyRateCurrency__c</fieldItem>
-                    <identifier>fieldInstance_HourlyRate</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>QuotedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_QuotedHours</identifier>
+                    <fieldItem>WorkItemId__c</fieldItem>
+                    <identifier>fieldInstance_WorkItem</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>PreApprovedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_PreApprovedHours</identifier>
+                    <fieldItem>WorkItemCommentId__c</fieldItem>
+                    <identifier>fieldInstance_WorkItemComment</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>RequestedBudgetIncreaseNumber__c</fieldItem>
-                    <identifier>fieldInstance_RequestedBudgetIncrease</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>TotalLoggedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_TotalLoggedHours</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>BudgetUtilizationPercent__c</fieldItem>
-                    <identifier>fieldInstance_BudgetUtilization</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ProjectedCostCurrency__c</fieldItem>
-                    <identifier>fieldInstance_ProjectedCost</identifier>
+                    <fieldItem>RequestId__c</fieldItem>
+                    <identifier>fieldInstance_Request</identifier>
                 </fieldInstances>
             </componentInstance>
         </itemInstances>
@@ -187,25 +155,79 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
-                    <value>Verification</value>
+                    <value>Routing</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_Verification</identifier>
+                <identifier>fieldSection_Routing</identifier>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>RemoteWorkItemIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_RemoteWorkItemId</identifier>
+                    <fieldItem>LocalRecordIdTxt__c</fieldItem>
+                    <identifier>fieldInstance_LocalRecordId</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>WorkProofUrl__c</fieldItem>
-                    <identifier>fieldInstance_WorkProofUrl</identifier>
+                    <fieldItem>RemoteExternalIDTxt__c</fieldItem>
+                    <identifier>fieldInstance_RemoteExternalID</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>GlobalSourceIdTxt__c</fieldItem>
+                    <identifier>fieldInstance_GlobalSourceId</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>RetryCountNumber__c</fieldItem>
+                    <identifier>fieldInstance_RetryCount</identifier>
+                </fieldInstances>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>ONE</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Diagnostics</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>fieldSection_Diagnostics</identifier>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>ErrorLogTxt__c</fieldItem>
+                    <identifier>fieldInstance_ErrorLog</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>PayloadContextTxt__c</fieldItem>
+                    <identifier>fieldInstance_PayloadContext</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>PayloadTxt__c</fieldItem>
+                    <identifier>fieldInstance_Payload</identifier>
                 </fieldInstances>
             </componentInstance>
         </itemInstances>
@@ -266,25 +288,13 @@
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryManageRequest</componentName>
-                <identifier>c_deliveryManageRequest</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryWorkItemChat</componentName>
-                <identifier>c_deliveryWorkItemChat</identifier>
-            </componentInstance>
-        </itemInstances>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
-    <masterLabel>Request Record Page</masterLabel>
+    <masterLabel>Sync Item Record Page</masterLabel>
     <parentFlexiPage>flexipage__default_rec_L</parentFlexiPage>
-    <sobjectType>WorkRequest__c</sobjectType>
+    <sobjectType>SyncItem__c</sobjectType>
     <template>
         <name>flexipage:recordHomeTemplateDesktop</name>
     </template>

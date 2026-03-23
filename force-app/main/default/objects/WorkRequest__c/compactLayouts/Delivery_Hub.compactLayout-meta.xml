@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CompactLayout xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Delivery_Hub</fullName>
+    <fields>Name</fields>
+    <fields>WorkItemId__c</fields>
+    <fields>DeliveryEntityId__c</fields>
+    <fields>StatusPk__c</fields>
+    <fields>TotalLoggedHoursNumber__c</fields>
+    <label>Delivery Hub</label>
+</CompactLayout>

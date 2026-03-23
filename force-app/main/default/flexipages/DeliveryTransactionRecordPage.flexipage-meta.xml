@@ -63,10 +63,10 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
-                    <value>Request Info</value>
+                    <value>Transaction</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_RequestInfo</identifier>
+                <identifier>fieldSection_Transaction</identifier>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
@@ -80,132 +80,48 @@
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>WorkItemId__c</fieldItem>
-                    <identifier>fieldInstance_WorkItem</identifier>
+                    <fieldItem>DocumentId__c</fieldItem>
+                    <identifier>fieldInstance_Document</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>DeliveryEntityId__c</fieldItem>
-                    <identifier>fieldInstance_DeliveryEntity</identifier>
+                    <fieldItem>TypePk__c</fieldItem>
+                    <identifier>fieldInstance_Type</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>StatusPk__c</fieldItem>
-                    <identifier>fieldInstance_Status</identifier>
+                    <fieldItem>AmountCurrency__c</fieldItem>
+                    <identifier>fieldInstance_Amount</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>StandDownReasonTxt__c</fieldItem>
-                    <identifier>fieldInstance_StandDownReason</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Budget &amp; Financials</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_BudgetFinancials</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>HourlyRateCurrency__c</fieldItem>
-                    <identifier>fieldInstance_HourlyRate</identifier>
+                    <fieldItem>TransactionDateDate__c</fieldItem>
+                    <identifier>fieldInstance_TransactionDate</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>QuotedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_QuotedHours</identifier>
+                    <fieldItem>MethodPk__c</fieldItem>
+                    <identifier>fieldInstance_Method</identifier>
                 </fieldInstances>
                 <fieldInstances>
                     <fieldInstanceProperties>
                         <name>uiBehavior</name>
                         <value>none</value>
                     </fieldInstanceProperties>
-                    <fieldItem>PreApprovedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_PreApprovedHours</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RequestedBudgetIncreaseNumber__c</fieldItem>
-                    <identifier>fieldInstance_RequestedBudgetIncrease</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>TotalLoggedHoursNumber__c</fieldItem>
-                    <identifier>fieldInstance_TotalLoggedHours</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>BudgetUtilizationPercent__c</fieldItem>
-                    <identifier>fieldInstance_BudgetUtilization</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>readonly</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>ProjectedCostCurrency__c</fieldItem>
-                    <identifier>fieldInstance_ProjectedCost</identifier>
-                </fieldInstances>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>TWO</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Verification</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>fieldSection_Verification</identifier>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>RemoteWorkItemIdTxt__c</fieldItem>
-                    <identifier>fieldInstance_RemoteWorkItemId</identifier>
-                </fieldInstances>
-                <fieldInstances>
-                    <fieldInstanceProperties>
-                        <name>uiBehavior</name>
-                        <value>none</value>
-                    </fieldInstanceProperties>
-                    <fieldItem>WorkProofUrl__c</fieldItem>
-                    <identifier>fieldInstance_WorkProofUrl</identifier>
+                    <fieldItem>NoteTxt__c</fieldItem>
+                    <identifier>fieldInstance_Note</identifier>
                 </fieldInstances>
             </componentInstance>
         </itemInstances>
@@ -266,25 +182,13 @@
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryManageRequest</componentName>
-                <identifier>c_deliveryManageRequest</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryWorkItemChat</componentName>
-                <identifier>c_deliveryWorkItemChat</identifier>
-            </componentInstance>
-        </itemInstances>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
-    <masterLabel>Request Record Page</masterLabel>
+    <masterLabel>Delivery Transaction Record Page</masterLabel>
     <parentFlexiPage>flexipage__default_rec_L</parentFlexiPage>
-    <sobjectType>WorkRequest__c</sobjectType>
+    <sobjectType>DeliveryTransaction__c</sobjectType>
     <template>
         <name>flexipage:recordHomeTemplateDesktop</name>
     </template>
