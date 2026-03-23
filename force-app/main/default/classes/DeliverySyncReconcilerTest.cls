@@ -88,29 +88,45 @@ private class DeliverySyncReconcilerTest {
      */
     @IsTest
     static void testReconcileSkipsSyncedItems() {
-        // Clear any noise and create an already-Synced item
+        // Clear any noise and pre-create Synced items for BOTH WorkItem and WorkLog
         delete [SELECT Id FROM SyncItem__c];
 
         WorkRequest__c req = [SELECT Id, WorkItemId__c FROM WorkRequest__c LIMIT 1];
+        WorkLog__c wl = [SELECT Id FROM WorkLog__c LIMIT 1];
 
-        insert new SyncItem__c(
-            ObjectTypePk__c     = 'WorkItem__c',
-            LocalRecordIdTxt__c = req.WorkItemId__c,
-            WorkItemId__c       = req.WorkItemId__c,
-            RequestId__c        = req.Id,
-            DirectionPk__c      = 'Outbound',
-            StatusPk__c         = 'Synced',
-            PayloadTxt__c       = '{"test":"already synced"}'
-        );
+        // Pre-create Synced outbound items for both object types
+        insert new List<SyncItem__c>{
+            new SyncItem__c(
+                ObjectTypePk__c     = 'WorkItem__c',
+                LocalRecordIdTxt__c = req.WorkItemId__c,
+                WorkItemId__c       = req.WorkItemId__c,
+                RequestId__c        = req.Id,
+                DirectionPk__c      = 'Outbound',
+                StatusPk__c         = 'Synced',
+                PayloadTxt__c       = '{"test":"already synced"}'
+            ),
+            new SyncItem__c(
+                ObjectTypePk__c     = 'WorkLog__c',
+                LocalRecordIdTxt__c = (String) wl.Id,
+                WorkItemId__c       = req.WorkItemId__c,
+                RequestId__c        = req.Id,
+                DirectionPk__c      = 'Outbound',
+                StatusPk__c         = 'Synced',
+                PayloadTxt__c       = '{"test":"worklog already synced"}'
+            )
+        };
 
-        Integer beforeCount = [SELECT COUNT() FROM SyncItem__c];
+        Integer beforeWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound'];
+        Integer beforeWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound'];
 
         Test.startTest();
         System.enqueueJob(new DeliverySyncReconciler());
         Test.stopTest();
 
-        Integer afterCount = [SELECT COUNT() FROM SyncItem__c];
-        System.assertEquals(beforeCount, afterCount, 'Reconciler should NOT create new SyncItems when a Synced item exists.');
+        Integer afterWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound'];
+        Integer afterWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound'];
+        System.assertEquals(beforeWI, afterWI, 'Reconciler should NOT create new WorkItem SyncItems when Synced item exists.');
+        System.assertEquals(beforeWL, afterWL, 'Reconciler should NOT create new WorkLog SyncItems when Synced item exists.');
     }
 
     /**
