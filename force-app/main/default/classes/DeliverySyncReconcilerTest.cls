@@ -116,17 +116,16 @@ private class DeliverySyncReconcilerTest {
             )
         };
 
-        Integer beforeWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound'];
-        Integer beforeWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound'];
-
         Test.startTest();
         System.enqueueJob(new DeliverySyncReconciler());
         Test.stopTest();
 
-        Integer afterWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound'];
-        Integer afterWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound'];
-        System.assertEquals(beforeWI, afterWI, 'Reconciler should NOT create new WorkItem SyncItems when Synced item exists.');
-        System.assertEquals(beforeWL, afterWL, 'Reconciler should NOT create new WorkLog SyncItems when Synced item exists.');
+        // The reconciler creates Queued items. If it correctly skipped covered records,
+        // there should be zero Queued outbound items (regardless of what triggers created).
+        Integer queuedWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
+        Integer queuedWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
+        System.assertEquals(0, queuedWI, 'Reconciler should NOT create Queued WorkItem SyncItems when Synced item exists.');
+        System.assertEquals(0, queuedWL, 'Reconciler should NOT create Queued WorkLog SyncItems when Synced item exists.');
     }
 
     /**
