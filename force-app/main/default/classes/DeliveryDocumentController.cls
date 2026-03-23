@@ -505,6 +505,21 @@ public with sharing class DeliveryDocumentController {
         return getTransactionsForDocument(documentId);
     }
 
+    /**
+     * @description Returns the Default Billing Entity ID from org settings.
+     * Used by the Document Viewer LWC to resolve the entity context when
+     * no record page context or explicit networkEntityId is available.
+     * @return The 18-character NetworkEntity__c ID, or null if not configured.
+     */
+    @AuraEnabled(cacheable=true)
+    public static String getDefaultBillingEntityId() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null) {
+            return null;
+        }
+        return (String) settings.get('DefaultBillingEntityIdTxt__c');
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  PRIVATE: Transaction Helpers
     // ═══════════════════════════════════════════════════════════
