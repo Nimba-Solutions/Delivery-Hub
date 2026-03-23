@@ -57,8 +57,70 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>force:detailPanel</componentName>
-                <identifier>force_detailPanel</identifier>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>TWO</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Comment</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>fieldSection_Comment</identifier>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>WorkItemId__c</fieldItem>
+                    <identifier>fieldInstance_WorkItem</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>AuthorTxt__c</fieldItem>
+                    <identifier>fieldInstance_Author</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>readonly</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>SourcePk__c</fieldItem>
+                    <identifier>fieldInstance_Source</identifier>
+                </fieldInstances>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>readonly</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>SyncedDateTime__c</fieldItem>
+                    <identifier>fieldInstance_Synced</identifier>
+                </fieldInstances>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>ONE</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Body</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>fieldSection_Body</identifier>
+                <fieldInstances>
+                    <fieldInstanceProperties>
+                        <name>uiBehavior</name>
+                        <value>none</value>
+                    </fieldInstanceProperties>
+                    <fieldItem>BodyTxt__c</fieldItem>
+                    <identifier>fieldInstance_Body</identifier>
+                </fieldInstances>
             </componentInstance>
         </itemInstances>
         <mode>Replace</mode>
