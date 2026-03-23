@@ -101,7 +101,14 @@ global without sharing class DeliveryHubSyncService {
             }
 
             String path = req.requestURI.substring(req.requestURI.lastIndexOf('/') + 1);
-            
+
+            // Health Endpoint: Org-level sync health check (no clientId required)
+            if (path.toLowerCase() == 'health') {
+                res.statusCode = 200;
+                res.responseBody = Blob.valueOf(JSON.serialize(buildHealthResponse()));
+                return;
+            }
+
             // Route Validation: Ensure they are hitting the /changes endpoint
             if (path.toLowerCase() != 'changes') {
                 res.statusCode = 404;
@@ -173,6 +180,56 @@ global without sharing class DeliveryHubSyncService {
             res.statusCode = 500;
             res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{ 'error' => e.getMessage() }));
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Health Check
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Builds a health snapshot of the current org's sync state.
+     * Returns counts of WorkItems, WorkLogs, total hours, and SyncItem status breakdown.
+     * @return A map representing the health JSON response.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private static Map<String, Object> buildHealthResponse() {
+        Map<String, Object> health = new Map<String, Object>();
+
+        // WorkItem count
+        health.put('workItems', [SELECT COUNT() FROM WorkItem__c WITH SYSTEM_MODE]);
+
+        // WorkLog count
+        health.put('workLogs', [SELECT COUNT() FROM WorkLog__c WITH SYSTEM_MODE]);
+
+        // Total hours from WorkLogs
+        AggregateResult[] hoursAgg = [
+            SELECT SUM(HoursLoggedNumber__c) totalHours
+            FROM WorkLog__c
+            WITH SYSTEM_MODE
+        ];
+        Decimal totalHours = (hoursAgg != null && !hoursAgg.isEmpty() && hoursAgg[0].get('totalHours') != null)
+            ? (Decimal) hoursAgg[0].get('totalHours')
+            : 0;
+        health.put('totalHours', totalHours);
+
+        // SyncItem breakdown by status
+        Map<String, Integer> syncItemCounts = new Map<String, Integer>{
+            'queued' => 0, 'synced' => 0, 'failed' => 0, 'staged' => 0
+        };
+        for (AggregateResult ar : [
+            SELECT StatusPk__c status, COUNT(Id) cnt
+            FROM SyncItem__c
+            WITH SYSTEM_MODE
+            GROUP BY StatusPk__c
+        ]) {
+            String status = ((String) ar.get('status'));
+            if (String.isNotBlank(status)) {
+                syncItemCounts.put(status.toLowerCase(), (Integer) ar.get('cnt'));
+            }
+        }
+        health.put('syncItems', syncItemCounts);
+
+        return health;
     }
 
     // -------------------------------------------------------------------------
