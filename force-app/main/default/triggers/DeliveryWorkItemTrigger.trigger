@@ -1,6 +1,7 @@
 /**
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidLogicInTrigger') // trivial guards + handler delegation only
 trigger DeliveryWorkItemTrigger on WorkItem__c (before insert, after insert, after update, before update) {
 
     if (DeliveryWorkItemTriggerHandler.triggerDisabled) {

@@ -15,6 +15,7 @@
  *
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryActivityLogCleanup implements Schedulable, Database.Batchable<SObject> {
 
     @TestVisible
