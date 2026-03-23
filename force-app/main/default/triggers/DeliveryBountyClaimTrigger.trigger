@@ -6,10 +6,5 @@
  * @author       Cloud Nimbus LLC
  */
 trigger DeliveryBountyClaimTrigger on BountyClaim__c (after insert, after update) {
-    if (Trigger.isAfter && Trigger.isInsert) {
-        DeliveryBountyClaimTriggerHandler.handleAfterInsert(Trigger.new);
-    }
-    if (Trigger.isAfter && Trigger.isUpdate) {
-        DeliveryBountyClaimTriggerHandler.handleAfterUpdate(Trigger.new, Trigger.oldMap);
-    }
+    DeliveryBountyClaimTriggerHandler.handleAfter(Trigger.new, Trigger.oldMap, Trigger.isInsert, Trigger.isUpdate);
 }

@@ -5,7 +5,7 @@
  *               via the sync engine so that orgs posting bounties see claims in real time.
  * @author       Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public without sharing class DeliveryBountyClaimTriggerHandler {
 
     private static final Set<String> SYNC_FIELDS = new Set<String>{
@@ -18,7 +18,25 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
         'SubmittedDateTime__c'
     };
 
-    public static void handleAfterInsert(List<BountyClaim__c> newClaims) {
+    /**
+     * @description Entry point from trigger. Routes to insert or update handler.
+     * @param newClaims List of new or updated BountyClaim__c records.
+     * @param oldMap Map of old BountyClaim__c records (null on insert).
+     * @param isInsert True if trigger context is insert.
+     * @param isUpdate True if trigger context is update.
+     */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
+    public static void handleAfter(List<BountyClaim__c> newClaims, Map<Id, BountyClaim__c> oldMap, Boolean isInsert, Boolean isUpdate) {
+        if (isInsert) { handleAfterInsert(newClaims); }
+        if (isUpdate) { handleAfterUpdate(newClaims, oldMap); }
+    }
+
+    /**
+     * @description Creates outbound SyncItem__c records when claims are inserted,
+     * routing them to the origin org via the parent WorkItem's ClientNetworkEntity.
+     * @param newClaims List of newly inserted BountyClaim__c records.
+     */
+    private static void handleAfterInsert(List<BountyClaim__c> newClaims) {
         if (DeliverySyncEngine.isSyncContext) { return; }
 
         // Query parent WorkItem -> ClientNetworkEntity for routing
@@ -78,7 +96,12 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
         }
     }
 
-    public static void handleAfterUpdate(List<BountyClaim__c> newClaims, Map<Id, BountyClaim__c> oldMap) {
+    /**
+     * @description Captures field changes on updated claims and syncs them via the sync engine.
+     * @param newClaims List of updated BountyClaim__c records.
+     * @param oldMap Map of pre-update BountyClaim__c records.
+     */
+    private static void handleAfterUpdate(List<BountyClaim__c> newClaims, Map<Id, BountyClaim__c> oldMap) {
         DeliverySyncEngine.captureChanges(newClaims, oldMap, SYNC_FIELDS);
     }
 }

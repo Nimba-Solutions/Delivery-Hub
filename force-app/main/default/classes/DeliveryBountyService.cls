@@ -5,7 +5,7 @@
  *               submission, and lifecycle management of bounty-enabled work items.
  * @author       Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessiveParameterList')
 public without sharing class DeliveryBountyService {
 
     // ── Query: List Open Bounties ────────────────────────────────────────
