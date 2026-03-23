@@ -34,6 +34,12 @@
                 <identifier>force_highlightsPanel</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>runtime_sales_pathassistant:pathAssistant</componentName>
+                <identifier>runtime_sales_pathassistant_pathAssistant</identifier>
+            </componentInstance>
+        </itemInstances>
         <mode>Replace</mode>
         <name>header</name>
         <type>Region</type>
