@@ -142,25 +142,36 @@ public without sharing class DeliverySyncItemIngestor {
         // ==========================================
         // NEW: AUTO-PARENTING THE UPSTREAM CLIENT
         // ==========================================
-        if (String.isNotBlank(senderOrgId) && objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
+        // Check for Default Billing Entity override
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        String defaultBillingEntityId = settings != null ? (String) settings.get('DefaultBillingEntityIdTxt__c') : null;
+
+        if (String.isNotBlank(defaultBillingEntityId) && objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
+            // Override: Use the configured billing entity instead of sender-org auto-detection
+            try {
+                putSafe(recordToUpsert, 'ClientNetworkEntityId__c', (Id) defaultBillingEntityId);
+            } catch (Exception e) {
+                System.debug(LoggingLevel.FINE, 'Invalid DefaultBillingEntityIdTxt__c: ' + e.getMessage());
+            }
+        } else if (String.isNotBlank(senderOrgId) && objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             try {
                 // Grab the 15-char base ID to prevent 18-char mismatch failures on Text fields
                 String baseOrgId = senderOrgId.length() >= 15 ? senderOrgId.substring(0, 15) + '%' : senderOrgId;
-                
+
                 // FIX: Look at BOTH OrgIdTxt__c and RemoteExternalIdTxt__c
                 String query = 'SELECT Id, EntityTypePk__c FROM NetworkEntity__c WHERE (OrgIdTxt__c LIKE :baseOrgId OR RemoteExternalIdTxt__c LIKE :baseOrgId) LIMIT 1';
-                
+
                 if (String.isNotBlank(getNamespacePrefix())) {
                     query = query.replace('NetworkEntity__c', getNamespacePrefix() + 'NetworkEntity__c')
                                  .replace('OrgIdTxt__c', getNamespacePrefix() + 'OrgIdTxt__c')
                                  .replace('RemoteExternalIdTxt__c', getNamespacePrefix() + 'RemoteExternalIdTxt__c')
                                  .replace('EntityTypePk__c', getNamespacePrefix() + 'EntityTypePk__c');
                 }
-                
+
                 List<SObject> entities = Database.query(query); // NOPMD
                 if (!entities.isEmpty()) {
                     String eType = (String)entities[0].get(entities[0].getSObjectType().getDescribe().fields.getMap().containsKey('EntityTypePk__c') ? 'EntityTypePk__c' : getNamespacePrefix() + 'EntityTypePk__c');
-                    
+
                     // If the sender is registered as a Client in our org, lock them in as the Client for this Work Item
                     if (eType == 'Client' || eType == 'Both') {
                         putSafe(recordToUpsert, 'ClientNetworkEntityId__c', (Id)entities[0].get('Id'));
