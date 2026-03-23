@@ -6,8 +6,8 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from 'lwc';
-import getWorkloadData from '@salesforce/apex/DeliveryWorkloadController.getWorkloadData';
-import getUnassignedCount from '@salesforce/apex/DeliveryWorkloadController.getUnassignedCount';
+import getUnassignedCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkloadController.getUnassignedCount';
+import getWorkloadData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkloadController.getWorkloadData';
 import { refreshApex } from '@salesforce/apex';
 
 export default class DeliveryDeveloperWorkload extends LightningElement {

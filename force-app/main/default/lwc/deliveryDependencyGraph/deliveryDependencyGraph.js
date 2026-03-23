@@ -8,9 +8,9 @@
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
-import getDependencyGraph from '@salesforce/apex/DeliveryDependencyGraphController.getDependencyGraph';
-import getProjectDependencyGraph from '@salesforce/apex/DeliveryDependencyGraphController.getProjectDependencyGraph';
-import getWorkflowConfig from '@salesforce/apex/DeliveryWorkflowConfigService.getWorkflowConfig';
+import getDependencyGraph from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDependencyGraphController.getDependencyGraph';
+import getProjectDependencyGraph from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDependencyGraphController.getProjectDependencyGraph';
+import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 

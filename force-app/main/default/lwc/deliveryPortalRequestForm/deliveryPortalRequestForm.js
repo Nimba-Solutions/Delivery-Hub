@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, track } from 'lwc';
-import submitPortalRequest from '@salesforce/apex/DeliveryPortalController.submitPortalRequest';
+import submitPortalRequest from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPortalController.submitPortalRequest';
 
 export default class DeliveryPortalRequestForm extends LightningElement {
     @api networkEntityId;
