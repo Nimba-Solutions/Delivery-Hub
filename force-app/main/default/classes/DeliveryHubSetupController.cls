@@ -7,7 +7,7 @@
  */
 // without sharing: Required so any user (including Standard Users without sharing rules)
 // can read/write NetworkEntity__c and DeliveryHubSettings__c during initial org setup.
-@SuppressWarnings('PMD.ApexSharingViolations')
+@SuppressWarnings('PMD.ApexSharingViolations, PMD.CyclomaticComplexity')
 public without sharing class DeliveryHubSetupController {
 
     /** @description DTO holding the org's Delivery Hub connection status for the setup LWC. */

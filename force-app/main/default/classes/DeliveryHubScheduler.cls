@@ -7,6 +7,7 @@
  * create recurring items, and deliver periodic status summaries.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryHubScheduler implements Schedulable {
 
     /**

@@ -201,6 +201,7 @@ public without sharing class DeliveryPortalController {
     /**
      * @description Returns full detail for a single work item including comments and file counts.
      * @param workItemId The WorkItem__c record Id
+     * @param networkEntityId The NetworkEntity__c Id used to validate entity access
      * @return Map containing work item detail, comments list, and file info
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')

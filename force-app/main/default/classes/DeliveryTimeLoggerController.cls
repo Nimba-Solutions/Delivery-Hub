@@ -20,6 +20,7 @@ public with sharing class DeliveryTimeLoggerController {
      * @param workNotes  Optional description of work performed.
      * @param workDate   The date the work was performed. Defaults to today if null.
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
     public static void logHours(Id workItemId, Decimal hours, String workNotes, Date workDate) {
         List<WorkRequest__c> activeReqs = [

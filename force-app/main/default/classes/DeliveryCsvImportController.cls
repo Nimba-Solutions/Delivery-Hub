@@ -6,6 +6,7 @@
  *               available field schema for dynamic column mapping.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity')
 public with sharing class DeliveryCsvImportController {
 
     private static final Integer BATCH_SIZE = 200;
