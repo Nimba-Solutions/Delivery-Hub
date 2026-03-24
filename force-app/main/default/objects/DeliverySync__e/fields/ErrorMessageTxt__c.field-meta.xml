@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ErrorMessageTxt__c</fullName>
+    <description>Error message when the sync item fails processing. Null on success.</description>
+    <inlineHelpText>Error details if the sync failed.</inlineHelpText>
+    <label>Error Message</label>
+    <length>255</length>
+    <type>Text</type>
+</CustomField>

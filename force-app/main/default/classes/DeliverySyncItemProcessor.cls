@@ -63,6 +63,7 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
 
         List<SyncItem__c> itemsToUpdate = new List<SyncItem__c>();
         Map<Id, WorkRequest__c> requestsToUpdate = new Map<Id, WorkRequest__c>();
+        List<DeliverySync__e> syncEvents = new List<DeliverySync__e>();
 
         for (SyncItem__c item : items) {
             try {
@@ -71,6 +72,12 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                 if (item.ObjectTypePk__c == 'UsageAnalytics') {
                     item.StatusPk__c = 'Synced';
                     itemsToUpdate.add(item);
+                    syncEvents.add(new DeliverySync__e(
+                        ObjectTypePk__c = item.ObjectTypePk__c,
+                        DirectionPk__c = 'Outbound',
+                        StatusPk__c = 'Synced',
+                        RecordIdTxt__c = item.LocalRecordIdTxt__c
+                    ));
                     continue;
                 }
 
@@ -167,6 +174,15 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                 System.debug(LoggingLevel.ERROR, 'DeliverySyncItemProcessor Error: ' + e.getMessage());
             }
             itemsToUpdate.add(item);
+
+            // Collect platform event for each processed sync item
+            syncEvents.add(new DeliverySync__e(
+                ObjectTypePk__c = item.ObjectTypePk__c,
+                DirectionPk__c = 'Outbound',
+                StatusPk__c = item.StatusPk__c,
+                RecordIdTxt__c = item.LocalRecordIdTxt__c,
+                ErrorMessageTxt__c = item.ErrorLogTxt__c
+            ));
         }
 
         // Execute DML
@@ -176,6 +192,11 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         
         if (!requestsToUpdate.isEmpty()) {
             Database.update(requestsToUpdate.values(), AccessLevel.SYSTEM_MODE);
+        }
+
+        // Publish sync platform events for external subscribers
+        if (!syncEvents.isEmpty()) {
+            EventBus.publish(syncEvents);
         }
 
         // Chain Job if more outbound work exists (both Push and Hub Mode items)

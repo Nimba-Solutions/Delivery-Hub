@@ -67,6 +67,17 @@ public with sharing class DeliveryDocumentController {
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
+
+        // Publish platform event for external subscribers
+        Map<String, Object> entityMap = (Map<String, Object>) snapshot.get('entity');
+        String entityName = entityMap != null ? (String) entityMap.get('name') : '';
+        EventBus.publish(new DeliveryDocument__e(
+            DocumentIdTxt__c = doc.Id,
+            TemplatePk__c    = templateType,
+            StatusPk__c      = 'Draft',
+            EntityNameTxt__c = entityName
+        ));
+
         return doc.Id;
     }
 
@@ -350,7 +361,8 @@ public with sharing class DeliveryDocumentController {
     @AuraEnabled
     public static void updateDocumentStatus(Id documentId, String newStatus) {
         DeliveryDocument__c doc = [
-            SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c
+            SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c,
+                   TemplatePk__c, NetworkEntityId__r.Name
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -368,6 +380,15 @@ public with sharing class DeliveryDocumentController {
         }
 
         Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        // Publish platform event for external subscribers
+        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
+        EventBus.publish(new DeliveryDocument__e(
+            DocumentIdTxt__c = doc.Id,
+            TemplatePk__c    = doc.TemplatePk__c,
+            StatusPk__c      = newStatus,
+            EntityNameTxt__c = entityName
+        ));
     }
 
     /**
