@@ -829,6 +829,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryScore</componentName>
+                <identifier>c_deliveryScore</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryWorkItemActionCenter</componentName>
                 <identifier>c_deliveryWorkItemActionCenter</identifier>
             </componentInstance>
