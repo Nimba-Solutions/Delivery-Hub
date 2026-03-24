@@ -1,3 +1,4 @@
+/* eslint-disable one-var, no-underscore-dangle */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
