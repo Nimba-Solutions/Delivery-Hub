@@ -31,7 +31,11 @@ public with sharing class DeliveryEmailService {
         dispatchEmails(emails);
     }
 
-    /** @description Builds a reply-to email address for routing replies back to the inbound handler. */
+    /**
+     * @description Builds a reply-to email address for routing replies back to the inbound handler.
+     * @param workItemName The work item auto-number name (e.g. T-0039).
+     * @return The formatted reply-to email address, or null if inputs are blank.
+     */
     @TestVisible
     static String buildReplyToAddress(String workItemName) {
         String domain = getEmailServiceDomain();
