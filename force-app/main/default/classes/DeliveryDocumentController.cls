@@ -52,21 +52,58 @@ public with sharing class DeliveryDocumentController {
             metaMap.put('clauses', buildDefaultAgreementClauses(templateType, snapshot));
         }
 
+        // ── Versioning: supersede existing document for same entity+period+template ──
+        Integer nextVersion = 1;
+        Id previousVersionId = null;
+        List<DeliveryDocument__c> existing = [
+            SELECT Id, VersionNumber__c
+            FROM DeliveryDocument__c
+            WHERE NetworkEntityId__c = :entityId
+            AND TemplatePk__c = :templateType
+            AND PeriodStartDate__c = :periodStart
+            AND PeriodEndDate__c = :periodEnd
+            AND StatusPk__c != 'Superseded'
+            WITH SYSTEM_MODE
+            ORDER BY VersionNumber__c DESC
+            LIMIT 1
+        ];
+        if (!existing.isEmpty()) {
+            DeliveryDocument__c prev = existing[0];
+            Decimal prevVer = prev.VersionNumber__c != null ? prev.VersionNumber__c : 1;
+            nextVersion = prevVer.intValue() + 1;
+            previousVersionId = prev.Id;
+            prev.StatusPk__c = 'Superseded';
+            Database.update(prev, AccessLevel.SYSTEM_MODE);
+        }
+
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c  = entityId,
-            TemplatePk__c       = templateType,
-            PeriodStartDate__c  = periodStart,
-            PeriodEndDate__c    = periodEnd,
-            StatusPk__c         = 'Draft',
-            PublicTokenTxt__c   = publicToken,
-            SnapshotTxt__c      = JSON.serialize(snapshot),
-            TotalHoursNumber__c = calculateTotalHours(snapshot),
-            TotalCurrency__c    = currentCharges,
-            TermsTxt__c         = 'Net 30',
-            MetadataTxt__c      = JSON.serialize(metaMap)
+            NetworkEntityId__c     = entityId,
+            TemplatePk__c          = templateType,
+            PeriodStartDate__c     = periodStart,
+            PeriodEndDate__c       = periodEnd,
+            StatusPk__c            = 'Draft',
+            PublicTokenTxt__c      = publicToken,
+            SnapshotTxt__c         = JSON.serialize(snapshot),
+            TotalHoursNumber__c    = calculateTotalHours(snapshot),
+            TotalCurrency__c       = currentCharges,
+            TermsTxt__c            = 'Net 30',
+            MetadataTxt__c         = JSON.serialize(metaMap),
+            VersionNumber__c       = nextVersion,
+            PreviousVersionId__c   = previousVersionId
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
+
+        // Publish platform event for external subscribers
+        Map<String, Object> entityMap = (Map<String, Object>) snapshot.get('entity');
+        String entityName = entityMap != null ? (String) entityMap.get('name') : '';
+        EventBus.publish(new DeliveryDocEvent__e(
+            DocumentIdTxt__c = doc.Id,
+            TemplatePk__c    = templateType,
+            StatusPk__c      = 'Draft',
+            EntityNameTxt__c = entityName
+        ));
+
         return doc.Id;
     }
 
@@ -86,6 +123,7 @@ public with sharing class DeliveryDocumentController {
             WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
+            AND StatusPk__c != 'Superseded'
             WITH SYSTEM_MODE
         ];
         if (unpaidDocs.isEmpty()) {
@@ -160,6 +198,7 @@ public with sharing class DeliveryDocumentController {
             WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
+            AND StatusPk__c != 'Superseded'
             WITH SYSTEM_MODE
             ORDER BY PeriodStartDate__c ASC
         ];
@@ -207,7 +246,8 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
+                   VersionNumber__c, PreviousVersionId__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = :publicToken
             WITH SYSTEM_MODE
@@ -248,6 +288,8 @@ public with sharing class DeliveryDocumentController {
         result.put('transactions', getTransactionsForDocument(doc.Id));
         result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
+        result.put('version', doc.VersionNumber__c);
+        result.put('previousVersionId', doc.PreviousVersionId__c);
         return result;
     }
 
@@ -267,7 +309,8 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
+                   VersionNumber__c, PreviousVersionId__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -301,6 +344,8 @@ public with sharing class DeliveryDocumentController {
         result.put('transactions', getTransactionsForDocument(doc.Id));
         result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
+        result.put('version', doc.VersionNumber__c);
+        result.put('previousVersionId', doc.PreviousVersionId__c);
         return result;
     }
 
@@ -317,7 +362,7 @@ public with sharing class DeliveryDocumentController {
 
         String query = 'SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c, '
             + 'StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, CreatedDate, '
-            + 'NetworkEntityId__r.Name '
+            + 'NetworkEntityId__r.Name, VersionNumber__c, PreviousVersionId__c '
             + 'FROM DeliveryDocument__c ';
         if (entityId != null) {
             query += 'WHERE NetworkEntityId__c = :entityId ';
@@ -336,6 +381,8 @@ public with sharing class DeliveryDocumentController {
             item.put('totalHours', doc.TotalHoursNumber__c);
             item.put('totalCost', doc.TotalCurrency__c);
             item.put('createdDate', doc.CreatedDate);
+            item.put('version', doc.VersionNumber__c);
+            item.put('previousVersionId', doc.PreviousVersionId__c);
             results.add(item);
         }
 
@@ -350,7 +397,8 @@ public with sharing class DeliveryDocumentController {
     @AuraEnabled
     public static void updateDocumentStatus(Id documentId, String newStatus) {
         DeliveryDocument__c doc = [
-            SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c
+            SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c,
+                   TemplatePk__c, NetworkEntityId__r.Name
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -368,6 +416,15 @@ public with sharing class DeliveryDocumentController {
         }
 
         Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        // Publish platform event for external subscribers
+        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
+        EventBus.publish(new DeliveryDocEvent__e(
+            DocumentIdTxt__c = doc.Id,
+            TemplatePk__c    = doc.TemplatePk__c,
+            StatusPk__c      = newStatus,
+            EntityNameTxt__c = entityName
+        ));
     }
 
     /**
@@ -519,6 +576,128 @@ public with sharing class DeliveryDocumentController {
         }
         return (String) settings.get('DefaultBillingEntityIdTxt__c');
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PUBLIC: Document Approval Flow (token-authenticated)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Approves a document identified by its public token.
+     *              Sets status to Approved, creates an Approval transaction,
+     *              and logs a Document_Action activity entry.
+     *              Only documents in Sent or Viewed status can be approved.
+     * @param publicToken The 64-char hex public access token.
+     * @return Map with document id and new status.
+     */
+    public static Map<String, Object> approveDocumentByToken(String publicToken) {
+        DeliveryDocument__c doc = queryDocumentByToken(publicToken);
+        validateApprovableStatus(doc);
+
+        doc.StatusPk__c = 'Approved';
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        DeliveryTransaction__c txn = new DeliveryTransaction__c(
+            DocumentId__c          = doc.Id,
+            TypePk__c              = 'Approval',
+            AmountCurrency__c      = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0,
+            TransactionDateDate__c = Date.today(),
+            NoteTxt__c             = 'Approved by client via portal'
+        );
+        Database.insert(txn, AccessLevel.SYSTEM_MODE);
+
+        logDocumentAction(doc.Id, 'approve', null);
+
+        return new Map<String, Object>{
+            'id'     => doc.Id,
+            'status' => 'Approved'
+        };
+    }
+
+    /**
+     * @description Disputes a document identified by its public token.
+     *              Sets status to Disputed, stores the dispute reason,
+     *              and logs a Document_Action activity entry.
+     *              Only documents in Sent or Viewed status can be disputed.
+     * @param publicToken The 64-char hex public access token.
+     * @param reason The client-provided reason for the dispute.
+     * @return Map with document id and new status.
+     */
+    public static Map<String, Object> disputeDocumentByToken(String publicToken, String reason) {
+        DeliveryDocument__c doc = queryDocumentByToken(publicToken);
+        validateApprovableStatus(doc);
+
+        doc.StatusPk__c = 'Disputed';
+        doc.DisputeReasonTxt__c = String.isNotBlank(reason) ? reason.left(5000) : null;
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        logDocumentAction(doc.Id, 'dispute', reason);
+
+        return new Map<String, Object>{
+            'id'     => doc.Id,
+            'status' => 'Disputed'
+        };
+    }
+
+    /**
+     * @description Queries a document by its public token. Throws if not found.
+     * @param publicToken The public access token.
+     * @return The DeliveryDocument__c record.
+     */
+    @TestVisible
+    private static DeliveryDocument__c queryDocumentByToken(String publicToken) {
+        if (String.isBlank(publicToken)) {
+            throw new AuraHandledException('Public token is required.');
+        }
+        List<DeliveryDocument__c> docs = [
+            SELECT Id, StatusPk__c, TotalCurrency__c, NetworkEntityId__c,
+                   TemplatePk__c, NetworkEntityId__r.Name
+            FROM DeliveryDocument__c
+            WHERE PublicTokenTxt__c = :publicToken
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (docs.isEmpty()) {
+            throw new AuraHandledException('Document not found.');
+        }
+        return docs[0];
+    }
+
+    /**
+     * @description Validates that a document is in an approvable status (Sent or Viewed).
+     * @param doc The document to validate.
+     */
+    @TestVisible
+    private static void validateApprovableStatus(DeliveryDocument__c doc) {
+        Set<String> approvable = new Set<String>{ 'Sent', 'Viewed' };
+        if (!approvable.contains(doc.StatusPk__c)) {
+            throw new AuraHandledException(
+                'Document cannot be approved or disputed in its current status: ' + doc.StatusPk__c
+            );
+        }
+    }
+
+    /**
+     * @description Creates an ActivityLog__c entry for a document approval action.
+     * @param documentId The DeliveryDocument__c Id.
+     * @param action The action performed (approve or dispute).
+     * @param reason Optional dispute reason.
+     */
+    private static void logDocumentAction(Id documentId, String action, String reason) {
+        Map<String, Object> contextData = new Map<String, Object>{
+            'action'     => action,
+            'documentId' => documentId
+        };
+        if (String.isNotBlank(reason)) {
+            contextData.put('reason', reason.left(500));
+        }
+        ActivityLog__c log = new ActivityLog__c(
+            ActionTypePk__c    = 'Document_Action',
+            RecordIdTxt__c     = documentId,
+            ContextDataTxt__c  = JSON.serialize(contextData)
+        );
+        Database.insert(log, AccessLevel.SYSTEM_MODE);
+    }
+
 
     // ═══════════════════════════════════════════════════════════
     //  PRIVATE: Transaction Helpers

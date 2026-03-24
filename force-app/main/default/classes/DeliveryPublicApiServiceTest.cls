@@ -871,6 +871,178 @@ private class DeliveryPublicApiServiceTest {
         System.assertEquals(400, res.statusCode);
     }
 
+    @IsTest
+    static void testPostLogHoursCrossEntityBlocked() {
+        WorkItem__c otherItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
+
+        Map<String, Object> body = new Map<String, Object>{
+            'workItemId' => otherItem.Id,
+            'hours' => 1.5,
+            'workNotes' => 'Cross-entity attempt',
+            'workDate' => String.valueOf(Date.today())
+        };
+
+        RestRequest req = buildPostRequest(
+            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+            body
+        );
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(403, res.statusCode, 'Should block cross-entity hour logging');
+        assertErrorResponse(res, 'access denied');
+    }
+
+    @IsTest
+    static void testPostLogHoursCreatesActivityLog() {
+        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+
+        Map<String, Object> body = new Map<String, Object>{
+            'workItemId' => item.Id,
+            'hours' => 3.0,
+            'workNotes' => 'Activity log test',
+            'workDate' => String.valueOf(Date.today())
+        };
+
+        RestRequest req = buildPostRequest(
+            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+            body
+        );
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(201, res.statusCode);
+
+        List<ActivityLog__c> logs = [
+            SELECT ActionTypePk__c, RecordIdTxt__c, ComponentNameTxt__c
+            FROM ActivityLog__c WHERE ActionTypePk__c = 'Portal_Hours_Logged'
+        ];
+        System.assertEquals(1, logs.size(), 'Should create an ActivityLog record');
+        System.assertEquals(item.Id, logs[0].RecordIdTxt__c, 'ActivityLog should reference the work item');
+        System.assertEquals('PortalTimeEntry', logs[0].ComponentNameTxt__c, 'ComponentName should be PortalTimeEntry');
+    }
+
+    // ==========================================
+    // GET WORK-LOGS WITH WORK ITEM FILTER
+    // ==========================================
+
+    @IsTest
+    static void testGetWorkLogsFilteredByWorkItem() {
+        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-logs');
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        req.addParameter('workItemId', item.Id);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handleGet();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode);
+        Map<String, Object> body = parseResponse(res);
+        System.assertEquals(true, body.get('success'));
+
+        List<Object> data = (List<Object>) body.get('data');
+        for (Object entry : data) {
+            Map<String, Object> log = (Map<String, Object>) entry;
+            System.assertEquals(item.Id, log.get('workItemId'), 'All logs should belong to filtered work item');
+        }
+    }
+
+    // ==========================================
+    // DOCUMENT APPROVAL TESTS
+    // ==========================================
+
+    @IsTest
+    static void testPostDocumentApprove() {
+        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+        DeliveryTriggerControl.runAfterLogic = false;
+        Id docId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Invoice',
+            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+        );
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+
+        Map<String, Object> body = new Map<String, Object>{ 'token' => doc.PublicTokenTxt__c };
+        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> result = parseResponse(res);
+        System.assertEquals(true, result.get('success'), 'Should be successful');
+        Map<String, Object> data = (Map<String, Object>) result.get('data');
+        System.assertEquals('Approved', data.get('status'), 'Document should be Approved');
+    }
+
+    @IsTest
+    static void testPostDocumentDispute() {
+        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+        DeliveryTriggerControl.runAfterLogic = false;
+        Id docId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Invoice',
+            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+        );
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+
+        Map<String, Object> body = new Map<String, Object>{
+            'token' => doc.PublicTokenTxt__c, 'reason' => 'Hours are incorrect'
+        };
+        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-dispute', body);
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> result = parseResponse(res);
+        Map<String, Object> data = (Map<String, Object>) result.get('data');
+        System.assertEquals('Disputed', data.get('status'), 'Document should be Disputed');
+    }
+
+    @IsTest
+    static void testPostDocumentApproveMissingToken() {
+        Map<String, Object> body = new Map<String, Object>{ 'action' => 'approve' };
+        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(400, res.statusCode, 'Should return 400 for missing token');
+    }
+
     // ==========================================
     // HELPERS
     // ==========================================

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkflowTypeTxt__c</fullName>
+    <description>The workflow type this filter applies to, matching the WorkflowType CMT DeveloperName</description>
+    <inlineHelpText>Which workflow type this filter was created for (e.g. Software_Delivery).</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Workflow Type</label>
+    <length>80</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>TypePk__c</fullName>
     <description>The type of financial transaction recorded against the document.</description>
-    <inlineHelpText>Select the transaction type: Payment, Credit, Refund, Adjustment, or Write-Off.</inlineHelpText>
+    <inlineHelpText>Select the transaction type: Payment, Approval, Credit, Refund, Adjustment, or Write-Off.</inlineHelpText>
     <label>Type</label>
     <required>true</required>
     <trackTrending>false</trackTrending>
@@ -12,6 +12,7 @@
         <valueSetDefinition>
             <sorted>false</sorted>
             <value><fullName>Payment</fullName><default>true</default><label>Payment</label></value>
+            <value><fullName>Approval</fullName><default>false</default><label>Approval</label></value>
             <value><fullName>Credit</fullName><default>false</default><label>Credit</label></value>
             <value><fullName>Refund</fullName><default>false</default><label>Refund</label></value>
             <value><fullName>Adjustment</fullName><default>false</default><label>Adjustment</label></value>
