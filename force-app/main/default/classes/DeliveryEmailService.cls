@@ -10,6 +10,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexDoc')
 public with sharing class DeliveryEmailService {
 
     @TestVisible
