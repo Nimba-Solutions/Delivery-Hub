@@ -495,11 +495,12 @@ To have the vendor push changes to the client in real time (instead of polling):
 
 ## Retry Behavior
 
-Failed sync items are retried up to 3 times:
+Failed sync items are retried up to a configurable limit (default: 3):
 
+- The retry limit is read from `DeliveryHubSettings__c.SyncRetryLimitNumber__c` at runtime; if not set, defaults to 3
 - On each failure, `RetryCountNumber__c` is incremented and `ErrorLogTxt__c` is populated
 - The scheduled poller (`DeliveryHubPoller`) picks up failed items on its next run
-- After 3 failed attempts, items remain in `Failed` status for manual investigation
+- After reaching the retry limit, items remain in `Failed` status for manual investigation
 - The `deliverySyncRetryPanel` LWC component provides a UI for viewing and retrying failed items
 
 ---

@@ -21,7 +21,7 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **SyncItem\_\_c** | Audit ledger for every sync event (inbound and outbound) | DirectionPk\_\_c, StatusPk\_\_c, ObjectTypePk\_\_c, PayloadTxt\_\_c, GlobalSourceIdTxt\_\_c, RemoteExternalIdTxt\_\_c, LocalRecordIdTxt\_\_c |
 | **WorkItemDependency\_\_c** | Blocking relationship between two work items | BlockingWorkItemId\_\_c, DependentWorkItemId\_\_c |
 | **WorkLog\_\_c** | Time logging entries | WorkItemId\_\_c, HoursNumber\_\_c, DateDt\_\_c, DescriptionTxt\_\_c |
-| **DeliveryHubSettings\_\_c** | Org-level settings (hierarchy custom setting) | Scheduling, polling, AI config |
+| **DeliveryHubSettings\_\_c** | Org-level settings (hierarchy custom setting) | Scheduling, polling, AI config, ReconciliationHourNumber\_\_c, SyncRetryLimitNumber\_\_c, ActivityLogRetentionDaysNumber\_\_c, EscalationCooldownHoursNumber\_\_c |
 | **ActivityLog\_\_c** | Audit trail of changes on work items | WorkItemId\_\_c, ActionTypePk\_\_c, ComponentNameTxt\_\_c, ContextDataTxt\_\_c, PageUrlTxt\_\_c, NetworkEntityId\_\_c, SessionIdTxt\_\_c |
 | **DeliveryDocument\_\_c** | Generated documents (invoices, status reports) | NetworkEntityId\_\_c (MD), TemplatePk\_\_c, StatusPk\_\_c, SnapshotTxt\_\_c (131072 LTA), TotalHoursNumber\_\_c, TotalCurrency\_\_c, AiNarrativeTxt\_\_c, PublicTokenTxt\_\_c (External ID), PeriodStartDate\_\_c, PeriodEndDate\_\_c, TermsTxt\_\_c, DueDateDate\_\_c |
 | **DeliveryTransaction\_\_c** | Financial transactions against a document (payments, credits, refunds) | DocumentId\_\_c (MD to DeliveryDocument\_\_c), AmountCurrency\_\_c, TypePk\_\_c (Payment/Credit/Refund/Adjustment/Write-Off), MethodPk\_\_c, TransactionDateDate\_\_c, NoteTxt\_\_c |
@@ -194,6 +194,7 @@ See [Sync API Guide](SYNC_API_GUIDE.md) for full documentation.
 | `deliveryWorkItemQuotes` | Quote/estimate management |
 | `deliveryWorkItemTemplates` | Work item template picker |
 | `deliverySwipeCard` | Mobile swipe interaction for stage transitions |
+| `deliveryScore` | Attention score indicator, placed on the WorkItem record page sidebar |
 
 ### Dashboard and Analytics
 
@@ -239,12 +240,13 @@ See [Sync API Guide](SYNC_API_GUIDE.md) for full documentation.
 |-----------|-------------|
 | `deliveryGhostRecorder` | Floating work item submission form (available anywhere in the app) |
 | `deliveryTimeLogger` | Quick hour logging |
-| `deliverySyncRetryPanel` | Monitor and retry failed sync items |
+| `deliverySyncRetryPanel` | Monitor and retry failed sync items. Placed on admin Home page and NetworkEntity record page sidebar. |
 | `deliverySyncPollerButton` | Manual sync poll trigger |
 | `deliveryActivityTimeline` | Full audit trail of work item changes |
 | `deliveryRecurringConfig` | Recurring work item schedule configuration |
 | `deliveryReleaseNotes` | Auto-generated release summaries |
 | `deliveryCsvImport` | Bulk import from CSV files |
+| `deliveryDocumentViewer` | Document preview and management. Placed on Document record page (Preview tab) and admin Home page. |
 | `deliveryAiDraftPanel` | AI-generated description and acceptance criteria |
 
 ---
@@ -353,7 +355,7 @@ The activity tracking system captures both explicit field changes and implicit n
 | Class | Responsibility |
 |-------|---------------|
 | **DeliveryGhostRecorder** (LWC) | Floating UI widget that captures navigation patterns. Logs page visits as `ActivityLog__c` records with page URL, component name, and session context. |
-| **DeliveryActivityLogCleanup** | Global schedulable job that purges old navigation/activity logs on a configurable retention schedule. |
+| **DeliveryActivityLogCleanup** | Global schedulable job that purges old navigation/activity logs. Retention period is configurable via `DeliveryHubSettings__c.ActivityLogRetentionDaysNumber__c` (default: 90 days). |
 | **TrackedField\_\_mdt** | Custom Metadata Type that defines which fields on which objects generate change log entries. Ships with 4 records: WorkItem\_Developer, WorkItem\_Priority, WorkItem\_Stage, WorkItem\_Status. |
 
 ### How It Works
@@ -377,6 +379,25 @@ The activity tracking system captures both explicit field changes and implicit n
 
 ---
 
+## Configurable Settings
+
+Operational parameters that were previously hardcoded constants are now read at runtime from `DeliveryHubSettings__c`. Each setting falls back to a sensible default when not configured.
+
+| Setting Field | Default | Consumer | Description |
+|---------------|---------|----------|-------------|
+| `ReconciliationHourNumber__c` | 6 | `DeliveryHubScheduler` | GMT hour (0-23) for the daily sync reconciliation run |
+| `SyncRetryLimitNumber__c` | 3 | `DeliveryHubScheduler` | Max retry attempts before a failed sync item stays in Failed status |
+| `ActivityLogRetentionDaysNumber__c` | 90 | `DeliveryActivityLogCleanup` | Days to retain activity/navigation logs before purging |
+| `EscalationCooldownHoursNumber__c` | 24 | `DeliveryEscalationService` | Minimum hours between repeated escalations of the same work item |
+
+DateTime activation toggles (e.g., `RequireWorkLogApprovalDate__c`) store the exact timestamp when a feature was enabled, providing an audit trail. The Settings UI in the admin app exposes all of these fields.
+
+### WorkItem Admin Page
+
+The WorkItem Admin record page uses **Dynamic Forms** -- fields are placed directly on the Lightning page layout rather than through a page layout assignment. This allows conditional visibility rules and a more flexible field arrangement per section.
+
+---
+
 ## Document Engine
 
 The Document Engine generates structured documents (invoices, status reports) from live Salesforce data, stores them as snapshots, and exposes them through the portal API.
@@ -386,7 +407,7 @@ The Document Engine generates structured documents (invoices, status reports) fr
 | Class | Responsibility |
 |-------|---------------|
 | **DeliveryDocumentController** | Core controller. Generates documents by querying work items, work logs, work requests, and entity data. Builds a JSON snapshot stored on `DeliveryDocument__c.SnapshotTxt__c`. Handles email delivery with configurable CC via `DocumentCcEmailTxt__c`. Supports retrieval by ID or public token. |
-| **DeliveryDocumentPdfController** | Visualforce controller for server-side PDF rendering. Parses the frozen JSON snapshot and exposes typed properties (vendor branding, line items, totals, A/R summary, prior balance) that the `DeliveryDocumentPdf.page` consumes. Runs `without sharing` for guest user / Site access. |
+| **DeliveryDocumentPdfController** | Visualforce controller for server-side PDF rendering. Parses the frozen JSON snapshot and exposes typed properties (vendor branding, line items, totals, A/R summary, prior balance) that the `DeliveryDocumentPdf.page` consumes. Work item names in the PDF are hyperlinked to their Salesforce records. Runs `without sharing` for guest user / Site access. |
 | **DocumentTemplate\_\_mdt** | Registry of document templates. Each record defines a portal component, data query shape, output formats, and an optional AI prompt. Ships with Invoice, Status\_Report, Client\_Agreement, and Contractor\_Agreement records. |
 
 ### Rate Hierarchy
@@ -408,6 +429,7 @@ Each generated document receives a unique `PublicTokenTxt__c` (External ID). Thi
 ```
 DeliveryDocumentController.generateDocument(entityId, templateType, periodStart, periodEnd)
   -> Query NetworkEntity, WorkItems, WorkLogs, WorkRequests for the period
+  -> Filter out work items with zero logged hours in the period
   -> Build JSON snapshot with entity, items, logs, requests, and computed totals
   -> Create DeliveryDocument__c record with snapshot, totals, and public token
   -> Return document Id for immediate rendering or portal sharing
