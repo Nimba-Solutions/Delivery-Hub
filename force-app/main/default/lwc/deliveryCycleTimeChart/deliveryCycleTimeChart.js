@@ -1,6 +1,6 @@
 import { LightningElement, wire } from 'lwc';
-import getCycleTimeData from '@salesforce/apex/DeliveryCycleTimeController.getCycleTimeData';
-import getCurrentStageAges from '@salesforce/apex/DeliveryCycleTimeController.getCurrentStageAges';
+import getCurrentStageAges from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCycleTimeController.getCurrentStageAges';
+import getCycleTimeData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCycleTimeController.getCycleTimeData';
 
 /** @description Maximum number of weeks to display in the cycle time chart */
 const MAX_WEEKS = 12;

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BountyMaxClaimsNumber__c</fullName>
+    <defaultValue>3</defaultValue>
+    <description>Maximum number of simultaneous active claims allowed for this bounty. Prevents over-subscription while allowing competitive delivery.</description>
+    <inlineHelpText>How many developers can claim this bounty at the same time. Default is 3.</inlineHelpText>
+    <label>Bounty Max Claims</label>
+    <precision>3</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

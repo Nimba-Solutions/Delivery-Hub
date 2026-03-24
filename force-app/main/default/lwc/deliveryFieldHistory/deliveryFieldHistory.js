@@ -8,8 +8,8 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire } from 'lwc';
-import getFieldChangeHistory from '@salesforce/apex/DeliveryFieldChangeService.getFieldChangeHistory';
-import getFieldChangeTrend from '@salesforce/apex/DeliveryFieldChangeService.getFieldChangeTrend';
+import getFieldChangeHistory from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFieldChangeService.getFieldChangeHistory';
+import getFieldChangeTrend from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFieldChangeService.getFieldChangeTrend';
 
 const COLUMNS = [
     { label: 'Date', fieldName: 'formattedDate', type: 'text', sortable: false, initialWidth: 160 },

@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
-import getPortalDashboard from '@salesforce/apex/DeliveryPortalController.getPortalDashboard';
+import getPortalDashboard from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPortalController.getPortalDashboard';
 
 export default class DeliveryPortalDashboard extends LightningElement {
     @api networkEntityId;

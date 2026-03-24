@@ -54,6 +54,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
 
     // ── Shared sync item creation ──────────────────────────────────────
 
+    @SuppressWarnings('PMD.CyclomaticComplexity')
     private static void createSyncItemsForLogs(List<WorkLog__c> logs) {
         Set<Id> workItemIds = new Set<Id>();
         for (WorkLog__c wl : logs) {

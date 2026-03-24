@@ -6,8 +6,8 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, track } from 'lwc';
-import getPortalWorkItemDetail from '@salesforce/apex/DeliveryPortalController.getPortalWorkItemDetail';
-import addPortalComment from '@salesforce/apex/DeliveryPortalController.addPortalComment';
+import addPortalComment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPortalController.addPortalComment';
+import getPortalWorkItemDetail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPortalController.getPortalWorkItemDetail';
 
 const STAGE_COLORS = {
     'Backlog': '#6b7280',

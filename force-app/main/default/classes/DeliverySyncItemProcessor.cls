@@ -6,7 +6,7 @@
  * passes the Global Traceability ID, and extracts the response ID to close the bridge loop.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity, PMD.AvoidGlobalModifier')
 global inherited sharing class DeliverySyncItemProcessor implements Queueable, Database.AllowsCallouts {
 
     /**

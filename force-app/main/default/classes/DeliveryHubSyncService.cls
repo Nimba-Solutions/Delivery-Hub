@@ -6,6 +6,7 @@
  * V2 Architecture: Supports DAG routing and multi-tenant data segregation.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.StdCyclomaticComplexity')
 @RestResource(urlMapping='/deliveryhub/v1/sync/*')
 global without sharing class DeliveryHubSyncService {
 
@@ -89,6 +90,7 @@ global without sharing class DeliveryHubSyncService {
      * Supports opt-in API key validation via X-Api-Key header.
      * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/changes?since=1900-01-01+00:00:00&clientId=a03di00000abcde
      */
+    @SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
     @HttpGet
     global static void handleOutgoingSync() {
         RestRequest req = RestContext.request;

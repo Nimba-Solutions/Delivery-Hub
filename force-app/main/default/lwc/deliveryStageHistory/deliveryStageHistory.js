@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire } from 'lwc';
-import getStageHistory from '@salesforce/apex/DeliveryStageHistoryController.getStageHistory';
+import getStageHistory from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryStageHistoryController.getStageHistory';
 
 const MS_PER_MINUTE = 60000;
 const MS_PER_HOUR   = 3600000;

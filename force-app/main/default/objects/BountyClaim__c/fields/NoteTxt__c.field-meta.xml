@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NoteTxt__c</fullName>
+    <description>Optional note from the developer when claiming or submitting this bounty.</description>
+    <inlineHelpText>Developer's note about their approach or submission.</inlineHelpText>
+    <label>Note</label>
+    <length>5000</length>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

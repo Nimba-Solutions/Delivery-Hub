@@ -52,6 +52,7 @@ public with sharing class DeliveryHubSettingsController {
      * @description Fetches settings. Not cacheable to ensure fresh reload.
      * @return SettingsDTO The aggregated settings object.
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity')
     @AuraEnabled
     public static SettingsDTO getSettings() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
