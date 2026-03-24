@@ -833,7 +833,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         });
 
         if (this.showMode === 'active' || this.hideEmptyColumns) {
-            return enrichedColumns.filter(col => col.workItems.length > 0);
+            return enrichedColumns.filter(col => col.workItems.length > 0); // eslint-disable-line no-magic-numbers
         }
         return enrichedColumns;
     }
@@ -884,7 +884,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleIntentionFilterChange(e) { this.intentionFilter = e.detail ? e.detail.value : e.target.value; }
     handleOverallFilterChange(e) { this.overallFilter = e.detail ? e.detail.value : e.target.value; }
     handleToggleColumns(e) { this.showAllColumns = e.target.checked; this.logBoardState(); }
-    handleToggleHideEmpty(e) { this.hideEmptyColumns = e.target.checked; }
+    handleToggleHideEmpty(evt) { this.hideEmptyColumns = evt.target.checked; }
     columnOwner(colName) {
         const personaView = (this.workflowConfig?.personaViews || {})[this.persona] || [];
         const col = personaView.find(c => c.columnName === colName);
