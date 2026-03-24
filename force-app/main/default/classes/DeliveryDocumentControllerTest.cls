@@ -746,4 +746,97 @@ private class DeliveryDocumentControllerTest {
         System.assertEquals('Test Client Corp', entityMap.get('name'), 'Entity name should match');
         System.assertEquals(100, (Decimal) entityMap.get('defaultRate'), 'Entity default rate should be 100');
     }
+
+    // ── Versioning Tests ──────────────────────────────────────────────────────────────────────
+
+    @isTest
+    static void testFirstDocumentIsVersion1() {
+        NetworkEntity__c entity = getEntity();
+        Test.startTest();
+        Id docId = generateTestDocument(entity.Id);
+        Test.stopTest();
+        DeliveryDocument__c doc = [
+            SELECT VersionNumber__c, PreviousVersionId__c
+            FROM DeliveryDocument__c WHERE Id = :docId
+        ];
+        System.assertEquals(1, doc.VersionNumber__c, 'First document should be version 1');
+        System.assertEquals(null, doc.PreviousVersionId__c, 'First document should have no previous version');
+    }
+
+    @isTest
+    static void testRegenerateCreatesVersion2() {
+        NetworkEntity__c entity = getEntity();
+        Id docId1 = generateTestDocument(entity.Id);
+        Test.startTest();
+        Id docId2 = generateTestDocument(entity.Id);
+        Test.stopTest();
+        DeliveryDocument__c oldDoc = [
+            SELECT StatusPk__c, VersionNumber__c FROM DeliveryDocument__c WHERE Id = :docId1
+        ];
+        System.assertEquals('Superseded', oldDoc.StatusPk__c, 'Old document should be Superseded');
+        System.assertEquals(1, oldDoc.VersionNumber__c, 'Old document should remain version 1');
+        DeliveryDocument__c newDoc = [
+            SELECT VersionNumber__c, PreviousVersionId__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId2
+        ];
+        System.assertEquals(2, newDoc.VersionNumber__c, 'New document should be version 2');
+        System.assertEquals(docId1, newDoc.PreviousVersionId__c, 'New document should link to old');
+        System.assertEquals('Draft', newDoc.StatusPk__c, 'New document should start as Draft');
+    }
+
+    @isTest
+    static void testMultipleRegenerationsIncrementVersion() {
+        NetworkEntity__c entity = getEntity();
+        Id docId1 = generateTestDocument(entity.Id);
+        Id docId2 = generateTestDocument(entity.Id);
+        Test.startTest();
+        Id docId3 = generateTestDocument(entity.Id);
+        Test.stopTest();
+        DeliveryDocument__c v3 = [
+            SELECT VersionNumber__c, PreviousVersionId__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId3
+        ];
+        System.assertEquals(3, v3.VersionNumber__c, 'Third document should be version 3');
+        System.assertEquals(docId2, v3.PreviousVersionId__c, 'V3 should link to V2');
+        System.assertEquals('Draft', v3.StatusPk__c, 'Latest version should be Draft');
+        List<DeliveryDocument__c> superseded = [
+            SELECT Id FROM DeliveryDocument__c WHERE Id IN (:docId1, :docId2) AND StatusPk__c = 'Superseded'
+        ];
+        System.assertEquals(2, superseded.size(), 'Both prior versions should be Superseded');
+    }
+
+    @isTest
+    static void testDifferentTemplatesVersionIndependently() {
+        NetworkEntity__c entity = getEntity();
+        Id invoiceId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Invoice', Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+        );
+        Test.startTest();
+        Id reportId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Status_Report', Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+        );
+        Test.stopTest();
+        DeliveryDocument__c invoice = [
+            SELECT VersionNumber__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :invoiceId
+        ];
+        DeliveryDocument__c report = [
+            SELECT VersionNumber__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :reportId
+        ];
+        System.assertEquals(1, invoice.VersionNumber__c, 'Invoice should remain version 1');
+        System.assertEquals('Draft', invoice.StatusPk__c, 'Invoice should still be Draft');
+        System.assertEquals(1, report.VersionNumber__c, 'Status Report should be version 1');
+    }
+
+    @isTest
+    static void testSupersededExcludedFromPriorBalance() {
+        NetworkEntity__c entity = getEntity();
+        generateTestDocument(entity.Id);
+        Id docId2 = generateTestDocument(entity.Id);
+        Test.startTest();
+        Decimal balance = DeliveryDocumentController.calculatePriorBalance(entity.Id);
+        Test.stopTest();
+        DeliveryDocument__c v2 = [
+            SELECT TotalCurrency__c FROM DeliveryDocument__c WHERE Id = :docId2
+        ];
+        System.assertEquals(v2.TotalCurrency__c, balance,
+            'Prior balance should only include the latest (non-Superseded) version');
+    }
 }
