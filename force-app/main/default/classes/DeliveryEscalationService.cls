@@ -23,7 +23,7 @@ public with sharing class DeliveryEscalationService {
 
     /** @description Hours before re-escalating the same work item (24h default) */
     @TestVisible
-    private static Integer ESCALATION_COOLDOWN_HOURS = 24;
+    private static Integer escalationCooldownHours = 24;
 
     // -------------------------------------------------------------------------
     // AuraEnabled — callable from LWC dashboard

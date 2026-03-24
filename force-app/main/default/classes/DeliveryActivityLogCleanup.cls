@@ -19,7 +19,7 @@
 global without sharing class DeliveryActivityLogCleanup implements Schedulable, Database.Batchable<SObject> {
 
     @TestVisible
-    private static Integer RETENTION_DAYS = 90;
+    private static Integer retentionDays = 90;
     private static final Integer AGGREGATION_DAYS = 30;
 
     // -----------------------------------------------------------------------
