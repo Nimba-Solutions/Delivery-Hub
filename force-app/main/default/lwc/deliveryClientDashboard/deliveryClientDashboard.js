@@ -280,7 +280,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             type: 'standard__recordPage',
             attributes: {
                 recordId: recordId,
-                objectApiName: 'WorkItem__c',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c',
                 actionName: 'view'
             }
         });
@@ -292,7 +292,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         if (!listView) return;
         this[NavigationMixin.Navigate]({
             type: 'standard__listView',
-            attributes: { objectApiName: 'WorkItem__c', listViewApiName: listView }
+            attributes: { objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c', listViewApiName: listView }
         });
     }
 
