@@ -1044,6 +1044,7 @@ curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "token": "abc123def456...",
+    "reason": "Hours for WI-0042 seem incorrect -- we agreed on 8 hours, not 12."
     "reason": "Hours for WI-0042 seem incorrect — we agreed on 8 hours, not 12."
   }' \
   "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/document-dispute"
