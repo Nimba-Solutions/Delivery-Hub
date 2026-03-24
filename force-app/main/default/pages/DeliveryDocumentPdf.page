@@ -123,7 +123,7 @@
         </tr>
         <apex:repeat value="{!workItemRows}" var="wi">
             <tr>
-                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;">{!wi.name}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;"><a href="/{!wi.id}" style="color: #0176d3; text-decoration: none;">{!wi.name}</a></td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee;">{!wi.description}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-size: 7.5pt;">{!wi.stage}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wi.hours}</td>
@@ -149,7 +149,7 @@
         <apex:repeat value="{!workLogRows}" var="wl">
             <tr>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee;">{!wl.workDate}</td>
-                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;">{!wl.workItemName}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;"><a href="/{!wl.workItemId}" style="color: #0176d3; text-decoration: none;">{!wl.workItemName}</a></td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wl.hours}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wl.formattedRate}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right; font-weight: bold;">{!wl.formattedAmount}</td>

@@ -14,6 +14,7 @@
         <targetConfig targets="lightning__RecordPage">
             <objects>
                 <object>NetworkEntity__c</object>
+                <object>DeliveryDocument__c</object>
             </objects>
             <property name="networkEntityId" type="String" label="Network Entity Id" description="The Id of the NetworkEntity__c to display documents for. On record pages, this is auto-populated from the record context." />
             <property name="documentId" type="String" label="Document Id" description="Optional. If set, opens directly in preview mode for this document." />

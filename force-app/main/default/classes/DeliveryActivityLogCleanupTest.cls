@@ -79,7 +79,7 @@ private class DeliveryActivityLogCleanupTest {
         insert oldLog;
 
         // Backdate via direct update (Test context allows this)
-        Test.setCreatedDate(oldLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+        Test.setCreatedDate(oldLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));
 
         // Also insert a recent one that should survive
         ActivityLog__c recentLog = new ActivityLog__c(
@@ -115,7 +115,7 @@ private class DeliveryActivityLogCleanupTest {
             ContextDataTxt__c = '{"fieldName":"IUW_Risk_Rating__c","oldValue":"3","newValue":"4"}'
         );
         insert fieldChangeLog;
-        Test.setCreatedDate(fieldChangeLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+        Test.setCreatedDate(fieldChangeLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));
 
         // Insert an old Navigation log that SHOULD be purged
         ActivityLog__c oldNavLog = new ActivityLog__c(
@@ -124,7 +124,7 @@ private class DeliveryActivityLogCleanupTest {
             UserIdTxt__c = UserInfo.getUserId()
         );
         insert oldNavLog;
-        Test.setCreatedDate(oldNavLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+        Test.setCreatedDate(oldNavLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));
 
         Test.startTest();
         Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
@@ -227,7 +227,7 @@ private class DeliveryActivityLogCleanupTest {
             ContextDataTxt__c = '{"fieldName":"StageNamePk__c","oldValue":"Backlog","newValue":"Done"}'
         );
         insert oldFieldChange;
-        Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+        Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));
 
         // Insert an old Navigation log — should be purged
         ActivityLog__c oldNavLog = new ActivityLog__c(
@@ -236,7 +236,7 @@ private class DeliveryActivityLogCleanupTest {
             UserIdTxt__c = UserInfo.getUserId()
         );
         insert oldNavLog;
-        Test.setCreatedDate(oldNavLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+        Test.setCreatedDate(oldNavLog.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));
 
         Test.startTest();
         Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
@@ -269,7 +269,7 @@ private class DeliveryActivityLogCleanupTest {
             ContextDataTxt__c = '{"fieldName":"Developer__c","oldValue":"User A","newValue":"User B"}'
         );
         insert oldFieldChange;
-        Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.RETENTION_DAYS + 1)));
+        Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));
 
         Test.startTest();
         Database.executeBatch(new DeliveryActivityLogCleanup(), 200);

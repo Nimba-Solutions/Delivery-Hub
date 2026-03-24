@@ -523,6 +523,18 @@
         <type>Facet</type>
     </flexiPageRegions>
 
+    <!-- Preview tab content -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryDocumentViewer</componentName>
+                <identifier>c_deliveryDocumentViewer</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>previewTabContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
     <!-- ══ Tab Set ══ -->
     <flexiPageRegions>
         <itemInstances>
@@ -541,6 +553,20 @@
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
                 <identifier>detailTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>previewTabContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Preview</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>previewTab</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
