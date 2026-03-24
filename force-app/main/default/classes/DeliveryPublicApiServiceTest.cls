@@ -965,6 +965,85 @@ private class DeliveryPublicApiServiceTest {
     }
 
     // ==========================================
+    // DOCUMENT APPROVAL TESTS
+    // ==========================================
+
+    @IsTest
+    static void testPostDocumentApprove() {
+        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+        DeliveryTriggerControl.runAfterLogic = false;
+        Id docId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Invoice',
+            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+        );
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+
+        Map<String, Object> body = new Map<String, Object>{ 'token' => doc.PublicTokenTxt__c };
+        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> result = parseResponse(res);
+        System.assertEquals(true, result.get('success'), 'Should be successful');
+        Map<String, Object> data = (Map<String, Object>) result.get('data');
+        System.assertEquals('Approved', data.get('status'), 'Document should be Approved');
+    }
+
+    @IsTest
+    static void testPostDocumentDispute() {
+        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+        DeliveryTriggerControl.runAfterLogic = false;
+        Id docId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Invoice',
+            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+        );
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+
+        Map<String, Object> body = new Map<String, Object>{
+            'token' => doc.PublicTokenTxt__c, 'reason' => 'Hours are incorrect'
+        };
+        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-dispute', body);
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(200, res.statusCode, 'Should return 200');
+        Map<String, Object> result = parseResponse(res);
+        Map<String, Object> data = (Map<String, Object>) result.get('data');
+        System.assertEquals('Disputed', data.get('status'), 'Document should be Disputed');
+    }
+
+    @IsTest
+    static void testPostDocumentApproveMissingToken() {
+        Map<String, Object> body = new Map<String, Object>{ 'action' => 'approve' };
+        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
+        req.addHeader('X-Api-Key', TEST_API_KEY);
+        RestResponse res = new RestResponse();
+        RestContext.request = req;
+        RestContext.response = res;
+
+        Test.startTest();
+        DeliveryPublicApiService.handlePost();
+        Test.stopTest();
+
+        System.assertEquals(400, res.statusCode, 'Should return 400 for missing token');
+    }
+
+    // ==========================================
     // HELPERS
     // ==========================================
 
