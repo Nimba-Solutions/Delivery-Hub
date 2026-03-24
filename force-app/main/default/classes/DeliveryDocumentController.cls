@@ -760,6 +760,10 @@ public with sharing class DeliveryDocumentController {
     private static List<Map<String, Object>> serializeWorkItems(List<WorkItem__c> items) {
         List<Map<String, Object>> result = new List<Map<String, Object>>();
         for (WorkItem__c wi : items) {
+            // Skip work items with zero hours — invoices only show billable items
+            if (wi.TotalLoggedHoursNumber__c == null || wi.TotalLoggedHoursNumber__c <= 0) {
+                continue;
+            }
             Map<String, Object> m = new Map<String, Object>();
             m.put('id', wi.Id);
             m.put('name', wi.Name);
