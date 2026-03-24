@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getGuideContext from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGuideController.getGuideContext';

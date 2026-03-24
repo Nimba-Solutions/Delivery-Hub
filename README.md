@@ -105,7 +105,7 @@ The Activity Feed provides a unified, cross-item timeline of comments, hours, an
 
 ### Document Engine
 
-Generate professional invoices, status reports, client agreements, and contractor agreements directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. Zero-hour work items are automatically filtered from invoices so only billable items appear. PDF rendering via Visualforce produces print-ready output with clickable hyperlinks to the source Salesforce records. The VF URL builder detects the namespace at runtime, so PDF and web preview links work correctly in both managed and unmanaged installations. Email delivery sends the document to the client contact with an optional CC address (configurable via `DocumentCcEmailTxt__c`). Payment tracking through `DeliveryTransaction__c` records supports multiple transaction types (payment, credit, refund, adjustment, write-off) per document. The A/R summary on each invoice shows outstanding prior balances. White-label vendor branding pulls the issuing entity's name, address, email, and phone from the vendor NetworkEntity record. Every invoice footer links to cloudnimbusllc.com.
+Generate professional invoices, status reports, client agreements, and contractor agreements directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. Zero-hour work items are automatically filtered from invoices so only billable items appear. PDF rendering via Visualforce produces print-ready output with clickable hyperlinks to the source Salesforce records. The VF URL builder detects the namespace at runtime, so PDF and web preview links work correctly in both managed and unmanaged installations. Email delivery sends the document to the client contact with an optional CC address (configurable via `DocumentCcEmailTxt__c`). Payment tracking through `DeliveryTransaction__c` records supports multiple transaction types (payment, credit, refund, adjustment, write-off) per document. The A/R summary on each invoice shows outstanding prior balances. White-label vendor branding pulls the issuing entity's name, address, email, and phone from the vendor NetworkEntity record. Every invoice footer links to cloudnimbusllc.com. Document versioning preserves history when regenerating &mdash; superseded documents link back via version chain. Client-facing invoice approval flow lets clients approve or dispute invoices from the portal with full audit trail.
 
 ### Configurable Workflows
 
@@ -151,10 +151,11 @@ The engine is retry-aware (configurable limit, default 3 attempts), handles name
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 140 (71 production + 69 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, DeliverySyncReconciler, SettingsController |
-| **LWC Components** | 56 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer |
-| **Custom Objects** | 14 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c |
-| **Custom Metadata** | 12 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, ScheduledJobConfig\_\_mdt |
+| **Apex Classes** | 148 (75 production + 73 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService |
+| **LWC Components** | 57 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryTimelineView |
+| **Custom Objects** | 15 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c |
+| **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt |
+| **Platform Events** | 4 | DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e |
 | **Triggers** | 5 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger |
 
 ---
@@ -186,7 +187,7 @@ cci task run retrieve_changes --org dev
 git push origin feature/your-feature
 ```
 
-Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 580+ Apex tests (75%+ coverage enforced), runs PMD static analysis (zero violations enforced), and tears everything down.
+Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 600+ Apex tests (75%+ coverage enforced), runs PMD static analysis (zero violations enforced), and tears everything down.
 
 ### Reconciliation
 
@@ -237,6 +238,9 @@ Delivery Hub exposes a REST API for non-Salesforce clients (websites, mobile app
 | GET | `/api/board-summary` | AI-generated board summary |
 | GET | `/api/files` | Files attached to entity work items |
 | GET | `/api/documents` | Documents generated for the entity |
+| GET | `/api/documents/{token}` | Document detail by public token |
+| POST | `/api/document-approve` | Approve a document by public token |
+| POST | `/api/document-dispute` | Dispute a document with reason by public token |
 | GET | `/sync/health` | Org-level sync health &mdash; record counts, hours, status breakdown (no auth required) |
 
 All requests require an `X-Api-Key` header matched against a NetworkEntity record. See the [Public API Guide](docs/PUBLIC_API_GUIDE.md) for complete documentation.
@@ -307,7 +311,10 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **WorkLog Approval** | Draft &rarr; Approved &rarr; Synced pipeline, gated by org setting |
 | **Activity Feed** | Cross-item unified timeline of comments, hours, and changes with inline reply |
 | **Data Lineage** | Visual sync chain with per-entity health metrics on admin home |
-| **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering with hyperlinks to SF records, zero-hour filtering, runtime namespace detection for VF URLs, email delivery with CC, payment tracking, A/R balance, white-label vendor branding, and cloudnimbusllc.com footer |
+| **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering with hyperlinks to SF records, zero-hour filtering, runtime namespace detection for VF URLs, email delivery with CC, payment tracking, A/R balance, white-label vendor branding, and cloudnimbusllc.com footer. Document versioning tracks regeneration history with version numbers and superseded-document chains. |
+| **Invoice Approval Flow** | Client-facing approve/dispute workflow via portal. Clients review invoices by public token and either approve or dispute with a reason. Dispute details stored in DisputeReasonTxt__c. All actions logged to ActivityLog for audit trail. |
+| **Timeline View** | Gantt-style horizontal timeline showing active work items grouped by NetworkEntity. CSS Grid-based bars with zoom (week/month/quarter), scroll controls, today-line marker, stage-based colors from workflow config, and click-to-navigate to work item records. Available as the Delivery Timeline tab. |
+| **Saved Filters** | Save and recall board filter configurations. Per-user filters (Private sharing model) with default filter auto-applied on board load. Stored as JSON in DeliverySavedFilter__c. Accessible from a dropdown in the board toolbar. |
 | **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking |
 | **Delivery Guide** | In-app documentation with Ghost Recorder utility bar detection across all Lightning apps |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
@@ -326,6 +333,12 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Dynamic Record Pages** | Every object has a production-quality record page with dynamic forms, smart field sections, readonly enforcement on rollup fields, and compact layouts for lookup previews. LWC placements put the right component on the right page: deliveryScore on WorkItem, deliveryDocumentViewer on Document and NetworkEntity, deliverySyncRetryPanel on NetworkEntity. All 10 record pages are assigned as app defaults for both Delivery Hub apps. |
 | **Default Billing Entity** | Configurable billing entity override for pass-through invoicing patterns (e.g., Cloud Nimbus &rarr; At Large &rarr; MF). |
 | **Configurable Settings** | Admin settings page with DateTime activation toggles (shows who enabled what and when) and 4 operational knobs: reconciliation hour (default 6 AM UTC), sync retry limit (default 3), activity log retention days (default 90), and escalation cooldown hours (default 24). All settings are wired into the Apex runtime &mdash; the scheduler, cleanup job, and escalation service read from `DeliveryHubSettings__c` on every run. |
+| **Document Versioning** | Regenerating a document for the same entity, period, and template creates a new version. The old document is marked Superseded, the new one gets an incremented VersionNumber__c and links back via PreviousVersionId__c. Superseded documents are excluded from A/R prior balance calculations. |
+| **Inbound Email Handler** | Reply to work item notification emails to create comments directly. DeliveryInboundEmailHandler parses work item numbers (T-0039, WI-0039) from the To address or Subject, strips reply quotes, and inserts a WorkItemComment__c. Gated by EnableEmailNotificationsDateTime__c. DeliveryEmailService sends outbound comment notifications with reply-to routing for seamless email-based collaboration. |
+| **Platform Events** | Three HighVolume platform events (DeliverySync__e, DeliveryEscalation__e, DeliveryDocEvent__e) enable external systems to subscribe to sync completions, escalation firings, and document lifecycle changes without polling. |
+| **Portal Time Entry** | Enhanced portal time logging with entity scoping, workItemId filtering on GET /work-logs, cross-entity validation on POST /log-hours (403 if work item belongs to another entity), and activity log auditing for portal hour submissions. |
+| **Demo Org Flow** | One-command demo org setup via `cci flow run demo_org --org dev`. Creates a scratch org, deploys the package, loads realistic sample data (2 entities, 10 work items, 21 work logs, comments, a draft invoice), configures org defaults, and schedules all background jobs. |
+| **Task API (Versioned)** | CI/CD and AI agent endpoints moved to `/deliveryhub/v1/tasks/*` to match the URL convention used by all other REST endpoints. |
 | **Native Reports** | Full Salesforce reporting on all delivery data |
 
 ---
