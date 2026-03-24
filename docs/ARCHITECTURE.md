@@ -23,9 +23,10 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **WorkLog\_\_c** | Time logging entries | WorkItemId\_\_c, HoursNumber\_\_c, DateDt\_\_c, DescriptionTxt\_\_c |
 | **DeliveryHubSettings\_\_c** | Org-level settings (hierarchy custom setting) | Scheduling, polling, AI config, ReconciliationHourNumber\_\_c, SyncRetryLimitNumber\_\_c, ActivityLogRetentionDaysNumber\_\_c, EscalationCooldownHoursNumber\_\_c |
 | **ActivityLog\_\_c** | Audit trail of changes on work items | WorkItemId\_\_c, ActionTypePk\_\_c, ComponentNameTxt\_\_c, ContextDataTxt\_\_c, PageUrlTxt\_\_c, NetworkEntityId\_\_c, SessionIdTxt\_\_c |
-| **DeliveryDocument\_\_c** | Generated documents (invoices, status reports) | NetworkEntityId\_\_c (MD), TemplatePk\_\_c, StatusPk\_\_c, SnapshotTxt\_\_c (131072 LTA), TotalHoursNumber\_\_c, TotalCurrency\_\_c, AiNarrativeTxt\_\_c, PublicTokenTxt\_\_c (External ID), PeriodStartDate\_\_c, PeriodEndDate\_\_c, TermsTxt\_\_c, DueDateDate\_\_c |
+| **DeliveryDocument\_\_c** | Generated documents (invoices, status reports) with versioning | NetworkEntityId\_\_c (MD), TemplatePk\_\_c, StatusPk\_\_c, SnapshotTxt\_\_c (131072 LTA), TotalHoursNumber\_\_c, TotalCurrency\_\_c, AiNarrativeTxt\_\_c, PublicTokenTxt\_\_c (External ID), PeriodStartDate\_\_c, PeriodEndDate\_\_c, TermsTxt\_\_c, DueDateDate\_\_c, VersionNumber\_\_c (default 1), PreviousVersionId\_\_c (self-lookup), DisputeReasonTxt\_\_c (LTA 5000) |
 | **DeliveryTransaction\_\_c** | Financial transactions against a document (payments, credits, refunds) | DocumentId\_\_c (MD to DeliveryDocument\_\_c), AmountCurrency\_\_c, TypePk\_\_c (Payment/Credit/Refund/Adjustment/Write-Off), MethodPk\_\_c, TransactionDateDate\_\_c, NoteTxt\_\_c |
 | **PortalAccess\_\_c** | Controls portal user access; links email to NetworkEntity with access level | NetworkEntityId\_\_c (MD), EmailTxt\_\_c, RolePk\_\_c |
+| **DeliverySavedFilter\_\_c** | User-owned saved board filter presets (Private sharing model) | LabelTxt\_\_c, FilterJsonTxt\_\_c (LTA), IsDefaultBool\_\_c, WorkflowTypeTxt\_\_c |
 
 ### Custom Metadata Types
 
@@ -44,9 +45,12 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 
 ### Platform Events
 
-| Event | Purpose |
-|-------|---------|
-| **DeliveryWorkItemChange\_\_e** | Published on work item changes to drive real-time UI updates |
+| Event | Purpose | Key Fields |
+|-------|---------|------------|
+| **DeliveryWorkItemChange\_\_e** | Published on work item changes to drive real-time UI updates | -- |
+| **DeliverySync\_\_e** | Published on sync item completion (success or failure) for external subscribers | RecordIdTxt\_\_c, ObjectTypePk\_\_c, DirectionPk\_\_c, StatusPk\_\_c, ErrorMessageTxt\_\_c |
+| **DeliveryEscalation\_\_e** | Published when an escalation rule fires, enabling external alerting integrations | WorkItemIdTxt\_\_c, RuleNameTxt\_\_c, SeverityPk\_\_c, ActionTypePk\_\_c, DaysInStageNum\_\_c |
+| **DeliveryDocEvent\_\_e** | Published on document lifecycle events (generated, sent, approved, disputed) | DocumentIdTxt\_\_c, StatusPk\_\_c, TemplatePk\_\_c, EntityNameTxt\_\_c |
 
 ### Relationship Diagram
 
@@ -71,6 +75,11 @@ WorkItem__c
   |-- SyncItem__c.WorkItemId__c (sync audit trail)
   |-- ActivityLog__c.WorkItemId__c (change history)
   |-- ContentDocumentLink (file attachments)
+
+DeliveryDocument__c
+  |-- DeliveryDocument__c.PreviousVersionId__c (version chain, self-lookup)
+
+DeliverySavedFilter__c (owned by User, Private sharing model)
 ```
 
 ---
@@ -158,8 +167,17 @@ For websites, mobile apps, and external platforms. Authenticated via `X-Api-Key`
 | GET | `/api/pending-approvals` | Work logs awaiting approval |
 | GET | `/api/my-entities` | Entities accessible by the authenticated portal user |
 | GET | `/api/portal-users` | Portal users for an entity |
+| GET | `/api/documents/{token}` | Document detail by public token |
+| POST | `/api/document-approve` | Approve a document by public token |
+| POST | `/api/document-dispute` | Dispute a document with reason by public token |
 
 See [Public API Guide](PUBLIC_API_GUIDE.md) for full documentation.
+
+### Task API (CI/CD & AI Agents)
+
+**Class**: `DeliveryTaskAPI` (`@RestResource /deliveryhub/v1/tasks/*`)
+
+For CI/CD tools, AI agents, and automation platforms. Endpoints for task management operations.
 
 ### Sync API (Org-to-Org)
 
@@ -248,6 +266,7 @@ See [Sync API Guide](SYNC_API_GUIDE.md) for full documentation.
 | `deliveryCsvImport` | Bulk import from CSV files |
 | `deliveryDocumentViewer` | Document preview and management. Placed on Document record page (Preview tab) and admin Home page. |
 | `deliveryAiDraftPanel` | AI-generated description and acceptance criteria |
+| `deliveryTimelineView` | Gantt-style horizontal timeline with zoom (week/month/quarter), scroll, today marker, stage colors, click-to-navigate. Available as Delivery Timeline tab. |
 
 ---
 
@@ -465,16 +484,102 @@ Multiple transactions can be recorded per document. The A/R summary on invoices 
 
 When a document is sent via email, `DeliveryDocumentController` constructs a `Messaging.SingleEmailMessage` with the document PDF attached. The recipient is the client NetworkEntity's contact email. If `DeliveryHubSettings__c.DocumentCcEmailTxt__c` is populated, that address receives a CC copy of every outbound document email.
 
+### Document Versioning
+
+When regenerating a document for the same entity, period, and template combination:
+
+1. The existing document's status is set to **Superseded**
+2. A new `DeliveryDocument__c` record is created with an incremented `VersionNumber__c`
+3. The new document's `PreviousVersionId__c` links back to the superseded document
+4. Superseded documents are excluded from prior balance calculations on new invoices
+
+This preserves full document history while ensuring only the latest version is used for financial calculations.
+
+### Invoice Approval Flow
+
+Documents support client-facing approval and dispute actions via public token authentication:
+
+| Method | Description |
+|--------|-------------|
+| `approveDocumentByToken(token)` | Validates the document is in an approvable status, transitions to Approved, creates an Approval transaction, and logs the action |
+| `disputeDocumentByToken(token, reason)` | Transitions to Disputed, stores the reason in `DisputeReasonTxt__c`, and logs the action |
+
+Both methods are exposed through `DeliveryPublicApiService` as `POST /api/document-approve` and `POST /api/document-dispute`.
+
+---
+
+## Email System
+
+### Inbound Email Handler
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryInboundEmailHandler** | Implements `Messaging.InboundEmailHandler`. Parses work item numbers from the To address or Subject line using regex (`workitem-T0039`, `T-0039`, `T0039`). Resolves the sender as a Salesforce user, validates the feature gate (`EnableEmailNotificationsDateTime__c`), strips reply quotes, and inserts a `WorkItemComment__c` with `SourcePk__c = 'Email'`. |
+| **DeliveryEmailService** | Outbound notification service. Sends comment notification emails to subscribed users (developer + owner) with reply-to address routing back through the inbound handler. Uses `@future` for async email sends. Gated by `EnableEmailNotificationsDateTime__c` org-level setting. |
+
+### Email Flow
+
+```
+New comment posted (UI / Sync / Portal)
+  -> DeliveryEmailService.notifyCommentSubscribers()
+     -> Query work item developer + owner
+     -> Build SingleEmailMessage with reply-to = workitem-T{number}@{domain}
+     -> Send notification
+
+Recipient replies to email
+  -> DeliveryInboundEmailHandler.handleInboundEmail()
+     -> Parse T-number from To address or Subject
+     -> Resolve sender as Salesforce user
+     -> Check EnableEmailNotificationsDateTime__c gate
+     -> Strip reply quote text
+     -> Insert WorkItemComment__c (Source = 'Email')
+     -> Trigger sync engine for comment replication
+```
+
+---
+
+## Saved Filters
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliverySavedFilterController** | CRUD controller for `DeliverySavedFilter__c`. Methods: `getSavedFilters(workflowType)`, `saveBoardFilter(label, filterJson, isDefault, workflowType)`, `deleteSavedFilter(filterId)`. Uses Private sharing model -- each user can only see their own filters. |
+
+Filters are stored as JSON capturing the complete board filter state and scoped to a workflow type. Default filters auto-apply when the board loads.
+
+---
+
+## Timeline View
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryTimelineController** | Returns active work items with computed date ranges grouped by NetworkEntity. Uses a fallback chain for start/end dates (CreatedDate, CalculatedETADate__c, estimated hours converted to days). |
+
+The `deliveryTimelineView` LWC renders a CSS Grid-based Gantt chart with configurable zoom levels (week/month/quarter), horizontal scroll, a today-line marker, and stage-based colors pulled from `WorkflowStage__mdt`.
+
+---
+
+## Platform Events
+
+Three HighVolume platform events enable external systems to subscribe to key lifecycle events without polling:
+
+| Event | Publisher | When Fired |
+|-------|-----------|------------|
+| **DeliverySync\_\_e** | `DeliverySyncItemProcessor` | After every sync item completion (success or failure) |
+| **DeliveryEscalation\_\_e** | `DeliveryEscalationService` | When an escalation rule fires against a work item |
+| **DeliveryDocEvent\_\_e** | `DeliveryDocumentController` | On document generation, send, approval, or dispute |
+
+These are in addition to `DeliveryWorkItemChange__e` which drives real-time UI updates within the app.
+
 ---
 
 ## Package Summary
 
 | Category | Count |
 |----------|-------|
-| Apex classes | 128 (65 production + 63 test) |
-| LWC components | 54 |
-| Custom Objects | 12 |
+| Apex classes | 148 (75 production + 73 test) |
+| LWC components | 57 |
+| Custom Objects | 15 (includes DeliverySavedFilter\_\_c) |
 | Custom Metadata Types | 10 |
-| Platform Events | 1 |
+| Platform Events | 4 (DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e) |
 | Permission Sets | 3 |
-| Triggers | 4 |
+| Triggers | 5 |
