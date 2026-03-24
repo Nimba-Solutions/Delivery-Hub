@@ -1,0 +1,130 @@
+/* ── Workflow Type Grid (Screen 1) ── */
+.wb-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.wb-type-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    background: #fff;
+}
+.wb-type-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+}
+
+.wb-type-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.wb-type-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1e293b;
+    flex: 1;
+}
+.wb-type-desc {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.4;
+    margin-bottom: 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.wb-type-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.wb-default-badge {
+    --sds-c-badge-color-background: #dbeafe;
+    --sds-c-badge-text-color: #1e40af;
+    font-size: 0.7rem;
+}
+
+/* ── Stage Section Header ── */
+.wb-stage-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Stage Row ── */
+.wb-stage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.wb-stage-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fafafa;
+}
+.wb-stage-row:hover {
+    background: #f8fafc;
+}
+
+.wb-stage-num {
+    min-width: 24px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.wb-stage-swatch {
+    flex-shrink: 0;
+}
+
+.wb-stage-field--name {
+    flex: 2;
+    min-width: 140px;
+}
+.wb-stage-field--phase {
+    flex: 1;
+    min-width: 120px;
+}
+.wb-stage-field--color {
+    flex: 1;
+    min-width: 100px;
+}
+
+.wb-stage-checks {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.wb-stage-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.wb-delete-btn {
+    --sds-c-button-text-color: #ef4444;
+    --sds-c-button-text-color-hover: #dc2626;
+}
+
+.wb-empty-stages {
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+}
