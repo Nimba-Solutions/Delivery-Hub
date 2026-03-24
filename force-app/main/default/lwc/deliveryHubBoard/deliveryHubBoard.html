@@ -98,6 +98,43 @@
                         </button>
                     </div>
                 </div>
+                <div class="filter-group saved-filter-group">
+                    <div class="saved-filter-wrapper">
+                        <button class="toolbar-button saved-filter-trigger" onclick={handleToggleSavedFilterMenu} title="Saved Filters">
+                            <lightning-icon icon-name="utility:filterList" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                            Filters
+                            <template lwc:if={hasSavedFilters}><span class="saved-filter-count">{savedFilters.length}</span></template>
+                        </button>
+                        <template lwc:if={showSavedFilterMenu}>
+                            <div class="saved-filter-backdrop" onclick={handleCloseSavedFilterMenu}></div>
+                            <div class="saved-filter-dropdown">
+                                <div class="saved-filter-dropdown-header">
+                                    <span class="saved-filter-dropdown-title">Saved Filters</span>
+                                    <button class="saved-filter-save-btn" onclick={handleOpenSaveFilterModal} title="Save current filters">
+                                        <lightning-icon icon-name="utility:add" size="xx-small"></lightning-icon> Save Current
+                                    </button>
+                                </div>
+                                <template lwc:if={hasSavedFilters}>
+                                    <ul class="saved-filter-list">
+                                        <template for:each={savedFilterMenuItems} for:item="sf">
+                                            <li key={sf.id} class={sf.pillClass} data-id={sf.id} onclick={handleLoadSavedFilter}>
+                                                <div class="saved-filter-item-left">
+                                                    <template lwc:if={sf.isDefault}><lightning-icon icon-name="utility:favorite" size="xx-small" class="default-star"></lightning-icon></template>
+                                                    <span class="saved-filter-label">{sf.label}</span>
+                                                </div>
+                                                <div class="saved-filter-item-actions">
+                                                    <button class="sf-action-btn" title="Overwrite" data-id={sf.id} onclick={handleOverwriteSavedFilter}><lightning-icon icon-name="utility:refresh" size="xx-small"></lightning-icon></button>
+                                                    <button class="sf-action-btn sf-action-btn--delete" title="Delete" data-id={sf.id} onclick={handleDeleteSavedFilter}><lightning-icon icon-name="utility:delete" size="xx-small"></lightning-icon></button>
+                                                </div>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </template>
+                                <template lwc:else><div class="saved-filter-empty">No saved filters yet.</div></template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
 
             <!-- Quick-filter Pill Bar -->
@@ -914,5 +951,36 @@
                 </div>
             </template>
         </div>
+
+    <template lwc:if={showSaveFilterModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" aria-modal="true" aria-labelledby="save-filter-heading">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseSaveFilterModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="Close" size="small" variant="inverse"></lightning-icon>
+                    </button>
+                    <h2 id="save-filter-heading" class="slds-modal__title slds-hyphenate">Save Board Filter</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form-element slds-m-bottom_small">
+                        <label class="slds-form-element__label" for="filter-name-input">Filter Name</label>
+                        <div class="slds-form-element__control">
+                            <input type="text" id="filter-name-input" class="slds-input" value={saveFilterLabel} onchange={handleSaveFilterLabelChange} />
+                        </div>
+                    </div>
+                    <div class="slds-form-element">
+                        <div class="slds-form-element__control">
+                            <lightning-input type="checkbox" label="Set as default filter" checked={saveFilterIsDefault} onchange={handleSaveFilterDefaultChange}></lightning-input>
+                        </div>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button variant="neutral" label="Cancel" onclick={handleCloseSaveFilterModal}></lightning-button>
+                    <lightning-button variant="brand" label="Save Filter" onclick={handleSaveFilter} class="slds-m-left_x-small"></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
     </template>
 </template>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsDefaultBool__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When checked, this filter auto-loads when the user opens the board</description>
+    <inlineHelpText>Check to make this filter load automatically when you open the board.</inlineHelpText>
+    <label>Is Default</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

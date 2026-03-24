@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Stores a user's saved board filter configuration for the Delivery Hub Board. Each record captures a serialized set of filter criteria that can be quickly loaded to restore a specific board view.</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableLicensing>false</enableLicensing>
+    <enableReports>false</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>false</enableStreamingApi>
+    <externalSharingModel>Private</externalSharingModel>
+    <label>Delivery Saved Filter</label>
+    <nameField>
+        <displayFormat>SF-{0000}</displayFormat>
+        <label>Delivery Saved Filter Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Delivery Saved Filters</pluralLabel>
+    <searchLayouts></searchLayouts>
+    <sharingModel>Private</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>
