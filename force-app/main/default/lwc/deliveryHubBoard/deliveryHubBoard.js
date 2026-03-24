@@ -1844,9 +1844,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     get savedFilterMenuItems() {
         return this.savedFilters.map(f => ({
             id: f.Id,
-            label: f.LabelTxt__c || f.delivery__LabelTxt__c || '',
-            isDefault: f.IsDefaultBool__c || f.delivery__IsDefaultBool__c || false,
-            pillClass: (f.IsDefaultBool__c || f.delivery__IsDefaultBool__c)
+            label: filter.LabelTxt__c || filter.delivery__LabelTxt__c || '',
+            isDefault: filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c || false,
+            pillClass: (filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c)
                 ? 'saved-filter-item saved-filter-item--default' : 'saved-filter-item'
         }));
     }
@@ -1854,7 +1854,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         try {
             const filters = await getSavedFilters({ workflowType: this.activeWorkflowType });
             this.savedFilters = filters || [];
-            const df = this.savedFilters.find(f => f.IsDefaultBool__c || f.delivery__IsDefaultBool__c);
+            const df = this.savedFilters.find(f => filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c);
             if (df) { this.applyFilterState(df.FilterJsonTxt__c || df.delivery__FilterJsonTxt__c); }
         } catch (error) { console.error('[DeliveryHubBoard] loadSavedFilters error:', error); }
     }
@@ -1862,7 +1862,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleCloseSavedFilterMenu() { this.showSavedFilterMenu = false; }
     handleLoadSavedFilter(event) {
         const fid = event.currentTarget.dataset.id;
-        const f = this.savedFilters.find(x => x.Id === fid);
+        const filter = this.savedFilters.find(x => x.Id === fid);
         if (f) {
             this.applyFilterState(f.FilterJsonTxt__c || f.delivery__FilterJsonTxt__c);
             this.showToast('Filter Applied', 'Filter loaded.', 'success');
@@ -1910,11 +1910,11 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleOverwriteSavedFilter(event) {
         event.stopPropagation();
         const fid = event.currentTarget.dataset.id;
-        const f = this.savedFilters.find(x => x.Id === fid);
+        const filter = this.savedFilters.find(x => x.Id === fid);
         if (f) {
             this.editingFilterId = f.Id;
-            this.saveFilterLabel = f.LabelTxt__c || f.delivery__LabelTxt__c || '';
-            this.saveFilterIsDefault = f.IsDefaultBool__c || f.delivery__IsDefaultBool__c || false;
+            this.saveFilterLabel = filter.LabelTxt__c || filter.delivery__LabelTxt__c || '';
+            this.saveFilterIsDefault = filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c || false;
             this.showSaveFilterModal = true; this.showSavedFilterMenu = false;
         }
     }
