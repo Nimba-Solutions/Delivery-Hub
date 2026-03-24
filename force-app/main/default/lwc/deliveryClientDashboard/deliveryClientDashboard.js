@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -280,7 +281,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             type: 'standard__recordPage',
             attributes: {
                 recordId: recordId,
-                objectApiName: 'WorkItem__c',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c',
                 actionName: 'view'
             }
         });
@@ -290,9 +291,9 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         const phase = event.currentTarget.dataset.phase;
         const listView = PHASE_LIST_VIEWS[phase];
         if (!listView) return;
-        this[NavigationMixin.Navigate]({
+        this[NavigationMixin.Navigate]({ // eslint-disable-line sort-keys
             type: 'standard__listView',
-            attributes: { objectApiName: 'WorkItem__c', listViewApiName: listView }
+            attributes: { listViewApiName: listView, objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c' }
         });
     }
 
