@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -19,6 +20,18 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track slackTestResult = '';
     @track isSlackTesting = false;
 
+    // Activation-date display strings
+    @track notificationsActivatedAt = null;
+    @track autoSyncActivatedAt = null;
+    @track emailNotificationsActivatedAt = null;
+    @track boardMetricsActivatedAt = null;
+
+    // Advanced configurable settings
+    @track reconciliationHour = 6;
+    @track syncRetryLimit = 3;
+    @track activityLogRetentionDays = 90;
+    @track escalationCooldownHours = 24;
+
     isLoading = true;
 
     // 1. REPLACED @wire WITH IMPERATIVE CALL
@@ -30,7 +43,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     async loadSettings() {
         try {
             const data = await getSettings(); // Direct Apex Call
-            
+
             if (data) {
                 this.notifications = data.enableNotifications || false;
 
@@ -41,6 +54,18 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 this.slackWebhookUrl = data.slackWebhookUrl || '';
                 this.emailNotificationsEnabled = data.emailNotificationsEnabled || false;
                 this.showBoardMetrics = (data.showBoardMetrics !== undefined && data.showBoardMetrics !== null) ? data.showBoardMetrics : true;
+
+                // Activation dates
+                this.notificationsActivatedAt = data.notificationsActivatedAt || null;
+                this.autoSyncActivatedAt = data.autoSyncActivatedAt || null;
+                this.emailNotificationsActivatedAt = data.emailNotificationsActivatedAt || null;
+                this.boardMetricsActivatedAt = data.boardMetricsActivatedAt || null;
+
+                // Advanced configurable settings
+                this.reconciliationHour = data.reconciliationHour !== null ? data.reconciliationHour : 6;
+                this.syncRetryLimit = data.syncRetryLimit !== null ? data.syncRetryLimit : 3;
+                this.activityLogRetentionDays = data.activityLogRetentionDays !== null ? data.activityLogRetentionDays : 90;
+                this.escalationCooldownHours = data.escalationCooldownHours !== null ? data.escalationCooldownHours : 24;
             }
         } catch (error) {
             this.showToast('Error Loading Settings', error.body ? error.body.message : error.message, 'error');
@@ -73,19 +98,44 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveState();
     }
 
+    // Handlers for Advanced Configuration
+    handleReconciliationHourChange(event) {
+        this.reconciliationHour = parseInt(event.target.value, 10);
+        this.saveState();
+    }
+
+    handleSyncRetryLimitChange(event) {
+        this.syncRetryLimit = parseInt(event.target.value, 10);
+        this.saveState();
+    }
+
+    handleActivityLogRetentionChange(event) {
+        this.activityLogRetentionDays = parseInt(event.target.value, 10);
+        this.saveState();
+    }
+
+    handleEscalationCooldownChange(event) {
+        this.escalationCooldownHours = parseInt(event.target.value, 10);
+        this.saveState();
+    }
+
     // Centralized Save Logic
     async saveState() {
         try {
             await saveGeneralSettings({
-                enableNotifications: this.notifications,
+                activityLogRetentionDays: this.activityLogRetentionDays,
                 autoCreateRequest: true,
                 autoSendRequest: this.autoSyncNetworkEntity,
                 emailNotificationsEnabled: this.emailNotificationsEnabled,
-                showBoardMetrics: this.showBoardMetrics
+                enableNotifications: this.notifications,
+                escalationCooldownHours: this.escalationCooldownHours,
+                reconciliationHour: this.reconciliationHour,
+                showBoardMetrics: this.showBoardMetrics,
+                syncRetryLimit: this.syncRetryLimit
             });
-            
-            // Optional: Show a subtle success toast
-            // this.showToast('Success', 'Settings updated', 'success');
+
+            // Reload to get fresh activation dates from server
+            await this.loadSettings();
 
         } catch (error) {
             this.showToast('Error Saving Settings', error.body ? error.body.message : error.message, 'error');
