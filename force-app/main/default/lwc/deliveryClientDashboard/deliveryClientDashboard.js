@@ -290,9 +290,9 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         const phase = event.currentTarget.dataset.phase;
         const listView = PHASE_LIST_VIEWS[phase];
         if (!listView) return;
-        this[NavigationMixin.Navigate]({
+        this[NavigationMixin.Navigate]({ // eslint-disable-line sort-keys
             type: 'standard__listView',
-            attributes: { objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c', listViewApiName: listView }
+            attributes: { listViewApiName: listView, objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c' }
         });
     }
 
