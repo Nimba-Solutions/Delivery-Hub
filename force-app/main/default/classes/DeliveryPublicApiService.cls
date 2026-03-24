@@ -87,7 +87,13 @@ global without sharing class DeliveryPublicApiService {
         if (resource == 'files') { getFiles(entityId); return true; }
         if (resource == 'board-summary') { getBoardSummary(); return true; }
         if (resource == 'documents') { sendSuccess(DeliveryDocumentController.getDocumentsForEntity(entityId)); return true; }
+        if (resource.startsWith('documents/')) { getDocumentByToken(resource); return true; }
         return false;
+    }
+
+    private static void getDocumentByToken(String resource) {
+        String token = resource.substringAfter('documents/');
+        sendSuccess(DeliveryDocumentController.getDocumentByToken(token));
     }
 
     private static void getWorkItems(Id entityId) {
@@ -212,6 +218,8 @@ global without sharing class DeliveryPublicApiService {
         else if (resource == 'approve-worklogs') { approveReject(jsonBody, true); }
         else if (resource == 'reject-worklogs') { approveReject(jsonBody, false); }
         else if (resource == 'log-hours') { postLogHours(jsonBody, entityId); }
+        else if (resource == 'document-approve') { postDocumentApprove(jsonBody); }
+        else if (resource == 'document-dispute') { postDocumentDispute(jsonBody); }
         else { sendError(404, 'Unknown resource: ' + resource); }
     }
 
@@ -288,6 +296,21 @@ global without sharing class DeliveryPublicApiService {
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN, 'Portal activity log failed: ' + e.getMessage());
         }
+    }
+
+    private static void postDocumentApprove(String jsonBody) {
+        Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String token = (String) bodyMap.get('token');
+        if (String.isBlank(token)) { sendError(400, 'token is required.'); return; }
+        sendSuccess(DeliveryDocumentController.approveDocumentByToken(token));
+    }
+
+    private static void postDocumentDispute(String jsonBody) {
+        Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String token = (String) bodyMap.get('token');
+        String reason = (String) bodyMap.get('reason');
+        if (String.isBlank(token)) { sendError(400, 'token is required.'); return; }
+        sendSuccess(DeliveryDocumentController.disputeDocumentByToken(token, reason));
     }
 
     // ── Auth + Resolution ──────────────────────────────────────────────
