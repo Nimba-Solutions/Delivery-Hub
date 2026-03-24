@@ -4,13 +4,13 @@
  * @description  REST API for external task management. Provides endpoints to
  *               list, update, and comment on Work Items from non-Salesforce
  *               clients (CI/CD tools, AI agents, dashboards, etc.).
- *               URL Pattern: /services/apexrest/delivery/tasks/*
- *               (In namespaced package: /services/apexrest/delivery/delivery/tasks/*)
+ *               URL Pattern: /services/apexrest/deliveryhub/v1/tasks/*
+ *               (In namespaced package: /services/apexrest/delivery/deliveryhub/v1/tasks/*)
  *               Authenticates via X-Api-Key header matched against NetworkEntity__c.ApiKeyTxt__c.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ApexSOQLInjection')
-@RestResource(urlMapping='/delivery/tasks/*')
+@RestResource(urlMapping='/deliveryhub/v1/tasks/*')
 global without sharing class DeliveryTaskAPI {
 
     /**
@@ -100,7 +100,7 @@ global without sharing class DeliveryTaskAPI {
 
     /**
      * @description Updates a work item. Expects the work item ID as the last
-     *              path segment: PATCH /delivery/tasks/{id}
+     *              path segment: PATCH /deliveryhub/v1/tasks/{id}
      *              Body JSON: { stage, priority }
      */
     @HttpPatch
@@ -191,7 +191,7 @@ global without sharing class DeliveryTaskAPI {
 
     /**
      * @description Creates a comment on a work item.
-     *              POST /delivery/tasks/{id}/comments
+     *              POST /deliveryhub/v1/tasks/{id}/comments
      *              Body JSON: { body, author }
      */
     @HttpPost
@@ -209,7 +209,7 @@ global without sharing class DeliveryTaskAPI {
             String workItemId = extractWorkItemIdFromCommentPath(path);
 
             if (String.isBlank(workItemId)) {
-                sendError(res, 400, 'Work item ID is required. URL pattern: /delivery/tasks/{id}/comments');
+                sendError(res, 400, 'Work item ID is required. URL pattern: /deliveryhub/v1/tasks/{id}/comments');
                 return;
             }
 
