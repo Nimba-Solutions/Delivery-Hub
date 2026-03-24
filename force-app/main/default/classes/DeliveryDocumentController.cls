@@ -52,21 +52,58 @@ public with sharing class DeliveryDocumentController {
             metaMap.put('clauses', buildDefaultAgreementClauses(templateType, snapshot));
         }
 
+        // ── Versioning: supersede existing document for same entity+period+template ──
+        Integer nextVersion = 1;
+        Id previousVersionId = null;
+        List<DeliveryDocument__c> existing = [
+            SELECT Id, VersionNumber__c
+            FROM DeliveryDocument__c
+            WHERE NetworkEntityId__c = :entityId
+            AND TemplatePk__c = :templateType
+            AND PeriodStartDate__c = :periodStart
+            AND PeriodEndDate__c = :periodEnd
+            AND StatusPk__c != 'Superseded'
+            WITH SYSTEM_MODE
+            ORDER BY VersionNumber__c DESC
+            LIMIT 1
+        ];
+        if (!existing.isEmpty()) {
+            DeliveryDocument__c prev = existing[0];
+            Decimal prevVer = prev.VersionNumber__c != null ? prev.VersionNumber__c : 1;
+            nextVersion = prevVer.intValue() + 1;
+            previousVersionId = prev.Id;
+            prev.StatusPk__c = 'Superseded';
+            Database.update(prev, AccessLevel.SYSTEM_MODE);
+        }
+
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c  = entityId,
-            TemplatePk__c       = templateType,
-            PeriodStartDate__c  = periodStart,
-            PeriodEndDate__c    = periodEnd,
-            StatusPk__c         = 'Draft',
-            PublicTokenTxt__c   = publicToken,
-            SnapshotTxt__c      = JSON.serialize(snapshot),
-            TotalHoursNumber__c = calculateTotalHours(snapshot),
-            TotalCurrency__c    = currentCharges,
-            TermsTxt__c         = 'Net 30',
-            MetadataTxt__c      = JSON.serialize(metaMap)
+            NetworkEntityId__c     = entityId,
+            TemplatePk__c          = templateType,
+            PeriodStartDate__c     = periodStart,
+            PeriodEndDate__c       = periodEnd,
+            StatusPk__c            = 'Draft',
+            PublicTokenTxt__c      = publicToken,
+            SnapshotTxt__c         = JSON.serialize(snapshot),
+            TotalHoursNumber__c    = calculateTotalHours(snapshot),
+            TotalCurrency__c       = currentCharges,
+            TermsTxt__c            = 'Net 30',
+            MetadataTxt__c         = JSON.serialize(metaMap),
+            VersionNumber__c       = nextVersion,
+            PreviousVersionId__c   = previousVersionId
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
+
+        // Publish platform event for external subscribers
+        Map<String, Object> entityMap = (Map<String, Object>) snapshot.get('entity');
+        String entityName = entityMap != null ? (String) entityMap.get('name') : '';
+        EventBus.publish(new DeliveryDocument__e(
+            DocumentIdTxt__c = doc.Id,
+            TemplatePk__c    = templateType,
+            StatusPk__c      = 'Draft',
+            EntityNameTxt__c = entityName
+        ));
+
         return doc.Id;
     }
 
@@ -86,6 +123,7 @@ public with sharing class DeliveryDocumentController {
             WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
+            AND StatusPk__c != 'Superseded'
             WITH SYSTEM_MODE
         ];
         if (unpaidDocs.isEmpty()) {
@@ -160,6 +198,7 @@ public with sharing class DeliveryDocumentController {
             WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
+            AND StatusPk__c != 'Superseded'
             WITH SYSTEM_MODE
             ORDER BY PeriodStartDate__c ASC
         ];
@@ -207,7 +246,8 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
+                   VersionNumber__c, PreviousVersionId__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = :publicToken
             WITH SYSTEM_MODE
@@ -248,6 +288,8 @@ public with sharing class DeliveryDocumentController {
         result.put('transactions', getTransactionsForDocument(doc.Id));
         result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
+        result.put('version', doc.VersionNumber__c);
+        result.put('previousVersionId', doc.PreviousVersionId__c);
         return result;
     }
 
@@ -267,7 +309,8 @@ public with sharing class DeliveryDocumentController {
                    AiNarrativeTxt__c, SnapshotTxt__c,
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
-                   DueDateDate__c, TermsTxt__c, MetadataTxt__c
+                   DueDateDate__c, TermsTxt__c, MetadataTxt__c,
+                   VersionNumber__c, PreviousVersionId__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -301,6 +344,8 @@ public with sharing class DeliveryDocumentController {
         result.put('transactions', getTransactionsForDocument(doc.Id));
         result.put('totalPaid', getTotalPaid(doc.Id));
         result.put('snapshot', doc.SnapshotTxt__c);
+        result.put('version', doc.VersionNumber__c);
+        result.put('previousVersionId', doc.PreviousVersionId__c);
         return result;
     }
 
@@ -317,7 +362,7 @@ public with sharing class DeliveryDocumentController {
 
         String query = 'SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c, '
             + 'StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, CreatedDate, '
-            + 'NetworkEntityId__r.Name '
+            + 'NetworkEntityId__r.Name, VersionNumber__c, PreviousVersionId__c '
             + 'FROM DeliveryDocument__c ';
         if (entityId != null) {
             query += 'WHERE NetworkEntityId__c = :entityId ';
@@ -336,6 +381,8 @@ public with sharing class DeliveryDocumentController {
             item.put('totalHours', doc.TotalHoursNumber__c);
             item.put('totalCost', doc.TotalCurrency__c);
             item.put('createdDate', doc.CreatedDate);
+            item.put('version', doc.VersionNumber__c);
+            item.put('previousVersionId', doc.PreviousVersionId__c);
             results.add(item);
         }
 
@@ -350,7 +397,8 @@ public with sharing class DeliveryDocumentController {
     @AuraEnabled
     public static void updateDocumentStatus(Id documentId, String newStatus) {
         DeliveryDocument__c doc = [
-            SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c
+            SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c,
+                   TemplatePk__c, NetworkEntityId__r.Name
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -368,6 +416,15 @@ public with sharing class DeliveryDocumentController {
         }
 
         Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        // Publish platform event for external subscribers
+        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
+        EventBus.publish(new DeliveryDocument__e(
+            DocumentIdTxt__c = doc.Id,
+            TemplatePk__c    = doc.TemplatePk__c,
+            StatusPk__c      = newStatus,
+            EntityNameTxt__c = entityName
+        ));
     }
 
     /**

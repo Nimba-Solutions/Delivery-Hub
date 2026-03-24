@@ -38,6 +38,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
+        <field>DeliveryDocument__c.PreviousVersionId__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>DeliveryDocument__c.VersionNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>DeliveryDocument__c.DueDateDate__c</field>
         <readable>true</readable>
     </fieldPermissions>

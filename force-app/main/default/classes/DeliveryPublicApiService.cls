@@ -120,14 +120,28 @@ global without sharing class DeliveryPublicApiService {
     }
 
     private static void getWorkLogs(Id entityId) {
-        List<WorkLog__c> logs = [
-            SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
-                   HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
-                   StatusPk__c, CreatedDate, CreatedBy.Name
-            FROM WorkLog__c
-            WHERE WorkItemId__r.ClientNetworkEntityId__c = :entityId
-            WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 200
-        ];
+        String workItemIdParam = RestContext.request.params.get('workItemId');
+        List<WorkLog__c> logs;
+        if (String.isNotBlank(workItemIdParam)) {
+            Id wiId = Id.valueOf(workItemIdParam);
+            logs = [
+                SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
+                       StatusPk__c, CreatedDate, CreatedBy.Name
+                FROM WorkLog__c
+                WHERE WorkItemId__c = :wiId AND WorkItemId__r.ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE ORDER BY WorkDateDate__c DESC, CreatedDate DESC LIMIT 200
+            ];
+        } else {
+            logs = [
+                SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
+                       StatusPk__c, CreatedDate, CreatedBy.Name
+                FROM WorkLog__c
+                WHERE WorkItemId__r.ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 200
+            ];
+        }
         List<Map<String, Object>> result = new List<Map<String, Object>>();
         for (WorkLog__c wl : logs) {
             result.add(buildWorkLogMap(wl));
@@ -197,7 +211,7 @@ global without sharing class DeliveryPublicApiService {
         else if (resource.contains('/comments')) { postComment(resource, jsonBody, entityId); }
         else if (resource == 'approve-worklogs') { approveReject(jsonBody, true); }
         else if (resource == 'reject-worklogs') { approveReject(jsonBody, false); }
-        else if (resource == 'log-hours') { postLogHours(jsonBody); }
+        else if (resource == 'log-hours') { postLogHours(jsonBody, entityId); }
         else { sendError(404, 'Unknown resource: ' + resource); }
     }
 
@@ -236,17 +250,44 @@ global without sharing class DeliveryPublicApiService {
         sendSuccess(new Map<String, Object>{ 'status' => approve ? 'Approved' : 'Rejected', 'count' => ids.size() });
     }
 
-    private static void postLogHours(String jsonBody) {
+    private static void postLogHours(String jsonBody, Id entityId) {
         Map<String, Object> b = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
         String workItemId = (String) b.get('workItemId');
         Decimal hours = b.get('hours') != null ? (Decimal) b.get('hours') : null;
         if (String.isBlank(workItemId) || hours == null || hours <= 0) {
             sendError(400, 'workItemId and positive hours required.'); return;
         }
+        List<WorkItem__c> items = [
+            SELECT Id, Name, BriefDescriptionTxt__c FROM WorkItem__c
+            WHERE Id = :workItemId AND ClientNetworkEntityId__c = :entityId
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (items.isEmpty()) { sendError(403, 'Work item not found or access denied.'); return; }
         String dateStr = (String) b.get('workDate');
         Date workDate = String.isNotBlank(dateStr) ? Date.valueOf(dateStr) : null;
-        DeliveryTimeLoggerController.logHours(Id.valueOf(workItemId), hours, (String) b.get('workNotes'), workDate);
+        String description = (String) b.get('workNotes');
+        DeliveryTimeLoggerController.logHours(Id.valueOf(workItemId), hours, description, workDate);
+        logPortalActivity(items[0], hours, description);
         sendSuccess(new Map<String, Object>{ 'status' => 'Logged', 'hours' => hours }, 201);
+    }
+
+    private static void logPortalActivity(WorkItem__c item, Decimal hours, String description) {
+        try {
+            String portalUser = getPortalEmail();
+            ActivityLog__c log = new ActivityLog__c();
+            log.ActionTypePk__c = 'Portal_Hours_Logged';
+            log.RecordIdTxt__c = item.Id;
+            log.ComponentNameTxt__c = 'PortalTimeEntry';
+            log.ContextDataTxt__c = JSON.serialize(new Map<String, Object>{
+                'workItemId' => item.Id, 'workItemName' => item.Name,
+                'hours' => hours, 'portalUser' => portalUser,
+                'description' => description
+            });
+            log.UserIdTxt__c = UserInfo.getUserId();
+            Database.insert(log, AccessLevel.SYSTEM_MODE);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN, 'Portal activity log failed: ' + e.getMessage());
+        }
     }
 
     // ── Auth + Resolution ──────────────────────────────────────────────
