@@ -11,7 +11,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
 
     @TestSetup
     static void setup() {
-        insert new DeliveryHubSettings__c(AutoCreateWorkRequestBool__c = true);
+        insert new DeliveryHubSettings__c(EnableAutoCreateWorkRequestDateTime__c = Datetime.now());
         NetworkEntity__c vendor = new NetworkEntity__c(Name='V', EntityTypePk__c='Vendor', StatusPk__c='Active', IntegrationEndpointUrlTxt__c='https://f.com');
         insert vendor;
         insert new WorkItem__c(BriefDescriptionTxt__c = 'Blocker', StatusPk__c = 'In Progress', StageNamePk__c = 'In Development');
@@ -36,7 +36,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
 
     @IsTest
     static void testAutoWorkRequestCreation() {
-        // Settings have AutoCreateWorkRequestBool__c = true from setup
+        // Settings have EnableAutoCreateWorkRequestDateTime__c = Datetime.now() from setup
         // and an active vendor exists, so inserting a work item should auto-create a request
         Test.startTest();
         WorkItem__c newItem = new WorkItem__c(

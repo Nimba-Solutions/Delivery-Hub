@@ -21,8 +21,8 @@ private class DeliveryHubPollerTest {
 
         // 1. Setup Settings (Dynamic SObject to handle namespace)
         SObject settings = (SObject) Type.forName(ns + 'DeliveryHubSettings__c').newInstance();
-        settings.put(ns + 'AutoCreateWorkRequestBool__c', false);
-        settings.put(ns + 'AutoSyncNetworkEntityBool__c', false);
+        settings.put(ns + 'EnableAutoCreateWorkRequestDateTime__c', null);
+        settings.put(ns + 'EnableAutoSyncNetworkEntityDateTime__c', null);
         insert settings;
 
         // 2. Create Active Vendor (Mothership) - FORCED POPULATION

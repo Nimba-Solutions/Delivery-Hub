@@ -24,7 +24,7 @@ public with sharing class DeliveryWeeklyDigestService {
     public static void sendWeeklyDigest() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
 
-        if (settings == null || settings.WeeklyDigestEnabledBool__c != true) {
+        if (settings == null || settings.EnableWeeklyDigestDateTime__c == null) {
             return;
         }
 
@@ -58,7 +58,7 @@ public with sharing class DeliveryWeeklyDigestService {
      * @return true if today is the configured digest day.
      */
     public static Boolean isTodayDigestDay(DeliveryHubSettings__c settings) {
-        if (settings == null || settings.WeeklyDigestEnabledBool__c != true) {
+        if (settings == null || settings.EnableWeeklyDigestDateTime__c == null) {
             return false;
         }
         String configuredDay = String.isNotBlank(settings.WeeklyDigestDayTxt__c)
@@ -209,7 +209,7 @@ public with sharing class DeliveryWeeklyDigestService {
      */
     @TestVisible
     private static String tryGenerateAiSummary(DeliveryHubSettings__c settings) {
-        if (settings.AISuggestionsEnabledBool__c != true
+        if (settings.EnableAISuggestionsDateTime__c == null
             || String.isBlank(settings.OpenAIApiKeyTxt__c)) {
             return null;
         }

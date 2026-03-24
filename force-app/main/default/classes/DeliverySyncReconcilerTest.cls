@@ -17,8 +17,8 @@ private class DeliverySyncReconcilerTest {
         // 1. Settings
         insert new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            AutoCreateWorkRequestBool__c = false,
-            AutoSyncNetworkEntityBool__c = false
+            EnableAutoCreateWorkRequestDateTime__c = null,
+            EnableAutoSyncNetworkEntityDateTime__c = null
         );
 
         // 2. Network Entity (Vendor, Connected)

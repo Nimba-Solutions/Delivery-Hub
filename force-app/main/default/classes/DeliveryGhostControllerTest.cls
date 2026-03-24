@@ -13,7 +13,7 @@ private class DeliveryGhostControllerTest {
      */
     private static void enableActivityLogging() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.EnableActivityLoggingBool__c = true;
+        settings.EnableActivityLoggingDateTime__c = Datetime.now();
         upsert settings;
     }
 

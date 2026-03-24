@@ -12,7 +12,7 @@ private class DeliveryStatusPageControllerTest {
     static void setupData() {
         // Enable status page in org defaults
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.StatusPageEnabledBool__c = true;
+        settings.EnableStatusPageDateTime__c = Datetime.now();
         settings.StatusPageTokenTxt__c = 'test-token';
         upsert settings;
 
@@ -189,7 +189,7 @@ private class DeliveryStatusPageControllerTest {
     static void testDisabledStatusPage() {
         // Disable the status page
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.StatusPageEnabledBool__c = false;
+        settings.EnableStatusPageDateTime__c = null;
         upsert settings;
 
         Test.startTest();
@@ -391,7 +391,7 @@ private class DeliveryStatusPageControllerTest {
     static void testVfPageDisabledStatusPage() {
         // Disable status page via settings, then exercise VF controller
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.StatusPageEnabledBool__c = false;
+        settings.EnableStatusPageDateTime__c = null;
         upsert settings;
 
         PageReference pageRef = Page.DeliveryStatusPage;

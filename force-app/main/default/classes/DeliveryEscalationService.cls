@@ -407,6 +407,16 @@ public with sharing class DeliveryEscalationService {
             handleReassign(wi, rule.TargetValueTxt__c, itemsToUpdate);
         }
 
+        // Send bell notification to the work item owner (if opted in)
+        String briefDesc = String.isNotBlank(wi.BriefDescriptionTxt__c)
+            ? wi.BriefDescriptionTxt__c : wi.Name;
+        sendBellNotification(
+            wi.Id,
+            wi.OwnerId,
+            'Delivery Hub: Item Needs Attention',
+            briefDesc + ' — ' + rule.MasterLabel
+        );
+
         logEntries.add(new ActivityLog__c(
             ActionTypePk__c = 'Feature_Use',
             ComponentNameTxt__c = 'DeliveryEscalationService',
@@ -630,6 +640,44 @@ public with sharing class DeliveryEscalationService {
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryEscalationService] Slack callout failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Sends a Salesforce bell notification to the work item owner if they have
+     *              EnableBellNotificationsDateTime__c != null in their user-level DeliveryHubSettings.
+     *              Uses the Delivery_Hub_Alert custom notification type.
+     * @param workItemId The WorkItem__c Id to link the notification to.
+     * @param ownerId The User Id to notify.
+     * @param title Short notification title.
+     * @param body Notification body text.
+     */
+    private static void sendBellNotification(Id workItemId, Id ownerId, String title, String body) {
+        try {
+            // Check user-level setting (hierarchy: user > profile > org)
+            DeliveryHubSettings__c userSettings = DeliveryHubSettings__c.getInstance(ownerId);
+            if (userSettings == null || userSettings.EnableBellNotificationsDateTime__c == null) {
+                return; // User hasn't opted in
+            }
+
+            // Look up the custom notification type
+            List<CustomNotificationType> types = [
+                SELECT Id FROM CustomNotificationType
+                WHERE DeveloperName = 'Delivery_Hub_Alert'
+                LIMIT 1
+            ];
+            if (types.isEmpty()) {
+                return; // Notification type not deployed
+            }
+
+            Messaging.CustomNotification notification = new Messaging.CustomNotification();
+            notification.setTitle(title);
+            notification.setBody(body);
+            notification.setNotificationTypeId(types[0].Id);
+            notification.setTargetId(workItemId);
+            notification.send(new Set<String>{ ownerId });
+        } catch (Exception e) {
+            System.debug(LoggingLevel.FINE, 'Bell notification failed: ' + e.getMessage());
         }
     }
 

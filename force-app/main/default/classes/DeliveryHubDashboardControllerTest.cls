@@ -66,7 +66,7 @@ private class DeliveryHubDashboardControllerTest {
         insert workItems;
 
         Test.startTest();
-        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek');
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
         Test.stopTest();
 
         System.assert(result.containsKey('attentionWorkItems'), 'Should return attentionWorkItems key');
@@ -119,7 +119,7 @@ private class DeliveryHubDashboardControllerTest {
         );
 
         Test.startTest();
-        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek');
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
         Test.stopTest();
 
         List<Object> announcements = (List<Object>) result.get('announcements');
@@ -135,7 +135,7 @@ private class DeliveryHubDashboardControllerTest {
         );
 
         Test.startTest();
-        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisMonth');
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisMonth', 'Software_Delivery');
         Test.stopTest();
 
         System.assert(result.containsKey('thisWeek'), 'thisMonth range should still return thisWeek key');

@@ -36,7 +36,7 @@ public with sharing class DeliveryFieldTrackingService {
 
         // Gate: check org-level setting
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
-        if (settings == null || !settings.EnableFieldTrackingBool__c) {
+        if (settings == null || settings.EnableFieldTrackingDateTime__c == null) {
             return;
         }
 

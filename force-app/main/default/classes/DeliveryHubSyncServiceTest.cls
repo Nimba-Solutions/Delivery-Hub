@@ -13,8 +13,8 @@ private class DeliveryHubSyncServiceTest {
     static void makeData() {
         // 1. Setup Settings
         insert new DeliveryHubSettings__c(
-            AutoCreateWorkRequestBool__c = false,
-            AutoSyncNetworkEntityBool__c = false
+            EnableAutoCreateWorkRequestDateTime__c = null,
+            EnableAutoSyncNetworkEntityDateTime__c = null
         );
 
         // 2. Create Network Entities (Vendor & Client)
