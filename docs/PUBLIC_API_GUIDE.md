@@ -84,6 +84,9 @@ Error responses:
 | GET | `/api/board-summary` | AI-generated board summary |
 | GET | `/api/files` | Files attached to the entity's work items |
 | GET | `/api/documents` | Generated documents (invoices, statements) for the entity |
+| GET | `/api/documents/{token}` | Document detail by public token |
+| POST | `/api/document-approve` | Approve a document by public token |
+| POST | `/api/document-dispute` | Dispute a document with reason by public token |
 
 ---
 
@@ -513,13 +516,26 @@ curl -s \
 
 Returns all work logs for the authenticated entity's work items, ordered by creation date descending.
 
+**Query parameters**:
+
+| Parameter | Required | Values | Description |
+|-----------|----------|--------|-------------|
+| `workItemId` | No | Salesforce ID | Filter to work logs for a specific work item. Omit for all work logs. |
+
 **Request**:
 
 ```bash
+# All work logs for the entity
 curl -s \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "X-Api-Key: YOUR_API_KEY" \
   "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/work-logs"
+
+# Work logs for a specific work item
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/work-logs?workItemId=a00xx0000000001AAA"
 ```
 
 **Response** (200):
@@ -604,11 +620,14 @@ curl -s -X POST \
 }
 ```
 
+The endpoint also creates an `ActivityLog__c` record for portal audit tracking.
+
 **Errors**:
 
 | Code | Condition |
 |------|-----------|
 | 400 | Missing request body, missing `workItemId`, or `hours` is null/zero/negative |
+| 403 | Work item belongs to a different NetworkEntity than the authenticated entity |
 
 ---
 
@@ -917,6 +936,151 @@ curl -s \
 | `createdDate` | DateTime | Document creation timestamp |
 
 **Limit**: Returns up to 100 documents per request.
+
+---
+
+### GET /api/documents/{token}
+
+Returns a single document by its public token. This allows clients to view document details from a shared link without authentication beyond the API key.
+
+**Request**:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/documents/abc123def456..."
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": "a07xx0000000001AAA",
+        "name": "INV-0001",
+        "template": "Invoice",
+        "periodStart": "2026-03-01",
+        "periodEnd": "2026-03-31",
+        "status": "Sent",
+        "totalHours": 42.5,
+        "totalCost": 3825.00,
+        "createdDate": "2026-03-15T09:00:00.000Z",
+        "snapshot": { ... },
+        "versionNumber": 1,
+        "disputeReason": null
+    }
+}
+```
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 404 | No document found for the given token |
+
+---
+
+### POST /api/document-approve
+
+Approves a document by its public token. The document must be in an approvable status (Sent, Ready, or Draft).
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "abc123def456..."}' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/document-approve"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `token` | Yes | String | The document's 64-character public token |
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "status": "Approved",
+        "documentId": "a07xx0000000001AAA"
+    }
+}
+```
+
+On approval:
+- Document status transitions to **Approved**
+- A `DeliveryTransaction__c` record of type "Approval" is created
+- An `ActivityLog__c` record is created with action type "Document_Action"
+- A `DeliveryDocEvent__e` platform event is published
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Missing token in request body |
+| 404 | No document found for the given token |
+| 400 | Document is not in an approvable status (already Approved, Paid, Cancelled, or Superseded) |
+
+---
+
+### POST /api/document-dispute
+
+Disputes a document by its public token. Requires a reason explaining the dispute.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "abc123def456...",
+    "reason": "Hours for WI-0042 seem incorrect -- we agreed on 8 hours, not 12."
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/document-dispute"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `token` | Yes | String | The document's 64-character public token |
+| `reason` | Yes | String | Explanation for the dispute (up to 5000 characters, stored in DisputeReasonTxt__c) |
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "status": "Disputed",
+        "documentId": "a07xx0000000001AAA"
+    }
+}
+```
+
+On dispute:
+- Document status transitions to **Disputed**
+- The reason is stored in `DeliveryDocument__c.DisputeReasonTxt__c`
+- An `ActivityLog__c` record is created with action type "Document_Action" and the dispute reason in context data
+- A `DeliveryDocEvent__e` platform event is published
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Missing token or reason in request body |
+| 404 | No document found for the given token |
+| 400 | Document is not in a disputable status |
 
 ---
 
