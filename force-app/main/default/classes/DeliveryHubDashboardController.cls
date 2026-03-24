@@ -18,6 +18,7 @@ public with sharing class DeliveryHubDashboardController {
         @AuraEnabled public String urgency;
         @AuraEnabled public String priority;
         @AuraEnabled public Integer daysInStage;
+        @AuraEnabled public Boolean isComment;
     }
 
     /** @description Wrapper for a phase bucket count used in the client dashboard. */
@@ -134,16 +135,19 @@ public with sharing class DeliveryHubDashboardController {
      * @return Map containing attentionWorkItems, phases, recentWorkItems, announcements, and thisWeek keys.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getClientDashboard(String timeRange) {
+    public static Map<String, Object> getClientDashboard(String timeRange, String workflowType) {
         if (String.isBlank(timeRange)) {
             timeRange = 'thisWeek';
         }
+        if (String.isBlank(workflowType)) {
+            workflowType = 'Software_Delivery';
+        }
         Map<String, Object> result = new Map<String, Object>();
-        result.put('attentionWorkItems', fetchAttentionWorkItems());
-        result.put('phases', fetchPhaseList());
+        result.put('attentionWorkItems', fetchAttentionWorkItems(workflowType));
+        result.put('phases', fetchPhaseList(workflowType));
         result.put('recentWorkItems', fetchRecentWorkItems());
         result.put('announcements', fetchVendorAnnouncements());
-        result.put('thisWeek', fetchTimeRangeMetrics(timeRange));
+        result.put('thisWeek', fetchTimeRangeMetrics(timeRange, workflowType));
         return result;
     }
 
@@ -151,8 +155,8 @@ public with sharing class DeliveryHubDashboardController {
     // Private helpers — keep getClientDashboard complexity at 1
     // -------------------------------------------------------------------------
 
-    private static List<WorkItemSummary> fetchAttentionWorkItems() {
-        Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
+    private static List<WorkItemSummary> fetchAttentionWorkItems(String workflowType) {
+        Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues(workflowType);
 
         List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
@@ -261,8 +265,9 @@ public with sharing class DeliveryHubDashboardController {
         }
     }
 
-    private static List<PhaseItem> fetchPhaseList() {
-        Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
+    private static List<PhaseItem> fetchPhaseList(String workflowType) {
+        Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap(workflowType);
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
         Map<String, Integer> phaseCounts = new Map<String, Integer>{
             'Planning' => 0, 'Approval' => 0, 'Development' => 0,
             'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
@@ -271,7 +276,7 @@ public with sharing class DeliveryHubDashboardController {
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
-            WHERE StageNamePk__c NOT IN ('Done', 'Cancelled', 'Deployed to Prod')
+            WHERE StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
         ]) {
@@ -301,17 +306,74 @@ public with sharing class DeliveryHubDashboardController {
             LIMIT 5
         ];
 
+        // Use a parallel list of raw Datetime values for accurate sorting
         List<WorkItemSummary> items = new List<WorkItemSummary>();
+        List<Datetime> sortDates = new List<Datetime>();
+
         for (WorkItem__c t : recs) {
             WorkItemSummary item = new WorkItemSummary();
             item.id = t.Id;
             item.name = t.Name;
             item.title = t.BriefDescriptionTxt__c;
             item.stage = t.StageNamePk__c;
-            item.lastModified = t.LastModifiedDate.format('MM/dd h:mm a', UserInfo.getTimeZone().getId());
+            item.isComment = false;
             items.add(item);
+            sortDates.add(t.LastModifiedDate);
         }
-        return items;
+
+        // Merge recent comments into the list
+        List<WorkItemComment__c> recentComments = [
+            SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                   WorkItemId__r.StageNamePk__c, AuthorTxt__c, BodyTxt__c, CreatedDate
+            FROM WorkItemComment__c
+            ORDER BY CreatedDate DESC
+            WITH SYSTEM_MODE
+            LIMIT 5
+        ];
+
+        for (WorkItemComment__c c : recentComments) {
+            WorkItemSummary item = new WorkItemSummary();
+            item.id = c.WorkItemId__c;
+            item.name = c.WorkItemId__r.Name;
+            String body = c.BodyTxt__c != null ? c.BodyTxt__c : '';
+            item.title = (body.length() > 80 ? body.substring(0, 80) : body)
+                + ' \u2014 ' + (c.AuthorTxt__c != null ? c.AuthorTxt__c : '');
+            item.stage = c.WorkItemId__r.StageNamePk__c;
+            item.isComment = true;
+            items.add(item);
+            sortDates.add(c.CreatedDate);
+        }
+
+        // Sort by raw datetime descending using index-based selection sort
+        Integer size = items.size();
+        for (Integer i = 0; i < size - 1; i++) {
+            Integer maxIdx = i;
+            for (Integer j = i + 1; j < size; j++) {
+                if (sortDates[j] > sortDates[maxIdx]) {
+                    maxIdx = j;
+                }
+            }
+            if (maxIdx != i) {
+                // Swap items
+                WorkItemSummary tmpItem = items[i];
+                items[i] = items[maxIdx];
+                items[maxIdx] = tmpItem;
+                // Swap dates
+                Datetime tmpDate = sortDates[i];
+                sortDates[i] = sortDates[maxIdx];
+                sortDates[maxIdx] = tmpDate;
+            }
+        }
+
+        // Cap at 7 items and format the display date
+        Integer cap = Math.min(size, 7);
+        List<WorkItemSummary> result = new List<WorkItemSummary>();
+        String tz = UserInfo.getTimeZone().getId();
+        for (Integer i = 0; i < cap; i++) {
+            items[i].lastModified = sortDates[i].format('MM/dd h:mm a', tz);
+            result.add(items[i]);
+        }
+        return result;
     }
 
     private static List<String> fetchVendorAnnouncements() {
@@ -332,7 +394,7 @@ public with sharing class DeliveryHubDashboardController {
         return texts;
     }
 
-    private static Map<String, Object> fetchTimeRangeMetrics(String timeRange) {
+    private static Map<String, Object> fetchTimeRangeMetrics(String timeRange, String workflowType) {
         Map<String, Object> metrics = new Map<String, Object>();
 
         // Determine date range based on timeRange parameter
@@ -353,7 +415,7 @@ public with sharing class DeliveryHubDashboardController {
         Datetime startDt = Datetime.newInstance(startDate, Time.newInstance(0, 0, 0, 0));
         Datetime endDt = endDate != null ? Datetime.newInstance(endDate, Time.newInstance(0, 0, 0, 0)) : null;
 
-        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
 
         // Items completed in range
         Integer completed;
