@@ -58,6 +58,7 @@ public with sharing class DeliveryInboundEmailHandler implements Messaging.Inbou
         return result;
     }
 
+    /** @description Resolves the sender User record from the inbound email address. */
     @TestVisible
     private static User resolveSender(String fromAddress) {
         if (String.isBlank(fromAddress)) { return null; }
