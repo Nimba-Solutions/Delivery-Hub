@@ -1,4 +1,4 @@
-/* eslint-disable sort-keys */
+/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
