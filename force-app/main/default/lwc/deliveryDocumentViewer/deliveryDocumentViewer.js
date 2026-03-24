@@ -562,13 +562,22 @@ export default class DeliveryDocumentViewer extends LightningElement {
         if (!this.previewDoc?.publicToken) return;
         const baseUrl = window.location.origin;
         const url = `${baseUrl}/apex/${this._vfPrefix}DeliveryDocumentPdf?token=${this.previewDoc.publicToken}`;
-        navigator.clipboard.writeText(url).then(() => {
+        // LockerService blocks navigator.clipboard — use hidden textarea fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
             this._showToast('Copied', 'Public document link copied to clipboard.', 'success');
-        }).catch(() => {
-            // Fallback: show the URL in a prompt
+        } catch (err) {
             /* eslint-disable-next-line no-alert */
             window.prompt('Copy this link:', url);
-        });
+        } finally {
+            document.body.removeChild(textarea);
+        }
     }
 
     handlePrint() {
