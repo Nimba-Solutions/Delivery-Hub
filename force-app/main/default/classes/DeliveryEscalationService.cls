@@ -426,6 +426,15 @@ public with sharing class DeliveryEscalationService {
             ComponentNameTxt__c = 'DeliveryEscalationService',
             ContextDataTxt__c = logContext
         ));
+
+        // Publish platform event for external subscribers
+        EventBus.publish(new DeliveryEscalation__e(
+            WorkItemIdTxt__c = wi.Id,
+            RuleNameTxt__c = rule.MasterLabel,
+            ActionTypePk__c = action,
+            SeverityPk__c = severity,
+            DaysInStageNum__c = daysInStage
+        ));
     }
 
     // -------------------------------------------------------------------------
