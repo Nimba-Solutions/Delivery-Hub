@@ -36,6 +36,16 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
+        <editable>false</editable>
+        <field>DeliveryDocument__c.PreviousVersionId__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>DeliveryDocument__c.VersionNumber__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>true</editable>
         <field>DeliveryTransaction__c.MethodPk__c</field>
         <readable>true</readable>
@@ -548,6 +558,10 @@
     </objectPermissions>
     <tabSettings>
         <tab>Delivery_Board</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Delivery_Timeline</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>

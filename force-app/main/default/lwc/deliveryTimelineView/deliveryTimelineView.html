@@ -1,0 +1,113 @@
+<template>
+    <lightning-card title="Timeline" icon-name="standard:date_input">
+        <!-- Toolbar -->
+        <div slot="actions" class="toolbar">
+            <lightning-combobox
+                label="Workflow Type"
+                value={selectedWorkflowType}
+                options={workflowTypeOptions}
+                onchange={handleWorkflowTypeChange}
+                variant="label-hidden"
+                class="slds-m-right_small type-picker"
+            ></lightning-combobox>
+            <lightning-button-group class="zoom-controls">
+                <lightning-button
+                    label="Week"
+                    variant={weekVariant}
+                    onclick={handleZoomWeek}
+                ></lightning-button>
+                <lightning-button
+                    label="Month"
+                    variant={monthVariant}
+                    onclick={handleZoomMonth}
+                ></lightning-button>
+                <lightning-button
+                    label="Quarter"
+                    variant={quarterVariant}
+                    onclick={handleZoomQuarter}
+                ></lightning-button>
+            </lightning-button-group>
+            <lightning-button-icon
+                icon-name="utility:chevronleft"
+                alternative-text="Scroll left"
+                onclick={handleScrollLeft}
+                class="slds-m-left_small"
+            ></lightning-button-icon>
+            <lightning-button-icon
+                icon-name="utility:chevronright"
+                alternative-text="Scroll right"
+                onclick={handleScrollRight}
+            ></lightning-button-icon>
+            <lightning-button
+                label="Today"
+                variant="neutral"
+                onclick={handleScrollToToday}
+                class="slds-m-left_small"
+            ></lightning-button>
+        </div>
+
+        <!-- Loading state -->
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading timeline" size="medium"></lightning-spinner>
+        </template>
+
+        <!-- Empty state -->
+        <template if:true={isEmpty}>
+            <div class="slds-align_absolute-center slds-p-around_large empty-state">
+                <div class="slds-text-align_center">
+                    <lightning-icon icon-name="utility:date_input" size="large" class="slds-m-bottom_small"></lightning-icon>
+                    <p class="slds-text-heading_small slds-m-top_small">No work items to display</p>
+                    <p class="slds-text-body_regular slds-text-color_weak">
+                        Active work items with dates will appear here as timeline bars.
+                    </p>
+                </div>
+            </div>
+        </template>
+
+        <!-- Timeline grid -->
+        <template if:false={isLoading}>
+            <template if:false={isEmpty}>
+                <div class="timeline-container" lwc:ref="timelineContainer">
+                    <!-- Header row with date columns -->
+                    <div class="timeline-header" style={gridTemplateStyle}>
+                        <div class="entity-label-header">Entity</div>
+                        <div class="date-columns-row">
+                            <template for:each={dateColumns} for:item="col">
+                                <div key={col.key} class={col.cssClass} style={col.style}>
+                                    {col.label}
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Body rows grouped by entity -->
+                    <template for:each={entityGroups} for:item="group">
+                        <div key={group.entityKey} class="entity-row" style={gridTemplateStyle}>
+                            <!-- Entity label -->
+                            <div class="entity-row-header" style={group.rowStyle}>
+                                {group.entityName}
+                            </div>
+                            <!-- Bar container -->
+                            <div class="entity-row-body" style={group.bodyStyle}>
+                                <!-- Today line -->
+                                <div class="today-line" style={todayLineInBodyStyle}></div>
+                                <template for:each={group.items} for:item="item">
+                                    <div
+                                        key={item.workItemId}
+                                        class="timeline-bar"
+                                        style={item.barStyle}
+                                        title={item.tooltipText}
+                                        data-id={item.workItemId}
+                                        onclick={handleBarClick}
+                                    >
+                                        <span class="bar-label">{item.name}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </template>
+    </lightning-card>
+</template>

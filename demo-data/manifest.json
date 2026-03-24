@@ -1,0 +1,52 @@
+{
+  "description": "Delivery Hub demo data manifest. The actual records are inserted via scripts/load-demo-data.apex (Anonymous Apex). This file documents the dataset for reference.",
+  "version": "1.0",
+  "entities": [
+    {
+      "object": "NetworkEntity__c",
+      "count": 2,
+      "records": [
+        { "name": "Acme Corp", "type": "Client", "rate": 150 },
+        { "name": "Cloud Nimbus LLC", "type": "Both", "rate": 175 }
+      ]
+    },
+    {
+      "object": "WorkItem__c",
+      "count": 10,
+      "records": [
+        { "title": "Implement SSO integration with Azure AD", "stage": "In Development", "priority": "High" },
+        { "title": "Fix payment processing timeout on large invoices", "stage": "Ready for QA", "priority": "High" },
+        { "title": "Add export to CSV feature for report dashboards", "stage": "Backlog", "priority": "Medium" },
+        { "title": "Build automated email notification system for case updates", "stage": "Ready for Client UAT", "priority": "Medium" },
+        { "title": "Design mobile-responsive Lightning record pages", "stage": "Scoping In Progress", "priority": "Low" },
+        { "title": "Migrate legacy REST API to Salesforce Connect (OData)", "stage": "In Development", "priority": "High" },
+        { "title": "Create executive KPI dashboard with real-time metrics", "stage": "Deployed to Prod", "priority": "Medium" },
+        { "title": "Implement field-level encryption for PII data", "stage": "Ready for Sizing", "priority": "High" },
+        { "title": "Set up CI/CD pipeline with CumulusCI and GitHub Actions", "stage": "Done", "priority": "Medium" },
+        { "title": "Fix duplicate contact merge losing activity history", "stage": "QA In Progress", "priority": "Medium" }
+      ]
+    },
+    {
+      "object": "WorkLog__c",
+      "count": 21,
+      "totalHours": 108,
+      "dateRange": "Last 60 days (relative to execution date)"
+    },
+    {
+      "object": "WorkItemComment__c",
+      "count": 4
+    },
+    {
+      "object": "DeliveryDocument__c",
+      "count": 1,
+      "records": [
+        { "template": "Invoice", "status": "Draft", "period": "Last 30 days" }
+      ]
+    },
+    {
+      "object": "DeliveryHubSettings__c",
+      "count": 1,
+      "note": "Org defaults with activity logging, field tracking, bell notifications, and board metrics enabled"
+    }
+  ]
+}

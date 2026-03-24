@@ -1,0 +1,166 @@
+/* --- Container --- */
+.timeline-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 75vh;
+    position: relative;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+}
+
+/* --- Toolbar --- */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.type-picker {
+    width: 200px;
+}
+
+/* --- Header row --- */
+.timeline-header {
+    display: grid;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background-color: #f9fafb;
+    border-bottom: 2px solid #d1d5db;
+    min-height: 34px;
+}
+
+.entity-label-header {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    background-color: #f3f4f6;
+    padding: 0.4rem 0.75rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #374151;
+    border-right: 1px solid #d1d5db;
+    display: flex;
+    align-items: center;
+}
+
+.date-columns-row {
+    display: flex;
+    flex-direction: row;
+}
+
+.date-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+    border-right: 1px solid #e5e7eb;
+    padding: 0.25rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.today-col {
+    background-color: #fef2f2;
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.weekend-col {
+    background-color: #f9fafb;
+    color: #9ca3af;
+}
+
+.month-col {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #374151;
+}
+
+/* --- Entity row (one per entity group) --- */
+.entity-row {
+    display: grid;
+}
+
+/* --- Entity row header (left sticky label) --- */
+.entity-row-header {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: #ffffff;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #1f2937;
+    border-right: 1px solid #d1d5db;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    align-items: flex-start;
+}
+
+/* --- Entity row body (bar container) --- */
+.entity-row-body {
+    position: relative;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+/* --- Timeline bar --- */
+.timeline-bar {
+    position: absolute;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    transition: opacity 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    min-width: 4px;
+    z-index: 1;
+}
+
+.timeline-bar:hover {
+    opacity: 0.85;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 2;
+}
+
+.bar-label {
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Today line --- */
+.today-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: transparent;
+    border-left: 2px dashed #dc2626;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* --- Empty state --- */
+.empty-state {
+    min-height: 300px;
+}
+
+/* --- Responsive adjustments --- */
+@media (max-width: 768px) {
+    .toolbar {
+        flex-wrap: wrap;
+    }
+    .type-picker {
+        width: 100%;
+    }
+}

@@ -188,9 +188,11 @@
     <isNavTabPersistenceDisabled>false</isNavTabPersistenceDisabled>
     <isOmniPinnedViewEnabled>false</isOmniPinnedViewEnabled>
     <label>Delivery Hub</label>
+    <logo>DeliveryHubLogo</logo>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
     <tabs>Delivery_Board</tabs>
+    <tabs>Delivery_Timeline</tabs>
     <tabs>Delivery_Activity</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>WorkItemComment__c</tabs>

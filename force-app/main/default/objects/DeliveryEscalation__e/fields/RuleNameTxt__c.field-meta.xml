@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RuleNameTxt__c</fullName>
+    <description>The MasterLabel of the WorkflowEscalationRule__mdt that fired.</description>
+    <inlineHelpText>Name of the escalation rule that triggered.</inlineHelpText>
+    <label>Rule Name</label>
+    <length>80</length>
+    <type>Text</type>
+</CustomField>

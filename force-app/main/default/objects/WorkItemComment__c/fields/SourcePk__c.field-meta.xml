@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>SourcePk__c</fullName>
     <defaultValue>&quot;Salesforce&quot;</defaultValue>
-    <description>Origin system for the comment. Values: Salesforce, Jira.</description>
+    <description>Origin system for the comment. Values: Salesforce, Jira, Client, Mothership, Vendor, API, Email.</description>
     <inlineHelpText>Indicates whether this comment originated locally or was synced from a remote org.</inlineHelpText>
     <label>Source</label>
     <required>false</required>
@@ -40,6 +40,11 @@
                 <fullName>API</fullName>
                 <default>false</default>
                 <label>API</label>
+            </value>
+            <value>
+                <fullName>Email</fullName>
+                <default>false</default>
+                <label>Email</label>
             </value>
         </valueSetDefinition>
     </valueSet>
