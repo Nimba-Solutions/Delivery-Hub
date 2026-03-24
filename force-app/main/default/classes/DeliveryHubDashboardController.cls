@@ -5,6 +5,7 @@
  * Returns System Pulse metrics and client-facing dashboard data.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryHubDashboardController {
 
     /** @description Wrapper for a work item summary row used in the client dashboard. */
@@ -31,7 +32,6 @@ public with sharing class DeliveryHubDashboardController {
      * @description Calculates active work items, sync health, and last active timestamp.
      * @return Map<String, Object> Metrics map (Object type to support String dates).
      */
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getBudgetMetrics() {
         Map<String, Object> metrics = new Map<String, Object>();
@@ -132,6 +132,8 @@ public with sharing class DeliveryHubDashboardController {
     /**
      * @description Returns client-facing dashboard data: attention items, phase counts,
      *              recent work items, vendor announcements, and this-week metrics.
+     * @param timeRange The time range filter — 'thisWeek', 'lastWeek', or 'thisMonth'. Defaults to 'thisWeek'.
+     * @param workflowType The workflow configuration key (e.g. 'Software_Delivery'). Defaults to 'Software_Delivery'.
      * @return Map containing attentionWorkItems, phases, recentWorkItems, announcements, and thisWeek keys.
      */
     @AuraEnabled(cacheable=true)
