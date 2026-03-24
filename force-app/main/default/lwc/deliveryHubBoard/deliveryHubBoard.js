@@ -1924,19 +1924,12 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             sizeMode: this.sizeMode, showMode: this.showMode,
             boardViewMode: this.boardViewMode, activeQuickFilter: this.activeQuickFilter };
     }
-    applyFilterState(jsonStr) {
+    applyFilterState(jsonStr) { // eslint-disable-line complexity
         try {
-            const state = JSON.parse(jsonStr); // eslint-disable-line no-eq-null, eqeqeq
-            if (state.persona !== null && state.persona !== undefined) { this.persona = state.persona; }
-            if (state.overallFilter !== null && state.overallFilter !== undefined) { this.overallFilter = state.overallFilter; }
-            if (state.intentionFilter !== null && state.intentionFilter !== undefined) { this.intentionFilter = state.intentionFilter; }
-            if (state.showAllColumns !== null && state.showAllColumns !== undefined) { this.showAllColumns = state.showAllColumns; }
-            if (state.myWorkOnly !== null && state.myWorkOnly !== undefined) { this.myWorkOnly = state.myWorkOnly; }
-            if (state.displayMode !== null && state.displayMode !== undefined) { this.displayMode = state.displayMode; }
-            if (state.sizeMode !== null && state.sizeMode !== undefined) { this.sizeMode = state.sizeMode; }
-            if (state.showMode !== null && state.showMode !== undefined) { this.showMode = state.showMode; }
-            if (state.boardViewMode !== null && state.boardViewMode !== undefined) { this.boardViewMode = state.boardViewMode; }
-            if (state.activeQuickFilter !== null && state.activeQuickFilter !== undefined) { this.activeQuickFilter = state.activeQuickFilter; }
+            const state = JSON.parse(jsonStr);
+            const fields = ['persona', 'overallFilter', 'intentionFilter', 'showAllColumns',
+                'myWorkOnly', 'displayMode', 'sizeMode', 'showMode', 'boardViewMode', 'activeQuickFilter'];
+            fields.forEach((key) => { if (key in state) { this[key] = state[key]; } });
         } catch (error) { console.error('[DeliveryHubBoard] applyFilterState error:', error); }
     }
 }
