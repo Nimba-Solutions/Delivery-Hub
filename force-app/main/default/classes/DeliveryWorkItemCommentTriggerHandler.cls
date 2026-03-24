@@ -5,6 +5,7 @@
  * Consolidates Delivery Hub logic to satisfy PMD and Best Practices.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
 
     /**
