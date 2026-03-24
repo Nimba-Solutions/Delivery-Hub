@@ -541,23 +541,27 @@ export default class DeliveryDocumentViewer extends LightningElement {
         }
     }
 
+    // VF page prefix: 'delivery__' for managed package, '' for unmanaged
+    get _vfPrefix() {
+        // Detect namespace from the component's module name
+        const moduleName = this.template.host?.localName || '';
+        return moduleName.startsWith('delivery-') ? 'delivery__' : '';
+    }
+
     handleViewPdf() {
         if (!this.previewDoc?.id) return;
-        // Open VF page rendered as actual PDF in new tab
-        window.open('/apex/%%%NAMESPACE_PREFIX%%%DeliveryDocumentPdf?id=' + this.previewDoc.id + '&pdf=true', '_blank');
+        window.open(`/apex/${this._vfPrefix}DeliveryDocumentPdf?id=${this.previewDoc.id}&pdf=true`, '_blank');
     }
 
     handleViewWeb() {
         if (!this.previewDoc?.id) return;
-        // Open rich renderer (Static Resource bundle) in new tab
-        window.open('/apex/%%%NAMESPACE_PREFIX%%%DeliveryDocumentView?id=' + this.previewDoc.id, '_blank');
+        window.open(`/apex/${this._vfPrefix}DeliveryDocumentView?id=${this.previewDoc.id}`, '_blank');
     }
 
     handleCopyPublicLink() {
         if (!this.previewDoc?.publicToken) return;
-        // Copy the public token URL — works for Sites, portals, or any public access
         const baseUrl = window.location.origin;
-        const url = baseUrl + '/apex/%%%NAMESPACE_PREFIX%%%DeliveryDocumentPdf?token=' + this.previewDoc.publicToken;
+        const url = `${baseUrl}/apex/${this._vfPrefix}DeliveryDocumentPdf?token=${this.previewDoc.publicToken}`;
         navigator.clipboard.writeText(url).then(() => {
             this._showToast('Copied', 'Public document link copied to clipboard.', 'success');
         }).catch(() => {
