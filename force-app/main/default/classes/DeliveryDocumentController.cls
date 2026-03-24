@@ -97,7 +97,7 @@ public with sharing class DeliveryDocumentController {
         // Publish platform event for external subscribers
         Map<String, Object> entityMap = (Map<String, Object>) snapshot.get('entity');
         String entityName = entityMap != null ? (String) entityMap.get('name') : '';
-        EventBus.publish(new DeliveryDocument__e(
+        EventBus.publish(new DeliveryDocEvent__e(
             DocumentIdTxt__c = doc.Id,
             TemplatePk__c    = templateType,
             StatusPk__c      = 'Draft',
@@ -419,7 +419,7 @@ public with sharing class DeliveryDocumentController {
 
         // Publish platform event for external subscribers
         String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
-        EventBus.publish(new DeliveryDocument__e(
+        EventBus.publish(new DeliveryDocEvent__e(
             DocumentIdTxt__c = doc.Id,
             TemplatePk__c    = doc.TemplatePk__c,
             StatusPk__c      = newStatus,

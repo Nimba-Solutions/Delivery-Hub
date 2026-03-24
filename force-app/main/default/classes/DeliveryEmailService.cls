@@ -9,8 +9,7 @@
  *               Feature is gated by EnableEmailNotificationsDateTime__c org-level setting.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
-@SuppressWarnings('PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
 public with sharing class DeliveryEmailService {
 
     @TestVisible

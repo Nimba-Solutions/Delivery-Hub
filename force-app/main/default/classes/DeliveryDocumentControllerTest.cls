@@ -838,6 +838,7 @@ private class DeliveryDocumentControllerTest {
         ];
         System.assertEquals(v2.TotalCurrency__c, balance,
             'Prior balance should only include the latest (non-Superseded) version');
+    }
 
     // ── Approval Flow Tests ──────────────────────────────────────────────────────
 
