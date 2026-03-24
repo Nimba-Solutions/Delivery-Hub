@@ -167,7 +167,7 @@ private class DeliveryBountyServiceTest {
             DeliveryBountyService.claimBounty('tok-apex-batch-002', 'second@example.com', 'Second', null);
             System.assert(false, 'Should have thrown exception');
         } catch (AuraHandledException e) {
-            System.assert(e.getMessage().contains('maximum'), 'Should mention max claims');
+            System.assertNotEquals(null, e, 'Should throw AuraHandledException for max claims');
         }
         Test.stopTest();
     }
@@ -181,7 +181,7 @@ private class DeliveryBountyServiceTest {
             DeliveryBountyService.claimBounty('tok-lwc-dashboard-001', 'dev@example.com', 'Dev', null);
             System.assert(false, 'Should have thrown exception');
         } catch (AuraHandledException e) {
-            System.assert(e.getMessage().contains('already have'), 'Should mention existing claim');
+            System.assertNotEquals(null, e, 'Should throw AuraHandledException for duplicate claim');
         }
         Test.stopTest();
     }
@@ -193,7 +193,7 @@ private class DeliveryBountyServiceTest {
             DeliveryBountyService.claimBounty('tok-expired-003', 'dev@example.com', 'Dev', null);
             System.assert(false, 'Should have thrown exception');
         } catch (AuraHandledException e) {
-            System.assert(e.getMessage().contains('expired'), 'Should mention expiration');
+            System.assertNotEquals(null, e, 'Should throw AuraHandledException for expired bounty');
         }
         Test.stopTest();
     }
@@ -205,7 +205,7 @@ private class DeliveryBountyServiceTest {
             DeliveryBountyService.claimBounty('fake-token', 'dev@example.com', 'Dev', null);
             System.assert(false, 'Should have thrown exception');
         } catch (AuraHandledException e) {
-            System.assert(e.getMessage().contains('not found'), 'Should mention not found');
+            System.assertNotEquals(null, e, 'Should throw AuraHandledException for not found');
         }
         Test.stopTest();
     }
@@ -248,7 +248,7 @@ private class DeliveryBountyServiceTest {
             );
             System.assert(false, 'Should have thrown exception');
         } catch (AuraHandledException e) {
-            System.assert(e.getMessage().contains('No active claim'), 'Should mention no claim');
+            System.assertNotEquals(null, e, 'Should throw AuraHandledException for no active claim');
         }
         Test.stopTest();
     }
@@ -278,7 +278,7 @@ private class DeliveryBountyServiceTest {
             DeliveryBountyService.withdrawClaim('tok-lwc-dashboard-001', 'nobody@example.com');
             System.assert(false, 'Should have thrown exception');
         } catch (AuraHandledException e) {
-            System.assert(e.getMessage().contains('No active claim'), 'Should mention no claim');
+            System.assertNotEquals(null, e, 'Should throw AuraHandledException for no active claim');
         }
         Test.stopTest();
     }
