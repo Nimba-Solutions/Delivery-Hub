@@ -9,6 +9,7 @@
     <columns>TotalHoursNumber__c</columns>
     <columns>TotalCurrency__c</columns>
     <columns>StatusPk__c</columns>
+    <columns>VersionNumber__c</columns>
     <filterScope>Everything</filterScope>
     <label>All</label>
 </ListView>

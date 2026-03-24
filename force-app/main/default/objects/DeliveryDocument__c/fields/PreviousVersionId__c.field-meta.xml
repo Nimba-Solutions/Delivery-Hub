@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PreviousVersionId__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Points to the previous version of this document, forming a version chain. Null for first-version documents.</description>
+    <inlineHelpText>The document this version superseded. Follow the chain to view full revision history.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Previous Version</label>
+    <referenceTo>DeliveryDocument__c</referenceTo>
+    <relationshipLabel>Newer Versions</relationshipLabel>
+    <relationshipName>NewerVersions</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
