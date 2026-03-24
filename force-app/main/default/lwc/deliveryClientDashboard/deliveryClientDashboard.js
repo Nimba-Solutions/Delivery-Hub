@@ -39,6 +39,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @api hideThisWeekSection = false;
 
     @track selectedTimeRange = 'thisWeek';
+    @track activeWorkflowType = 'Software_Delivery';
     @track attentionWorkItems = [];
     @track phases = [];
     @track recentWorkItems = [];
@@ -56,7 +57,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @wire(getRecord, { recordId: USER_ID, fields: [FIRST_NAME_FIELD] })
     wiredUser;
 
-    @wire(getWorkflowConfig, { workflowTypeName: 'Software_Delivery' })
+    @wire(getWorkflowConfig, { workflowTypeName: '$activeWorkflowType' })
     wiredConfig({ data, error }) {
         if (data) {
             this.workflowConfig = data;
@@ -70,7 +71,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         }
     }
 
-    @wire(getClientDashboard, { timeRange: '$selectedTimeRange' })
+    @wire(getClientDashboard, { timeRange: '$selectedTimeRange', workflowType: '$activeWorkflowType' })
     wiredDashboard(result) {
         this._wiredResult = result;
         const { data, error } = result;
@@ -147,13 +148,14 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             };
         });
 
-        // Recent work items
+        // Recent work items (includes both work items and comments)
         this.recentWorkItems = (data.recentWorkItems || []).map(t => ({
             id: t.id,
+            isComment: t.isComment || false,
+            lastModified: t.lastModified,
             name: t.name,
-            title: t.title || null,
             stage: t.stage,
-            lastModified: t.lastModified
+            title: t.title || null
         }));
 
         // Vendor announcements (one per active vendor with a message)
