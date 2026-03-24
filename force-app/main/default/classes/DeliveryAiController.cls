@@ -130,7 +130,7 @@ public with sharing class DeliveryAiController {
      */
     private static DeliveryHubSettings__c getValidatedSettings() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || settings.AISuggestionsEnabledBool__c != true) {
+        if (settings == null || settings.EnableAISuggestionsDateTime__c == null) {
             throw new AuraHandledException(
                 'AI features are not enabled. Turn them on in Delivery Hub \u2192 AI Settings.'
             );

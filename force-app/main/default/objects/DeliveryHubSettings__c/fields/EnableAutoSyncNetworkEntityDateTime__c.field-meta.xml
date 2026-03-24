@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableAutoSyncNetworkEntityDateTime__c</fullName>
+    <description>When non-null, the feature is active (enabled as of this timestamp). Null = feature off. Supports user/profile/org hierarchy for phased rollouts.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to enable this feature. Leave blank to disable.</inlineHelpText>
+    <label>Enable Auto Sync Network Entity</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

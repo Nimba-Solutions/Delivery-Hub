@@ -18,6 +18,7 @@ public with sharing class DeliveryHubDashboardController {
         @AuraEnabled public String urgency;
         @AuraEnabled public String priority;
         @AuraEnabled public Integer daysInStage;
+        @AuraEnabled public Boolean isComment;
     }
 
     /** @description Wrapper for a phase bucket count used in the client dashboard. */
@@ -42,7 +43,7 @@ public with sharing class DeliveryHubDashboardController {
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             AND IsTemplateBool__c = false
-            WITH SYSTEM_MODE
+
         ];
 
         Decimal activeCount = (workItemStats[0].get('total') != null) ? (Decimal)workItemStats[0].get('total') : 0;
@@ -52,14 +53,16 @@ public with sharing class DeliveryHubDashboardController {
 
         AggregateResult[] mtdStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
-            WHERE WorkDateDate__c >= :firstOfMonth WITH SYSTEM_MODE
+            WHERE WorkDateDate__c >= :firstOfMonth
+
         ];
         metrics.put('hoursThisMonth', mtdStats[0].get('total') != null ? (Decimal)mtdStats[0].get('total') : 0);
 
         AggregateResult[] lastMonthStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
             WHERE WorkDateDate__c >= :firstOfLastMonth
-            AND WorkDateDate__c < :firstOfMonth WITH SYSTEM_MODE
+            AND WorkDateDate__c < :firstOfMonth
+
         ];
         metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
 
@@ -69,7 +72,6 @@ public with sharing class DeliveryHubDashboardController {
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             AND IsTemplateBool__c = false
-            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
@@ -87,7 +89,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT StatusPk__c val, Count(Id) cnt
             FROM SyncItem__c
             WHERE StatusPk__c IN ('Synced', 'Failed')
-            WITH SYSTEM_MODE
+
             GROUP BY StatusPk__c
         ];
 
@@ -124,7 +126,6 @@ public with sharing class DeliveryHubDashboardController {
             SELECT COUNT()
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
-            WITH SYSTEM_MODE
         ];
     }
 
@@ -134,16 +135,19 @@ public with sharing class DeliveryHubDashboardController {
      * @return Map containing attentionWorkItems, phases, recentWorkItems, announcements, and thisWeek keys.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getClientDashboard(String timeRange) {
+    public static Map<String, Object> getClientDashboard(String timeRange, String workflowType) {
         if (String.isBlank(timeRange)) {
             timeRange = 'thisWeek';
         }
+        if (String.isBlank(workflowType)) {
+            workflowType = 'Software_Delivery';
+        }
         Map<String, Object> result = new Map<String, Object>();
-        result.put('attentionWorkItems', fetchAttentionWorkItems());
-        result.put('phases', fetchPhaseList());
+        result.put('attentionWorkItems', fetchAttentionWorkItems(workflowType));
+        result.put('phases', fetchPhaseList(workflowType));
         result.put('recentWorkItems', fetchRecentWorkItems());
         result.put('announcements', fetchVendorAnnouncements());
-        result.put('thisWeek', fetchTimeRangeMetrics(timeRange));
+        result.put('thisWeek', fetchTimeRangeMetrics(timeRange, workflowType));
         return result;
     }
 
@@ -151,15 +155,14 @@ public with sharing class DeliveryHubDashboardController {
     // Private helpers — keep getClientDashboard complexity at 1
     // -------------------------------------------------------------------------
 
-    private static List<WorkItemSummary> fetchAttentionWorkItems() {
-        Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
+    private static List<WorkItemSummary> fetchAttentionWorkItems(String workflowType) {
+        Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues(workflowType);
 
         List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
                    PriorityPk__c, LastModifiedDate, CalculatedETADate__c, Developer__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
-            WITH SYSTEM_MODE
             LIMIT 50
         ];
 
@@ -261,8 +264,9 @@ public with sharing class DeliveryHubDashboardController {
         }
     }
 
-    private static List<PhaseItem> fetchPhaseList() {
-        Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
+    private static List<PhaseItem> fetchPhaseList(String workflowType) {
+        Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap(workflowType);
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
         Map<String, Integer> phaseCounts = new Map<String, Integer>{
             'Planning' => 0, 'Approval' => 0, 'Development' => 0,
             'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
@@ -271,8 +275,7 @@ public with sharing class DeliveryHubDashboardController {
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
-            WHERE StageNamePk__c NOT IN ('Done', 'Cancelled', 'Deployed to Prod')
-            WITH SYSTEM_MODE
+            WHERE StageNamePk__c NOT IN :terminalStages
             GROUP BY StageNamePk__c
         ]) {
             String phase = stageToPhase.get((String)ar.get('stage'));
@@ -296,22 +299,77 @@ public with sharing class DeliveryHubDashboardController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled')
-            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 5
         ];
 
+        // Use a parallel list of raw Datetime values for accurate sorting
         List<WorkItemSummary> items = new List<WorkItemSummary>();
+        List<Datetime> sortDates = new List<Datetime>();
+
         for (WorkItem__c t : recs) {
             WorkItemSummary item = new WorkItemSummary();
             item.id = t.Id;
             item.name = t.Name;
             item.title = t.BriefDescriptionTxt__c;
             item.stage = t.StageNamePk__c;
-            item.lastModified = t.LastModifiedDate.format('MM/dd h:mm a', UserInfo.getTimeZone().getId());
+            item.isComment = false;
             items.add(item);
+            sortDates.add(t.LastModifiedDate);
         }
-        return items;
+
+        // Merge recent comments into the list
+        List<WorkItemComment__c> recentComments = [
+            SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                   WorkItemId__r.StageNamePk__c, AuthorTxt__c, BodyTxt__c, CreatedDate
+            FROM WorkItemComment__c
+            ORDER BY CreatedDate DESC
+            LIMIT 5
+        ];
+
+        for (WorkItemComment__c c : recentComments) {
+            WorkItemSummary item = new WorkItemSummary();
+            item.id = c.WorkItemId__c;
+            item.name = c.WorkItemId__r.Name;
+            String body = c.BodyTxt__c != null ? c.BodyTxt__c : '';
+            item.title = (body.length() > 80 ? body.substring(0, 80) : body)
+                + ' \u2014 ' + (c.AuthorTxt__c != null ? c.AuthorTxt__c : '');
+            item.stage = c.WorkItemId__r.StageNamePk__c;
+            item.isComment = true;
+            items.add(item);
+            sortDates.add(c.CreatedDate);
+        }
+
+        // Sort by raw datetime descending using index-based selection sort
+        Integer size = items.size();
+        for (Integer i = 0; i < size - 1; i++) {
+            Integer maxIdx = i;
+            for (Integer j = i + 1; j < size; j++) {
+                if (sortDates[j] > sortDates[maxIdx]) {
+                    maxIdx = j;
+                }
+            }
+            if (maxIdx != i) {
+                // Swap items
+                WorkItemSummary tmpItem = items[i];
+                items[i] = items[maxIdx];
+                items[maxIdx] = tmpItem;
+                // Swap dates
+                Datetime tmpDate = sortDates[i];
+                sortDates[i] = sortDates[maxIdx];
+                sortDates[maxIdx] = tmpDate;
+            }
+        }
+
+        // Cap at 7 items and format the display date
+        Integer cap = Math.min(size, 7);
+        List<WorkItemSummary> result = new List<WorkItemSummary>();
+        String tz = UserInfo.getTimeZone().getId();
+        for (Integer i = 0; i < cap; i++) {
+            items[i].lastModified = sortDates[i].format('MM/dd h:mm a', tz);
+            result.add(items[i]);
+        }
+        return result;
     }
 
     private static List<String> fetchVendorAnnouncements() {
@@ -320,7 +378,6 @@ public with sharing class DeliveryHubDashboardController {
             FROM NetworkEntity__c
             WHERE EntityTypePk__c = 'Vendor'
             AND StatusPk__c = 'Active'
-            WITH SYSTEM_MODE
             ORDER BY Name ASC
         ];
         List<String> texts = new List<String>();
@@ -332,7 +389,7 @@ public with sharing class DeliveryHubDashboardController {
         return texts;
     }
 
-    private static Map<String, Object> fetchTimeRangeMetrics(String timeRange) {
+    private static Map<String, Object> fetchTimeRangeMetrics(String timeRange, String workflowType) {
         Map<String, Object> metrics = new Map<String, Object>();
 
         // Determine date range based on timeRange parameter
@@ -353,7 +410,7 @@ public with sharing class DeliveryHubDashboardController {
         Datetime startDt = Datetime.newInstance(startDate, Time.newInstance(0, 0, 0, 0));
         Datetime endDt = endDate != null ? Datetime.newInstance(endDate, Time.newInstance(0, 0, 0, 0)) : null;
 
-        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
 
         // Items completed in range
         Integer completed;
@@ -364,7 +421,6 @@ public with sharing class DeliveryHubDashboardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
-                WITH SYSTEM_MODE
             ];
         } else {
             completed = [
@@ -372,7 +428,6 @@ public with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
-                WITH SYSTEM_MODE
             ];
         }
         metrics.put('completed', completed);
@@ -386,7 +441,6 @@ public with sharing class DeliveryHubDashboardController {
                 WHERE LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
                 AND StageNamePk__c NOT IN :terminalStages
-                WITH SYSTEM_MODE
             ];
         } else {
             moved = [
@@ -394,7 +448,6 @@ public with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE LastModifiedDate >= :startDt
                 AND StageNamePk__c NOT IN :terminalStages
-                WITH SYSTEM_MODE
             ];
         }
         metrics.put('moved', moved);
@@ -407,14 +460,12 @@ public with sharing class DeliveryHubDashboardController {
                 FROM WorkLog__c
                 WHERE WorkDateDate__c >= :startDate
                 AND WorkDateDate__c < :endDate
-                WITH SYSTEM_MODE
             ];
         } else {
             hoursAgg = [
                 SELECT SUM(HoursLoggedNumber__c) total
                 FROM WorkLog__c
                 WHERE WorkDateDate__c >= :startDate
-                WITH SYSTEM_MODE
             ];
         }
         Decimal hours = hoursAgg[0].get('total') != null ? (Decimal)hoursAgg[0].get('total') : 0;
@@ -428,7 +479,6 @@ public with sharing class DeliveryHubDashboardController {
             WHERE BlockingWorkItemId__c IN (
                 SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
             )
-            WITH SYSTEM_MODE
         ]) {
             blockedIds.add(dep.BlockedWorkItemId__c);
         }
@@ -439,3 +489,4 @@ public with sharing class DeliveryHubDashboardController {
 
 }
 
+// trigger rebuild

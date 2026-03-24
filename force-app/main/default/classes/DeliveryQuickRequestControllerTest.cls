@@ -14,7 +14,7 @@ private class DeliveryQuickRequestControllerTest {
     private static DeliveryHubSettings__c enableAi() {
         DeliveryHubSettings__c s = new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            AISuggestionsEnabledBool__c = true,
+            EnableAISuggestionsDateTime__c = Datetime.now(),
             OpenAIApiKeyTxt__c = 'sk-test-key-123',
             OpenAIModelTxt__c = 'gpt-3.5-turbo'
         );

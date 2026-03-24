@@ -14,8 +14,8 @@ private class DeliverySyncEngineTest {
         // 1. Settings (Ensure Org-level enforcement to minimize rogue triggers)
         insert new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            AutoCreateWorkRequestBool__c = false,
-            AutoSyncNetworkEntityBool__c = false
+            EnableAutoCreateWorkRequestDateTime__c = null,
+            EnableAutoSyncNetworkEntityDateTime__c = null
         );
 
         // 2. Network Entities (The DAG Edges)

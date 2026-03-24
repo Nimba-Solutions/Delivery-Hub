@@ -55,7 +55,7 @@ public without sharing class DeliveryStatusPageController {
 
         // --- Guard: check master toggle ---
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || settings.StatusPageEnabledBool__c != true) {
+        if (settings == null || settings.EnableStatusPageDateTime__c == null) {
             result.put('error', 'Status page is not enabled.');
             return result;
         }

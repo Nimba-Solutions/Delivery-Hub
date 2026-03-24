@@ -18,7 +18,7 @@ private class DeliveryActivityTimelineControllerTest {
     static void setup() {
         // Enable activity logging so ActivityLog__c records can be created
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.EnableActivityLoggingBool__c = true;
+        settings.EnableActivityLoggingDateTime__c = Datetime.now();
         upsert settings;
 
         // Network Entity (needed for WorkRequest master-detail chain)

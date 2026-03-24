@@ -23,7 +23,7 @@ public with sharing class DeliveryEmailNotificationService {
 
     /**
      * @description Asynchronously sends stage-change email notifications.
-     *              Reads the EmailNotificationsEnabledBool__c setting; no-ops if false.
+     *              Reads the EnableEmailNotificationsDateTime__c setting; no-ops if false.
      * @param workItemIds Set of WorkItem__c Ids whose stage changed
      * @param workItemIdToNewStage Map of WorkItem Id → new stage value
      */
@@ -48,7 +48,7 @@ public with sharing class DeliveryEmailNotificationService {
      */
     private static Boolean isEnabled() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        return settings != null && settings.EmailNotificationsEnabledBool__c == true;
+        return settings != null && settings.EnableEmailNotificationsDateTime__c != null;
     }
 
     /**

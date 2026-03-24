@@ -14,7 +14,7 @@ public class DeliverySLAServiceTest {
      */
     @TestSetup
     static void setup() {
-        insert new DeliveryHubSettings__c(AutoCreateWorkRequestBool__c = false);
+        insert new DeliveryHubSettings__c(EnableAutoCreateWorkRequestDateTime__c = null);
         insert new NetworkEntity__c(
             Name = 'TestVendor',
             EntityTypePk__c = 'Vendor',

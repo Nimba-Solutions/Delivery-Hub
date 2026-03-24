@@ -1,0 +1,254 @@
+<template>
+
+    <!-- ── Loading Spinner ── -->
+    <template lwc:if={isLoading}>
+        <div class="slds-p-around_large slds-text-align_center">
+            <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
+        </div>
+    </template>
+
+    <template lwc:elseif={isListScreen}>
+        <!-- ══════════════════════════════════════════════════════════════
+             Screen 1: Workflow Type List
+             ══════════════════════════════════════════════════════════════ -->
+        <lightning-card title="Workflow Builder" icon-name="utility:flow">
+            <lightning-button
+                slot="actions"
+                label="Create New Workflow"
+                variant="brand"
+                icon-name="utility:add"
+                onclick={handleCreateNew}
+            ></lightning-button>
+
+            <div class="slds-p-around_medium">
+                <template lwc:if={hasWorkflowTypes}>
+                    <div class="wb-type-grid">
+                        <template for:each={workflowTypes} for:item="wt">
+                            <div key={wt.developerName}
+                                 class="wb-type-card"
+                                 data-name={wt.developerName}
+                                 onclick={handleViewType}>
+                                <div class="wb-type-header">
+                                    <lightning-icon
+                                        icon-name={wt.iconName}
+                                        size="small"
+                                        class="slds-m-right_small"
+                                    ></lightning-icon>
+                                    <span class="wb-type-name">{wt.label}</span>
+                                    <template lwc:if={wt.isDefault}>
+                                        <lightning-badge label="Default" class="wb-default-badge"></lightning-badge>
+                                    </template>
+                                </div>
+                                <p class="wb-type-desc">{wt.description}</p>
+                                <div class="wb-type-footer">
+                                    <lightning-badge label={wt.stageLabel}></lightning-badge>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <template lwc:else>
+                    <div class="slds-text-align_center slds-p-around_large slds-text-color_weak">
+                        No workflow types found. Click "Create New Workflow" to get started.
+                    </div>
+                </template>
+            </div>
+        </lightning-card>
+    </template>
+
+    <template lwc:elseif={isEditorScreen}>
+        <!-- ══════════════════════════════════════════════════════════════
+             Screen 2: Workflow Editor
+             ══════════════════════════════════════════════════════════════ -->
+        <lightning-card title={editorTitle} icon-name="utility:settings">
+            <lightning-button-group slot="actions">
+                <lightning-button
+                    label="Back"
+                    icon-name="utility:back"
+                    onclick={handleBackToList}
+                ></lightning-button>
+                <lightning-button
+                    label={deployButtonLabel}
+                    variant="brand"
+                    icon-name="utility:upload"
+                    disabled={deployDisabled}
+                    onclick={handleDeploy}
+                ></lightning-button>
+            </lightning-button-group>
+
+            <div class="slds-p-around_medium">
+
+                <!-- ── Workflow-level fields ── -->
+                <div class="slds-grid slds-gutters slds-wrap slds-m-bottom_medium">
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            label="Workflow Name"
+                            value={workflowLabel}
+                            onchange={handleNameChange}
+                            required
+                            placeholder="e.g. Software Delivery"
+                        ></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            label="API Name"
+                            value={workflowName}
+                            onchange={handleApiNameChange}
+                            required
+                            placeholder="e.g. Software_Delivery"
+                            disabled={editingExisting}
+                        ></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            label="Icon"
+                            value={workflowIcon}
+                            onchange={handleIconChange}
+                            placeholder="e.g. utility:flow"
+                        ></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-textarea
+                            label="Description"
+                            value={workflowDescription}
+                            onchange={handleDescriptionChange}
+                            max-length="500"
+                        ></lightning-textarea>
+                    </div>
+                </div>
+
+                <!-- ── Deploying spinner ── -->
+                <template lwc:if={isDeploying}>
+                    <div class="slds-p-around_medium slds-text-align_center">
+                        <lightning-spinner alternative-text="Deploying..." size="small"></lightning-spinner>
+                        <p class="slds-m-top_small slds-text-color_weak">Deploying workflow metadata...</p>
+                    </div>
+                </template>
+
+                <!-- ── Stage list header ── -->
+                <div class="wb-stage-section-header">
+                    <h2 class="slds-text-heading_small">Stages</h2>
+                    <lightning-button
+                        label="Add Stage"
+                        variant="neutral"
+                        icon-name="utility:add"
+                        onclick={handleAddStage}
+                    ></lightning-button>
+                </div>
+
+                <!-- ── Stage rows ── -->
+                <template lwc:if={hasStages}>
+                    <div class="wb-stage-list">
+                        <template for:each={indexedStages} for:item="stage">
+                            <div key={stage.id} class="wb-stage-row">
+                                <!-- Sort # -->
+                                <div class="wb-stage-num">{stage.displayIndex}</div>
+
+                                <!-- Color swatch -->
+                                <div class="wb-stage-swatch" style={stage.colorStyle}></div>
+
+                                <!-- Name -->
+                                <div class="wb-stage-field wb-stage-field--name">
+                                    <lightning-input
+                                        label="Stage Name"
+                                        variant="label-hidden"
+                                        value={stage.label}
+                                        data-index={stage.index}
+                                        onchange={handleStageLabelChange}
+                                        placeholder="Stage name"
+                                    ></lightning-input>
+                                </div>
+
+                                <!-- Phase -->
+                                <div class="wb-stage-field wb-stage-field--phase">
+                                    <lightning-combobox
+                                        label="Phase"
+                                        variant="label-hidden"
+                                        value={stage.phase}
+                                        options={phaseOptions}
+                                        data-index={stage.index}
+                                        onchange={handleStagePhaseChange}
+                                    ></lightning-combobox>
+                                </div>
+
+                                <!-- Color -->
+                                <div class="wb-stage-field wb-stage-field--color">
+                                    <lightning-combobox
+                                        label="Color"
+                                        variant="label-hidden"
+                                        value={stage.color}
+                                        options={colorOptions}
+                                        data-index={stage.index}
+                                        onchange={handleStageColorChange}
+                                    ></lightning-combobox>
+                                </div>
+
+                                <!-- Checkboxes -->
+                                <div class="wb-stage-checks">
+                                    <lightning-input
+                                        type="checkbox"
+                                        label="Terminal"
+                                        checked={stage.isTerminal}
+                                        data-index={stage.index}
+                                        onchange={handleStageTerminalChange}
+                                    ></lightning-input>
+                                    <lightning-input
+                                        type="checkbox"
+                                        label="Attention"
+                                        checked={stage.isAttention}
+                                        data-index={stage.index}
+                                        onchange={handleStageAttentionChange}
+                                    ></lightning-input>
+                                    <lightning-input
+                                        type="checkbox"
+                                        label="Blocked"
+                                        checked={stage.isBlocked}
+                                        data-index={stage.index}
+                                        onchange={handleStageBlockedChange}
+                                    ></lightning-input>
+                                </div>
+
+                                <!-- Reorder / Delete -->
+                                <div class="wb-stage-actions">
+                                    <lightning-button-icon
+                                        icon-name="utility:up"
+                                        alternative-text="Move up"
+                                        data-index={stage.index}
+                                        disabled={stage.isFirst}
+                                        onclick={handleMoveUp}
+                                        size="small"
+                                    ></lightning-button-icon>
+                                    <lightning-button-icon
+                                        icon-name="utility:down"
+                                        alternative-text="Move down"
+                                        data-index={stage.index}
+                                        disabled={stage.isLast}
+                                        onclick={handleMoveDown}
+                                        size="small"
+                                    ></lightning-button-icon>
+                                    <lightning-button-icon
+                                        icon-name="utility:delete"
+                                        alternative-text="Remove stage"
+                                        variant="bare"
+                                        data-index={stage.index}
+                                        onclick={handleRemoveStage}
+                                        class="wb-delete-btn"
+                                        size="small"
+                                    ></lightning-button-icon>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <template lwc:else>
+                    <div class="slds-text-align_center slds-p-around_medium slds-text-color_weak wb-empty-stages">
+                        No stages yet. Click "Add Stage" to begin building your workflow.
+                    </div>
+                </template>
+
+            </div>
+        </lightning-card>
+    </template>
+
+</template>
