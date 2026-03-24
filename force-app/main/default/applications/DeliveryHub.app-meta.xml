@@ -192,6 +192,7 @@
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
     <tabs>Delivery_Board</tabs>
+    <tabs>Delivery_Timeline</tabs>
     <tabs>Delivery_Activity</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>WorkItemComment__c</tabs>
