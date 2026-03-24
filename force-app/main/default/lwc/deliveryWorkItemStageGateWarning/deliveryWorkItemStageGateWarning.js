@@ -69,7 +69,7 @@ export default class DeliveryWorkItemStageGateWarning extends LightningElement {
         }
 
         // --- GATE 3: DEVELOPMENT READINESS (Hard Stop) ---
-        const devStages = ['Ready for Development', 'In Development'];
+        const devStages = ['In Development'];
         if (devStages.includes(stage)) {
             let errors = [];
             if (!estimate) errors.push('Missing Hours Estimate');

@@ -188,6 +188,7 @@
     <isNavTabPersistenceDisabled>false</isNavTabPersistenceDisabled>
     <isOmniPinnedViewEnabled>false</isOmniPinnedViewEnabled>
     <label>Delivery Hub Admin</label>
+    <logo>DeliveryHubLogo</logo>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
     <tabs>WorkItem__c</tabs>
