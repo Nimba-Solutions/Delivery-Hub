@@ -36,9 +36,9 @@ import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettings
 import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTypes';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 import getWorkItemDetail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.getWorkItemDetail';
-import getSavedFilters from '@salesforce/apex/%%%NAMESPACE_DOT%%%SavedFilterController.getSavedFilters';
-import saveBoardFilter from '@salesforce/apex/%%%NAMESPACE_DOT%%%SavedFilterController.saveBoardFilter';
-import deleteSavedFilter from '@salesforce/apex/%%%NAMESPACE_DOT%%%SavedFilterController.deleteSavedFilter';
+import getSavedFilters from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySavedFilterController.getSavedFilters';
+import saveBoardFilter from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySavedFilterController.saveBoardFilter';
+import deleteSavedFilter from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySavedFilterController.deleteSavedFilter';
 
 // --- NAMESPACE BRIDGE ---
 const FIELDS = {
@@ -1926,17 +1926,17 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
     applyFilterState(jsonStr) {
         try {
-            const s = JSON.parse(jsonStr);
-            if (s.persona != null) { this.persona = s.persona; }
-            if (s.overallFilter != null) { this.overallFilter = s.overallFilter; }
-            if (s.intentionFilter != null) { this.intentionFilter = s.intentionFilter; }
-            if (s.showAllColumns != null) { this.showAllColumns = s.showAllColumns; }
-            if (s.myWorkOnly != null) { this.myWorkOnly = s.myWorkOnly; }
-            if (s.displayMode != null) { this.displayMode = s.displayMode; }
-            if (s.sizeMode != null) { this.sizeMode = s.sizeMode; }
-            if (s.showMode != null) { this.showMode = s.showMode; }
-            if (s.boardViewMode != null) { this.boardViewMode = s.boardViewMode; }
-            if (s.activeQuickFilter != null) { this.activeQuickFilter = s.activeQuickFilter; }
+            const state = JSON.parse(jsonStr); // eslint-disable-line no-eq-null, eqeqeq
+            if (state.persona !== null && state.persona !== undefined) { this.persona = state.persona; }
+            if (state.overallFilter !== null && state.overallFilter !== undefined) { this.overallFilter = state.overallFilter; }
+            if (state.intentionFilter !== null && state.intentionFilter !== undefined) { this.intentionFilter = state.intentionFilter; }
+            if (state.showAllColumns !== null && state.showAllColumns !== undefined) { this.showAllColumns = state.showAllColumns; }
+            if (state.myWorkOnly !== null && state.myWorkOnly !== undefined) { this.myWorkOnly = state.myWorkOnly; }
+            if (state.displayMode !== null && state.displayMode !== undefined) { this.displayMode = state.displayMode; }
+            if (state.sizeMode !== null && state.sizeMode !== undefined) { this.sizeMode = state.sizeMode; }
+            if (state.showMode !== null && state.showMode !== undefined) { this.showMode = state.showMode; }
+            if (state.boardViewMode !== null && state.boardViewMode !== undefined) { this.boardViewMode = state.boardViewMode; }
+            if (state.activeQuickFilter !== null && state.activeQuickFilter !== undefined) { this.activeQuickFilter = state.activeQuickFilter; }
         } catch (error) { console.error('[DeliveryHubBoard] applyFilterState error:', error); }
     }
 }

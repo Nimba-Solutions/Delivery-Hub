@@ -12,13 +12,13 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>false</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>Saved Filter</label>
+    <label>Delivery Saved Filter</label>
     <nameField>
         <displayFormat>SF-{0000}</displayFormat>
-        <label>Saved Filter Number</label>
+        <label>Delivery Saved Filter Number</label>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>Saved Filters</pluralLabel>
+    <pluralLabel>Delivery Saved Filters</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>Private</sharingModel>
     <visibility>Public</visibility>

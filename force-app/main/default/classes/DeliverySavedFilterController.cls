@@ -6,22 +6,22 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class SavedFilterController {
+public with sharing class DeliverySavedFilterController {
 
     /**
      * @description Returns all saved filters owned by the running user for a given workflow type.
      * @param workflowType The WorkflowType DeveloperName to filter by.
-     * @return List of SavedFilter__c records ordered by label.
+     * @return List of DeliverySavedFilter__c records ordered by label.
      */
     @AuraEnabled(cacheable=true)
-    public static List<SavedFilter__c> getSavedFilters(String workflowType) {
+    public static List<DeliverySavedFilter__c> getSavedFilters(String workflowType) {
         if (String.isBlank(workflowType)) {
             workflowType = 'Software_Delivery';
         }
         return [
             SELECT Id, Name, LabelTxt__c, FilterJsonTxt__c,
                    IsDefaultBool__c, WorkflowTypeTxt__c
-            FROM SavedFilter__c
+            FROM DeliverySavedFilter__c
             WHERE OwnerId = :UserInfo.getUserId()
             AND WorkflowTypeTxt__c = :workflowType
             WITH SYSTEM_MODE
@@ -38,11 +38,11 @@ public with sharing class SavedFilterController {
      * @param filterJson Serialized filter criteria JSON.
      * @param isDefault Whether this should be the default filter.
      * @param workflowType The workflow type this filter applies to.
-     * @return The upserted SavedFilter__c record.
+     * @return The upserted DeliverySavedFilter__c record.
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
-    public static SavedFilter__c saveBoardFilter(
+    public static DeliverySavedFilter__c saveBoardFilter(
         Id filterId,
         String label,
         String filterJson,
@@ -63,9 +63,9 @@ public with sharing class SavedFilterController {
             clearExistingDefaults(workflowType, filterId);
         }
 
-        SavedFilter__c sf;
+        DeliverySavedFilter__c sf;
         if (filterId != null) {
-            sf = new SavedFilter__c(
+            sf = new DeliverySavedFilter__c(
                 Id = filterId,
                 LabelTxt__c = label,
                 FilterJsonTxt__c = filterJson,
@@ -74,7 +74,7 @@ public with sharing class SavedFilterController {
             );
             update sf;
         } else {
-            sf = new SavedFilter__c(
+            sf = new DeliverySavedFilter__c(
                 LabelTxt__c = label,
                 FilterJsonTxt__c = filterJson,
                 IsDefaultBool__c = isDefault == true,
@@ -87,7 +87,7 @@ public with sharing class SavedFilterController {
 
     /**
      * @description Deletes a saved filter record owned by the running user.
-     * @param filterId The Id of the SavedFilter__c to delete.
+     * @param filterId The Id of the DeliverySavedFilter__c to delete.
      */
     @AuraEnabled
     public static void deleteSavedFilter(Id filterId) {
@@ -95,8 +95,8 @@ public with sharing class SavedFilterController {
             throw createAuraException('Filter Id is required.');
         }
 
-        List<SavedFilter__c> filters = [
-            SELECT Id FROM SavedFilter__c
+        List<DeliverySavedFilter__c> filters = [
+            SELECT Id FROM DeliverySavedFilter__c
             WHERE Id = :filterId
             AND OwnerId = :UserInfo.getUserId()
             WITH SYSTEM_MODE
@@ -115,8 +115,8 @@ public with sharing class SavedFilterController {
      * @param excludeId Optional Id to exclude from the clear.
      */
     private static void clearExistingDefaults(String workflowType, Id excludeId) {
-        List<SavedFilter__c> existingDefaults = [
-            SELECT Id, IsDefaultBool__c FROM SavedFilter__c
+        List<DeliverySavedFilter__c> existingDefaults = [
+            SELECT Id, IsDefaultBool__c FROM DeliverySavedFilter__c
             WHERE OwnerId = :UserInfo.getUserId()
             AND WorkflowTypeTxt__c = :workflowType
             AND IsDefaultBool__c = true
@@ -125,7 +125,7 @@ public with sharing class SavedFilterController {
             LIMIT 50
         ];
         if (!existingDefaults.isEmpty()) {
-            for (SavedFilter__c f : existingDefaults) {
+            for (DeliverySavedFilter__c f : existingDefaults) {
                 f.IsDefaultBool__c = false;
             }
             update existingDefaults;
