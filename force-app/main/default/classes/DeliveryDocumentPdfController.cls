@@ -81,6 +81,8 @@ public without sharing class DeliveryDocumentPdfController {
 
     /** @description Row data for work items table in the PDF. */
     public class WorkItemRow {
+        /** @description Work item record Id for linking. */
+        public String id { get; set; }
         /** @description Work item auto-number name. */
         public String name { get; set; }
         /** @description Brief description of the work item. */
@@ -101,6 +103,8 @@ public without sharing class DeliveryDocumentPdfController {
 
     /** @description Row data for time log detail table in the PDF. */
     public class WorkLogRow {
+        /** @description Parent work item record Id for linking. */
+        public String workItemId { get; set; }
         /** @description Parent work item name. */
         public String workItemName { get; set; }
         /** @description Hours logged in this entry. */
@@ -476,6 +480,7 @@ public without sharing class DeliveryDocumentPdfController {
         for (Object o : items) {
             Map<String, Object> item = (Map<String, Object>) o;
             WorkItemRow row = new WorkItemRow();
+            row.id = (String) item.get('id');
             row.name = (String) item.get('name');
             row.description = (String) item.get('description');
             row.stage = (String) item.get('stage');
@@ -527,6 +532,7 @@ public without sharing class DeliveryDocumentPdfController {
             }
             row.description = (String) log.get('description');
             String workItemId = (String) log.get('workItemId');
+            row.workItemId = workItemId;
             row.rate = rateMap.containsKey(workItemId) ? rateMap.get(workItemId) : defaultRate;
             row.amount = row.hours * row.rate;
             row.formattedRate = formatCurrency(row.rate);

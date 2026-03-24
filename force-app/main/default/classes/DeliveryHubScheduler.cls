@@ -56,12 +56,15 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
      * back to 'Queued' so the DeliverySyncItemProcessor can re-attempt them.
      */
     private static void requeueFailedItems() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        Integer maxRetries = settings != null && settings.SyncRetryLimitNumber__c != null
+            ? (Integer) settings.SyncRetryLimitNumber__c : 3;
         List<SyncItem__c> failedItems = [
             SELECT Id, StatusPk__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             AND DirectionPk__c = 'Outbound'
-            AND (RetryCountNumber__c = null OR RetryCountNumber__c < 3)
+            AND (RetryCountNumber__c = null OR RetryCountNumber__c < :maxRetries)
             WITH SYSTEM_MODE
             LIMIT 50
         ];
@@ -144,8 +147,11 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
      */
     private static void runReconciliation() {
         try {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            Integer reconcileHour = settings != null && settings.ReconciliationHourNumber__c != null
+                ? (Integer) settings.ReconciliationHourNumber__c : 6;
             Integer currentHour = DateTime.now().hourGmt();
-            if (currentHour == 6) {
+            if (currentHour == reconcileHour) {
                 System.enqueueJob(new DeliverySyncReconciler());
             }
         } catch (Exception e) {
