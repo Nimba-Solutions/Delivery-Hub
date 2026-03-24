@@ -730,6 +730,103 @@ private class DeliveryEscalationServiceTest {
             'Log context should include severity level');
     }
 
+    /**
+     * @description Verifies that EscalationCooldownHoursNumber__c controls the cooldown window.
+     *              Sets cooldown to 1 hour, then creates an item that was escalated 2 hours ago.
+     *              With a 1-hour cooldown the item should be re-escalated (priority bumped).
+     *              Confirms the configurable setting overrides the default 24-hour cooldown.
+     */
+    @IsTest
+    static void testCustomCooldownHoursSetting() {
+        // Set cooldown to 1 hour instead of the default 24
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.EscalationCooldownHoursNumber__c = 1;
+        settings.EnableEmailNotificationsDateTime__c = Datetime.now();
+        settings.EnableNotificationsDateTime__c = Datetime.now();
+        update settings;
+
+        // Set LastEscalatedDateTime__c to 2 hours ago — outside the 1-hour cooldown
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'In Development'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        wi.LastEscalatedDateTime__c = DateTime.now().addHours(-2);
+        update wi;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Custom Cooldown Rule',
+            'Software_Delivery',
+            'In Development',
+            0,
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c updated = [
+            SELECT PriorityPk__c FROM WorkItem__c
+            WHERE Id = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals('High', updated.PriorityPk__c,
+            'Priority should be bumped from Medium to High because 2 hours exceeds the 1-hour cooldown');
+    }
+
+    /**
+     * @description Verifies that a long cooldown setting prevents re-escalation.
+     *              Sets cooldown to 72 hours, then creates an item escalated 2 hours ago.
+     *              With a 72-hour cooldown the item should NOT be re-escalated.
+     */
+    @IsTest
+    static void testLongCooldownPreventsReescalation() {
+        // Set cooldown to 72 hours
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.EscalationCooldownHoursNumber__c = 72;
+        settings.EnableEmailNotificationsDateTime__c = Datetime.now();
+        settings.EnableNotificationsDateTime__c = Datetime.now();
+        update settings;
+
+        // Set LastEscalatedDateTime__c to 2 hours ago — within the 72-hour cooldown
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'In Development'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        wi.LastEscalatedDateTime__c = DateTime.now().addHours(-2);
+        update wi;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Long Cooldown Rule',
+            'Software_Delivery',
+            'In Development',
+            0,
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c unchanged = [
+            SELECT PriorityPk__c FROM WorkItem__c
+            WHERE Id = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals('Medium', unchanged.PriorityPk__c,
+            'Priority should remain Medium because 2 hours is within the 72-hour cooldown');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
