@@ -5,7 +5,11 @@ import getGuideContext from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGuideCo
 const SECTION_KEYS = [
     'welcome', 'board', 'workItems', 'timeTracking',
     'documents', 'activityFeed', 'ghostRecorder',
-    'sync', 'portal', 'settings'
+    'sync', 'portal', 'settings',
+    'timeline', 'savedFilters', 'docVersioning',
+    'invoiceApproval', 'portalTimeEntry', 'emailInbound',
+    'platformEvents', 'configurableSettings', 'pdfHyperlinks',
+    'hideEmptyColumns', 'appLogo'
 ];
 
 export default class DeliveryGuide extends NavigationMixin(LightningElement) {
@@ -93,6 +97,39 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
 
     get settingsExpanded() { return this._isOpen('settings'); }
     get settingsChevron() { return this._chevron('settings'); }
+
+    get timelineExpanded() { return this._isOpen('timeline'); }
+    get timelineChevron() { return this._chevron('timeline'); }
+
+    get savedFiltersExpanded() { return this._isOpen('savedFilters'); }
+    get savedFiltersChevron() { return this._chevron('savedFilters'); }
+
+    get docVersioningExpanded() { return this._isOpen('docVersioning'); }
+    get docVersioningChevron() { return this._chevron('docVersioning'); }
+
+    get invoiceApprovalExpanded() { return this._isOpen('invoiceApproval'); }
+    get invoiceApprovalChevron() { return this._chevron('invoiceApproval'); }
+
+    get portalTimeEntryExpanded() { return this._isOpen('portalTimeEntry'); }
+    get portalTimeEntryChevron() { return this._chevron('portalTimeEntry'); }
+
+    get emailInboundExpanded() { return this._isOpen('emailInbound'); }
+    get emailInboundChevron() { return this._chevron('emailInbound'); }
+
+    get platformEventsExpanded() { return this._isOpen('platformEvents'); }
+    get platformEventsChevron() { return this._chevron('platformEvents'); }
+
+    get configurableSettingsExpanded() { return this._isOpen('configurableSettings'); }
+    get configurableSettingsChevron() { return this._chevron('configurableSettings'); }
+
+    get pdfHyperlinksExpanded() { return this._isOpen('pdfHyperlinks'); }
+    get pdfHyperlinksChevron() { return this._chevron('pdfHyperlinks'); }
+
+    get hideEmptyColumnsExpanded() { return this._isOpen('hideEmptyColumns'); }
+    get hideEmptyColumnsChevron() { return this._chevron('hideEmptyColumns'); }
+
+    get appLogoExpanded() { return this._isOpen('appLogo'); }
+    get appLogoChevron() { return this._chevron('appLogo'); }
 
     /* ── Ghost Recorder detection ── */
 

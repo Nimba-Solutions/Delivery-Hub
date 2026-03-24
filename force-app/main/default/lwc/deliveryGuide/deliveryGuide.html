@@ -41,6 +41,18 @@
                 <lightning-icon icon-name="standard:connected_apps" size="small"></lightning-icon>
                 <span>Sync</span>
             </div>
+            <div class="dg-quick-link" data-key="timeline" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:date_time" size="small"></lightning-icon>
+                <span>Timeline</span>
+            </div>
+            <div class="dg-quick-link" data-key="platformEvents" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:data_streams" size="small"></lightning-icon>
+                <span>Platform Events</span>
+            </div>
+            <div class="dg-quick-link" data-key="configurableSettings" onclick={handleQuickLink}>
+                <lightning-icon icon-name="standard:settings" size="small"></lightning-icon>
+                <span>New Settings</span>
+            </div>
         </div>
 
         <!-- ═══════════════════════════════════════════════════ -->
@@ -843,6 +855,287 @@
                         <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
                         <span><strong>Tip:</strong> Settings are stored in a Custom Setting (DeliveryHubSettings__c) and apply org-wide. Changes take effect immediately.</span>
                     </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Timeline View -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="timeline">
+            <div class="dg-section-header" data-key="timeline" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:date_time" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Timeline View</h2>
+                </div>
+                <lightning-icon icon-name={timelineChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={timelineExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        The Timeline tab provides a Gantt-style chart showing work items plotted across time. Each bar represents a work item&rsquo;s span from creation to target completion, color-coded by stage. Use the timeline to visualize project schedules, identify overlaps, and spot gaps in your delivery pipeline.
+                    </p>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Switch between the Board and Timeline tabs to see your work from both a stage-based and time-based perspective.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Saved Board Filters -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="savedFilters">
+            <div class="dg-section-header" data-key="savedFilters" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="utility:filterList" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Saved Board Filters</h2>
+                </div>
+                <lightning-icon icon-name={savedFiltersChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={savedFiltersExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Save frequently used board filter combinations as named presets. After applying entity, priority, or assignee filters on the board, click &ldquo;Save Filter&rdquo; to store the preset. Load any saved filter from the dropdown to instantly restore that view. Filters are stored per-user so each team member can maintain their own presets.
+                    </p>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Create filters like &ldquo;My Active Items&rdquo; or &ldquo;Client X Blockers&rdquo; to quickly switch between different views of the board.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Document Versioning -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="docVersioning">
+            <div class="dg-section-header" data-key="docVersioning" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:document" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Document Versioning</h2>
+                </div>
+                <lightning-icon icon-name={docVersioningChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={docVersioningExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        When you regenerate a document, the system preserves the previous version as a historical snapshot before creating the new one. This means you always have a full audit trail of every version of an invoice or report. The version number increments automatically and all prior versions remain accessible from the document record.
+                    </p>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Use versioning to refine invoices &mdash; regenerate after correcting hours and the original is preserved for reference.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Invoice Approval Flow -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="invoiceApproval">
+            <div class="dg-section-header" data-key="invoiceApproval" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:approval" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Invoice Approval Flow</h2>
+                </div>
+                <lightning-icon icon-name={invoiceApprovalChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={invoiceApprovalExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Clients can approve or dispute invoices directly from the portal. When an invoice is shared, the client sees &ldquo;Approve&rdquo; and &ldquo;Dispute&rdquo; buttons on the document view. Approving moves the invoice to Approved status; disputing prompts the client to enter a reason and notifies the vendor for resolution.
+                    </p>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Disputed invoices appear in the Sync Retry Panel so admins can address concerns and regenerate if needed.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Portal Time Entry -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="portalTimeEntry">
+            <div class="dg-section-header" data-key="portalTimeEntry" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:timesheet_entry" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Portal Time Entry</h2>
+                </div>
+                <lightning-icon icon-name={portalTimeEntryChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={portalTimeEntryExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Portal users can log hours directly from the client portal without needing Salesforce access. The time entry form on a work item&rsquo;s detail page lets clients record hours, date, and a description. Submitted entries follow the same approval workflow as internal time logs and sync back to the vendor org.
+                    </p>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Portal time entries are ideal for clients who contribute effort (e.g., UAT testing hours) that should be tracked alongside vendor work.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Email Inbound -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="emailInbound">
+            <div class="dg-section-header" data-key="emailInbound" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:email" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Email Inbound Comments</h2>
+                </div>
+                <lightning-icon icon-name={emailInboundChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={emailInboundExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Reply directly to Delivery Hub notification emails to add comments to a work item. The inbound email handler matches the reply to the originating work item and creates a comment automatically. This lets team members respond from their inbox without opening Salesforce.
+                    </p>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Replies are matched by the reference ID in the email header. Keep the subject line intact so the system can route your comment correctly.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Platform Events -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="platformEvents">
+            <div class="dg-section-header" data-key="platformEvents" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:data_streams" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Platform Events</h2>
+                </div>
+                <lightning-icon icon-name={platformEventsChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={platformEventsExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Delivery Hub publishes platform events (DeliveryDocEvent__e) when key actions occur, such as document generation or status changes. External systems can subscribe to these events to trigger downstream workflows &mdash; for example, sending a Slack notification when an invoice is generated or updating an external billing system when a document is marked as Paid.
+                    </p>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> Use Salesforce Flow or an external middleware to subscribe to DeliveryDocEvent__e and build custom integrations without modifying Delivery Hub code.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Configurable Settings -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="configurableSettings">
+            <div class="dg-section-header" data-key="configurableSettings" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:settings" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Configurable Settings (New)</h2>
+                </div>
+                <lightning-icon icon-name={configurableSettingsChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={configurableSettingsExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Four new operational settings have been added to the Settings page, giving admins fine-grained control over scheduling and data retention:
+                    </p>
+                    <div class="dg-field-table">
+                        <div class="dg-field-row">
+                            <span class="dg-field-name">Escalation Window (hours)</span>
+                            <span class="dg-field-desc">How long a work item can remain in a blocked or attention state before the escalation engine flags it.</span>
+                        </div>
+                        <div class="dg-field-row">
+                            <span class="dg-field-name">Log Retention (days)</span>
+                            <span class="dg-field-desc">Number of days to keep activity log records before the cleanup job deletes them.</span>
+                        </div>
+                        <div class="dg-field-row">
+                            <span class="dg-field-name">Scheduler Interval (minutes)</span>
+                            <span class="dg-field-desc">How frequently the background scheduler runs sync retries and cleanup tasks.</span>
+                        </div>
+                        <div class="dg-field-row">
+                            <span class="dg-field-name">Poller Batch Size</span>
+                            <span class="dg-field-desc">Maximum number of records fetched per poll cycle from connected orgs.</span>
+                        </div>
+                    </div>
+                    <div class="dg-tip">
+                        <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                        <span><strong>Tip:</strong> These settings include DateTime toggle controls that let you view and compare the last-run timestamps for the scheduler, escalation engine, and cleanup jobs.</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: PDF Hyperlinks -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="pdfHyperlinks">
+            <div class="dg-section-header" data-key="pdfHyperlinks" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="utility:link" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">PDF Hyperlinks</h2>
+                </div>
+                <lightning-icon icon-name={pdfHyperlinksChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={pdfHyperlinksExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Work item names in generated PDF documents (invoices, status reports) are now clickable hyperlinks. Each link points directly to the work item record in Salesforce, making it easy for recipients to jump from a PDF line item to the full record for more detail.
+                    </p>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: Hide Empty Columns -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="hideEmptyColumns">
+            <div class="dg-section-header" data-key="hideEmptyColumns" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="utility:toggle_off" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">Hide Empty Columns</h2>
+                </div>
+                <lightning-icon icon-name={hideEmptyColumnsChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={hideEmptyColumnsExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Toggle &ldquo;Hide Empty Columns&rdquo; in the board header to collapse columns that have no work items. This declutters the board when only a few stages are active, letting you focus on where the work actually is. The toggle state persists across sessions.
+                    </p>
+                </div>
+            </template>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- SECTION: App Logo in App Launcher -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="dg-section" data-section="appLogo">
+            <div class="dg-section-header" data-key="appLogo" onclick={handleSectionToggle}
+                 role="button" tabindex="0" onkeydown={handleKeydown}>
+                <div class="dg-section-header-left">
+                    <lightning-icon icon-name="standard:apps" size="small"></lightning-icon>
+                    <h2 class="dg-section-title">App Logo in App Launcher</h2>
+                </div>
+                <lightning-icon icon-name={appLogoChevron} size="x-small"></lightning-icon>
+            </div>
+            <template lwc:if={appLogoExpanded}>
+                <div class="dg-section-body">
+                    <p class="dg-description">
+                        Delivery Hub and Delivery Hub Admin now display a custom branded logo in the Salesforce App Launcher. The logo appears in the app grid and the app navigation bar, making the apps instantly recognizable alongside your other Salesforce applications.
+                    </p>
                 </div>
             </template>
         </div>
