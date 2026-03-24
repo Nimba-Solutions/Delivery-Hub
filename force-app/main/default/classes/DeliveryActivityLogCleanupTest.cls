@@ -282,4 +282,47 @@ private class DeliveryActivityLogCleanupTest {
         System.assertEquals('Field_Change', remaining[0].ActionTypePk__c,
             'Surviving record should be the Field_Change log');
     }
+
+    /**
+     * @description Verifies that ActivityLogRetentionDaysNumber__c controls the purge window.
+     *              Sets retention to 30 days so a 35-day-old record is purged
+     *              while a 25-day-old record survives.
+     */
+    @IsTest
+    static void testCustomRetentionDaysSetting() {
+        // Configure retention to 30 days instead of the default 90
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.ActivityLogRetentionDaysNumber__c = 30;
+        upsert settings;
+
+        // Insert a log that is 35 days old — beyond the 30-day window, should be purged
+        ActivityLog__c oldLog = new ActivityLog__c(
+            ActionTypePk__c = 'Navigation',
+            ComponentNameTxt__c = 'deliveryHubBoard',
+            UserIdTxt__c = UserInfo.getUserId()
+        );
+        insert oldLog;
+        Test.setCreatedDate(oldLog.Id, DateTime.now().addDays(-35));
+
+        // Insert a log that is 25 days old — within the 30-day window, should survive
+        ActivityLog__c recentLog = new ActivityLog__c(
+            ActionTypePk__c = 'Button_Click',
+            ComponentNameTxt__c = 'deliveryGhostRecorder',
+            UserIdTxt__c = UserInfo.getUserId()
+        );
+        insert recentLog;
+        Test.setCreatedDate(recentLog.Id, DateTime.now().addDays(-25));
+
+        Test.startTest();
+        Database.executeBatch(new DeliveryActivityLogCleanup(), 200);
+        Test.stopTest();
+
+        List<ActivityLog__c> remaining = [
+            SELECT Id FROM ActivityLog__c WITH SYSTEM_MODE
+        ];
+        System.assertEquals(1, remaining.size(),
+            'Only the 25-day-old log should survive when retention is set to 30 days');
+        System.assertEquals(recentLog.Id, remaining[0].Id,
+            'Surviving record should be the one within the 30-day retention window');
+    }
 }
