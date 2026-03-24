@@ -66,7 +66,7 @@ private class DeliveryHubDashboardControllerTest {
         insert workItems;
 
         Test.startTest();
-        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek');
         Test.stopTest();
 
         System.assert(result.containsKey('attentionWorkItems'), 'Should return attentionWorkItems key');
@@ -119,11 +119,30 @@ private class DeliveryHubDashboardControllerTest {
         );
 
         Test.startTest();
-        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek');
         Test.stopTest();
 
         List<Object> announcements = (List<Object>) result.get('announcements');
         System.assertEquals(1, announcements.size(), 'Should include vendor announcement in dashboard');
         System.assertEquals('Scheduled maintenance this weekend.', (String) announcements[0]);
+    }
+
+    @IsTest
+    static void testGetClientDashboardThisMonth() {
+        insert new WorkItem__c(
+            BriefDescriptionTxt__c = 'Monthly Work Item',
+            StageNamePk__c = 'In Progress'
+        );
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisMonth');
+        Test.stopTest();
+
+        System.assert(result.containsKey('thisWeek'), 'thisMonth range should still return thisWeek key');
+        Map<String, Object> metrics = (Map<String, Object>)result.get('thisWeek');
+        System.assert(metrics.containsKey('completed'), 'thisMonth metrics should contain completed');
+        System.assert(metrics.containsKey('moved'), 'thisMonth metrics should contain moved');
+        System.assert(metrics.containsKey('hoursLogged'), 'thisMonth metrics should contain hoursLogged');
+        System.assert(metrics.containsKey('blocked'), 'thisMonth metrics should contain blocked');
     }
 }

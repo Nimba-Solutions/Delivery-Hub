@@ -108,14 +108,23 @@
     <!-- ============================================================ -->
     <template lwc:if={showThisWeekSection}>
         <template lwc:if={hasThisWeek}>
-            <lightning-card title="This Week" icon-name="utility:date_input" class="slds-m-bottom_small">
-                <lightning-button-icon
-                    slot="actions"
-                    icon-name={thisWeekChevronIcon}
-                    variant="bare"
-                    onclick={toggleThisWeek}
-                    alternative-text="Toggle">
-                </lightning-button-icon>
+            <lightning-card title={timeRangeLabel} icon-name="utility:date_input" class="slds-m-bottom_small">
+                <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.5rem;">
+                    <lightning-combobox
+                        value={selectedTimeRange}
+                        options={timeRangeOptions}
+                        onchange={handleTimeRangeChange}
+                        variant="label-hidden"
+                        dropdown-alignment="right"
+                        class="time-range-picker">
+                    </lightning-combobox>
+                    <lightning-button-icon
+                        icon-name={thisWeekChevronIcon}
+                        variant="bare"
+                        onclick={toggleThisWeek}
+                        alternative-text="Toggle">
+                    </lightning-button-icon>
+                </div>
                 <template lwc:if={thisWeekExpanded}>
                     <template lwc:if={isLoaded}>
                         <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">

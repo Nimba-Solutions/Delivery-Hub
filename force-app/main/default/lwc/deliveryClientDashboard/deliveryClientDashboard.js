@@ -38,6 +38,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     @api hideThisWeekSection = false;
 
+    @track selectedTimeRange = 'thisWeek';
     @track attentionWorkItems = [];
     @track phases = [];
     @track recentWorkItems = [];
@@ -69,7 +70,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         }
     }
 
-    @wire(getClientDashboard)
+    @wire(getClientDashboard, { timeRange: '$selectedTimeRange' })
     wiredDashboard(result) {
         this._wiredResult = result;
         const { data, error } = result;
@@ -243,6 +244,20 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         return this.thisWeek != null;
     }
 
+    timeRangeOptions = [
+        { label: 'This Week', value: 'thisWeek' },
+        { label: 'Last Week', value: 'lastWeek' },
+        { label: 'This Month', value: 'thisMonth' }
+    ];
+
+    get timeRangeLabel() {
+        const match = this.timeRangeOptions.find(opt => opt.value === this.selectedTimeRange);
+        if (match) {
+            return match.label;
+        }
+        return 'This Week';
+    }
+
     get inFlightChevronIcon() { return this.inFlightCollapsed ? 'utility:chevronright' : 'utility:chevrondown'; }
     get recentChevronIcon()   { return this.recentCollapsed   ? 'utility:chevronright' : 'utility:chevrondown'; }
     get thisWeekChevronIcon() { return this.thisWeekCollapsed  ? 'utility:chevronright' : 'utility:chevrondown'; }
@@ -252,6 +267,10 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     toggleInFlight()  { this.inFlightCollapsed  = !this.inFlightCollapsed;  }
     toggleRecent()    { this.recentCollapsed    = !this.recentCollapsed;   }
     toggleThisWeek()  { this.thisWeekCollapsed  = !this.thisWeekCollapsed; }
+
+    handleTimeRangeChange(event) {
+        this.selectedTimeRange = event.detail.value;
+    }
 
     handleWorkItemClick(event) {
         const recordId = event.currentTarget.dataset.id;

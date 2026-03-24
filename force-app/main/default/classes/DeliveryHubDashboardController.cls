@@ -134,13 +134,16 @@ public with sharing class DeliveryHubDashboardController {
      * @return Map containing attentionWorkItems, phases, recentWorkItems, announcements, and thisWeek keys.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getClientDashboard() {
+    public static Map<String, Object> getClientDashboard(String timeRange) {
+        if (String.isBlank(timeRange)) {
+            timeRange = 'thisWeek';
+        }
         Map<String, Object> result = new Map<String, Object>();
         result.put('attentionWorkItems', fetchAttentionWorkItems());
         result.put('phases', fetchPhaseList());
         result.put('recentWorkItems', fetchRecentWorkItems());
         result.put('announcements', fetchVendorAnnouncements());
-        result.put('thisWeek', fetchThisWeekMetrics());
+        result.put('thisWeek', fetchTimeRangeMetrics(timeRange));
         return result;
     }
 
@@ -329,44 +332,95 @@ public with sharing class DeliveryHubDashboardController {
         return texts;
     }
 
-    private static Map<String, Object> fetchThisWeekMetrics() {
+    private static Map<String, Object> fetchTimeRangeMetrics(String timeRange) {
         Map<String, Object> metrics = new Map<String, Object>();
-        Date weekStart = Date.today().toStartOfWeek();
-        Datetime weekStartDt = Datetime.newInstance(weekStart, Time.newInstance(0, 0, 0, 0));
+
+        // Determine date range based on timeRange parameter
+        Date startDate;
+        Date endDate; // null means "today" (open-ended)
+        if (timeRange == 'lastWeek') {
+            startDate = Date.today().toStartOfWeek().addDays(-7);
+            endDate = Date.today().toStartOfWeek();
+        } else if (timeRange == 'thisMonth') {
+            startDate = Date.today().toStartOfMonth();
+            endDate = null;
+        } else {
+            // Default: 'thisWeek'
+            startDate = Date.today().toStartOfWeek();
+            endDate = null;
+        }
+
+        Datetime startDt = Datetime.newInstance(startDate, Time.newInstance(0, 0, 0, 0));
+        Datetime endDt = endDate != null ? Datetime.newInstance(endDate, Time.newInstance(0, 0, 0, 0)) : null;
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
 
-        // Items completed this week
-        Integer completed = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE StageNamePk__c IN :terminalStages
-            AND LastModifiedDate >= :weekStartDt
-            WITH SYSTEM_MODE
-        ];
+        // Items completed in range
+        Integer completed;
+        if (endDt != null) {
+            completed = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND LastModifiedDate >= :startDt
+                AND LastModifiedDate < :endDt
+                WITH SYSTEM_MODE
+            ];
+        } else {
+            completed = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND LastModifiedDate >= :startDt
+                WITH SYSTEM_MODE
+            ];
+        }
         metrics.put('completed', completed);
 
-        // Items modified (stage changed) this week
-        Integer moved = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE LastModifiedDate >= :weekStartDt
-            AND StageNamePk__c NOT IN :terminalStages
-            WITH SYSTEM_MODE
-        ];
+        // Items modified (stage changed) in range
+        Integer moved;
+        if (endDt != null) {
+            moved = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE LastModifiedDate >= :startDt
+                AND LastModifiedDate < :endDt
+                AND StageNamePk__c NOT IN :terminalStages
+                WITH SYSTEM_MODE
+            ];
+        } else {
+            moved = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE LastModifiedDate >= :startDt
+                AND StageNamePk__c NOT IN :terminalStages
+                WITH SYSTEM_MODE
+            ];
+        }
         metrics.put('moved', moved);
 
-        // Hours logged this week
-        AggregateResult[] hoursAgg = [
-            SELECT SUM(HoursLoggedNumber__c) total
-            FROM WorkLog__c
-            WHERE WorkDateDate__c >= :weekStart
-            WITH SYSTEM_MODE
-        ];
+        // Hours logged in range
+        AggregateResult[] hoursAgg;
+        if (endDate != null) {
+            hoursAgg = [
+                SELECT SUM(HoursLoggedNumber__c) total
+                FROM WorkLog__c
+                WHERE WorkDateDate__c >= :startDate
+                AND WorkDateDate__c < :endDate
+                WITH SYSTEM_MODE
+            ];
+        } else {
+            hoursAgg = [
+                SELECT SUM(HoursLoggedNumber__c) total
+                FROM WorkLog__c
+                WHERE WorkDateDate__c >= :startDate
+                WITH SYSTEM_MODE
+            ];
+        }
         Decimal hours = hoursAgg[0].get('total') != null ? (Decimal)hoursAgg[0].get('total') : 0;
         metrics.put('hoursLogged', hours);
 
-        // Currently blocked items
+        // Currently blocked items (not time-bounded — always current state)
         Set<Id> blockedIds = new Set<Id>();
         for (WorkItemDependency__c dep : [
             SELECT BlockedWorkItemId__c
