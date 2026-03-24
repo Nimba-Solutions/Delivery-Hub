@@ -5,6 +5,7 @@
  * Logs user activity to ActivityLog__c and creates quick work items.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
 public with sharing class DeliveryGhostController {
 
     /**
@@ -14,6 +15,7 @@ public with sharing class DeliveryGhostController {
      * @param actionType The type of action (e.g., 'Navigation', 'Button_Click', 'Feature_Use').
      * @param contextData JSON string containing browser/URL/component info.
      */
+    @SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
     @AuraEnabled
     public static void logUserActivity(String actionType, String contextData) {
         try {

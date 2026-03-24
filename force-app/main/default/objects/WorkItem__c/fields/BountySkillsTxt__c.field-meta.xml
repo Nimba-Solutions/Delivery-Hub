@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BountySkillsTxt__c</fullName>
+    <description>Semicolon-delimited list of skills required for this bounty (e.g. Apex;LWC;Flow). Used for filtering and matching on the marketplace.</description>
+    <inlineHelpText>Skills required to complete this bounty, separated by semicolons (e.g. Apex;LWC;Flow).</inlineHelpText>
+    <label>Bounty Skills</label>
+    <length>255</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

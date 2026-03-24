@@ -7,7 +7,7 @@
  * URL Pattern: /services/apexrest/delivery/deliveryhub/v1/api/{resource}
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity')
 @RestResource(urlMapping='/deliveryhub/v1/api/*')
 global without sharing class DeliveryPublicApiService {
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableBellNotificationsBool__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When enabled at the user level, Delivery Hub sends Salesforce bell notifications for items needing attention, overdue SLAs, and new comments. Defaults to false (off). Each user opts in by setting this to true on their user-level hierarchy setting.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enable bell notifications for this user. Set at user level to opt in.</inlineHelpText>
+    <label>Enable Bell Notifications</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

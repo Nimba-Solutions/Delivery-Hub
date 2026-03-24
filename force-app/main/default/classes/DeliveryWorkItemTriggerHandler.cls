@@ -47,19 +47,27 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
         // 3. UNIFIED SYNC ENGINE (High-Water Mark)
         Set<String> syncFields = new Set<String>{
-            'BriefDescriptionTxt__c', 
-            'DetailsTxt__c', 
-            'StageNamePk__c', 
-            'StatusPk__c', 
-            'PriorityPk__c', 
-            'DeveloperDaysSizeNumber__c', 
-            'EstimatedHoursNumber__c', 
-            'ClientPreApprovedHoursNumber__c', 
-            'Developer__c', 
-            'CalculatedETADate__c', 
+            'BriefDescriptionTxt__c',
+            'DetailsTxt__c',
+            'StageNamePk__c',
+            'StatusPk__c',
+            'PriorityPk__c',
+            'DeveloperDaysSizeNumber__c',
+            'EstimatedHoursNumber__c',
+            'ClientPreApprovedHoursNumber__c',
+            'Developer__c',
+            'CalculatedETADate__c',
             'ProjectedUATReadyDate__c',
-            'AcceptanceCriteriaTxt__c', 
-            'StepsToReproduceTxt__c'
+            'AcceptanceCriteriaTxt__c',
+            'StepsToReproduceTxt__c',
+            'IsBountyBool__c',
+            'BountyAmountCurrency__c',
+            'BountyDeadlineDate__c',
+            'BountyStatusPk__c',
+            'BountyTokenTxt__c',
+            'BountyDifficultyPk__c',
+            'BountySkillsTxt__c',
+            'BountyMaxClaimsNumber__c'
         };
 
         DeliverySyncEngine.captureChanges(newRows, oldMap, syncFields);
@@ -217,6 +225,16 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     public static void handleBeforeUpdate(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
         stampStageEnteredOnUpdate(newWorkItems, oldMap);
 
+        // Auto-generate bounty token when IsBountyBool__c flips to true on update
+        for (WorkItem__c workItem : newWorkItems) {
+            WorkItem__c oldItem = oldMap.get(workItem.Id);
+            if (workItem.IsBountyBool__c == true
+                && (oldItem == null || oldItem.IsBountyBool__c != true)
+                && String.isBlank(workItem.BountyTokenTxt__c)) {
+                workItem.BountyTokenTxt__c = DeliveryBountyService.generateBountyToken();
+            }
+        }
+
         Set<String> activeDevStages = new Set<String>{'In Development', 'Ready for QA'};
         Set<Id> workItemsToCheck = new Set<Id>();
         for (WorkItem__c workItem : newWorkItems) {
@@ -254,6 +272,10 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         for (WorkItem__c workItem : newWorkItems) {
             if (workItem.StageEnteredDateTime__c == null) {
                 workItem.StageEnteredDateTime__c = now;
+            }
+            // Auto-generate bounty token when published as a bounty
+            if (workItem.IsBountyBool__c == true && String.isBlank(workItem.BountyTokenTxt__c)) {
+                workItem.BountyTokenTxt__c = DeliveryBountyService.generateBountyToken();
             }
         }
     }

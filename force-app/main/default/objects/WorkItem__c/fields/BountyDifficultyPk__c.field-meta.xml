@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BountyDifficultyPk__c</fullName>
+    <description>Difficulty rating shown on the marketplace to help developers self-select appropriate bounties.</description>
+    <inlineHelpText>Estimated difficulty level. Helps developers choose bounties that match their skill level.</inlineHelpText>
+    <label>Bounty Difficulty</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Beginner</fullName>
+                <default>false</default>
+                <label>Beginner</label>
+            </value>
+            <value>
+                <fullName>Intermediate</fullName>
+                <default>true</default>
+                <label>Intermediate</label>
+            </value>
+            <value>
+                <fullName>Advanced</fullName>
+                <default>false</default>
+                <label>Advanced</label>
+            </value>
+            <value>
+                <fullName>Expert</fullName>
+                <default>false</default>
+                <label>Expert</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

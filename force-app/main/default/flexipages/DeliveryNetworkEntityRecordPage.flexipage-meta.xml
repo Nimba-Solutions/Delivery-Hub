@@ -31,6 +31,397 @@
         <name>header</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ══ DYNAMIC FORMS: Level 1 — Field Facets ══ -->
+
+    <!-- Entity Info: Left column (Name, EntityTypePk, StatusPk) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.Name</fieldItem>
+                <identifier>RecordNameField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.EntityTypePk__c</fieldItem>
+                <identifier>RecordEntityTypePk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.StatusPk__c</fieldItem>
+                <identifier>RecordStatusPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-info-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Entity Info: Right column (ConnectionStatusPk, DefaultHourlyRateCurrency, OwnerId) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ConnectionStatusPk__c</fieldItem>
+                <identifier>RecordConnectionStatusPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.DefaultHourlyRateCurrency__c</fieldItem>
+                <identifier>RecordDefaultHourlyRateCurrency_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.OwnerId</fieldItem>
+                <identifier>RecordOwnerIdField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-info-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Contact Information: Left column (AddressTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.AddressTxt__c</fieldItem>
+                <identifier>RecordAddressTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-contact-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Contact Information: Right column (ContactEmailTxt, ContactPhoneTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ContactEmailTxt__c</fieldItem>
+                <identifier>RecordContactEmailTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ContactPhoneTxt__c</fieldItem>
+                <identifier>RecordContactPhoneTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-contact-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Integration: Left column (IntegrationEndpointUrlTxt, OrgIdTxt, ApiKeyTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.IntegrationEndpointUrlTxt__c</fieldItem>
+                <identifier>RecordIntegrationEndpointUrlTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.OrgIdTxt__c</fieldItem>
+                <identifier>RecordOrgIdTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ApiKeyTxt__c</fieldItem>
+                <identifier>RecordApiKeyTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-integ-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Integration: Right column (EnableVendorPushBool, GithubUsernameTxt, RemoteExternalIdTxt, LastInboundSyncDateTime) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.EnableVendorPushBool__c</fieldItem>
+                <identifier>RecordEnableVendorPushBool_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.GithubUsernameTxt__c</fieldItem>
+                <identifier>RecordGithubUsernameTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RemoteExternalIdTxt__c</fieldItem>
+                <identifier>RecordRemoteExternalIdTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LastInboundSyncDateTime__c</fieldItem>
+                <identifier>RecordLastInboundSyncDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-integ-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Vendor Management: Single column (VendorAnnouncementTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.VendorAnnouncementTxt__c</fieldItem>
+                <identifier>RecordVendorAnnouncementTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-vendor-col</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ DYNAMIC FORMS: Level 2 — Column Facets ══ -->
+
+    <!-- Entity Info: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-info-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_info1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-info-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_info2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-ne-info-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Contact Information: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-contact-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_contact1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-contact-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_contact2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-ne-contact-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Integration: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-integ-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_integ1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-integ-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_integ2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-ne-integ-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Vendor Management: 1 column -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-vendor-col</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_vendor1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-ne-vendor-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ Detail Tab Content — Level 3 field sections ══ -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-ne-info-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Entity Info</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_info</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-ne-contact-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Contact Information</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_contact</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-ne-integ-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Integration</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_integ</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-ne-vendor-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Vendor Management</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_vendor</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>detailTabContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- ══ Related Lists Tab ══ -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -54,17 +445,8 @@
         <name>relatedTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentName>force:detailPanel</componentName>
-                <identifier>force_detailPanel</identifier>
-            </componentInstance>
-        </itemInstances>
-        <mode>Replace</mode>
-        <name>detailTabContent</name>
-        <type>Facet</type>
-    </flexiPageRegions>
+
+    <!-- Documents tab content -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -75,6 +457,8 @@
         <name>documentsTabContent</name>
         <type>Facet</type>
     </flexiPageRegions>
+
+    <!-- ══ Tab Set ══ -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -141,6 +525,8 @@
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
+
+    <!-- ══ Sidebar ══ -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>

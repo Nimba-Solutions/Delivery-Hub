@@ -1,6 +1,6 @@
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
-import getGuideContext from '@salesforce/apex/DeliveryGuideController.getGuideContext';
+import getGuideContext from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGuideController.getGuideContext';
 
 const SECTION_KEYS = [
     'welcome', 'board', 'workItems', 'timeTracking',

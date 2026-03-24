@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
-import getTimelineEvents from '@salesforce/apex/DeliveryActivityTimelineController.getTimelineEvents';
+import getTimelineEvents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityTimelineController.getTimelineEvents';
 import { refreshApex } from '@salesforce/apex';
 
 const FILTER_OPTIONS = [

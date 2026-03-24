@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomNotificationType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customNotifTypeName>Delivery_Hub_Alert</customNotifTypeName>
+    <description>Notifications for Delivery Hub events — items needing attention, SLA breaches, new comments.</description>
+    <desktop>true</desktop>
+    <masterLabel>Delivery Hub Alert</masterLabel>
+    <mobile>true</mobile>
+    <slack>false</slack>
+</CustomNotificationType>

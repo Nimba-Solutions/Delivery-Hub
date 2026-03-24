@@ -1,7 +1,7 @@
 /**
  * @author Cloud Nimbus LLC
  */
-trigger DeliveryWorkItemTrigger on WorkItem__c (before insert, after insert, after update, before update) {
+trigger DeliveryWorkItemTrigger on WorkItem__c (before insert, after insert, after update, before update) { //NOPMD - AvoidLogicInTrigger: trivial guards + handler delegation only
 
     if (DeliveryWorkItemTriggerHandler.triggerDisabled) {
         return;

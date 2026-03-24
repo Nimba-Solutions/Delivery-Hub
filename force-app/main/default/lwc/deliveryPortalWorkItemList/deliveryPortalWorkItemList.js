@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
-import getPortalWorkItems from '@salesforce/apex/DeliveryPortalController.getPortalWorkItems';
+import getPortalWorkItems from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPortalController.getPortalWorkItems';
 
 const FILTER_OPTIONS = [
     { label: 'All', value: '' },
