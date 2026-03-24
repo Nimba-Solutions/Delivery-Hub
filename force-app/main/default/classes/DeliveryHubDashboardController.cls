@@ -72,7 +72,6 @@ public with sharing class DeliveryHubDashboardController {
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             AND IsTemplateBool__c = false
-            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
@@ -127,7 +126,6 @@ public with sharing class DeliveryHubDashboardController {
             SELECT COUNT()
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
-            WITH SYSTEM_MODE
         ];
     }
 
@@ -165,7 +163,6 @@ public with sharing class DeliveryHubDashboardController {
                    PriorityPk__c, LastModifiedDate, CalculatedETADate__c, Developer__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
-            WITH SYSTEM_MODE
             LIMIT 50
         ];
 
@@ -279,7 +276,6 @@ public with sharing class DeliveryHubDashboardController {
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
-            WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
         ]) {
             String phase = stageToPhase.get((String)ar.get('stage'));
@@ -303,7 +299,6 @@ public with sharing class DeliveryHubDashboardController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN ('Done', 'Cancelled')
-            WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 5
         ];
@@ -329,7 +324,6 @@ public with sharing class DeliveryHubDashboardController {
                    WorkItemId__r.StageNamePk__c, AuthorTxt__c, BodyTxt__c, CreatedDate
             FROM WorkItemComment__c
             ORDER BY CreatedDate DESC
-            WITH SYSTEM_MODE
             LIMIT 5
         ];
 
@@ -384,7 +378,6 @@ public with sharing class DeliveryHubDashboardController {
             FROM NetworkEntity__c
             WHERE EntityTypePk__c = 'Vendor'
             AND StatusPk__c = 'Active'
-            WITH SYSTEM_MODE
             ORDER BY Name ASC
         ];
         List<String> texts = new List<String>();
@@ -428,7 +421,6 @@ public with sharing class DeliveryHubDashboardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
-                WITH SYSTEM_MODE
             ];
         } else {
             completed = [
@@ -436,7 +428,6 @@ public with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
-                WITH SYSTEM_MODE
             ];
         }
         metrics.put('completed', completed);
@@ -450,7 +441,6 @@ public with sharing class DeliveryHubDashboardController {
                 WHERE LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
                 AND StageNamePk__c NOT IN :terminalStages
-                WITH SYSTEM_MODE
             ];
         } else {
             moved = [
@@ -458,7 +448,6 @@ public with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE LastModifiedDate >= :startDt
                 AND StageNamePk__c NOT IN :terminalStages
-                WITH SYSTEM_MODE
             ];
         }
         metrics.put('moved', moved);
@@ -471,14 +460,12 @@ public with sharing class DeliveryHubDashboardController {
                 FROM WorkLog__c
                 WHERE WorkDateDate__c >= :startDate
                 AND WorkDateDate__c < :endDate
-                WITH SYSTEM_MODE
             ];
         } else {
             hoursAgg = [
                 SELECT SUM(HoursLoggedNumber__c) total
                 FROM WorkLog__c
                 WHERE WorkDateDate__c >= :startDate
-                WITH SYSTEM_MODE
             ];
         }
         Decimal hours = hoursAgg[0].get('total') != null ? (Decimal)hoursAgg[0].get('total') : 0;
@@ -492,7 +479,6 @@ public with sharing class DeliveryHubDashboardController {
             WHERE BlockingWorkItemId__c IN (
                 SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
             )
-            WITH SYSTEM_MODE
         ]) {
             blockedIds.add(dep.BlockedWorkItemId__c);
         }
