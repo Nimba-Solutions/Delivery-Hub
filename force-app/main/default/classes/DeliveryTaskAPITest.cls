@@ -60,7 +60,7 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetAllTasks() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/delivery/tasks');
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
         RestResponse res = new RestResponse();
         RestContext.request = req;
         RestContext.response = res;
@@ -82,7 +82,7 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetTasksByAssignee() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/delivery/tasks');
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
         req.addParameter('assignee', 'ai');
         RestResponse res = new RestResponse();
         RestContext.request = req;
@@ -104,7 +104,7 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetTasksByStatus() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/delivery/tasks');
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
         req.addParameter('status', 'Backlog');
         RestResponse res = new RestResponse();
         RestContext.request = req;
@@ -126,7 +126,7 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetTasksByWorkflowType() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/delivery/tasks');
+        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
         req.addParameter('workflowType', 'Loan_Approval');
         RestResponse res = new RestResponse();
         RestContext.request = req;
@@ -158,7 +158,7 @@ private class DeliveryTaskAPITest {
         };
 
         RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + item.Id,
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
             body
         );
         RestResponse res = new RestResponse();
@@ -199,7 +199,7 @@ private class DeliveryTaskAPITest {
         };
 
         RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + item.Id,
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
             body
         );
         RestResponse res = new RestResponse();
@@ -225,7 +225,7 @@ private class DeliveryTaskAPITest {
     @IsTest
     static void testPatchMissingId() {
         RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/delivery/tasks/',
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/',
             new Map<String, Object>{ 'stage' => 'Done' }
         );
         RestResponse res = new RestResponse();
@@ -251,7 +251,7 @@ private class DeliveryTaskAPITest {
         ];
 
         RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/delivery/delivery/tasks/' + item.Id;
+        req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id;
         req.httpMethod = 'PATCH';
         req.headers.put('X-Api-Key', TEST_API_KEY);
         RestResponse res = new RestResponse();
@@ -282,7 +282,7 @@ private class DeliveryTaskAPITest {
         };
 
         RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + item.Id + '/comments',
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
             body
         );
         RestResponse res = new RestResponse();
@@ -328,7 +328,7 @@ private class DeliveryTaskAPITest {
         };
 
         RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + item.Id + '/comments',
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
             body
         );
         RestResponse res = new RestResponse();
@@ -355,7 +355,7 @@ private class DeliveryTaskAPITest {
     @IsTest
     static void testPostCommentMissingId() {
         RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/delivery/tasks/',
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/',
             new Map<String, Object>{ 'body' => 'orphan comment' }
         );
         RestResponse res = new RestResponse();
@@ -381,7 +381,7 @@ private class DeliveryTaskAPITest {
         ];
 
         RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + item.Id + '/comments',
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
             new Map<String, Object>{ 'body' => '' }
         );
         RestResponse res = new RestResponse();
@@ -406,7 +406,7 @@ private class DeliveryTaskAPITest {
     @IsTest
     static void testGetMissingApiKey() {
         RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/delivery/delivery/tasks';
+        req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/tasks';
         req.httpMethod = 'GET';
         // No X-Api-Key header
         RestResponse res = new RestResponse();
@@ -429,7 +429,7 @@ private class DeliveryTaskAPITest {
         // Use a valid ID format that doesn't exist in DB
         String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
         RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + fakeId,
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + fakeId,
             new Map<String, Object>{ 'stage' => 'Done' }
         );
         RestResponse res = new RestResponse();
@@ -455,7 +455,7 @@ private class DeliveryTaskAPITest {
         ];
 
         RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + item.Id,
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
             new Map<String, Object>{ 'someUnknownField' => 'value' }
         );
         RestResponse res = new RestResponse();
@@ -477,7 +477,7 @@ private class DeliveryTaskAPITest {
     static void testPostCommentNonExistentWorkItem() {
         String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
         RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/delivery/tasks/' + fakeId + '/comments',
+            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + fakeId + '/comments',
             new Map<String, Object>{ 'body' => 'orphan comment' }
         );
         RestResponse res = new RestResponse();
