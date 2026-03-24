@@ -10,7 +10,7 @@
     <enableReports>false</enableReports>
     <enableSearch>false</enableSearch>
     <enableSharing>true</enableSharing>
-    <enableStreamingApi>false</enableStreamingApi>
+    <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
     <label>Delivery Saved Filter</label>
     <nameField>

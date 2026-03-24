@@ -9,8 +9,7 @@
  *               DeliveryHubSettings__c hierarchy settings.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
-@SuppressWarnings('PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
 public with sharing class DeliveryInboundEmailHandler implements Messaging.InboundEmailHandler {
 
     @TestVisible
