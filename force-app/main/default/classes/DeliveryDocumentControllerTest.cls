@@ -838,5 +838,117 @@ private class DeliveryDocumentControllerTest {
         ];
         System.assertEquals(v2.TotalCurrency__c, balance,
             'Prior balance should only include the latest (non-Superseded) version');
+
+    // ── Approval Flow Tests ──────────────────────────────────────────────────────
+
+    /**
+     * @description Approve a Sent document by token. Verify status transitions to
+     *              Approved, an Approval transaction is created, and an ActivityLog entry exists.
+     */
+    @isTest
+    static void testApproveDocumentByToken() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.approveDocumentByToken(doc.PublicTokenTxt__c);
+        Test.stopTest();
+
+        System.assertEquals('Approved', result.get('status'), 'Result status should be Approved');
+        System.assertEquals(docId, (Id) result.get('id'), 'Result id should match document');
+
+        DeliveryDocument__c updated = [SELECT StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.assertEquals('Approved', updated.StatusPk__c, 'Document status should be Approved');
+
+        List<DeliveryTransaction__c> txns = [
+            SELECT TypePk__c, NoteTxt__c FROM DeliveryTransaction__c WHERE DocumentId__c = :docId
+        ];
+        System.assertEquals(1, txns.size(), 'Should create an Approval transaction');
+        System.assertEquals('Approval', txns[0].TypePk__c, 'Transaction type should be Approval');
+
+        List<ActivityLog__c> logs = [
+            SELECT ActionTypePk__c, RecordIdTxt__c FROM ActivityLog__c
+            WHERE RecordIdTxt__c = :String.valueOf(docId)
+        ];
+        System.assertEquals(1, logs.size(), 'Should create an activity log entry');
+        System.assertEquals('Document_Action', logs[0].ActionTypePk__c, 'Log type should be Document_Action');
+    }
+
+    @isTest
+    static void testApproveViewedDocument() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+        DeliveryDocumentController.getDocumentByToken(doc.PublicTokenTxt__c);
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.approveDocumentByToken(doc.PublicTokenTxt__c);
+        Test.stopTest();
+
+        System.assertEquals('Approved', result.get('status'), 'Should approve from Viewed status');
+    }
+
+    @isTest
+    static void testDisputeDocumentByToken() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.disputeDocumentByToken(
+            doc.PublicTokenTxt__c, 'Hours on item MF-699 are incorrect'
+        );
+        Test.stopTest();
+
+        System.assertEquals('Disputed', result.get('status'), 'Result status should be Disputed');
+        DeliveryDocument__c updated = [
+            SELECT StatusPk__c, DisputeReasonTxt__c FROM DeliveryDocument__c WHERE Id = :docId
+        ];
+        System.assertEquals('Disputed', updated.StatusPk__c, 'Document status should be Disputed');
+        System.assertEquals('Hours on item MF-699 are incorrect', updated.DisputeReasonTxt__c, 'Dispute reason stored');
+    }
+
+    @isTest
+    static void testApproveInvalidStatusThrows() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+        Boolean threw = false;
+        Test.startTest();
+        try { DeliveryDocumentController.approveDocumentByToken(doc.PublicTokenTxt__c); }
+        catch (AuraHandledException e) { threw = true; }
+        Test.stopTest();
+        System.assert(threw, 'Should throw for non-approvable status');
+    }
+
+    @isTest
+    static void testApproveInvalidTokenThrows() {
+        Boolean threw = false;
+        Test.startTest();
+        try { DeliveryDocumentController.approveDocumentByToken('nonexistent-token-value'); }
+        catch (AuraHandledException e) { threw = true; }
+        Test.stopTest();
+        System.assert(threw, 'Should throw for invalid token');
+    }
+
+    @isTest
+    static void testDisputeWithBlankReason() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.disputeDocumentByToken(doc.PublicTokenTxt__c, '');
+        Test.stopTest();
+
+        System.assertEquals('Disputed', result.get('status'), 'Should dispute even with blank reason');
+        DeliveryDocument__c updated = [SELECT DisputeReasonTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.assertEquals(null, updated.DisputeReasonTxt__c, 'Blank reason should be stored as null');
     }
 }
