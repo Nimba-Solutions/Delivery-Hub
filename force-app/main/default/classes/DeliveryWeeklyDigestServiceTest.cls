@@ -17,14 +17,15 @@ private class DeliveryWeeklyDigestServiceTest {
     private static DeliveryHubSettings__c createSettings(
         Boolean digestEnabled, Boolean aiEnabled, String apiKey
     ) {
+        Datetime now = Datetime.now();
         DeliveryHubSettings__c s = new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            WeeklyDigestEnabledBool__c = digestEnabled,
+            EnableWeeklyDigestDateTime__c = digestEnabled ? now : null,
             WeeklyDigestDayTxt__c = 'Monday',
-            AISuggestionsEnabledBool__c = aiEnabled,
+            EnableAISuggestionsDateTime__c = aiEnabled ? now : null,
             OpenAIApiKeyTxt__c = apiKey,
             OpenAIModelTxt__c = 'gpt-3.5-turbo',
-            EmailNotificationsEnabledBool__c = false
+            EnableEmailNotificationsDateTime__c = null
         );
         insert s;
         return s;
@@ -765,10 +766,10 @@ private class DeliveryWeeklyDigestServiceTest {
     static void testSchedulerWithDigest() {
         insert new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            WeeklyDigestEnabledBool__c = true,
+            EnableWeeklyDigestDateTime__c = Datetime.now(),
             WeeklyDigestDayTxt__c = Datetime.now().format('EEEE'),
-            AutoCreateWorkRequestBool__c = false,
-            AutoSyncNetworkEntityBool__c = false
+            EnableAutoCreateWorkRequestDateTime__c = null,
+            EnableAutoSyncNetworkEntityDateTime__c = null
         );
 
         NetworkEntity__c vendor = new NetworkEntity__c(

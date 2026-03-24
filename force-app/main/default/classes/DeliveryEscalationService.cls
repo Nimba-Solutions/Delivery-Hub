@@ -645,7 +645,7 @@ public with sharing class DeliveryEscalationService {
 
     /**
      * @description Sends a Salesforce bell notification to the work item owner if they have
-     *              EnableBellNotificationsBool__c = true in their user-level DeliveryHubSettings.
+     *              EnableBellNotificationsDateTime__c != null in their user-level DeliveryHubSettings.
      *              Uses the Delivery_Hub_Alert custom notification type.
      * @param workItemId The WorkItem__c Id to link the notification to.
      * @param ownerId The User Id to notify.
@@ -656,7 +656,7 @@ public with sharing class DeliveryEscalationService {
         try {
             // Check user-level setting (hierarchy: user > profile > org)
             DeliveryHubSettings__c userSettings = DeliveryHubSettings__c.getInstance(ownerId);
-            if (userSettings == null || userSettings.EnableBellNotificationsBool__c != true) {
+            if (userSettings == null || userSettings.EnableBellNotificationsDateTime__c == null) {
                 return; // User hasn't opted in
             }
 

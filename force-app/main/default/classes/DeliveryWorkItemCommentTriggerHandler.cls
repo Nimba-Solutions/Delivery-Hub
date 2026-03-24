@@ -26,7 +26,7 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
 
     /**
      * @description Sends bell notifications to work item owners when new comments are posted,
-     *              provided the owner has opted in via EnableBellNotificationsBool__c and is
+     *              provided the owner has opted in via EnableBellNotificationsDateTime__c and is
      *              not the person who posted the comment.
      * @param comments Newly inserted comment records
      */
@@ -80,7 +80,7 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
             try {
                 // Check user-level setting (hierarchy: user > profile > org)
                 DeliveryHubSettings__c userSettings = DeliveryHubSettings__c.getInstance(wi.OwnerId);
-                if (userSettings == null || userSettings.EnableBellNotificationsBool__c != true) {
+                if (userSettings == null || userSettings.EnableBellNotificationsDateTime__c == null) {
                     continue; // User hasn't opted in
                 }
 

@@ -11,7 +11,7 @@ public with sharing class DeliveryActivityTrackerController {
 
     /**
      * @description Logs a single user activity event to ActivityLog__c.
-     *              Respects the org-level EnableActivityLoggingBool__c toggle —
+     *              Respects the org-level EnableActivityLoggingDateTime__c toggle —
      *              when disabled, the method returns silently without inserting.
      *              This is a fire-and-forget call; errors are swallowed to ensure
      *              tracking never disrupts the user experience.
@@ -33,7 +33,7 @@ public with sharing class DeliveryActivityTrackerController {
         try {
             // Gate: activity logging must be explicitly enabled in org settings
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
-            if (settings == null || !settings.EnableActivityLoggingBool__c) {
+            if (settings == null || settings.EnableActivityLoggingDateTime__c == null) {
                 return;
             }
 

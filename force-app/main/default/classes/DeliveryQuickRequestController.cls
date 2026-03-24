@@ -91,7 +91,7 @@ public with sharing class DeliveryQuickRequestController {
     private static void enhanceWithAi(Id workItemId, String title, String description) {
         try {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            if (settings == null || settings.AISuggestionsEnabledBool__c != true) {
+            if (settings == null || settings.EnableAISuggestionsDateTime__c == null) {
                 return; // AI not enabled — silently skip
             }
             if (String.isBlank(settings.OpenAIApiKeyTxt__c)) {

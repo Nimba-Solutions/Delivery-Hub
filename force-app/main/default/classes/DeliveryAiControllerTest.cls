@@ -14,7 +14,7 @@ private class DeliveryAiControllerTest {
     private static DeliveryHubSettings__c createSettings(Boolean aiEnabled, String apiKey) {
         DeliveryHubSettings__c s = new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            AISuggestionsEnabledBool__c = aiEnabled,
+            EnableAISuggestionsDateTime__c = aiEnabled ? Datetime.now() : null,
             OpenAIApiKeyTxt__c = apiKey,
             OpenAIModelTxt__c = 'gpt-3.5-turbo'
         );

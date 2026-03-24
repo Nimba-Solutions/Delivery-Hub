@@ -11,8 +11,8 @@ private class DeliveryEmailNotificationServiceTest {
     static void makeData() {
         DeliveryHubSettings__c settings = new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            EmailNotificationsEnabledBool__c = true,
-            EnableNotificationsBool__c = true
+            EnableEmailNotificationsDateTime__c = Datetime.now(),
+            EnableNotificationsDateTime__c = Datetime.now()
         );
         insert settings;
 
@@ -43,7 +43,7 @@ private class DeliveryEmailNotificationServiceTest {
     @IsTest
     static void testSendStageChangeEmailsDisabled() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.EmailNotificationsEnabledBool__c = false;
+        settings.EnableEmailNotificationsDateTime__c = null;
         update settings;
 
         WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];

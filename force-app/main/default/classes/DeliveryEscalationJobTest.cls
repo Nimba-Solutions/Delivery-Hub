@@ -13,8 +13,8 @@ private class DeliveryEscalationJobTest {
     static void makeData() {
         insert new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId(),
-            EmailNotificationsEnabledBool__c = true,
-            EnableNotificationsBool__c = true
+            EnableEmailNotificationsDateTime__c = Datetime.now(),
+            EnableNotificationsDateTime__c = Datetime.now()
         );
 
         List<WorkItem__c> items = new List<WorkItem__c>();
