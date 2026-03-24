@@ -10,7 +10,7 @@ private class DeliveryWorkItemCommentTriggerTest {
 
     @TestSetup
     static void setup() {
-        insert new DeliveryHubSettings__c(AutoCreateWorkRequestBool__c = false);
+        insert new DeliveryHubSettings__c(EnableAutoCreateWorkRequestDateTime__c = null);
         NetworkEntity__c vendor = new NetworkEntity__c(Name='M', EntityTypePk__c='Vendor', StatusPk__c='Active', IntegrationEndpointUrlTxt__c='https://f.com');
         insert vendor;
         WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c='T', StageNamePk__c='Backlog');

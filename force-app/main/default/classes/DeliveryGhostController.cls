@@ -21,7 +21,7 @@ public with sharing class DeliveryGhostController {
         try {
             // Gate: activity logging must be explicitly enabled in org settings
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
-            if (settings == null || !settings.EnableActivityLoggingBool__c) {
+            if (settings == null || settings.EnableActivityLoggingDateTime__c == null) {
                 return;
             }
 

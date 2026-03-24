@@ -14,8 +14,8 @@ private class DeliveryFieldTrackingServiceTest {
     @TestSetup
     static void setupData() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.EnableActivityLoggingBool__c = true;
-        settings.EnableFieldTrackingBool__c = true;
+        settings.EnableActivityLoggingDateTime__c = Datetime.now();
+        settings.EnableFieldTrackingDateTime__c = Datetime.now();
         upsert settings;
 
         DeliveryTriggerControl.disableAfterLogic();
@@ -72,7 +72,7 @@ private class DeliveryFieldTrackingServiceTest {
     @IsTest
     static void testTrackingDisabledNoChangeRequest() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.EnableFieldTrackingBool__c = false;
+        settings.EnableFieldTrackingDateTime__c = null;
         upsert settings;
 
         WorkItem__c workItem = [

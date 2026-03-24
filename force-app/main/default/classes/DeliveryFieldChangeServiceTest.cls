@@ -14,7 +14,7 @@ private class DeliveryFieldChangeServiceTest {
     static void setup() {
         // Enable activity logging
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.EnableActivityLoggingBool__c = true;
+        settings.EnableActivityLoggingDateTime__c = Datetime.now();
         upsert settings;
     }
 
@@ -109,7 +109,7 @@ private class DeliveryFieldChangeServiceTest {
     static void testCaptureFieldChangeLoggingDisabled() {
         // Override settings to disable logging
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.EnableActivityLoggingBool__c = false;
+        settings.EnableActivityLoggingDateTime__c = null;
         upsert settings;
 
         Account testAcct = new Account(Name = 'Disabled Log Test');

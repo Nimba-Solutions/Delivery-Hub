@@ -83,8 +83,8 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         Boolean shouldCreateRequest = true;
         if (settings.Id != null) {
             Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
-            if (populatedFields.containsKey('AutoCreateWorkRequestBool__c')) {
-                shouldCreateRequest = settings.AutoCreateWorkRequestBool__c;
+            if (populatedFields.containsKey('EnableAutoCreateWorkRequestDateTime__c')) {
+                shouldCreateRequest = settings.EnableAutoCreateWorkRequestDateTime__c != null;
             }
         }
 
@@ -172,7 +172,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
         // Respect the master notification toggle
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
-        Boolean notificationsEnabled = settings.Id != null && settings.EnableNotificationsBool__c;
+        Boolean notificationsEnabled = settings.Id != null && settings.EnableNotificationsDateTime__c != null;
 
         if (notificationsEnabled) {
             if (!slackChanges.isEmpty()) {
