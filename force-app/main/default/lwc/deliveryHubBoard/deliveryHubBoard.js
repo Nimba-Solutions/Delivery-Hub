@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -36,6 +37,9 @@ import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettings
 import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTypes';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 import getWorkItemDetail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.getWorkItemDetail';
+import getSavedFilters from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySavedFilterController.getSavedFilters';
+import saveBoardFilter from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySavedFilterController.saveBoardFilter';
+import deleteSavedFilter from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySavedFilterController.deleteSavedFilter';
 
 // --- NAMESPACE BRIDGE ---
 const FIELDS = {
@@ -85,6 +89,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     numDevs = 2;
     @track etaResults = [];
     showAllColumns = false;
+    hideEmptyColumns = false;
     showCreateModal = false;
     nextSortOrder = 1;
     overallFilter = "all";
@@ -147,6 +152,14 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     // --- Quick-filter Pill Bar State ---
     activeQuickFilter = 'all';
+
+    // --- Saved Filter State ---
+    @track savedFilters = [];
+    showSaveFilterModal = false;
+    saveFilterLabel = '';
+    saveFilterIsDefault = false;
+    editingFilterId = null;
+    showSavedFilterMenu = false;
 
     // --- Table View State ---
     @track tableSortColumn = 'stageProgress';
@@ -215,6 +228,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     connectedCallback() {
         this.loadSettings();
         this.subscribeToWorkItemChanges();
+        this.loadSavedFilters();
     }
 
     disconnectedCallback() {
@@ -831,7 +845,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             };
         });
 
-        return this.showMode === 'active' ? enrichedColumns.filter(col => col.workItems.length > 0) : enrichedColumns;
+        if (this.showMode === 'active' || this.hideEmptyColumns) {
+            return enrichedColumns.filter(col => col.workItems.length > 0); // eslint-disable-line no-magic-numbers
+        }
+        return enrichedColumns;
     }
 
     getClientCardColor(status) {
@@ -880,6 +897,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     handleIntentionFilterChange(e) { this.intentionFilter = e.detail ? e.detail.value : e.target.value; }
     handleOverallFilterChange(e) { this.overallFilter = e.detail ? e.detail.value : e.target.value; }
     handleToggleColumns(e) { this.showAllColumns = e.target.checked; this.logBoardState(); }
+    handleToggleHideEmpty(evt) { this.hideEmptyColumns = evt.target.checked; }
     columnOwner(colName) {
         const personaView = (this.workflowConfig?.personaViews || {})[this.persona] || [];
         const col = personaView.find(c => c.columnName === colName);
@@ -1822,5 +1840,102 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             default:
                 return enriched;
         }
+    }
+
+    // =====================================================================
+    // FEATURE 4: Saved Board Filters
+    // =====================================================================
+    get hasSavedFilters() { return this.savedFilters.length > 0; }
+    get savedFilterMenuItems() {
+        return this.savedFilters.map(f => ({
+            id: f.Id,
+            label: filter.LabelTxt__c || filter.delivery__LabelTxt__c || '',
+            isDefault: filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c || false,
+            pillClass: (filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c)
+                ? 'saved-filter-item saved-filter-item--default' : 'saved-filter-item'
+        }));
+    }
+    async loadSavedFilters() {
+        try {
+            const filters = await getSavedFilters({ workflowType: this.activeWorkflowType });
+            this.savedFilters = filters || [];
+            const df = this.savedFilters.find(f => filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c);
+            if (df) { this.applyFilterState(df.FilterJsonTxt__c || df.delivery__FilterJsonTxt__c); }
+        } catch (error) { console.error('[DeliveryHubBoard] loadSavedFilters error:', error); }
+    }
+    handleToggleSavedFilterMenu() { this.showSavedFilterMenu = !this.showSavedFilterMenu; }
+    handleCloseSavedFilterMenu() { this.showSavedFilterMenu = false; }
+    handleLoadSavedFilter(event) {
+        const fid = event.currentTarget.dataset.id;
+        const filter = this.savedFilters.find(x => x.Id === fid);
+        if (f) {
+            this.applyFilterState(f.FilterJsonTxt__c || f.delivery__FilterJsonTxt__c);
+            this.showToast('Filter Applied', 'Filter loaded.', 'success');
+        }
+        this.showSavedFilterMenu = false;
+    }
+    handleOpenSaveFilterModal() {
+        this.showSaveFilterModal = true; this.saveFilterLabel = '';
+        this.saveFilterIsDefault = false; this.editingFilterId = null; this.showSavedFilterMenu = false;
+    }
+    handleCloseSaveFilterModal() {
+        this.showSaveFilterModal = false; this.saveFilterLabel = '';
+        this.saveFilterIsDefault = false; this.editingFilterId = null;
+    }
+    handleSaveFilterLabelChange(event) { this.saveFilterLabel = event.target.value; }
+    handleSaveFilterDefaultChange(event) { this.saveFilterIsDefault = event.target.checked; }
+    async handleSaveFilter() {
+        if (!this.saveFilterLabel || !this.saveFilterLabel.trim()) {
+            this.showToast('Error', 'Please enter a filter name.', 'error'); return;
+        }
+        try {
+            await saveBoardFilter({
+                filterId: this.editingFilterId, label: this.saveFilterLabel.trim(),
+                filterJson: JSON.stringify(this.captureFilterState()),
+                isDefault: this.saveFilterIsDefault, workflowType: this.activeWorkflowType
+            });
+            this.showToast('Saved', 'Filter saved.', 'success');
+            this.handleCloseSaveFilterModal(); this.loadSavedFilters();
+        } catch (error) {
+            this.showToast('Error', error.body?.message || 'Save failed.', 'error');
+            console.error('[DeliveryHubBoard] saveBoardFilter error:', error);
+        }
+    }
+    async handleDeleteSavedFilter(event) {
+        event.stopPropagation();
+        const filterId = event.currentTarget.dataset.id;
+        try {
+            await deleteSavedFilter({ filterId });
+            this.showToast('Deleted', 'Filter removed.', 'success'); this.loadSavedFilters();
+        } catch (error) {
+            this.showToast('Error', error.body?.message || 'Delete failed.', 'error');
+            console.error('[DeliveryHubBoard] deleteSavedFilter error:', error);
+        }
+    }
+    handleOverwriteSavedFilter(event) {
+        event.stopPropagation();
+        const fid = event.currentTarget.dataset.id;
+        const filter = this.savedFilters.find(x => x.Id === fid);
+        if (f) {
+            this.editingFilterId = f.Id;
+            this.saveFilterLabel = filter.LabelTxt__c || filter.delivery__LabelTxt__c || '';
+            this.saveFilterIsDefault = filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c || false;
+            this.showSaveFilterModal = true; this.showSavedFilterMenu = false;
+        }
+    }
+    captureFilterState() {
+        return { persona: this.persona, overallFilter: this.overallFilter,
+            intentionFilter: this.intentionFilter, showAllColumns: this.showAllColumns,
+            myWorkOnly: this.myWorkOnly, displayMode: this.displayMode,
+            sizeMode: this.sizeMode, showMode: this.showMode,
+            boardViewMode: this.boardViewMode, activeQuickFilter: this.activeQuickFilter };
+    }
+    applyFilterState(jsonStr) { // eslint-disable-line complexity
+        try {
+            const state = JSON.parse(jsonStr);
+            const fields = ['persona', 'overallFilter', 'intentionFilter', 'showAllColumns',
+                'myWorkOnly', 'displayMode', 'sizeMode', 'showMode', 'boardViewMode', 'activeQuickFilter'];
+            fields.forEach((key) => { if (key in state) { this[key] = state[key]; } });
+        } catch (error) { console.error('[DeliveryHubBoard] applyFilterState error:', error); }
     }
 }

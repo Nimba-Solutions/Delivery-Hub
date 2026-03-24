@@ -562,6 +562,10 @@
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
+        <tab>Delivery_Timeline</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
         <tab>DeliveryHubSettings</tab>
         <visibility>Visible</visibility>
     </tabSettings>
