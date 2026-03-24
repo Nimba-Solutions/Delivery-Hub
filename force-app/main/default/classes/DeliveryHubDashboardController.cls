@@ -53,14 +53,16 @@ public with sharing class DeliveryHubDashboardController {
 
         AggregateResult[] mtdStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
-            WHERE WorkDateDate__c >= :firstOfMonth WITH SYSTEM_MODE
+            WHERE WorkDateDate__c >= :firstOfMonth
+            WITH SYSTEM_MODE
         ];
         metrics.put('hoursThisMonth', mtdStats[0].get('total') != null ? (Decimal)mtdStats[0].get('total') : 0);
 
         AggregateResult[] lastMonthStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
             WHERE WorkDateDate__c >= :firstOfLastMonth
-            AND WorkDateDate__c < :firstOfMonth WITH SYSTEM_MODE
+            AND WorkDateDate__c < :firstOfMonth
+            WITH SYSTEM_MODE
         ];
         metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
 
