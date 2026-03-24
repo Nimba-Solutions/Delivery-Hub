@@ -105,11 +105,24 @@ The Activity Feed provides a unified, cross-item timeline of comments, hours, an
 
 ### Document Engine
 
-Generate professional invoices, status reports, client agreements, and contractor agreements directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. PDF rendering via Visualforce produces print-ready output. Email delivery sends the document to the client contact with an optional CC address (configurable via `DocumentCcEmailTxt__c`). Payment tracking through `DeliveryTransaction__c` records supports multiple transaction types (payment, credit, refund, adjustment, write-off) per document. The A/R summary on each invoice shows outstanding prior balances. White-label vendor branding pulls the issuing entity's name, address, email, and phone from the vendor NetworkEntity record.
+Generate professional invoices, status reports, client agreements, and contractor agreements directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. Zero-hour work items are automatically filtered from invoices so only billable items appear. PDF rendering via Visualforce produces print-ready output with clickable hyperlinks to the source Salesforce records. The VF URL builder detects the namespace at runtime, so PDF and web preview links work correctly in both managed and unmanaged installations. Email delivery sends the document to the client contact with an optional CC address (configurable via `DocumentCcEmailTxt__c`). Payment tracking through `DeliveryTransaction__c` records supports multiple transaction types (payment, credit, refund, adjustment, write-off) per document. The A/R summary on each invoice shows outstanding prior balances. White-label vendor branding pulls the issuing entity's name, address, email, and phone from the vendor NetworkEntity record. Every invoice footer links to cloudnimbusllc.com.
 
 ### Configurable Workflows
 
 Not just software delivery &mdash; the workflow engine supports any stage-based process. Ships with Software Delivery (40+ stages) and Loan Approval (8 stages) out of the box. Define your own workflow types, stages, personas, and transitions through Custom Metadata.
+
+### Admin Settings
+
+Central settings page with DateTime activation toggles that record who enabled each feature and when. Four operational settings control runtime behavior across the platform:
+
+| Setting | Field | Default | What It Controls |
+|---------|-------|---------|-----------------|
+| Reconciliation Hour | `ReconciliationHourNumber__c` | 6 (AM UTC) | Hour when the scheduler runs the daily sync reconciliation |
+| Sync Retry Limit | `SyncRetryLimitNumber__c` | 3 | Max retry attempts before a failed sync item stops requeueing |
+| Activity Log Retention | `ActivityLogRetentionDaysNumber__c` | 90 days | How long activity log records are kept before batch purge |
+| Escalation Cooldown | `EscalationCooldownHoursNumber__c` | 24 hours | Minimum interval before re-escalating the same work item |
+
+All four settings are wired into the Apex runtime &mdash; the DeliveryHubScheduler, DeliveryActivityLogCleanup, and DeliveryEscalationService read from `DeliveryHubSettings__c` on every execution. The admin page uses dynamic forms for field-level layout control.
 
 ---
 
@@ -130,7 +143,7 @@ Work item created        ---- sync ---->  Request ingested
 3. The vendor org ingests the payload, creates or updates the matching work item, and syncs back.
 4. Both orgs stay in lock-step. Echo suppression ensures changes don't bounce back as duplicates.
 
-The engine is retry-aware (up to 3 attempts), handles namespace translation for managed packages, and supports multi-vendor routing to multiple external orgs simultaneously.
+The engine is retry-aware (configurable limit, default 3 attempts), handles namespace translation for managed packages, and supports multi-vendor routing to multiple external orgs simultaneously.
 
 ---
 
@@ -138,8 +151,8 @@ The engine is retry-aware (up to 3 attempts), handles namespace translation for 
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 130 (66 production + 64 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, DeliverySyncReconciler |
-| **LWC Components** | 54 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder |
+| **Apex Classes** | 140 (71 production + 69 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, DeliverySyncReconciler, SettingsController |
+| **LWC Components** | 56 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer |
 | **Custom Objects** | 14 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c |
 | **Custom Metadata** | 12 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, SyncRoutingConfig\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, ScheduledJobConfig\_\_mdt |
 | **Triggers** | 5 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger |
@@ -294,7 +307,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **WorkLog Approval** | Draft &rarr; Approved &rarr; Synced pipeline, gated by org setting |
 | **Activity Feed** | Cross-item unified timeline of comments, hours, and changes with inline reply |
 | **Data Lineage** | Visual sync chain with per-entity health metrics on admin home |
-| **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering, email delivery with CC, payment tracking, A/R balance, and white-label vendor branding |
+| **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering with hyperlinks to SF records, zero-hour filtering, runtime namespace detection for VF URLs, email delivery with CC, payment tracking, A/R balance, white-label vendor branding, and cloudnimbusllc.com footer |
 | **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking |
 | **Delivery Guide** | In-app documentation with Ghost Recorder utility bar detection across all Lightning apps |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
@@ -309,9 +322,10 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Configurable Workflows** | Custom stages, personas, and transitions via metadata |
 | **Setup Wizard** | One-click connection with automatic scheduler provisioning and real-time prerequisites checklist |
 | **Bounty Marketplace** | Publish work items as bounties with fixed payouts, skill tags, difficulty ratings, and deadlines. Developers claim, submit work, and get approved through a structured lifecycle. Public API for marketplace browsing, authenticated API for claims. Claims auto-sync to origin orgs. |
-| **Sync Reconciler** | Self-healing sync engine that detects drift between orgs and auto-repairs missing records. Runs daily at 6 AM UTC or on-demand. Health endpoint for monitoring. |
-| **Dynamic Record Pages** | Every object has a production-quality record page with smart field sections, readonly enforcement on rollup fields, and compact layouts for lookup previews. |
+| **Sync Reconciler** | Self-healing sync engine that detects drift between orgs and auto-repairs missing records. Runs daily at a configurable hour (default 6 AM UTC) or on-demand. Health endpoint for monitoring. |
+| **Dynamic Record Pages** | Every object has a production-quality record page with dynamic forms, smart field sections, readonly enforcement on rollup fields, and compact layouts for lookup previews. LWC placements put the right component on the right page: deliveryScore on WorkItem, deliveryDocumentViewer on Document and NetworkEntity, deliverySyncRetryPanel on NetworkEntity. All 10 record pages are assigned as app defaults for both Delivery Hub apps. |
 | **Default Billing Entity** | Configurable billing entity override for pass-through invoicing patterns (e.g., Cloud Nimbus &rarr; At Large &rarr; MF). |
+| **Configurable Settings** | Admin settings page with DateTime activation toggles (shows who enabled what and when) and 4 operational knobs: reconciliation hour (default 6 AM UTC), sync retry limit (default 3), activity log retention days (default 90), and escalation cooldown hours (default 24). All settings are wired into the Apex runtime &mdash; the scheduler, cleanup job, and escalation service read from `DeliveryHubSettings__c` on every run. |
 | **Native Reports** | Full Salesforce reporting on all delivery data |
 
 ---
