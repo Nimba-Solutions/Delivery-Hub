@@ -439,7 +439,139 @@ All Lightning apps (Delivery Hub, Delivery Hub Admin) include record page assign
 
 ---
 
-## 14. AI Features
+## 14. Timeline View
+
+The **Delivery Timeline** tab provides a Gantt-style horizontal timeline of active work items, grouped by NetworkEntity.
+
+### Accessing the Timeline
+
+1. Navigate to the **Delivery Timeline** tab in either the Delivery Hub or Delivery Hub Admin app
+2. The timeline displays all active work items as horizontal bars positioned by date range
+
+### Timeline Controls
+
+- **Zoom levels**: Switch between Week, Month, and Quarter views using the toolbar buttons
+- **Scroll**: Use the left/right arrow controls to navigate through the time range
+- **Today marker**: A vertical red line marks the current date for quick orientation
+- **Stage colors**: Each bar is colored based on its current workflow stage (pulled from WorkflowStage__mdt configuration)
+
+### Date Range Logic
+
+The timeline determines bar placement using a fallback chain:
+
+1. **Start date**: CreatedDate of the work item (always available)
+2. **End date**: CalculatedETADate__c if set, otherwise CreatedDate + EstimatedHoursNumber__c converted to days, otherwise CreatedDate + 5 days as a default span
+
+### Interacting with Items
+
+Click any bar on the timeline to navigate directly to that work item's record page.
+
+---
+
+## 15. Saved Filters
+
+Save and recall board filter configurations so you do not have to re-apply filters every time you visit the board.
+
+### Saving a Filter
+
+1. Apply your desired filters on the **Board** tab (status, priority, entity, search text, etc.)
+2. Click the **Save Filter** icon in the filter toolbar
+3. Enter a label for the filter
+4. Optionally mark it as **Default** -- default filters auto-apply when the board loads
+
+### Loading a Saved Filter
+
+1. Click the filter dropdown in the board toolbar
+2. Select a saved filter from the list
+3. The board immediately updates to reflect the saved filter criteria
+
+### Managing Filters
+
+- Each user maintains their own set of saved filters (Private sharing model -- other users cannot see your filters)
+- Filters are scoped to the current workflow type (Software_Delivery, Loan_Approval, etc.)
+- Delete a saved filter by selecting it and clicking the delete icon
+- Up to 50 saved filters per user per workflow type
+
+### Filter Storage
+
+Filters are stored as JSON in `DeliverySavedFilter__c.FilterJsonTxt__c`, capturing the complete board filter state including status filters, priority selections, entity scope, and search text.
+
+---
+
+## 16. Invoice Approval Flow
+
+Clients can approve or dispute invoices directly from the portal without needing a Salesforce license.
+
+### How It Works
+
+1. Generate an invoice via the Document Engine (see Section 9)
+2. Send the invoice to the client -- the client receives a link with the document's public token
+3. The client reviews the invoice in the portal document viewer
+4. The client clicks **Approve** or **Dispute**
+
+### Approval
+
+When the client approves:
+- The document status changes to **Approved**
+- A DeliveryTransaction__c record of type "Approval" is created
+- An ActivityLog__c record is created for audit
+
+### Dispute
+
+When the client disputes:
+- The client must provide a dispute reason (stored in `DisputeReasonTxt__c`)
+- The document status changes to **Disputed**
+- An ActivityLog__c record captures the dispute action and reason
+- The vendor team can review the dispute reason and regenerate the invoice if needed
+
+### API Endpoints
+
+These actions are also available via the Public API:
+
+- `POST /api/document-approve` -- Approve by public token
+- `POST /api/document-dispute` -- Dispute with reason by public token
+- `GET /api/documents/{token}` -- Retrieve document detail by public token
+
+---
+
+## 17. Email-Based Commenting
+
+Reply to work item notification emails to create comments directly in Salesforce -- no login required.
+
+### Enabling Email Notifications
+
+1. Go to **Setup > Custom Settings > DeliveryHubSettings__c**
+2. Set `EnableEmailNotificationsDateTime__c` to a DateTime value (this also records when the feature was activated)
+3. Once enabled, comment notifications are sent to the developer and owner of a work item when a new comment is posted
+
+### How Inbound Email Works
+
+1. A comment is posted on a work item (from UI, sync, or portal)
+2. DeliveryEmailService sends notification emails to subscribed users (developer + owner)
+3. The email includes a reply-to address formatted as `workitem-T0039@{email-service-domain}`
+4. The recipient replies to the email
+5. DeliveryInboundEmailHandler parses the work item number from the To address or Subject line
+6. A new WorkItemComment__c is created with `SourcePk__c = 'Email'`
+7. Reply quote text ("On DATE, NAME wrote:") is stripped automatically for clean comment bodies
+
+### Supported Work Item Number Formats
+
+The inbound handler recognizes these patterns in the To address or Subject:
+- `workitem-T0039` (canonical format in reply-to address)
+- `T-0039` (hyphenated)
+- `T0039` (compact)
+
+### Setup Requirements
+
+For inbound email to work, you must configure an **Email Service** in Salesforce Setup:
+1. Go to **Setup > Email Services**
+2. Create a new Email Service pointing to `DeliveryInboundEmailHandler`
+3. Create an Email Address for the service
+4. Use this domain in your outbound notification reply-to addresses
+
+---
+
+## 18. AI Features
 
 Delivery Hub integrates with OpenAI to provide AI-powered content generation and analysis.
 
@@ -478,3 +610,7 @@ These settings are stored on `DeliveryHubSettings__c` and read at runtime by the
 - **Enable AI features**: Configure OpenAI integration in the Settings panel for auto-generated descriptions, acceptance criteria, and weekly digest emails.
 - **Import existing work**: Use the CSV Import wizard (`deliveryCsvImport`) to bulk-import work items from spreadsheets.
 - **Add team members**: Assign the `DeliveryHubApp` permission set to your team and they can start using the board immediately.
+- **Enable email commenting**: Set up the inbound email handler so team members can reply to notifications and create comments without opening Salesforce (see Section 17).
+- **Use the Timeline**: Open the Delivery Timeline tab to see a Gantt-style view of all active work items with zoom and scroll controls (see Section 14).
+- **Save board filters**: Save your preferred board filter settings so they auto-apply on every visit (see Section 15).
+- **Spin up a demo org**: Run `cci flow run demo_org --org dev` to get a fully configured scratch org with sample data for evaluation or demos.
