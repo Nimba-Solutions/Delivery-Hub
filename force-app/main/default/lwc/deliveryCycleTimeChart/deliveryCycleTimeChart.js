@@ -40,6 +40,7 @@ export default class DeliveryCycleTimeChart extends LightningElement {
         if (result.data) {
             this._cycleTimeRaw = result.data;
         } else if (result.error) {
+            console.error('DeliveryCycleTimeChart: wiredCycleTime failed', result.error);
             this._cycleTimeRaw = [];
         }
     }
@@ -54,6 +55,7 @@ export default class DeliveryCycleTimeChart extends LightningElement {
         if (result.data) {
             this._stageAgeRaw = result.data;
         } else if (result.error) {
+            console.error('DeliveryCycleTimeChart: wiredStageAges failed', result.error);
             this._stageAgeRaw = [];
         }
     }

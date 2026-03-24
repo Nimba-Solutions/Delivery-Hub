@@ -55,7 +55,7 @@ export default class DeliveryDependencyGraph extends NavigationMixin(LightningEl
     // Wire: load workflow config for stage colors
     // -------------------------------------------------------------------------
     @wire(getWorkflowConfig, { workflowTypeName: '$workflowType' })
-    wiredConfig({ data }) {
+    wiredConfig({ data, error }) {
         if (data && data.stages) {
             const colorMap = {};
             for (const stage of data.stages) {
@@ -65,6 +65,9 @@ export default class DeliveryDependencyGraph extends NavigationMixin(LightningEl
             if (this._simulationNodes.length > 0) {
                 this._renderSvg();
             }
+        }
+        if (error) {
+            console.error('DeliveryDependencyGraph: wiredConfig failed', error);
         }
     }
 
