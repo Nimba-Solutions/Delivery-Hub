@@ -294,15 +294,20 @@ Each document is an **immutable JSON snapshot** -- changing underlying data (hou
 
 Documents support configurable payment terms such as "Net 30", "Due on Receipt", "Net 15", etc. Due dates are auto-calculated from the document issue date based on the selected terms.
 
+### Invoice Generation Notes
+
+- **Zero-hour filtering**: Work items with zero logged hours in the billing period are automatically excluded from generated invoices. Only items with actual billable time appear in the document.
+- **PDF hyperlinks**: Work item names in the PDF are clickable links that navigate to the corresponding Salesforce record. This applies to both the work items summary table and the time log detail table.
+
 ### PDF Rendering
 
 Documents can be rendered as PDF for download or email attachment:
 
 1. Open a generated document in the **Document Viewer**
 2. Click **Download PDF** -- a Visualforce page renders the snapshot data into a professional PDF layout
-3. The PDF includes vendor branding (company name, address, contact details), line-item details, totals, payment terms, due date, and an A/R summary of prior unpaid balances
+3. The PDF includes vendor branding (company name, address, contact details), line-item details, totals, payment terms, due date, an A/R summary of prior unpaid balances, and a footer linking to the vendor's website (cloudnimbusllc.com for Cloud Nimbus-issued documents)
 
-The PDF rendering is handled server-side by `DeliveryDocumentPdf.page` and works for both authenticated users and public access via Salesforce Sites.
+The PDF rendering is handled server-side by `DeliveryDocumentPdf.page` with runtime namespace detection (no hardcoded namespace tokens). The page works for both authenticated users and public access via Salesforce Sites.
 
 ### Sending Documents by Email
 
@@ -418,7 +423,23 @@ Delivery Hub includes built-in documentation accessible directly from the app.
 
 ---
 
-## 13. AI Features
+## 13. Record Page Components
+
+Delivery Hub places LWC components on record pages for contextual information and actions:
+
+| Record Page | Component | Location | Description |
+|-------------|-----------|----------|-------------|
+| **WorkItem** | `deliveryScore` | Sidebar | Attention score indicator showing urgency level |
+| **DeliveryDocument** | `deliveryDocumentViewer` | Preview tab | Document preview and PDF download |
+| **NetworkEntity** | `deliverySyncRetryPanel` | Sidebar | Monitor and retry failed sync items for the entity |
+
+The WorkItem Admin record page uses **Dynamic Forms**, placing fields directly on the Lightning page with conditional visibility rules instead of relying on page layout assignments.
+
+All Lightning apps (Delivery Hub, Delivery Hub Admin) include record page assignments for their respective objects.
+
+---
+
+## 14. AI Features
 
 Delivery Hub integrates with OpenAI to provide AI-powered content generation and analysis.
 
@@ -428,6 +449,19 @@ Delivery Hub integrates with OpenAI to provide AI-powered content generation and
 2. Navigate to the **AI Settings** section
 3. Enter your **OpenAI API key**
 4. Save the settings
+
+### Configurable Operational Settings
+
+The Settings panel also exposes operational parameters that control background job behavior. Each setting has a sensible default that applies when no value is configured:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Reconciliation Hour (GMT)** | 6 | Hour of the day (0-23) when the daily sync reconciliation job runs |
+| **Sync Retry Limit** | 3 | Maximum number of retry attempts for failed outbound sync items |
+| **Activity Log Retention Days** | 90 | Number of days to retain navigation/activity logs before cleanup |
+| **Escalation Cooldown Hours** | 24 | Minimum hours between repeated escalations of the same work item |
+
+These settings are stored on `DeliveryHubSettings__c` and read at runtime by the scheduler, cleanup, and escalation services. The settings use DateTime activation toggles -- features like Work Log Approval show the exact activation timestamp, providing a clear audit trail of when each feature was enabled.
 
 ### Available AI Features
 
