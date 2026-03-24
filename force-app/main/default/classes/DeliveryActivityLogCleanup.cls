@@ -19,7 +19,7 @@
 global without sharing class DeliveryActivityLogCleanup implements Schedulable, Database.Batchable<SObject> {
 
     @TestVisible
-    private static final Integer RETENTION_DAYS = 90;
+    private static Integer RETENTION_DAYS = 90;
     private static final Integer AGGREGATION_DAYS = 30;
 
     // -----------------------------------------------------------------------
@@ -47,7 +47,10 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
      * @return QueryLocator targeting expired activity log records.
      */
     public Database.QueryLocator start(Database.BatchableContext bc) {
-        DateTime cutoff = DateTime.now().addDays(-RETENTION_DAYS);
+        DeliveryHubSettings__c retentionSettings = DeliveryHubSettings__c.getOrgDefaults();
+        Integer logRetentionDays = retentionSettings != null && retentionSettings.ActivityLogRetentionDaysNumber__c != null
+            ? (Integer) retentionSettings.ActivityLogRetentionDaysNumber__c : 90;
+        DateTime cutoff = DateTime.now().addDays(-logRetentionDays);
 
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
         Decimal retentionDays = (settings != null) ? settings.FieldChangeRetentionDaysNumber__c : null;

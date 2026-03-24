@@ -23,7 +23,7 @@ public with sharing class DeliveryEscalationService {
 
     /** @description Hours before re-escalating the same work item (24h default) */
     @TestVisible
-    private static final Integer ESCALATION_COOLDOWN_HOURS = 24;
+    private static Integer ESCALATION_COOLDOWN_HOURS = 24;
 
     // -------------------------------------------------------------------------
     // AuraEnabled — callable from LWC dashboard
@@ -104,6 +104,10 @@ public with sharing class DeliveryEscalationService {
         if (rules == null || rules.isEmpty()) {
             return;
         }
+
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        Integer cooldownHours = settings != null && settings.EscalationCooldownHoursNumber__c != null
+            ? (Integer) settings.EscalationCooldownHoursNumber__c : 24;
 
         // Collect all trigger stages to build a single SOQL query
         Set<String> triggerStages = new Set<String>();
@@ -202,7 +206,7 @@ public with sharing class DeliveryEscalationService {
                 if (wi.LastEscalatedDateTime__c != null) {
                     Long hoursSinceLastEscalation = (now.getTime()
                         - wi.LastEscalatedDateTime__c.getTime()) / (1000 * 60 * 60);
-                    if (hoursSinceLastEscalation < ESCALATION_COOLDOWN_HOURS) {
+                    if (hoursSinceLastEscalation < cooldownHours) {
                         continue;
                     }
                 }
