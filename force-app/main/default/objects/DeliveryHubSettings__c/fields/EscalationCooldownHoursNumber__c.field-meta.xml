@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EscalationCooldownHoursNumber__c</fullName>
+    <description>Minimum hours between repeated escalation notifications for the same work item. Defaults to 24.</description>
+    <inlineHelpText>Hours to wait before re-escalating the same work item (1-168).</inlineHelpText>
+    <label>Escalation Cooldown Hours</label>
+    <precision>3</precision>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+    <required>false</required>
+</CustomField>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ReconciliationHourNumber__c</fullName>
+    <description>Hour of the day (0-23) at which the reconciliation job runs. Defaults to 6 (6 AM).</description>
+    <inlineHelpText>Hour (0-23) when the daily reconciliation job should run.</inlineHelpText>
+    <label>Reconciliation Hour</label>
+    <precision>2</precision>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+    <required>false</required>
+</CustomField>
