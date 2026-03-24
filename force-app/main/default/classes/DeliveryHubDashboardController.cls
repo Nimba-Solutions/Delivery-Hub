@@ -43,7 +43,7 @@ public with sharing class DeliveryHubDashboardController {
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             AND IsTemplateBool__c = false
-            WITH SYSTEM_MODE
+
         ];
 
         Decimal activeCount = (workItemStats[0].get('total') != null) ? (Decimal)workItemStats[0].get('total') : 0;
@@ -54,7 +54,7 @@ public with sharing class DeliveryHubDashboardController {
         AggregateResult[] mtdStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
             WHERE WorkDateDate__c >= :firstOfMonth
-            WITH SYSTEM_MODE
+
         ];
         metrics.put('hoursThisMonth', mtdStats[0].get('total') != null ? (Decimal)mtdStats[0].get('total') : 0);
 
@@ -62,7 +62,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
             WHERE WorkDateDate__c >= :firstOfLastMonth
             AND WorkDateDate__c < :firstOfMonth
-            WITH SYSTEM_MODE
+
         ];
         metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
 
@@ -90,7 +90,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT StatusPk__c val, Count(Id) cnt
             FROM SyncItem__c
             WHERE StatusPk__c IN ('Synced', 'Failed')
-            WITH SYSTEM_MODE
+
             GROUP BY StatusPk__c
         ];
 
