@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActivityLogRetentionDaysNumber__c</fullName>
+    <description>Number of days to retain activity log records before cleanup. Defaults to 90.</description>
+    <inlineHelpText>How many days to keep activity log records before automatic cleanup (30-365).</inlineHelpText>
+    <label>Activity Log Retention Days</label>
+    <precision>3</precision>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+    <required>false</required>
+</CustomField>

@@ -11,9 +11,9 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="card-body">
-            
+
             <div class="form-section">
                 <div class="toggle-group">
                     <div class="toggle-content">
@@ -24,6 +24,9 @@
                         <div class="toggle-help">
                             Receive notifications for work item updates and system events
                         </div>
+                        <template lwc:if={notificationsActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {notificationsActivatedAt}</p>
+                        </template>
                     </div>
                     <div class="toggle-control">
                         <div class="custom-toggle">
@@ -49,6 +52,9 @@
                         <div class="toggle-help">
                             Automatically create a Request when a Work Item is created if only one active Vendor exists.
                         </div>
+                        <template lwc:if={autoSyncActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {autoSyncActivatedAt}</p>
+                        </template>
                     </div>
                     <div class="toggle-control">
                         <div class="custom-toggle">
@@ -62,8 +68,6 @@
                 </div>
             </div>
 
-        </div>
-
             <div class="section-divider"></div>
 
             <div class="form-section">
@@ -76,6 +80,9 @@
                         <div class="toggle-help">
                             Send email notifications to assigned developers and record owners when work items change stage.
                         </div>
+                        <template lwc:if={emailNotificationsActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {emailNotificationsActivatedAt}</p>
+                        </template>
                     </div>
                     <div class="toggle-control">
                         <div class="custom-toggle">
@@ -101,6 +108,9 @@
                         <div class="toggle-help">
                             Display the inline metrics bar (active count, cycle time, blocked items) at the top of the Kanban board.
                         </div>
+                        <template lwc:if={boardMetricsActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {boardMetricsActivatedAt}</p>
+                        </template>
                     </div>
                     <div class="toggle-control">
                         <div class="custom-toggle">
@@ -149,6 +159,63 @@
                             {slackTestResult}
                         </div>
                     </template>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Advanced Configuration -->
+            <div class="form-section">
+                <div class="toggle-label-wrapper" style="margin-bottom: 0.75rem;">
+                    <lightning-icon icon-name="utility:advanced_function" alternative-text="Advanced" size="x-small"></lightning-icon>
+                    <label class="toggle-label">Advanced Configuration</label>
+                </div>
+
+                <div class="slds-grid slds-wrap slds-gutters_small">
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Reconciliation Hour (0-23)"
+                            value={reconciliationHour}
+                            min="0"
+                            max="23"
+                            step="1"
+                            onchange={handleReconciliationHourChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Sync Retry Limit (1-10)"
+                            value={syncRetryLimit}
+                            min="1"
+                            max="10"
+                            step="1"
+                            onchange={handleSyncRetryLimitChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Activity Log Retention Days (30-365)"
+                            value={activityLogRetentionDays}
+                            min="30"
+                            max="365"
+                            step="1"
+                            onchange={handleActivityLogRetentionChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Escalation Cooldown Hours (1-168)"
+                            value={escalationCooldownHours}
+                            min="1"
+                            max="168"
+                            step="1"
+                            onchange={handleEscalationCooldownChange}>
+                        </lightning-input>
+                    </div>
                 </div>
             </div>
 

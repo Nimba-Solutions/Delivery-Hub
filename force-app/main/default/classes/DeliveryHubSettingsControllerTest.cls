@@ -34,20 +34,31 @@ private class DeliveryHubSettingsControllerTest {
 
         System.assertNotEquals(null, dto, 'Settings DTO should not be null');
         System.assertEquals(true, dto.enableNotifications, 'Notifications should be enabled');
-        
+
         // Check the new DTO field names
         System.assertEquals(true, dto.autoCreateRequest, 'Auto Create Request should be true');
         System.assertEquals(true, dto.autoSendRequest, 'Auto Send Request should be true');
-        
+
         System.assert(dto.aiSuggestionsEnabled, 'AI Suggestions should be true');
         System.assertEquals('gpt-4o', dto.openaiModel, 'OpenAI model should be gpt-4o');
+
+        // Activation-date strings should be populated (not null)
+        System.assertNotEquals(null, dto.notificationsActivatedAt, 'Notifications activated date should be set');
+        System.assertNotEquals(null, dto.autoSyncActivatedAt, 'Auto-Sync activated date should be set');
+
+        // Configurable number settings should return defaults when not set
+        System.assertEquals(6, dto.reconciliationHour, 'Reconciliation hour should default to 6');
+        System.assertEquals(3, dto.syncRetryLimit, 'Sync retry limit should default to 3');
+        System.assertEquals(90, dto.activityLogRetentionDays, 'Activity log retention should default to 90');
+        System.assertEquals(24, dto.escalationCooldownHours, 'Escalation cooldown should default to 24');
     }
 
     @isTest
     static void testSaveGeneralSettings() {
         Test.startTest();
-        // Pass 5 arguments: (Notifications, AutoCreate, AutoSend, EmailNotifications, ShowBoardMetrics)
-        DeliveryHubSettingsController.saveGeneralSettings(false, false, false, true, false);
+        // Pass 9 arguments: (Notifications, AutoCreate, AutoSend, EmailNotifications, ShowBoardMetrics,
+        //                     ReconciliationHour, SyncRetryLimit, ActivityLogRetentionDays, EscalationCooldownHours)
+        DeliveryHubSettingsController.saveGeneralSettings(false, false, false, true, false, 8, 5, 60, 48);
         Test.stopTest();
 
         DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
@@ -57,6 +68,10 @@ private class DeliveryHubSettingsControllerTest {
         System.assertEquals(null, s.EnableAutoSyncNetworkEntityDateTime__c, 'Auto Send should be disabled');
         System.assertNotEquals(null, s.EnableEmailNotificationsDateTime__c, 'Email notifications should be enabled');
         System.assertEquals(null, s.EnableBoardMetricsDateTime__c, 'Board metrics should be disabled');
+        System.assertEquals(8, s.ReconciliationHourNumber__c, 'Reconciliation hour should be 8');
+        System.assertEquals(5, s.SyncRetryLimitNumber__c, 'Sync retry limit should be 5');
+        System.assertEquals(60, s.ActivityLogRetentionDaysNumber__c, 'Activity log retention should be 60 days');
+        System.assertEquals(48, s.EscalationCooldownHoursNumber__c, 'Escalation cooldown should be 48 hours');
     }
 
     @isTest
