@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WebhookUrlTxt__c</fullName>
+    <description>External webhook URL for real-time push notifications. When a platform event fires (sync completion, document lifecycle), the system POSTs a JSON payload to this URL so external sites (e.g. client portal) can update without polling.</description>
+    <inlineHelpText>Enter the URL of an external endpoint to receive real-time event notifications (e.g. https://yoursite.com/api/webhooks/delivery). Leave blank to disable.</inlineHelpText>
+    <label>Webhook URL</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

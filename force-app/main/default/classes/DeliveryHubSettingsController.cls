@@ -115,6 +115,8 @@ public with sharing class DeliveryHubSettingsController {
         @AuraEnabled public String defaultBillingEntityId { get; set; }
         /** @description Comma-separated stages for auto-sharing with dev team */
         @AuraEnabled public String stagesToAutoShare { get; set; }
+        /** @description External webhook URL for real-time push notifications */
+        @AuraEnabled public String webhookUrl { get; set; }
     }
 
     /**
@@ -188,6 +190,7 @@ public with sharing class DeliveryHubSettingsController {
             dto.statusPageToken = settings.StatusPageTokenTxt__c;
             dto.defaultBillingEntityId = settings.DefaultBillingEntityIdTxt__c;
             dto.stagesToAutoShare = settings.StagesToAutoShareWithDevTeamTxt__c;
+            dto.webhookUrl = settings.WebhookUrlTxt__c;
         } else {
             // Fresh Install Defaults — match what DeliveryHubInstallHandler sets
             dto.enableNotifications = true;
@@ -324,6 +327,7 @@ public with sharing class DeliveryHubSettingsController {
             settings.StatusPageTokenTxt__c = dto.statusPageToken;
             settings.DefaultBillingEntityIdTxt__c = dto.defaultBillingEntityId;
             settings.StagesToAutoShareWithDevTeamTxt__c = dto.stagesToAutoShare;
+            settings.WebhookUrlTxt__c = dto.webhookUrl;
 
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});
