@@ -56,6 +56,24 @@ const INFO_REGISTRY = {
         keyFields:
             'WorkItem__c.StageNamePk__c, WorkItem__c.IsActiveBool__c, WorkItem__c.PriorityPk__c, WorkItem__c.DaysInStageNumber__c, WorkLog__c.HoursNumber__c, WorkflowStage__mdt (phase, isTerminal)'
     },
+    deliveryClientOnboarding: {
+        dataSource:
+            'The form collects company name, contact email, hourly rate, phone, and address. On submit it calls onboardClient which creates a NetworkEntity__c record for the new client and generates a Client Agreement document via the Document Engine. The agreement can then be previewed or emailed directly from the success panel.',
+        description:
+            'A quick-entry form for onboarding new clients. Creates a Network Entity record with billing details and auto-generates a professional Client Agreement document ready for review and signing.',
+        friendlyName: 'Client Onboarding',
+        keyFields:
+            'NetworkEntity__c.Name, NetworkEntity__c.ContactEmailTxt__c, NetworkEntity__c.HourlyRateNumber__c, Document__c.TemplatePk__c, Document__c.StatusPk__c'
+    },
+    deliveryDataLineage: {
+        dataSource:
+            'Calls getNetworkEntities which returns the local org identity and all connected Network Entities with their entity type (Vendor/Client/Both), connection status, and last sync timestamp. Health percentage is computed from Sync_Item__c success rates per entity.',
+        description:
+            'Visual map of the sync chain between connected orgs. Shows upstream vendors (pull) and downstream clients (push) with real-time connection health, entity type, and last sync timestamps.',
+        friendlyName: 'Data Flow',
+        keyFields:
+            'NetworkEntity__c.Name, NetworkEntity__c.EntityTypePk__c, NetworkEntity__c.StatusPk__c, NetworkEntity__c.OrgIdTxt__c, Sync_Item__c.StatusPk__c'
+    },
     deliveryDocumentViewer: {
         dataSource:
             'Loads documents via getDocumentsForEntity for the context entity. In preview mode, fetches a JSON snapshot that was captured at generation time — this snapshot contains the entity details, work items, work logs, rates, and totals frozen at the moment the document was created. Templates come from DocumentTemplate__mdt. Payments are tracked as transaction records.',
@@ -118,6 +136,15 @@ const INFO_REGISTRY = {
         friendlyName: 'Hub Setup',
         keyFields:
             'NetworkEntity__c.StatusPk__c, NetworkEntity__c.OrgTypePk__c, NetworkEntity__c.Name, DeliveryHubSettings__c.AutoSyncBool__c'
+    },
+    deliveryReleaseNotes: {
+        dataSource:
+            'Calls generateReleaseNotes with a configurable date range (defaults to last 30 days). The Apex method queries Work Items completed within that window and groups them by request type into sections. Results include item name, title, priority, and developer.',
+        description:
+            'Generates formatted release notes from completed work items within a date range. Items are grouped by category with priority badges and developer attribution. Supports one-click copy to clipboard for sharing.',
+        friendlyName: 'Release Notes',
+        keyFields:
+            'WorkItem__c.StageNamePk__c, WorkItem__c.CompletedDate__c, WorkItem__c.RequestTypePk__c, WorkItem__c.BriefDescriptionTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.Developer__c'
     },
     deliveryScore: {
         dataSource:

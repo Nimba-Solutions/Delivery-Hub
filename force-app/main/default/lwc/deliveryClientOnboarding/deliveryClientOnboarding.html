@@ -1,6 +1,7 @@
 <template>
     <lightning-card title="Client Onboarding" icon-name="standard:person_account">
-        <div slot="actions">
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+            <c-delivery-info-popover component-name="deliveryClientOnboarding"></c-delivery-info-popover>
             <lightning-button
                 label={toggleButtonLabel}
                 icon-name={toggleButtonIcon}

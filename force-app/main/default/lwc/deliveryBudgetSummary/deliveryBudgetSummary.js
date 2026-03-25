@@ -4,10 +4,11 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
 import getBudgetMetrics from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getBudgetMetrics';
 import { refreshApex } from '@salesforce/apex';
 
-export default class DeliveryBudgetSummary extends LightningElement {
+export default class DeliveryBudgetSummary extends NavigationMixin(LightningElement) {
     @api hideConnectionHealth = false;
 
     get shouldShowConnectionHealth() {
@@ -68,6 +69,38 @@ export default class DeliveryBudgetSummary extends LightningElement {
 
     get barStyle() {
         return `width: ${this.syncHealth}%`;
+    }
+
+    /**
+     * Navigates to the Sync Item list view showing all records.
+     */
+    handleSyncedClick() {
+        this[NavigationMixin.Navigate]({
+            attributes: {
+                actionName: 'list',
+                objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c'
+            },
+            state: {
+                filterName: 'Recent'
+            },
+            type: 'standard__objectPage'
+        });
+    }
+
+    /**
+     * Navigates to the Sync Item list view (failed items).
+     */
+    handleFailedClick() {
+        this[NavigationMixin.Navigate]({
+            attributes: {
+                actionName: 'list',
+                objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c'
+            },
+            state: {
+                filterName: 'Recent'
+            },
+            type: 'standard__objectPage'
+        });
     }
 
     handleRefresh() {

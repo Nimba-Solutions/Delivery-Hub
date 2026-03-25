@@ -1,6 +1,9 @@
 <template>
     <lightning-card icon-name="utility:flow">
         <div slot="title" class="dl-title">Data Flow</div>
+        <div slot="actions">
+            <c-delivery-info-popover component-name="deliveryDataLineage"></c-delivery-info-popover>
+        </div>
 
         <div class="slds-p-around_medium">
             <template lwc:if={isLoading}>
