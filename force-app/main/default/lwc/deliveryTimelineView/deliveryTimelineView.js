@@ -5,7 +5,8 @@
  * @description  Horizontal Gantt-style timeline view of active work items.
  *               Grouped by NetworkEntity, color-coded by stage, with zoom
  *               (week/month/quarter) and scroll controls. Today marker shown
- *               as a red dashed vertical line.
+ *               as a prominent labeled vertical line. Unscheduled items (no
+ *               explicit dates) shown in a separate section below the chart.
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from 'lwc';
@@ -73,6 +74,75 @@ export default class DeliveryTimelineView extends NavigationMixin(LightningEleme
         return !this.isLoading && (!this.timelineRows || this.timelineRows.length === 0);
     }
 
+    // -- Card title with item count --
+
+    get scheduledRows() {
+        return (this.timelineRows || []).filter(r => r.hasExplicitDates !== false);
+    }
+
+    get _unscheduledRows() {
+        return (this.timelineRows || []).filter(r => r.hasExplicitDates === false);
+    }
+
+    get totalItemCount() {
+        return this.timelineRows ? this.timelineRows.length : 0;
+    }
+
+    get cardTitle() {
+        const count = this.totalItemCount;
+        if (count === 0) return 'Timeline';
+        return 'Timeline (' + count + ' item' + (count === 1 ? '' : 's') + ')';
+    }
+
+    // -- Legend --
+
+    get legendItems() {
+        const usedStages = new Set();
+        (this.timelineRows || []).forEach(r => {
+            if (r.stage) usedStages.add(r.stage);
+        });
+        const items = [];
+        usedStages.forEach(stage => {
+            const color = this.stageColorMap[stage] || '#6B7280';
+            items.push({
+                stage,
+                swatchStyle: 'background-color: ' + color + ';'
+            });
+        });
+        items.sort((a, b) => a.stage.localeCompare(b.stage));
+        return items;
+    }
+
+    get hasLegendItems() {
+        return this.legendItems.length > 0;
+    }
+
+    // -- Unscheduled items --
+
+    get unscheduledItems() {
+        return this._unscheduledRows.map(row => {
+            const color = this.stageColorMap[row.stage] || '#6B7280';
+            return {
+                workItemId: row.workItemId,
+                name: row.name,
+                description: row.description,
+                stage: row.stage,
+                swatchStyle: 'background-color: ' + color + ';',
+                tooltipText: row.name + ': ' + (row.description || '') + '\nStage: ' + row.stage + '\nNo dates set'
+            };
+        });
+    }
+
+    get hasUnscheduledItems() {
+        return this.unscheduledItems.length > 0;
+    }
+
+    get unscheduledCount() {
+        return this.unscheduledItems.length;
+    }
+
+    // -- Workflow type options --
+
     get workflowTypeOptions() {
         const opts = [{ label: 'All Types', value: '' }];
         this.workflowTypes.forEach((t) => {
@@ -92,13 +162,14 @@ export default class DeliveryTimelineView extends NavigationMixin(LightningEleme
     }
 
     get timelineBounds() {
-        if (!this.timelineRows || this.timelineRows.length === 0) {
+        const scheduled = this.scheduledRows;
+        if (!scheduled || scheduled.length === 0) {
             const now = new Date();
             return { start: now, end: new Date(now.getTime() + 30 * MS_PER_DAY) };
         }
         let earliest = null;
         let latest = null;
-        this.timelineRows.forEach((row) => {
+        scheduled.forEach((row) => {
             const sd = this._parseDate(row.startDate);
             const ed = this._parseDate(row.endDate);
             if (!earliest || sd < earliest) {
@@ -147,7 +218,8 @@ export default class DeliveryTimelineView extends NavigationMixin(LightningEleme
     }
 
     get entityGroups() {
-        if (!this.timelineRows || this.timelineRows.length === 0) {
+        const scheduled = this.scheduledRows;
+        if (!scheduled || scheduled.length === 0) {
             return [];
         }
 
@@ -156,7 +228,7 @@ export default class DeliveryTimelineView extends NavigationMixin(LightningEleme
         const grouped = {};
         const groupOrder = [];
 
-        this.timelineRows.forEach((row) => {
+        scheduled.forEach((row) => {
             const eName = row.entityName || 'Unassigned';
             if (!grouped[eName]) {
                 grouped[eName] = { entityName: eName, entityId: row.entityId, items: [] };

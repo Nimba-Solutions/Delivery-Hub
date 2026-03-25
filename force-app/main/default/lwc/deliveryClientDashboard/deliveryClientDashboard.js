@@ -297,6 +297,46 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         });
     }
 
+    handleCompletedClick() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__listView',
+            attributes: {
+                listViewApiName: 'Recently_Completed',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
+            }
+        });
+    }
+
+    handleInProgressClick() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__listView',
+            attributes: {
+                listViewApiName: 'In_Flight',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
+            }
+        });
+    }
+
+    handleHoursClick() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__listView',
+            attributes: {
+                listViewApiName: 'This_Month',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c'
+            }
+        });
+    }
+
+    handleBlockedClick() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__listView',
+            attributes: {
+                listViewApiName: 'Blocked',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
+            }
+        });
+    }
+
     handleRefresh() {
         this.isLoading = true;
         refreshApex(this._wiredResult).then(() => {
