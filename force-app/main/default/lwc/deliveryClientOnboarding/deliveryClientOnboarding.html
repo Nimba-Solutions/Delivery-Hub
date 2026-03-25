@@ -98,8 +98,16 @@
                 <div class="slds-grid slds-gutters">
                     <div class="slds-col">
                         <lightning-button
-                            label="Send Agreement Email"
+                            label="View Agreement"
                             variant="brand"
+                            icon-name="utility:preview"
+                            onclick={handleViewAgreement}
+                        ></lightning-button>
+                    </div>
+                    <div class="slds-col">
+                        <lightning-button
+                            label="Send Agreement Email"
+                            variant="neutral"
                             icon-name="utility:email"
                             onclick={handleSendAgreement}
                             disabled={isSending}
