@@ -1,4 +1,4 @@
-/* eslint-disable no-underscore-dangle */
+/* eslint-disable no-underscore-dangle, one-var */
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getGuideContext from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGuideController.getGuideContext';
@@ -170,10 +170,9 @@ const SECTION_CONFIG = [
     }
 ];
 
-const SECTION_KEYS = SECTION_CONFIG.map(s => s.key);
-
-/* Build fast look-ups from the config array */
-const _sectionMap = Object.fromEntries(SECTION_CONFIG.map(s => [s.key, s]));
+const SECTION_KEYS = SECTION_CONFIG.map(sec => sec.key),
+    /* Build fast look-ups from the config array */
+    sectionMap = Object.fromEntries(SECTION_CONFIG.map(sec => [sec.key, sec]));
 
 export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     @track _expanded = { welcome: true };
@@ -197,8 +196,11 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     /* ── Persona filter ── */
 
     get selectedPersonaLabel() {
-        const found = PERSONAS.find(p => p.value === this._selectedPersona);
-        return found ? found.label : 'All Roles';
+        const found = PERSONAS.find(opt => opt.value === this._selectedPersona);
+        if (found) {
+            return found.label;
+        }
+        return 'All Roles';
     }
 
     get isFiltered() {
@@ -212,34 +214,49 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     /* ── Section visibility based on persona ── */
 
     _isVisibleForPersona(key) {
-        if (!this._selectedPersona) return true;
-        const cfg = _sectionMap[key];
-        return cfg ? cfg.personas.includes(this._selectedPersona) : true;
+        if (!this._selectedPersona) {
+            return true;
+        }
+        const cfg = sectionMap[key];
+        if (cfg) {
+            return cfg.personas.includes(this._selectedPersona);
+        }
+        return true;
     }
 
     _isRecommended(key) {
-        if (!this._selectedPersona) return false;
-        const cfg = _sectionMap[key];
-        return cfg ? cfg.personas.includes(this._selectedPersona) : false;
+        if (!this._selectedPersona) {
+            return false;
+        }
+        const cfg = sectionMap[key];
+        if (cfg) {
+            return cfg.personas.includes(this._selectedPersona);
+        }
+        return false;
     }
 
     /* ── Deep-link navigation ── */
 
     _hasNavLink(key) {
-        const cfg = _sectionMap[key];
+        const cfg = sectionMap[key];
         return cfg && cfg.navType !== null;
     }
 
     _getNavLabel(key) {
-        const cfg = _sectionMap[key];
-        return cfg ? cfg.navLabel : null;
+        const cfg = sectionMap[key];
+        if (cfg) {
+            return cfg.navLabel;
+        }
+        return null;
     }
 
     handleNavigate(event) {
         event.stopPropagation();
         const key = event.currentTarget.dataset.key;
-        const cfg = _sectionMap[key];
-        if (!cfg || !cfg.navType) return;
+        const cfg = sectionMap[key];
+        if (!cfg || !cfg.navType) {
+            return;
+        }
 
         if (cfg.navType === 'tab') {
             this[NavigationMixin.Navigate]({
@@ -274,9 +291,9 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
 
     handleExpandAll() {
         const all = {};
-        SECTION_KEYS.forEach(k => {
-            if (this._isVisibleForPersona(k)) {
-                all[k] = true;
+        SECTION_KEYS.forEach(sKey => {
+            if (this._isVisibleForPersona(sKey)) {
+                all[sKey] = true;
             }
         });
         this._expanded = all;
@@ -300,8 +317,16 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
 
     /* ── Per-section getters ── */
 
-    _isOpen(key) { return !!this._expanded[key]; }
-    _chevron(key) { return this._expanded[key] ? 'utility:chevrondown' : 'utility:chevronright'; }
+    _isOpen(key) {
+        return !!this._expanded[key];
+    }
+
+    _chevron(key) {
+        if (this._expanded[key]) {
+            return 'utility:chevrondown';
+        }
+        return 'utility:chevronright';
+    }
 
     /* Welcome */
     get welcomeExpanded() { return this._isOpen('welcome'); }
@@ -474,24 +499,31 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     /* ── Ghost Recorder detection ── */
 
     get ghostRecorderApps() {
-        if (!this.guideContext?.apps) return [];
-        return this.guideContext.apps.map(app => ({
-            ...app,
-            statusClass: app.hasGhostRecorder
-                ? 'dg-app-status dg-app-status--installed'
-                : 'dg-app-status dg-app-status--missing',
-            statusLabel: app.hasGhostRecorder ? 'Installed' : 'Not installed',
-            statusIcon: app.hasGhostRecorder ? 'utility:check' : 'utility:close',
-            statusVariant: app.hasGhostRecorder ? '' : 'error'
-        }));
+        if (!this.guideContext?.apps) {
+            return [];
+        }
+        return this.guideContext.apps.map(app => {
+            const installed = app.hasGhostRecorder;
+            let statusClass = 'dg-app-status dg-app-status--missing';
+            let statusLabel = 'Not installed';
+            let statusIcon = 'utility:close';
+            let statusVariant = 'error';
+            if (installed) {
+                statusClass = 'dg-app-status dg-app-status--installed';
+                statusLabel = 'Installed';
+                statusIcon = 'utility:check';
+                statusVariant = '';
+            }
+            return { ...app, statusClass, statusIcon, statusLabel, statusVariant };
+        });
     }
 
     get appsWithoutGhostRecorder() {
-        return this.ghostRecorderApps.filter(a => !a.hasGhostRecorder);
+        return this.ghostRecorderApps.filter(app => !app.hasGhostRecorder);
     }
 
     get appsWithGhostRecorder() {
-        return this.ghostRecorderApps.filter(a => a.hasGhostRecorder);
+        return this.ghostRecorderApps.filter(app => app.hasGhostRecorder);
     }
 
     get hasAppsWithoutGhostRecorder() {
