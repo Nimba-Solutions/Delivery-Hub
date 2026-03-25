@@ -1,3 +1,4 @@
+/* eslint-disable new-cap */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
