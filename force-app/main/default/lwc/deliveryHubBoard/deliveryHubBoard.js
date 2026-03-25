@@ -95,7 +95,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     overallFilter = "all";
     intentionFilter = "all";
     @track uploadedFileIds = [];
-    showMode = "active";
+    showMode = "overall";
     @track draggedItem = {};
     isDragging = false;
     placeholder = null;
