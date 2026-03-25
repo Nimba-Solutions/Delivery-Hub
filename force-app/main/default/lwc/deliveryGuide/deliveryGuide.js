@@ -1,4 +1,4 @@
-/* eslint-disable no-underscore-dangle, one-var */
+/* eslint-disable no-underscore-dangle, one-var, class-methods-use-this */
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getGuideContext from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGuideController.getGuideContext';
@@ -208,7 +208,8 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     }
 
     handlePersonaChange(event) {
-        this._selectedPersona = event.detail.value;
+        const { value } = event.detail;
+        this._selectedPersona = value;
     }
 
     /* ── Section visibility based on persona ── */
@@ -239,7 +240,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
 
     _hasNavLink(key) {
         const cfg = sectionMap[key];
-        return cfg && cfg.navType !== null;
+        return Boolean(cfg) && cfg.navType !== null;
     }
 
     _getNavLabel(key) {
@@ -252,7 +253,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
 
     handleNavigate(event) {
         event.stopPropagation();
-        const key = event.currentTarget.dataset.key;
+        const { key } = event.currentTarget.dataset;
         const cfg = sectionMap[key];
         if (!cfg || !cfg.navType) {
             return;
@@ -278,7 +279,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     /* ── Section toggle ── */
 
     handleSectionToggle(event) {
-        const key = event.currentTarget.dataset.key;
+        const { key } = event.currentTarget.dataset;
         this._expanded = { ...this._expanded, [key]: !this._expanded[key] };
     }
 
@@ -304,9 +305,10 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     }
 
     handleQuickLink(event) {
-        const key = event.currentTarget.dataset.key;
+        const { key } = event.currentTarget.dataset;
         this._expanded = { ...this._expanded, [key]: true };
-        setTimeout(() => { // Scroll after DOM update
+        /* Scroll after DOM update */
+        setTimeout(() => {
             const el = this.template.querySelector(`[data-section="${key}"]`);
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -317,7 +319,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     /* ── Per-section getters ── */
 
     _isOpen(key) {
-        return !!this._expanded[key];
+        return Boolean(this._expanded[key]);
     }
 
     _chevron(key) {
@@ -497,24 +499,28 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
 
     /* ── Ghost Recorder detection ── */
 
+    _buildAppStatus(app) {
+        if (app.hasGhostRecorder) {
+            return {
+                statusClass: 'dg-app-status dg-app-status--installed',
+                statusIcon: 'utility:check',
+                statusLabel: 'Installed',
+                statusVariant: ''
+            };
+        }
+        return {
+            statusClass: 'dg-app-status dg-app-status--missing',
+            statusIcon: 'utility:close',
+            statusLabel: 'Not installed',
+            statusVariant: 'error'
+        };
+    }
+
     get ghostRecorderApps() {
         if (!this.guideContext?.apps) {
             return [];
         }
-        return this.guideContext.apps.map(app => {
-            const installed = app.hasGhostRecorder;
-            let statusClass = 'dg-app-status dg-app-status--missing';
-            let statusLabel = 'Not installed';
-            let statusIcon = 'utility:close';
-            let statusVariant = 'error';
-            if (installed) {
-                statusClass = 'dg-app-status dg-app-status--installed';
-                statusLabel = 'Installed';
-                statusIcon = 'utility:check';
-                statusVariant = '';
-            }
-            return { ...app, statusClass, statusIcon, statusLabel, statusVariant };
-        });
+        return this.guideContext.apps.map(app => ({ ...app, ...this._buildAppStatus(app) }));
     }
 
     get appsWithoutGhostRecorder() {
