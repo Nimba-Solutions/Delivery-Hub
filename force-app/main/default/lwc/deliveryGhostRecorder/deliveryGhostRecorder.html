@@ -1,6 +1,7 @@
 <template>
     <template lwc:if={isCardMode}>
         <lightning-card title={cardTitle} icon-name={cardIcon}>
+            <c-delivery-info-popover slot="actions" component-name="deliveryGhostRecorder"></c-delivery-info-popover>
             <template lwc:if={hasAttentionItems}>
                 <div class="gr-attention-banner">
                     <lightning-icon icon-name="utility:warning" size="x-small" class="gr-attention-icon"></lightning-icon>

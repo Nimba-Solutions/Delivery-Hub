@@ -92,6 +92,8 @@ private class DeliveryTimelineControllerTest {
         System.assertNotEquals(null, withDates.name, 'name should be set.');
         System.assertNotEquals(null, withDates.startDate, 'startDate should be set.');
         System.assertNotEquals(null, withDates.endDate, 'endDate should be set.');
+        System.assertEquals(true, withDates.hasExplicitDates,
+            'hasExplicitDates should be true when dates are explicitly set.');
         System.assertEquals('Test Client Corp', withDates.entityName,
             'entityName should match the network entity.');
     }
@@ -134,6 +136,8 @@ private class DeliveryTimelineControllerTest {
             'startDate should fallback to CreatedDate.');
         System.assertNotEquals(null, noDateRow.endDate,
             'endDate should fallback to start+14.');
+        System.assertEquals(false, noDateRow.hasExplicitDates,
+            'hasExplicitDates should be false when no date fields are set.');
     }
 
     @IsTest
@@ -147,6 +151,26 @@ private class DeliveryTimelineControllerTest {
 
         System.assertEquals(0, rows.size(),
             'Should return empty list when no active work items exist.');
+    }
+
+    @IsTest
+    static void testGetTimelineDataPartialDatesHasExplicit() {
+        Test.startTest();
+        List<DeliveryTimelineController.TimelineRow> rows =
+            DeliveryTimelineController.getTimelineData(null);
+        Test.stopTest();
+
+        DeliveryTimelineController.TimelineRow partialRow;
+        for (DeliveryTimelineController.TimelineRow row : rows) {
+            if (row.description == 'Fix export bug') {
+                partialRow = row;
+                break;
+            }
+        }
+
+        System.assertNotEquals(null, partialRow, 'Should find the export bug item.');
+        System.assertEquals(true, partialRow.hasExplicitDates,
+            'hasExplicitDates should be true when at least one date field is set (ProjectedUATReadyDate).');
     }
 
     @IsTest

@@ -1,0 +1,57 @@
+<template>
+    <template lwc:if={hasInfo}>
+        <button
+            class="info-trigger"
+            title="About this component"
+            onclick={handleToggle}
+            aria-label="Show component info">
+            <lightning-icon
+                icon-name="utility:info"
+                size="xx-small"
+                alternative-text="Info">
+            </lightning-icon>
+        </button>
+
+        <template lwc:if={isOpen}>
+            <div class="info-backdrop"
+                 onclick={handleBackdropClick}
+                 onkeydown={handleKeyDown}
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label={friendlyName}>
+                <div class="info-modal">
+                    <div class="info-modal-header">
+                        <div class="info-modal-title-row">
+                            <lightning-icon icon-name="utility:info_alt" size="small" class="info-modal-icon"></lightning-icon>
+                            <h2 class="info-modal-title">{friendlyName}</h2>
+                        </div>
+                        <button class="info-modal-close" onclick={handleClose} aria-label="Close">
+                            <lightning-icon icon-name="utility:close" size="xx-small" alternative-text="Close"></lightning-icon>
+                        </button>
+                    </div>
+
+                    <div class="info-modal-body">
+                        <div class="info-section">
+                            <h3 class="info-section-label">What it shows</h3>
+                            <p class="info-section-text">{description}</p>
+                        </div>
+
+                        <div class="info-section">
+                            <h3 class="info-section-label">How the data is populated</h3>
+                            <p class="info-section-text">{dataSource}</p>
+                        </div>
+
+                        <div class="info-section">
+                            <h3 class="info-section-label">Key fields</h3>
+                            <p class="info-section-text info-section-text--mono">{keyFields}</p>
+                        </div>
+
+                        <div class="info-section info-section--footer">
+                            <span class="info-refreshed-label">Page opened at {lastRefreshedLabel}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </template>
+</template>

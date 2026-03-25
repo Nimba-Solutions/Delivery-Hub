@@ -3,7 +3,8 @@
         <div slot="title" class="af-title-wrapper">
             <span class="af-card-title">Activity Feed</span>
         </div>
-        <div slot="actions">
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+            <c-delivery-info-popover component-name="deliveryActivityFeed"></c-delivery-info-popover>
             <lightning-button-icon
                 icon-name="utility:refresh"
                 alternative-text="Refresh"
