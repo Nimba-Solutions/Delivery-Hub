@@ -337,6 +337,16 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         });
     }
 
+    handleViewAllAttention() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__listView',
+            attributes: {
+                listViewApiName: '%%%NAMESPACE%%%In_Flight',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
+            }
+        });
+    }
+
     handleRefresh() {
         this.isLoading = true;
         refreshApex(this._wiredResult).then(() => {

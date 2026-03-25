@@ -80,6 +80,16 @@
     white-space: nowrap;
 }
 
+/* ── View All link ── */
+.view-all-link {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #0070d2;
+}
+.view-all-link:hover {
+    text-decoration: underline;
+}
+
 /* ── Phase tiles ── */
 .phase-tile--btn {
     width: 100%;
