@@ -134,10 +134,10 @@ export default class DeliveryInfoPopover extends LightningElement {
     @api componentName = '';
 
     @track isOpen = false;
-    @track _lastRefreshed = null;
+    @track lastRefreshedTime = null;
 
     connectedCallback() {
-        this._lastRefreshed = new Date();
+        this.lastRefreshedTime = new Date();
     }
 
     get info() {
@@ -165,10 +165,10 @@ export default class DeliveryInfoPopover extends LightningElement {
     }
 
     get lastRefreshedLabel() {
-        if (!this._lastRefreshed) {
+        if (!this.lastRefreshedTime) {
             return 'Unknown';
         }
-        return this._lastRefreshed.toLocaleTimeString(undefined, {
+        return this.lastRefreshedTime.toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
         });
@@ -178,7 +178,7 @@ export default class DeliveryInfoPopover extends LightningElement {
         event.stopPropagation();
         this.isOpen = !this.isOpen;
         if (this.isOpen) {
-            this._lastRefreshed = new Date();
+            this.lastRefreshedTime = new Date();
         }
     }
 
