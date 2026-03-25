@@ -3,15 +3,14 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, track, wire, api } from 'lwc';
 import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import userId from '@salesforce/user/Id';
-
+import { LightningElement, api, track, wire } from 'lwc';
+import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
 import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
-import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync";
-import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
+import linkFilesAndSync from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync';
+import userId from '@salesforce/user/Id';
 
 export default class DeliveryGhostRecorder extends NavigationMixin(LightningElement) {
     @api enableShortcut = false; 
