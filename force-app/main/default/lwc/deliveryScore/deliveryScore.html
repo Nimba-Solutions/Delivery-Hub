@@ -1,5 +1,6 @@
 <template>
     <lightning-card title="Delivery Score" icon-name="standard:calibration">
+        <c-delivery-info-popover slot="actions" component-name="deliveryScore"></c-delivery-info-popover>
 
         <!-- Loading spinner -->
         <template lwc:if={isLoading}>

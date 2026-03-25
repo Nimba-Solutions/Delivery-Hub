@@ -17,7 +17,7 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>hideAttentionSection</name>
-                    <value>true</value>
+                    <value>false</value>
                 </componentInstanceProperties>
                 <componentName>deliveryClientDashboard</componentName>
                 <identifier>c_deliveryClientDashboard_main</identifier>

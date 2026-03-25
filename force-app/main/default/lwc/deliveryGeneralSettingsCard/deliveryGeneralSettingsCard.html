@@ -14,6 +14,14 @@
 
         <div class="card-body">
 
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Notifications & Alerts
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:notification" alternative-text="Notifications" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Notifications &amp; Alerts</span>
+            </div>
+
             <div class="form-section">
                 <div class="toggle-group">
                     <div class="toggle-content">
@@ -39,36 +47,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="section-divider"></div>
-
-            <div class="form-section">
-                <div class="toggle-group">
-                    <div class="toggle-content">
-                        <div class="toggle-label-wrapper">
-                            <lightning-icon icon-name="utility:connected_apps" alternative-text="Sync" size="x-small"></lightning-icon>
-                            <label class="toggle-label">Auto-Sync Network Entity</label>
-                        </div>
-                        <div class="toggle-help">
-                            Automatically create a Request when a Work Item is created if only one active Vendor exists.
-                        </div>
-                        <template lwc:if={autoSyncActivatedAt}>
-                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {autoSyncActivatedAt}</p>
-                        </template>
-                    </div>
-                    <div class="toggle-control">
-                        <div class="custom-toggle">
-                            <lightning-input
-                                type="toggle"
-                                checked={autoSyncNetworkEntity}
-                                onchange={handleAutoSyncToggle}>
-                            </lightning-input>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-divider"></div>
 
             <div class="form-section">
                 <div class="toggle-group">
@@ -96,28 +74,26 @@
                 </div>
             </div>
 
-            <div class="section-divider"></div>
-
             <div class="form-section">
                 <div class="toggle-group">
                     <div class="toggle-content">
                         <div class="toggle-label-wrapper">
-                            <lightning-icon icon-name="utility:metrics" alternative-text="Board Metrics" size="x-small"></lightning-icon>
-                            <label class="toggle-label">Show Board Metrics</label>
+                            <lightning-icon icon-name="utility:alert" alternative-text="Bell" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Bell Notifications</label>
                         </div>
                         <div class="toggle-help">
-                            Display the inline metrics bar (active count, cycle time, blocked items) at the top of the Kanban board.
+                            Show Salesforce bell notifications for items needing attention, overdue SLAs, and new comments.
                         </div>
-                        <template lwc:if={boardMetricsActivatedAt}>
-                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {boardMetricsActivatedAt}</p>
+                        <template lwc:if={bellNotificationsActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {bellNotificationsActivatedAt}</p>
                         </template>
                     </div>
                     <div class="toggle-control">
                         <div class="custom-toggle">
                             <lightning-input
                                 type="toggle"
-                                checked={showBoardMetrics}
-                                onchange={handleBoardMetricsToggle}>
+                                checked={bellNotificationsEnabled}
+                                onchange={handleBellNotificationsToggle}>
                             </lightning-input>
                         </div>
                     </div>
@@ -126,6 +102,9 @@
 
             <div class="section-divider"></div>
 
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Slack Integration
+                 ═══════════════════════════════════════════════════════════ -->
             <div class="form-section">
                 <div class="slack-group">
                     <div class="toggle-label-wrapper" style="margin-bottom: 0.5rem;">
@@ -164,7 +143,361 @@
 
             <div class="section-divider"></div>
 
-            <!-- Advanced Configuration -->
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Automation & Sync
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:flow" alternative-text="Automation" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Automation &amp; Sync</span>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:record_create" alternative-text="Auto Create" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Auto-Create Work Requests</label>
+                        </div>
+                        <div class="toggle-help">
+                            Automatically create a Request when a Work Item is created, if only one active Vendor exists.
+                        </div>
+                        <template lwc:if={autoCreateWorkRequestActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {autoCreateWorkRequestActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={autoCreateWorkRequest}
+                                onchange={handleAutoCreateWorkRequestToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:connected_apps" alternative-text="Sync" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Auto-Sync Network Entity</label>
+                        </div>
+                        <div class="toggle-help">
+                            Automatically send the Request to the Vendor via API after creation.
+                        </div>
+                        <template lwc:if={autoSyncActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {autoSyncActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={autoSyncNetworkEntity}
+                                onchange={handleAutoSyncToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:approval" alternative-text="Approval" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Require WorkLog Approval</label>
+                        </div>
+                        <div class="toggle-help">
+                            WorkLogs are saved as Draft until approved before syncing to client orgs. Leave off to sync immediately.
+                        </div>
+                        <template lwc:if={requireWorkLogApprovalActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {requireWorkLogApprovalActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={requireWorkLogApproval}
+                                onchange={handleRequireWorkLogApprovalToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Board & Display
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:kanban" alternative-text="Board" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Board &amp; Display</span>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:metrics" alternative-text="Board Metrics" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Show Board Metrics</label>
+                        </div>
+                        <div class="toggle-help">
+                            Display the inline metrics bar (active count, cycle time, blocked items) at the top of the Kanban board.
+                        </div>
+                        <template lwc:if={boardMetricsActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {boardMetricsActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={showBoardMetrics}
+                                onchange={handleBoardMetricsToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Activity Tracking
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:activity" alternative-text="Tracking" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Activity Tracking</span>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:record" alternative-text="Activity Logging" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Enable Activity Logging</label>
+                        </div>
+                        <div class="toggle-help">
+                            Ghost Recorder logs page navigation and feature usage to ActivityLog for experience optimization. Recommended for orgs with fewer than 500 active users.
+                        </div>
+                        <template lwc:if={activityLoggingActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {activityLoggingActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={activityLoggingEnabled}
+                                onchange={handleActivityLoggingToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:edit" alternative-text="Field Tracking" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Enable Field Change Tracking</label>
+                        </div>
+                        <div class="toggle-help">
+                            Automatically log field value changes on configured objects (via Tracked Fields custom metadata) to ActivityLog.
+                        </div>
+                        <template lwc:if={fieldTrackingActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {fieldTrackingActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={fieldTrackingEnabled}
+                                onchange={handleFieldTrackingToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Weekly Digest
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:date_time" alternative-text="Digest" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Weekly Digest</span>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:email" alternative-text="Digest" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Enable Weekly Digest</label>
+                        </div>
+                        <div class="toggle-help">
+                            Send a weekly AI-generated board summary email to configured recipients.
+                        </div>
+                        <template lwc:if={weeklyDigestActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {weeklyDigestActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={weeklyDigestEnabled}
+                                onchange={handleWeeklyDigestToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template lwc:if={isWeeklyDigestConfigVisible}>
+                <div class="form-section nested-config">
+                    <div class="slds-grid slds-wrap slds-gutters_small">
+                        <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                            <lightning-combobox
+                                label="Digest Day"
+                                value={weeklyDigestDay}
+                                options={weeklyDigestDayOptions}
+                                onchange={handleWeeklyDigestDayChange}>
+                            </lightning-combobox>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                            <lightning-input
+                                type="text"
+                                label="Recipients (comma-separated emails)"
+                                placeholder="Leave blank for all DH users"
+                                value={weeklyDigestRecipients}
+                                onchange={handleWeeklyDigestRecipientsChange}
+                                onblur={handleWeeklyDigestRecipientsSave}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div class="section-divider"></div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Public Status Page
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:world" alternative-text="Status Page" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Public Status Page</span>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:world" alternative-text="Status Page" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Enable Status Page</label>
+                        </div>
+                        <div class="toggle-help">
+                            Enable the public-facing status page for sharing project health with external stakeholders.
+                        </div>
+                        <template lwc:if={statusPageActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {statusPageActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={statusPageEnabled}
+                                onchange={handleStatusPageToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template lwc:if={isStatusPageConfigVisible}>
+                <div class="form-section nested-config">
+                    <lightning-input
+                        type="text"
+                        label="Status Page Token"
+                        placeholder="Auto-generated or custom URL token"
+                        value={statusPageToken}
+                        onchange={handleStatusPageTokenChange}
+                        onblur={handleStatusPageTokenSave}>
+                    </lightning-input>
+                </div>
+            </template>
+
+            <div class="section-divider"></div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Document & Billing
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:file" alternative-text="Documents" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Documents &amp; Billing</span>
+            </div>
+
+            <div class="form-section">
+                <div class="slds-grid slds-wrap slds-gutters_small" style="padding: 0.75rem;">
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="email"
+                            label="Document CC Email"
+                            placeholder="cc@example.com"
+                            value={documentCcEmail}
+                            onchange={handleDocumentCcEmailChange}
+                            onblur={handleDocumentCcEmailSave}>
+                        </lightning-input>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            Receive a copy of every document sent (invoices, contracts, etc.)
+                        </p>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="text"
+                            label="Default Billing Entity ID"
+                            placeholder="18-character NetworkEntity ID"
+                            value={defaultBillingEntityId}
+                            max-length="18"
+                            onchange={handleDefaultBillingEntityChange}
+                            onblur={handleDefaultBillingEntitySave}>
+                        </lightning-input>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            Override auto-parenting of inbound WorkItems for invoice billing
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" style="padding: 0 0.75rem;">
+                <lightning-input
+                    type="text"
+                    label="Stages To Auto-Share With Dev Team"
+                    placeholder="e.g. In Development, Code Review, Testing"
+                    value={stagesToAutoShare}
+                    onchange={handleStagesToAutoShareChange}
+                    onblur={handleStagesToAutoShareSave}>
+                </lightning-input>
+                <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                    Comma-separated stage names. Work items entering these stages are automatically shared with the development team.
+                </p>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 SECTION: Advanced Configuration
+                 ═══════════════════════════════════════════════════════════ -->
             <div class="form-section">
                 <div class="toggle-label-wrapper" style="margin-bottom: 0.75rem;">
                     <lightning-icon icon-name="utility:advanced_function" alternative-text="Advanced" size="x-small"></lightning-icon>
@@ -214,6 +547,17 @@
                             max="168"
                             step="1"
                             onchange={handleEscalationCooldownChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Field Change Retention Days (0 = forever)"
+                            value={fieldChangeRetentionDays}
+                            min="0"
+                            max="365"
+                            step="1"
+                            onchange={handleFieldChangeRetentionChange}>
                         </lightning-input>
                     </div>
                 </div>

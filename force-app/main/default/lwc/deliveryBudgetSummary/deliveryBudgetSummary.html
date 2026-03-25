@@ -1,13 +1,15 @@
 <template>
     <lightning-card title="System Pulse" icon-name="standard:service_report">
         
-        <lightning-button-icon 
-            icon-name="utility:refresh" 
-            slot="actions" 
-            variant="border-filled" 
-            onclick={handleRefresh} 
-            alternative-text="Refresh Metrics">
-        </lightning-button-icon>
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+            <c-delivery-info-popover component-name="deliveryBudgetSummary"></c-delivery-info-popover>
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="border-filled"
+                onclick={handleRefresh}
+                alternative-text="Refresh Metrics">
+            </lightning-button-icon>
+        </div>
 
         <div class="slds-p-horizontal_medium slds-p-bottom_medium">
             

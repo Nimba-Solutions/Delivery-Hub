@@ -226,6 +226,24 @@
 /* ── This Week metrics ── */
 .tw-metric {
     padding: 0.5rem 0.25rem;
+    width: 100%;
+    border: none;
+    background: none;
+    font-family: inherit;
+}
+.tw-metric--clickable {
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.tw-metric--clickable:hover {
+    background-color: #f1f5f9;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+.tw-metric--clickable:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .tw-metric-value {
     font-size: 1.5rem;

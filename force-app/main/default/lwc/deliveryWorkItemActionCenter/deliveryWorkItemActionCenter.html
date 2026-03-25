@@ -2,6 +2,7 @@
     <lightning-card icon-name="standard:flow">
         <div slot="title" class="ac-title-wrapper">
             <span class="ac-card-title">Action Center</span>
+            <c-delivery-info-popover component-name="deliveryWorkItemActionCenter"></c-delivery-info-popover>
             <template lwc:if={currentPhaseLabel}>
                 <span class="ac-phase-chip">{currentPhaseLabel}</span>
             </template>
