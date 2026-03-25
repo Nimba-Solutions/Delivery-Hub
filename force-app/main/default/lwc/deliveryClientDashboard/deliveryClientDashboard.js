@@ -9,6 +9,7 @@ import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import getClientDashboard from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getClientDashboard';
+import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 import USER_ID from '@salesforce/user/Id';
 import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
@@ -51,12 +52,24 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @track recentCollapsed = false;
     @track thisWeekCollapsed = false;
     @track workflowConfig = null;
+    @track reportIds = {};
 
     _wiredResult;
     _pendingData = null; // holds dashboard data until config is ready
 
     @wire(getRecord, { recordId: USER_ID, fields: [FIRST_NAME_FIELD] })
     wiredUser;
+
+    connectedCallback() {
+        getReportIds({ developerNames: [
+            'Recently_Completed', 'In_Flight_Work_Items', 'Blocked_Work_Items',
+            'Monthly_Hours', 'Attention_Items',
+            'WorkItems_Planning', 'WorkItems_Approval', 'WorkItems_Development',
+            'WorkItems_Testing', 'WorkItems_UAT', 'WorkItems_Deployment'
+        ]}).then(data => {
+            this.reportIds = data;
+        }).catch(err => { console.error('getReportIds failed', err); });
+    }
 
     @wire(getWorkflowConfig, { workflowTypeName: '$activeWorkflowType' })
     wiredConfig({ data, error }) {
@@ -290,61 +303,72 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     handlePhaseClick(event) {
         const phase = event.currentTarget.dataset.phase;
         const listView = PHASE_LIST_VIEWS[phase];
-        if (!listView) return;
-        this[NavigationMixin.Navigate]({ // eslint-disable-line sort-keys
-            type: 'standard__listView',
-            attributes: { listViewApiName: listView, objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c' }
-        });
+        if (!listView) {
+            return;
+        }
+        this._navigateToReport(listView, listView);
+    }
+
+    _getDateRange() {
+        const now = new Date();
+        let start, end;
+        if (this.selectedTimeRange === 'lastWeek') {
+            const day = now.getDay();
+            start = new Date(now); start.setDate(now.getDate() - day - 7);
+            end = new Date(start); end.setDate(start.getDate() + 6);
+        } else if (this.selectedTimeRange === 'thisMonth') {
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else {
+            // thisWeek (default) — Sunday to Saturday
+            const day = now.getDay();
+            start = new Date(now); start.setDate(now.getDate() - day);
+            end = new Date(start); end.setDate(start.getDate() + 6);
+        }
+        const fmt = d => d.toISOString().split('T')[0];
+        return { start: fmt(start), end: fmt(end) };
+    }
+
+    _navigateToReport(reportDevName, fallbackListView, fallbackObject) {
+        const reportId = this.reportIds[reportDevName];
+        if (reportId) {
+            const { start, end } = this._getDateRange();
+            this[NavigationMixin.Navigate]({
+                type: 'standard__webPage',
+                attributes: {
+                    url: `/lightning/r/Report/${reportId}/view?fv0=${start}&fv1=${end}`
+                }
+            });
+        } else {
+            this[NavigationMixin.Navigate]({
+                type: 'standard__objectPage',
+                attributes: {
+                    objectApiName: fallbackObject || '%%%NAMESPACED_ORG%%%WorkItem__c',
+                    actionName: 'list'
+                },
+                state: { filterName: fallbackListView }
+            });
+        }
     }
 
     handleCompletedClick() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__listView',
-            attributes: {
-                listViewApiName: 'Recently_Completed',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
-            }
-        });
+        this._navigateToReport('Recently_Completed', 'Recently_Completed');
     }
 
     handleInProgressClick() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__listView',
-            attributes: {
-                listViewApiName: 'In_Flight',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
-            }
-        });
+        this._navigateToReport('In_Flight_Work_Items', 'In_Flight');
     }
 
     handleHoursClick() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__listView',
-            attributes: {
-                listViewApiName: 'This_Month',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c'
-            }
-        });
+        this._navigateToReport('Monthly_Hours', 'This_Month', '%%%NAMESPACED_ORG%%%WorkLog__c');
     }
 
     handleBlockedClick() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__listView',
-            attributes: {
-                listViewApiName: 'Blocked',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
-            }
-        });
+        this._navigateToReport('Blocked_Work_Items', 'Blocked');
     }
 
     handleViewAllAttention() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__listView',
-            attributes: {
-                listViewApiName: 'In_Flight',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
-            }
-        });
+        this._navigateToReport('Attention_Items', 'In_Flight');
     }
 
     handleRefresh() {

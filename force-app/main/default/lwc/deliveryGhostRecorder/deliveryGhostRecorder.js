@@ -8,6 +8,7 @@ import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { LightningElement, api, track, wire } from 'lwc';
 import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
+import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
 import linkFilesAndSync from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync';
@@ -48,12 +49,27 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     handleAttentionClick() {
-        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
-            attributes: {
-                listViewApiName: 'In_Flight',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
-            },
-            type: 'standard__listView'
+        // Try report first, fall back to list view
+        getReportIds({ developerNames: ['Attention_Items'] })
+            .then(ids => {
+                const reportId = ids['Attention_Items'];
+                if (reportId) {
+                    this[NavigationMixin.Navigate]({
+                        type: 'standard__recordPage',
+                        attributes: { recordId: reportId, objectApiName: 'Report', actionName: 'view' }
+                    });
+                } else {
+                    this._navigateToAttentionListView();
+                }
+            })
+            .catch(() => this._navigateToAttentionListView());
+    }
+
+    _navigateToAttentionListView() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: { actionName: 'list', objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c' },
+            state: { filterName: 'In_Flight' }
         });
     }
 
