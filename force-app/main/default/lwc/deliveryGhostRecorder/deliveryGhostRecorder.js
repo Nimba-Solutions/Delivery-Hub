@@ -52,24 +52,24 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
         // Try report first, fall back to list view
         getReportIds({ developerNames: ['Attention_Items'] })
             .then(ids => {
-                const reportId = ids['Attention_Items'];
+                const reportId = ids.Attention_Items; // eslint-disable-line dot-notation
                 if (reportId) {
-                    this[NavigationMixin.Navigate]({
-                        type: 'standard__recordPage',
-                        attributes: { recordId: reportId, objectApiName: 'Report', actionName: 'view' }
+                    this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
+                        attributes: { actionName: 'view', objectApiName: 'Report', recordId: reportId },
+                        type: 'standard__recordPage'
                     });
                 } else {
-                    this._navigateToAttentionListView();
+                    this.navigateToAttentionListView();
                 }
             })
-            .catch(() => this._navigateToAttentionListView());
+            .catch(() => this.navigateToAttentionListView());
     }
 
-    _navigateToAttentionListView() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__objectPage',
+    navigateToAttentionListView() {
+        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: { actionName: 'list', objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c' },
-            state: { filterName: 'In_Flight' }
+            state: { filterName: 'In_Flight' },
+            type: 'standard__objectPage'
         });
     }
 
