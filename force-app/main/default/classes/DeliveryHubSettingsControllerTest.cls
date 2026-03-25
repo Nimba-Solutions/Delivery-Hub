@@ -75,6 +75,93 @@ private class DeliveryHubSettingsControllerTest {
     }
 
     @isTest
+    static void testGetSettingsExtendedFields() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        Datetime now = Datetime.now();
+        settings.EnableActivityLoggingDateTime__c = now;
+        settings.EnableFieldTrackingDateTime__c = now;
+        settings.EnableBellNotificationsDateTime__c = now;
+        settings.EnableWeeklyDigestDateTime__c = now;
+        settings.EnableStatusPageDateTime__c = now;
+        settings.RequireWorkLogApprovalDate__c = now;
+        settings.FieldChangeRetentionDaysNumber__c = 60;
+        settings.WeeklyDigestDayTxt__c = 'Wednesday';
+        settings.WeeklyDigestRecipientsTxt__c = 'test@example.com';
+        settings.DocumentCcEmailTxt__c = 'cc@example.com';
+        settings.StatusPageTokenTxt__c = 'abc-123';
+        settings.DefaultBillingEntityIdTxt__c = 'a3VRu000002ZPtdMA';
+        settings.StagesToAutoShareWithDevTeamTxt__c = 'In Development,Code Review';
+        update settings;
+
+        Test.startTest();
+        DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
+        Test.stopTest();
+
+        System.assertEquals(true, dto.activityLoggingEnabled, 'Activity logging should be enabled');
+        System.assertEquals(true, dto.fieldTrackingEnabled, 'Field tracking should be enabled');
+        System.assertEquals(true, dto.bellNotificationsEnabled, 'Bell notifications should be enabled');
+        System.assertEquals(true, dto.weeklyDigestEnabled, 'Weekly digest should be enabled');
+        System.assertEquals(true, dto.statusPageEnabled, 'Status page should be enabled');
+        System.assertEquals(true, dto.requireWorkLogApproval, 'WorkLog approval should be required');
+        System.assertEquals(60, dto.fieldChangeRetentionDays, 'Field change retention should be 60');
+        System.assertEquals('Wednesday', dto.weeklyDigestDay, 'Digest day should be Wednesday');
+        System.assertEquals('test@example.com', dto.weeklyDigestRecipients, 'Digest recipients should be set');
+        System.assertEquals('cc@example.com', dto.documentCcEmail, 'Document CC email should be set');
+        System.assertEquals('abc-123', dto.statusPageToken, 'Status page token should be set');
+        System.assertEquals('a3VRu000002ZPtdMA', dto.defaultBillingEntityId, 'Default billing entity should be set');
+        System.assertEquals('In Development,Code Review', dto.stagesToAutoShare, 'Stages to auto share should be set');
+        System.assertNotEquals(null, dto.fieldTrackingActivatedAt, 'Field tracking activation date should be set');
+        System.assertNotEquals(null, dto.bellNotificationsActivatedAt, 'Bell notifications activation date should be set');
+        System.assertNotEquals(null, dto.weeklyDigestActivatedAt, 'Weekly digest activation date should be set');
+        System.assertNotEquals(null, dto.statusPageActivatedAt, 'Status page activation date should be set');
+        System.assertNotEquals(null, dto.requireWorkLogApprovalActivatedAt, 'WorkLog approval activation date should be set');
+    }
+
+    @isTest
+    static void testSaveExtendedSettings() {
+        String settingsJson = JSON.serialize(new Map<String, Object>{
+            'activityLoggingEnabled' => true,
+            'fieldTrackingEnabled' => true,
+            'bellNotificationsEnabled' => false,
+            'weeklyDigestEnabled' => true,
+            'statusPageEnabled' => false,
+            'autoCreateWorkRequest' => true,
+            'requireWorkLogApproval' => true,
+            'fieldChangeRetentionDays' => 45,
+            'weeklyDigestDay' => 'Friday',
+            'weeklyDigestRecipients' => 'a@b.com,c@d.com',
+            'documentCcEmail' => 'doc@test.com',
+            'statusPageToken' => 'xyz-789',
+            'defaultBillingEntityId' => 'a3VRu000002ZPtdMA',
+            'stagesToAutoShare' => 'Testing,Deployed'
+        });
+
+        Test.startTest();
+        DeliveryHubSettingsController.saveExtendedSettings(settingsJson);
+        Test.stopTest();
+
+        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+        System.assertNotEquals(null, s.EnableActivityLoggingDateTime__c, 'Activity logging should be enabled');
+        System.assertNotEquals(null, s.EnableFieldTrackingDateTime__c, 'Field tracking should be enabled');
+        System.assertEquals(null, s.EnableBellNotificationsDateTime__c, 'Bell notifications should be disabled');
+        System.assertNotEquals(null, s.EnableWeeklyDigestDateTime__c, 'Weekly digest should be enabled');
+        System.assertEquals(null, s.EnableStatusPageDateTime__c, 'Status page should be disabled');
+        System.assertNotEquals(null, s.RequireWorkLogApprovalDate__c, 'WorkLog approval should be required');
+        System.assertEquals(true, s.EnableActivityLoggingBool__c, 'Activity logging bool should be true');
+        System.assertEquals(true, s.EnableFieldTrackingBool__c, 'Field tracking bool should be true');
+        System.assertEquals(false, s.EnableBellNotificationsBool__c, 'Bell notifications bool should be false');
+        System.assertEquals(true, s.WeeklyDigestEnabledBool__c, 'Weekly digest bool should be true');
+        System.assertEquals(false, s.StatusPageEnabledBool__c, 'Status page bool should be false');
+        System.assertEquals(45, s.FieldChangeRetentionDaysNumber__c, 'Field change retention should be 45');
+        System.assertEquals('Friday', s.WeeklyDigestDayTxt__c, 'Digest day should be Friday');
+        System.assertEquals('a@b.com,c@d.com', s.WeeklyDigestRecipientsTxt__c, 'Digest recipients should be set');
+        System.assertEquals('doc@test.com', s.DocumentCcEmailTxt__c, 'Document CC email should be set');
+        System.assertEquals('xyz-789', s.StatusPageTokenTxt__c, 'Status page token should be set');
+        System.assertEquals('a3VRu000002ZPtdMA', s.DefaultBillingEntityIdTxt__c, 'Default billing entity should be set');
+        System.assertEquals('Testing,Deployed', s.StagesToAutoShareWithDevTeamTxt__c, 'Stages to auto share should be set');
+    }
+
+    @isTest
     static void testSaveAiSettings() {
         Test.startTest();
         DeliveryHubSettingsController.saveAiSettings(false, true, false);
