@@ -10,7 +10,7 @@
     background: linear-gradient(135deg, #1a2d4a 0%, #2d4a7a 100%);
     border-radius: 12px;
     padding: 2rem 2.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     color: #ffffff;
 }
 
@@ -31,6 +31,68 @@
 .dg-hero-actions {
     display: flex;
     gap: 0.5rem;
+}
+
+/* ── Persona Filter Bar ── */
+.dg-persona-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.dg-persona-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dg-persona-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+}
+
+.dg-persona-combo {
+    min-width: 180px;
+}
+
+.dg-persona-active-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    background: #eef2ff;
+    color: #4f46e5;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+/* ── Recommended Badge ── */
+.dg-recommended-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-radius: 10px;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+/* ── Section Header Right (nav button + chevron) ── */
+.dg-section-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dg-nav-btn {
+    flex-shrink: 0;
 }
 
 /* ── Quick Links ── */
@@ -442,5 +504,15 @@
         flex: none;
         border-right: none;
         border-bottom: 1px solid #e2e8f0;
+    }
+
+    .dg-persona-bar {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+
+    .dg-section-header-right {
+        gap: 0.25rem;
     }
 }
