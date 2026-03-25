@@ -44,6 +44,11 @@
     color: #475569;
     letter-spacing: 0.02em;
 }
+.gs-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
 .gs-chevron {
     --lwc-colorTextIconDefault: #94a3b8;
 }
