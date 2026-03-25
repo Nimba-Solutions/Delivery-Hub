@@ -60,6 +60,36 @@ public with sharing class DeliveryHubSettingsController {
         /** @description Formatted date when activity logging was activated */
         @AuraEnabled public String activityLoggingActivatedAt { get; set; }
 
+        // ── Additional feature toggles ──────────────────────────────────
+        /** @description Enable Ghost Recorder activity logging */
+        @AuraEnabled public Boolean activityLoggingEnabled { get; set; }
+        /** @description Enable automatic field change tracking */
+        @AuraEnabled public Boolean fieldTrackingEnabled { get; set; }
+        /** @description Enable bell notifications for attention items */
+        @AuraEnabled public Boolean bellNotificationsEnabled { get; set; }
+        /** @description Enable weekly digest emails */
+        @AuraEnabled public Boolean weeklyDigestEnabled { get; set; }
+        /** @description Enable public status page */
+        @AuraEnabled public Boolean statusPageEnabled { get; set; }
+        /** @description Auto-create Work Requests when Work Items are created */
+        @AuraEnabled public Boolean autoCreateWorkRequest { get; set; }
+        /** @description Require WorkLog approval before syncing */
+        @AuraEnabled public Boolean requireWorkLogApproval { get; set; }
+
+        // ── Activation-date strings (continued) ────────────────────────────
+        /** @description Formatted date when field tracking was activated */
+        @AuraEnabled public String fieldTrackingActivatedAt { get; set; }
+        /** @description Formatted date when bell notifications were activated */
+        @AuraEnabled public String bellNotificationsActivatedAt { get; set; }
+        /** @description Formatted date when weekly digest was activated */
+        @AuraEnabled public String weeklyDigestActivatedAt { get; set; }
+        /** @description Formatted date when status page was activated */
+        @AuraEnabled public String statusPageActivatedAt { get; set; }
+        /** @description Formatted date when auto-create work request was activated */
+        @AuraEnabled public String autoCreateWorkRequestActivatedAt { get; set; }
+        /** @description Formatted date when WorkLog approval was enabled */
+        @AuraEnabled public String requireWorkLogApprovalActivatedAt { get; set; }
+
         // ── Configurable number settings ──────────────────────────────────
         /** @description Hour (0-23) at which the reconciliation job runs */
         @AuraEnabled public Integer reconciliationHour { get; set; }
@@ -69,6 +99,22 @@ public with sharing class DeliveryHubSettingsController {
         @AuraEnabled public Integer activityLogRetentionDays { get; set; }
         /** @description Hours between repeated escalation notifications */
         @AuraEnabled public Integer escalationCooldownHours { get; set; }
+        /** @description Days to retain field change logs before purging */
+        @AuraEnabled public Integer fieldChangeRetentionDays { get; set; }
+
+        // ── Text configuration settings ─────────────────────────────────
+        /** @description Day of week for weekly digest (e.g., Monday) */
+        @AuraEnabled public String weeklyDigestDay { get; set; }
+        /** @description Comma-separated email addresses for digest recipients */
+        @AuraEnabled public String weeklyDigestRecipients { get; set; }
+        /** @description Email address to CC on every document email */
+        @AuraEnabled public String documentCcEmail { get; set; }
+        /** @description Token for the public status page URL */
+        @AuraEnabled public String statusPageToken { get; set; }
+        /** @description Default billing entity ID override */
+        @AuraEnabled public String defaultBillingEntityId { get; set; }
+        /** @description Comma-separated stages for auto-sharing with dev team */
+        @AuraEnabled public String stagesToAutoShare { get; set; }
     }
 
     /**
@@ -101,12 +147,27 @@ public with sharing class DeliveryHubSettingsController {
             dto.emailNotificationsEnabled = settings.EnableEmailNotificationsDateTime__c != null;
             dto.showBoardMetrics = settings.EnableBoardMetricsDateTime__c != null;
 
+            // Additional feature toggles
+            dto.activityLoggingEnabled = settings.EnableActivityLoggingDateTime__c != null;
+            dto.fieldTrackingEnabled = settings.EnableFieldTrackingDateTime__c != null;
+            dto.bellNotificationsEnabled = settings.EnableBellNotificationsDateTime__c != null;
+            dto.weeklyDigestEnabled = settings.EnableWeeklyDigestDateTime__c != null;
+            dto.statusPageEnabled = settings.EnableStatusPageDateTime__c != null;
+            dto.autoCreateWorkRequest = settings.EnableAutoCreateWorkRequestDateTime__c != null;
+            dto.requireWorkLogApproval = settings.RequireWorkLogApprovalDate__c != null;
+
             // Activation-date strings
             dto.notificationsActivatedAt = formatActivationDate(settings.EnableNotificationsDateTime__c);
             dto.autoSyncActivatedAt = formatActivationDate(settings.EnableAutoSyncNetworkEntityDateTime__c);
             dto.emailNotificationsActivatedAt = formatActivationDate(settings.EnableEmailNotificationsDateTime__c);
             dto.boardMetricsActivatedAt = formatActivationDate(settings.EnableBoardMetricsDateTime__c);
             dto.activityLoggingActivatedAt = formatActivationDate(settings.EnableActivityLoggingDateTime__c);
+            dto.fieldTrackingActivatedAt = formatActivationDate(settings.EnableFieldTrackingDateTime__c);
+            dto.bellNotificationsActivatedAt = formatActivationDate(settings.EnableBellNotificationsDateTime__c);
+            dto.weeklyDigestActivatedAt = formatActivationDate(settings.EnableWeeklyDigestDateTime__c);
+            dto.statusPageActivatedAt = formatActivationDate(settings.EnableStatusPageDateTime__c);
+            dto.autoCreateWorkRequestActivatedAt = formatActivationDate(settings.EnableAutoCreateWorkRequestDateTime__c);
+            dto.requireWorkLogApprovalActivatedAt = formatActivationDate(settings.RequireWorkLogApprovalDate__c);
 
             // Configurable number settings (with defaults)
             dto.reconciliationHour = settings.ReconciliationHourNumber__c != null
@@ -117,6 +178,16 @@ public with sharing class DeliveryHubSettingsController {
                 ? Integer.valueOf(settings.ActivityLogRetentionDaysNumber__c) : 90;
             dto.escalationCooldownHours = settings.EscalationCooldownHoursNumber__c != null
                 ? Integer.valueOf(settings.EscalationCooldownHoursNumber__c) : 24;
+            dto.fieldChangeRetentionDays = settings.FieldChangeRetentionDaysNumber__c != null
+                ? Integer.valueOf(settings.FieldChangeRetentionDaysNumber__c) : 0;
+
+            // Text configuration settings
+            dto.weeklyDigestDay = settings.WeeklyDigestDayTxt__c != null ? settings.WeeklyDigestDayTxt__c : 'Monday';
+            dto.weeklyDigestRecipients = settings.WeeklyDigestRecipientsTxt__c;
+            dto.documentCcEmail = settings.DocumentCcEmailTxt__c;
+            dto.statusPageToken = settings.StatusPageTokenTxt__c;
+            dto.defaultBillingEntityId = settings.DefaultBillingEntityIdTxt__c;
+            dto.stagesToAutoShare = settings.StagesToAutoShareWithDevTeamTxt__c;
         } else {
             // Fresh Install Defaults — match what DeliveryHubInstallHandler sets
             dto.enableNotifications = true;
@@ -127,10 +198,19 @@ public with sharing class DeliveryHubSettingsController {
             dto.aiSuggestionsEnabled = true;
             dto.autoGenerateDescriptions = true;
             dto.aiEstimationEnabled = true;
+            dto.activityLoggingEnabled = false;
+            dto.fieldTrackingEnabled = false;
+            dto.bellNotificationsEnabled = false;
+            dto.weeklyDigestEnabled = false;
+            dto.statusPageEnabled = false;
+            dto.autoCreateWorkRequest = true;
+            dto.requireWorkLogApproval = false;
             dto.reconciliationHour = 6;
             dto.syncRetryLimit = 3;
             dto.activityLogRetentionDays = 90;
             dto.escalationCooldownHours = 24;
+            dto.fieldChangeRetentionDays = 0;
+            dto.weeklyDigestDay = 'Monday';
         }
         return dto;
     }
@@ -206,6 +286,55 @@ public with sharing class DeliveryHubSettingsController {
         }
     }
     
+    /**
+     * @description Saves extended settings (feature toggles, text configs, numbers) from JSON payload.
+     * Used by the General Settings card for newly exposed fields.
+     * @param settingsJson JSON string matching SettingsDTO shape
+     */
+    @AuraEnabled
+    public static void saveExtendedSettings(String settingsJson) {
+        try {
+            SettingsDTO dto = (SettingsDTO) JSON.deserialize(settingsJson, SettingsDTO.class);
+            DeliveryHubSettings__c settings = getOrCreateSettings();
+
+            // Feature toggles (DateTime-based)
+            settings.EnableActivityLoggingDateTime__c = dto.activityLoggingEnabled ? (settings.EnableActivityLoggingDateTime__c != null ? settings.EnableActivityLoggingDateTime__c : Datetime.now()) : null;
+            settings.EnableFieldTrackingDateTime__c = dto.fieldTrackingEnabled ? (settings.EnableFieldTrackingDateTime__c != null ? settings.EnableFieldTrackingDateTime__c : Datetime.now()) : null;
+            settings.EnableBellNotificationsDateTime__c = dto.bellNotificationsEnabled ? (settings.EnableBellNotificationsDateTime__c != null ? settings.EnableBellNotificationsDateTime__c : Datetime.now()) : null;
+            settings.EnableWeeklyDigestDateTime__c = dto.weeklyDigestEnabled ? (settings.EnableWeeklyDigestDateTime__c != null ? settings.EnableWeeklyDigestDateTime__c : Datetime.now()) : null;
+            settings.EnableStatusPageDateTime__c = dto.statusPageEnabled ? (settings.EnableStatusPageDateTime__c != null ? settings.EnableStatusPageDateTime__c : Datetime.now()) : null;
+            settings.EnableAutoCreateWorkRequestDateTime__c = dto.autoCreateWorkRequest ? (settings.EnableAutoCreateWorkRequestDateTime__c != null ? settings.EnableAutoCreateWorkRequestDateTime__c : Datetime.now()) : null;
+            settings.RequireWorkLogApprovalDate__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDate__c != null ? settings.RequireWorkLogApprovalDate__c : Datetime.now()) : null;
+
+            // Keep legacy booleans in sync
+            settings.EnableActivityLoggingBool__c = dto.activityLoggingEnabled == true;
+            settings.EnableFieldTrackingBool__c = dto.fieldTrackingEnabled == true;
+            settings.EnableBellNotificationsBool__c = dto.bellNotificationsEnabled == true;
+            settings.WeeklyDigestEnabledBool__c = dto.weeklyDigestEnabled == true;
+            settings.StatusPageEnabledBool__c = dto.statusPageEnabled == true;
+            settings.AutoCreateWorkRequestBool__c = dto.autoCreateWorkRequest == true;
+
+            // Number settings
+            settings.FieldChangeRetentionDaysNumber__c = dto.fieldChangeRetentionDays != null ? dto.fieldChangeRetentionDays : 0;
+
+            // Text settings
+            settings.WeeklyDigestDayTxt__c = dto.weeklyDigestDay;
+            settings.WeeklyDigestRecipientsTxt__c = dto.weeklyDigestRecipients;
+            settings.DocumentCcEmailTxt__c = dto.documentCcEmail;
+            settings.StatusPageTokenTxt__c = dto.statusPageToken;
+            settings.DefaultBillingEntityIdTxt__c = dto.defaultBillingEntityId;
+            settings.StagesToAutoShareWithDevTeamTxt__c = dto.stagesToAutoShare;
+
+            SObjectAccessDecision decision = Security.stripInaccessible(
+                AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});
+            upsert decision.getRecords();
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
     /**
      * @description Saves AI-related settings
      * @param suggestions Enable AI suggestions
