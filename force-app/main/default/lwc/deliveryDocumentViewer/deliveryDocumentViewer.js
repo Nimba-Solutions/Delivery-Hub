@@ -34,7 +34,10 @@ const STATUS_CONFIG = {
 
 // Fallback if CMT query fails or returns empty
 const DEFAULT_TEMPLATE_OPTIONS = [
-    { label: 'Invoice', value: 'Invoice' }
+    { label: 'Invoice', value: 'Invoice' },
+    { label: 'Client Agreement', value: 'Client_Agreement' },
+    { label: 'Contractor Agreement', value: 'Contractor_Agreement' },
+    { label: 'Status Report', value: 'Status_Report' }
 ];
 
 export default class DeliveryDocumentViewer extends LightningElement {
@@ -62,6 +65,9 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track totalPaid = 0;
     @track isLoadingPreview = false;
     @track isUpdatingStatus = false;
+
+    // Metadata (clauses, etc.)
+    @track metadata = null;
 
     // Send email state
     @track showSendModal = false;
@@ -195,6 +201,29 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     get isInvoiceTemplate() {
         return this.previewDoc?.template === 'Invoice';
+    }
+
+    get isAgreementTemplate() {
+        const t = this.previewDoc?.template;
+        return t === 'Client_Agreement' || t === 'Contractor_Agreement';
+    }
+
+    get isStatusReportTemplate() {
+        return this.previewDoc?.template === 'Status_Report';
+    }
+
+    get agreementClauses() {
+        if (!this.metadata?.clauses) return [];
+        return this.metadata.clauses.map((c, idx) => ({
+            key: `clause-${idx}`,
+            seq: idx + 1,
+            title: c.title || '',
+            body: c.body || ''
+        }));
+    }
+
+    get hasAgreementClauses() {
+        return this.agreementClauses.length > 0;
     }
 
     get formattedTotalCost() {
@@ -428,6 +457,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.mode = 'list';
         this.previewDoc = null;
         this.snapshot = null;
+        this.metadata = null;
         this.transactions = [];
         this.totalPaid = 0;
     }
@@ -593,6 +623,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.isLoadingPreview = true;
         this.previewDoc = null;
         this.snapshot = null;
+        this.metadata = null;
         this.transactions = [];
         this.totalPaid = 0;
 
@@ -616,6 +647,13 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.totalPaid = result.totalPaid || 0;
             if (result.snapshot) {
                 this.snapshot = JSON.parse(result.snapshot);
+            }
+            if (result.metadata) {
+                try {
+                    this.metadata = JSON.parse(result.metadata);
+                } catch (_e) {
+                    this.metadata = null;
+                }
             }
         } catch (err) {
             this._showToast('Error', this._extractError(err), 'error');
@@ -688,7 +726,9 @@ export default class DeliveryDocumentViewer extends LightningElement {
     }
 
     _resetGenerateForm() {
-        this.genTemplate = 'Invoice';
+        this.genTemplate = this._templateOptions.length > 0
+            ? this._templateOptions[0].value
+            : 'Invoice';
         this.genPeriodStart = '';
         this.genPeriodEnd = '';
     }
