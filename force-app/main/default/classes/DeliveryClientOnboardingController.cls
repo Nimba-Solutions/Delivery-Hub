@@ -8,67 +8,63 @@
 public with sharing class DeliveryClientOnboardingController {
 
     /**
-     * @description Wrapper for client onboarding parameters to avoid excessive parameter lists.
-     */
-    public class OnboardingRequest {
-        /** @description The client company name. */
-        @AuraEnabled public String clientName;
-        /** @description The primary contact email address. */
-        @AuraEnabled public String contactEmail;
-        /** @description The agreed hourly rate. */
-        @AuraEnabled public Decimal hourlyRate;
-        /** @description Optional phone number. */
-        @AuraEnabled public String contactPhone;
-        /** @description Optional mailing address. */
-        @AuraEnabled public String address;
-    }
-
-    /**
      * @description Creates a new client entity and generates a Client Agreement document.
-     * @param request The onboarding request containing client details.
+     *              Uses primitive parameters instead of a wrapper class to ensure
+     *              the Aura framework can deserialize them in managed package context.
+     * @param clientName The client company name.
+     * @param contactEmail The primary contact email address.
+     * @param hourlyRate The agreed hourly rate.
+     * @param contactPhone Optional phone number.
+     * @param address Optional mailing address.
      * @return Map with entityId, documentId, documentName, and publicToken keys.
      */
     @AuraEnabled
-    public static Map<String, Object> onboardClient(OnboardingRequest request) {
-        validateRequest(request);
-        NetworkEntity__c entity = createEntity(request);
+    public static Map<String, Object> onboardClient(
+        String clientName, String contactEmail, Decimal hourlyRate,
+        String contactPhone, String address
+    ) {
+        validateRequest(clientName, contactEmail, hourlyRate);
+        NetworkEntity__c entity = createEntity(clientName, contactEmail, hourlyRate, contactPhone, address);
         return generateAgreement(entity);
     }
 
     @SuppressWarnings('PMD.CyclomaticComplexity')
-    private static void validateRequest(OnboardingRequest request) {
-        if (String.isBlank(request.clientName)) {
+    private static void validateRequest(String clientName, String contactEmail, Decimal hourlyRate) {
+        if (String.isBlank(clientName)) {
             throw new AuraHandledException('Client name is required.');
         }
-        if (String.isBlank(request.contactEmail)) {
+        if (String.isBlank(contactEmail)) {
             throw new AuraHandledException('Contact email is required.');
         }
-        if (request.hourlyRate == null || request.hourlyRate <= 0) {
+        if (hourlyRate == null || hourlyRate <= 0) {
             throw new AuraHandledException('A valid hourly rate is required.');
         }
         List<NetworkEntity__c> existing = [
             SELECT Id FROM NetworkEntity__c
-            WHERE Name = :request.clientName
+            WHERE Name = :clientName
             WITH SYSTEM_MODE LIMIT 1
         ];
         if (!existing.isEmpty()) {
-            throw new AuraHandledException('A client named "' + request.clientName + '" already exists.');
+            throw new AuraHandledException('A client named "' + clientName + '" already exists.');
         }
     }
 
-    private static NetworkEntity__c createEntity(OnboardingRequest request) {
+    private static NetworkEntity__c createEntity(
+        String clientName, String contactEmail, Decimal hourlyRate,
+        String contactPhone, String address
+    ) {
         NetworkEntity__c entity = new NetworkEntity__c(
-            Name = request.clientName,
+            Name = clientName,
             EntityTypePk__c = 'Client',
             StatusPk__c = 'Active',
-            DefaultHourlyRateCurrency__c = request.hourlyRate,
-            ContactEmailTxt__c = request.contactEmail
+            DefaultHourlyRateCurrency__c = hourlyRate,
+            ContactEmailTxt__c = contactEmail
         );
-        if (String.isNotBlank(request.contactPhone)) {
-            entity.ContactPhoneTxt__c = request.contactPhone;
+        if (String.isNotBlank(contactPhone)) {
+            entity.ContactPhoneTxt__c = contactPhone;
         }
-        if (String.isNotBlank(request.address)) {
-            entity.AddressTxt__c = request.address;
+        if (String.isNotBlank(address)) {
+            entity.AddressTxt__c = address;
         }
         Database.insert(entity, AccessLevel.SYSTEM_MODE);
         return entity;
