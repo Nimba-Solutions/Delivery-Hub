@@ -89,7 +89,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     numDevs = 2;
     @track etaResults = [];
     @track showAllColumns = false;
-    @track hideEmptyColumns = false;
+    @track hideEmptyColumns = true;
     showCreateModal = false;
     nextSortOrder = 1;
     overallFilter = "all";

@@ -65,6 +65,33 @@ const INFO_REGISTRY = {
         keyFields:
             'Document__c.StatusPk__c, Document__c.SnapshotJson__c, Document__c.TemplatePk__c, Document__c.TotalHoursNumber__c, Document__c.TotalCostNumber__c, NetworkEntity__c.Id, DocumentTemplate__mdt'
     },
+    deliveryGanttChart: {
+        dataSource:
+            'Calls getTimelineItems which returns active Work Items with creation dates and projected UAT-ready dates. Items are grouped by Network Entity and rendered as horizontal bars across a calendar axis. Bar colors come from WorkflowStage__mdt card color definitions.',
+        description:
+            'A Gantt-style timeline chart showing active work items as horizontal bars plotted against a date axis. Supports 30-day, 60-day, and 90-day windows. Items are color-coded by stage and grouped by Network Entity.',
+        friendlyName: 'Delivery Timeline',
+        keyFields:
+            'WorkItem__c.CreatedDate, WorkItem__c.ProjectedUATReadyDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.NetworkEntityId__c, WorkflowStage__mdt.CardColor'
+    },
+    deliveryGeneralSettingsCard: {
+        dataSource:
+            'Loads all Delivery Hub settings via getSettings which reads the DeliveryHubSettings__c custom setting. Each toggle calls saveGeneralSettings or saveExtendedSettings to persist changes immediately. Slack webhook is saved separately via saveSlackWebhookUrl and tested via testWebhook.',
+        description:
+            'Central configuration panel for Delivery Hub. Manages notification preferences (email, bell, Slack), automation toggles (auto-sync, auto-create work requests, WorkLog approval), board display options, activity tracking, weekly digest scheduling, public status page, and document billing settings.',
+        friendlyName: 'General Settings',
+        keyFields:
+            'DeliveryHubSettings__c (all fields — Notifications, AutoSync, EmailNotifications, BellNotifications, BoardMetrics, ActivityLogging, FieldTracking, WeeklyDigest, StatusPage, SlackWebhookUrl, DocumentCcEmail, DefaultBillingEntityId)'
+    },
+    deliveryGettingStarted: {
+        dataSource:
+            'Calls getSetupStatus to determine if the org is already connected. The 5-step wizard calls prepareLocalEntity to create the local Network Entity, checkPrerequisites to verify Site and Remote Site Settings, configureGuestUserAccess for guest user permissions, and performHandshake to establish the vendor connection.',
+        description:
+            'Interactive onboarding wizard that walks new users through connecting their Salesforce org to the Delivery Hub network. Covers org type selection, workflow choice, partner configuration, prerequisite checks, and the final connection handshake.',
+        friendlyName: 'Getting Started',
+        keyFields:
+            'NetworkEntity__c.OrgTypePk__c, NetworkEntity__c.StatusPk__c, DeliveryHubSettings__c, Salesforce Site, Remote Site Setting'
+    },
     deliveryGhostRecorder: {
         dataSource:
             'Logs navigation events via logUserActivity each time the page reference changes (debounced to 3s). The bug/feature form calls createQuickRequest which creates a Work Item with context metadata (URL, object name, record ID, browser). File uploads are linked via linkFilesAndSync. Attention count shown in the banner comes from getAttentionCount.',
@@ -82,6 +109,15 @@ const INFO_REGISTRY = {
         friendlyName: 'Kanban Board',
         keyFields:
             'WorkItem__c.StageNamePk__c, WorkItem__c.IsActiveBool__c, WorkItem__c.WorkflowTypeTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.Developer__c, WorkItem__c.Tags__c, WorkflowType__mdt, WorkflowStage__mdt, WorkflowPersonaView__mdt'
+    },
+    deliveryHubSetup: {
+        dataSource:
+            'Calls getSetupStatus to check if the org is connected, is the mothership, or needs setup. On the admin home, also loads getPendingApprovalCount and getPendingApprovals for incoming connection requests. Approve/reject actions call approveConnection and rejectConnection respectively.',
+        description:
+            'Connection status card showing whether this org is linked to the Delivery Hub network. On the admin home, displays vendor details, sync schedule, entity status, and a queue of pending connection approval requests from client orgs.',
+        friendlyName: 'Hub Setup',
+        keyFields:
+            'NetworkEntity__c.StatusPk__c, NetworkEntity__c.OrgTypePk__c, NetworkEntity__c.Name, DeliveryHubSettings__c.AutoSyncBool__c'
     },
     deliveryScore: {
         dataSource:

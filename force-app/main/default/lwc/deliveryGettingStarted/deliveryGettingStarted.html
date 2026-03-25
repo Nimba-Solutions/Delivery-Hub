@@ -9,7 +9,10 @@
                     <span class="gs-connected-pill">Connected</span>
                 </template>
             </div>
-            <lightning-icon icon-name={chevronIcon} size="x-small" class="gs-chevron"></lightning-icon>
+            <div class="gs-header-actions">
+                <c-delivery-info-popover component-name="deliveryGettingStarted"></c-delivery-info-popover>
+                <lightning-icon icon-name={chevronIcon} size="x-small" class="gs-chevron"></lightning-icon>
+            </div>
         </div>
 
         <!-- Expanded body -->
