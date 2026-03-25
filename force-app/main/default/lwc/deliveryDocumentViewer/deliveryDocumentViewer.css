@@ -511,6 +511,52 @@
     overflow: hidden;
 }
 
+/* ═══════════════════════════════════════
+ * AGREEMENT LAYOUT
+ * ═══════════════════════════════════════ */
+
+.agreement-clause {
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+}
+
+.agreement-clause-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dv-gray-900);
+    margin: 0 0 0.35rem 0;
+}
+
+.agreement-clause-body {
+    font-size: 0.85rem;
+    color: var(--dv-gray-700);
+    line-height: 1.65;
+    margin: 0;
+}
+
+.agreement-signatures {
+    display: flex;
+    justify-content: space-between;
+    gap: 3rem;
+    margin-top: 2.5rem;
+    padding: 1.5rem 0;
+}
+
+.agreement-signature-block {
+    flex: 1;
+}
+
+.agreement-signature-line {
+    border-top: 1px solid var(--dv-gray-700);
+    margin-top: 2rem;
+}
+
+.agreement-signature-label {
+    font-size: 0.75rem;
+    color: var(--dv-gray-500);
+    margin: 0.25rem 0 0 0;
+}
+
 /* AI Narrative */
 .ai-narrative-box {
     background: linear-gradient(to right, #f5f3ff, #eef2ff);
@@ -707,5 +753,13 @@
         border-color: #ccc;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+    }
+
+    .agreement-signatures {
+        page-break-inside: avoid;
+    }
+
+    .agreement-signature-line {
+        border-top-color: #000;
     }
 }
