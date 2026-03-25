@@ -11,14 +11,15 @@ const PERSONAS = [
     { label: 'Admin', value: 'Admin' }
 ];
 
-/* ── Section configuration ──
-   Each entry defines a section key, its relevant personas, and an optional
-   navigation target so users can jump directly to the feature.
-   navType values:
-     'tab'        → NavigationMixin to a named tab
-     'objectList' → NavigationMixin to an object's list view (Recent)
-     null         → no deep-link (informational sections)
-*/
+/*
+ * Section configuration.
+ * Each entry defines a section key, its relevant personas, and an optional
+ * navigation target so users can jump directly to the feature.
+ * navType values:
+ *   'tab'        - NavigationMixin to a named tab
+ *   'objectList' - NavigationMixin to an object's list view (Recent)
+ *   null         - no deep-link (informational sections)
+ */
 const SECTION_CONFIG = [
     {
         key: 'welcome',
@@ -302,7 +303,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     _isOpen(key) { return !!this._expanded[key]; }
     _chevron(key) { return this._expanded[key] ? 'utility:chevrondown' : 'utility:chevronright'; }
 
-    /* welcome */
+    /* Welcome */
     get welcomeExpanded() { return this._isOpen('welcome'); }
     get welcomeChevron() { return this._chevron('welcome'); }
     get welcomeVisible() { return this._isVisibleForPersona('welcome'); }
@@ -310,7 +311,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get welcomeHasNav() { return this._hasNavLink('welcome'); }
     get welcomeNavLabel() { return this._getNavLabel('welcome'); }
 
-    /* board */
+    /* Board */
     get boardExpanded() { return this._isOpen('board'); }
     get boardChevron() { return this._chevron('board'); }
     get boardVisible() { return this._isVisibleForPersona('board'); }
@@ -318,7 +319,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get boardHasNav() { return this._hasNavLink('board'); }
     get boardNavLabel() { return this._getNavLabel('board'); }
 
-    /* workItems */
+    /* WorkItems */
     get workItemsExpanded() { return this._isOpen('workItems'); }
     get workItemsChevron() { return this._chevron('workItems'); }
     get workItemsVisible() { return this._isVisibleForPersona('workItems'); }
@@ -326,7 +327,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get workItemsHasNav() { return this._hasNavLink('workItems'); }
     get workItemsNavLabel() { return this._getNavLabel('workItems'); }
 
-    /* timeTracking */
+    /* TimeTracking */
     get timeTrackingExpanded() { return this._isOpen('timeTracking'); }
     get timeTrackingChevron() { return this._chevron('timeTracking'); }
     get timeTrackingVisible() { return this._isVisibleForPersona('timeTracking'); }
@@ -334,7 +335,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get timeTrackingHasNav() { return this._hasNavLink('timeTracking'); }
     get timeTrackingNavLabel() { return this._getNavLabel('timeTracking'); }
 
-    /* documents */
+    /* Documents */
     get documentsExpanded() { return this._isOpen('documents'); }
     get documentsChevron() { return this._chevron('documents'); }
     get documentsVisible() { return this._isVisibleForPersona('documents'); }
@@ -342,7 +343,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get documentsHasNav() { return this._hasNavLink('documents'); }
     get documentsNavLabel() { return this._getNavLabel('documents'); }
 
-    /* activityFeed */
+    /* ActivityFeed */
     get activityFeedExpanded() { return this._isOpen('activityFeed'); }
     get activityFeedChevron() { return this._chevron('activityFeed'); }
     get activityFeedVisible() { return this._isVisibleForPersona('activityFeed'); }
@@ -350,7 +351,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get activityFeedHasNav() { return this._hasNavLink('activityFeed'); }
     get activityFeedNavLabel() { return this._getNavLabel('activityFeed'); }
 
-    /* ghostRecorder */
+    /* GhostRecorder */
     get ghostRecorderExpanded() { return this._isOpen('ghostRecorder'); }
     get ghostRecorderChevron() { return this._chevron('ghostRecorder'); }
     get ghostRecorderVisible() { return this._isVisibleForPersona('ghostRecorder'); }
@@ -358,7 +359,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get ghostRecorderHasNav() { return this._hasNavLink('ghostRecorder'); }
     get ghostRecorderNavLabel() { return this._getNavLabel('ghostRecorder'); }
 
-    /* sync */
+    /* Sync */
     get syncExpanded() { return this._isOpen('sync'); }
     get syncChevron() { return this._chevron('sync'); }
     get syncVisible() { return this._isVisibleForPersona('sync'); }
@@ -366,7 +367,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get syncHasNav() { return this._hasNavLink('sync'); }
     get syncNavLabel() { return this._getNavLabel('sync'); }
 
-    /* portal */
+    /* Portal */
     get portalExpanded() { return this._isOpen('portal'); }
     get portalChevron() { return this._chevron('portal'); }
     get portalVisible() { return this._isVisibleForPersona('portal'); }
@@ -374,7 +375,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get portalHasNav() { return this._hasNavLink('portal'); }
     get portalNavLabel() { return this._getNavLabel('portal'); }
 
-    /* settings */
+    /* Settings */
     get settingsExpanded() { return this._isOpen('settings'); }
     get settingsChevron() { return this._chevron('settings'); }
     get settingsVisible() { return this._isVisibleForPersona('settings'); }
@@ -382,7 +383,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get settingsHasNav() { return this._hasNavLink('settings'); }
     get settingsNavLabel() { return this._getNavLabel('settings'); }
 
-    /* timeline */
+    /* Timeline */
     get timelineExpanded() { return this._isOpen('timeline'); }
     get timelineChevron() { return this._chevron('timeline'); }
     get timelineVisible() { return this._isVisibleForPersona('timeline'); }
@@ -390,7 +391,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get timelineHasNav() { return this._hasNavLink('timeline'); }
     get timelineNavLabel() { return this._getNavLabel('timeline'); }
 
-    /* savedFilters */
+    /* SavedFilters */
     get savedFiltersExpanded() { return this._isOpen('savedFilters'); }
     get savedFiltersChevron() { return this._chevron('savedFilters'); }
     get savedFiltersVisible() { return this._isVisibleForPersona('savedFilters'); }
@@ -398,7 +399,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get savedFiltersHasNav() { return this._hasNavLink('savedFilters'); }
     get savedFiltersNavLabel() { return this._getNavLabel('savedFilters'); }
 
-    /* docVersioning */
+    /* DocVersioning */
     get docVersioningExpanded() { return this._isOpen('docVersioning'); }
     get docVersioningChevron() { return this._chevron('docVersioning'); }
     get docVersioningVisible() { return this._isVisibleForPersona('docVersioning'); }
@@ -406,7 +407,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get docVersioningHasNav() { return this._hasNavLink('docVersioning'); }
     get docVersioningNavLabel() { return this._getNavLabel('docVersioning'); }
 
-    /* invoiceApproval */
+    /* InvoiceApproval */
     get invoiceApprovalExpanded() { return this._isOpen('invoiceApproval'); }
     get invoiceApprovalChevron() { return this._chevron('invoiceApproval'); }
     get invoiceApprovalVisible() { return this._isVisibleForPersona('invoiceApproval'); }
@@ -414,7 +415,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get invoiceApprovalHasNav() { return this._hasNavLink('invoiceApproval'); }
     get invoiceApprovalNavLabel() { return this._getNavLabel('invoiceApproval'); }
 
-    /* portalTimeEntry */
+    /* PortalTimeEntry */
     get portalTimeEntryExpanded() { return this._isOpen('portalTimeEntry'); }
     get portalTimeEntryChevron() { return this._chevron('portalTimeEntry'); }
     get portalTimeEntryVisible() { return this._isVisibleForPersona('portalTimeEntry'); }
@@ -422,7 +423,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get portalTimeEntryHasNav() { return this._hasNavLink('portalTimeEntry'); }
     get portalTimeEntryNavLabel() { return this._getNavLabel('portalTimeEntry'); }
 
-    /* emailInbound */
+    /* EmailInbound */
     get emailInboundExpanded() { return this._isOpen('emailInbound'); }
     get emailInboundChevron() { return this._chevron('emailInbound'); }
     get emailInboundVisible() { return this._isVisibleForPersona('emailInbound'); }
@@ -430,7 +431,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get emailInboundHasNav() { return this._hasNavLink('emailInbound'); }
     get emailInboundNavLabel() { return this._getNavLabel('emailInbound'); }
 
-    /* platformEvents */
+    /* PlatformEvents */
     get platformEventsExpanded() { return this._isOpen('platformEvents'); }
     get platformEventsChevron() { return this._chevron('platformEvents'); }
     get platformEventsVisible() { return this._isVisibleForPersona('platformEvents'); }
@@ -438,7 +439,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get platformEventsHasNav() { return this._hasNavLink('platformEvents'); }
     get platformEventsNavLabel() { return this._getNavLabel('platformEvents'); }
 
-    /* configurableSettings */
+    /* ConfigurableSettings */
     get configurableSettingsExpanded() { return this._isOpen('configurableSettings'); }
     get configurableSettingsChevron() { return this._chevron('configurableSettings'); }
     get configurableSettingsVisible() { return this._isVisibleForPersona('configurableSettings'); }
@@ -446,7 +447,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get configurableSettingsHasNav() { return this._hasNavLink('configurableSettings'); }
     get configurableSettingsNavLabel() { return this._getNavLabel('configurableSettings'); }
 
-    /* pdfHyperlinks */
+    /* PdfHyperlinks */
     get pdfHyperlinksExpanded() { return this._isOpen('pdfHyperlinks'); }
     get pdfHyperlinksChevron() { return this._chevron('pdfHyperlinks'); }
     get pdfHyperlinksVisible() { return this._isVisibleForPersona('pdfHyperlinks'); }
@@ -454,7 +455,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get pdfHyperlinksHasNav() { return this._hasNavLink('pdfHyperlinks'); }
     get pdfHyperlinksNavLabel() { return this._getNavLabel('pdfHyperlinks'); }
 
-    /* hideEmptyColumns */
+    /* HideEmptyColumns */
     get hideEmptyColumnsExpanded() { return this._isOpen('hideEmptyColumns'); }
     get hideEmptyColumnsChevron() { return this._chevron('hideEmptyColumns'); }
     get hideEmptyColumnsVisible() { return this._isVisibleForPersona('hideEmptyColumns'); }
@@ -462,7 +463,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get hideEmptyColumnsHasNav() { return this._hasNavLink('hideEmptyColumns'); }
     get hideEmptyColumnsNavLabel() { return this._getNavLabel('hideEmptyColumns'); }
 
-    /* appLogo */
+    /* AppLogo */
     get appLogoExpanded() { return this._isOpen('appLogo'); }
     get appLogoChevron() { return this._chevron('appLogo'); }
     get appLogoVisible() { return this._isVisibleForPersona('appLogo'); }
