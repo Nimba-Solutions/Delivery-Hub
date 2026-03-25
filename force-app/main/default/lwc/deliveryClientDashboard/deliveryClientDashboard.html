@@ -19,6 +19,7 @@
                 <div class="cd-greeting-line">{greetingLine}</div>
                 <div class="cd-greeting-sub">{greetingSubtext}</div>
             </div>
+            <c-delivery-info-popover component-name="deliveryClientDashboard"></c-delivery-info-popover>
             <lightning-button-icon
                 icon-name="utility:refresh"
                 variant="border-filled"
@@ -129,28 +130,28 @@
                     <template lwc:if={isLoaded}>
                         <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
-                                <div class="tw-metric">
+                                <button class="tw-metric tw-metric--clickable" onclick={handleCompletedClick} title="View recently completed work items">
                                     <div class="tw-metric-value tw-metric--success">{thisWeek.completed}</div>
                                     <div class="tw-metric-label">Completed</div>
-                                </div>
+                                </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
-                                <div class="tw-metric">
+                                <button class="tw-metric tw-metric--clickable" onclick={handleInProgressClick} title="View in-flight work items">
                                     <div class="tw-metric-value tw-metric--info">{thisWeek.moved}</div>
                                     <div class="tw-metric-label">In Progress</div>
-                                </div>
+                                </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
-                                <div class="tw-metric">
+                                <button class="tw-metric tw-metric--clickable" onclick={handleHoursClick} title="View work logs">
                                     <div class="tw-metric-value">{thisWeek.hoursLogged}</div>
                                     <div class="tw-metric-label">Hours Logged</div>
-                                </div>
+                                </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
-                                <div class="tw-metric">
+                                <button class="tw-metric tw-metric--clickable" onclick={handleBlockedClick} title="View blocked work items">
                                     <div class="tw-metric-value tw-metric--warning">{thisWeek.blocked}</div>
                                     <div class="tw-metric-label">Blocked</div>
-                                </div>
+                                </button>
                             </div>
                         </div>
                     </template>

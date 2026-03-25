@@ -1,7 +1,8 @@
 <template>
-    <lightning-card title="Timeline" icon-name="standard:date_input">
+    <lightning-card title={cardTitle} icon-name="standard:date_input">
         <!-- Toolbar -->
         <div slot="actions" class="toolbar">
+            <c-delivery-info-popover component-name="deliveryTimelineView"></c-delivery-info-popover>
             <lightning-combobox
                 label="Workflow Type"
                 value={selectedWorkflowType}
@@ -67,6 +68,18 @@
         <!-- Timeline grid -->
         <template if:false={isLoading}>
             <template if:false={isEmpty}>
+                <!-- Stage color legend -->
+                <template if:true={hasLegendItems}>
+                    <div class="legend-bar">
+                        <template for:each={legendItems} for:item="legendItem">
+                            <div key={legendItem.stage} class="legend-item">
+                                <span class="legend-swatch" style={legendItem.swatchStyle}></span>
+                                <span class="legend-label">{legendItem.stage}</span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
                 <div class="timeline-container" lwc:ref="timelineContainer">
                     <!-- Header row with date columns -->
                     <div class="timeline-header" style={gridTemplateStyle}>
@@ -89,8 +102,11 @@
                             </div>
                             <!-- Bar container -->
                             <div class="entity-row-body" style={group.bodyStyle}>
-                                <!-- Today line -->
-                                <div class="today-line" style={todayLineInBodyStyle}></div>
+                                <!-- Today line with label -->
+                                <div class="today-marker" style={todayLineInBodyStyle}>
+                                    <div class="today-marker-label">Today</div>
+                                    <div class="today-marker-line"></div>
+                                </div>
                                 <template for:each={group.items} for:item="item">
                                     <div
                                         key={item.workItemId}
@@ -107,6 +123,35 @@
                         </div>
                     </template>
                 </div>
+
+                <!-- Unscheduled items section -->
+                <template if:true={hasUnscheduledItems}>
+                    <div class="unscheduled-section">
+                        <div class="unscheduled-header">
+                            <lightning-icon icon-name="utility:warning" size="x-small" class="unscheduled-icon"></lightning-icon>
+                            <span class="unscheduled-title">Unscheduled ({unscheduledCount})</span>
+                            <span class="unscheduled-subtitle">Items missing start or end dates</span>
+                        </div>
+                        <div class="unscheduled-items">
+                            <template for:each={unscheduledItems} for:item="usItem">
+                                <button
+                                    key={usItem.workItemId}
+                                    class="unscheduled-item"
+                                    data-id={usItem.workItemId}
+                                    onclick={handleBarClick}
+                                    title={usItem.tooltipText}
+                                >
+                                    <span class="unscheduled-swatch" style={usItem.swatchStyle}></span>
+                                    <span class="unscheduled-name">{usItem.name}</span>
+                                    <template if:true={usItem.description}>
+                                        <span class="unscheduled-desc">&mdash; {usItem.description}</span>
+                                    </template>
+                                    <span class="unscheduled-stage">{usItem.stage}</span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
             </template>
         </template>
     </lightning-card>
