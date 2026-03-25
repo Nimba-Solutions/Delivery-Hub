@@ -4,7 +4,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track, wire, api } from 'lwc';
-import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
+import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import userId from '@salesforce/user/Id';
 
@@ -48,12 +48,12 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     handleAttentionClick() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__listView',
+        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
                 listViewApiName: '%%%NAMESPACE%%%In_Flight',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
-            }
+            },
+            type: 'standard__listView'
         });
     }
 
