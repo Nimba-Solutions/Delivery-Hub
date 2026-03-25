@@ -3,10 +3,11 @@
         <lightning-card title={cardTitle} icon-name={cardIcon}>
             <c-delivery-info-popover slot="actions" component-name="deliveryGhostRecorder"></c-delivery-info-popover>
             <template lwc:if={hasAttentionItems}>
-                <div class="gr-attention-banner">
+                <button class="gr-attention-banner gr-attention-banner--clickable" onclick={handleAttentionClick} title="View in-flight work items">
                     <lightning-icon icon-name="utility:warning" size="x-small" class="gr-attention-icon"></lightning-icon>
                     <span class="gr-attention-text">{attentionLabel}</span>
-                </div>
+                    <lightning-icon icon-name="utility:chevronright" size="xx-small" class="gr-attention-chevron"></lightning-icon>
+                </button>
             </template>
             <div class="slds-p-horizontal_medium">
                 
@@ -90,10 +91,11 @@
                     </header>
                     <div class="slds-modal__content slds-p-around_medium">
                         <template lwc:if={hasAttentionItems}>
-                            <div class="gr-attention-banner slds-m-bottom_small">
+                            <button class="gr-attention-banner gr-attention-banner--clickable slds-m-bottom_small" onclick={handleAttentionClick} title="View in-flight work items">
                                 <lightning-icon icon-name="utility:warning" size="x-small" class="gr-attention-icon"></lightning-icon>
                                 <span class="gr-attention-text">{attentionLabel}</span>
-                            </div>
+                                <lightning-icon icon-name="utility:chevronright" size="xx-small" class="gr-attention-chevron"></lightning-icon>
+                            </button>
                         </template>
                         <div class="slds-m-bottom_medium slds-text-align_center">
                             <lightning-radio-group 

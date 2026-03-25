@@ -4,7 +4,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track, wire, api } from 'lwc';
-import { CurrentPageReference } from 'lightning/navigation';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import userId from '@salesforce/user/Id';
 
@@ -13,7 +13,7 @@ import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostContro
 import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync";
 import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
 
-export default class DeliveryGhostRecorder extends LightningElement {
+export default class DeliveryGhostRecorder extends NavigationMixin(LightningElement) {
     @api enableShortcut = false; 
     @api displayMode = 'Card';   
     
@@ -45,6 +45,16 @@ export default class DeliveryGhostRecorder extends LightningElement {
     get attentionLabel() {
         const n = this.attentionCount;
         return `${n} item${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} your attention`;
+    }
+
+    handleAttentionClick() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__listView',
+            attributes: {
+                listViewApiName: '%%%NAMESPACE%%%In_Flight',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
+            }
+        });
     }
 
     // --- GETTERS FOR DYNAMIC UI ---
