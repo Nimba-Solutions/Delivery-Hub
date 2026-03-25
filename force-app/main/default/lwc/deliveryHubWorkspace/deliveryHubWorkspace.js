@@ -1,4 +1,4 @@
-import { LightningElement, wire, track } from 'lwc';
+import { LightningElement, track, wire } from 'lwc';
 import isAdminUser from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.isAdminUser';
 
 export default class DeliveryHubWorkspace extends LightningElement {
@@ -7,7 +7,7 @@ export default class DeliveryHubWorkspace extends LightningElement {
 
     @wire(isAdminUser)
     wiredAdmin({ data }) {
-        if (data !== undefined) {
+        if (data != null) {
             this.isAdmin = data;
         }
     }
