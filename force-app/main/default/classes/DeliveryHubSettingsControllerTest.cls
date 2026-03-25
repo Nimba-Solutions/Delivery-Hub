@@ -91,6 +91,7 @@ private class DeliveryHubSettingsControllerTest {
         settings.StatusPageTokenTxt__c = 'abc-123';
         settings.DefaultBillingEntityIdTxt__c = 'a3VRu000002ZPtdMA';
         settings.StagesToAutoShareWithDevTeamTxt__c = 'In Development,Code Review';
+        settings.WebhookUrlTxt__c = 'https://portal.example.com/api/webhooks/delivery';
         update settings;
 
         Test.startTest();
@@ -110,6 +111,7 @@ private class DeliveryHubSettingsControllerTest {
         System.assertEquals('abc-123', dto.statusPageToken, 'Status page token should be set');
         System.assertEquals('a3VRu000002ZPtdMA', dto.defaultBillingEntityId, 'Default billing entity should be set');
         System.assertEquals('In Development,Code Review', dto.stagesToAutoShare, 'Stages to auto share should be set');
+        System.assertEquals('https://portal.example.com/api/webhooks/delivery', dto.webhookUrl, 'Webhook URL should be set');
         System.assertNotEquals(null, dto.fieldTrackingActivatedAt, 'Field tracking activation date should be set');
         System.assertNotEquals(null, dto.bellNotificationsActivatedAt, 'Bell notifications activation date should be set');
         System.assertNotEquals(null, dto.weeklyDigestActivatedAt, 'Weekly digest activation date should be set');
@@ -133,7 +135,8 @@ private class DeliveryHubSettingsControllerTest {
             'documentCcEmail' => 'doc@test.com',
             'statusPageToken' => 'xyz-789',
             'defaultBillingEntityId' => 'a3VRu000002ZPtdMA',
-            'stagesToAutoShare' => 'Testing,Deployed'
+            'stagesToAutoShare' => 'Testing,Deployed',
+            'webhookUrl' => 'https://portal.example.com/api/webhooks/delivery'
         });
 
         Test.startTest();
@@ -159,6 +162,7 @@ private class DeliveryHubSettingsControllerTest {
         System.assertEquals('xyz-789', s.StatusPageTokenTxt__c, 'Status page token should be set');
         System.assertEquals('a3VRu000002ZPtdMA', s.DefaultBillingEntityIdTxt__c, 'Default billing entity should be set');
         System.assertEquals('Testing,Deployed', s.StagesToAutoShareWithDevTeamTxt__c, 'Stages to auto share should be set');
+        System.assertEquals('https://portal.example.com/api/webhooks/delivery', s.WebhookUrlTxt__c, 'Webhook URL should be saved');
     }
 
     @isTest
