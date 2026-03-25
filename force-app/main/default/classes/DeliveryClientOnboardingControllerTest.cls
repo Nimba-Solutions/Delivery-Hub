@@ -20,26 +20,12 @@ private class DeliveryClientOnboardingControllerTest {
         insert vendor;
     }
 
-    private static DeliveryClientOnboardingController.OnboardingRequest buildRequest(
-        String name, String email, Decimal rate
-    ) {
-        DeliveryClientOnboardingController.OnboardingRequest req =
-            new DeliveryClientOnboardingController.OnboardingRequest();
-        req.clientName = name;
-        req.contactEmail = email;
-        req.hourlyRate = rate;
-        return req;
-    }
-
     @isTest
     static void testOnboardClientSuccess() {
-        DeliveryClientOnboardingController.OnboardingRequest req =
-            buildRequest('Acme Corp', 'ceo@acme.com', 150.00);
-        req.contactPhone = '555-1234';
-        req.address = '100 Main St';
-
         Test.startTest();
-        Map<String, Object> result = DeliveryClientOnboardingController.onboardClient(req);
+        Map<String, Object> result = DeliveryClientOnboardingController.onboardClient(
+            'Acme Corp', 'ceo@acme.com', 150.00, '555-1234', '100 Main St'
+        );
         Test.stopTest();
 
         System.assertNotEquals(null, result.get('entityId'), 'Should return entity ID');
@@ -73,11 +59,10 @@ private class DeliveryClientOnboardingControllerTest {
 
     @isTest
     static void testOnboardClientMinimalFields() {
-        DeliveryClientOnboardingController.OnboardingRequest req =
-            buildRequest('Minimal Corp', 'hi@minimal.com', 90.00);
-
         Test.startTest();
-        Map<String, Object> result = DeliveryClientOnboardingController.onboardClient(req);
+        Map<String, Object> result = DeliveryClientOnboardingController.onboardClient(
+            'Minimal Corp', 'hi@minimal.com', 90.00, null, null
+        );
         Test.stopTest();
 
         System.assertNotEquals(null, result.get('entityId'), 'Should create entity with minimal fields');
@@ -90,13 +75,12 @@ private class DeliveryClientOnboardingControllerTest {
             Name = 'Existing Corp', EntityTypePk__c = 'Client', StatusPk__c = 'Active'
         );
 
-        DeliveryClientOnboardingController.OnboardingRequest req =
-            buildRequest('Existing Corp', 'test@test.com', 100.00);
-
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryClientOnboardingController.onboardClient(req);
+            DeliveryClientOnboardingController.onboardClient(
+                'Existing Corp', 'test@test.com', 100.00, null, null
+            );
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -107,12 +91,11 @@ private class DeliveryClientOnboardingControllerTest {
 
     @isTest
     static void testOnboardClientMissingName() {
-        DeliveryClientOnboardingController.OnboardingRequest req =
-            buildRequest('', 'test@test.com', 100.00);
-
         Boolean threw = false;
         try {
-            DeliveryClientOnboardingController.onboardClient(req);
+            DeliveryClientOnboardingController.onboardClient(
+                '', 'test@test.com', 100.00, null, null
+            );
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -121,12 +104,11 @@ private class DeliveryClientOnboardingControllerTest {
 
     @isTest
     static void testOnboardClientMissingEmail() {
-        DeliveryClientOnboardingController.OnboardingRequest req =
-            buildRequest('Test Corp', '', 100.00);
-
         Boolean threw = false;
         try {
-            DeliveryClientOnboardingController.onboardClient(req);
+            DeliveryClientOnboardingController.onboardClient(
+                'Test Corp', '', 100.00, null, null
+            );
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -135,12 +117,11 @@ private class DeliveryClientOnboardingControllerTest {
 
     @isTest
     static void testOnboardClientInvalidRate() {
-        DeliveryClientOnboardingController.OnboardingRequest req =
-            buildRequest('Test Corp', 'test@test.com', -50.00);
-
         Boolean threw = false;
         try {
-            DeliveryClientOnboardingController.onboardClient(req);
+            DeliveryClientOnboardingController.onboardClient(
+                'Test Corp', 'test@test.com', -50.00, null, null
+            );
         } catch (AuraHandledException e) {
             threw = true;
         }

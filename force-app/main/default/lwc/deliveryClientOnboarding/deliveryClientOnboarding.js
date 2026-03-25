@@ -101,14 +101,13 @@ export default class DeliveryClientOnboarding extends LightningElement {
     }
 
     async performOnboarding() {
-        const request = {
-            address: this.address || null,
+        this.result = await onboardClient({
             clientName: this.clientName,
             contactEmail: this.contactEmail,
+            hourlyRate: parseFloat(this.hourlyRate),
             contactPhone: this.contactPhone || null,
-            hourlyRate: parseFloat(this.hourlyRate)
-        };
-        this.result = await onboardClient({ request });
+            address: this.address || null
+        });
         this.showForm = false;
         this.showResult = true;
         this.dispatchEvent(
