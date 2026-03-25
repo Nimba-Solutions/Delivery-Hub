@@ -7,7 +7,7 @@ export default class DeliveryHubWorkspace extends LightningElement {
 
     @wire(isAdminUser)
     wiredAdmin({ data }) {
-        if (data != null) {
+        if (data !== null && data !== undefined) {
             this.isAdmin = data;
         }
     }
