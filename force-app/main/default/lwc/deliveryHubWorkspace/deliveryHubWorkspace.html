@@ -1,0 +1,35 @@
+<template>
+    <lightning-tabset variant="scoped" active-tab-value={activeTab} onactive={handleTabChange}>
+
+        <lightning-tab label="Board" value="board" icon-name="standard:kanban">
+            <c-delivery-hub-board></c-delivery-hub-board>
+        </lightning-tab>
+
+        <lightning-tab label="Timeline" value="timeline" icon-name="standard:date_input">
+            <c-delivery-gantt-chart></c-delivery-gantt-chart>
+        </lightning-tab>
+
+        <lightning-tab label="Activity" value="activity" icon-name="standard:feed">
+            <c-delivery-activity-feed></c-delivery-activity-feed>
+        </lightning-tab>
+
+        <lightning-tab label="Documents" value="documents" icon-name="standard:document">
+            <c-delivery-document-viewer></c-delivery-document-viewer>
+        </lightning-tab>
+
+        <lightning-tab label="Guide" value="guide" icon-name="standard:knowledge">
+            <c-delivery-guide></c-delivery-guide>
+        </lightning-tab>
+
+        <template lwc:if={isAdmin}>
+            <lightning-tab label="Settings" value="settings" icon-name="standard:settings">
+                <c-delivery-settings-container></c-delivery-settings-container>
+            </lightning-tab>
+
+            <lightning-tab label="Workflows" value="workflows" icon-name="standard:flow">
+                <c-delivery-workflow-builder></c-delivery-workflow-builder>
+            </lightning-tab>
+        </template>
+
+    </lightning-tabset>
+</template>

@@ -145,4 +145,17 @@ private class DeliveryHubDashboardControllerTest {
         System.assert(metrics.containsKey('hoursLogged'), 'thisMonth metrics should contain hoursLogged');
         System.assert(metrics.containsKey('blocked'), 'thisMonth metrics should contain blocked');
     }
+
+    @IsTest
+    static void testGetReportIds() {
+        Test.startTest();
+        Map<String, String> result = DeliveryHubDashboardController.getReportIds(
+            new List<String>{ 'Recently_Completed', 'Nonexistent_Report' }
+        );
+        Test.stopTest();
+
+        // Reports may or may not exist in scratch org; just verify no exception and correct type
+        System.assertNotEquals(null, result, 'getReportIds should return a non-null map');
+        System.assert(!result.containsKey('Nonexistent_Report'), 'Should not contain nonexistent report');
+    }
 }

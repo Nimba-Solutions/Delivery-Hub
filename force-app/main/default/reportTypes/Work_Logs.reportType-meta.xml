@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ReportType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <baseObject>WorkLog__c</baseObject>
+    <category>other</category>
+    <deployed>true</deployed>
+    <description>Work log entries with hours, date, and work item reference.</description>
+    <label>Work Logs</label>
+    <sections>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>Id</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>Name</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>HoursLoggedNumber__c</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>WorkDateDate__c</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>WorkDescriptionTxt__c</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>WorkItemId__c</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>StatusPk__c</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <masterLabel>Work Logs</masterLabel>
+    </sections>
+</ReportType>

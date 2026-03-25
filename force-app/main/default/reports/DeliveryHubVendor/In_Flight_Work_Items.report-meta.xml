@@ -16,6 +16,9 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
     </columns>
     <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%Developer__c</field>
+    </columns>
+    <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>
     </columns>
     <columns>
@@ -24,7 +27,7 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%CalculatedETADate__c</field>
     </columns>
-    <description>All active work items in non-terminal stages. Matches the In Progress metric tile on the client dashboard.</description>
+    <description>Active work items in non-terminal stages, modified this month. Matches the In Progress metric tile on the client dashboard.</description>
     <filter>
         <booleanFilter>1 AND 2 AND 3</booleanFilter>
         <criteriaItems>
@@ -42,23 +45,19 @@
             <value>Cancelled</value>
         </criteriaItems>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
+            <column>CUST_LAST_UPDATE</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
-            <operator>notEqual</operator>
-            <value>Blocked</value>
+            <operator>equals</operator>
+            <value>THIS_MONTH</value>
         </criteriaItems>
     </filter>
-    <format>Summary</format>
-    <groupingsDown>
-        <dateGranularity>Day</dateGranularity>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
-        <sortOrder>Asc</sortOrder>
-    </groupingsDown>
+    <format>Tabular</format>
     <name>In-Flight Work Items</name>
     <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
-    <showSubTotals>true</showSubTotals>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</sortColumn>
+    <sortOrder>Asc</sortOrder>
 </Report>

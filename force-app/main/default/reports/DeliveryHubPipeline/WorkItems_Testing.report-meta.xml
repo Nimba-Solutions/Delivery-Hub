@@ -7,33 +7,39 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
     </columns>
     <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
+    </columns>
+    <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</field>
-    </columns>
-    <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%Developer__c</field>
     </columns>
-    <description>Work items currently in the Blocked stage. Matches the Blocked metric tile on the client dashboard. Use to triage and unblock stalled work.</description>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursNumber__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</field>
+    </columns>
+    <description>Work items in the Testing phase: Scratch Test through Internal UAT.</description>
     <filter>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
-            <value>Blocked</value>
+            <value>Ready for Scratch Test,Scratch Testing,Ready for QA,QA In Progress,Ready for Internal UAT,Internal UAT</value>
         </criteriaItems>
     </filter>
     <format>Tabular</format>
-    <name>Blocked Work Items</name>
+    <name>Work Items — Testing</name>
     <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
-    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</sortColumn>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</sortColumn>
     <sortOrder>Asc</sortOrder>
 </Report>

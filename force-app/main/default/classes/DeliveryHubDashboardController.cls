@@ -489,6 +489,40 @@ public with sharing class DeliveryHubDashboardController {
         return metrics;
     }
 
+    /**
+     * @description Looks up report IDs by DeveloperName for dashboard drill-through.
+     * @param developerNames List of report DeveloperNames to look up.
+     * @return Map of DeveloperName to Report Id (only found reports included).
+     */
+    @AuraEnabled
+    public static Map<String, String> getReportIds(List<String> developerNames) {
+        Map<String, String> result = new Map<String, String>();
+        for (Report r : [
+            SELECT Id, DeveloperName
+            FROM Report
+            WHERE DeveloperName IN :developerNames
+            WITH SYSTEM_MODE
+        ]) {
+            result.put(r.DeveloperName, r.Id);
+        }
+        return result;
+    }
+
+    /**
+     * @description Checks if the current user has the DeliveryHubAdmin permission set group.
+     * @return True if the user is a Delivery Hub admin.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Boolean isAdminUser() {
+        return ![
+            SELECT Id FROM PermissionSetAssignment
+            WHERE AssigneeId = :UserInfo.getUserId()
+            AND PermissionSetGroup.DeveloperName = 'DeliveryHubAdmin'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ].isEmpty();
+    }
+
 }
 
 // trigger rebuild
