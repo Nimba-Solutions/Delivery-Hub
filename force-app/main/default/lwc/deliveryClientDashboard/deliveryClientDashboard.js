@@ -17,12 +17,12 @@ import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 const FALLBACK_PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
 
 const PHASE_LIST_VIEWS = {
-    'Approval':    '%%%NAMESPACE%%%WorkItems_Approval',
-    'Deployment':  '%%%NAMESPACE%%%WorkItems_Deployment',
-    'Development': '%%%NAMESPACE%%%WorkItems_Development',
-    'Planning':    '%%%NAMESPACE%%%WorkItems_Planning',
-    'Testing':     '%%%NAMESPACE%%%WorkItems_Testing',
-    'UAT':         '%%%NAMESPACE%%%WorkItems_UAT'
+    'Approval':    'WorkItems_Approval',
+    'Deployment':  'WorkItems_Deployment',
+    'Development': 'WorkItems_Development',
+    'Planning':    'WorkItems_Planning',
+    'Testing':     'WorkItems_Testing',
+    'UAT':         'WorkItems_UAT'
 };
 
 // Maps phase name → badge CSS modifier (for attention work item styling)
@@ -301,7 +301,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({
             type: 'standard__listView',
             attributes: {
-                listViewApiName: '%%%NAMESPACE%%%Recently_Completed',
+                listViewApiName: 'Recently_Completed',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
             }
         });
@@ -311,7 +311,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({
             type: 'standard__listView',
             attributes: {
-                listViewApiName: '%%%NAMESPACE%%%In_Flight',
+                listViewApiName: 'In_Flight',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
             }
         });
@@ -321,7 +321,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({
             type: 'standard__listView',
             attributes: {
-                listViewApiName: '%%%NAMESPACE%%%This_Month',
+                listViewApiName: 'This_Month',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c'
             }
         });
@@ -331,7 +331,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({
             type: 'standard__listView',
             attributes: {
-                listViewApiName: '%%%NAMESPACE%%%Blocked',
+                listViewApiName: 'Blocked',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
             }
         });
@@ -341,7 +341,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({
             type: 'standard__listView',
             attributes: {
-                listViewApiName: '%%%NAMESPACE%%%In_Flight',
+                listViewApiName: 'In_Flight',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
             }
         });

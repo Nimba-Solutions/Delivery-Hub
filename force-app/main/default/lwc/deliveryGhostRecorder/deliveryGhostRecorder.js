@@ -50,7 +50,7 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     handleAttentionClick() {
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
-                listViewApiName: '%%%NAMESPACE%%%In_Flight',
+                listViewApiName: 'In_Flight',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
             },
             type: 'standard__listView'
