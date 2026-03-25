@@ -8,6 +8,7 @@ import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { LightningElement, api, track, wire } from 'lwc';
 import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
+import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
 import linkFilesAndSync from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync';
@@ -48,12 +49,27 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     handleAttentionClick() {
+        // Try report first, fall back to list view
+        getReportIds({ developerNames: ['Attention_Items'] })
+            .then(ids => {
+                const reportId = ids.Attention_Items; // eslint-disable-line dot-notation
+                if (reportId) {
+                    this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
+                        attributes: { actionName: 'view', objectApiName: 'Report', recordId: reportId },
+                        type: 'standard__recordPage'
+                    });
+                } else {
+                    this.navigateToAttentionListView();
+                }
+            })
+            .catch(() => this.navigateToAttentionListView());
+    }
+
+    navigateToAttentionListView() {
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
-            attributes: {
-                listViewApiName: 'In_Flight',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
-            },
-            type: 'standard__listView'
+            attributes: { actionName: 'list', objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c' },
+            state: { filterName: 'In_Flight' },
+            type: 'standard__objectPage'
         });
     }
 

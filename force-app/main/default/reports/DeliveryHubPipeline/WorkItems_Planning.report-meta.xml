@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>CUST_NAME</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%Developer__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</field>
+    </columns>
+    <description>Work items in the Planning phase: Backlog through Drafting Proposal.</description>
+    <filter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value>Backlog,Scoping In Progress,Clarification Requested (Pre-Dev),Providing Clarification,Ready for Sizing,Sizing Underway,Ready for Prioritization,Prioritizing,Proposal Requested,Drafting Proposal</value>
+        </criteriaItems>
+    </filter>
+    <format>Tabular</format>
+    <name>Work Items — Planning</name>
+    <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</sortColumn>
+    <sortOrder>Asc</sortOrder>
+</Report>

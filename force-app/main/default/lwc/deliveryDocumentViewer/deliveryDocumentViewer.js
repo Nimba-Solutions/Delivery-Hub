@@ -124,8 +124,14 @@ export default class DeliveryDocumentViewer extends LightningElement {
     handlePageRef(pageRef) {
         if (pageRef) {
             const recId = pageRef.attributes?.recordId || pageRef.state?.recordId;
+            const objName = pageRef.attributes?.objectApiName || '';
             if (recId && !this.networkEntityId) {
-                this._effectiveEntityId = recId;
+                // If we're on a Document record page, load that document directly
+                if (objName === '%%%NAMESPACED_ORG%%%DeliveryDocument__c' || objName === 'DeliveryDocument__c') {
+                    this._loadDocumentById(recId);
+                } else {
+                    this._effectiveEntityId = recId;
+                }
             }
         }
     }
@@ -585,7 +591,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     handleViewWeb() {
         if (!this.previewDoc?.id) return;
-        window.open(`/apex/${this._vfPrefix}DeliveryDocumentView?id=${this.previewDoc.id}`, '_blank');
+        window.open(`/apex/${this._vfPrefix}DeliveryDocumentPdf?id=${this.previewDoc.id}`, '_blank');
     }
 
     handleCopyPublicLink() {
@@ -620,6 +626,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     async _loadDocumentById(docId) {
         this.mode = 'preview';
+        this.isLoading = false; // Ensure the list-mode loading gate is cleared so preview template renders
         this.isLoadingPreview = true;
         this.previewDoc = null;
         this.snapshot = null;
@@ -695,11 +702,13 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     _enrichDocument(d) {
         const sc = STATUS_CONFIG[d.status] || STATUS_CONFIG.Draft;
+        const isInvoice = d.template === 'Invoice';
         return {
             id: d.id,
             name: d.name,
             template: d.template,
             templateDisplay: (d.template || '').replace(/_/g, ' '),
+            isInvoice,
             periodStart: d.periodStart,
             periodEnd: d.periodEnd,
             periodDisplay: `${this._formatDate(d.periodStart)} - ${this._formatDate(d.periodEnd)}`,
@@ -707,9 +716,9 @@ export default class DeliveryDocumentViewer extends LightningElement {
             statusLabel: sc.label,
             statusClass: sc.cssClass,
             totalHours: d.totalHours || 0,
-            hoursDisplay: `${(d.totalHours || 0).toFixed(1)} hrs`,
+            hoursDisplay: isInvoice ? `${(d.totalHours || 0).toFixed(1)} hrs` : '\u2014',
             totalCost: d.totalCost || 0,
-            costDisplay: CURRENCY_FMT.format(d.totalCost || 0),
+            costDisplay: isInvoice ? CURRENCY_FMT.format(d.totalCost || 0) : '\u2014',
             createdDate: d.createdDate,
             createdDateDisplay: this._formatDate(d.createdDate)
         };

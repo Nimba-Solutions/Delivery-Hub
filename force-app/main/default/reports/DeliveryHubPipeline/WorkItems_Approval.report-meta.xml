@@ -10,34 +10,36 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%Developer__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%HoursVarianceNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</field>
     </columns>
-    <description>Work items with logged hours, grouped by client. Matches the Hours Logged metric tile on the client dashboard. Shows total hours logged per work item for budget tracking.</description>
+    <description>Work items in the Approval phase: Tech Review through Final Approval.</description>
     <filter>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursNumber__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
-            <operator>greaterThan</operator>
-            <value>0</value>
+            <operator>equals</operator>
+            <value>Ready for Tech Review,Tech Reviewing,Ready for Final Approval,Final Approving</value>
         </criteriaItems>
     </filter>
-    <format>Summary</format>
-    <groupingsDown>
-        <dateGranularity>Day</dateGranularity>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
-        <sortOrder>Asc</sortOrder>
-    </groupingsDown>
-    <name>Hours Logged by Work Item</name>
+    <format>Tabular</format>
+    <name>Work Items — Approval</name>
     <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
-    <showSubTotals>true</showSubTotals>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</sortColumn>
+    <sortOrder>Asc</sortOrder>
 </Report>
