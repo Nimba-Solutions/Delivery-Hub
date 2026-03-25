@@ -22,6 +22,9 @@ public with sharing class DeliveryDocumentController {
      */
     @AuraEnabled
     public static Id generateDocument(Id entityId, String templateType, Date periodStart, Date periodEnd, String metadata) {
+        if (entityId == null) {
+            throw new AuraHandledException('Please select a client before generating a document.');
+        }
         Map<String, Object> snapshot = buildSnapshot(entityId, templateType, periodStart, periodEnd);
 
         String publicToken = generateToken();

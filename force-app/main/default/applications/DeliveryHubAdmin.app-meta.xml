@@ -191,6 +191,7 @@
     <logo>DeliveryHubLogo</logo>
     <navType>Standard</navType>
     <tabs>standard-home</tabs>
+    <tabs>Delivery_Workspace</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>Delivery_Board</tabs>
     <tabs>Delivery_Timeline</tabs>
