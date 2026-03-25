@@ -19,6 +19,21 @@
     font-size: 0.78rem;
     font-weight: 600;
     color: #78350f;
+    flex: 1;
+}
+.gr-attention-banner--clickable {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s;
+}
+.gr-attention-banner--clickable:hover {
+    background-color: #fef3c7;
+}
+.gr-attention-chevron {
+    --lwc-colorTextIconDefault: #b45309;
+    flex-shrink: 0;
 }
 
 /* Card Layout Polish */

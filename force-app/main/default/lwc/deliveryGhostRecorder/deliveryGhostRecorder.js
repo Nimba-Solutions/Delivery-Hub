@@ -1,19 +1,19 @@
+/* eslint-disable new-cap, sort-imports */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, track, wire, api } from 'lwc';
-import { CurrentPageReference } from 'lightning/navigation';
+import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import userId from '@salesforce/user/Id';
-
+import { LightningElement, api, track, wire } from 'lwc';
+import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
 import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
-import linkFilesAndSync from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync";
-import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
+import linkFilesAndSync from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync';
+import userId from '@salesforce/user/Id';
 
-export default class DeliveryGhostRecorder extends LightningElement {
+export default class DeliveryGhostRecorder extends NavigationMixin(LightningElement) {
     @api enableShortcut = false; 
     @api displayMode = 'Card';   
     
@@ -45,6 +45,16 @@ export default class DeliveryGhostRecorder extends LightningElement {
     get attentionLabel() {
         const n = this.attentionCount;
         return `${n} item${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} your attention`;
+    }
+
+    handleAttentionClick() {
+        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
+            attributes: {
+                listViewApiName: '%%%NAMESPACE%%%In_Flight',
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c'
+            },
+            type: 'standard__listView'
+        });
     }
 
     // --- GETTERS FOR DYNAMIC UI ---
