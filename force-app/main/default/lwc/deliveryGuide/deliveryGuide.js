@@ -260,17 +260,17 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
 
         if (cfg.navType === 'tab') {
             this[NavigationMixin.Navigate]({
-                type: 'standard__navItemPage',
-                attributes: { apiName: cfg.navTarget }
+                attributes: { apiName: cfg.navTarget },
+                type: 'standard__navItemPage'
             });
         } else if (cfg.navType === 'objectList') {
             this[NavigationMixin.Navigate]({
-                type: 'standard__objectPage',
                 attributes: {
-                    objectApiName: cfg.navTarget,
-                    actionName: 'list'
+                    actionName: 'list',
+                    objectApiName: cfg.navTarget
                 },
-                state: { filterName: 'Recent' }
+                state: { filterName: 'Recent' },
+                type: 'standard__objectPage'
             });
         }
     }
@@ -306,8 +306,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     handleQuickLink(event) {
         const key = event.currentTarget.dataset.key;
         this._expanded = { ...this._expanded, [key]: true };
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
-        setTimeout(() => {
+        setTimeout(() => { // Scroll after DOM update
             const el = this.template.querySelector(`[data-section="${key}"]`);
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
