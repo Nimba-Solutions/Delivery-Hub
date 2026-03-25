@@ -145,23 +145,35 @@ export default class DeliveryInfoPopover extends LightningElement {
     }
 
     get hasInfo() {
-        return this.info != null;
+        return this.info !== null;
     }
 
     get friendlyName() {
-        return this.info ? this.info.friendlyName : this.componentName;
+        if (this.info) {
+            return this.info.friendlyName;
+        }
+        return this.componentName;
     }
 
     get description() {
-        return this.info ? this.info.description : '';
+        if (this.info) {
+            return this.info.description;
+        }
+        return '';
     }
 
     get dataSource() {
-        return this.info ? this.info.dataSource : '';
+        if (this.info) {
+            return this.info.dataSource;
+        }
+        return '';
     }
 
     get keyFields() {
-        return this.info ? this.info.keyFields : '';
+        if (this.info) {
+            return this.info.keyFields;
+        }
+        return '';
     }
 
     get lastRefreshedLabel() {
