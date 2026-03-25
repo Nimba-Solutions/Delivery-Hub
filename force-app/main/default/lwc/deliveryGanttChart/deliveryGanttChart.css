@@ -40,6 +40,12 @@
     gap: 0.75rem;
 }
 
+.gantt-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .gantt-header-icon {
     color: #3b82f6;
 }

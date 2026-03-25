@@ -4,6 +4,7 @@
         <!-- ── Mothership: this org is the Cloud Nimbus host ── -->
         <template lwc:if={status.isMothership}>
             <lightning-card title="Delivery Hub" icon-name="standard:service_territory_member">
+                <c-delivery-info-popover slot="actions" component-name="deliveryHubSetup"></c-delivery-info-popover>
                 <div class="slds-p-around_medium slds-text-align_center">
                     <lightning-icon icon-name="utility:success" variant="success" size="small" class="slds-m-right_x-small"></lightning-icon>
                     <span class="slds-text-heading_small">This is the Host Org</span>
@@ -26,9 +27,12 @@
                 <template lwc:if={status.isConnected}>
                     <lightning-card icon-name="utility:connected_apps">
                         <span slot="title">Delivery Hub</span>
-                        <template lwc:if={hasPendingApprovals}>
-                            <lightning-badge slot="actions" label={pendingApprovalCount} class="hs-pending-badge"></lightning-badge>
-                        </template>
+                        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+                            <c-delivery-info-popover component-name="deliveryHubSetup"></c-delivery-info-popover>
+                            <template lwc:if={hasPendingApprovals}>
+                                <lightning-badge label={pendingApprovalCount} class="hs-pending-badge"></lightning-badge>
+                            </template>
+                        </div>
                         <div class="slds-p-around_medium">
 
                             <div class="hs-connected-banner">
@@ -90,6 +94,7 @@
                 <!-- ── Not connected: Quickstart ── -->
                 <template lwc:else>
                     <lightning-card title="Delivery Hub Setup" icon-name="standard:service_territory_member">
+                        <c-delivery-info-popover slot="actions" component-name="deliveryHubSetup"></c-delivery-info-popover>
                         <div class="slds-p-around_medium">
 
                             <div class="slds-text-longform slds-m-bottom_medium">
