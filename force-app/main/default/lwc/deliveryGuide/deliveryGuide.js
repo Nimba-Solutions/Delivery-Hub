@@ -23,150 +23,150 @@ const PERSONAS = [
 const SECTION_CONFIG = [
     {
         key: 'welcome',
-        personas: ['Developer', 'Project Manager', 'Client', 'Admin'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
     {
         key: 'board',
-        personas: ['Developer', 'Project Manager', 'Client', 'Admin'],
-        navType: 'tab',
+        navLabel: 'Open Board',
         navTarget: 'Delivery_Board',
-        navLabel: 'Open Board'
+        navType: 'tab',
+        personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
     {
         key: 'workItems',
-        personas: ['Developer', 'Project Manager', 'Admin'],
-        navType: 'objectList',
+        navLabel: 'View Work Items',
         navTarget: 'WorkItem__c',
-        navLabel: 'View Work Items'
+        navType: 'objectList',
+        personas: ['Developer', 'Project Manager', 'Admin']
     },
     {
         key: 'timeTracking',
-        personas: ['Developer', 'Project Manager', 'Client', 'Admin'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
     {
         key: 'documents',
-        personas: ['Project Manager', 'Client', 'Admin'],
-        navType: 'objectList',
+        navLabel: 'View Documents',
         navTarget: 'DeliveryDocument__c',
-        navLabel: 'View Documents'
+        navType: 'objectList',
+        personas: ['Project Manager', 'Client', 'Admin']
     },
     {
         key: 'activityFeed',
-        personas: ['Developer', 'Project Manager', 'Client', 'Admin'],
-        navType: 'tab',
+        navLabel: 'Open Activity Feed',
         navTarget: 'Delivery_Activity',
-        navLabel: 'Open Activity Feed'
+        navType: 'tab',
+        personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
     {
         key: 'ghostRecorder',
-        personas: ['Developer', 'Admin'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Developer', 'Admin']
     },
     {
         key: 'sync',
-        personas: ['Admin'],
-        navType: 'objectList',
+        navLabel: 'View Sync Items',
         navTarget: 'SyncItem__c',
-        navLabel: 'View Sync Items'
+        navType: 'objectList',
+        personas: ['Admin']
     },
     {
         key: 'portal',
-        personas: ['Project Manager', 'Client', 'Admin'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Project Manager', 'Client', 'Admin']
     },
     {
         key: 'settings',
-        personas: ['Admin'],
-        navType: 'tab',
+        navLabel: 'Open Settings',
         navTarget: 'DeliveryHubSettings',
-        navLabel: 'Open Settings'
+        navType: 'tab',
+        personas: ['Admin']
     },
     {
         key: 'timeline',
-        personas: ['Developer', 'Project Manager', 'Admin'],
-        navType: 'tab',
+        navLabel: 'Open Timeline',
         navTarget: 'Delivery_Timeline',
-        navLabel: 'Open Timeline'
+        navType: 'tab',
+        personas: ['Developer', 'Project Manager', 'Admin']
     },
     {
         key: 'savedFilters',
-        personas: ['Developer', 'Project Manager'],
-        navType: 'tab',
+        navLabel: 'Open Board',
         navTarget: 'Delivery_Board',
-        navLabel: 'Open Board'
+        navType: 'tab',
+        personas: ['Developer', 'Project Manager']
     },
     {
         key: 'docVersioning',
-        personas: ['Project Manager', 'Admin'],
-        navType: 'objectList',
+        navLabel: 'View Documents',
         navTarget: 'DeliveryDocument__c',
-        navLabel: 'View Documents'
+        navType: 'objectList',
+        personas: ['Project Manager', 'Admin']
     },
     {
         key: 'invoiceApproval',
-        personas: ['Client', 'Admin'],
-        navType: 'objectList',
+        navLabel: 'View Documents',
         navTarget: 'DeliveryDocument__c',
-        navLabel: 'View Documents'
+        navType: 'objectList',
+        personas: ['Client', 'Admin']
     },
     {
         key: 'portalTimeEntry',
-        personas: ['Client'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Client']
     },
     {
         key: 'emailInbound',
-        personas: ['Developer', 'Project Manager', 'Client'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Developer', 'Project Manager', 'Client']
     },
     {
         key: 'platformEvents',
-        personas: ['Developer', 'Admin'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Developer', 'Admin']
     },
     {
         key: 'configurableSettings',
-        personas: ['Admin'],
-        navType: 'tab',
+        navLabel: 'Open Settings',
         navTarget: 'DeliveryHubSettings',
-        navLabel: 'Open Settings'
+        navType: 'tab',
+        personas: ['Admin']
     },
     {
         key: 'pdfHyperlinks',
-        personas: ['Project Manager', 'Admin'],
-        navType: 'objectList',
+        navLabel: 'View Documents',
         navTarget: 'DeliveryDocument__c',
-        navLabel: 'View Documents'
+        navType: 'objectList',
+        personas: ['Project Manager', 'Admin']
     },
     {
         key: 'hideEmptyColumns',
-        personas: ['Developer', 'Project Manager'],
-        navType: 'tab',
+        navLabel: 'Open Board',
         navTarget: 'Delivery_Board',
-        navLabel: 'Open Board'
+        navType: 'tab',
+        personas: ['Developer', 'Project Manager']
     },
     {
         key: 'appLogo',
-        personas: ['Admin'],
-        navType: null,
+        navLabel: null,
         navTarget: null,
-        navLabel: null
+        navType: null,
+        personas: ['Admin']
     }
 ];
 
