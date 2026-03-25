@@ -386,6 +386,48 @@
 
                     <!-- ── Non-Invoice Templates ── -->
                     <template lwc:else>
+
+                        <!-- Entity Info (shown for agreements and status reports) -->
+                        <template lwc:if={hasEntityContact}>
+                            <div class="invoice-parties">
+                                <div class="invoice-party">
+                                    <h3 class="invoice-party-label">
+                                        <template lwc:if={isAgreementTemplate}>Prepared For</template>
+                                        <template lwc:else>Entity</template>
+                                    </h3>
+                                    <p class="invoice-party-name">{entityName}</p>
+                                    <template lwc:if={entityAddress}>
+                                        <p class="invoice-party-detail">{entityAddress}</p>
+                                    </template>
+                                    <template lwc:if={entityEmail}>
+                                        <p class="invoice-party-detail">{entityEmail}</p>
+                                    </template>
+                                    <template lwc:if={entityPhone}>
+                                        <p class="invoice-party-detail">{entityPhone}</p>
+                                    </template>
+                                </div>
+                                <template lwc:if={entityDefaultRate}>
+                                    <div class="invoice-party invoice-party--right">
+                                        <h3 class="invoice-party-label">Rate</h3>
+                                        <p class="invoice-party-detail">{entityDefaultRate}</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Agreement Clauses -->
+                        <template lwc:if={hasAgreementClauses}>
+                            <div class="invoice-section">
+                                <h3 class="invoice-section-title">Agreement Terms</h3>
+                                <template for:each={agreementClauses} for:item="clause">
+                                    <div key={clause.key} class="agreement-clause">
+                                        <h4 class="agreement-clause-title">{clause.seq}. {clause.title}</h4>
+                                        <p class="agreement-clause-body">{clause.body}</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
                         <!-- Work Requests -->
                         <template lwc:if={hasWorkRequests}>
                             <div class="invoice-section">
@@ -465,6 +507,24 @@
                                 <h3 class="invoice-section-title">AI Summary</h3>
                                 <div class="ai-narrative-box">
                                     <p class="ai-narrative-text">{aiNarrative}</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Signature Block (Agreements only) -->
+                        <template lwc:if={isAgreementTemplate}>
+                            <div class="agreement-signatures">
+                                <div class="agreement-signature-block">
+                                    <div class="agreement-signature-line"></div>
+                                    <p class="agreement-signature-label">Authorized Signature</p>
+                                    <div class="agreement-signature-line slds-m-top_large"></div>
+                                    <p class="agreement-signature-label">Date</p>
+                                </div>
+                                <div class="agreement-signature-block">
+                                    <div class="agreement-signature-line"></div>
+                                    <p class="agreement-signature-label">{entityName} - Authorized Signature</p>
+                                    <div class="agreement-signature-line slds-m-top_large"></div>
+                                    <p class="agreement-signature-label">Date</p>
                                 </div>
                             </div>
                         </template>
