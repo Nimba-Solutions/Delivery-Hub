@@ -5,13 +5,14 @@
  *               a NetworkEntity, and generates a Client Agreement document.
  * @author Cloud Nimbus LLC
  */
-/* eslint-disable no-ternary, sort-keys */
+/* eslint-disable no-ternary, sort-keys, new-cap */
 import { LightningElement, track } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import onboardClient from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryClientOnboardingController.onboardClient';
 import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.sendDocumentEmail';
 
-export default class DeliveryClientOnboarding extends LightningElement {
+export default class DeliveryClientOnboarding extends NavigationMixin(LightningElement) {
     @track clientName = '';
     @track contactEmail = '';
     @track hourlyRate = null;
@@ -117,6 +118,19 @@ export default class DeliveryClientOnboarding extends LightningElement {
                 variant: 'success'
             })
         );
+    }
+
+    handleViewAgreement() {
+        if (!this.result || !this.result.documentId) {
+            return;
+        }
+        this[NavigationMixin.Navigate]({
+            attributes: {
+                actionName: 'view',
+                recordId: this.result.documentId
+            },
+            type: 'standard__recordPage'
+        });
     }
 
     async handleSendAgreement() {
