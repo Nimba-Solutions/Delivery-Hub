@@ -3,10 +3,9 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Interactive Gantt chart powered by Frappe Gantt (MIT).
- *               Features: drag-to-reschedule, progress bars by hours,
- *               color-coded by workflow stage phase, view mode controls,
- *               entity grouping, developer names, scroll-to-today,
- *               and click-to-navigate to work item records.
+ *               Features: drag-to-reschedule, dependency arrows, quick-edit
+ *               modal, phase color-coding, milestone markers, entity/my-work
+ *               filters, localStorage persistence, rich custom popups.
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, track, api } from 'lwc';
@@ -15,47 +14,58 @@ import { loadScript, loadStyle } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import FRAPPE_RES from '@salesforce/resourceUrl/frappegantt';
+import USER_ID from '@salesforce/user/Id';
 import getGanttData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttData';
+import getGanttDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttDependencies';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
 
+const STORAGE_KEY = 'dh-frappe-gantt-prefs';
+
 const PHASE_COLORS = {
-    'Planning':    '#3b82f6',
-    'Approval':    '#f59e0b',
-    'Development': '#22c55e',
-    'Testing':     '#a855f7',
-    'UAT':         '#14b8a6',
-    'Deployment':  '#ef4444',
-    'Done':        '#9ca3af'
+    Planning:    '#3b82f6',
+    Approval:    '#f59e0b',
+    Development: '#22c55e',
+    Testing:     '#a855f7',
+    UAT:         '#14b8a6',
+    Deployment:  '#ef4444',
+    Done:        '#9ca3af'
 };
 
 const PHASE_CSS_MAP = {
-    'Planning':    'bar-planning',
-    'Approval':    'bar-approval',
-    'Development': 'bar-development',
-    'Testing':     'bar-testing',
-    'UAT':         'bar-uat',
-    'Deployment':  'bar-deployment',
-    'Done':        'bar-done'
+    Planning:    'bar-planning',
+    Approval:    'bar-approval',
+    Development: 'bar-development',
+    Testing:     'bar-testing',
+    UAT:         'bar-uat',
+    Deployment:  'bar-deployment',
+    Done:        'bar-done'
 };
 
 const DEFAULT_CSS_CLASS = 'bar-development';
 
 export default class DeliveryFrappeGantt extends NavigationMixin(LightningElement) {
 
-    // ── Public API ──────────────────────────────────────────────────────
+    // ── Public API ─────────────────────────────────────────────────────
     @api showCompleted = false;
     @api initialViewMode = 'Week';
 
-    // ── Tracked state ───────────────────────────────────────────────────
+    // ── Tracked state ──────────────────────────────────────────────────
     @track isLoading = true;
     @track errorMessage = '';
     @track rawTasks = [];
+    @track rawDependencies = [];
     @track workflowConfig = null;
     @track currentViewMode = 'Week';
     @track _showCompleted = false;
+    @track showDependencies = true;
+    @track myWorkOnly = false;
     @track selectedEntity = '';
     @track summaryStats = { total: 0, onTrack: 0, overdue: 0, unscheduled: 0 };
+    @track showQuickEdit = false;
+    @track selectedWorkItemId = null;
+
+    currentUserId = USER_ID;
 
     _ganttInitialized = false;
     _scriptsLoaded = false;
@@ -63,12 +73,17 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
     _ganttInstance = null;
     _taskMap = {};
     _wiredGanttResult = null;
+    _wiredDepsResult = null;
+    _terminalStages = new Set();
 
-    // ── Lifecycle ───────────────────────────────────────────────────────
+    // ── Lifecycle ──────────────────────────────────────────────────────
 
     connectedCallback() {
-        this.currentViewMode = this.initialViewMode || 'Week';
-        this._showCompleted = this.showCompleted;
+        this._restorePrefs();
+        this.currentViewMode = this.currentViewMode || this.initialViewMode || 'Week';
+        if (!this._showCompleted && this.showCompleted) {
+            this._showCompleted = this.showCompleted;
+        }
     }
 
     renderedCallback() {
@@ -87,12 +102,13 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         this._ganttInitialized = false;
     }
 
-    // ── Wires ───────────────────────────────────────────────────────────
+    // ── Wires ──────────────────────────────────────────────────────────
 
     @wire(getWorkflowConfig, { workflowTypeName: 'Software_Delivery' })
     wiredConfig({ data, error }) {
         if (data) {
             this.workflowConfig = data;
+            this._buildTerminalStages();
             this._tryRender();
         } else if (error) {
             console.error('[DeliveryFrappeGantt] getWorkflowConfig error:', error);
@@ -112,7 +128,18 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         }
     }
 
-    // ── Computed UI state ───────────────────────────────────────────────
+    @wire(getGanttDependencies)
+    wiredDependencies(result) {
+        this._wiredDepsResult = result;
+        if (result.data) {
+            this.rawDependencies = result.data;
+            this._tryRender();
+        } else if (result.error) {
+            console.error('[DeliveryFrappeGantt] getGanttDependencies error:', result.error);
+        }
+    }
+
+    // ── Computed: UI state ─────────────────────────────────────────────
 
     get hasError()  { return !this.isLoading && !!this.errorMessage; }
     get isEmpty()   { return !this.isLoading && !this.errorMessage && this.filteredTasks.length === 0; }
@@ -120,10 +147,14 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
 
     get filteredTasks() {
         if (!this.rawTasks) { return []; }
-        if (!this.selectedEntity) { return this.rawTasks; }
-        return this.rawTasks.filter(t =>
-            (t.entityName || 'Unassigned') === this.selectedEntity
-        );
+        let tasks = [...this.rawTasks];
+        if (this.selectedEntity) {
+            tasks = tasks.filter(t => (t.entityName || 'Unassigned') === this.selectedEntity);
+        }
+        if (this.myWorkOnly) {
+            tasks = tasks.filter(t => t.developerName != null && t.developerName !== '');
+        }
+        return tasks;
     }
 
     get subtitleText() {
@@ -131,9 +162,11 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         if (this.isLoading) { return 'Loading...'; }
         if (count === 0) { return 'No work items'; }
         const suffix = count === 1 ? 'item' : 'items';
-        const filter = this.selectedEntity ? ' (' + this.selectedEntity + ')' : '';
-        const completed = this._showCompleted ? ' incl. completed' : '';
-        return count + ' work ' + suffix + filter + completed;
+        const parts = [count + ' work ' + suffix];
+        if (this.selectedEntity) { parts.push(this.selectedEntity); }
+        if (this._showCompleted) { parts.push('incl. completed'); }
+        if (this.myWorkOnly) { parts.push('assigned only'); }
+        return parts.join(' \u00b7 ');
     }
 
     get entityOptions() {
@@ -145,23 +178,8 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         return opts;
     }
 
-    get showEntityFilter() {
-        return this.entityOptions.length > 2;
-    }
-
-    // View mode button variants
-    get btnDayVariant()   { return this.currentViewMode === 'Day' ? 'brand' : 'neutral'; }
-    get btnWeekVariant()  { return this.currentViewMode === 'Week' ? 'brand' : 'neutral'; }
-    get btnMonthVariant() { return this.currentViewMode === 'Month' ? 'brand' : 'neutral'; }
-
-    get completedToggleTitle() {
-        return this._showCompleted ? 'Hide completed items' : 'Show completed items';
-    }
-    get completedToggleVariant() {
-        return this._showCompleted ? 'brand' : 'border';
-    }
-    get completedToggleIcon() {
-        return this._showCompleted ? 'utility:check' : 'utility:filterList';
+    get hasSummaryStats() {
+        return this.summaryStats.total > 0;
     }
 
     get legendItems() {
@@ -175,15 +193,11 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         const phases = usedPhases.size > 0 ? Array.from(usedPhases) : Object.keys(PHASE_COLORS);
         return phases.map(phase => ({
             phase,
-            dotStyle: 'background-color: ' + PHASE_COLORS[phase] + ';'
+            dotStyle: 'background-color: ' + (PHASE_COLORS[phase] || '#9ca3af') + ';'
         }));
     }
 
-    get hasSummaryStats() {
-        return this.summaryStats.total > 0;
-    }
-
-    // ── Stage → phase mapping ───────────────────────────────────────────
+    // ── Computed: stage/phase mapping ──────────────────────────────────
 
     get _stagePhaseMap() {
         if (!this.workflowConfig || !this.workflowConfig.stages) { return {}; }
@@ -194,12 +208,27 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         return map;
     }
 
+    _buildTerminalStages() {
+        this._terminalStages = new Set();
+        if (this.workflowConfig && this.workflowConfig.stages) {
+            this.workflowConfig.stages.forEach(s => {
+                if (s.isTerminal) {
+                    this._terminalStages.add(s.apiValue);
+                }
+            });
+        }
+    }
+
     _getCssClassForStage(stageName) {
         const phase = this._stagePhaseMap[stageName] || 'Development';
         return PHASE_CSS_MAP[phase] || DEFAULT_CSS_CLASS;
     }
 
-    // ── Summary stats ───────────────────────────────────────────────────
+    _isTerminalStage(stageName) {
+        return this._terminalStages.has(stageName);
+    }
+
+    // ── Summary stats ──────────────────────────────────────────────────
 
     _computeSummary() {
         const today = new Date();
@@ -229,37 +258,72 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         };
     }
 
-    // ── Handlers ────────────────────────────────────────────────────────
+    // ── Toolbar event handlers ─────────────────────────────────────────
 
-    handleViewDay()   { this._setViewMode('Day'); }
-    handleViewWeek()  { this._setViewMode('Week'); }
-    handleViewMonth() { this._setViewMode('Month'); }
-
-    handleToggleCompleted() {
-        this._showCompleted = !this._showCompleted;
+    handleZoomChange(event) {
+        const mode = event.detail.value;
+        this.currentViewMode = mode;
+        this._savePrefs();
+        if (this._ganttInstance) {
+            try {
+                this._ganttInstance.change_view_mode(mode);
+                requestAnimationFrame(() => this._scrollToToday());
+            } catch (err) {
+                console.error('[DeliveryFrappeGantt] change_view_mode error:', err);
+            }
+        }
     }
 
     handleEntityChange(event) {
         this.selectedEntity = event.detail.value;
+        this._savePrefs();
+        this._rebuildChart();
+    }
+
+    handleToggleDependencies() {
+        this.showDependencies = !this.showDependencies;
+        this._savePrefs();
+        this._rebuildChart();
+    }
+
+    handleToggleCompleted() {
+        this._showCompleted = !this._showCompleted;
+        this._savePrefs();
+        // Wire reactivity will refetch data automatically
+    }
+
+    handleToggleMyWork() {
+        this.myWorkOnly = !this.myWorkOnly;
+        this._savePrefs();
         this._rebuildChart();
     }
 
     handleScrollToToday() {
-        if (!this._ganttInstance) { return; }
-        const container = this.refs.ganttContainer;
-        if (!container) { return; }
-        const todayEl = container.querySelector('.today-highlight');
-        if (todayEl) {
-            todayEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }
+        this._scrollToToday();
     }
 
     handleRefresh() {
         this.isLoading = true;
         refreshApex(this._wiredGanttResult);
+        if (this._wiredDepsResult) {
+            refreshApex(this._wiredDepsResult);
+        }
     }
 
-    // ── Private: Library loading ────────────────────────────────────────
+    // ── Quick-edit handlers ────────────────────────────────────────────
+
+    handleQuickEditSave() {
+        this.showQuickEdit = false;
+        this.selectedWorkItemId = null;
+        refreshApex(this._wiredGanttResult);
+    }
+
+    handleQuickEditClose() {
+        this.showQuickEdit = false;
+        this.selectedWorkItemId = null;
+    }
+
+    // ── Private: Library loading ───────────────────────────────────────
 
     _loadLibrary() {
         if (this._scriptsLoading) { return; }
@@ -279,21 +343,39 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         });
     }
 
-    // ── Private: Build Frappe tasks ─────────────────────────────────────
+    // ── Private: Build dependency map ──────────────────────────────────
+
+    _buildDependencyMap() {
+        // Map: targetWorkItemId → [sourceWorkItemIds]
+        const depMap = {};
+        if (!this.rawDependencies || !this.showDependencies) { return depMap; }
+        this.rawDependencies.forEach(d => {
+            if (!depMap[d.target]) {
+                depMap[d.target] = [];
+            }
+            depMap[d.target].push(d.source);
+        });
+        return depMap;
+    }
+
+    // ── Private: Build Frappe tasks ────────────────────────────────────
 
     _buildTasks() {
         this._taskMap = {};
         const tasks = [];
+        const depMap = this._buildDependencyMap();
+        // Build a set of all work item IDs in the current filtered set for dep filtering
+        const filteredIds = new Set(this.filteredTasks.map(t => t.workItemId));
 
         this.filteredTasks.forEach(item => {
             const taskId = 'task_' + item.workItemId;
             this._taskMap[taskId] = item.workItemId;
 
-            const entityPrefix = item.entityName ? '[' + item.entityName + '] ' : '';
             const devSuffix = item.developerName ? ' (' + item.developerName + ')' : '';
-            const label = item.name + (item.description ? ' — ' + item.description : '') + devSuffix;
+            const label = item.name + (item.description ? ' \u2014 ' + item.description : '') + devSuffix;
 
             const cssClass = this._getCssClassForStage(item.stage);
+            const isMilestone = this._isTerminalStage(item.stage);
 
             // Calculate progress from hours
             let progress = 0;
@@ -301,21 +383,34 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
                 progress = Math.round(item.progress * 100);
             }
 
+            // Build dependencies string — only include sources that are in the filtered set
+            let depsStr = '';
+            if (depMap[item.workItemId]) {
+                const validDeps = depMap[item.workItemId]
+                    .filter(srcId => filteredIds.has(srcId))
+                    .map(srcId => 'task_' + srcId);
+                depsStr = validDeps.join(', ');
+            }
+
+            const classes = [cssClass];
+            if (item.isCompleted) { classes.push('bar-completed'); }
+            if (isMilestone) { classes.push('bar-milestone'); }
+
             tasks.push({
                 id: taskId,
                 name: label,
                 start: item.startDate,
                 end: item.endDate,
                 progress: progress,
-                custom_class: cssClass + (item.isCompleted ? ' bar-completed' : ''),
-                dependencies: ''
+                custom_class: classes.join(' '),
+                dependencies: depsStr
             });
         });
 
         return tasks;
     }
 
-    // ── Private: Gantt init ─────────────────────────────────────────────
+    // ── Private: Gantt init ────────────────────────────────────────────
 
     _initGantt() {
         const svgEl = this.refs.ganttSvg;
@@ -344,14 +439,8 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
                 on_click: function(task) {
                     const sfId = self._taskMap[task.id];
                     if (sfId) {
-                        self[NavigationMixin.Navigate]({
-                            type: 'standard__recordPage',
-                            attributes: {
-                                recordId: sfId,
-                                objectApiName: 'WorkItem__c',
-                                actionName: 'view'
-                            }
-                        });
+                        self.selectedWorkItemId = sfId;
+                        self.showQuickEdit = true;
                     }
                 },
 
@@ -365,7 +454,7 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
                         .then(() => {
                             self.dispatchEvent(new ShowToastEvent({
                                 title: 'Dates Updated',
-                                message: task.name.split(' — ')[0] + ': ' + startStr + ' to ' + endStr,
+                                message: task.name.split(' \u2014 ')[0] + ': ' + startStr + ' to ' + endStr,
                                 variant: 'success'
                             }));
                             refreshApex(self._wiredGanttResult);
@@ -389,12 +478,15 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
                     const item = self.rawTasks.find(t => t.workItemId === sfId);
 
                     let html = '<div class="frappe-popup">';
-                    html += '<div class="frappe-popup-title">' + self._escapeHtml(task.name.split(' (')[0]) + '</div>';
+                    html += '<div class="frappe-popup-title">' + self._escapeHtml(task.name.split(' (')[0].split(' \u2014 ')[0]) + '</div>';
 
                     if (item) {
-                        // Stage + Priority row
+                        // Stage + Priority badges
+                        const phase = self._stagePhaseMap[item.stage] || 'Development';
+                        const phaseColor = PHASE_COLORS[phase] || '#9ca3af';
                         const stageBadge = item.stage
-                            ? '<span class="popup-stage-badge">' + self._escapeHtml(item.stage) + '</span>'
+                            ? '<span class="popup-stage-badge" style="background:' + phaseColor + '44;color:' + phaseColor + '">'
+                              + self._escapeHtml(item.stage) + '</span>'
                             : '';
                         const priBadge = item.priority
                             ? '<span class="popup-priority-badge popup-pri-' + (item.priority || '').toLowerCase() + '">'
@@ -412,7 +504,7 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
                             html += '<div class="frappe-popup-row"><span class="popup-label">Developer:</span> ' + self._escapeHtml(item.developerName) + '</div>';
                         }
 
-                        // Hours + Progress bar
+                        // Hours + mini progress bar
                         if (item.estimatedHours != null && item.estimatedHours > 0) {
                             const logged = item.loggedHours || 0;
                             const pct = Math.min(Math.round((logged / item.estimatedHours) * 100), 100);
@@ -422,31 +514,34 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
                             html += '<div class="popup-progress-track"><div class="popup-progress-fill" style="width:' + pct + '%"></div></div>';
                         }
 
-                        // Dates
+                        // Dates + days remaining/overdue
                         const startD = task._start ? task._start.toLocaleDateString() : item.startDate;
                         const endD = task._end ? task._end.toLocaleDateString() : item.endDate;
-                        html += '<div class="frappe-popup-dates">' + startD + '  →  ' + endD + '</div>';
+                        html += '<div class="frappe-popup-dates">' + startD + '  \u2192  ' + endD;
 
-                        // Days remaining
                         if (task._end) {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
                             const daysLeft = Math.ceil((task._end - today) / (1000 * 60 * 60 * 24));
                             if (daysLeft < 0 && !item.isCompleted) {
-                                html += '<div class="popup-overdue">' + Math.abs(daysLeft) + ' days overdue</div>';
+                                html += ' <span class="popup-overdue-inline">' + Math.abs(daysLeft) + 'd overdue</span>';
                             } else if (daysLeft >= 0 && daysLeft <= 7 && !item.isCompleted) {
-                                html += '<div class="popup-warning">' + daysLeft + ' days remaining</div>';
+                                html += ' <span class="popup-warning-inline">' + daysLeft + 'd left</span>';
                             }
                         }
+                        html += '</div>';
+
+                        // View Record link
+                        html += '<div class="popup-view-link">View Record \u2197</div>';
                     }
 
-                    html += '<div class="popup-hint">Click to open &middot; Drag to reschedule</div>';
+                    html += '<div class="popup-hint">Click to edit \u00b7 Drag to reschedule</div>';
                     html += '</div>';
                     return html;
                 }
             });
 
-            // Scroll to today after a short delay
+            // Scroll to today after init
             requestAnimationFrame(() => {
                 this._scrollToToday();
             });
@@ -457,21 +552,7 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         }
     }
 
-    // ── Private: View mode ──────────────────────────────────────────────
-
-    _setViewMode(mode) {
-        this.currentViewMode = mode;
-        if (this._ganttInstance) {
-            try {
-                this._ganttInstance.change_view_mode(mode);
-                requestAnimationFrame(() => this._scrollToToday());
-            } catch (err) {
-                console.error('[DeliveryFrappeGantt] change_view_mode error:', err);
-            }
-        }
-    }
-
-    // ── Private: Rebuild chart ──────────────────────────────────────────
+    // ── Private: Rebuild / re-render ───────────────────────────────────
 
     _rebuildChart() {
         this._ganttInitialized = false;
@@ -494,7 +575,7 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         }
     }
 
-    // ── Private: Scroll to today ────────────────────────────────────────
+    // ── Private: Scroll to today ───────────────────────────────────────
 
     _scrollToToday() {
         const container = this.refs.ganttContainer;
@@ -505,7 +586,39 @@ export default class DeliveryFrappeGantt extends NavigationMixin(LightningElemen
         }
     }
 
-    // ── Private: Utilities ──────────────────────────────────────────────
+    // ── Private: localStorage persistence ──────────────────────────────
+
+    _savePrefs() {
+        try {
+            const prefs = {
+                showDependencies: this.showDependencies,
+                showCompleted: this._showCompleted,
+                myWorkOnly: this.myWorkOnly,
+                currentViewMode: this.currentViewMode,
+                selectedEntity: this.selectedEntity
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        } catch (e) {
+            // localStorage may be unavailable; fail silently
+        }
+    }
+
+    _restorePrefs() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (!stored) { return; }
+            const prefs = JSON.parse(stored);
+            if (prefs.showDependencies != null) { this.showDependencies = prefs.showDependencies; }
+            if (prefs.showCompleted != null) { this._showCompleted = prefs.showCompleted; }
+            if (prefs.myWorkOnly != null) { this.myWorkOnly = prefs.myWorkOnly; }
+            if (prefs.currentViewMode) { this.currentViewMode = prefs.currentViewMode; }
+            if (prefs.selectedEntity != null) { this.selectedEntity = prefs.selectedEntity; }
+        } catch (e) {
+            // fail silently
+        }
+    }
+
+    // ── Private: Utilities ─────────────────────────────────────────────
 
     _formatDate(d) {
         if (!d) { return ''; }

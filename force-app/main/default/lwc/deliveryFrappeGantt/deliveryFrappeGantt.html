@@ -1,62 +1,32 @@
 <template>
     <div class="frappe-gantt-card">
 
-        <!-- Header -->
-        <div class="frappe-gantt-header">
-            <div class="frappe-gantt-header-left">
-                <lightning-icon icon-name="utility:date_time" alternative-text="Gantt Chart" size="small" class="frappe-gantt-header-icon"></lightning-icon>
-                <div>
-                    <h2 class="frappe-gantt-title">Project Timeline</h2>
-                    <p class="frappe-gantt-subtitle">{subtitleText}</p>
-                </div>
-            </div>
-            <div class="frappe-gantt-header-right">
-                <!-- Entity filter -->
-                <template lwc:if={showEntityFilter}>
-                    <lightning-combobox
-                        label="Client"
-                        variant="label-hidden"
-                        value={selectedEntity}
-                        options={entityOptions}
-                        onchange={handleEntityChange}
-                        class="entity-filter"
-                    ></lightning-combobox>
-                </template>
+        <!-- Shared toolbar -->
+        <c-delivery-gantt-toolbar
+            title="Project Timeline"
+            subtitle={subtitleText}
+            zoom-levels="Day,Week,Month"
+            current-zoom={currentViewMode}
+            entity-options={entityOptions}
+            selected-entity={selectedEntity}
+            show-dependency-toggle
+            dependencies-active={showDependencies}
+            show-completed-toggle
+            completed-active={_showCompleted}
+            show-my-work-toggle
+            my-work-active={myWorkOnly}
+            onzoomchange={handleZoomChange}
+            onentitychange={handleEntityChange}
+            ontoggledependencies={handleToggleDependencies}
+            ontogglecompleted={handleToggleCompleted}
+            ontogglemywork={handleToggleMyWork}
+            onscrolltoday={handleScrollToToday}
+            onrefresh={handleRefresh}
+        ></c-delivery-gantt-toolbar>
 
-                <!-- View mode buttons -->
-                <lightning-button-group>
-                    <lightning-button label="Day" variant={btnDayVariant} onclick={handleViewDay}></lightning-button>
-                    <lightning-button label="Week" variant={btnWeekVariant} onclick={handleViewWeek}></lightning-button>
-                    <lightning-button label="Month" variant={btnMonthVariant} onclick={handleViewMonth}></lightning-button>
-                </lightning-button-group>
-
-                <!-- Scroll to today -->
-                <lightning-button-icon
-                    icon-name="utility:clock"
-                    alternative-text="Scroll to today"
-                    title="Scroll to today"
-                    variant="border"
-                    onclick={handleScrollToToday}
-                ></lightning-button-icon>
-
-                <!-- Toggle completed -->
-                <lightning-button-icon
-                    icon-name={completedToggleIcon}
-                    alternative-text="Toggle completed items"
-                    title={completedToggleTitle}
-                    variant={completedToggleVariant}
-                    onclick={handleToggleCompleted}
-                ></lightning-button-icon>
-
-                <!-- Refresh -->
-                <lightning-button-icon
-                    icon-name="utility:refresh"
-                    alternative-text="Refresh data"
-                    title="Refresh data"
-                    variant="border"
-                    onclick={handleRefresh}
-                ></lightning-button-icon>
-            </div>
+        <!-- Info popover -->
+        <div class="info-popover-slot">
+            <c-delivery-info-popover component-name="deliveryFrappeGantt"></c-delivery-info-popover>
         </div>
 
         <!-- Summary stats bar -->
@@ -117,7 +87,7 @@
             </div>
         </template>
 
-        <!-- Legend + drag hint -->
+        <!-- Legend + drag hint footer -->
         <template lwc:if={hasData}>
             <div class="frappe-gantt-footer">
                 <div class="frappe-gantt-legend">
@@ -127,10 +97,23 @@
                             {item.phase}
                         </span>
                     </template>
+                    <span class="legend-item legend-milestone">
+                        <span class="legend-diamond"></span>
+                        Milestone
+                    </span>
                 </div>
-                <span class="drag-hint">Drag bars to reschedule &middot; Click to open record</span>
+                <span class="drag-hint">Click to edit &middot; Drag to reschedule</span>
             </div>
         </template>
 
     </div>
+
+    <!-- Quick-edit modal -->
+    <template lwc:if={showQuickEdit}>
+        <c-delivery-gantt-quick-edit
+            record-id={selectedWorkItemId}
+            onsave={handleQuickEditSave}
+            onclose={handleQuickEditClose}
+        ></c-delivery-gantt-quick-edit>
+    </template>
 </template>

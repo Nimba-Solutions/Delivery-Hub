@@ -2,65 +2,28 @@
     display: block;
 }
 
-/* Card shell */
+/* ── Card shell ─────────────────────────────────────────────────────── */
+
 .frappe-gantt-card {
     background: #ffffff;
     border-radius: 0.75rem;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     font-size: 0.8125rem;
+    position: relative;
 }
 
-/* ── Header ──────────────────────────────────────────────────────────── */
+/* ── Info popover positioning ───────────────────────────────────────── */
 
-.frappe-gantt-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
-    flex-wrap: wrap;
-    gap: 0.75rem;
+.info-popover-slot {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    z-index: 10;
 }
 
-.frappe-gantt-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.frappe-gantt-header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.frappe-gantt-header-icon {
-    color: #3b82f6;
-}
-
-.frappe-gantt-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0 0 0.1rem 0;
-    letter-spacing: -0.01em;
-}
-
-.frappe-gantt-subtitle {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin: 0;
-}
-
-.entity-filter {
-    width: 10rem;
-}
-
-/* ── Summary stats bar ───────────────────────────────────────────────── */
+/* ── Summary stats bar ──────────────────────────────────────────────── */
 
 .summary-bar {
     display: flex;
@@ -103,7 +66,7 @@
     color: #d97706;
 }
 
-/* ── Loading / Error / Empty ─────────────────────────────────────────── */
+/* ── Loading / Error / Empty ────────────────────────────────────────── */
 
 .frappe-gantt-loading {
     padding: 3rem;
@@ -140,7 +103,7 @@
     margin-top: 0.35rem;
 }
 
-/* ── Gantt container ─────────────────────────────────────────────────── */
+/* ── Gantt container ────────────────────────────────────────────────── */
 
 .frappe-gantt-container {
     width: 100%;
@@ -153,7 +116,7 @@
     scrollbar-color: #cbd5e1 transparent;
 }
 
-/* ── Frappe Gantt bar colors by workflow phase ────────────────────────── */
+/* ── Frappe Gantt bar colors by workflow phase ──────────────────────── */
 
 /* Planning = blue */
 :global(.bar-planning .bar-progress) { fill: #2563eb; }
@@ -188,7 +151,20 @@
 :global(.bar-completed .bar-progress) { opacity: 0.45; }
 :global(.bar-completed .bar-label) { opacity: 0.5; }
 
-/* ── General Frappe Gantt style overrides ─────────────────────────────── */
+/* Milestone bars = diamond-style accent */
+:global(.bar-milestone .bar) {
+    stroke-width: 2;
+    stroke-dasharray: 6 3;
+}
+:global(.bar-milestone .bar-progress) {
+    fill-opacity: 0.9;
+}
+:global(.bar-milestone .bar-label) {
+    font-weight: 700;
+    font-style: italic;
+}
+
+/* ── General Frappe Gantt style overrides ────────────────────────────── */
 
 /* Bars */
 :global(.gantt .bar-wrapper .bar) {
@@ -198,7 +174,7 @@
 }
 
 :global(.gantt .bar-wrapper:hover .bar) {
-    filter: brightness(1.1);
+    filter: brightness(1.08);
     cursor: grab;
 }
 
@@ -256,7 +232,7 @@
     opacity: 0.6;
 }
 
-/* Drag handles — show them for drag-to-reschedule */
+/* Drag handles — show on hover */
 :global(.gantt .handle-group) {
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -282,7 +258,7 @@
     stroke-width: 1.5;
 }
 
-/* ── Popup (tooltip) styling ─────────────────────────────────────────── */
+/* ── Popup (tooltip) styling ────────────────────────────────────────── */
 
 :global(.gantt .popup-wrapper) {
     z-index: 10000;
@@ -299,7 +275,7 @@
     padding: 12px 16px;
     font-size: 12px;
     line-height: 1.6;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     max-width: 380px;
     min-width: 220px;
 }
@@ -317,6 +293,7 @@
     display: flex;
     gap: 6px;
     margin-bottom: 8px;
+    flex-wrap: wrap;
 }
 
 :global(.popup-stage-badge) {
@@ -325,8 +302,6 @@
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 999px;
-    background: #334155;
-    color: #e2e8f0;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
@@ -354,6 +329,11 @@
 :global(.popup-pri-low) {
     background: #14532d;
     color: #86efac;
+}
+
+:global(.popup-pri-critical) {
+    background: #4c0519;
+    color: #fb7185;
 }
 
 :global(.frappe-popup-row) {
@@ -391,18 +371,31 @@
     font-weight: 500;
 }
 
-:global(.popup-overdue) {
-    margin-top: 4px;
+:global(.popup-overdue-inline) {
     color: #f87171;
-    font-weight: 600;
-    font-size: 11px;
+    font-weight: 700;
+    font-size: 10px;
+    margin-left: 4px;
 }
 
-:global(.popup-warning) {
-    margin-top: 4px;
+:global(.popup-warning-inline) {
     color: #fbbf24;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+:global(.popup-view-link) {
+    margin-top: 6px;
+    color: #60a5fa;
     font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+:global(.popup-view-link:hover) {
+    color: #93bbfd;
+    text-decoration: underline;
 }
 
 :global(.popup-hint) {
@@ -414,7 +407,7 @@
     font-style: italic;
 }
 
-/* ── Footer (legend + hint) ──────────────────────────────────────────── */
+/* ── Footer (legend + hint) ─────────────────────────────────────────── */
 
 .frappe-gantt-footer {
     display: flex;
@@ -447,6 +440,19 @@
     height: 0.55rem;
     border-radius: 50%;
     display: inline-block;
+}
+
+.legend-diamond {
+    width: 0.5rem;
+    height: 0.5rem;
+    background: #475569;
+    transform: rotate(45deg);
+    display: inline-block;
+    border: 1px dashed #94a3b8;
+}
+
+.legend-milestone {
+    color: #475569;
 }
 
 .drag-hint {

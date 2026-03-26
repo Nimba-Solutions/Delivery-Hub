@@ -4,16 +4,15 @@
     <isExposed>true</isExposed>
     <targets>
         <target>lightning__AppPage</target>
-        <target>lightning__RecordPage</target>
-        <target>lightning__HomePage</target>
         <target>lightning__Tab</target>
+        <target>lightning__HomePage</target>
     </targets>
     <targetConfigs>
-        <targetConfig targets="lightning__AppPage,lightning__RecordPage,lightning__HomePage">
+        <targetConfig targets="lightning__AppPage,lightning__HomePage">
             <property name="showCompleted" type="Boolean" label="Show Completed Items" description="When checked, includes completed (inactive) work items in the Gantt chart." default="false" />
             <property name="initialViewMode" type="String" label="Initial View Mode" description="The default view mode when the chart loads." datasource="Day,Week,Month" default="Week" />
         </targetConfig>
     </targetConfigs>
     <masterLabel>Delivery Frappe Gantt</masterLabel>
-    <description>Interactive Gantt chart powered by Frappe Gantt. Shows work items with progress bars, stage color-coding by workflow phase, view mode controls, and click-to-navigate.</description>
+    <description>Interactive Gantt chart powered by Frappe Gantt. Features dependency arrows, quick-edit modal, phase color-coding, milestone markers, entity and my-work filters, drag-to-reschedule, and rich custom popups.</description>
 </LightningComponentBundle>
