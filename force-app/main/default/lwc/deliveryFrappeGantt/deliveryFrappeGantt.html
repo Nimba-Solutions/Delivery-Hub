@@ -6,27 +6,84 @@
             <div class="frappe-gantt-header-left">
                 <lightning-icon icon-name="utility:date_time" alternative-text="Gantt Chart" size="small" class="frappe-gantt-header-icon"></lightning-icon>
                 <div>
-                    <h2 class="frappe-gantt-title">Frappe Timeline</h2>
+                    <h2 class="frappe-gantt-title">Project Timeline</h2>
                     <p class="frappe-gantt-subtitle">{subtitleText}</p>
                 </div>
             </div>
             <div class="frappe-gantt-header-right">
+                <!-- Entity filter -->
+                <template lwc:if={showEntityFilter}>
+                    <lightning-combobox
+                        label="Client"
+                        variant="label-hidden"
+                        value={selectedEntity}
+                        options={entityOptions}
+                        onchange={handleEntityChange}
+                        class="entity-filter"
+                    ></lightning-combobox>
+                </template>
+
+                <!-- View mode buttons -->
                 <lightning-button-group>
-                    <lightning-button label="Quarter Day" variant={btnQuarterDayVariant} onclick={handleViewQuarterDay}></lightning-button>
-                    <lightning-button label="Half Day" variant={btnHalfDayVariant} onclick={handleViewHalfDay}></lightning-button>
                     <lightning-button label="Day" variant={btnDayVariant} onclick={handleViewDay}></lightning-button>
                     <lightning-button label="Week" variant={btnWeekVariant} onclick={handleViewWeek}></lightning-button>
                     <lightning-button label="Month" variant={btnMonthVariant} onclick={handleViewMonth}></lightning-button>
                 </lightning-button-group>
+
+                <!-- Scroll to today -->
                 <lightning-button-icon
-                    icon-name="utility:filterList"
+                    icon-name="utility:clock"
+                    alternative-text="Scroll to today"
+                    title="Scroll to today"
+                    variant="border"
+                    onclick={handleScrollToToday}
+                ></lightning-button-icon>
+
+                <!-- Toggle completed -->
+                <lightning-button-icon
+                    icon-name={completedToggleIcon}
                     alternative-text="Toggle completed items"
                     title={completedToggleTitle}
                     variant={completedToggleVariant}
                     onclick={handleToggleCompleted}
                 ></lightning-button-icon>
+
+                <!-- Refresh -->
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    alternative-text="Refresh data"
+                    title="Refresh data"
+                    variant="border"
+                    onclick={handleRefresh}
+                ></lightning-button-icon>
             </div>
         </div>
+
+        <!-- Summary stats bar -->
+        <template lwc:if={hasSummaryStats}>
+            <div class="summary-bar">
+                <span class="summary-stat">
+                    <span class="stat-number">{summaryStats.total}</span>
+                    <span class="stat-label">Total</span>
+                </span>
+                <span class="summary-stat stat-on-track">
+                    <span class="stat-number">{summaryStats.onTrack}</span>
+                    <span class="stat-label">On Track</span>
+                </span>
+                <template lwc:if={summaryStats.overdue}>
+                    <span class="summary-stat stat-overdue">
+                        <span class="stat-number">{summaryStats.overdue}</span>
+                        <span class="stat-label">Overdue</span>
+                    </span>
+                </template>
+                <template lwc:if={summaryStats.unscheduled}>
+                    <span class="summary-stat stat-unscheduled">
+                        <span class="stat-number">{summaryStats.unscheduled}</span>
+                        <span class="stat-label">No Dates</span>
+                    </span>
+                </template>
+            </div>
+        </template>
 
         <!-- Loading -->
         <template lwc:if={isLoading}>
@@ -47,8 +104,9 @@
         <template lwc:if={isEmpty}>
             <div class="frappe-gantt-empty">
                 <lightning-icon icon-name="utility:date_time" size="medium" class="frappe-gantt-empty-icon"></lightning-icon>
-                <p>No work items found to display on the Gantt chart.</p>
-                <p class="frappe-gantt-empty-sub">Create work items with estimated dates to see them plotted here.</p>
+                <p>No work items found to display on the timeline.</p>
+                <p class="frappe-gantt-empty-sub">Create work items with estimated start/end dates to see them plotted here.</p>
+                <p class="frappe-gantt-empty-sub">Tip: You can drag bars to reschedule items directly on the chart.</p>
             </div>
         </template>
 
@@ -59,15 +117,18 @@
             </div>
         </template>
 
-        <!-- Legend -->
+        <!-- Legend + drag hint -->
         <template lwc:if={hasData}>
-            <div class="frappe-gantt-legend">
-                <template for:each={legendItems} for:item="item">
-                    <span key={item.phase} class="legend-item">
-                        <span class="legend-dot" style={item.dotStyle}></span>
-                        {item.phase}
-                    </span>
-                </template>
+            <div class="frappe-gantt-footer">
+                <div class="frappe-gantt-legend">
+                    <template for:each={legendItems} for:item="item">
+                        <span key={item.phase} class="legend-item">
+                            <span class="legend-dot" style={item.dotStyle}></span>
+                            {item.phase}
+                        </span>
+                    </template>
+                </div>
+                <span class="drag-hint">Drag bars to reschedule &middot; Click to open record</span>
             </div>
         </template>
 

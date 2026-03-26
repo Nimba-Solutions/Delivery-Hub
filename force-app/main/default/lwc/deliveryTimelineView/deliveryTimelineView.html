@@ -116,6 +116,9 @@
                                         data-id={item.workItemId}
                                         onclick={handleBarClick}
                                     >
+                                        <template lwc:if={item.hasProgress}>
+                                            <div class="bar-progress" style={item.progressStyle}></div>
+                                        </template>
                                         <span class="bar-label">{item.name}</span>
                                     </div>
                                 </template>
