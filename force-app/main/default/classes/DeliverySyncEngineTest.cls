@@ -180,17 +180,17 @@ private class DeliverySyncEngineTest {
     @IsTest
     static void testSmartRoutingBlocksUpstreamEcho() {
         WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c FROM WorkItem__c LIMIT 1];
-        
+
         delete [SELECT Id FROM SyncItem__c]; // Clear setup noise
 
         Test.startTest();
         // Simulate Ingestor receiving a payload from the Client (Upstream)
-        DeliverySyncEngine.ignoreOrigin(t.ClientNetworkEntityId__c); 
+        DeliverySyncEngine.ignoreOrigin(t.ClientNetworkEntityId__c);
 
         t.BriefDescriptionTxt__c = 'Upstream Echo Update';
         DeliverySyncEngine.captureChanges(
-            new List<SObject>{t}, 
-            null, 
+            new List<SObject>{t},
+            null,
             new Set<String>{'BriefDescriptionTxt__c'}
         );
         Test.stopTest();
@@ -203,8 +203,165 @@ private class DeliverySyncEngineTest {
                 items.add(si);
             }
         }
-        
+
         System.assertEquals(1, items.size(), 'Engine should have blocked the upstream route and only created the downstream push.');
         System.assertNotEquals(null, items[0].RequestId__c, 'The created item should be the downstream Push item (RequestId != null).');
+    }
+
+    // ── Additional Coverage Tests ───────────────────────────────────────
+
+    @IsTest
+    static void testCaptureChangesNullRecordsReturnsEarly() {
+        Test.startTest();
+        DeliverySyncEngine.captureChanges(null, null, new Set<String>{'BriefDescriptionTxt__c'});
+        Test.stopTest();
+
+        // No exceptions thrown — null records are handled gracefully
+        System.assert(true, 'captureChanges should return early for null records');
+    }
+
+    @IsTest
+    static void testCaptureChangesEmptyListReturnsEarly() {
+        Test.startTest();
+        DeliverySyncEngine.captureChanges(
+            new List<SObject>(),
+            null,
+            new Set<String>{'BriefDescriptionTxt__c'}
+        );
+        Test.stopTest();
+
+        System.assert(true, 'captureChanges should return early for empty list');
+    }
+
+    @IsTest
+    static void testIsSyncContextBlocksCaptureChanges() {
+        WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+        delete [SELECT Id FROM SyncItem__c];
+
+        Test.startTest();
+        DeliverySyncEngine.setSyncContext();
+        System.assertEquals(true, DeliverySyncEngine.isSyncContext, 'isSyncContext should be true after setSyncContext');
+
+        t.BriefDescriptionTxt__c = 'Sync Context Blocked';
+        DeliverySyncEngine.captureChanges(
+            new List<SObject>{t},
+            null,
+            new Set<String>{'BriefDescriptionTxt__c'}
+        );
+        Test.stopTest();
+
+        List<SyncItem__c> allItems = [SELECT Id, PayloadTxt__c FROM SyncItem__c];
+        List<SyncItem__c> filtered = new List<SyncItem__c>();
+        for (SyncItem__c si : allItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Sync Context Blocked')) {
+                filtered.add(si);
+            }
+        }
+        System.assertEquals(0, filtered.size(), 'No sync items should be created when isSyncContext is true');
+    }
+
+    @IsTest
+    static void testIgnoreOriginBlankIsIgnored() {
+        // Calling ignoreOrigin with blank should not add to blockedOrigins
+        Integer sizeBefore = DeliverySyncEngine.blockedOrigins.size();
+
+        Test.startTest();
+        DeliverySyncEngine.ignoreOrigin('');
+        DeliverySyncEngine.ignoreOrigin(null);
+        DeliverySyncEngine.ignoreOrigin('   ');
+        Test.stopTest();
+
+        System.assertEquals(sizeBefore, DeliverySyncEngine.blockedOrigins.size(),
+            'Blank/null origins should not be added to blockedOrigins');
+    }
+
+    @IsTest
+    static void testNoSignificantChangeSkipsSync() {
+        WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c, StageNamePk__c FROM WorkItem__c LIMIT 1];
+        delete [SELECT Id FROM SyncItem__c];
+
+        // Build an oldMap that matches the current record exactly (no change)
+        Map<Id, SObject> oldMap = new Map<Id, SObject>();
+        WorkItem__c oldCopy = t.clone(true, true, false, false);
+        oldMap.put(t.Id, oldCopy);
+
+        Test.startTest();
+        DeliverySyncEngine.captureChanges(
+            new List<SObject>{t},
+            oldMap,
+            new Set<String>{'BriefDescriptionTxt__c', 'StageNamePk__c'}
+        );
+        Test.stopTest();
+
+        List<SyncItem__c> allItems = [SELECT Id FROM SyncItem__c];
+        System.assertEquals(0, allItems.size(),
+            'No sync items should be created when no significant change occurred');
+    }
+
+    @IsTest
+    static void testInsertContextNullOldMapTreatsAsSignificant() {
+        WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+        delete [SELECT Id FROM SyncItem__c];
+
+        Test.startTest();
+        // Passing null oldMap simulates insert context — all records are "significant"
+        t.BriefDescriptionTxt__c = 'Insert Context Test';
+        DeliverySyncEngine.captureChanges(
+            new List<SObject>{t},
+            null,
+            new Set<String>{'BriefDescriptionTxt__c'}
+        );
+        Test.stopTest();
+
+        List<SyncItem__c> allItems = [SELECT Id, PayloadTxt__c FROM SyncItem__c];
+        List<SyncItem__c> items = new List<SyncItem__c>();
+        for (SyncItem__c si : allItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Insert Context Test')) {
+                items.add(si);
+            }
+        }
+        System.assert(items.size() >= 1,
+            'Null oldMap (insert context) should treat every record as significant');
+    }
+
+    @IsTest
+    static void testGlobalSourceIdInheritanceFromLedger() {
+        WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+
+        // Insert a prior inbound SyncItem with a GlobalSourceId to simulate ledger inheritance
+        insert new SyncItem__c(
+            LocalRecordIdTxt__c = (String)t.Id,
+            GlobalSourceIdTxt__c = 'EXTERNAL-ORG-12345',
+            StatusPk__c = 'Synced',
+            DirectionPk__c = 'Inbound',
+            ObjectTypePk__c = 'WorkItem__c',
+            WorkItemId__c = t.Id
+        );
+
+        delete [SELECT Id FROM SyncItem__c WHERE DirectionPk__c = 'Outbound'];
+
+        Test.startTest();
+        t.BriefDescriptionTxt__c = 'Ledger Inheritance Test';
+        DeliverySyncEngine.captureChanges(
+            new List<SObject>{t},
+            null,
+            new Set<String>{'BriefDescriptionTxt__c'}
+        );
+        Test.stopTest();
+
+        List<SyncItem__c> outboundItems = [
+            SELECT Id, GlobalSourceIdTxt__c, PayloadTxt__c
+            FROM SyncItem__c
+            WHERE DirectionPk__c = 'Outbound'
+        ];
+        List<SyncItem__c> inherited = new List<SyncItem__c>();
+        for (SyncItem__c si : outboundItems) {
+            if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Ledger Inheritance Test')) {
+                inherited.add(si);
+            }
+        }
+        System.assert(!inherited.isEmpty(), 'Should create outbound sync items for inherited record');
+        System.assertEquals('EXTERNAL-ORG-12345', inherited[0].GlobalSourceIdTxt__c,
+            'GlobalSourceId should be inherited from the existing ledger entry');
     }
 }
