@@ -1,75 +1,22 @@
-/* --- Card wrapper (replaces lightning-card) --- */
-.timeline-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    background-color: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-}
-
-/* --- Stats bar --- */
-.stats-bar {
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid #e5e7eb;
-    background-color: #f8fafc;
-}
-
-.stat-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0.5rem 0.75rem;
-    border-right: 1px solid #e5e7eb;
-}
-
-.stat-item:last-child {
-    border-right: none;
-}
-
-.stat-value {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #1e293b;
-    line-height: 1.2;
-}
-
-.stat-label {
-    font-size: 0.65rem;
-    font-weight: 500;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.stat-on-track .stat-value {
-    color: #16a34a;
-}
-
-.stat-overdue .stat-value {
-    color: #dc2626;
-}
-
-.stat-unscheduled .stat-value {
-    color: #d97706;
-}
-
-/* --- Loading container --- */
-.loading-container {
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 /* --- Container --- */
 .timeline-container {
     overflow-x: auto;
     overflow-y: auto;
     max-height: 75vh;
     position: relative;
-    border-top: 1px solid #e5e7eb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+}
+
+/* --- Toolbar --- */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.type-picker {
+    width: 200px;
 }
 
 /* --- Header row --- */
@@ -165,7 +112,7 @@
 .timeline-bar {
     position: absolute;
     border-radius: 4px;
-    cursor: grab;
+    cursor: pointer;
     display: flex;
     align-items: center;
     padding: 0 8px;
@@ -173,22 +120,12 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     min-width: 4px;
     z-index: 1;
-    user-select: none;
-    -webkit-user-select: none;
 }
 
 .timeline-bar:hover {
     opacity: 0.85;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     z-index: 2;
-}
-
-.timeline-bar.dragging {
-    cursor: grabbing;
-    opacity: 0.7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 10;
-    transition: none;
 }
 
 .bar-label {
@@ -199,7 +136,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    pointer-events: none;
 }
 
 /* --- Today marker (prominent labeled line) --- */
@@ -270,27 +206,6 @@
     font-weight: 500;
     color: #374151;
     white-space: nowrap;
-}
-
-/* --- Dependency SVG overlay --- */
-.dependency-svg {
-    position: absolute;
-    top: 0;
-    left: 180px; /* offset by entity label width */
-    pointer-events: none;
-    z-index: 4;
-    overflow: visible;
-}
-
-.dep-path {
-    stroke: #94a3b8;
-    stroke-width: 1.5;
-    fill: none;
-}
-
-.dep-arrowhead {
-    fill: #94a3b8;
-    stroke: none;
 }
 
 /* --- Unscheduled section --- */
@@ -391,10 +306,10 @@
 
 /* --- Responsive adjustments --- */
 @media (max-width: 768px) {
-    .stats-bar {
+    .toolbar {
         flex-wrap: wrap;
     }
-    .stat-item {
-        min-width: 80px;
+    .type-picker {
+        width: 100%;
     }
 }
