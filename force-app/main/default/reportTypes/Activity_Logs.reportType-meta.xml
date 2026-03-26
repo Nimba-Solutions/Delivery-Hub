@@ -51,6 +51,11 @@
             <field>NetworkEntityId__c</field>
             <table>ActivityLog__c</table>
         </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>CreatedDate</field>
+            <table>ActivityLog__c</table>
+        </columns>
         <masterLabel>Activity Logs</masterLabel>
     </sections>
 </ReportType>

@@ -1,0 +1,75 @@
+<template>
+    <div class="frappe-gantt-card">
+
+        <!-- Header -->
+        <div class="frappe-gantt-header">
+            <div class="frappe-gantt-header-left">
+                <lightning-icon icon-name="utility:date_time" alternative-text="Gantt Chart" size="small" class="frappe-gantt-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="frappe-gantt-title">Frappe Timeline</h2>
+                    <p class="frappe-gantt-subtitle">{subtitleText}</p>
+                </div>
+            </div>
+            <div class="frappe-gantt-header-right">
+                <lightning-button-group>
+                    <lightning-button label="Quarter Day" variant={btnQuarterDayVariant} onclick={handleViewQuarterDay}></lightning-button>
+                    <lightning-button label="Half Day" variant={btnHalfDayVariant} onclick={handleViewHalfDay}></lightning-button>
+                    <lightning-button label="Day" variant={btnDayVariant} onclick={handleViewDay}></lightning-button>
+                    <lightning-button label="Week" variant={btnWeekVariant} onclick={handleViewWeek}></lightning-button>
+                    <lightning-button label="Month" variant={btnMonthVariant} onclick={handleViewMonth}></lightning-button>
+                </lightning-button-group>
+                <lightning-button-icon
+                    icon-name="utility:filterList"
+                    alternative-text="Toggle completed items"
+                    title={completedToggleTitle}
+                    variant={completedToggleVariant}
+                    onclick={handleToggleCompleted}
+                ></lightning-button-icon>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="frappe-gantt-loading">
+                <lightning-spinner alternative-text="Loading Gantt chart..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={hasError}>
+            <div class="frappe-gantt-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <!-- Empty state -->
+        <template lwc:if={isEmpty}>
+            <div class="frappe-gantt-empty">
+                <lightning-icon icon-name="utility:date_time" size="medium" class="frappe-gantt-empty-icon"></lightning-icon>
+                <p>No work items found to display on the Gantt chart.</p>
+                <p class="frappe-gantt-empty-sub">Create work items with estimated dates to see them plotted here.</p>
+            </div>
+        </template>
+
+        <!-- Frappe Gantt container -->
+        <template lwc:if={hasData}>
+            <div class="frappe-gantt-container" lwc:ref="ganttContainer">
+                <svg lwc:ref="ganttSvg"></svg>
+            </div>
+        </template>
+
+        <!-- Legend -->
+        <template lwc:if={hasData}>
+            <div class="frappe-gantt-legend">
+                <template for:each={legendItems} for:item="item">
+                    <span key={item.phase} class="legend-item">
+                        <span class="legend-dot" style={item.dotStyle}></span>
+                        {item.phase}
+                    </span>
+                </template>
+            </div>
+        </template>
+
+    </div>
+</template>
