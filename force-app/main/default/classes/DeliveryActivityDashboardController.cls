@@ -54,38 +54,38 @@ public with sharing class DeliveryActivityDashboardController {
 
         // Top 5 most active users
         List<RankedItem> topUsers = new List<RankedItem>();
-        for (AggregateResult ar : [
+        for (AggregateResult agg : [
             SELECT UserIdTxt__c userId, COUNT(Id) cnt
             FROM ActivityLog__c
             WHERE CreatedDate >= :monthStartDt
             AND UserIdTxt__c != NULL
+            WITH SYSTEM_MODE
             GROUP BY UserIdTxt__c
             ORDER BY COUNT(Id) DESC
-            WITH SYSTEM_MODE
             LIMIT 5
         ]) {
             RankedItem item = new RankedItem();
-            item.label = (String) ar.get('userId');
-            item.count = ((Decimal) ar.get('cnt')).intValue();
+            item.label = (String) agg.get('userId');
+            item.count = ((Decimal) agg.get('cnt')).intValue();
             topUsers.add(item);
         }
         result.put('topUsers', topUsers);
 
         // Top 5 most used components
         List<RankedItem> topComponents = new List<RankedItem>();
-        for (AggregateResult ar : [
+        for (AggregateResult agg : [
             SELECT ComponentNameTxt__c comp, COUNT(Id) cnt
             FROM ActivityLog__c
             WHERE CreatedDate >= :monthStartDt
             AND ComponentNameTxt__c != NULL
+            WITH SYSTEM_MODE
             GROUP BY ComponentNameTxt__c
             ORDER BY COUNT(Id) DESC
-            WITH SYSTEM_MODE
             LIMIT 5
         ]) {
             RankedItem item = new RankedItem();
-            item.label = (String) ar.get('comp');
-            item.count = ((Decimal) ar.get('cnt')).intValue();
+            item.label = (String) agg.get('comp');
+            item.count = ((Decimal) agg.get('cnt')).intValue();
             topComponents.add(item);
         }
         result.put('topComponents', topComponents);
@@ -99,16 +99,16 @@ public with sharing class DeliveryActivityDashboardController {
             dailyMap.put(sevenDaysAgo.addDays(i), 0);
         }
 
-        for (AggregateResult ar : [
+        for (AggregateResult agg : [
             SELECT DAY_ONLY(CreatedDate) day, COUNT(Id) cnt
             FROM ActivityLog__c
             WHERE CreatedDate >= :sevenDaysAgoDt
+            WITH SYSTEM_MODE
             GROUP BY DAY_ONLY(CreatedDate)
             ORDER BY DAY_ONLY(CreatedDate) ASC
-            WITH SYSTEM_MODE
         ]) {
-            Date day = (Date) ar.get('day');
-            Integer cnt = ((Decimal) ar.get('cnt')).intValue();
+            Date day = (Date) agg.get('day');
+            Integer cnt = ((Decimal) agg.get('cnt')).intValue();
             if (dailyMap.containsKey(day)) {
                 dailyMap.put(day, cnt);
             }
@@ -127,20 +127,20 @@ public with sharing class DeliveryActivityDashboardController {
 
         // Top 5 most visited pages
         List<RankedItem> topPages = new List<RankedItem>();
-        for (AggregateResult ar : [
+        for (AggregateResult agg : [
             SELECT PageUrlTxt__c page, COUNT(Id) cnt
             FROM ActivityLog__c
             WHERE CreatedDate >= :monthStartDt
             AND PageUrlTxt__c != NULL
             AND ActionTypePk__c = 'Navigation'
+            WITH SYSTEM_MODE
             GROUP BY PageUrlTxt__c
             ORDER BY COUNT(Id) DESC
-            WITH SYSTEM_MODE
             LIMIT 5
         ]) {
             RankedItem item = new RankedItem();
-            item.label = (String) ar.get('page');
-            item.count = ((Decimal) ar.get('cnt')).intValue();
+            item.label = (String) agg.get('page');
+            item.count = ((Decimal) agg.get('cnt')).intValue();
             topPages.add(item);
         }
         result.put('topPages', topPages);

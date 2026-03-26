@@ -19,6 +19,8 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
     @track dailyCounts = [];
     @track hasData = false;
 
+    get isEmpty() { return !this.isLoading && !this.hasData; }
+
     wiredSummaryResult;
     maxDailyCount = 1;
 
