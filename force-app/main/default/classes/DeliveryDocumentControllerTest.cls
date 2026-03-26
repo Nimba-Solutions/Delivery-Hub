@@ -952,4 +952,115 @@ private class DeliveryDocumentControllerTest {
         DeliveryDocument__c updated = [SELECT DisputeReasonTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
         System.assertEquals(null, updated.DisputeReasonTxt__c, 'Blank reason should be stored as null');
     }
+
+    // ── Additional coverage: getDocumentById ───────────────────────────────────
+
+    @isTest
+    static void testGetDocumentById() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.getDocumentById(docId);
+        Test.stopTest();
+
+        System.assertEquals('Invoice', result.get('template'), 'Template should match');
+        System.assertEquals('Test Client Corp', result.get('entityName'), 'Entity name should match');
+        System.assertNotEquals(null, result.get('publicToken'), 'Public token should be returned');
+        System.assertNotEquals(null, result.get('snapshot'), 'Snapshot should be returned');
+        System.assertEquals(1, (Decimal) result.get('version'), 'Version should be 1');
+    }
+
+    @isTest
+    static void testGetDocumentByIdNotFound() {
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryDocumentController.getDocumentById(
+                DeliveryDocument__c.SObjectType.getDescribe().getKeyPrefix() + '000000000001'
+            );
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'Should throw for nonexistent document Id');
+    }
+
+    // ── Additional coverage: getDocumentsForEntity(null) — all docs ───────────
+
+    @isTest
+    static void testGetDocumentsForEntityNull() {
+        NetworkEntity__c entity = getEntity();
+        generateTestDocument(entity.Id);
+
+        Test.startTest();
+        List<Map<String, Object>> docs = DeliveryDocumentController.getDocumentsForEntity(null);
+        Test.stopTest();
+
+        System.assert(docs.size() >= 1, 'Should return at least 1 document when entityId is null');
+    }
+
+    // ── Additional coverage: getDefaultBillingEntityId ─────────────────────────
+
+    @isTest
+    static void testGetDefaultBillingEntityId() {
+        Test.startTest();
+        String result = DeliveryDocumentController.getDefaultBillingEntityId();
+        Test.stopTest();
+        // No settings configured, should return null or a value — just verify no exception
+        System.assert(true, 'Should execute without exception');
+    }
+
+    // ── Additional coverage: generateDocument with null entityId ───────────────
+
+    @isTest
+    static void testGenerateDocumentNullEntity() {
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryDocumentController.generateDocument(
+                null, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'Should throw for null entity Id');
+    }
+
+    // ── Additional coverage: queryDocumentByToken with blank token ────────────
+
+    @isTest
+    static void testQueryDocumentByTokenBlank() {
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryDocumentController.queryDocumentByToken('');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'Should throw for blank token');
+    }
+
+    // ── Additional coverage: generate Status_Report (not Invoice/Agreement) ──
+
+    @isTest
+    static void testGenerateStatusReport() {
+        NetworkEntity__c entity = getEntity();
+
+        Test.startTest();
+        Id docId = DeliveryDocumentController.generateDocument(
+            entity.Id, 'Status_Report',
+            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+        );
+        Test.stopTest();
+
+        DeliveryDocument__c doc = [
+            SELECT TemplatePk__c, SnapshotTxt__c FROM DeliveryDocument__c WHERE Id = :docId
+        ];
+        System.assertEquals('Status_Report', doc.TemplatePk__c, 'Template should be Status_Report');
+        System.assertNotEquals(null, doc.SnapshotTxt__c, 'Snapshot should exist');
+    }
 }

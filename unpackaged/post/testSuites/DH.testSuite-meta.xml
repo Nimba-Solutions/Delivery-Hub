@@ -62,4 +62,17 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryPublicSubmissionServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryStageHistoryControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTaskAPITest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocumentPdfControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryBountyApiServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryBountyClaimTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryBountyServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncReconcilerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryClientOnboardingControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWebhookNotifierTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkflowBuilderControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryEmailServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryInboundEmailHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliverySavedFilterControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTimelineControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityDashboardControllerTest</testClassName>
 </ApexTestSuite>
