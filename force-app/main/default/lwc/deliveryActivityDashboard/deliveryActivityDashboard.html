@@ -1,0 +1,152 @@
+<template>
+    <lightning-card title="Activity Tracking" icon-name="standard:metrics">
+
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="border-filled"
+                onclick={handleRefresh}
+                alternative-text="Refresh Activity Data">
+            </lightning-button-icon>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <!-- Totals Row -->
+            <div class="slds-grid slds-wrap slds-gutters_small slds-m-bottom_small">
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-media slds-media_center slds-box slds-box_x-small slds-theme_shade">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="standard:today" size="medium"></lightning-icon>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
+                                <strong>{totalThisWeek}</strong>
+                            </div>
+                            <div class="slds-text-title_caps slds-text-color_weak">This Week</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                    <div class="slds-media slds-media_center slds-box slds-box_x-small slds-theme_shade">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="standard:date_input" size="medium"></lightning-icon>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
+                                <strong>{totalThisMonth}</strong>
+                            </div>
+                            <div class="slds-text-title_caps slds-text-color_weak">This Month</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7-Day Activity Trend -->
+            <template lwc:if={hasDailyCounts}>
+                <div class="slds-m-bottom_small">
+                    <div class="slds-text-title_caps slds-text-color_weak slds-m-bottom_xx-small">7-Day Trend</div>
+                    <div class="slds-grid slds-grid_align-spread" style="height: 90px; align-items: flex-end;">
+                        <template for:each={dailyCounts} for:item="day">
+                            <div key={day.key} class="slds-col slds-text-align_center" style="flex: 1; padding: 0 2px;">
+                                <div class="slds-text-body_small slds-text-color_weak" style="font-size: 0.625rem; margin-bottom: 2px;">
+                                    {day.count}
+                                </div>
+                                <div style={day.barStyle}></div>
+                                <div class="slds-text-body_small slds-text-color_weak" style="font-size: 0.625rem; margin-top: 2px;">
+                                    {day.label}
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <div class="slds-col slds-size_1-of-1 slds-m-vertical_x-small">
+                <div class="slds-border_bottom"></div>
+            </div>
+
+            <!-- Top Users -->
+            <template lwc:if={hasTopUsers}>
+                <div class="slds-m-bottom_small">
+                    <div class="slds-text-title_caps slds-text-color_weak slds-m-bottom_xx-small">Top Users (This Month)</div>
+                    <template for:each={topUsers} for:item="user">
+                        <div key={user.key} class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
+                            <div class="slds-col slds-size_5-of-12">
+                                <span class="slds-text-body_small slds-truncate" title={user.label}>{user.label}</span>
+                            </div>
+                            <div class="slds-col slds-size_5-of-12 slds-p-horizontal_xx-small">
+                                <div style={user.barStyle}></div>
+                            </div>
+                            <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                <span class="slds-text-body_small slds-text-color_weak">{user.count}</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Top Components -->
+            <template lwc:if={hasTopComponents}>
+                <div class="slds-m-bottom_small">
+                    <div class="slds-text-title_caps slds-text-color_weak slds-m-bottom_xx-small">Top Components (This Month)</div>
+                    <template for:each={topComponents} for:item="comp">
+                        <div key={comp.key} class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
+                            <div class="slds-col slds-size_5-of-12">
+                                <span class="slds-text-body_small slds-truncate" title={comp.label}>{comp.label}</span>
+                            </div>
+                            <div class="slds-col slds-size_5-of-12 slds-p-horizontal_xx-small">
+                                <div style={comp.barStyle}></div>
+                            </div>
+                            <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                <span class="slds-text-body_small slds-text-color_weak">{comp.count}</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Top Pages -->
+            <template lwc:if={hasTopPages}>
+                <div class="slds-m-bottom_small">
+                    <div class="slds-text-title_caps slds-text-color_weak slds-m-bottom_xx-small">Top Pages (This Month)</div>
+                    <template for:each={topPages} for:item="page">
+                        <div key={page.key} class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
+                            <div class="slds-col slds-size_5-of-12">
+                                <span class="slds-text-body_small slds-truncate" title={page.fullUrl}>{page.label}</span>
+                            </div>
+                            <div class="slds-col slds-size_5-of-12 slds-p-horizontal_xx-small">
+                                <div style={page.barStyle}></div>
+                            </div>
+                            <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                <span class="slds-text-body_small slds-text-color_weak">{page.count}</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Empty State -->
+            <template lwc:if={isEmpty}>
+                <div class="slds-illustration slds-illustration_small slds-p-vertical_medium">
+                    <div class="slds-text-longform slds-text-align_center">
+                        <p class="slds-text-body_regular slds-text-color_weak">
+                            No activity data yet. Ghost Recorder will start tracking user navigation automatically.
+                        </p>
+                    </div>
+                </div>
+            </template>
+
+            <!-- View Full Report Button -->
+            <div class="slds-text-align_center slds-m-top_small">
+                <lightning-button
+                    label="View Full Report"
+                    variant="neutral"
+                    icon-name="utility:chart"
+                    onclick={handleViewReport}>
+                </lightning-button>
+            </div>
+
+        </div>
+    </lightning-card>
+</template>

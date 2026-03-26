@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%UserIdTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ActionTypePk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ComponentNameTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$Name</field>
+    </columns>
+    <description>Activity logs grouped by day, showing volume of user activity over time. Useful for identifying usage trends and peak activity periods.</description>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>%%%NAMESPACE%%%ActivityLog__c$CreatedDate</field>
+        <sortOrder>Desc</sortOrder>
+    </groupingsDown>
+    <name>Activity by Day</name>
+    <reportType>%%%NAMESPACE%%%Activity_Logs__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <showSubTotals>true</showSubTotals>
+</Report>

@@ -202,4 +202,148 @@ private class DeliveryGhostControllerTest {
         System.assertEquals(1, logs.size(), 'One activity log should be persisted');
         System.assertEquals('WorkItem__c', logs[0].ComponentNameTxt__c, 'Component should fall back to objectName when pageLabel is absent');
     }
+
+    /**
+     * @description Verifies createQuickRequest defaults to [Issue] prefix when workItemType is blank.
+     */
+    @IsTest
+    static void testCreateQuickRequestBlankTypeDefaultsToIssue() {
+        Test.startTest();
+        Id workItemId = DeliveryGhostController.createQuickRequest(
+            'Something odd', 'Description here', 'Medium', null, ''
+        );
+        Test.stopTest();
+
+        WorkItem__c t = [SELECT BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+        System.assert(t.BriefDescriptionTxt__c.startsWith('[Issue]'), 'Blank type should default to [Issue] prefix');
+    }
+
+    /**
+     * @description Verifies createQuickRequest defaults to [Issue] prefix when workItemType is null.
+     */
+    @IsTest
+    static void testCreateQuickRequestNullTypeDefaultsToIssue() {
+        Test.startTest();
+        Id workItemId = DeliveryGhostController.createQuickRequest(
+            'Null type test', 'Details', 'Low', null, null
+        );
+        Test.stopTest();
+
+        WorkItem__c t = [SELECT BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+        System.assert(t.BriefDescriptionTxt__c.startsWith('[Issue]'), 'Null type should default to [Issue] prefix');
+    }
+
+    /**
+     * @description Verifies createQuickRequest with null contextData omits context block.
+     */
+    @IsTest
+    static void testCreateQuickRequestNullContextData() {
+        Test.startTest();
+        Id workItemId = DeliveryGhostController.createQuickRequest(
+            'No context', 'Just a description', 'High', null, 'Bug'
+        );
+        Test.stopTest();
+
+        WorkItem__c t = [SELECT DetailsTxt__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+        System.assert(!t.DetailsTxt__c.contains('Auto-Captured Context'), 'Null context should not include context block');
+        System.assertEquals('Just a description', t.DetailsTxt__c, 'Details should be just the description');
+    }
+
+    /**
+     * @description Verifies createQuickRequest truncates subject + description to 100 chars for BriefDescription.
+     */
+    @IsTest
+    static void testCreateQuickRequestLongSubjectTruncation() {
+        // Build a subject that will exceed 100 chars when combined with prefix and description
+        String longSubject = 'A'.repeat(80);
+        String longDesc = 'B'.repeat(80);
+
+        Test.startTest();
+        Id workItemId = DeliveryGhostController.createQuickRequest(
+            longSubject, longDesc, 'Medium', null, 'Feature'
+        );
+        Test.stopTest();
+
+        WorkItem__c t = [SELECT BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+        System.assertEquals(100, t.BriefDescriptionTxt__c.length(), 'BriefDescription should be truncated to 100 chars');
+    }
+
+    /**
+     * @description Verifies createQuickRequest with empty context string omits context block.
+     */
+    @IsTest
+    static void testCreateQuickRequestEmptyContextString() {
+        Test.startTest();
+        Id workItemId = DeliveryGhostController.createQuickRequest(
+            'Empty ctx', 'Some desc', 'Low', '', 'Bug'
+        );
+        Test.stopTest();
+
+        WorkItem__c t = [SELECT DetailsTxt__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+        System.assert(!t.DetailsTxt__c.contains('Auto-Captured Context'), 'Empty context should not include context block');
+    }
+
+    /**
+     * @description Verifies logUserActivity links to the active NetworkEntity when one exists.
+     */
+    @IsTest
+    static void testLogUserActivityLinksNetworkEntity() {
+        enableActivityLogging();
+
+        NetworkEntity__c entity = new NetworkEntity__c(
+            Name = 'Ghost Entity Test', EntityTypePk__c = 'Client', StatusPk__c = 'Active'
+        );
+        insert entity;
+
+        Map<String, Object> contextMap = new Map<String, Object>{
+            'url' => 'https://salesforce.com/test',
+            'browser' => 'Chrome',
+            'objectName' => 'TestComponent'
+        };
+
+        Test.startTest();
+        DeliveryGhostController.logUserActivity('Navigation', JSON.serialize(contextMap));
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT NetworkEntityId__c FROM ActivityLog__c
+        ];
+        System.assertEquals(1, logs.size(), 'One activity log should be persisted');
+        System.assertNotEquals(null, logs[0].NetworkEntityId__c, 'NetworkEntity should be linked when active entity exists');
+    }
+
+    /**
+     * @description Verifies logUserActivity handles empty context string gracefully.
+     */
+    @IsTest
+    static void testLogUserActivityEmptyContextString() {
+        enableActivityLogging();
+
+        Test.startTest();
+        DeliveryGhostController.logUserActivity('Button_Click', '');
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ActionTypePk__c, ComponentNameTxt__c
+            FROM ActivityLog__c
+        ];
+        System.assertEquals(1, logs.size(), 'Record should be created even with empty context');
+        System.assertEquals('Button_Click', logs[0].ActionTypePk__c, 'Action type should still be set');
+        System.assertEquals(null, logs[0].ComponentNameTxt__c, 'Component should be null for empty context');
+    }
+
+    /**
+     * @description Verifies createQuickRequest with blank description uses empty string in brief.
+     */
+    @IsTest
+    static void testCreateQuickRequestBlankDescription() {
+        Test.startTest();
+        Id workItemId = DeliveryGhostController.createQuickRequest(
+            'No desc', '', 'High', null, 'Bug'
+        );
+        Test.stopTest();
+
+        WorkItem__c t = [SELECT BriefDescriptionTxt__c, DetailsTxt__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+        System.assert(t.BriefDescriptionTxt__c.contains('[Bug] No desc'), 'Brief should contain subject with prefix');
+    }
 }
