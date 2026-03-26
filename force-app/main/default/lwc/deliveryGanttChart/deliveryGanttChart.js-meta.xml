@@ -6,7 +6,14 @@
         <target>lightning__AppPage</target>
         <target>lightning__RecordPage</target>
         <target>lightning__HomePage</target>
+        <target>lightning__Tab</target>
     </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__AppPage,lightning__RecordPage,lightning__HomePage">
+            <property name="showCompleted" type="Boolean" label="Show Completed Items" default="false" />
+            <property name="initialZoom" type="String" label="Initial Zoom" datasource="day,week,month,quarter" default="month" />
+        </targetConfig>
+    </targetConfigs>
     <masterLabel>Delivery Gantt Chart</masterLabel>
     <description>Visual timeline of active work items plotted against their projected UAT dates.</description>
 </LightningComponentBundle>

@@ -3,7 +3,7 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, wire, track } from 'lwc';
+import { LightningElement, wire, track, api } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getWorkItemsForGantt from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getWorkItemsForGantt';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
@@ -11,6 +11,8 @@ import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkf
 const MS_PER_DAY = 86400000;
 
 export default class DeliveryGanttChart extends NavigationMixin(LightningElement) {
+    @api showCompleted = false;
+    @api initialZoom = 'month';
     @track windowDays = 60;
     @track isLoading = true;
     @track errorMessage = '';
