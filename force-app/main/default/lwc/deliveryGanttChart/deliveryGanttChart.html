@@ -1,23 +1,24 @@
 <template>
     <div class="gantt-card">
 
-        <!-- Toolbar -->
-        <c-delivery-gantt-toolbar
-            title={toolbarTitle}
-            subtitle={toolbarSubtitle}
-            zoom-levels={toolbarZoomLevels}
-            current-zoom={toolbarCurrentZoom}
-            hide-entity-filter
-            show-dependency-toggle
-            dependencies-active={showDependencies}
-            show-my-work-toggle
-            my-work-active={myWorkOnly}
-            onzoomchange={handleZoomChange}
-            ontoggledependencies={handleToggleDependencies}
-            ontogglemywork={handleToggleMyWork}
-            onscrolltoday={handleScrollToday}
-            onrefresh={handleRefresh}
-        ></c-delivery-gantt-toolbar>
+        <!-- Header -->
+        <div class="gantt-header">
+            <div class="gantt-header-left">
+                <lightning-icon icon-name="utility:date_time" alternative-text="Timeline" size="small" class="gantt-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="gantt-title">Delivery Timeline</h2>
+                    <p class="gantt-subtitle">Active work items with projected UAT dates &bull; {windowLabel}</p>
+                </div>
+            </div>
+            <div class="gantt-header-right">
+                <c-delivery-info-popover component-name="deliveryGanttChart"></c-delivery-info-popover>
+                <lightning-button-group>
+                    <lightning-button label="30d" variant={btn30Variant} onclick={handleWindow30}></lightning-button>
+                    <lightning-button label="60d" variant={btn60Variant} onclick={handleWindow60}></lightning-button>
+                    <lightning-button label="90d" variant={btn90Variant} onclick={handleWindow90}></lightning-button>
+                </lightning-button-group>
+            </div>
+        </div>
 
         <!-- Loading -->
         <template lwc:if={isLoading}>
@@ -45,36 +46,11 @@
 
         <!-- Chart -->
         <template lwc:if={hasRows}>
-
-            <!-- Summary stats bar -->
-            <div class="gantt-summary-bar">
-                <span class="summary-stat">
-                    <span class="summary-count">{summaryStats.total}</span> Total
-                </span>
-                <span class="summary-stat summary-stat--on-track">
-                    <span class="summary-count">{summaryStats.onTrack}</span> On Track
-                </span>
-                <template lwc:if={hasSummaryDueSoon}>
-                    <span class="summary-stat summary-stat--warning">
-                        <span class="summary-count">{summaryStats.dueSoon}</span> Due Soon
-                    </span>
-                </template>
-                <template lwc:if={hasSummaryOverdue}>
-                    <span class="summary-stat summary-stat--overdue">
-                        <span class="summary-count">{summaryStats.overdue}</span> Overdue
-                    </span>
-                </template>
-                <span class="summary-stat summary-stat--assigned">
-                    <span class="summary-count">{summaryStats.assigned}</span> Assigned
-                </span>
-            </div>
-
             <div class="gantt-body">
 
                 <!-- Date axis labels -->
                 <div class="gantt-axis">
                     <div class="gantt-label-col"></div>
-                    <div class="gantt-dev-col gantt-dev-header">Dev</div>
                     <div class="gantt-track-col">
                         <div class="gantt-date-row">
                             <template for:each={dateLabels} for:item="dl">
@@ -88,39 +64,19 @@
 
                 <!-- Work item rows -->
                 <template for:each={ganttRows} for:item="row">
-                    <div key={row.workItemId} class={row.rowClass} data-id={row.workItemId} ondblclick={handleRowDblClick}>
-                        <div class="gantt-label-col" style={row.labelStyle}>
+                    <div key={row.workItemId} class="gantt-row">
+                        <div class="gantt-label-col">
                             <a data-id={row.workItemId} onclick={handleRowClick} class="gantt-work-item-name">
                                 {row.name}
                             </a>
-                            <template lwc:if={row.descShort}>
+                            <template if:true={row.descShort}>
                                 <div class="gantt-desc-short" title={row.description}>{row.descShort}</div>
                             </template>
-                            <div class="gantt-label-meta">
-                                <span class={row.stageBadgeClass}>{row.stage}</span>
-                            </div>
-                            <template lwc:if={row.hasDependencies}>
-                                <div class="gantt-dep-badge" title={row.dependencyLabel}>
-                                    <lightning-icon icon-name="utility:flow" size="xx-small" alternative-text="Dependencies"></lightning-icon>
-                                    <span>{row.dependencyLabel}</span>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="gantt-dev-col">
-                            <template lwc:if={row.devFirstName}>
-                                <span class="gantt-dev-name" title={row.developerName}>{row.devFirstName}</span>
-                            </template>
+                            <span class={row.stageBadgeClass}>{row.stage}</span>
                         </div>
                         <div class="gantt-track-col">
                             <div class="gantt-track">
-                                <div
-                                    class={row.barClass}
-                                    style={row.barStyle}
-                                    title={row.barTooltip}
-                                    data-id={row.workItemId}
-                                    onmousedown={handleBarDragStart}
-                                    ontouchstart={handleBarDragStart}
-                                ></div>
+                                <div class={row.barClass} style={row.barStyle} title={row.barTooltip}></div>
                             </div>
                         </div>
                     </div>
@@ -128,26 +84,14 @@
 
             </div>
 
-            <!-- Legend + drag hint -->
-            <div class="gantt-footer">
-                <div class="gantt-legend">
-                    <span class="legend-item"><span class="legend-dot legend-dot--normal"></span>On track</span>
-                    <span class="legend-item"><span class="legend-dot legend-dot--warning"></span>Due &lt; 7 days</span>
-                    <span class="legend-item"><span class="legend-dot legend-dot--overdue"></span>Overdue</span>
-                    <span class="legend-item"><span class="legend-dot legend-dot--future"></span>Starts after window</span>
-                </div>
-                <div class="gantt-hint">Click to edit &bull; Double-click to view &bull; Drag bar to reschedule</div>
+            <!-- Legend -->
+            <div class="gantt-legend">
+                <span class="legend-item"><span class="legend-dot legend-dot--normal"></span>On track</span>
+                <span class="legend-item"><span class="legend-dot legend-dot--warning"></span>Due &lt; 7 days</span>
+                <span class="legend-item"><span class="legend-dot legend-dot--overdue"></span>Overdue</span>
+                <span class="legend-item"><span class="legend-dot legend-dot--future"></span>Starts after window</span>
             </div>
         </template>
 
     </div>
-
-    <!-- Quick-edit modal -->
-    <template lwc:if={showQuickEdit}>
-        <c-delivery-gantt-quick-edit
-            record-id={selectedWorkItemId}
-            onsave={handleQuickEditSave}
-            onclose={handleQuickEditClose}
-        ></c-delivery-gantt-quick-edit>
-    </template>
 </template>

@@ -9,7 +9,7 @@
     --gantt-red:     #ef4444;
     --gantt-gray:    #9ca3af;
     --gantt-warning: #f59e0b;
-    --gantt-label-w: 14rem;
+    --gantt-label-w: 13rem;
 }
 
 /* Card shell */
@@ -20,6 +20,47 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     overflow: hidden;
     font-size: 0.8125rem;
+}
+
+/* Header */
+.gantt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.125rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.gantt-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.gantt-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gantt-header-icon {
+    color: #3b82f6;
+}
+
+.gantt-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.15rem 0;
+}
+
+.gantt-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0;
 }
 
 /* Loading / Error / Empty */
@@ -58,40 +99,7 @@
     margin-top: 0.25rem;
 }
 
-/* ── Summary stats bar ────────────────────────────────────────────────── */
-
-.gantt-summary-bar {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    padding: 0.625rem 1.25rem;
-    border-bottom: 1px solid #f3f4f6;
-    background: #fafbfc;
-    flex-wrap: wrap;
-}
-
-.summary-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.75rem;
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.summary-count {
-    font-weight: 700;
-    font-size: 0.8125rem;
-    color: #374151;
-}
-
-.summary-stat--on-track .summary-count { color: #16a34a; }
-.summary-stat--warning .summary-count  { color: #d97706; }
-.summary-stat--overdue .summary-count  { color: #dc2626; }
-.summary-stat--assigned .summary-count { color: #3b82f6; }
-
-/* ── Body ─────────────────────────────────────────────────────────────── */
-
+/* Body */
 .gantt-body {
     padding: 1rem 1.25rem 0.5rem;
     position: relative;
@@ -154,6 +162,18 @@
     border-bottom: 1px solid #f3f4f6;
 }
 
+.gantt-desc-short {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(var(--gantt-label-w) - 0.75rem);
+    margin-top: 0.05rem;
+    margin-bottom: 0.1rem;
+    cursor: default;
+}
+
 .gantt-row:last-child {
     border-bottom: none;
 }
@@ -168,7 +188,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: calc(var(--gantt-label-w) - 0.75rem);
-    cursor: pointer;
 }
 
 .gantt-work-item-name:hover {
@@ -176,28 +195,9 @@
     text-decoration: underline;
 }
 
-.gantt-desc-short {
-    font-size: 0.6875rem;
-    color: #6b7280;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: calc(var(--gantt-label-w) - 0.75rem);
-    margin-top: 0.05rem;
-    margin-bottom: 0.1rem;
-    cursor: default;
-}
-
-.gantt-label-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-top: 0.15rem;
-    flex-wrap: wrap;
-}
-
 .gantt-stage-badge {
     display: inline-block;
+    margin-top: 0.15rem;
     font-size: 0.625rem;
     font-weight: 500;
     padding: 0.1rem 0.35rem;
@@ -212,80 +212,13 @@
     color: #991b1b;
 }
 
-/* Developer badge removed — using dedicated .gantt-dev-col instead */
-
-/* ── Developer column ─────────────────────────────────────────────────── */
-
-.gantt-dev-col {
-    width: 4.5rem;
-    min-width: 4.5rem;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gantt-dev-header {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: #9ca3af;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.gantt-dev-name {
-    font-size: 0.6875rem;
-    font-weight: 500;
-    color: #2563eb;
-    background: #eff6ff;
-    padding: 0.1rem 0.4rem;
-    border-radius: 999px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 4rem;
-    text-align: center;
-}
-
-/* ── Child row indent ────────────────────────────────────────────────── */
-
-.gantt-row--child {
-    background: #fafbfc;
-}
-
-.gantt-row--child .gantt-work-item-name {
-    font-weight: 500;
-    font-size: 0.6875rem;
-}
-
-.gantt-row--child .gantt-work-item-name::before {
-    content: '\2514 ';
-    color: #d1d5db;
-    font-weight: 400;
-}
-
-/* ── Dependency badge ─────────────────────────────────────────────────── */
-
-.gantt-dep-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    font-size: 0.6rem;
-    color: #7c3aed;
-    background: #ede9fe;
-    padding: 0.05rem 0.35rem;
-    border-radius: 999px;
-    margin-top: 0.15rem;
-    white-space: nowrap;
-}
-
 /* Track & bars */
 .gantt-track {
     position: relative;
     height: 1.5rem;
     background: #f3f4f6;
     border-radius: 0.375rem;
-    overflow: visible;
+    overflow: hidden;
     width: 100%;
 }
 
@@ -295,22 +228,11 @@
     border-radius: 0.375rem;
     opacity: 0.85;
     transition: opacity 0.15s ease, transform 0.15s ease;
-    cursor: grab;
 }
 
 .gantt-bar:hover {
     opacity: 1;
     transform: scaleY(1.15);
-}
-
-.gantt-bar--dragging,
-.gantt-bar--dragging:hover {
-    opacity: 1;
-    cursor: grabbing;
-    z-index: 10;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    transition: none;
-    transform: none;
 }
 
 .gantt-bar--overdue {
@@ -333,22 +255,13 @@
     opacity: 0.4;
 }
 
-/* ── Footer: Legend + Hint ────────────────────────────────────────────── */
-
-.gantt-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1.25rem;
-    border-top: 1px solid #f3f4f6;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
+/* Legend */
 .gantt-legend {
     display: flex;
     align-items: center;
     gap: 1.25rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #f3f4f6;
     flex-wrap: wrap;
 }
 
@@ -371,9 +284,3 @@
 .legend-dot--warning { background: var(--gantt-warning); }
 .legend-dot--overdue { background: var(--gantt-red); }
 .legend-dot--future  { background: var(--gantt-gray); opacity: 0.4; }
-
-.gantt-hint {
-    font-size: 0.6875rem;
-    color: #9ca3af;
-    font-style: italic;
-}
