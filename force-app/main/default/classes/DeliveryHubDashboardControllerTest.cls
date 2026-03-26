@@ -158,4 +158,88 @@ private class DeliveryHubDashboardControllerTest {
         System.assertNotEquals(null, result, 'getReportIds should return a non-null map');
         System.assert(!result.containsKey('Nonexistent_Report'), 'Should not contain nonexistent report');
     }
+
+    @IsTest
+    static void testIsAdminUser() {
+        Test.startTest();
+        Boolean result = DeliveryHubDashboardController.isAdminUser();
+        Test.stopTest();
+
+        // Running user may or may not have admin PSG; just verify no exception and returns Boolean
+        System.assertNotEquals(null, result, 'isAdminUser should return a non-null Boolean');
+    }
+
+    @IsTest
+    static void testGetClientDashboardLastWeek() {
+        insert new WorkItem__c(
+            BriefDescriptionTxt__c = 'Last Week Item',
+            StageNamePk__c = 'In Progress'
+        );
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('lastWeek', 'Software_Delivery');
+        Test.stopTest();
+
+        System.assert(result.containsKey('thisWeek'), 'lastWeek range should still use thisWeek key');
+        Map<String, Object> metrics = (Map<String, Object>)result.get('thisWeek');
+        System.assert(metrics.containsKey('completed'), 'lastWeek metrics should contain completed');
+        System.assert(metrics.containsKey('blocked'), 'lastWeek metrics should contain blocked');
+    }
+
+    @IsTest
+    static void testGetClientDashboardDefaultParams() {
+        Test.startTest();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard(null, null);
+        Test.stopTest();
+
+        System.assert(result.containsKey('attentionWorkItems'), 'Should return attentionWorkItems with null params');
+        System.assert(result.containsKey('phases'), 'Should return phases with null params');
+        System.assert(result.containsKey('recentWorkItems'), 'Should return recentWorkItems with null params');
+    }
+
+    @IsTest
+    static void testGetBudgetMetricsNoWorkItems() {
+        // No data — should return zeros and dashes without errors
+        Test.startTest();
+        Map<String, Object> metrics = DeliveryHubDashboardController.getBudgetMetrics();
+        Test.stopTest();
+
+        System.assertEquals(0, (Decimal)metrics.get('activeRequests'), 'Should be 0 with no work items');
+        System.assertEquals('--', (String)metrics.get('lastEntry'), 'Should be -- with no recent activity');
+    }
+
+    @IsTest
+    static void testGetClientDashboardWithComments() {
+        WorkItem__c item = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Comment Test Item',
+            StageNamePk__c = 'In Development'
+        );
+        insert item;
+
+        insert new WorkItemComment__c(
+            WorkItemId__c = item.Id,
+            BodyTxt__c = 'Test comment for coverage',
+            AuthorTxt__c = 'Test Author',
+            SourcePk__c = 'Internal'
+        );
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
+        Test.stopTest();
+
+        List<DeliveryHubDashboardController.WorkItemSummary> recent =
+            (List<DeliveryHubDashboardController.WorkItemSummary>)result.get('recentWorkItems');
+        System.assert(recent.size() > 0, 'Should include items and/or comments in recent list');
+    }
+
+    @IsTest
+    static void testGetReportIdsEmptyList() {
+        Test.startTest();
+        Map<String, String> result = DeliveryHubDashboardController.getReportIds(
+            new List<String>()
+        );
+        Test.stopTest();
+
+        System.assertEquals(0, result.size(), 'Should return empty map for empty input list');
+    }
 }
