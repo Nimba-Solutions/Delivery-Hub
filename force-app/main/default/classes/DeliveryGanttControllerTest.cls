@@ -80,4 +80,48 @@ private class DeliveryGanttControllerTest {
 
         System.assertEquals(0, rows.size(), 'Should return empty list when no active workItems exist.');
     }
+
+    @IsTest
+    static void testGetGanttDependenciesReturnsResults() {
+        List<WorkItem__c> items = [SELECT Id FROM WorkItem__c WHERE IsActiveBool__c = true ORDER BY CreatedDate ASC LIMIT 2];
+
+        WorkItemDependency__c dep = new WorkItemDependency__c(
+            BlockedWorkItemId__c  = items[0].Id,
+            BlockingWorkItemId__c = items[1].Id,
+            TypePk__c             = 'Blocks'
+        );
+        insert dep;
+
+        Test.startTest();
+        List<DeliveryGanttController.GanttDependency> deps = DeliveryGanttController.getGanttDependencies();
+        Test.stopTest();
+
+        System.assertEquals(1, deps.size(), 'Should return 1 dependency.');
+        System.assertEquals(items[1].Id, deps[0].source, 'Source should be the blocking work item.');
+        System.assertEquals(items[0].Id, deps[0].target, 'Target should be the blocked work item.');
+        System.assertEquals('Blocks', deps[0].dependencyType, 'Dependency type should match.');
+    }
+
+    @IsTest
+    static void testGetGanttDependenciesEmpty() {
+        delete [SELECT Id FROM WorkItemDependency__c];
+
+        Test.startTest();
+        List<DeliveryGanttController.GanttDependency> deps = DeliveryGanttController.getGanttDependencies();
+        Test.stopTest();
+
+        System.assertEquals(0, deps.size(), 'Should return empty list when no dependencies exist.');
+    }
+
+    @IsTest
+    static void testUpdateWorkItemSortOrder() {
+        WorkItem__c item = [SELECT Id, SortOrderNumber__c FROM WorkItem__c WHERE IsActiveBool__c = true LIMIT 1];
+
+        Test.startTest();
+        DeliveryGanttController.updateWorkItemSortOrder(item.Id, 42);
+        Test.stopTest();
+
+        WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :item.Id];
+        System.assertEquals(42, updated.SortOrderNumber__c, 'Sort order should be updated to 42.');
+    }
 }

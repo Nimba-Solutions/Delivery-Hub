@@ -69,4 +69,74 @@ public with sharing class DeliveryGanttController {
             throw ahe;
         }
     }
+
+    /**
+     * @description Data Transfer Object representing a dependency link between two Gantt items.
+     */
+    public class GanttDependency {
+        /** @description Salesforce record Id of the dependency junction record */
+        @AuraEnabled public String id { get; set; }
+        /** @description Id of the blocking (source) work item */
+        @AuraEnabled public String source { get; set; }
+        /** @description Id of the blocked (target) work item */
+        @AuraEnabled public String target { get; set; }
+        /** @description Dependency type picklist value (e.g. Blocks) */
+        @AuraEnabled public String dependencyType { get; set; }
+    }
+
+    /**
+     * @description Returns active WorkItemDependency__c records where both the blocked and
+     *              blocking work items are active. Used by deliveryGanttChart to draw
+     *              dependency arrows between bars.
+     * @return List&lt;GanttDependency&gt; Flat list of dependency links.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<GanttDependency> getGanttDependencies() {
+        try {
+            List<WorkItemDependency__c> deps = [
+                SELECT Id, BlockingWorkItemId__c, BlockedWorkItemId__c, TypePk__c
+                FROM WorkItemDependency__c
+                WHERE BlockedWorkItemId__r.IsActiveBool__c = true
+                AND BlockingWorkItemId__r.IsActiveBool__c = true
+                WITH SYSTEM_MODE
+                LIMIT 500
+            ];
+
+            List<GanttDependency> result = new List<GanttDependency>();
+            for (WorkItemDependency__c d : deps) {
+                GanttDependency dep = new GanttDependency();
+                dep.id             = d.Id;
+                dep.source         = d.BlockingWorkItemId__c;
+                dep.target         = d.BlockedWorkItemId__c;
+                dep.dependencyType = d.TypePk__c;
+                result.add(dep);
+            }
+            return result;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Updates the sort order of a single work item, used for drag-and-drop
+     *              reordering in the Gantt chart.
+     * @param workItemId The Id of the WorkItem__c to update.
+     * @param sortOrder  The new sort order value.
+     */
+    @AuraEnabled
+    public static void updateWorkItemSortOrder(String workItemId, Decimal sortOrder) {
+        try {
+            WorkItem__c item = new WorkItem__c(
+                Id = workItemId,
+                SortOrderNumber__c = sortOrder
+            );
+            update item;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
 }
