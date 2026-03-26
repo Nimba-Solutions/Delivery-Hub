@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Activity tracking analytics from Ghost Recorder — top users, components, pages, and trends.</description>
+    <label>Activity Dashboard</label>
+    <lwcComponent>deliveryActivityDashboard</lwcComponent>
+    <motif>Custom100: Handshake</motif>
+</CustomTab>

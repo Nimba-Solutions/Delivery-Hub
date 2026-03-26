@@ -196,6 +196,7 @@
     <tabs>Delivery_Board</tabs>
     <tabs>Delivery_Timeline</tabs>
     <tabs>Delivery_Activity</tabs>
+    <tabs>Delivery_Activity_Dashboard</tabs>
     <tabs>NetworkEntity__c</tabs>
     <tabs>WorkRequest__c</tabs>
     <tabs>WorkItemComment__c</tabs>
