@@ -217,7 +217,7 @@ private class DeliveryHubSettingsControllerTest {
         Test.stopTest();
 
         DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertEquals('', s.SlackWebhookUrl__c, 'Slack webhook URL should be cleared');
+        System.assert(String.isBlank(s.SlackWebhookUrl__c), 'Slack webhook URL should be cleared');
     }
 
     @isTest
