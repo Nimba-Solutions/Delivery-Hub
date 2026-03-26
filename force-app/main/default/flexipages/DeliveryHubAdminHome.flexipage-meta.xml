@@ -61,6 +61,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryActivityDashboard</componentName>
+                <identifier>c_deliveryActivityDashboard</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryDataLineage</componentName>
                 <identifier>c_deliveryDataLineage</identifier>
             </componentInstance>

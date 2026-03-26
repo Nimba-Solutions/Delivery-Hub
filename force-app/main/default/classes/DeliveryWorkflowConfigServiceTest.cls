@@ -221,4 +221,156 @@ private class DeliveryWorkflowConfigServiceTest {
         System.assert(personaViews.containsKey('Manager'), 'Manager persona view required');
         System.assert(personaViews.containsKey('New_Hire'), 'New_Hire persona view required');
     }
+
+    /**
+     * @description Verifies getTerminalStageValues returns correct terminals for Loan_Approval.
+     */
+    @isTest
+    static void testGetTerminalStageValuesLoanApproval() {
+        Set<String> terminals = DeliveryWorkflowConfigService.getTerminalStageValues('Loan_Approval');
+        System.assert(!terminals.isEmpty(), 'Loan_Approval terminal stages must not be empty');
+        // Loan_Approval should have at least one terminal stage
+        System.assert(terminals.size() >= 1, 'Expected at least 1 terminal stage for Loan_Approval');
+    }
+
+    /**
+     * @description Verifies getAttentionStageValues returns correct attention stages for Loan_Approval.
+     */
+    @isTest
+    static void testGetAttentionStageValuesLoanApproval() {
+        Set<String> attention = DeliveryWorkflowConfigService.getAttentionStageValues('Loan_Approval');
+        System.assert(!attention.isEmpty(), 'Loan_Approval attention stages must not be empty');
+    }
+
+    /**
+     * @description Verifies getStagePhaseMap returns a populated map for Loan_Approval.
+     */
+    @isTest
+    static void testGetStagePhaseMapLoanApproval() {
+        Map<String,String> phaseMap = DeliveryWorkflowConfigService.getStagePhaseMap('Loan_Approval');
+        System.assert(!phaseMap.isEmpty(), 'Loan_Approval phase map must not be empty');
+        // All values should be non-null phase strings
+        for (String apiValue : phaseMap.keySet()) {
+            System.assertNotEquals(null, phaseMap.get(apiValue), 'Phase for ' + apiValue + ' must not be null');
+        }
+    }
+
+    /**
+     * @description Verifies getTerminalStageValues defaults to Software_Delivery for blank input.
+     */
+    @isTest
+    static void testGetTerminalStageValuesBlankDefaults() {
+        Set<String> terminals = DeliveryWorkflowConfigService.getTerminalStageValues('');
+        System.assert(!terminals.isEmpty(), 'Blank input should default to Software_Delivery terminals');
+        System.assert(terminals.contains('Done'), 'Done should be terminal for default type');
+    }
+
+    /**
+     * @description Verifies getAttentionStageValues defaults to Software_Delivery for blank input.
+     */
+    @isTest
+    static void testGetAttentionStageValuesBlankDefaults() {
+        Set<String> attention = DeliveryWorkflowConfigService.getAttentionStageValues('');
+        System.assert(!attention.isEmpty(), 'Blank input should default to Software_Delivery attention stages');
+    }
+
+    /**
+     * @description Verifies getStagePhaseMap defaults to Software_Delivery for null input.
+     */
+    @isTest
+    static void testGetStagePhaseMapNullDefaults() {
+        Map<String,String> phaseMap = DeliveryWorkflowConfigService.getStagePhaseMap(null);
+        System.assert(!phaseMap.isEmpty(), 'Null input should default to Software_Delivery phase map');
+        System.assertEquals('Planning', phaseMap.get('Backlog'), 'Backlog should map to Planning for default');
+    }
+
+    /**
+     * @description Verifies transition structure within stages has both forward and backtrack lists.
+     */
+    @isTest
+    static void testStageTransitionsStructure() {
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Software_Delivery');
+        List<Object> stages = (List<Object>) config.get('stages');
+
+        for (Object stageObj : stages) {
+            Map<String,Object> s = (Map<String,Object>) stageObj;
+            // Both transition lists must be present (even if empty)
+            Object fwd = s.get('forwardTransitions');
+            Object bck = s.get('backtrackTransitions');
+            System.assertNotEquals(null, fwd, 'forwardTransitions must not be null for ' + s.get('apiValue'));
+            System.assertNotEquals(null, bck, 'backtrackTransitions must not be null for ' + s.get('apiValue'));
+            // Must be lists
+            System.assert(fwd instanceof List<Object>, 'forwardTransitions must be a list for ' + s.get('apiValue'));
+            System.assert(bck instanceof List<Object>, 'backtrackTransitions must be a list for ' + s.get('apiValue'));
+        }
+    }
+
+    /**
+     * @description Verifies persona view structure has columnName, stages list, and sortOrder.
+     */
+    @isTest
+    static void testPersonaViewStructure() {
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Software_Delivery');
+        Map<String,Object> personaViews = (Map<String,Object>) config.get('personaViews');
+
+        System.assert(!personaViews.isEmpty(), 'Persona views must not be empty');
+
+        for (String persona : personaViews.keySet()) {
+            List<Object> columns = (List<Object>) personaViews.get(persona);
+            System.assert(!columns.isEmpty(), persona + ' must have at least one column');
+
+            for (Object colObj : columns) {
+                Map<String,Object> col = (Map<String,Object>) colObj;
+                System.assertNotEquals(null, col.get('columnName'), 'columnName must be present for ' + persona);
+                System.assertNotEquals(null, col.get('stages'), 'stages must be present for ' + persona);
+                System.assertNotEquals(null, col.get('sortOrder'), 'sortOrder must be present for ' + persona);
+                // isExtended must be a Boolean
+                Object isExt = col.get('isExtended');
+                System.assert(isExt == null || isExt instanceof Boolean, 'isExtended must be Boolean or null for ' + persona);
+                // stages must be a list
+                Object stagesList = col.get('stages');
+                System.assert(stagesList instanceof List<Object>, 'stages must be a list for ' + persona + ' / ' + col.get('columnName'));
+            }
+        }
+    }
+
+    /**
+     * @description Verifies stage flags (isTerminal, isBlockedState, isAttentionState) are booleans.
+     */
+    @isTest
+    static void testStageFlags() {
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Software_Delivery');
+        List<Object> stages = (List<Object>) config.get('stages');
+
+        Boolean foundTerminal = false;
+        Boolean foundAttention = false;
+        Boolean foundBlocked = false;
+
+        for (Object stageObj : stages) {
+            Map<String,Object> s = (Map<String,Object>) stageObj;
+            if (s.get('isTerminal') == true) { foundTerminal = true; }
+            if (s.get('isAttentionState') == true) { foundAttention = true; }
+            if (s.get('isBlockedState') == true) { foundBlocked = true; }
+        }
+
+        System.assert(foundTerminal, 'At least one stage should be terminal');
+        System.assert(foundAttention, 'At least one stage should be an attention state');
+        System.assert(foundBlocked, 'At least one stage should be a blocked state');
+    }
+
+    /**
+     * @description Verifies getWorkflowConfig includes displayName, phase, and color for each stage.
+     */
+    @isTest
+    static void testStageDisplayProperties() {
+        Map<String,Object> config = DeliveryWorkflowConfigService.getWorkflowConfig('Software_Delivery');
+        List<Object> stages = (List<Object>) config.get('stages');
+
+        for (Object stageObj : stages) {
+            Map<String,Object> s = (Map<String,Object>) stageObj;
+            System.assertNotEquals(null, s.get('displayName'), 'displayName must be set for ' + s.get('apiValue'));
+            System.assertNotEquals(null, s.get('headerBgColor'), 'headerBgColor must be set for ' + s.get('apiValue'));
+            System.assertNotEquals(null, s.get('headerTextColor'), 'headerTextColor must be set for ' + s.get('apiValue'));
+        }
+    }
 }
