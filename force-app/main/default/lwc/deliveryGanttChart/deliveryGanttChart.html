@@ -4,26 +4,34 @@
         <!-- Header -->
         <div class="gantt-header">
             <div class="gantt-header-left">
-                <lightning-icon icon-name="utility:date_time" alternative-text="Timeline" size="small" class="gantt-header-icon"></lightning-icon>
+                <lightning-icon icon-name="utility:date_time" alternative-text="Gantt Chart" size="small" class="gantt-header-icon"></lightning-icon>
                 <div>
-                    <h2 class="gantt-title">Delivery Timeline</h2>
-                    <p class="gantt-subtitle">Active work items with projected UAT dates &bull; {windowLabel}</p>
+                    <h2 class="gantt-title">Delivery Gantt Chart</h2>
+                    <p class="gantt-subtitle">{subtitleText}</p>
                 </div>
             </div>
             <div class="gantt-header-right">
                 <c-delivery-info-popover component-name="deliveryGanttChart"></c-delivery-info-popover>
                 <lightning-button-group>
-                    <lightning-button label="30d" variant={btn30Variant} onclick={handleWindow30}></lightning-button>
-                    <lightning-button label="60d" variant={btn60Variant} onclick={handleWindow60}></lightning-button>
-                    <lightning-button label="90d" variant={btn90Variant} onclick={handleWindow90}></lightning-button>
+                    <lightning-button label="Day" variant={btnDayVariant} onclick={handleZoomDay}></lightning-button>
+                    <lightning-button label="Week" variant={btnWeekVariant} onclick={handleZoomWeek}></lightning-button>
+                    <lightning-button label="Month" variant={btnMonthVariant} onclick={handleZoomMonth}></lightning-button>
+                    <lightning-button label="Quarter" variant={btnQuarterVariant} onclick={handleZoomQuarter}></lightning-button>
                 </lightning-button-group>
+                <lightning-button-icon
+                    icon-name="utility:filterList"
+                    alternative-text="Toggle completed items"
+                    title={completedToggleTitle}
+                    variant={completedToggleVariant}
+                    onclick={handleToggleCompleted}
+                ></lightning-button-icon>
             </div>
         </div>
 
         <!-- Loading -->
         <template lwc:if={isLoading}>
             <div class="gantt-loading">
-                <lightning-spinner alternative-text="Loading timeline..." size="small"></lightning-spinner>
+                <lightning-spinner alternative-text="Loading Gantt chart..." size="small"></lightning-spinner>
             </div>
         </template>
 
@@ -39,57 +47,25 @@
         <template lwc:if={isEmpty}>
             <div class="gantt-empty">
                 <lightning-icon icon-name="utility:date_time" size="medium" class="gantt-empty-icon"></lightning-icon>
-                <p>No active work items with a Projected UAT date found.</p>
-                <p class="gantt-empty-sub">Set a Projected UAT Ready Date on your work items to see them here.</p>
+                <p>No work items found to display on the Gantt chart.</p>
+                <p class="gantt-empty-sub">Create work items with estimated dates to see them plotted here.</p>
             </div>
         </template>
 
-        <!-- Chart -->
-        <template lwc:if={hasRows}>
-            <div class="gantt-body">
+        <!-- Gantt container — DHTMLX renders into this div -->
+        <template lwc:if={hasData}>
+            <div class="gantt-container" lwc:ref="ganttContainer"></div>
+        </template>
 
-                <!-- Date axis labels -->
-                <div class="gantt-axis">
-                    <div class="gantt-label-col"></div>
-                    <div class="gantt-track-col">
-                        <div class="gantt-date-row">
-                            <template for:each={dateLabels} for:item="dl">
-                                <span key={dl.key} class="gantt-date-label" style={dl.style}>{dl.label}</span>
-                            </template>
-                        </div>
-                        <!-- Today line -->
-                        <div class="gantt-today-line" style={todayLineStyle} title="Today"></div>
-                    </div>
-                </div>
-
-                <!-- Work item rows -->
-                <template for:each={ganttRows} for:item="row">
-                    <div key={row.workItemId} class="gantt-row">
-                        <div class="gantt-label-col">
-                            <a data-id={row.workItemId} onclick={handleRowClick} class="gantt-work-item-name">
-                                {row.name}
-                            </a>
-                            <template if:true={row.descShort}>
-                                <div class="gantt-desc-short" title={row.description}>{row.descShort}</div>
-                            </template>
-                            <span class={row.stageBadgeClass}>{row.stage}</span>
-                        </div>
-                        <div class="gantt-track-col">
-                            <div class="gantt-track">
-                                <div class={row.barClass} style={row.barStyle} title={row.barTooltip}></div>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-
-            </div>
-
-            <!-- Legend -->
+        <!-- Legend -->
+        <template lwc:if={hasData}>
             <div class="gantt-legend">
-                <span class="legend-item"><span class="legend-dot legend-dot--normal"></span>On track</span>
-                <span class="legend-item"><span class="legend-dot legend-dot--warning"></span>Due &lt; 7 days</span>
-                <span class="legend-item"><span class="legend-dot legend-dot--overdue"></span>Overdue</span>
-                <span class="legend-item"><span class="legend-dot legend-dot--future"></span>Starts after window</span>
+                <template for:each={legendItems} for:item="item">
+                    <span key={item.phase} class="legend-item">
+                        <span class="legend-dot" style={item.dotStyle}></span>
+                        {item.phase}
+                    </span>
+                </template>
             </div>
         </template>
 
