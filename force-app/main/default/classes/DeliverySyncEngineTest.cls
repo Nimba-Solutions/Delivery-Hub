@@ -332,7 +332,7 @@ private class DeliverySyncEngineTest {
         insert new SyncItem__c(
             LocalRecordIdTxt__c = (String)t.Id,
             GlobalSourceIdTxt__c = 'EXTERNAL-ORG-12345',
-            StatusPk__c = 'Processed',
+            StatusPk__c = 'Synced',
             DirectionPk__c = 'Inbound',
             ObjectTypePk__c = 'WorkItem__c',
             WorkItemId__c = t.Id
