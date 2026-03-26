@@ -124,4 +124,40 @@ private class DeliveryGanttControllerTest {
         WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :item.Id];
         System.assertEquals(42, updated.SortOrderNumber__c, 'Sort order should be updated to 42.');
     }
+
+    @IsTest
+    static void testUpdateWorkItemDates() {
+        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE IsActiveBool__c = true LIMIT 1];
+
+        Test.startTest();
+        DeliveryGanttController.updateWorkItemDates(item.Id, '2026-04-01', '2026-04-15');
+        Test.stopTest();
+
+        WorkItem__c updated = [SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c FROM WorkItem__c WHERE Id = :item.Id];
+        System.assertEquals(Date.valueOf('2026-04-01'), updated.EstimatedStartDevDate__c, 'Start date should be updated.');
+        System.assertEquals(Date.valueOf('2026-04-15'), updated.EstimatedEndDevDate__c, 'End date should be updated.');
+    }
+
+    @IsTest
+    static void testGanttRowNewFieldsPopulated() {
+        // Update a work item with start/end dates to verify new DTO fields
+        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE IsActiveBool__c = true AND ProjectedUATReadyDate__c != null LIMIT 1];
+        item.EstimatedStartDevDate__c = Date.today();
+        item.EstimatedEndDevDate__c = Date.today().addDays(10);
+        update item;
+
+        Test.startTest();
+        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
+        Test.stopTest();
+
+        Boolean foundWithDates = false;
+        for (DeliveryGanttController.GanttRow row : rows) {
+            if (row.workItemId == item.Id) {
+                System.assertNotEquals(null, row.startDate, 'startDate should be set.');
+                System.assertNotEquals(null, row.endDate, 'endDate should be set.');
+                foundWithDates = true;
+            }
+        }
+        System.assert(foundWithDates, 'Should find the work item with dates set.');
+    }
 }

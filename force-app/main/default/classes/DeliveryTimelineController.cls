@@ -34,6 +34,8 @@ public with sharing class DeliveryTimelineController {
         @AuraEnabled public String workflowType { get; set; }
         /** @description True when the item has at least one explicitly set date field */
         @AuraEnabled public Boolean hasExplicitDates { get; set; }
+        /** @description Id of the assigned developer (User lookup) */
+        @AuraEnabled public String developerId { get; set; }
     }
 
     /**
@@ -50,7 +52,7 @@ public with sharing class DeliveryTimelineController {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
                 + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
-                + 'WorkflowTypeTxt__c, '
+                + 'WorkflowTypeTxt__c, Developer__c, '
                 + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
                 + 'FROM WorkItem__c '
                 + 'WHERE IsActiveBool__c = true '
@@ -95,6 +97,7 @@ public with sharing class DeliveryTimelineController {
         row.entityName = item.ClientNetworkEntityId__r != null
             ? item.ClientNetworkEntityId__r.Name : 'Unassigned';
         row.entityId = item.ClientNetworkEntityId__c;
+        row.developerId = item.Developer__c;
 
         // Determine if the item has at least one explicitly set date
         Boolean hasStart = item.EstimatedStartDevDate__c != null;

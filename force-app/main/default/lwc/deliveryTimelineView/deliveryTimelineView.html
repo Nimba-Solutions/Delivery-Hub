@@ -1,55 +1,52 @@
 <template>
-    <lightning-card title={cardTitle} icon-name="standard:date_input">
-        <!-- Toolbar -->
-        <div slot="actions" class="toolbar">
-            <c-delivery-info-popover component-name="deliveryTimelineView"></c-delivery-info-popover>
-            <lightning-combobox
-                label="Workflow Type"
-                value={selectedWorkflowType}
-                options={workflowTypeOptions}
-                onchange={handleWorkflowTypeChange}
-                variant="label-hidden"
-                class="slds-m-right_small type-picker"
-            ></lightning-combobox>
-            <lightning-button-group class="zoom-controls">
-                <lightning-button
-                    label="Week"
-                    variant={weekVariant}
-                    onclick={handleZoomWeek}
-                ></lightning-button>
-                <lightning-button
-                    label="Month"
-                    variant={monthVariant}
-                    onclick={handleZoomMonth}
-                ></lightning-button>
-                <lightning-button
-                    label="Quarter"
-                    variant={quarterVariant}
-                    onclick={handleZoomQuarter}
-                ></lightning-button>
-            </lightning-button-group>
-            <lightning-button-icon
-                icon-name="utility:chevronleft"
-                alternative-text="Scroll left"
-                onclick={handleScrollLeft}
-                class="slds-m-left_small"
-            ></lightning-button-icon>
-            <lightning-button-icon
-                icon-name="utility:chevronright"
-                alternative-text="Scroll right"
-                onclick={handleScrollRight}
-            ></lightning-button-icon>
-            <lightning-button
-                label="Today"
-                variant="neutral"
-                onclick={handleScrollToToday}
-                class="slds-m-left_small"
-            ></lightning-button>
-        </div>
+    <div class="timeline-card">
+        <!-- Shared toolbar -->
+        <c-delivery-gantt-toolbar
+            title={toolbarTitle}
+            subtitle={toolbarSubtitle}
+            zoom-levels="Week,Month,Quarter"
+            current-zoom={zoomLevel}
+            entity-options={workflowTypeOptions}
+            selected-entity={selectedWorkflowType}
+            show-dependency-toggle
+            dependencies-active={showDependencies}
+            show-my-work-toggle
+            my-work-active={myWorkOnly}
+            onzoomchange={handleZoomChange}
+            onentitychange={handleEntityChange}
+            ontoggledependencies={handleToggleDependencies}
+            ontogglemywork={handleToggleMyWork}
+            onscrolltoday={handleScrollToday}
+            onrefresh={handleRefresh}
+        ></c-delivery-gantt-toolbar>
+
+        <!-- Summary stats bar -->
+        <template if:true={hasStats}>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-value">{totalItemCount}</span>
+                    <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item stat-on-track">
+                    <span class="stat-value">{onTrackCount}</span>
+                    <span class="stat-label">On Track</span>
+                </div>
+                <div class="stat-item stat-overdue">
+                    <span class="stat-value">{overdueCount}</span>
+                    <span class="stat-label">Overdue</span>
+                </div>
+                <div class="stat-item stat-unscheduled">
+                    <span class="stat-value">{unscheduledCount}</span>
+                    <span class="stat-label">Unscheduled</span>
+                </div>
+            </div>
+        </template>
 
         <!-- Loading state -->
         <template if:true={isLoading}>
-            <lightning-spinner alternative-text="Loading timeline" size="medium"></lightning-spinner>
+            <div class="loading-container">
+                <lightning-spinner alternative-text="Loading timeline" size="medium"></lightning-spinner>
+            </div>
         </template>
 
         <!-- Empty state -->
@@ -114,13 +111,35 @@
                                         style={item.barStyle}
                                         title={item.tooltipText}
                                         data-id={item.workItemId}
+                                        data-startdate={item.startDate}
+                                        data-enddate={item.endDate}
                                         onclick={handleBarClick}
+                                        onmousedown={handleBarMouseDown}
                                     >
                                         <span class="bar-label">{item.name}</span>
                                     </div>
                                 </template>
                             </div>
                         </div>
+                    </template>
+
+                    <!-- Dependency arrows SVG overlay -->
+                    <template if:true={showDependencies}>
+                        <template if:true={hasDependencyArrows}>
+                            <svg class="dependency-svg"
+                                 xmlns="http://www.w3.org/2000/svg"
+                                 viewBox={svgViewBox}
+                                 width={svgWidth}
+                                 height={svgHeight}
+                            >
+                                <template for:each={dependencyArrows} for:item="arrow">
+                                    <g key={arrow.key}>
+                                        <path d={arrow.pathD} class="dep-path"></path>
+                                        <path d={arrow.arrowD} class="dep-arrowhead"></path>
+                                    </g>
+                                </template>
+                            </svg>
+                        </template>
                     </template>
                 </div>
 
@@ -154,5 +173,14 @@
                 </template>
             </template>
         </template>
-    </lightning-card>
+    </div>
+
+    <!-- Quick-edit modal -->
+    <template if:true={showQuickEdit}>
+        <c-delivery-gantt-quick-edit
+            record-id={selectedWorkItemId}
+            onsave={handleQuickEditSave}
+            onclose={handleQuickEditClose}
+        ></c-delivery-gantt-quick-edit>
+    </template>
 </template>
