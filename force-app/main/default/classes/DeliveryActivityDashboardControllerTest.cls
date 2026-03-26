@@ -14,7 +14,7 @@ private class DeliveryActivityDashboardControllerTest {
         List<ActivityLog__c> logs = new List<ActivityLog__c>();
         for (Integer i = 0; i < 5; i++) {
             logs.add(new ActivityLog__c(
-                UserIdTxt__c = '005000000000001',
+                UserIdTxt__c = UserInfo.getUserId(),
                 ActionTypePk__c = 'Navigation',
                 ComponentNameTxt__c = 'deliveryHubBoard',
                 PageUrlTxt__c = '/lightning/page/home'
@@ -22,10 +22,10 @@ private class DeliveryActivityDashboardControllerTest {
         }
         for (Integer i = 0; i < 3; i++) {
             logs.add(new ActivityLog__c(
-                UserIdTxt__c = '005000000000002',
+                UserIdTxt__c = 'test-user-beta',
                 ActionTypePk__c = 'Button_Click',
                 ComponentNameTxt__c = 'deliveryGhostRecorder',
-                PageUrlTxt__c = '/lightning/r/WorkItem__c/a00000000000001/view'
+                PageUrlTxt__c = '/lightning/r/WorkItem__c/record/view'
             ));
         }
         insert logs;
@@ -45,7 +45,7 @@ private class DeliveryActivityDashboardControllerTest {
         List<DeliveryActivityDashboardController.RankedItem> topUsers =
             (List<DeliveryActivityDashboardController.RankedItem>) result.get('topUsers');
         System.assert(topUsers.size() >= 1, 'Should have at least one top user');
-        System.assertEquals('005000000000001', topUsers[0].label, 'Top user should be the one with 5 logs');
+        System.assertEquals(UserInfo.getUserId(), topUsers[0].label, 'Top user should be the one with 5 logs');
         System.assertEquals(5, topUsers[0].count, 'Top user should have 5 activities');
 
         // Validate top components
