@@ -566,6 +566,7 @@ export default class DeliveryTimelineView extends NavigationMixin(LightningEleme
             if (Math.abs(deltaX) < 5) return;
             this._dragThresholdMet = true;
             this._isDragging = true;
+            event.preventDefault();
             if (this._dragBarEl) {
                 this._dragBarEl.classList.add('dragging');
             }
