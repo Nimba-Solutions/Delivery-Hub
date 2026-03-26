@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ReportType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <baseObject>ActivityLog__c</baseObject>
+    <category>other</category>
+    <deployed>true</deployed>
+    <description>Activity log entries with user, page, component, and action data for usage analytics.</description>
+    <label>Activity Logs</label>
+    <sections>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>Id</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>Name</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>UserIdTxt__c</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>ActionTypePk__c</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>ComponentNameTxt__c</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>PageUrlTxt__c</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>SessionIdTxt__c</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>RecordIdTxt__c</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>NetworkEntityId__c</field>
+            <table>ActivityLog__c</table>
+        </columns>
+        <masterLabel>Activity Logs</masterLabel>
+    </sections>
+</ReportType>

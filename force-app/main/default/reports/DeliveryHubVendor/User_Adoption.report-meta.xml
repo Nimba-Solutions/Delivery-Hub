@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ActionTypePk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ComponentNameTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$Name</field>
+    </columns>
+    <description>Activity logs grouped by user ID with record counts. Shows which users are actively using the platform — useful for profile and permission decisions.</description>
+    <filter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%ActivityLog__c$CreatedDate</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value>THIS_MONTH</value>
+        </criteriaItems>
+    </filter>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%UserIdTxt__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <name>User Adoption</name>
+    <reportType>%%%NAMESPACE%%%Activity_Logs__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <showSubTotals>true</showSubTotals>
+</Report>
