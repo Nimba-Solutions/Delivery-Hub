@@ -11,9 +11,9 @@
     <targetConfigs>
         <targetConfig targets="lightning__AppPage,lightning__RecordPage,lightning__HomePage">
             <property name="showCompleted" type="Boolean" label="Show Completed Items" description="When checked, includes completed (inactive) work items in the Gantt chart." default="false" />
-            <property name="initialZoom" type="String" label="Initial Zoom Level" description="The default zoom level when the chart loads." datasource="day,week,month,quarter" default="month" />
+            <property name="initialZoom" type="String" label="Initial Zoom Level" description="The default zoom level when the chart loads." datasource="Day,Week,Month,Quarter" default="Month" />
         </targetConfig>
     </targetConfigs>
     <masterLabel>Delivery DHTMLX Gantt</masterLabel>
-    <description>Interactive Gantt chart powered by DHTMLX Gantt. Shows work items grouped by client with progress bars, stage color-coding, zoom controls, and click-to-navigate.</description>
+    <description>Power-user Gantt chart with drag, dependencies, hierarchy, and undo/redo.</description>
 </LightningComponentBundle>

@@ -2,65 +2,56 @@
     display: block;
 }
 
-/* Card shell */
-.dhtmlx-gantt-card {
+/* ── Card shell ───────────────────────────────────────────────────────────── */
+.dg-card {
     background: #ffffff;
     border-radius: 0.75rem;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     font-size: 0.8125rem;
 }
 
-/* Header */
-.dhtmlx-gantt-header {
+/* ── Summary stats bar ────────────────────────────────────────────────────── */
+.dg-stats {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1.125rem 1.5rem;
+    gap: 1.5rem;
+    padding: 0.5rem 1.25rem;
     border-bottom: 1px solid #e5e7eb;
-    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    background: #f9fafb;
 }
 
-.dhtmlx-gantt-header-left {
+.dg-stat {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    align-items: baseline;
+    gap: 0.35rem;
 }
 
-.dhtmlx-gantt-header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.dhtmlx-gantt-header-icon {
-    color: #3b82f6;
-}
-
-.dhtmlx-gantt-title {
-    font-size: 1rem;
-    font-weight: 600;
+.dg-stat-value {
+    font-size: 1.05rem;
+    font-weight: 700;
     color: #1f2937;
-    margin: 0 0 0.15rem 0;
 }
 
-.dhtmlx-gantt-subtitle {
-    font-size: 0.75rem;
+.dg-stat-label {
+    font-size: 0.6875rem;
     color: #6b7280;
-    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-/* Loading / Error / Empty */
-.dhtmlx-gantt-loading {
+.dg-stat-ontrack .dg-stat-value { color: #16a34a; }
+.dg-stat-overdue .dg-stat-value { color: #dc2626; }
+
+/* ── Loading / Error / Empty ──────────────────────────────────────────────── */
+.dg-loading {
     padding: 2rem;
     display: flex;
     justify-content: center;
 }
 
-.dhtmlx-gantt-error {
+.dg-error {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -72,208 +63,416 @@
     color: #991b1b;
 }
 
-.dhtmlx-gantt-empty {
+.dg-empty {
     padding: 3rem 2rem;
     text-align: center;
     color: #6b7280;
 }
 
-.dhtmlx-gantt-empty-icon {
+.dg-empty-icon {
     color: #d1d5db;
     margin-bottom: 0.75rem;
 }
 
-.dhtmlx-gantt-empty-sub {
+.dg-empty-sub {
     font-size: 0.75rem;
     color: #9ca3af;
     margin-top: 0.25rem;
 }
 
-/* DHTMLX Gantt container */
-.dhtmlx-gantt-container {
+/* ── DHTMLX Gantt container ───────────────────────────────────────────────── */
+.dg-container {
     width: 100%;
     height: 500px;
     position: relative;
 }
 
-/* Override DHTMLX Gantt styles for a modern look */
+/* ═══════════════════════════════════════════════════════════════════════════
+   DHTMLX Gantt style overrides — all via :global() to pierce shadow DOM
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Grid header cells */
-.dhtmlx-gantt-card :global(.gantt_grid_head_cell) {
+/* ── Grid header ──────────────────────────────────────────────────────────── */
+.dg-card :global(.gantt_grid_head_cell) {
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #374151;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    background: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
+    letter-spacing: 0.04em;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
 }
 
-/* Grid body cells */
-.dhtmlx-gantt-card :global(.gantt_cell) {
+/* ── Grid body cells ──────────────────────────────────────────────────────── */
+.dg-card :global(.gantt_cell) {
     font-size: 0.8125rem;
     color: #1f2937;
-    border-right: 1px solid #f3f4f6;
+    border-right: 1px solid #f1f5f9;
 }
 
-/* Grid rows */
-.dhtmlx-gantt-card :global(.gantt_row) {
-    border-bottom: 1px solid #f3f4f6;
+/* ── Grid rows ────────────────────────────────────────────────────────────── */
+.dg-card :global(.gantt_row) {
+    border-bottom: 1px solid #f1f5f9;
 }
 
-.dhtmlx-gantt-card :global(.gantt_row:hover),
-.dhtmlx-gantt-card :global(.gantt_row.odd:hover) {
+.dg-card :global(.gantt_row:hover),
+.dg-card :global(.gantt_row.odd:hover) {
     background-color: #eff6ff;
 }
 
-.dhtmlx-gantt-card :global(.gantt_row.odd) {
+.dg-card :global(.gantt_row.odd) {
     background-color: #fafbfc;
 }
 
-/* Task bars */
-.dhtmlx-gantt-card :global(.gantt_task_line) {
-    border-radius: 4px;
+/* ── Task bars ────────────────────────────────────────────────────────────── */
+.dg-card :global(.gantt_task_line) {
+    border-radius: 6px;
     border: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     cursor: pointer;
-    transition: box-shadow 0.15s ease;
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
 }
 
-.dhtmlx-gantt-card :global(.gantt_task_line:hover) {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+.dg-card :global(.gantt_task_line:hover) {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+    transform: translateY(-1px);
 }
 
-/* Progress bar inside task */
-.dhtmlx-gantt-card :global(.gantt_task_progress) {
-    border-radius: 4px 0 0 4px;
-    opacity: 0.7;
+/* ── Progress bar inside task ─────────────────────────────────────────────── */
+.dg-card :global(.gantt_task_progress) {
+    border-radius: 6px 0 0 6px;
+    opacity: 0.65;
 }
 
-/* Project rows (entity groups) */
-.dhtmlx-gantt-card :global(.gantt_task_line.gantt_project) {
+/* ── Progress drag handle ─────────────────────────────────────────────────── */
+.dg-card :global(.gantt_task_progress_drag) {
+    cursor: ew-resize;
+}
+
+/* ── Project rows (entity groups) ─────────────────────────────────────────── */
+.dg-card :global(.gantt_task_line.gantt_project) {
     background-color: #dbeafe;
     border: 1px solid #93c5fd;
     border-radius: 4px;
+    box-shadow: none;
 }
 
-/* Completed task styling */
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-task-completed .gantt_task_line),
-.dhtmlx-gantt-card :global(.gantt_task_line.dhtmlx-gantt-task-completed) {
-    opacity: 0.5;
+/* ── Link drag handles on task bars ───────────────────────────────────────── */
+.dg-card :global(.gantt_link_control) {
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
-/* Today marker */
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-today-marker) {
-    background: #ef4444;
-    width: 2px;
-    opacity: 0.8;
+.dg-card :global(.gantt_task_line:hover .gantt_link_control) {
+    opacity: 1;
 }
 
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-today-marker .gantt_marker_content) {
-    background: #ef4444;
-    color: white;
-    font-size: 0.6875rem;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-weight: 500;
-}
-
-/* Scale header */
-.dhtmlx-gantt-card :global(.gantt_scale_cell) {
-    font-size: 0.75rem;
-    color: #4b5563;
-    font-weight: 500;
-    border-right: 1px solid #e5e7eb;
-    background: #f9fafb;
-}
-
-/* Timeline area background */
-.dhtmlx-gantt-card :global(.gantt_task_bg) {
-    background: #ffffff;
-}
-
-.dhtmlx-gantt-card :global(.gantt_task_cell) {
-    border-right: 1px solid #f3f4f6;
-}
-
-/* Grid / timeline separator */
-.dhtmlx-gantt-card :global(.gantt_grid_scale),
-.dhtmlx-gantt-card :global(.gantt_task_scale) {
-    border-bottom: 2px solid #e5e7eb;
-}
-
-/* Tooltip overrides */
-.dhtmlx-gantt-card :global(.gantt_tooltip) {
-    background: #1f2937;
-    color: #f9fafb;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    border: none;
-    max-width: 350px;
-}
-
-/* Tree toggle icon */
-.dhtmlx-gantt-card :global(.gantt_tree_icon) {
+.dg-card :global(.gantt_link_point) {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     cursor: pointer;
 }
 
-/* Custom templates rendered in grid cells */
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-project-label) {
+/* ── Dependency links ─────────────────────────────────────────────────────── */
+.dg-card :global(.dg-link .gantt_line_wrapper div) {
+    background-color: #94a3b8;
+}
+
+.dg-card :global(.dg-link .gantt_link_arrow) {
+    border-color: #94a3b8;
+}
+
+.dg-card :global(.gantt_link_direction) {
+    border-color: #3b82f6 !important;
+}
+
+/* ── Completed tasks ──────────────────────────────────────────────────────── */
+.dg-card :global(.dg-completed) {
+    opacity: 0.4;
+}
+
+.dg-card :global(.dg-row-completed) {
+    opacity: 0.5;
+}
+
+/* ── Today marker ─────────────────────────────────────────────────────────── */
+.dg-card :global(.dg-today-marker) {
+    background: #ef4444;
+    width: 2px;
+    opacity: 0.85;
+    z-index: 5;
+}
+
+.dg-card :global(.dg-today-marker .gantt_marker_content) {
+    background: #ef4444;
+    color: white;
+    font-size: 0.625rem;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* ── Scale headers ────────────────────────────────────────────────────────── */
+.dg-card :global(.gantt_scale_cell) {
+    font-size: 0.7rem;
+    color: #475569;
+    font-weight: 500;
+    border-right: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+/* ── Timeline background ──────────────────────────────────────────────────── */
+.dg-card :global(.gantt_task_bg) {
+    background: #ffffff;
+}
+
+.dg-card :global(.gantt_task_cell) {
+    border-right: 1px solid #f1f5f9;
+}
+
+/* ── Grid/timeline separator ──────────────────────────────────────────────── */
+.dg-card :global(.gantt_grid_scale),
+.dg-card :global(.gantt_task_scale) {
+    border-bottom: 2px solid #e2e8f0;
+}
+
+/* ── Grid resize handle ───────────────────────────────────────────────────── */
+.dg-card :global(.gantt_grid_resize_wrap) {
+    cursor: col-resize;
+}
+
+/* ── Tree toggle ──────────────────────────────────────────────────────────── */
+.dg-card :global(.gantt_tree_icon) {
+    cursor: pointer;
+}
+
+/* ── Drag resize handles on task ──────────────────────────────────────────── */
+.dg-card :global(.gantt_task_drag) {
+    cursor: ew-resize;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Custom templates rendered inside DHTMLX cells
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Project label ────────────────────────────────────────────────────────── */
+.dg-card :global(.dg-project-label) {
     font-weight: 700;
     font-size: 0.8125rem;
     color: #1e40af;
 }
 
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-task-name) {
+/* ── Task name ────────────────────────────────────────────────────────────── */
+.dg-card :global(.dg-task-name) {
     font-size: 0.8125rem;
     color: #1f2937;
     cursor: pointer;
 }
 
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-task-name:hover) {
+.dg-card :global(.dg-task-name:hover) {
     color: #3b82f6;
     text-decoration: underline;
 }
 
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-stage-pill) {
+/* ── Stage pill ───────────────────────────────────────────────────────────── */
+.dg-card :global(.dg-stage-pill) {
     display: inline-block;
-    font-size: 0.625rem;
-    font-weight: 500;
-    padding: 0.1rem 0.4rem;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    padding: 0.1rem 0.45rem;
     border-radius: 999px;
-    background: #e5e7eb;
-    color: #374151;
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-/* Bar text (hours) */
-.dhtmlx-gantt-card :global(.dhtmlx-gantt-bar-text) {
-    font-size: 0.625rem;
-    color: rgba(255,255,255,0.9);
-    font-weight: 500;
-    padding-left: 4px;
+/* ── Developer name in grid ───────────────────────────────────────────────── */
+.dg-card :global(.dg-dev-name) {
+    font-size: 0.75rem;
+    color: #64748b;
 }
 
-/* Scrollbar styling */
-.dhtmlx-gantt-card :global(.gantt_layout_cell) {
-    scrollbar-width: thin;
-    scrollbar-color: #d1d5db transparent;
+/* ── Hours in grid ────────────────────────────────────────────────────────── */
+.dg-card :global(.dg-hours) {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    font-variant-numeric: tabular-nums;
 }
 
-/* Legend */
-.dhtmlx-gantt-legend {
+/* ── Bar text (hours inside task bar) ─────────────────────────────────────── */
+.dg-card :global(.dg-bar-text) {
+    font-size: 0.5625rem;
+    color: rgba(255, 255, 255, 0.92);
+    font-weight: 600;
+    padding-left: 6px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Tooltip styling — dark, rich, professional
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dg-card :global(.gantt_tooltip) {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 10px;
+    padding: 0;
+    font-size: 0.75rem;
+    line-height: 1.55;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    max-width: 380px;
+    overflow: hidden;
+}
+
+.dg-card :global(.dg-tip) {
+    padding: 12px 16px;
+}
+
+.dg-card :global(.dg-tip-title) {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 6px;
+    line-height: 1.3;
+}
+
+.dg-card :global(.dg-tip-desc) {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.dg-card :global(.dg-tip-badges) {
     display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    padding: 0.75rem 1.25rem;
-    border-top: 1px solid #f3f4f6;
+    gap: 6px;
+    margin-bottom: 8px;
     flex-wrap: wrap;
 }
 
-.dhtmlx-gantt-legend-item {
+.dg-card :global(.dg-tip-badge) {
+    display: inline-block;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.dg-card :global(.dg-pri-high),
+.dg-card :global(.dg-pri-critical) {
+    background: #dc2626;
+}
+
+.dg-card :global(.dg-pri-medium) {
+    background: #f59e0b;
+}
+
+.dg-card :global(.dg-pri-low) {
+    background: #6b7280;
+}
+
+.dg-card :global(.dg-tip-row) {
+    font-size: 0.6875rem;
+    color: #cbd5e1;
+    margin-bottom: 3px;
+}
+
+.dg-card :global(.dg-tip-label) {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.dg-card :global(.dg-tip-progress-track) {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    margin: 4px 0 8px;
+    overflow: hidden;
+}
+
+.dg-card :global(.dg-tip-progress-fill) {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.2s ease;
+}
+
+.dg-card :global(.dg-tip-dates) {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dg-card :global(.dg-tip-overdue) {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: #fca5a5;
+    margin-top: 4px;
+}
+
+.dg-card :global(.dg-tip-warning) {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: #fbbf24;
+    margin-top: 4px;
+}
+
+.dg-card :global(.dg-tip-hint) {
+    font-size: 0.5625rem;
+    color: #475569;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Scrollbar styling
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dg-card :global(.gantt_layout_cell) {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.dg-card :global(.gantt_layout_cell::-webkit-scrollbar) {
+    width: 6px;
+    height: 6px;
+}
+
+.dg-card :global(.gantt_layout_cell::-webkit-scrollbar-thumb) {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.dg-card :global(.gantt_layout_cell::-webkit-scrollbar-track) {
+    background: transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Legend bar
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dg-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.625rem 1.25rem;
+    border-top: 1px solid #f1f5f9;
+    flex-wrap: wrap;
+    background: #fafbfc;
+}
+
+.dg-legend-item {
     display: flex;
     align-items: center;
     gap: 0.35rem;
@@ -281,9 +480,16 @@
     color: #6b7280;
 }
 
-.dhtmlx-gantt-legend-dot {
-    width: 0.6rem;
-    height: 0.6rem;
+.dg-legend-dot {
+    width: 0.55rem;
+    height: 0.55rem;
     border-radius: 50%;
     display: inline-block;
+}
+
+.dg-legend-hint {
+    margin-left: auto;
+    font-size: 0.5625rem;
+    color: #94a3b8;
+    font-style: italic;
 }

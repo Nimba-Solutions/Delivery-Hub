@@ -1,43 +1,58 @@
 <template>
-    <div class="dhtmlx-gantt-card">
+    <div class="dg-card">
 
-        <!-- Header -->
-        <div class="dhtmlx-gantt-header">
-            <div class="dhtmlx-gantt-header-left">
-                <lightning-icon icon-name="utility:date_time" alternative-text="Gantt Chart" size="small" class="dhtmlx-gantt-header-icon"></lightning-icon>
-                <div>
-                    <h2 class="dhtmlx-gantt-title">Delivery DHTMLX Gantt</h2>
-                    <p class="dhtmlx-gantt-subtitle">{subtitleText}</p>
+        <!-- Shared toolbar -->
+        <c-delivery-gantt-toolbar
+            title="DHTMLX Gantt"
+            subtitle={subtitleText}
+            zoom-levels="Day,Week,Month,Quarter"
+            current-zoom={currentZoom}
+            entity-options={entityOptions}
+            selected-entity={selectedEntity}
+            show-dependency-toggle
+            dependencies-active={_showDependencies}
+            show-completed-toggle
+            completed-active={_showCompleted}
+            show-my-work-toggle
+            my-work-active={_showMyWork}
+            onzoomchange={handleZoomChange}
+            onentitychange={handleEntityChange}
+            ontoggledependencies={handleToggleDependencies}
+            ontogglecompleted={handleToggleCompleted}
+            ontogglemywork={handleToggleMyWork}
+            onscrolltoday={handleScrollToday}
+            onrefresh={handleRefresh}
+        ></c-delivery-gantt-toolbar>
+
+        <!-- Summary stats bar -->
+        <template lwc:if={hasSummaryStats}>
+            <div class="dg-stats">
+                <div class="dg-stat">
+                    <span class="dg-stat-value">{summaryStats.total}</span>
+                    <span class="dg-stat-label">Total</span>
                 </div>
-            </div>
-            <div class="dhtmlx-gantt-header-right">
+                <div class="dg-stat dg-stat-ontrack">
+                    <span class="dg-stat-value">{summaryStats.onTrack}</span>
+                    <span class="dg-stat-label">On Track</span>
+                </div>
+                <div class="dg-stat dg-stat-overdue">
+                    <span class="dg-stat-value">{summaryStats.overdue}</span>
+                    <span class="dg-stat-label">Overdue</span>
+                </div>
                 <c-delivery-info-popover component-name="deliveryDhtmlxGantt"></c-delivery-info-popover>
-                <lightning-button-group>
-                    <lightning-button label="Day" variant={btnDayVariant} onclick={handleZoomDay}></lightning-button>
-                    <lightning-button label="Week" variant={btnWeekVariant} onclick={handleZoomWeek}></lightning-button>
-                    <lightning-button label="Month" variant={btnMonthVariant} onclick={handleZoomMonth}></lightning-button>
-                    <lightning-button label="Quarter" variant={btnQuarterVariant} onclick={handleZoomQuarter}></lightning-button>
-                </lightning-button-group>
-                <lightning-button-icon
-                    icon-name="utility:filterList"
-                    alternative-text="Toggle completed items"
-                    title={completedToggleTitle}
-                    variant={completedToggleVariant}
-                    onclick={handleToggleCompleted}
-                ></lightning-button-icon>
             </div>
-        </div>
+        </template>
 
-        <!-- Loading -->
+        <!-- Loading spinner -->
         <template lwc:if={isLoading}>
-            <div class="dhtmlx-gantt-loading">
+            <div class="dg-loading">
                 <lightning-spinner alternative-text="Loading Gantt chart..." size="small"></lightning-spinner>
             </div>
         </template>
 
-        <!-- Error -->
+        <!-- Error state -->
         <template lwc:if={hasError}>
-            <div class="dhtmlx-gantt-error">
+            <div class="dg-error">
                 <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
                 <span>{errorMessage}</span>
             </div>
@@ -45,29 +60,40 @@
 
         <!-- Empty state -->
         <template lwc:if={isEmpty}>
-            <div class="dhtmlx-gantt-empty">
-                <lightning-icon icon-name="utility:date_time" size="medium" class="dhtmlx-gantt-empty-icon"></lightning-icon>
-                <p>No work items found to display on the Gantt chart.</p>
-                <p class="dhtmlx-gantt-empty-sub">Create work items with estimated dates to see them plotted here.</p>
+            <div class="dg-empty">
+                <lightning-icon icon-name="utility:date_time" size="medium" class="dg-empty-icon"></lightning-icon>
+                <p>No work items found for the Gantt chart.</p>
+                <p class="dg-empty-sub">Create work items with estimated dates to see them here.</p>
             </div>
         </template>
 
-        <!-- Gantt container — DHTMLX renders into this div -->
+        <!-- DHTMLX Gantt container -->
         <template lwc:if={hasData}>
-            <div class="dhtmlx-gantt-container" lwc:ref="ganttContainer"></div>
+            <div class="dg-container" lwc:ref="ganttContainer"></div>
         </template>
 
         <!-- Legend -->
         <template lwc:if={hasData}>
-            <div class="dhtmlx-gantt-legend">
+            <div class="dg-legend">
                 <template for:each={legendItems} for:item="item">
-                    <span key={item.phase} class="dhtmlx-gantt-legend-item">
-                        <span class="dhtmlx-gantt-legend-dot" style={item.dotStyle}></span>
+                    <span key={item.phase} class="dg-legend-item">
+                        <span class="dg-legend-dot" style={item.dotStyle}></span>
                         {item.phase}
                     </span>
                 </template>
+                <span class="dg-legend-hint">Ctrl+Z undo | Ctrl+Shift+Z redo | Drag bars to reschedule | Drag link handles to create dependencies</span>
             </div>
         </template>
 
     </div>
+
+    <!-- Quick-edit modal -->
+    <template lwc:if={showQuickEdit}>
+        <c-delivery-gantt-quick-edit
+            record-id={quickEditRecordId}
+            onsave={handleQuickEditSave}
+            onclose={handleQuickEditClose}
+        ></c-delivery-gantt-quick-edit>
+    </template>
+
 </template>
