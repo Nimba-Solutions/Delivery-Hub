@@ -884,6 +884,398 @@ private class DeliveryEscalationServiceTest {
         );
     }
 
+    // ── Additional Coverage Tests ───────────────────────────────────────
+
+    /**
+     * @description Verifies that multiple action types can fire across different rules
+     *              in a single processEscalations call (Slack_Alert + Bump_Priority + Move_Stage).
+     */
+    @IsTest
+    static void testMultipleActionTypesInSingleRun() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.SlackWebhookUrl__c = 'https://hooks.slack.com/test';
+        update settings;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        // Rule 1: Slack alert for clarification items
+        rules.add(buildRule(
+            'Multi Slack Rule',
+            'Software_Delivery',
+            'Clarification Requested (Pre-Dev)',
+            0,
+            'Slack_Alert',
+            null,
+            null,
+            'Warning'
+        ));
+        // Rule 2: Bump priority for dev blocked items
+        rules.add(buildRule(
+            'Multi Bump Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+        // Rule 3: Move stage for client approval items
+        rules.add(buildRule(
+            'Multi Move Rule',
+            'Software_Delivery',
+            'In Client Approval',
+            0,
+            'Move_Stage',
+            'Backlog',
+            null,
+            'Critical'
+        ));
+
+        Test.setMock(HttpCalloutMock.class, new SlackMockResponse());
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        // Verify bump priority happened
+        WorkItem__c bumped = [
+            SELECT PriorityPk__c FROM WorkItem__c
+            WHERE BriefDescriptionTxt__c = 'Blocked dev item'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        System.assertEquals('Medium', bumped.PriorityPk__c,
+            'Priority should be bumped from Low to Medium');
+
+        // Verify move stage happened
+        WorkItem__c moved = [
+            SELECT StageNamePk__c FROM WorkItem__c
+            WHERE BriefDescriptionTxt__c = 'Awaiting client approval'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        System.assertEquals('Backlog', moved.StageNamePk__c,
+            'Stage should be moved to Backlog');
+
+        // Verify activity logs created for all three rules
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assert(logs.size() >= 3,
+            'Should create at least 3 activity log entries for 3 rules');
+    }
+
+    /**
+     * @description Verifies that cooldown prevents duplicate escalations when multiple rules
+     *              target the same item that was already escalated within the cooldown window.
+     */
+    @IsTest
+    static void testCooldownBlocksMultipleRulesOnSameItem() {
+        // Set LastEscalatedDateTime__c to now for the dev blocked item
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'Dev Blocked'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        wi.LastEscalatedDateTime__c = DateTime.now();
+        update wi;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Cooldown Rule A',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+        rules.add(buildRule(
+            'Cooldown Rule B',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Email',
+            null,
+            null,
+            'Critical'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c unchanged = [
+            SELECT PriorityPk__c FROM WorkItem__c
+            WHERE Id = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals('Low', unchanged.PriorityPk__c,
+            'Priority should remain Low because cooldown prevented both rules from firing');
+
+        List<ActivityLog__c> logs = [
+            SELECT Id FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(0, logs.size(),
+            'No activity logs should be created when cooldown blocks all rules');
+    }
+
+    /**
+     * @description Verifies that rules with no matching stage produce no escalations.
+     */
+    @IsTest
+    static void testNoMatchingRulesForStage() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Nonexistent Stage Rule',
+            'Software_Delivery',
+            'Nonexistent Stage Value',
+            0,
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT Id FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(0, logs.size(),
+            'No escalations should occur when no items match the trigger stage');
+    }
+
+    /**
+     * @description Verifies Reassign action with an invalid Id does not throw
+     *              but also does not change the owner.
+     */
+    @IsTest
+    static void testReassignWithInvalidTargetId() {
+        WorkItem__c wi = [
+            SELECT Id, OwnerId FROM WorkItem__c
+            WHERE StageNamePk__c = 'Dev Blocked'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        Id originalOwner = wi.OwnerId;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Invalid Reassign Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Reassign',
+            'INVALID_ID_VALUE',
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c unchanged = [
+            SELECT OwnerId FROM WorkItem__c
+            WHERE Id = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(originalOwner, unchanged.OwnerId,
+            'Owner should remain unchanged when Reassign target is an invalid Id');
+    }
+
+    /**
+     * @description Verifies Move_Stage with a blank target value does not change the stage.
+     */
+    @IsTest
+    static void testMoveStageBlankTargetValue() {
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Blank Move Rule',
+            'Software_Delivery',
+            'In Client Approval',
+            0,
+            'Move_Stage',
+            null, // blank target
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c unchanged = [
+            SELECT StageNamePk__c FROM WorkItem__c
+            WHERE BriefDescriptionTxt__c = 'Awaiting client approval'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        System.assertEquals('In Client Approval', unchanged.StageNamePk__c,
+            'Stage should remain unchanged when Move_Stage has no target value');
+    }
+
+    /**
+     * @description Verifies Reassign with a blank target value does not change the owner.
+     */
+    @IsTest
+    static void testReassignBlankTargetValue() {
+        WorkItem__c wi = [
+            SELECT Id, OwnerId FROM WorkItem__c
+            WHERE StageNamePk__c = 'Dev Blocked'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        Id originalOwner = wi.OwnerId;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Blank Reassign Rule',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Reassign',
+            null, // blank target
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c unchanged = [
+            SELECT OwnerId FROM WorkItem__c
+            WHERE Id = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(originalOwner, unchanged.OwnerId,
+            'Owner should remain unchanged when Reassign has no target value');
+    }
+
+    /**
+     * @description Verifies bell notification path (sendBellNotification) is called
+     *              as part of the escalation flow. Uses user-level settings with
+     *              EnableBellNotificationsDateTime__c set to trigger the path.
+     */
+    @IsTest
+    static void testBellNotificationPath() {
+        // Enable bell notifications at user level
+        DeliveryHubSettings__c userSettings = DeliveryHubSettings__c.getInstance(UserInfo.getUserId());
+        if (userSettings.Id == null) {
+            userSettings = new DeliveryHubSettings__c(
+                SetupOwnerId = UserInfo.getUserId(),
+                EnableBellNotificationsDateTime__c = Datetime.now()
+            );
+            insert userSettings;
+        } else {
+            userSettings.EnableBellNotificationsDateTime__c = Datetime.now();
+            update userSettings;
+        }
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Bell Notification Rule',
+            'Software_Delivery',
+            'In Development',
+            0,
+            'Email',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        // Verify the escalation ran (bell notification is fire-and-forget,
+        // we verify the escalation itself executed by checking activity log)
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!logs.isEmpty(),
+            'Escalation should have fired and logged activity (bell notification attempted)');
+    }
+
+    /**
+     * @description Verifies that null rules list is handled gracefully (returns early).
+     */
+    @IsTest
+    static void testNullRulesListHandledGracefully() {
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(null);
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT Id FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(0, logs.size(), 'No escalations should occur with null rules list');
+    }
+
+    /**
+     * @description Verifies buildSummary with null rules returns empty list.
+     */
+    @IsTest
+    static void testBuildSummaryNullRules() {
+        Test.startTest();
+        List<DeliveryEscalationService.EscalationSummary> results =
+            DeliveryEscalationService.buildSummary(null);
+        Test.stopTest();
+
+        System.assertEquals(0, results.size(), 'Null rules should return empty summary list');
+    }
+
+    /**
+     * @description Verifies Bump_Priority on a Critical item keeps it at Critical (ceiling test).
+     */
+    @IsTest
+    static void testBumpPriorityCriticalCeiling() {
+        // Set the item to Critical — bump should have no effect
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'Dev Blocked'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        wi.PriorityPk__c = 'Critical';
+        update wi;
+
+        List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
+        rules.add(buildRule(
+            'Test Critical Ceiling',
+            'Software_Delivery',
+            'Dev Blocked',
+            0,
+            'Bump_Priority',
+            null,
+            null,
+            'Warning'
+        ));
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(rules);
+        Test.stopTest();
+
+        WorkItem__c updated = [
+            SELECT PriorityPk__c FROM WorkItem__c
+            WHERE Id = :wi.Id
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals('Critical', updated.PriorityPk__c,
+            'Priority should remain Critical — cannot bump beyond Critical');
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
     /**
      * @description Mock HTTP response for Slack webhook callouts.
      */

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$Name</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%PageUrlTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%UserIdTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ActionTypePk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ComponentNameTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$CreatedDate</field>
+    </columns>
+    <description>Tabular view of page navigations sorted by most recent. Shows where users are going in Salesforce — directly answers the question of user navigation patterns.</description>
+    <filter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ActionTypePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value>Navigation</value>
+        </criteriaItems>
+    </filter>
+    <format>Tabular</format>
+    <name>Page Navigation</name>
+    <reportType>%%%NAMESPACE%%%Activity_Logs__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <sortColumn>%%%NAMESPACE%%%ActivityLog__c$CreatedDate</sortColumn>
+    <sortOrder>Desc</sortOrder>
+</Report>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%UserIdTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ActionTypePk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%ActivityLog__c$Name</field>
+    </columns>
+    <description>Activity logs grouped by component name, showing which LWC components and pages receive the most usage.</description>
+    <filter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ComponentNameTxt__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value></value>
+        </criteriaItems>
+    </filter>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>%%%NAMESPACE%%%ActivityLog__c$%%%NAMESPACE%%%ComponentNameTxt__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <name>Component Usage</name>
+    <reportType>%%%NAMESPACE%%%Activity_Logs__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <showSubTotals>true</showSubTotals>
+</Report>
