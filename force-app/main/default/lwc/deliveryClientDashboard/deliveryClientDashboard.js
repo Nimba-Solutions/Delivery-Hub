@@ -332,11 +332,12 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     _navigateToReport(reportDevName, fallbackListView, fallbackObject) {
         const reportId = this.reportIds[reportDevName];
         if (reportId) {
-            const { start, end } = this._getDateRange();
             this[NavigationMixin.Navigate]({
-                type: 'standard__webPage',
+                type: 'standard__recordPage',
                 attributes: {
-                    url: `/lightning/r/Report/${reportId}/view?fv0=${start}&fv1=${end}`
+                    recordId: reportId,
+                    objectApiName: 'Report',
+                    actionName: 'view'
                 }
             });
         } else {
@@ -360,7 +361,25 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     handleHoursClick() {
-        this._navigateToReport('Monthly_Hours', 'This_Month', '%%%NAMESPACED_ORG%%%WorkLog__c');
+        const reportId = this.reportIds.Monthly_Hours; // eslint-disable-line dot-notation
+        if (reportId) {
+            const { start, end } = this._getDateRange();
+            this[NavigationMixin.Navigate]({
+                type: 'standard__webPage',
+                attributes: {
+                    url: `/lightning/r/Report/${reportId}/view?fv0=${start}&fv1=${end}`
+                }
+            });
+        } else {
+            this[NavigationMixin.Navigate]({
+                type: 'standard__objectPage',
+                attributes: {
+                    objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c',
+                    actionName: 'list'
+                },
+                state: { filterName: 'This_Month' }
+            });
+        }
     }
 
     handleBlockedClick() {
