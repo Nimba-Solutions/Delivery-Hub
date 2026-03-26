@@ -1,60 +1,64 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description Provides work item data for timeline/Gantt chart LWCs.
- *              getWorkItemsForGantt: legacy CSS chart (UAT-date-only items).
- *              getGanttData: rich data for Frappe Gantt (hours, developer,
- *              client grouping, resolved start/end dates, progress).
- *              updateWorkItemDates: saves date changes from drag-to-reschedule.
+ * @description Provides work item timeline data for the Delivery Gantt Chart LWC.
+ *              Returns active work items that have a projected UAT date, allowing the
+ *              component to render a CSS-based horizontal bar chart.
  * @author Cloud Nimbus LLC
  */
 public with sharing class DeliveryGanttController {
 
     /**
-     * @description Legacy DTO for the CSS-based Gantt chart.
+     * @description Data Transfer Object representing a single Gantt row.
      */
     public class GanttRow {
+        /** @description Salesforce record Id */
         @AuraEnabled public String workItemId { get; set; }
+        /** @description Auto-number work item name (e.g. WI-0001) */
         @AuraEnabled public String name { get; set; }
+        /** @description Brief one-line description of the work item */
         @AuraEnabled public String description { get; set; }
+        /** @description Current stage of the work item */
         @AuraEnabled public String stage { get; set; }
+        /** @description Priority label */
         @AuraEnabled public String priority { get; set; }
+        /** @description Projected UAT-ready date (ISO string YYYY-MM-DD) */
         @AuraEnabled public String uatDate { get; set; }
+        /** @description Calculated ETA date (ISO string YYYY-MM-DD), may be null */
         @AuraEnabled public String etaDate { get; set; }
+        /** @description Record creation date (ISO string YYYY-MM-DD) */
         @AuraEnabled public String createdDate { get; set; }
-    }
-
-    /**
-     * @description Rich DTO for Frappe Gantt — includes hours, developer,
-     *              client entity, progress, and resolved start/end dates.
-     */
-    public class GanttTask {
-        @AuraEnabled public String workItemId { get; set; }
-        @AuraEnabled public String name { get; set; }
-        @AuraEnabled public String description { get; set; }
-        @AuraEnabled public String stage { get; set; }
-        @AuraEnabled public String priority { get; set; }
-        @AuraEnabled public String startDate { get; set; }
-        @AuraEnabled public String endDate { get; set; }
-        @AuraEnabled public Decimal estimatedHours { get; set; }
-        @AuraEnabled public Decimal loggedHours { get; set; }
-        @AuraEnabled public Decimal progress { get; set; }
+        /** @description Developer user Id (15 or 18 char), null if unassigned */
+        @AuraEnabled public String developerId { get; set; }
+        /** @description Developer display name, null if unassigned */
         @AuraEnabled public String developerName { get; set; }
-        @AuraEnabled public String entityId { get; set; }
-        @AuraEnabled public String entityName { get; set; }
+        /** @description Parent work item Id for tree hierarchy, null if top-level */
         @AuraEnabled public String parentWorkItemId { get; set; }
-        @AuraEnabled public Boolean isCompleted { get; set; }
+        /** @description Client network entity name, null if unassigned */
+        @AuraEnabled public String entityName { get; set; }
+        /** @description Client network entity Id, null if unassigned */
+        @AuraEnabled public String entityId { get; set; }
+        /** @description Estimated start dev date (ISO YYYY-MM-DD), null if unset */
+        @AuraEnabled public String startDate { get; set; }
+        /** @description Estimated end dev date (ISO YYYY-MM-DD), null if unset */
+        @AuraEnabled public String endDate { get; set; }
     }
 
     /**
-     * @description Legacy: returns active work items with a ProjectedUATReadyDate__c.
+     * @description Returns active WorkItem__c records that have a ProjectedUATReadyDate__c,
+     *              ordered by that date ascending. Used by deliveryGanttChart to draw bars.
+     * @return List&lt;GanttRow&gt; Ordered list of work item timeline rows.
      */
     @AuraEnabled(cacheable=true)
     public static List<GanttRow> getWorkItemsForGantt() {
         try {
             List<WorkItem__c> items = [
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                       ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate
+                       ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate,
+                       Developer__c, Developer__r.Name,
+                       ParentWorkItemId__c,
+                       ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name,
+                       EstimatedStartDevDate__c, EstimatedEndDevDate__c
                 FROM WorkItem__c
                 WHERE IsActiveBool__c = true
                 AND IsTemplateBool__c = false
@@ -74,6 +78,13 @@ public with sharing class DeliveryGanttController {
                 row.uatDate   = String.valueOf(t.ProjectedUATReadyDate__c);
                 row.etaDate   = t.CalculatedETADate__c != null ? String.valueOf(t.CalculatedETADate__c) : null;
                 row.createdDate = String.valueOf(t.CreatedDate.date());
+                row.developerId = t.Developer__c;
+                row.developerName = t.Developer__r != null ? t.Developer__r.Name : null;
+                row.parentWorkItemId = t.ParentWorkItemId__c;
+                row.entityName = t.ClientNetworkEntityId__r != null ? t.ClientNetworkEntityId__r.Name : null;
+                row.entityId = t.ClientNetworkEntityId__c;
+                row.startDate = t.EstimatedStartDevDate__c != null ? String.valueOf(t.EstimatedStartDevDate__c) : null;
+                row.endDate = t.EstimatedEndDevDate__c != null ? String.valueOf(t.EstimatedEndDevDate__c) : null;
                 rows.add(row);
             }
             return rows;
@@ -85,39 +96,47 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
-     * @description Returns work items with full date/hour/developer/client data
-     *              for the Frappe Gantt chart. Resolves start/end dates using a
-     *              fallback chain and calculates progress from logged vs estimated hours.
-     * @param showCompleted When true, includes completed (inactive) items.
-     * @return List of GanttTask ordered by entity then start date.
+     * @description Data Transfer Object representing a dependency link between two Gantt items.
+     */
+    public class GanttDependency {
+        /** @description Salesforce record Id of the dependency junction record */
+        @AuraEnabled public String id { get; set; }
+        /** @description Id of the blocking (source) work item */
+        @AuraEnabled public String source { get; set; }
+        /** @description Id of the blocked (target) work item */
+        @AuraEnabled public String target { get; set; }
+        /** @description Dependency type picklist value (e.g. Blocks) */
+        @AuraEnabled public String dependencyType { get; set; }
+    }
+
+    /**
+     * @description Returns active WorkItemDependency__c records where both the blocked and
+     *              blocking work items are active. Used by deliveryGanttChart to draw
+     *              dependency arrows between bars.
+     * @return List&lt;GanttDependency&gt; Flat list of dependency links.
      */
     @AuraEnabled(cacheable=true)
-    public static List<GanttTask> getGanttData(Boolean showCompleted) {
+    public static List<GanttDependency> getGanttDependencies() {
         try {
-            String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
-                + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
-                + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
-                + 'EstimatedHoursNumber__c, TotalLoggedHoursNumber__c, '
-                + 'IsActiveBool__c, ParentWorkItemId__c, '
-                + 'Developer__r.Name, '
-                + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
-                + 'FROM WorkItem__c '
-                + 'WHERE IsTemplateBool__c = false ';
+            List<WorkItemDependency__c> deps = [
+                SELECT Id, BlockingWorkItemId__c, BlockedWorkItemId__c, TypePk__c
+                FROM WorkItemDependency__c
+                WHERE BlockedWorkItemId__r.IsActiveBool__c = true
+                AND BlockingWorkItemId__r.IsActiveBool__c = true
+                WITH SYSTEM_MODE
+                LIMIT 500
+            ];
 
-            if (showCompleted != true) {
-                query += 'AND IsActiveBool__c = true ';
+            List<GanttDependency> result = new List<GanttDependency>();
+            for (WorkItemDependency__c d : deps) {
+                GanttDependency dep = new GanttDependency();
+                dep.id             = d.Id;
+                dep.source         = d.BlockingWorkItemId__c;
+                dep.target         = d.BlockedWorkItemId__c;
+                dep.dependencyType = d.TypePk__c;
+                result.add(dep);
             }
-
-            query += 'WITH SYSTEM_MODE '
-                + 'ORDER BY ClientNetworkEntityId__r.Name ASC NULLS LAST, '
-                + 'EstimatedStartDevDate__c ASC NULLS LAST, CreatedDate ASC';
-
-            List<WorkItem__c> items = Database.query(query); // NOPMD — dynamic for conditional WHERE
-            List<GanttTask> tasks = new List<GanttTask>();
-            for (WorkItem__c item : items) {
-                tasks.add(mapToGanttTask(item));
-            }
-            return tasks;
+            return result;
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
@@ -126,22 +145,18 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
-     * @description Saves updated start/end dates after a drag-to-reschedule
-     *              action in the Gantt chart.
-     * @param workItemId The Salesforce record Id.
-     * @param startDate  New start date (ISO YYYY-MM-DD).
-     * @param endDate    New end date (ISO YYYY-MM-DD).
+     * @description Updates the sort order of a single work item, used for drag-and-drop
+     *              reordering in the Gantt chart.
+     * @param workItemId The Id of the WorkItem__c to update.
+     * @param sortOrder  The new sort order value.
      */
     @AuraEnabled
-    public static void updateWorkItemDates(String workItemId, String startDate, String endDate) {
+    public static void updateWorkItemSortOrder(String workItemId, Decimal sortOrder) {
         try {
-            WorkItem__c item = new WorkItem__c(Id = workItemId);
-            if (String.isNotBlank(startDate)) {
-                item.EstimatedStartDevDate__c = Date.valueOf(startDate);
-            }
-            if (String.isNotBlank(endDate)) {
-                item.EstimatedEndDevDate__c = Date.valueOf(endDate);
-            }
+            WorkItem__c item = new WorkItem__c(
+                Id = workItemId,
+                SortOrderNumber__c = sortOrder
+            );
             update item;
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
@@ -150,55 +165,26 @@ public with sharing class DeliveryGanttController {
         }
     }
 
-    private static GanttTask mapToGanttTask(WorkItem__c item) {
-        GanttTask task = new GanttTask();
-        task.workItemId = item.Id;
-        task.name = item.Name;
-        task.description = item.BriefDescriptionTxt__c;
-        task.stage = item.StageNamePk__c;
-        task.priority = item.PriorityPk__c;
-        task.estimatedHours = item.EstimatedHoursNumber__c;
-        task.loggedHours = item.TotalLoggedHoursNumber__c;
-        task.isCompleted = item.IsActiveBool__c != true;
-        task.parentWorkItemId = item.ParentWorkItemId__c;
-
-        if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
-            Decimal logged = item.TotalLoggedHoursNumber__c != null ? item.TotalLoggedHoursNumber__c : 0;
-            task.progress = Math.min(logged / item.EstimatedHoursNumber__c, 1.0);
-        } else {
-            task.progress = 0;
+    /**
+     * @description Updates the start and end dates of a work item, used for drag-to-reschedule
+     *              in the Gantt timeline views.
+     * @param workItemId The Id of the WorkItem__c to update.
+     * @param startDate  The new estimated start date (ISO YYYY-MM-DD string).
+     * @param endDate    The new estimated end date (ISO YYYY-MM-DD string).
+     */
+    @AuraEnabled
+    public static void updateWorkItemDates(String workItemId, String startDate, String endDate) {
+        try {
+            WorkItem__c item = new WorkItem__c(
+                Id = workItemId,
+                EstimatedStartDevDate__c = Date.valueOf(startDate),
+                EstimatedEndDevDate__c = Date.valueOf(endDate)
+            );
+            update item;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
         }
-
-        task.developerName = item.Developer__r != null ? item.Developer__r.Name : null;
-
-        task.entityName = item.ClientNetworkEntityId__r != null
-            ? item.ClientNetworkEntityId__r.Name : null;
-        task.entityId = item.ClientNetworkEntityId__c;
-
-        Date startDt = item.EstimatedStartDevDate__c != null
-            ? item.EstimatedStartDevDate__c
-            : item.CreatedDate.date();
-        task.startDate = String.valueOf(startDt);
-
-        Date endDt = resolveEndDate(item, startDt);
-        if (endDt < startDt) {
-            endDt = startDt.addDays(1);
-        }
-        task.endDate = String.valueOf(endDt);
-
-        return task;
-    }
-
-    private static Date resolveEndDate(WorkItem__c item, Date startDt) {
-        if (item.EstimatedEndDevDate__c != null) {
-            return item.EstimatedEndDevDate__c;
-        }
-        if (item.ProjectedUATReadyDate__c != null) {
-            return item.ProjectedUATReadyDate__c;
-        }
-        if (item.CalculatedETADate__c != null) {
-            return item.CalculatedETADate__c;
-        }
-        return startDt.addDays(14);
     }
 }

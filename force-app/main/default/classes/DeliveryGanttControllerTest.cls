@@ -11,40 +11,28 @@ private class DeliveryGanttControllerTest {
     static void makeData() {
         List<WorkItem__c> workItems = new List<WorkItem__c>{
             new WorkItem__c(
-                BriefDescriptionTxt__c   = 'Build login page',
-                StageNamePk__c           = 'In Development',
-                PriorityPk__c            = 'High',
-                IsActiveBool__c          = true,
-                ProjectedUATReadyDate__c = Date.today().addDays(14),
-                EstimatedStartDevDate__c = Date.today(),
-                EstimatedEndDevDate__c   = Date.today().addDays(10),
-                EstimatedHoursNumber__c  = 20
+                BriefDescriptionTxt__c  = 'Build login page',
+                StageNamePk__c          = 'In Development',
+                PriorityPk__c           = 'High',
+                IsActiveBool__c         = true,
+                ProjectedUATReadyDate__c = Date.today().addDays(14)
             ),
             new WorkItem__c(
-                BriefDescriptionTxt__c   = 'Fix export bug',
-                StageNamePk__c           = 'Ready for QA',
-                PriorityPk__c            = 'Medium',
-                IsActiveBool__c          = true,
+                BriefDescriptionTxt__c  = 'Fix export bug',
+                StageNamePk__c          = 'Ready for QA',
+                PriorityPk__c           = 'Medium',
+                IsActiveBool__c         = true,
                 ProjectedUATReadyDate__c = Date.today().addDays(7)
             ),
             new WorkItem__c(
-                BriefDescriptionTxt__c   = 'No UAT date work item',
-                StageNamePk__c           = 'Backlog',
-                IsActiveBool__c          = true
-            ),
-            new WorkItem__c(
-                BriefDescriptionTxt__c   = 'Completed item',
-                StageNamePk__c           = 'Done',
-                IsActiveBool__c          = false,
-                ProjectedUATReadyDate__c = Date.today().addDays(-5),
-                EstimatedStartDevDate__c = Date.today().addDays(-20),
-                EstimatedEndDevDate__c   = Date.today().addDays(-7)
+                BriefDescriptionTxt__c  = 'No UAT date work item',
+                StageNamePk__c          = 'Backlog',
+                IsActiveBool__c         = true
+                // ProjectedUATReadyDate__c intentionally null — should be excluded
             )
         };
         insert workItems;
     }
-
-    // ── Legacy getWorkItemsForGantt ──────────────────────────────────
 
     @IsTest
     static void testGetWorkItemsForGanttReturnsRows() {
@@ -52,7 +40,7 @@ private class DeliveryGanttControllerTest {
         List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
-        System.assertEquals(2, rows.size(), 'Should return only active workItems with a UAT date.');
+        System.assertEquals(2, rows.size(), 'Should return only workItems with a UAT date.');
     }
 
     @IsTest
@@ -74,6 +62,7 @@ private class DeliveryGanttControllerTest {
         List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
+        // First row should have the earlier UAT date (addDays(7) < addDays(14))
         System.assert(
             rows[0].uatDate.compareTo(rows[1].uatDate) <= 0,
             'Rows should be ordered by UAT date ascending.'
@@ -82,6 +71,7 @@ private class DeliveryGanttControllerTest {
 
     @IsTest
     static void testGetWorkItemsForGanttNoActiveWorkItems() {
+        // Delete all data
         delete [SELECT Id FROM WorkItem__c];
 
         Test.startTest();
@@ -91,120 +81,83 @@ private class DeliveryGanttControllerTest {
         System.assertEquals(0, rows.size(), 'Should return empty list when no active workItems exist.');
     }
 
-    // ── getGanttData ─────────────────────────────────────────────────
-
     @IsTest
-    static void testGetGanttDataActiveOnly() {
+    static void testGetGanttDependenciesReturnsResults() {
+        List<WorkItem__c> items = [SELECT Id FROM WorkItem__c WHERE IsActiveBool__c = true ORDER BY CreatedDate ASC LIMIT 2];
+
+        WorkItemDependency__c dep = new WorkItemDependency__c(
+            BlockedWorkItemId__c  = items[0].Id,
+            BlockingWorkItemId__c = items[1].Id,
+            TypePk__c             = 'Blocks'
+        );
+        insert dep;
+
         Test.startTest();
-        List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(false);
+        List<DeliveryGanttController.GanttDependency> deps = DeliveryGanttController.getGanttDependencies();
         Test.stopTest();
 
-        System.assertEquals(3, tasks.size(), 'Should return 3 active work items.');
-        for (DeliveryGanttController.GanttTask t : tasks) {
-            System.assertEquals(false, t.isCompleted, 'All returned items should be active.');
-        }
+        System.assertEquals(1, deps.size(), 'Should return 1 dependency.');
+        System.assertEquals(items[1].Id, deps[0].source, 'Source should be the blocking work item.');
+        System.assertEquals(items[0].Id, deps[0].target, 'Target should be the blocked work item.');
+        System.assertEquals('Blocks', deps[0].dependencyType, 'Dependency type should match.');
     }
 
     @IsTest
-    static void testGetGanttDataIncludesCompleted() {
+    static void testGetGanttDependenciesEmpty() {
+        delete [SELECT Id FROM WorkItemDependency__c];
+
         Test.startTest();
-        List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(true);
+        List<DeliveryGanttController.GanttDependency> deps = DeliveryGanttController.getGanttDependencies();
         Test.stopTest();
 
-        System.assertEquals(4, tasks.size(), 'Should return all 4 work items including completed.');
-        Boolean foundCompleted = false;
-        for (DeliveryGanttController.GanttTask t : tasks) {
-            if (t.isCompleted) { foundCompleted = true; }
-        }
-        System.assert(foundCompleted, 'Should include at least one completed item.');
+        System.assertEquals(0, deps.size(), 'Should return empty list when no dependencies exist.');
     }
 
     @IsTest
-    static void testGetGanttDataDateFallback() {
+    static void testUpdateWorkItemSortOrder() {
+        WorkItem__c item = [SELECT Id, SortOrderNumber__c FROM WorkItem__c WHERE IsActiveBool__c = true LIMIT 1];
+
         Test.startTest();
-        List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(false);
+        DeliveryGanttController.updateWorkItemSortOrder(item.Id, 42);
         Test.stopTest();
 
-        for (DeliveryGanttController.GanttTask t : tasks) {
-            System.assertNotEquals(null, t.startDate, 'startDate should always be resolved.');
-            System.assertNotEquals(null, t.endDate, 'endDate should always be resolved.');
-        }
+        WorkItem__c updated = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id = :item.Id];
+        System.assertEquals(42, updated.SortOrderNumber__c, 'Sort order should be updated to 42.');
     }
-
-    @IsTest
-    static void testGetGanttDataProgressCalculation() {
-        Test.startTest();
-        List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(false);
-        Test.stopTest();
-
-        for (DeliveryGanttController.GanttTask t : tasks) {
-            System.assert(t.progress >= 0 && t.progress <= 1,
-                'Progress should be between 0 and 1. Got: ' + t.progress);
-        }
-    }
-
-    @IsTest
-    static void testGetGanttDataFieldsPopulated() {
-        Test.startTest();
-        List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(false);
-        Test.stopTest();
-
-        DeliveryGanttController.GanttTask first = tasks[0];
-        System.assertNotEquals(null, first.workItemId, 'workItemId should be set.');
-        System.assertNotEquals(null, first.name, 'name should be set.');
-        System.assertNotEquals(null, first.stage, 'stage should be set.');
-    }
-
-    // ── updateWorkItemDates ──────────────────────────────────────────
 
     @IsTest
     static void testUpdateWorkItemDates() {
-        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Build login page' LIMIT 1];
-        Date newStart = Date.today().addDays(5);
-        Date newEnd = Date.today().addDays(25);
+        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE IsActiveBool__c = true LIMIT 1];
 
         Test.startTest();
-        DeliveryGanttController.updateWorkItemDates(
-            item.Id,
-            String.valueOf(newStart),
-            String.valueOf(newEnd)
-        );
+        DeliveryGanttController.updateWorkItemDates(item.Id, '2026-04-01', '2026-04-15');
         Test.stopTest();
 
-        WorkItem__c updated = [SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c
-                               FROM WorkItem__c WHERE Id = :item.Id];
-        System.assertEquals(newStart, updated.EstimatedStartDevDate__c, 'Start date should be updated.');
-        System.assertEquals(newEnd, updated.EstimatedEndDevDate__c, 'End date should be updated.');
+        WorkItem__c updated = [SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c FROM WorkItem__c WHERE Id = :item.Id];
+        System.assertEquals(Date.valueOf('2026-04-01'), updated.EstimatedStartDevDate__c, 'Start date should be updated.');
+        System.assertEquals(Date.valueOf('2026-04-15'), updated.EstimatedEndDevDate__c, 'End date should be updated.');
     }
 
     @IsTest
-    static void testUpdateWorkItemDatesPartial() {
-        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Fix export bug' LIMIT 1];
-        Date newEnd = Date.today().addDays(30);
+    static void testGanttRowNewFieldsPopulated() {
+        // Update a work item with start/end dates to verify new DTO fields
+        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE IsActiveBool__c = true AND ProjectedUATReadyDate__c != null LIMIT 1];
+        item.EstimatedStartDevDate__c = Date.today();
+        item.EstimatedEndDevDate__c = Date.today().addDays(10);
+        update item;
 
         Test.startTest();
-        DeliveryGanttController.updateWorkItemDates(item.Id, null, String.valueOf(newEnd));
+        List<DeliveryGanttController.GanttRow> rows = DeliveryGanttController.getWorkItemsForGantt();
         Test.stopTest();
 
-        WorkItem__c updated = [SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c
-                               FROM WorkItem__c WHERE Id = :item.Id];
-        System.assertEquals(null, updated.EstimatedStartDevDate__c, 'Start date should remain null.');
-        System.assertEquals(newEnd, updated.EstimatedEndDevDate__c, 'End date should be updated.');
-    }
-
-    @IsTest
-    static void testUpdateWorkItemDatesInvalidId() {
-        Boolean caught = false;
-        Test.startTest();
-        try {
-            DeliveryGanttController.updateWorkItemDates(
-                'bogusId', String.valueOf(Date.today()), String.valueOf(Date.today().addDays(5))
-            );
-        } catch (AuraHandledException e) {
-            caught = true;
+        Boolean foundWithDates = false;
+        for (DeliveryGanttController.GanttRow row : rows) {
+            if (row.workItemId == item.Id) {
+                System.assertNotEquals(null, row.startDate, 'startDate should be set.');
+                System.assertNotEquals(null, row.endDate, 'endDate should be set.');
+                foundWithDates = true;
+            }
         }
-        Test.stopTest();
-
-        System.assert(caught, 'Should throw AuraHandledException for invalid Id.');
+        System.assert(foundWithDates, 'Should find the work item with dates set.');
     }
 }

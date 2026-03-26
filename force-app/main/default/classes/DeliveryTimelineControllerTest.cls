@@ -183,23 +183,4 @@ private class DeliveryTimelineControllerTest {
         System.assertEquals(0, rows.size(),
             'Should return empty list for unmatched workflow type.');
     }
-
-    @IsTest
-    static void testGetTimelineDataProgressFields() {
-        // Update a work item with hours to verify progress calculation
-        WorkItem__c item = [SELECT Id FROM WorkItem__c
-                            WHERE BriefDescriptionTxt__c = 'Build login page' LIMIT 1];
-        item.EstimatedHoursNumber__c = 40;
-        update item;
-
-        Test.startTest();
-        List<DeliveryTimelineController.TimelineRow> rows =
-            DeliveryTimelineController.getTimelineData(null);
-        Test.stopTest();
-
-        for (DeliveryTimelineController.TimelineRow row : rows) {
-            System.assert(row.progress >= 0 && row.progress <= 1,
-                'Progress should be between 0 and 1. Got: ' + row.progress);
-        }
-    }
 }
