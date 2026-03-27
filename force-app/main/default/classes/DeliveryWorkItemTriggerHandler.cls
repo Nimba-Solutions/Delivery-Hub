@@ -30,10 +30,11 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     ){
         if (!DeliveryTriggerControl.runAfterLogic) { return; }
 
-        // 1. BRIDGE CREATION (Network Entity Sync)
+        // 1. BRIDGE CREATION (Network Entity Sync) + Field Tracking for Creates
         if (isInsert){
             handleNetworkEntitySync(newRows);
             autoSetSLATargets(newRows);
+            DeliveryFieldTrackingService.trackCreates(newRows);
         }
 
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)

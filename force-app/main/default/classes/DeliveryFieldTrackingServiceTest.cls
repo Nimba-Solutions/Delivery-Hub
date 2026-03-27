@@ -164,4 +164,130 @@ private class DeliveryFieldTrackingServiceTest {
 
         System.assert(true, 'Null/empty inputs should be handled gracefully');
     }
+
+    @IsTest
+    static void testTrackCreatesProducesChangeRequests() {
+        WorkItem__c workItem = [
+            SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
+            FROM WorkItem__c LIMIT 1
+        ];
+
+        DeliveryFieldTrackingService.clearCache();
+        DeliveryFieldTrackingService.lastChangeRequests = null;
+
+        Test.startTest();
+        DeliveryFieldTrackingService.trackCreates(new List<SObject>{ workItem });
+        Test.stopTest();
+
+        List<DeliveryFieldChangeService.FieldChangeRequest> requests =
+            DeliveryFieldTrackingService.lastChangeRequests;
+
+        System.assertNotEquals(null, requests, 'Create tracking should produce change requests');
+        System.assert(!requests.isEmpty(), 'At least one change request should exist for create');
+
+        // Verify dmlType in extraContext
+        Boolean foundCreate = false;
+        for (DeliveryFieldChangeService.FieldChangeRequest req : requests) {
+            if (req.extraContext != null && req.extraContext.contains('Created')) {
+                foundCreate = true;
+                System.assertEquals(null, req.oldValue, 'Old value should be null for creates');
+            }
+        }
+        System.assert(foundCreate, 'Should have at least one request with dmlType Created');
+    }
+
+    @IsTest
+    static void testTrackDeletesProducesChangeRequests() {
+        WorkItem__c workItem = [
+            SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, Developer__c
+            FROM WorkItem__c LIMIT 1
+        ];
+
+        DeliveryFieldTrackingService.clearCache();
+        DeliveryFieldTrackingService.lastChangeRequests = null;
+
+        Test.startTest();
+        DeliveryFieldTrackingService.trackDeletes(new List<SObject>{ workItem });
+        Test.stopTest();
+
+        List<DeliveryFieldChangeService.FieldChangeRequest> requests =
+            DeliveryFieldTrackingService.lastChangeRequests;
+
+        System.assertNotEquals(null, requests, 'Delete tracking should produce change requests');
+        System.assert(!requests.isEmpty(), 'At least one change request should exist for delete');
+
+        // Verify dmlType in extraContext
+        Boolean foundDelete = false;
+        for (DeliveryFieldChangeService.FieldChangeRequest req : requests) {
+            if (req.extraContext != null && req.extraContext.contains('Deleted')) {
+                foundDelete = true;
+                System.assertEquals(null, req.newValue, 'New value should be null for deletes');
+            }
+        }
+        System.assert(foundDelete, 'Should have at least one request with dmlType Deleted');
+    }
+
+    @IsTest
+    static void testTrackCreatesDisabledReturnsEarly() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.EnableFieldTrackingDateTime__c = null;
+        upsert settings;
+
+        WorkItem__c workItem = [
+            SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c
+            FROM WorkItem__c LIMIT 1
+        ];
+
+        DeliveryFieldTrackingService.clearCache();
+        DeliveryFieldTrackingService.lastChangeRequests = null;
+
+        Test.startTest();
+        DeliveryFieldTrackingService.trackCreates(new List<SObject>{ workItem });
+        Test.stopTest();
+
+        System.assertEquals(null, DeliveryFieldTrackingService.lastChangeRequests,
+            'No change requests when tracking is disabled');
+    }
+
+    @IsTest
+    static void testTrackDeletesDisabledReturnsEarly() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.EnableFieldTrackingDateTime__c = null;
+        upsert settings;
+
+        WorkItem__c workItem = [
+            SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c
+            FROM WorkItem__c LIMIT 1
+        ];
+
+        DeliveryFieldTrackingService.clearCache();
+        DeliveryFieldTrackingService.lastChangeRequests = null;
+
+        Test.startTest();
+        DeliveryFieldTrackingService.trackDeletes(new List<SObject>{ workItem });
+        Test.stopTest();
+
+        System.assertEquals(null, DeliveryFieldTrackingService.lastChangeRequests,
+            'No change requests when tracking is disabled');
+    }
+
+    @IsTest
+    static void testTrackCreatesNullInputsDoNotThrow() {
+        Test.startTest();
+        DeliveryFieldTrackingService.trackCreates(null);
+        DeliveryFieldTrackingService.trackCreates(new List<SObject>());
+        Test.stopTest();
+
+        System.assert(true, 'Null/empty inputs to trackCreates should be handled gracefully');
+    }
+
+    @IsTest
+    static void testTrackDeletesNullInputsDoNotThrow() {
+        Test.startTest();
+        DeliveryFieldTrackingService.trackDeletes(null);
+        DeliveryFieldTrackingService.trackDeletes(new List<SObject>());
+        Test.stopTest();
+
+        System.assert(true, 'Null/empty inputs to trackDeletes should be handled gracefully');
+    }
 }
