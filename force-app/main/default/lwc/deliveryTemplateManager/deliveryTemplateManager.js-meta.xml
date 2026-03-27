@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
-    <apiVersion>63.0</apiVersion>
-    <masterLabel>Delivery Client Onboarding</masterLabel>
+    <apiVersion>62.0</apiVersion>
     <isExposed>true</isExposed>
+    <masterLabel>Delivery Template Manager</masterLabel>
+    <description>Admin template management UI for browsing, creating, and cloning work item templates.</description>
     <targets>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>

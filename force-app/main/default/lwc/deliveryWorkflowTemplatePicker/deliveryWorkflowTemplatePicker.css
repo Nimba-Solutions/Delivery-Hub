@@ -140,6 +140,22 @@
     --lwc-colorTextIconDefault: #94a3b8;
 }
 
+/* ── Phase list ── */
+.tp-phase-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding-top: 0.25rem;
+}
+.tp-phase-pill {
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+}
+
 /* ── Persona list ── */
 .tp-persona-list {
     font-size: 0.66rem;

@@ -59,6 +59,13 @@
                                 {tmpl.personaCount} personas
                             </span>
                         </div>
+                        <template lwc:if={tmpl.hasPhases}>
+                            <div class="tp-phase-list">
+                                <template for:each={tmpl.phaseList} for:item="phase">
+                                    <span key={phase.key} class="tp-phase-pill">{phase.label}</span>
+                                </template>
+                            </div>
+                        </template>
                         <div class="tp-persona-list">{tmpl.personaLabel}</div>
                     </button>
                 </template>

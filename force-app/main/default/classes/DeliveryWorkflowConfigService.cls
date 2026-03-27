@@ -192,6 +192,25 @@ public with sharing class DeliveryWorkflowConfigService {
             personasByType.get(typeName).add(pv.PersonaNameTxt__c);
         }
 
+        // Collect unique, ordered phases per type
+        Map<String,List<String>> phasesByType = new Map<String,List<String>>();
+        for (WorkflowStage__mdt s : [
+            SELECT WorkflowType__r.DeveloperName, PhaseTxt__c
+            FROM WorkflowStage__mdt
+            WHERE PhaseTxt__c != null AND IsTerminalBool__c = false
+            WITH SYSTEM_MODE
+            ORDER BY SortOrderNumber__c ASC NULLS LAST
+        ]) {
+            String typeName = s.WorkflowType__r.DeveloperName;
+            if (!phasesByType.containsKey(typeName)) {
+                phasesByType.put(typeName, new List<String>());
+            }
+            List<String> phases = phasesByType.get(typeName);
+            if (!phases.contains(s.PhaseTxt__c)) {
+                phases.add(s.PhaseTxt__c);
+            }
+        }
+
         // Build result
         List<Map<String,Object>> result = new List<Map<String,Object>>();
         for (WorkflowType__mdt wt : types) {
@@ -209,6 +228,8 @@ public with sharing class DeliveryWorkflowConfigService {
                                         ? stageColorsByType.get(wt.DeveloperName) : new List<String>());
             m.put('personas',          personasByType.containsKey(wt.DeveloperName)
                                         ? new List<String>(personasByType.get(wt.DeveloperName)) : new List<String>());
+            m.put('phases',            phasesByType.containsKey(wt.DeveloperName)
+                                        ? phasesByType.get(wt.DeveloperName) : new List<String>());
             result.add(m);
         }
         return result;

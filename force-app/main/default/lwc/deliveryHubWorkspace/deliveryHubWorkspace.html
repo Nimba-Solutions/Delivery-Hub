@@ -22,6 +22,10 @@
         </lightning-tab>
 
         <template lwc:if={isAdmin}>
+            <lightning-tab label="Templates" value="templates" icon-name="standard:template">
+                <c-delivery-template-manager></c-delivery-template-manager>
+            </lightning-tab>
+
             <lightning-tab label="Analytics" value="analytics" icon-name="standard:dashboard">
                 <c-delivery-activity-dashboard></c-delivery-activity-dashboard>
             </lightning-tab>

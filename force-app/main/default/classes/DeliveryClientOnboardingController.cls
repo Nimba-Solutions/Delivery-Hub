@@ -1,14 +1,19 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Controller for client onboarding. Creates a NetworkEntity record
- *               and generates a Client Agreement document in one step.
+ * @description  Controller for client onboarding. Creates a NetworkEntity record,
+ *               generates a Client Agreement document, and provisions portal access
+ *               in one step.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryClientOnboardingController {
 
+    private static final String DEFAULT_WORKFLOW = 'Software_Delivery';
+
     /**
-     * @description Creates a new client entity and generates a Client Agreement document.
+     * @description Creates a new client entity, generates a Client Agreement document,
+     *              and provisions portal access with an auto-generated token.
      *              Uses primitive parameters instead of a wrapper class to ensure
      *              the Aura framework can deserialize them in managed package context.
      * @param clientName The client company name.
@@ -16,7 +21,8 @@ public with sharing class DeliveryClientOnboardingController {
      * @param hourlyRate The agreed hourly rate.
      * @param contactPhone Optional phone number.
      * @param address Optional mailing address.
-     * @return Map with entityId, documentId, documentName, and publicToken keys.
+     * @return Map with entityId, documentId, documentName, publicToken,
+     *         portalAccessId, and accessToken keys.
      */
     @AuraEnabled
     public static Map<String, Object> onboardClient(
@@ -25,7 +31,11 @@ public with sharing class DeliveryClientOnboardingController {
     ) {
         validateRequest(clientName, contactEmail, hourlyRate);
         NetworkEntity__c entity = createEntity(clientName, contactEmail, hourlyRate, contactPhone, address);
-        return generateAgreement(entity);
+        Map<String, Object> result = generateAgreement(entity);
+        PortalAccess__c portalAccess = provisionPortalAccess(entity.Id, contactEmail, 'Admin');
+        result.put('portalAccessId', portalAccess.Id);
+        result.put('accessToken', portalAccess.AccessTokenTxt__c);
+        return result;
     }
 
     @SuppressWarnings('PMD.CyclomaticComplexity')
@@ -86,6 +96,26 @@ public with sharing class DeliveryClientOnboardingController {
         result.put('documentName', doc.Name);
         result.put('publicToken', doc.PublicTokenTxt__c);
         return result;
+    }
+
+    /**
+     * @description Provisions portal access for a contact email on the given entity.
+     *              Generates a random access token for initial authentication.
+     * @param entityId The NetworkEntity__c Id to grant access to.
+     * @param email The contact email address.
+     * @param role The portal role (Admin or Member).
+     * @return The created PortalAccess__c record with token.
+     */
+    private static PortalAccess__c provisionPortalAccess(Id entityId, String email, String role) {
+        String token = EncodingUtil.convertToHex(Crypto.generateAesKey(128));
+        PortalAccess__c pa = new PortalAccess__c(
+            NetworkEntityId__c = entityId,
+            EmailTxt__c = email,
+            RolePk__c = String.isNotBlank(role) ? role : 'Member',
+            AccessTokenTxt__c = token
+        );
+        Database.insert(pa, AccessLevel.SYSTEM_MODE);
+        return pa;
     }
 
     /**

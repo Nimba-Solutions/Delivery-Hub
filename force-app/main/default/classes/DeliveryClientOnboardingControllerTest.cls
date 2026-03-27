@@ -32,6 +32,8 @@ private class DeliveryClientOnboardingControllerTest {
         System.assertNotEquals(null, result.get('documentId'), 'Should return document ID');
         System.assertNotEquals(null, result.get('documentName'), 'Should return document name');
         System.assertNotEquals(null, result.get('publicToken'), 'Should return public token');
+        System.assertNotEquals(null, result.get('portalAccessId'), 'Should return portal access ID');
+        System.assertNotEquals(null, result.get('accessToken'), 'Should return access token');
 
         // Verify entity was created correctly
         NetworkEntity__c entity = [
@@ -55,6 +57,16 @@ private class DeliveryClientOnboardingControllerTest {
         System.assertEquals('Client_Agreement', doc.TemplatePk__c, 'Should be Client Agreement');
         System.assertEquals('Draft', doc.StatusPk__c, 'Should be Draft');
         System.assert(doc.MetadataTxt__c.contains('clauses'), 'Should have agreement clauses');
+
+        // Verify portal access was provisioned
+        PortalAccess__c pa = [
+            SELECT EmailTxt__c, RolePk__c, AccessTokenTxt__c, NetworkEntityId__c
+            FROM PortalAccess__c WHERE Id = :(Id)result.get('portalAccessId')
+        ];
+        System.assertEquals('ceo@acme.com', pa.EmailTxt__c, 'Portal email should match');
+        System.assertEquals('Admin', pa.RolePk__c, 'Portal role should be Admin');
+        System.assertNotEquals(null, pa.AccessTokenTxt__c, 'Access token should be generated');
+        System.assertEquals((Id)result.get('entityId'), pa.NetworkEntityId__c, 'Portal access should link to entity');
     }
 
     @isTest
@@ -66,6 +78,8 @@ private class DeliveryClientOnboardingControllerTest {
         Test.stopTest();
 
         System.assertNotEquals(null, result.get('entityId'), 'Should create entity with minimal fields');
+        System.assertNotEquals(null, result.get('portalAccessId'), 'Should provision portal access');
+        System.assertNotEquals(null, result.get('accessToken'), 'Should generate access token');
     }
 
     @isTest
