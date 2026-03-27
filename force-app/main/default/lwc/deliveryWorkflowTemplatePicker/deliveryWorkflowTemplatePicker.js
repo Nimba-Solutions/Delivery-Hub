@@ -29,15 +29,15 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
                 stageLabel: t.stageCount + (t.stageCount === 1 ? ' stage' : ' stages'),
                 personaLabel: (t.personas || []).join(', ').replace(/_/g, ' '),
                 personaCount: (t.personas || []).length,
-                pipelineDots: (t.stageColors || []).map((color, idx) => ({
-                    key: t.developerName + '_dot_' + idx,
-                    style: 'background-color: ' + color
-                })),
-                phaseList: (t.phases || []).map((p, idx) => ({
-                    key: t.developerName + '_phase_' + idx,
-                    label: p
-                })),
                 hasPhases: (t.phases || []).length > 0,
+                phaseList: (t.phases || []).map((phase, idx) => ({
+                    key: `${t.developerName}_phase_${idx}`,
+                    label: phase
+                })),
+                pipelineDots: (t.stageColors || []).map((color, idx) => ({
+                    key: `${t.developerName}_dot_${idx}`,
+                    style: `background-color: ${color}`
+                })),
                 defaultBadge: t.isDefault === true
             }));
             this.error = '';
