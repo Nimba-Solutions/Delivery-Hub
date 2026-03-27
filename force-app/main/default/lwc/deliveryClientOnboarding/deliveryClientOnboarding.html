@@ -96,6 +96,20 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Portal Access Info -->
+                <template lwc:if={result.portalAccessId}>
+                    <div class="slds-box slds-m-bottom_medium" style="background: #f0f4ff; border-color: #4f46e5; border-radius: 8px; padding: 12px;">
+                        <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_x-small">
+                            <lightning-icon icon-name="utility:lock" size="xx-small" class="slds-m-right_x-small"></lightning-icon>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: #1e293b;">Portal Access Provisioned</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #475569; margin: 0;">
+                            Portal access has been created for <strong>{contactEmail}</strong> with Admin role.
+                        </p>
+                    </div>
+                </template>
+
                 <div class="slds-grid slds-gutters">
                     <div class="slds-col">
                         <lightning-button
@@ -112,6 +126,14 @@
                             icon-name="utility:email"
                             onclick={handleSendAgreement}
                             disabled={isSending}
+                        ></lightning-button>
+                    </div>
+                    <div class="slds-col">
+                        <lightning-button
+                            label="View Entity"
+                            variant="neutral"
+                            icon-name="utility:record"
+                            onclick={handleViewEntity}
                         ></lightning-button>
                     </div>
                     <div class="slds-col">
