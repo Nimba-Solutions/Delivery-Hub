@@ -227,7 +227,7 @@ public with sharing class DeliveryWorkItemController {
         List<WorkflowStageRequirement__mdt> requirements = [
             SELECT RequiredFieldsTxt__c
             FROM WorkflowStageRequirement__mdt
-            WHERE ActivatedDateTime__c != null AND TargetStageTxt__c = :targetStage
+            WHERE IsActiveBool__c = true AND TargetStageTxt__c = :targetStage
             LIMIT 1
         ];
 
