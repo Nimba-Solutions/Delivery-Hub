@@ -87,12 +87,19 @@ public with sharing class DeliveryVelocityService {
 
         Date startDate = Date.today().addDays(-(weeks * DAYS_PER_WEEK));
 
-        // For developer velocity, include all terminal stages across any workflow
+        // Gather terminal stages across all workflow types
+        Set<String> allTerminalStages = new Set<String>();
+        for (Map<String,Object> wt : DeliveryWorkflowConfigService.getWorkflowTypes()) {
+            allTerminalStages.addAll(
+                DeliveryWorkflowConfigService.getTerminalStageValues((String) wt.get('developerName'))
+            );
+        }
+
         List<WorkItem__c> completed = [
             SELECT Id, LastModifiedDate
             FROM WorkItem__c
             WHERE IsTemplateBool__c = false
-            AND StageNamePk__c IN ('Done', 'Cancelled', 'Shipped')
+            AND StageNamePk__c IN :allTerminalStages
             AND Developer__c = :developerId
             AND LastModifiedDate >= :startDate
             WITH SYSTEM_MODE

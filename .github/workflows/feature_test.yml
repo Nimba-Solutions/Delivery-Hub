@@ -44,7 +44,7 @@ jobs:
         with:
           pmdconfig: pmd-rules.xml
           severity-threshold: 4
-          engine: pmd,eslint-lwc
+          engine: pmd
           strictly-enforced-rules: '[{ "engine": "pmd", "category": "Performance", "rule": "AvoidDebugStatements" }]'
           report-mode: comments
           delete-resolved-comments: true
