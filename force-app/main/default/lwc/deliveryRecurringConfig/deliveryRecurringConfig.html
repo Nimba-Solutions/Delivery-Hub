@@ -5,7 +5,9 @@
             <template lwc:if={hasTemplateSource}>
                 <div class="slds-notify slds-notify_alert slds-alert_texture slds-m-bottom_small" style="background:#f3f3f3; border:1px solid #d8d8d8; border-radius:4px; padding:0.5rem 0.75rem;">
                     <lightning-icon icon-name="utility:link" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
-                    <span class="slds-text-body_small">Created from template: {templateSourceId}</span>
+                    <span class="slds-text-body_small">Created from template:
+                        <a href="javascript:void(0);" onclick={navigateToTemplate} class="slds-text-link">{templateSourceId}</a>
+                    </span>
                 </div>
             </template>
 
