@@ -51,7 +51,7 @@ const FIELDS = {
     STAGE: `%%%NAMESPACED_ORG%%%StageNamePk__c`,
     PRIORITY: `%%%NAMESPACED_ORG%%%PriorityPk__c`,
     SORT_ORDER: `%%%NAMESPACED_ORG%%%SortOrderNumber__c`,
-    IS_ACTIVE:  `%%%NAMESPACED_ORG%%%IsActiveBool__c`,
+    IS_ACTIVE:  `%%%NAMESPACED_ORG%%%ActivatedDateTime__c`,
     STATUS_PK:  `%%%NAMESPACED_ORG%%%StatusPk__c`,
     TAGS: `%%%NAMESPACED_ORG%%%Tags__c`,
     EPIC: `%%%NAMESPACED_ORG%%%Epic__c`,
@@ -1854,8 +1854,8 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         return this.savedFilters.map(f => ({
             id: f.Id,
             label: filter.LabelTxt__c || filter.delivery__LabelTxt__c || '',
-            isDefault: filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c || false,
-            pillClass: (filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c)
+            isDefault: (filter.DefaultSetDateTime__c || filter.delivery__DefaultSetDateTime__c) != null,
+            pillClass: (filter.DefaultSetDateTime__c || filter.delivery__DefaultSetDateTime__c) != null
                 ? 'saved-filter-item saved-filter-item--default' : 'saved-filter-item'
         }));
     }
@@ -1863,7 +1863,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         try {
             const filters = await getSavedFilters({ workflowType: this.activeWorkflowType });
             this.savedFilters = filters || [];
-            const df = this.savedFilters.find(f => filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c);
+            const df = this.savedFilters.find(f => (f.DefaultSetDateTime__c || f.delivery__DefaultSetDateTime__c) != null);
             if (df) { this.applyFilterState(df.FilterJsonTxt__c || df.delivery__FilterJsonTxt__c); }
         } catch (error) { console.error('[DeliveryHubBoard] loadSavedFilters error:', error); }
     }
@@ -1923,7 +1923,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         if (f) {
             this.editingFilterId = f.Id;
             this.saveFilterLabel = filter.LabelTxt__c || filter.delivery__LabelTxt__c || '';
-            this.saveFilterIsDefault = filter.IsDefaultBool__c || filter.delivery__IsDefaultBool__c || false;
+            this.saveFilterIsDefault = (filter.DefaultSetDateTime__c || filter.delivery__DefaultSetDateTime__c) != null;
             this.showSaveFilterModal = true; this.showSavedFilterMenu = false;
         }
     }

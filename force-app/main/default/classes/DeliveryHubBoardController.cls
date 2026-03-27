@@ -36,13 +36,13 @@ public with sharing class DeliveryHubBoardController {
     public static void reorderWorkItem(Id workItemId, String newStage, Integer newIndex) {
         try {
             // 1. Get existing work items in this stage (EXCLUDING the one we are moving)
-            // FIX: Removed 'WITH SECURITY_ENFORCED' to prevent FLS errors on SortOrderNumber__c/IsActiveBool__c
+            // FIX: Removed 'WITH SECURITY_ENFORCED' to prevent FLS errors on SortOrderNumber__c/ActivatedDateTime__c
             List<WorkItem__c> workItemsInColumn = [
                 SELECT Id, SortOrderNumber__c
                 FROM WorkItem__c
                 WHERE StageNamePk__c = :newStage
                 AND Id != :workItemId
-                AND IsActiveBool__c = TRUE
+                AND ActivatedDateTime__c != null
                 WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate DESC
             ];
@@ -426,8 +426,8 @@ public with sharing class DeliveryHubBoardController {
                     (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
                     (SELECT Id FROM WorkItemComments__r LIMIT 100)
                 FROM WorkItem__c
-                WHERE IsActiveBool__c = true
-                AND IsTemplateBool__c = false
+                WHERE ActivatedDateTime__c != null
+                AND TemplateMarkedDateTime__c = null
                 AND WorkflowTypeTxt__c = :workflowType
                 AND ClientNetworkEntityId__c = :entityId
                 WITH SYSTEM_MODE
@@ -453,8 +453,8 @@ public with sharing class DeliveryHubBoardController {
                 (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
                 (SELECT Id FROM WorkItemComments__r LIMIT 100)
             FROM WorkItem__c
-            WHERE IsActiveBool__c = true
-            AND IsTemplateBool__c = false
+            WHERE ActivatedDateTime__c != null
+            AND TemplateMarkedDateTime__c = null
             AND WorkflowTypeTxt__c = :workflowType
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c

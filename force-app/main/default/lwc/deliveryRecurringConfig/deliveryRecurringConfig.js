@@ -2,7 +2,7 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description Record page component for configuring recurring and template settings
- * on a WorkItem__c. Provides toggles for IsRecurringBool__c and IsTemplateBool__c,
+ * on a WorkItem__c. Provides toggles for RecurringEnabledDateTime__c and TemplateMarkedDateTime__c,
  * schedule/day pickers, and read-only next recurrence date display.
  * @author Cloud Nimbus LLC
  */
@@ -11,8 +11,8 @@ import { getRecord, getFieldValue, updateRecord } from "lightning/uiRecordApi";
 import { NavigationMixin } from "lightning/navigation";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
-import IS_RECURRING_FIELD from "@salesforce/schema/WorkItem__c.IsRecurringBool__c";
-import IS_TEMPLATE_FIELD from "@salesforce/schema/WorkItem__c.IsTemplateBool__c";
+import IS_RECURRING_FIELD from "@salesforce/schema/WorkItem__c.RecurringEnabledDateTime__c";
+import IS_TEMPLATE_FIELD from "@salesforce/schema/WorkItem__c.TemplateMarkedDateTime__c";
 import RECURRENCE_SCHEDULE_FIELD from "@salesforce/schema/WorkItem__c.RecurrenceScheduleTxt__c";
 import RECURRENCE_DAY_FIELD from "@salesforce/schema/WorkItem__c.RecurrenceDayTxt__c";
 import NEXT_RECURRENCE_DATE_FIELD from "@salesforce/schema/WorkItem__c.NextRecurrenceDate__c";
@@ -66,8 +66,8 @@ export default class DeliveryRecurringConfig extends NavigationMixin(LightningEl
     @wire(getRecord, { recordId: "$recordId", fields: FIELDS })
     wiredRecord({ data, error }) {
         if (data) {
-            this.isRecurring = getFieldValue(data, IS_RECURRING_FIELD) || false;
-            this.isTemplate = getFieldValue(data, IS_TEMPLATE_FIELD) || false;
+            this.isRecurring = getFieldValue(data, IS_RECURRING_FIELD) != null;
+            this.isTemplate = getFieldValue(data, IS_TEMPLATE_FIELD) != null;
             this.schedule = getFieldValue(data, RECURRENCE_SCHEDULE_FIELD) || "";
             this.recurrenceDay = getFieldValue(data, RECURRENCE_DAY_FIELD) || "";
             this.nextRecurrenceDate = getFieldValue(data, NEXT_RECURRENCE_DATE_FIELD);
@@ -154,8 +154,8 @@ export default class DeliveryRecurringConfig extends NavigationMixin(LightningEl
         try {
             const fields = {};
             fields[ID_FIELD.fieldApiName] = this.recordId;
-            fields[IS_RECURRING_FIELD.fieldApiName] = this.isRecurring;
-            fields[IS_TEMPLATE_FIELD.fieldApiName] = this.isTemplate;
+            fields[IS_RECURRING_FIELD.fieldApiName] = this.isRecurring ? new Date().toISOString() : null;
+            fields[IS_TEMPLATE_FIELD.fieldApiName] = this.isTemplate ? new Date().toISOString() : null;
             fields[RECURRENCE_SCHEDULE_FIELD.fieldApiName] = this.schedule || null;
             fields[RECURRENCE_DAY_FIELD.fieldApiName] = this.recurrenceDay || null;
 

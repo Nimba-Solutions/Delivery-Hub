@@ -39,7 +39,7 @@ private class DeliveryQuickRequestControllerTest {
 
         WorkItem__c wi = [
             SELECT BriefDescriptionTxt__c, PriorityPk__c, StageNamePk__c,
-                   IsActiveBool__c, StatusPk__c, DetailsTxt__c
+                   ActivatedDateTime__c, StatusPk__c, DetailsTxt__c
             FROM WorkItem__c
             WHERE Id = :result.recordId
             LIMIT 1
@@ -48,7 +48,7 @@ private class DeliveryQuickRequestControllerTest {
         System.assertEquals('Fix login bug', wi.BriefDescriptionTxt__c, 'Title should match');
         System.assertEquals('High', wi.PriorityPk__c, 'Priority should match');
         System.assertEquals('Backlog', wi.StageNamePk__c, 'Stage should be Backlog');
-        System.assertEquals(true, wi.IsActiveBool__c, 'Should be active');
+        System.assertNotEquals(null, wi.ActivatedDateTime__c, 'Should be active');
         System.assertEquals('New', wi.StatusPk__c, 'Status should be New');
         System.assert(wi.DetailsTxt__c.contains('password reset'), 'Description should be stored');
     }

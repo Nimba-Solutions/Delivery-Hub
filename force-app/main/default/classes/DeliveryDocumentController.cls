@@ -111,6 +111,44 @@ public with sharing class DeliveryDocumentController {
     }
 
     /**
+     * @description Returns a summary of all Draft invoices and daily hour summaries
+     *              that are pending review. Used by the document viewer banner.
+     * @return Map with 'count' (Integer) and 'documents' (List of summary maps).
+     */
+    @AuraEnabled(cacheable=true)
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static Map<String, Object> getPendingInvoices() {
+        List<DeliveryDocument__c> drafts = [
+            SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c,
+                   TotalCurrency__c, NetworkEntityId__r.Name
+            FROM DeliveryDocument__c
+            WHERE StatusPk__c = 'Draft'
+            AND TemplatePk__c IN ('Invoice', 'Daily_Hours_Summary')
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 50
+        ];
+
+        List<Map<String, Object>> docSummaries = new List<Map<String, Object>>();
+        for (DeliveryDocument__c doc : drafts) {
+            Map<String, Object> summary = new Map<String, Object>();
+            summary.put('id', doc.Id);
+            summary.put('name', doc.Name);
+            summary.put('templateType', doc.TemplatePk__c);
+            summary.put('entityName', doc.NetworkEntityId__r.Name);
+            summary.put('periodStart', String.valueOf(doc.PeriodStartDate__c));
+            summary.put('periodEnd', String.valueOf(doc.PeriodEndDate__c));
+            summary.put('total', doc.TotalCurrency__c);
+            docSummaries.add(summary);
+        }
+
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('count', drafts.size());
+        result.put('documents', docSummaries);
+        return result;
+    }
+
+    /**
      * @description Calculates the outstanding balance from all prior unpaid invoices
      *              for the given entity. Queries unpaid invoices and aggregates
      *              DeliveryTransaction__c amounts per document to compute paid totals.
@@ -886,16 +924,31 @@ public with sharing class DeliveryDocumentController {
 
         // Work logs within the period for these items
         Set<Id> itemIds = new Map<Id, WorkItem__c>(items).keySet();
-        List<WorkLog__c> logs = [
-            SELECT Id, Name, WorkItemId__c, WorkItemId__r.Name,
-                   HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
-            FROM WorkLog__c
-            WHERE WorkItemId__c IN :itemIds
-            AND WorkDateDate__c >= :periodStart
-            AND WorkDateDate__c <= :periodEnd
-            WITH SYSTEM_MODE
-            ORDER BY WorkDateDate__c ASC
-        ];
+        List<WorkLog__c> logs;
+        if (templateType == 'Invoice' || templateType == 'Daily_Hours_Summary') {
+            logs = [
+                SELECT Id, Name, WorkItemId__c, WorkItemId__r.Name,
+                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
+                FROM WorkLog__c
+                WHERE WorkItemId__c IN :itemIds
+                AND WorkDateDate__c >= :periodStart
+                AND WorkDateDate__c <= :periodEnd
+                AND (StatusPk__c = 'Approved' OR StatusPk__c = null)
+                WITH SYSTEM_MODE
+                ORDER BY WorkDateDate__c ASC
+            ];
+        } else {
+            logs = [
+                SELECT Id, Name, WorkItemId__c, WorkItemId__r.Name,
+                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
+                FROM WorkLog__c
+                WHERE WorkItemId__c IN :itemIds
+                AND WorkDateDate__c >= :periodStart
+                AND WorkDateDate__c <= :periodEnd
+                WITH SYSTEM_MODE
+                ORDER BY WorkDateDate__c ASC
+            ];
+        }
         snapshot.put('workLogs', serializeWorkLogs(logs));
 
         // Work requests (for rates and status)

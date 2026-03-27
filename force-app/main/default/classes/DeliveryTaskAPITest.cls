@@ -28,7 +28,7 @@ private class DeliveryTaskAPITest {
                 BriefDescriptionTxt__c = 'API Task Alpha',
                 StageNamePk__c        = 'In Development',
                 PriorityPk__c         = 'High',
-                IsActiveBool__c       = true,
+                ActivatedDateTime__c       = Datetime.now(),
                 StatusPk__c           = 'New',
                 DetailsTxt__c         = 'Details for alpha task',
                 WorkflowTypeTxt__c    = 'Software_Delivery',
@@ -38,7 +38,7 @@ private class DeliveryTaskAPITest {
                 BriefDescriptionTxt__c = 'API Task Beta',
                 StageNamePk__c        = 'Backlog',
                 PriorityPk__c         = 'Medium',
-                IsActiveBool__c       = true,
+                ActivatedDateTime__c       = Datetime.now(),
                 StatusPk__c           = 'New',
                 WorkflowTypeTxt__c    = 'Software_Delivery'
             ),
@@ -46,7 +46,7 @@ private class DeliveryTaskAPITest {
                 BriefDescriptionTxt__c = 'API Task Gamma',
                 StageNamePk__c        = 'Code Review',
                 PriorityPk__c         = 'Low',
-                IsActiveBool__c       = true,
+                ActivatedDateTime__c       = Datetime.now(),
                 StatusPk__c           = 'New',
                 WorkflowTypeTxt__c    = 'Loan_Approval'
             )

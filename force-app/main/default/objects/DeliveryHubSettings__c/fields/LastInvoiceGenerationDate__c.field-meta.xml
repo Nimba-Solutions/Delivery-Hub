@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastInvoiceGenerationDate__c</fullName>
+    <description>Tracks the last date automated invoices were generated. Prevents duplicate generation.</description>
+    <externalId>false</externalId>
+    <label>Last Invoice Generation Date</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

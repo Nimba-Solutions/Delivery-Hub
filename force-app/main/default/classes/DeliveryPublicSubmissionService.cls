@@ -167,7 +167,7 @@ global without sharing class DeliveryPublicSubmissionService {
         newItem.StageNamePk__c = 'Backlog';
         newItem.PriorityPk__c = input.priority;
         newItem.RequestTypePk__c = String.isNotBlank(input.requestType) ? input.requestType : 'Public Lead';
-        newItem.IsActiveBool__c = true;
+        newItem.ActivatedDateTime__c = Datetime.now();
         newItem.StatusPk__c = 'New';
 
         if (String.isNotBlank(input.tags)) {

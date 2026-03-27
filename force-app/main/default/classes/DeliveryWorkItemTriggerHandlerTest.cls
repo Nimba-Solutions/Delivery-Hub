@@ -229,12 +229,12 @@ public class DeliveryWorkItemTriggerHandlerTest {
 
     @IsTest
     static void testBountyTokenGenerationOnInsert() {
-        // IsBountyBool__c = true on insert should auto-generate a bounty token
+        // BountyEnabledDateTime__c != null on insert should auto-generate a bounty token
         Test.startTest();
         WorkItem__c bountyItem = new WorkItem__c(
             BriefDescriptionTxt__c = 'Bounty Insert Token Test',
             StageNamePk__c = 'Backlog',
-            IsBountyBool__c = true
+            BountyEnabledDateTime__c = Datetime.now()
         );
         insert bountyItem;
         Test.stopTest();
@@ -243,19 +243,19 @@ public class DeliveryWorkItemTriggerHandlerTest {
             SELECT BountyTokenTxt__c FROM WorkItem__c WHERE Id = :bountyItem.Id
         ];
         System.assertNotEquals(null, inserted.BountyTokenTxt__c,
-            'BountyTokenTxt__c should be auto-generated on insert when IsBountyBool__c is true');
+            'BountyTokenTxt__c should be auto-generated on insert when BountyEnabledDateTime__c is true');
         System.assertEquals(20, inserted.BountyTokenTxt__c.length(),
             'Bounty token should be 20 characters long');
     }
 
     @IsTest
     static void testBountyTokenGenerationOnUpdate() {
-        // IsBountyBool__c flip from false to true on update should auto-generate a bounty token
-        WorkItem__c t = [SELECT Id, IsBountyBool__c, BountyTokenTxt__c FROM WorkItem__c LIMIT 1];
+        // BountyEnabledDateTime__c flip from false to true on update should auto-generate a bounty token
+        WorkItem__c t = [SELECT Id, BountyEnabledDateTime__c, BountyTokenTxt__c FROM WorkItem__c LIMIT 1];
         System.assertEquals(null, t.BountyTokenTxt__c, 'Token should be null initially');
 
         Test.startTest();
-        t.IsBountyBool__c = true;
+        t.BountyEnabledDateTime__c = Datetime.now();
         update t;
         Test.stopTest();
 
@@ -263,7 +263,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
             SELECT BountyTokenTxt__c FROM WorkItem__c WHERE Id = :t.Id
         ];
         System.assertNotEquals(null, updated.BountyTokenTxt__c,
-            'BountyTokenTxt__c should be auto-generated when IsBountyBool__c flips to true');
+            'BountyTokenTxt__c should be auto-generated when BountyEnabledDateTime__c flips to true');
         System.assertEquals(20, updated.BountyTokenTxt__c.length(),
             'Bounty token should be 20 characters long');
     }

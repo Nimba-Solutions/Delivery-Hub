@@ -41,8 +41,8 @@ public with sharing class DeliveryWorkItemController {
                     (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
                     (SELECT Id FROM WorkItemComments__r LIMIT 100)
                 FROM WorkItem__c
-                WHERE IsActiveBool__c = true
-                AND IsTemplateBool__c = false
+                WHERE ActivatedDateTime__c != null
+                AND TemplateMarkedDateTime__c = null
                 AND WorkflowTypeTxt__c = :workflowType
                 WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c
@@ -67,8 +67,8 @@ public with sharing class DeliveryWorkItemController {
                 (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
                 (SELECT Id FROM WorkItemComments__r LIMIT 100)
             FROM WorkItem__c
-            WHERE IsActiveBool__c = true
-            AND IsTemplateBool__c = false
+            WHERE ActivatedDateTime__c != null
+            AND TemplateMarkedDateTime__c = null
             ORDER BY SortOrderNumber__c
         ];
     }
@@ -87,7 +87,7 @@ public with sharing class DeliveryWorkItemController {
                 DeveloperDaysSizeNumber__c=2.5,
                 StageNamePk__c='Backlog',
                 SortOrderNumber__c=1,
-                IsActiveBool__c=true
+                ActivatedDateTime__c=Datetime.now()
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c='Beta scope',
@@ -95,7 +95,7 @@ public with sharing class DeliveryWorkItemController {
                 DeveloperDaysSizeNumber__c=3.0,
                 StageNamePk__c='Active Scoping',
                 SortOrderNumber__c=1,
-                IsActiveBool__c=true
+                ActivatedDateTime__c=Datetime.now()
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c='Gamma done',
@@ -103,7 +103,7 @@ public with sharing class DeliveryWorkItemController {
                 DeveloperDaysSizeNumber__c=1.75,
                 StageNamePk__c='Dev Complete',
                 SortOrderNumber__c=1,
-                IsActiveBool__c=true
+                ActivatedDateTime__c=Datetime.now()
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c='Delta final',
@@ -111,7 +111,7 @@ public with sharing class DeliveryWorkItemController {
                 DeveloperDaysSizeNumber__c=4.0,
                 StageNamePk__c='Done',
                 SortOrderNumber__c=1,
-                IsActiveBool__c=true
+                ActivatedDateTime__c=Datetime.now()
             )
         };
         insert demo;
@@ -227,7 +227,7 @@ public with sharing class DeliveryWorkItemController {
         List<WorkflowStageRequirement__mdt> requirements = [
             SELECT RequiredFieldsTxt__c
             FROM WorkflowStageRequirement__mdt
-            WHERE IsActiveBool__c = true AND TargetStageTxt__c = :targetStage
+            WHERE ActivatedDateTime__c != null AND TargetStageTxt__c = :targetStage
             LIMIT 1
         ];
 

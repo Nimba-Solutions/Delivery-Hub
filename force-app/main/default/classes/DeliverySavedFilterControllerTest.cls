@@ -72,9 +72,9 @@ public class DeliverySavedFilterControllerTest {
         Test.stopTest();
 
         DeliverySavedFilter__c reQueried = [
-            SELECT IsDefaultBool__c FROM DeliverySavedFilter__c WHERE Id = :first.Id
+            SELECT DefaultSetDateTime__c FROM DeliverySavedFilter__c WHERE Id = :first.Id
         ];
-        System.assertEquals(true, reQueried.IsDefaultBool__c, 'Should be marked as default');
+        System.assertNotEquals(null, reQueried.DefaultSetDateTime__c, 'Should be marked as default');
     }
 
     @isTest
@@ -106,7 +106,7 @@ public class DeliverySavedFilterControllerTest {
         DeliverySavedFilter__c first = new DeliverySavedFilter__c(
             LabelTxt__c = 'First',
             FilterJsonTxt__c = SAMPLE_JSON,
-            IsDefaultBool__c = true,
+            DefaultSetDateTime__c = Datetime.now(),
             WorkflowTypeTxt__c = WORKFLOW
         );
         insert first;
@@ -118,9 +118,9 @@ public class DeliverySavedFilterControllerTest {
         Test.stopTest();
 
         DeliverySavedFilter__c firstReQueried = [
-            SELECT IsDefaultBool__c FROM DeliverySavedFilter__c WHERE Id = :first.Id
+            SELECT DefaultSetDateTime__c FROM DeliverySavedFilter__c WHERE Id = :first.Id
         ];
-        System.assertEquals(false, firstReQueried.IsDefaultBool__c, 'Previous default should be cleared');
+        System.assertEquals(null, firstReQueried.DefaultSetDateTime__c, 'Previous default should be cleared');
     }
 
     @isTest

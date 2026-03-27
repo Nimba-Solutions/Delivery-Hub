@@ -50,7 +50,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
             SELECT Id, ClientNetworkEntityId__c,
                    ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c,
                    ClientNetworkEntityId__r.ApiKeyTxt__c,
-                   ClientNetworkEntityId__r.EnableVendorPushBool__c,
+                   ClientNetworkEntityId__r.EnableVendorPushDateTime__c,
                    ClientNetworkEntityId__r.EntityTypePk__c,
                    ClientNetworkEntityId__r.ConnectionStatusPk__c
             FROM WorkItem__c
@@ -65,7 +65,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
             if (parent == null || parent.ClientNetworkEntityId__c == null) { continue; }
             if (parent.ClientNetworkEntityId__r.ConnectionStatusPk__c == 'Pending Approval') { continue; }
 
-            Boolean hasPushEndpoint = parent.ClientNetworkEntityId__r.EnableVendorPushBool__c == true
+            Boolean hasPushEndpoint = parent.ClientNetworkEntityId__r.EnableVendorPushDateTime__c != null
                 && String.isNotBlank(parent.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c);
 
             Map<String, Object> payload = new Map<String, Object>();

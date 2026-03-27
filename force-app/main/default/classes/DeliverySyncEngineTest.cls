@@ -123,7 +123,7 @@ private class DeliverySyncEngineTest {
     static void testVendorPushCreatesQueuedUpstreamItem() {
         // Enable vendor push on the client entity
         NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
-        client.EnableVendorPushBool__c = true;
+        client.EnableVendorPushDateTime__c = Datetime.now();
         client.IntegrationEndpointUrlTxt__c = 'https://client.com';
         update client;
 
@@ -156,7 +156,7 @@ private class DeliverySyncEngineTest {
 
     @IsTest
     static void testPollModeCreatesStagedUpstreamItem() {
-        // Client entity has EnableVendorPushBool__c = false (default from setup)
+        // Client entity has EnableVendorPushDateTime__c = null (default from setup)
         WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
         delete [SELECT Id FROM SyncItem__c];
 

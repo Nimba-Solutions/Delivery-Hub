@@ -60,7 +60,7 @@ public class DeliveryCsvImportControllerTest {
         System.assertEquals(1, ids.size(), 'Expected 1 created Id');
 
         WorkItem__c wi = [
-            SELECT BriefDescriptionTxt__c, PriorityPk__c, WorkflowTypeTxt__c, IsActiveBool__c
+            SELECT BriefDescriptionTxt__c, PriorityPk__c, WorkflowTypeTxt__c, ActivatedDateTime__c
             FROM WorkItem__c
             WHERE Id = :ids[0]
             WITH SYSTEM_MODE
@@ -68,7 +68,7 @@ public class DeliveryCsvImportControllerTest {
         System.assertEquals('CSV Single Import', wi.BriefDescriptionTxt__c);
         System.assertEquals('High', wi.PriorityPk__c);
         System.assertEquals('Software_Delivery', wi.WorkflowTypeTxt__c);
-        System.assertEquals(true, wi.IsActiveBool__c);
+        System.assertNotEquals(null, wi.ActivatedDateTime__c);
 
         DeliveryTriggerControl.enableAfterLogic();
     }
