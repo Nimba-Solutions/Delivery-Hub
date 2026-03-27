@@ -14,28 +14,31 @@ import USER_ID from '@salesforce/user/Id';
 import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 
 // Fallback phase order used when CMT config is not yet loaded
-const FALLBACK_PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
-
-const HOUR_NOON = 12;
-const HOUR_EVENING = 17;
-const DAYS_IN_WEEK = 7;
-const WEEK_END_OFFSET = 6;
-
-const PHASE_LIST_VIEWS = {
-    Approval: 'WorkItems_Approval',
-    Deployment: 'WorkItems_Deployment',
-    Development: 'WorkItems_Development',
-    Planning: 'WorkItems_Planning',
-    Testing: 'WorkItems_Testing',
-    UAT: 'WorkItems_UAT'
-};
-
-// Maps phase name to badge CSS modifier (for attention work item styling)
-const PHASE_BADGE_SUFFIX = {
-    Approval: 'approval',
-    Deployment: 'signoff',
-    UAT: 'uat'
-};
+const FALLBACK_PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'],
+    HOUR_NOON = 12,
+    HOUR_EVENING = 17,
+    DAYS_IN_WEEK = 7,
+    WEEK_END_OFFSET = 6,
+    EMPTY = 0,
+    FIRST_INDEX = 0,
+    SINGLE_ITEM = 1,
+    FIRST_DAY = 1,
+    LAST_DAY_OFFSET = 0,
+    MONTH_OFFSET = 1,
+    PHASE_LIST_VIEWS = {
+        Approval: 'WorkItems_Approval',
+        Deployment: 'WorkItems_Deployment',
+        Development: 'WorkItems_Development',
+        Planning: 'WorkItems_Planning',
+        Testing: 'WorkItems_Testing',
+        UAT: 'WorkItems_UAT'
+    },
+    // Maps phase name to badge CSS modifier (for attention work item styling)
+    PHASE_BADGE_SUFFIX = {
+        Approval: 'approval',
+        Deployment: 'signoff',
+        UAT: 'uat'
+    };
 
 export default class DeliveryClientDashboard extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @api hideAttentionSection = false;
@@ -107,10 +110,10 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     // CMT-driven badge class for a given stage
     getBadgeClass(stage) {
-        const stageData = (this.workflowConfig?.stages || []).find(stg => stg.apiValue === stage);
-        const phase = stageData?.phase;
-        const suffix = PHASE_BADGE_SUFFIX[phase] || null;
-        const base = 'slds-badge slds-badge_lightest stage-badge';
+        const stageData = (this.workflowConfig?.stages || []).find(stg => stg.apiValue === stage),
+            phase = stageData?.phase,
+            suffix = PHASE_BADGE_SUFFIX[phase] || null,
+            base = 'slds-badge slds-badge_lightest stage-badge';
         if (suffix) {
             return `${base} stage-badge--${suffix}`;
         }
@@ -122,26 +125,34 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         if (!this.workflowConfig?.stages) {
             return FALLBACK_PHASE_ORDER;
         }
-        const seen = new Set();
-        const order = [];
+        const seen = new Set(),
+            order = [];
         this.workflowConfig.stages.forEach(stg => {
             if (!stg.isTerminal && stg.phase && !seen.has(stg.phase)) {
                 seen.add(stg.phase);
                 order.push(stg.phase);
             }
         });
-        if (order.length > 0) {
+        if (order.length > EMPTY) {
             return order;
         }
         return FALLBACK_PHASE_ORDER;
     }
 
     processData(data) {
-        // Attention work items (pre-sorted by attention score from Apex)
-        this.attentionWorkItems = (data.attentionWorkItems || []).map(item => ({
-            attentionScore: item.attentionScore || 0,
+        this.attentionWorkItems = this.buildAttentionItems(data.attentionWorkItems || []);
+        this.phases = this.buildPhases(data.phases || []);
+        this.recentWorkItems = DeliveryClientDashboard.buildRecentItems(data.recentWorkItems || []);
+        this.announcements = DeliveryClientDashboard.buildAnnouncements(data.announcements || []);
+        this.thisWeek = DeliveryClientDashboard.buildThisWeekMetrics(data.thisWeek);
+    }
+
+    // Attention work items (pre-sorted by attention score from Apex)
+    buildAttentionItems(items) {
+        return items.map(item => ({
+            attentionScore: item.attentionScore || EMPTY,
             badgeClass: this.getBadgeClass(item.stage),
-            daysInStage: item.daysInStage || 0,
+            daysInStage: item.daysInStage || EMPTY,
             id: item.id,
             name: item.name,
             priority: item.priority || '',
@@ -151,32 +162,45 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             urgency: item.urgency || 'low',
             urgencyClass: `urgency-dot urgency-dot--${item.urgency || 'low'}`
         }));
+    }
 
-        // Phase counts
+    buildPhases(phaseData) {
         const phaseCounts = {};
-        (data.phases || []).forEach(phaseItem => {
-            phaseCounts[phaseItem.label] = phaseItem.count || 0;
+        phaseData.forEach(phaseItem => {
+            phaseCounts[phaseItem.label] = phaseItem.count || EMPTY;
         });
 
         const largePhase = !this.hasAttentionItems;
-        this.phases = this.phaseOrder.map(label => {
-            const count = phaseCounts[label] || 0;
+        return this.phaseOrder.map(label => {
+            const count = phaseCounts[label] || EMPTY;
+            let colClass = 'slds-col slds-size_1-of-3 slds-m-bottom_x-small';
+            if (largePhase) {
+                colClass = 'slds-col slds-size_1-of-2 slds-m-bottom_x-small';
+            }
+            let activeClass = 'phase-tile--empty';
+            if (count > EMPTY) {
+                activeClass = 'phase-tile--active';
+            }
+            let sizeClass = '';
+            if (largePhase) {
+                sizeClass = 'phase-tile--large';
+            }
             return {
-                colClass: largePhase
-                    ? 'slds-col slds-size_1-of-2 slds-m-bottom_x-small'
-                    : 'slds-col slds-size_1-of-3 slds-m-bottom_x-small',
+                colClass,
                 count,
                 label,
                 tileClass: [
                     'phase-tile phase-tile--btn slds-box slds-box_x-small slds-text-align_center',
-                    count > 0 ? 'phase-tile--active' : 'phase-tile--empty',
-                    largePhase ? 'phase-tile--large' : ''
+                    activeClass,
+                    sizeClass
                 ].join(' ').trim()
             };
         });
+    }
 
-        // Recent work items (includes both work items and comments)
-        this.recentWorkItems = (data.recentWorkItems || []).map(item => ({
+    // Recent work items (includes both work items and comments)
+    static buildRecentItems(items) {
+        return items.map(item => ({
             id: item.id,
             isComment: item.isComment || false,
             lastModified: item.lastModified,
@@ -184,27 +208,31 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             stage: item.stage,
             title: item.title || null
         }));
+    }
 
-        // Vendor announcements (one per active vendor with a message)
-        this.announcements = (data.announcements || []).map((text, idx) => ({
+    // Vendor announcements (one per active vendor with a message)
+    static buildAnnouncements(items) {
+        return items.map((text, idx) => ({
             key: idx,
             text
         }));
+    }
 
-        // This Week metrics
-        if (data.thisWeek) {
-            this.thisWeek = {
-                blocked: data.thisWeek.blocked || 0,
-                completed: data.thisWeek.completed || 0,
-                hoursLogged: data.thisWeek.hoursLogged || 0,
-                moved: data.thisWeek.moved || 0
-            };
+    static buildThisWeekMetrics(weekData) {
+        if (!weekData) {
+            return null;
         }
+        return {
+            blocked: weekData.blocked || EMPTY,
+            completed: weekData.completed || EMPTY,
+            hoursLogged: weekData.hoursLogged || EMPTY,
+            moved: weekData.moved || EMPTY
+        };
     }
 
     static formatScoreLabel(item) {
         const parts = [];
-        if (item.daysInStage > 0) {
+        if (item.daysInStage > EMPTY) {
             parts.push(`${item.daysInStage}d`);
         }
         if (item.priority) {
@@ -246,22 +274,22 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     get hasAttentionItems() {
-        return this.attentionWorkItems && this.attentionWorkItems.length > 0;
+        return this.attentionWorkItems && this.attentionWorkItems.length > EMPTY;
     }
 
     get hasRecentItems() {
-        return this.recentWorkItems && this.recentWorkItems.length > 0;
+        return this.recentWorkItems && this.recentWorkItems.length > EMPTY;
     }
 
     get hasAnnouncements() {
-        return this.announcements && this.announcements.length > 0;
+        return this.announcements && this.announcements.length > EMPTY;
     }
 
     get attentionCount() {
         if (this.attentionWorkItems) {
             return this.attentionWorkItems.length;
         }
-        return 0;
+        return EMPTY;
     }
 
     get greeting() {
@@ -280,14 +308,21 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     get greetingLine() {
-        const name = this.firstName ? `, ${this.firstName}` : '';
+        let name = '';
+        if (this.firstName) {
+            name = `, ${this.firstName}`;
+        }
         if (this.isLoading) {
             return `${this.greeting}${name}`;
         }
         if (this.hasAttentionItems) {
             const count = this.attentionCount;
-            const plural = count === 1 ? '' : 's';
-            const verb = count === 1 ? 's' : '';
+            let plural = 's',
+                verb = '';
+            if (count === SINGLE_ITEM) {
+                plural = '';
+                verb = 's';
+            }
             return `${this.greeting}${name} \u2014 ${count} item${plural} need${verb} your attention`;
         }
         return `${this.greeting}${name} \u2014 You\u2019re all caught up`;
@@ -375,8 +410,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     handlePhaseClick(event) {
-        const phase = event.currentTarget.dataset.phase;
-        const listView = PHASE_LIST_VIEWS[phase];
+        const phase = event.currentTarget.dataset.phase,
+            listView = PHASE_LIST_VIEWS[phase];
         if (!listView) {
             return;
         }
@@ -385,8 +420,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     getDateRange() {
         const now = new Date();
-        let start;
-        let end;
+        let start,
+            end;
         if (this.selectedTimeRange === 'lastWeek') {
             const dayOfWeek = now.getDay();
             start = new Date(now);
@@ -394,8 +429,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             end = new Date(start);
             end.setDate(start.getDate() + WEEK_END_OFFSET);
         } else if (this.selectedTimeRange === 'thisMonth') {
-            start = new Date(now.getFullYear(), now.getMonth(), 1);
-            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            start = new Date(now.getFullYear(), now.getMonth(), FIRST_DAY);
+            end = new Date(now.getFullYear(), now.getMonth() + MONTH_OFFSET, LAST_DAY_OFFSET);
         } else {
             // ThisWeek (default) — Sunday to Saturday
             const dayOfWeek = now.getDay();
@@ -404,7 +439,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             end = new Date(start);
             end.setDate(start.getDate() + WEEK_END_OFFSET);
         }
-        const formatDate = dateObj => dateObj.toISOString().split('T')[0];
+        const formatDate = dateObj => dateObj.toISOString().split('T')[FIRST_INDEX];
         return { end: formatDate(end), start: formatDate(start) };
     }
 

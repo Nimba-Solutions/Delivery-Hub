@@ -9,13 +9,17 @@ import { refreshApex } from '@salesforce/apex';
 import getActivitySummary from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityDashboardController.getActivitySummary';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 
-const BAR_PERCENT_SCALE = 100;
-const BAR_MIN_PERCENT = 5;
-const BAR_HEIGHT_SCALE = 80;
-const BAR_MIN_HEIGHT = 2;
-const PAGE_LABEL_MAX = 50;
-const PAGE_LABEL_TRUNCATE = 47;
-const BAR_COLOR = '#0176d3';
+const BAR_PERCENT_SCALE = 100,
+    BAR_MIN_PERCENT = 5,
+    BAR_HEIGHT_SCALE = 80,
+    BAR_MIN_HEIGHT = 2,
+    PAGE_LABEL_MAX = 50,
+    PAGE_LABEL_TRUNCATE = 47,
+    BAR_COLOR = '#0176d3',
+    EMPTY = 0,
+    FIRST_INDEX = 0,
+    FALLBACK_MAX = 1,
+    SECOND_ELEMENT = 1;
 
 export default class DeliveryActivityDashboard extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @track totalThisWeek = 0;
@@ -31,27 +35,27 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
     }
 
     wiredSummaryResult;
-    maxDailyCount = 1;
+    maxDailyCount = FALLBACK_MAX;
 
     @wire(getActivitySummary)
     wiredSummary(result) {
         this.wiredSummaryResult = result;
         if (result.data) {
-            this.totalThisWeek = result.data.totalThisWeek || 0;
-            this.totalThisMonth = result.data.totalThisMonth || 0;
+            this.totalThisWeek = result.data.totalThisWeek || EMPTY;
+            this.totalThisMonth = result.data.totalThisMonth || EMPTY;
             this.topUsers = this.formatRankedItems(result.data.topUsers || []);
             this.topComponents = this.formatRankedItems(result.data.topComponents || []);
             this.topPages = this.formatPageItems(result.data.topPages || []);
             this.processDailyCounts(result.data.dailyCounts || []);
-            this.hasData = this.totalThisMonth > 0;
+            this.hasData = this.totalThisMonth > EMPTY;
         }
     }
 
     formatRankedItems(items) {
-        if (!items || items.length === 0) {
+        if (!items || items.length === EMPTY) {
             return [];
         }
-        const maxCount = items[0].count || 1;
+        const maxCount = items[FIRST_INDEX].count || FALLBACK_MAX;
         return items.map((item, index) => {
             const pct = Math.max(Math.round((item.count / maxCount) * BAR_PERCENT_SCALE), BAR_MIN_PERCENT);
             return {
@@ -65,16 +69,16 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
     }
 
     formatPageItems(items) {
-        if (!items || items.length === 0) {
+        if (!items || items.length === EMPTY) {
             return [];
         }
-        const maxCount = items[0].count || 1;
+        const maxCount = items[FIRST_INDEX].count || FALLBACK_MAX;
         return items.map((item, index) => {
             let shortLabel = item.label || '';
             // Extract meaningful part of URL
             if (shortLabel.includes('/lightning/')) {
                 const parts = shortLabel.split('/lightning/');
-                shortLabel = `/lightning/${parts[1] || ''}`;
+                shortLabel = `/lightning/${parts[SECOND_ELEMENT] || ''}`;
             }
             // Truncate if too long
             if (shortLabel.length > PAGE_LABEL_MAX) {
@@ -93,12 +97,12 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
     }
 
     processDailyCounts(counts) {
-        if (!counts || counts.length === 0) {
+        if (!counts || counts.length === EMPTY) {
             this.dailyCounts = [];
-            this.maxDailyCount = 1;
+            this.maxDailyCount = FALLBACK_MAX;
             return;
         }
-        this.maxDailyCount = Math.max(...counts.map(day => day.count), 1);
+        this.maxDailyCount = Math.max(...counts.map(day => day.count), FALLBACK_MAX);
         this.dailyCounts = counts.map((day, index) => {
             const height = Math.max(Math.round((day.count / this.maxDailyCount) * BAR_HEIGHT_SCALE), BAR_MIN_HEIGHT);
             return {
@@ -112,19 +116,19 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
     }
 
     get hasTopUsers() {
-        return this.topUsers.length > 0;
+        return this.topUsers.length > EMPTY;
     }
 
     get hasTopComponents() {
-        return this.topComponents.length > 0;
+        return this.topComponents.length > EMPTY;
     }
 
     get hasTopPages() {
-        return this.topPages.length > 0;
+        return this.topPages.length > EMPTY;
     }
 
     get hasDailyCounts() {
-        return this.dailyCounts.length > 0;
+        return this.dailyCounts.length > EMPTY;
     }
 
     handleRefresh() {
