@@ -92,7 +92,15 @@ private class DeliveryPortalControllerTest {
         System.assertEquals('Acme Corp', (String) dashboard.get('entityName'), 'Entity name should match');
         System.assertEquals(2, (Integer) dashboard.get('activeCount'), 'Should have 2 active items');
         System.assertEquals(1, (Integer) dashboard.get('completedCount'), 'Should have 1 completed item');
-        System.assertNotEquals(null, dashboard.get('phases'), 'Phase distribution should be present');
+
+        // Phase distribution is now dynamically derived from CMT
+        List<Map<String, Object>> phases = (List<Map<String, Object>>) dashboard.get('phases');
+        System.assertNotEquals(null, phases, 'Phase distribution should be present');
+        // Each phase entry should have label and count keys
+        if (!phases.isEmpty()) {
+            System.assert(phases[0].containsKey('label'), 'Phase entry should contain label');
+            System.assert(phases[0].containsKey('count'), 'Phase entry should contain count');
+        }
         System.assertNotEquals(null, dashboard.get('recentActivity'), 'Recent activity should be present');
     }
 

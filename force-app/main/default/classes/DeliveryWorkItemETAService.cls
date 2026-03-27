@@ -26,12 +26,28 @@ public with sharing class DeliveryWorkItemETAService {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     // <<< FIX 1: Changed parameter from Set<Id> to List<Id> which is supported by AuraEnabled.
     public static ETAResult getWorkItemETAsWithPriority(Integer numberOfDevs, List<Id> prioritizedWorkItemIds) {
+        return getWorkItemETAsWithPriorityForType(numberOfDevs, prioritizedWorkItemIds, null);
+    }
+
+    /**
+     * @description Public method callable from Lightning Web Components.
+     * Triggers a synchronous, real-time recalculation of work item ETAs for a specific workflow type
+     * and returns the fresh results.
+     * @param numberOfDevs (Not Used) This parameter is maintained for LWC compatibility but the calculation now uses actual User records flagged as developers.
+     * @param prioritizedWorkItemIds A list of Work Item IDs to be placed at the very top of the queue, overriding all other sorting logic.
+     * @param workflowType DeveloperName of the WorkflowType__mdt record. Defaults to 'Software_Delivery' when blank/null.
+     * @return ETAResult A wrapper object containing the list of calculated work item ETAs.
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    public static ETAResult getWorkItemETAsWithPriorityForType(Integer numberOfDevs, List<Id> prioritizedWorkItemIds, String workflowType) {
         ETAResult result = new ETAResult();
         result.workItems = new List<WorkItemETADTO>();
         result.pushedBackWorkItemNumbers = new List<String>(); // Compatibility with original LWC structure
 
         try {
-            ETACalculator calculator = new ETACalculator(prioritizedWorkItemIds);
+            String resolvedType = String.isBlank(workflowType) ? 'Software_Delivery' : workflowType;
+            ETACalculator calculator = new ETACalculator(prioritizedWorkItemIds, resolvedType);
             calculator.execute();
 
             Set<Id> processedIds = calculator.getProcessedWorkItemIds();
@@ -127,12 +143,29 @@ public with sharing class DeliveryWorkItemETAService {
      * This should be called from a trigger on WorkItem__c when relevant fields change.
      */
     public class RecalculateAllETAsQueueable implements Queueable {
+        private final String workflowType;
+
+        /**
+         * @description Constructs the queueable with the default workflow type ('Software_Delivery').
+         */
+        public RecalculateAllETAsQueueable() {
+            this.workflowType = 'Software_Delivery';
+        }
+
+        /**
+         * @description Constructs the queueable with a specific workflow type.
+         * @param workflowType DeveloperName of the WorkflowType__mdt record.
+         */
+        public RecalculateAllETAsQueueable(String workflowType) {
+            this.workflowType = String.isBlank(workflowType) ? 'Software_Delivery' : workflowType;
+        }
+
         /**
          * @description Executes the ETA recalculation asynchronously with no prioritized items.
          * @param context The queueable context provided by the platform
          */
         public void execute(QueueableContext context) {
-            ETACalculator calculator = new ETACalculator(null);
+            ETACalculator calculator = new ETACalculator(null, this.workflowType);
             calculator.execute();
         }
     }
@@ -171,14 +204,18 @@ public with sharing class DeliveryWorkItemETAService {
         private Integer uatBufferDays;
         private final Set<Id> prioritizedWorkItemIds;
         private Set<Id> processedWorkItemIds;
+        private final String workflowType;
 
         /**
-         * @description Constructs the ETACalculator with an optional list of prioritized work item IDs.
+         * @description Constructs the ETACalculator with an optional list of prioritized work item IDs
+         * and a workflow type whose CMT stages drive the calculation.
          * @param prioritizedIds Work item IDs to prioritize at the top of the queue, or null for default ordering
+         * @param workflowType DeveloperName of the WorkflowType__mdt record (e.g. 'Software_Delivery')
          */
-        public ETACalculator(List<Id> prioritizedIds) {
+        public ETACalculator(List<Id> prioritizedIds, String workflowType) {
             this.prioritizedWorkItemIds = (prioritizedIds == null) ? new Set<Id>() : new Set<Id>(prioritizedIds);
             this.processedWorkItemIds = new Set<Id>();
+            this.workflowType = String.isBlank(workflowType) ? 'Software_Delivery' : workflowType;
         }
 
         /**
@@ -262,23 +299,26 @@ public with sharing class DeliveryWorkItemETAService {
 
         // --- Helper Methods for the Calculator ---
 
+        /**
+         * @description Loads stage configuration from CMT for the calculator's workflow type.
+         * Uses DeliveryWorkflowConfigService.getStagePhaseMap to dynamically resolve
+         * which phases map to pre-dev vs active-dev stages, instead of hardcoding phase names.
+         * Stages in the 'Planning' phase are treated as pre-development; stages in the
+         * 'Development' phase are treated as active development. All other phases are ignored.
+         */
         private void loadStageConfiguration() {
             this.preDevStages = new Set<String>();
             this.activeDevStages = new Set<String>();
             this.priorityWeights = DEFAULT_PRIORITY_WEIGHTS;
             this.uatBufferDays = DEFAULT_UAT_BUFFER_DAYS;
 
-            for (WorkflowStage__mdt s : [
-                SELECT ApiValueTxt__c, PhaseTxt__c
-                FROM WorkflowStage__mdt
-                WHERE WorkflowType__r.DeveloperName = 'Software_Delivery'
-                WITH SYSTEM_MODE
-            ]) {
-                if (s.ApiValueTxt__c == null || s.PhaseTxt__c == null) { continue; }
-                String apiVal = s.ApiValueTxt__c.toLowerCase().trim();
-                if (s.PhaseTxt__c == 'Planning') {
+            Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap(this.workflowType);
+            for (String apiValue : stageToPhase.keySet()) {
+                String phase = stageToPhase.get(apiValue);
+                String apiVal = apiValue.toLowerCase().trim();
+                if (phase == 'Planning') {
                     this.preDevStages.add(apiVal);
-                } else if (s.PhaseTxt__c == 'Development') {
+                } else if (phase == 'Development') {
                     this.activeDevStages.add(apiVal);
                 }
             }

@@ -20,6 +20,15 @@ import { LightningElement, api, track } from 'lwc';
  *   keyFields    : Which fields / objects drive the display
  */
 const INFO_REGISTRY = {
+    deliveryActivityDashboard: {
+        dataSource:
+            'Calls getActivityDashboard which aggregates Activity_Log__c records. "This Week" and "This Month" counts come from records where CreatedDate falls in the current week/month. The 7-Day Trend queries daily counts for the past 7 days. Top Users, Top Components, and Top Pages are derived from GROUP BY aggregations on Activity_Log__c fields (UserNameTxt__c, ComponentNameTxt__c, PageUrlTxt__c) for the current month.',
+        description:
+            'A compact analytics dashboard for Ghost Recorder activity data. Shows weekly and monthly event totals, a 7-day activity trend bar chart, and ranked lists of top users, top components, and top pages — all powered by the Activity Log records that Ghost Recorder writes automatically as users navigate.',
+        friendlyName: 'Activity Dashboard',
+        keyFields:
+            'Activity_Log__c.ActionTypePk__c, Activity_Log__c.CreatedDate, Activity_Log__c.UserNameTxt__c, Activity_Log__c.ComponentNameTxt__c, Activity_Log__c.PageUrlTxt__c'
+    },
     deliveryActivityFeed: {
         dataSource:
             'The All/Hours/Changes tabs call getActivityFeed which queries Activity_Log__c records filtered by type and paginated. Conversations tab calls getConversations which groups WorkItemComment__c records by Work Item into threads. The Hours tab also loads getPendingApprovals showing WorkLog__c entries awaiting approval. Events are grouped by date (Today, Yesterday, or formatted date).',
