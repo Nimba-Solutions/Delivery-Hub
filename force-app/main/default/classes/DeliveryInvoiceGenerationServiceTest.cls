@@ -53,8 +53,17 @@ private class DeliveryInvoiceGenerationServiceTest {
         );
         insert item;
 
+        WorkRequest__c request = new WorkRequest__c(
+            WorkItemId__c = item.Id,
+            DeliveryEntityId__c = entity.Id,
+            StatusPk__c = 'Active',
+            HourlyRateCurrency__c = 100
+        );
+        insert request;
+
         WorkLog__c log = new WorkLog__c(
             WorkItemId__c = item.Id,
+            RequestId__c = request.Id,
             HoursLoggedNumber__c = 8,
             WorkDateDate__c = Date.today().addDays(-5),
             WorkDescriptionTxt__c = 'Test work',

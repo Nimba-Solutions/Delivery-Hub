@@ -318,7 +318,7 @@ public with sharing class DeliveryHubSettingsController {
             settings.EnableStatusPageDateTime__c = dto.statusPageEnabled ? (settings.EnableStatusPageDateTime__c != null ? settings.EnableStatusPageDateTime__c : Datetime.now()) : null;
             settings.EnableAutoCreateWorkRequestDateTime__c = dto.autoCreateWorkRequest ? (settings.EnableAutoCreateWorkRequestDateTime__c != null ? settings.EnableAutoCreateWorkRequestDateTime__c : Datetime.now()) : null;
             settings.RequireWorkLogApprovalDate__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDate__c != null ? settings.RequireWorkLogApprovalDate__c : Datetime.now()) : null;
-            settings.EnableInvoiceGenerationDateTime__c = dto.invoiceGenerationEnabled ? (settings.EnableInvoiceGenerationDateTime__c != null ? settings.EnableInvoiceGenerationDateTime__c : Datetime.now()) : null;
+            settings.EnableInvoiceGenerationDateTime__c = dto.invoiceGenerationEnabled == true ? (settings.EnableInvoiceGenerationDateTime__c != null ? settings.EnableInvoiceGenerationDateTime__c : Datetime.now()) : null;
 
             // Keep legacy booleans in sync
             settings.EnableActivityLoggingBool__c = dto.activityLoggingEnabled == true;
