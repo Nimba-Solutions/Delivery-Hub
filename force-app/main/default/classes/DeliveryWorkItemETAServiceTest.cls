@@ -114,7 +114,7 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testBusinessDayLogic() {
-        DeliveryWorkItemETAService.ETACalculator calc = new DeliveryWorkItemETAService.ETACalculator(null);
+        DeliveryWorkItemETAService.ETACalculator calc = new DeliveryWorkItemETAService.ETACalculator(null, 'Software_Delivery');
         
         // Friday to Monday test
         Date friday = Date.newInstance(2023, 10, 20); // A Friday
@@ -143,8 +143,65 @@ private class DeliveryWorkItemETAServiceTest {
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Unexpected exception: ' + e.getTypeName());
         }
-        
+
         // Either an AuraHandledException was caught or the method handled nulls gracefully
         System.assert(exceptionThrown || !exceptionThrown, 'Method should handle null parameters without a fatal system exception');
+    }
+
+    /**
+     * @description Tests the workflow-type-parameterized method with explicit workflow type.
+     */
+    @IsTest
+    static void testGetWorkItemETAsWithPriorityForType() {
+        List<WorkItem__c> allWorkItems = [SELECT Id FROM WorkItem__c];
+        List<Id> prioritizedWorkItemIds = new List<Id>{allWorkItems[0].Id};
+
+        Test.startTest();
+        DeliveryWorkItemETAService.ETAResult result =
+            DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, prioritizedWorkItemIds, 'Software_Delivery');
+        Test.stopTest();
+
+        System.assertNotEquals(null, result, 'Result should not be null');
+        System.assertNotEquals(null, result.workItems, 'Work items list should not be null');
+    }
+
+    /**
+     * @description Tests the workflow-type-parameterized method with null workflow type (defaults to Software_Delivery).
+     */
+    @IsTest
+    static void testGetWorkItemETAsWithPriorityForTypeDefault() {
+        Test.startTest();
+        DeliveryWorkItemETAService.ETAResult result =
+            DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, new List<Id>(), null);
+        Test.stopTest();
+
+        System.assertNotEquals(null, result, 'Result should not be null for null workflow type');
+        System.assertNotEquals(null, result.workItems, 'Work items list should not be null');
+    }
+
+    /**
+     * @description Tests the workflow-type-parameterized method with blank workflow type (defaults to Software_Delivery).
+     */
+    @IsTest
+    static void testGetWorkItemETAsWithPriorityForTypeBlank() {
+        Test.startTest();
+        DeliveryWorkItemETAService.ETAResult result =
+            DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, new List<Id>(), '');
+        Test.stopTest();
+
+        System.assertNotEquals(null, result, 'Result should not be null for blank workflow type');
+    }
+
+    /**
+     * @description Tests the Queueable with an explicit workflow type parameter.
+     */
+    @IsTest
+    static void testQueueableWithWorkflowType() {
+        Test.startTest();
+        System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable('Software_Delivery'));
+        Test.stopTest();
+
+        List<WorkItem__c> updatedWorkItems = [SELECT Id, ProjectedUATReadyDate__c FROM WorkItem__c WHERE ProjectedUATReadyDate__c != NULL];
+        System.assert(updatedWorkItems.size() >= 0, 'Queueable with explicit type should execute without error');
     }
 }

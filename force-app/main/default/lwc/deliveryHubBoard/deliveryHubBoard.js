@@ -4,7 +4,7 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, track, wire } from "lwc";
+import { LightningElement, api, track, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import { NavigationMixin } from "lightning/navigation";
 
@@ -32,6 +32,8 @@ import createDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoa
 import removeDependency from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.removeDependency";
 import searchForPotentialBlockers from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.searchForPotentialBlockers";
 import getBoardMetrics from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.getBoardMetrics";
+import getWorkItemsForEntity from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.getWorkItemsForEntity";
+import getBoardMetricsForEntity from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubBoardController.getBoardMetricsForEntity";
 import getRequiredFieldsForStage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.getRequiredFieldsForStage';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';
 import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTypes';
@@ -77,6 +79,9 @@ const FIELDS = {
 };
 
 export default class DeliveryHubBoard extends NavigationMixin(LightningElement) {
+    /** @api Optional NetworkEntity record Id. When provided, scopes work items to this entity. Null/undefined = admin view (all entities). */
+    @api networkEntityId;
+
     persona = "Client";
     sizeMode = "equalSized";
     displayMode = "kanban";
@@ -365,7 +370,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    @wire(getBoardMetrics, { workflowType: '$activeWorkflowType' })
+    @wire(getBoardMetricsForEntity, { entityId: '$networkEntityId', workflowType: '$activeWorkflowType' })
     wiredMetrics({ data, error }) {
         if (data) {
             this.boardMetrics = data;
@@ -374,7 +379,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
     }
 
-    @wire(getWorkItems, { workflowType: '$activeWorkflowType' })
+    @wire(getWorkItemsForEntity, { entityId: '$networkEntityId', workflowType: '$activeWorkflowType' })
     wiredWorkItems(result) {
         this.workItemsWire = result;
         const { data, error } = result;
