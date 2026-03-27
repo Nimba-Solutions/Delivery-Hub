@@ -9,7 +9,8 @@
 import { LightningElement, api, track, wire } from 'lwc';
 import getWorkflowTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTemplates';
 
-const SINGLE_STAGE = 1;
+const SINGLE_STAGE = 1,
+    EMPTY = 0;
 
 export default class DeliveryWorkflowTemplatePicker extends LightningElement {
     @track templates = [];
@@ -33,11 +34,19 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
     }
 
     enrichTemplate(tmpl) {
-        const selected = tmpl.developerName === this.selectedTemplate;
-        const phases = tmpl.phases || [];
+        const selected = tmpl.developerName === this.selectedTemplate,
+            phases = tmpl.phases || [];
+        let cardClass = 'tp-card';
+        if (selected) {
+            cardClass = 'tp-card tp-card--selected';
+        }
+        let stageSuffix = 'stages';
+        if (tmpl.stageCount === SINGLE_STAGE) {
+            stageSuffix = 'stage';
+        }
         return {
             ...tmpl,
-            cardClass: selected ? 'tp-card tp-card--selected' : 'tp-card',
+            cardClass,
             defaultBadge: tmpl.isDefault === true,
             hasPhases: phases.length >= SINGLE_STAGE,
             isSelected: selected,
@@ -51,7 +60,7 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
                 key: `${tmpl.developerName}_dot_${idx}`,
                 style: `background-color: ${color}`
             })),
-            stageLabel: `${tmpl.stageCount} ${tmpl.stageCount === SINGLE_STAGE ? 'stage' : 'stages'}`
+            stageLabel: `${tmpl.stageCount} ${stageSuffix}`
         };
     }
 
@@ -60,7 +69,7 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
     }
 
     get hasTemplates() {
-        return this.templates.length > 0;
+        return this.templates.length > EMPTY;
     }
 
     get hasSelection() {
@@ -71,11 +80,18 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
         const devName = event.currentTarget.dataset.name;
         this.selectedTemplate = devName;
         // Re-derive card classes
-        this.templates = this.templates.map(tmpl => ({
-            ...tmpl,
-            cardClass: tmpl.developerName === devName ? 'tp-card tp-card--selected' : 'tp-card',
-            isSelected: tmpl.developerName === devName
-        }));
+        this.templates = this.templates.map(tmpl => {
+            const isMatch = tmpl.developerName === devName;
+            let cardClass = 'tp-card';
+            if (isMatch) {
+                cardClass = 'tp-card tp-card--selected';
+            }
+            return {
+                ...tmpl,
+                cardClass,
+                isSelected: isMatch
+            };
+        });
         this.dispatchEvent(new CustomEvent('templateselected', {
             detail: { workflowType: devName }
         }));
