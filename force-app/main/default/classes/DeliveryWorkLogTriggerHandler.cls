@@ -22,6 +22,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         if (!DeliveryTriggerControl.runAfterLogic) {
             return;
         }
+        DeliveryFieldTrackingService.trackCreates(newLogs);
         List<WorkLog__c> eligible = filterEligibleForSync(newLogs);
         if (eligible.isEmpty()) {
             return;
@@ -39,6 +40,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         if (!DeliveryTriggerControl.runAfterLogic) {
             return;
         }
+        DeliveryFieldTrackingService.trackChanges(newLogs, oldMap);
         List<WorkLog__c> newlyApproved = new List<WorkLog__c>();
         for (WorkLog__c wl : newLogs) {
             WorkLog__c old = oldMap.get(wl.Id);

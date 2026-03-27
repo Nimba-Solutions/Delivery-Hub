@@ -14,10 +14,13 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
      * @param newMap Map of new records
      */
     public static void handleAfterInsert(List<WorkItemComment__c> newRecords, Map<Id, WorkItemComment__c> newMap) {
+        // Field change tracking for creates
+        DeliveryFieldTrackingService.trackCreates(newRecords);
+
         // Delivery Hub Integration (Unified Sync Engine)
         // We explicitly define which fields constitute the "Payload" for a comment to keep it clean.
         Set<String> syncFields = new Set<String>{'BodyTxt__c', 'AuthorTxt__c'};
-        
+
         // Pass to Engine
         DeliverySyncEngine.captureChanges(newRecords, null, syncFields);
 

@@ -24,6 +24,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         runSyncAsync();
         enqueueWeeklyDigestIfDue();
         enqueueInvoiceGenerationIfDue();
+        enqueueOverdueRemindersIfEnabled();
         runReconciliation();
     }
 
@@ -120,6 +121,26 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         } catch (Exception ex) {
             String msg = ex.getMessage();
             msg.length(); // satisfy PMD empty-catch rule
+        }
+    }
+
+    /**
+     * @description Enqueues the overdue reminder Queueable once per day at 9 AM UTC
+     *              when the feature is enabled in org settings.
+     */
+    private static void enqueueOverdueRemindersIfEnabled() {
+        try {
+            Integer currentHour = DateTime.now().hourGmt();
+            if (currentHour != 9) {
+                return;
+            }
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (settings != null && settings.EnableOverdueRemindersDateTime__c != null) {
+                System.enqueueJob(new DeliveryOverdueReminderQueueable());
+            }
+        } catch (Exception ex) {
+            String msg = ex.getMessage();
+            msg.length();
         }
     }
 
