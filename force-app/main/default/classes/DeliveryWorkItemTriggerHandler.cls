@@ -270,6 +270,9 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
         for (WorkItem__c workItem : newWorkItems) {
+            if (workItem.ActivatedDateTime__c == null) {
+                workItem.ActivatedDateTime__c = now;
+            }
             if (workItem.StageEnteredDateTime__c == null) {
                 workItem.StageEnteredDateTime__c = now;
             }
