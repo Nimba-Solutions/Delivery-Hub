@@ -1,0 +1,143 @@
+<template>
+    <lightning-card title="Template Manager" icon-name="utility:template">
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.5rem;">
+            <lightning-button
+                label={toggleInactiveLabel}
+                variant="neutral"
+                icon-name="utility:filter"
+                onclick={handleToggleInactive}
+            ></lightning-button>
+            <lightning-button
+                label="New Template"
+                variant="brand"
+                icon-name="utility:add"
+                onclick={handleNewTemplate}
+            ></lightning-button>
+        </div>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_large slds-text-align_center">
+                <lightning-spinner alternative-text="Loading templates" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={error}>
+            <div class="slds-p-around_medium">
+                <div class="tm-error">
+                    <lightning-icon icon-name="utility:error" size="x-small" variant="error"></lightning-icon>
+                    <span>{error}</span>
+                </div>
+            </div>
+        </template>
+
+        <!-- Template List -->
+        <template lwc:if={hasTemplates}>
+            <div class="slds-p-horizontal_medium slds-p-bottom_x-small slds-p-top_x-small">
+                <span class="tm-count">{templateCount} templates</span>
+            </div>
+            <div class="tm-list">
+                <template for:each={filteredTemplates} for:item="tmpl">
+                    <div key={tmpl.Id} class="tm-row">
+                        <div class="tm-row-main">
+                            <div class="tm-row-left">
+                                <span class="tm-name">{tmpl.BriefDescriptionTxt__c}</span>
+                                <span class="tm-desc">{tmpl.descPreview}</span>
+                            </div>
+                            <div class="tm-row-meta">
+                                <span class="tm-workflow">{tmpl.workflowLabel}</span>
+                                <span style={tmpl.priorityStyle}>{tmpl.PriorityPk__c}</span>
+                                <span class="tm-estimate">{tmpl.estimateLabel}</span>
+                                <span class={tmpl.statusClass}>{tmpl.statusLabel}</span>
+                            </div>
+                            <div class="tm-row-actions">
+                                <lightning-button-group>
+                                    <lightning-button
+                                        label="Use"
+                                        variant="brand"
+                                        icon-name="utility:copy"
+                                        data-id={tmpl.Id}
+                                        onclick={handleUseTemplate}
+                                    ></lightning-button>
+                                    <lightning-button
+                                        label="View"
+                                        variant="neutral"
+                                        icon-name="utility:preview"
+                                        data-id={tmpl.Id}
+                                        onclick={handleViewTemplate}
+                                    ></lightning-button>
+                                    <lightning-button
+                                        label={tmpl.toggleLabel}
+                                        variant="neutral"
+                                        data-id={tmpl.Id}
+                                        onclick={handleToggleActive}
+                                    ></lightning-button>
+                                </lightning-button-group>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Empty State -->
+        <template lwc:if={showEmptyState}>
+            <template lwc:if={isLoaded}>
+                <template lwc:if={noError}>
+                    <div class="slds-p-around_medium slds-text-align_center" style="color: #706e6b;">
+                        <lightning-icon icon-name="utility:info" size="small" class="slds-m-bottom_small"></lightning-icon>
+                        <p>No templates found. Create a work item and mark it as a template to get started.</p>
+                    </div>
+                </template>
+            </template>
+        </template>
+    </lightning-card>
+
+    <!-- Clone Modal -->
+    <template lwc:if={showCloneModal}>
+        <section class="slds-modal slds-fade-in-open" tabindex="-1" role="dialog" aria-modal="true">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-modal__close" onclick={handleCloneCancel} title="Close">
+                        <lightning-icon icon-name="utility:close" size="small" alternative-text="Close"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium">Create from Template</h2>
+                    <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                        Source: {selectedTemplate.BriefDescriptionTxt__c}
+                    </p>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p class="slds-text-body_small slds-m-bottom_medium slds-text-color_weak">
+                        Optionally override fields below, or leave blank to use template defaults.
+                    </p>
+                    <lightning-input
+                        label="Title Override"
+                        placeholder="Leave blank to use template title"
+                        value={overrideTitle}
+                        onchange={handleOverrideTitleChange}
+                    ></lightning-input>
+                    <lightning-combobox
+                        label="Priority Override"
+                        value={overridePriority}
+                        options={priorityOptions}
+                        onchange={handleOverridePriorityChange}
+                        class="slds-m-top_small"
+                    ></lightning-combobox>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button variant="neutral" label="Cancel" onclick={handleCloneCancel}></lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Create Work Item"
+                        icon-name="utility:add"
+                        onclick={handleCloneConfirm}
+                        disabled={isCloning}
+                        class="slds-m-left_x-small"
+                    ></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

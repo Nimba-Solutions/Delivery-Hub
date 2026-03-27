@@ -133,6 +133,19 @@ export default class DeliveryClientOnboarding extends NavigationMixin(LightningE
         });
     }
 
+    handleViewEntity() {
+        if (!this.result || !this.result.entityId) {
+            return;
+        }
+        this[NavigationMixin.Navigate]({
+            attributes: {
+                actionName: 'view',
+                recordId: this.result.entityId
+            },
+            type: 'standard__recordPage'
+        });
+    }
+
     async handleSendAgreement() {
         if (!this.result || !this.result.documentId) {
             return;

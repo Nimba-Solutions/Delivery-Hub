@@ -1,0 +1,107 @@
+/* ── Error ── */
+.tm-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    font-size: 0.78rem;
+    color: #991b1b;
+}
+
+/* ── Count ── */
+.tm-count {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* ── Template List ── */
+.tm-list {
+    padding: 0 1rem 1rem;
+}
+
+.tm-row {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: #ffffff;
+    transition: box-shadow 0.15s;
+}
+.tm-row:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.tm-row-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.tm-row-left {
+    flex: 1;
+    min-width: 200px;
+}
+
+.tm-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: block;
+}
+
+.tm-desc {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    display: block;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+/* ── Row meta ── */
+.tm-row-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.tm-workflow {
+    font-size: 0.72rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+}
+
+.tm-estimate {
+    font-size: 0.72rem;
+    color: #64748b;
+}
+
+/* ── Status ── */
+.tm-status {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.tm-status--active {
+    color: #065f46;
+    background: #d1fae5;
+}
+.tm-status--inactive {
+    color: #991b1b;
+    background: #fef2f2;
+}
+
+/* ── Row actions ── */
+.tm-row-actions {
+    flex-shrink: 0;
+}
