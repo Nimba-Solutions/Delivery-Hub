@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -7,8 +6,11 @@
  * Dispatches 'templateselected' event with the chosen workflow type DeveloperName.
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, wire, track, api } from 'lwc';
+import { LightningElement, api, track, wire } from 'lwc';
 import getWorkflowTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowTemplates';
+
+const SINGLE_STAGE = 1,
+    EMPTY = 0;
 
 export default class DeliveryWorkflowTemplatePicker extends LightningElement {
     @track templates = [];
@@ -23,28 +25,7 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
     wiredTemplates({ data, error }) {
         this.isLoading = false;
         if (data) {
-            this.templates = data.map(t => {
-                const selected = t.developerName === this.selectedTemplate;
-                const phases = t.phases || [];
-                return {
-                    ...t,
-                    cardClass: selected ? 'tp-card tp-card--selected' : 'tp-card',
-                    defaultBadge: t.isDefault === true,
-                    hasPhases: phases.length >= 1,
-                    isSelected: selected,
-                    personaCount: (t.personas || []).length,
-                    personaLabel: (t.personas || []).join(', ').replace(/_/g, ' '),
-                    phaseList: phases.map((phase, idx) => ({
-                        key: `${t.developerName}_phase_${idx}`,
-                        label: phase
-                    })),
-                    pipelineDots: (t.stageColors || []).map((color, idx) => ({
-                        key: `${t.developerName}_dot_${idx}`,
-                        style: `background-color: ${color}`
-                    })),
-                    stageLabel: `${t.stageCount} ${t.stageCount === 1 ? 'stage' : 'stages'}`
-                };
-            });
+            this.templates = data.map(tmpl => this.enrichTemplate(tmpl));
             this.error = '';
         } else if (error) {
             this.error = error.body?.message || error.message || 'Failed to load workflow templates.';
@@ -52,12 +33,43 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
         }
     }
 
+    enrichTemplate(tmpl) {
+        const selected = tmpl.developerName === this.selectedTemplate,
+            phases = tmpl.phases || [];
+        let cardClass = 'tp-card';
+        if (selected) {
+            cardClass = 'tp-card tp-card--selected';
+        }
+        let stageSuffix = 'stages';
+        if (tmpl.stageCount === SINGLE_STAGE) {
+            stageSuffix = 'stage';
+        }
+        return {
+            ...tmpl,
+            cardClass,
+            defaultBadge: tmpl.isDefault === true,
+            hasPhases: phases.length >= SINGLE_STAGE,
+            isSelected: selected,
+            personaCount: (tmpl.personas || []).length,
+            personaLabel: (tmpl.personas || []).join(', ').replace(/_/gu, ' '),
+            phaseList: phases.map((phase, idx) => ({
+                key: `${tmpl.developerName}_phase_${idx}`,
+                label: phase
+            })),
+            pipelineDots: (tmpl.stageColors || []).map((color, idx) => ({
+                key: `${tmpl.developerName}_dot_${idx}`,
+                style: `background-color: ${color}`
+            })),
+            stageLabel: `${tmpl.stageCount} ${stageSuffix}`
+        };
+    }
+
     get showHeading() {
         return !this.compact;
     }
 
     get hasTemplates() {
-        return this.templates.length > 0;
+        return this.templates.length > EMPTY;
     }
 
     get hasSelection() {
@@ -68,11 +80,18 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
         const devName = event.currentTarget.dataset.name;
         this.selectedTemplate = devName;
         // Re-derive card classes
-        this.templates = this.templates.map(t => ({
-            ...t,
-            isSelected: t.developerName === devName,
-            cardClass: 'tp-card' + (t.developerName === devName ? ' tp-card--selected' : '')
-        }));
+        this.templates = this.templates.map(tmpl => {
+            const isMatch = tmpl.developerName === devName;
+            let cardClass = 'tp-card';
+            if (isMatch) {
+                cardClass = 'tp-card tp-card--selected';
+            }
+            return {
+                ...tmpl,
+                cardClass,
+                isSelected: isMatch
+            };
+        });
         this.dispatchEvent(new CustomEvent('templateselected', {
             detail: { workflowType: devName }
         }));
