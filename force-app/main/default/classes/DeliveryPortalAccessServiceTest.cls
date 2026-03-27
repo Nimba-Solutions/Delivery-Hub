@@ -165,4 +165,92 @@ private class DeliveryPortalAccessServiceTest {
 
         System.assertEquals(false, hasAccess, 'Null params should return false');
     }
+
+    // -------------------------------------------------------------------------
+    // generatePortalAccess tests
+    // -------------------------------------------------------------------------
+
+    @IsTest
+    static void testGeneratePortalAccessNewRecord() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Alpha Corp' LIMIT 1];
+
+        Test.startTest();
+        PortalAccess__c pa = DeliveryPortalAccessService.generatePortalAccess(
+            entityA.Id, 'newuser@example.com', 'Admin'
+        );
+        Test.stopTest();
+
+        System.assertNotEquals(null, pa.Id, 'Should return created record');
+        System.assertEquals('newuser@example.com', pa.EmailTxt__c, 'Email should match');
+        System.assertEquals('Admin', pa.RolePk__c, 'Role should be Admin');
+        System.assertNotEquals(null, pa.AccessTokenTxt__c, 'Token should be generated');
+        System.assert(pa.AccessTokenTxt__c.length() > 10, 'Token should be a substantial string');
+    }
+
+    @IsTest
+    static void testGeneratePortalAccessDefaultRole() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Alpha Corp' LIMIT 1];
+
+        Test.startTest();
+        PortalAccess__c pa = DeliveryPortalAccessService.generatePortalAccess(
+            entityA.Id, 'defaultrole@example.com', null
+        );
+        Test.stopTest();
+
+        System.assertEquals('Member', pa.RolePk__c, 'Role should default to Member');
+    }
+
+    @IsTest
+    static void testGeneratePortalAccessExistingRecord() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Alpha Corp' LIMIT 1];
+
+        // multiuser@example.com already has access to Alpha Corp from TestSetup
+        Test.startTest();
+        PortalAccess__c pa = DeliveryPortalAccessService.generatePortalAccess(
+            entityA.Id, 'multiuser@example.com', 'Member'
+        );
+        Test.stopTest();
+
+        System.assertNotEquals(null, pa.Id, 'Should return the updated record');
+        System.assertEquals('Member', pa.RolePk__c, 'Role should be updated to Member');
+        System.assertNotEquals(null, pa.AccessTokenTxt__c, 'Token should be regenerated');
+    }
+
+    @IsTest
+    static void testGeneratePortalAccessNullEntityId() {
+        Boolean threw = false;
+        try {
+            DeliveryPortalAccessService.generatePortalAccess(null, 'test@test.com', 'Admin');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'Should throw for null entity Id');
+    }
+
+    @IsTest
+    static void testGeneratePortalAccessBlankEmail() {
+        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Alpha Corp' LIMIT 1];
+
+        Boolean threw = false;
+        try {
+            DeliveryPortalAccessService.generatePortalAccess(entityA.Id, '', 'Admin');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'Should throw for blank email');
+    }
+
+    @IsTest
+    static void testGeneratePortalAccessInvalidEntity() {
+        // Use a fake Id that won't match any real entity
+        Id fakeId = NetworkEntity__c.SObjectType.getDescribe().getKeyPrefix() + '000000000000';
+
+        Boolean threw = false;
+        try {
+            DeliveryPortalAccessService.generatePortalAccess(fakeId, 'test@test.com', 'Admin');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'Should throw for invalid entity Id');
+    }
 }
