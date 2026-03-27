@@ -75,7 +75,7 @@ public without sharing class DeliverySyncEngine {
             // 2. Evaluate Upstream Routing Edges (The Parent Work Items)
             Map<Id, WorkItem__c> parentWorkItems = new Map<Id, WorkItem__c>([
                 SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c,
-                       ClientNetworkEntityId__r.EnableVendorPushBool__c,
+                       ClientNetworkEntityId__r.EnableVendorPushDateTime__c,
                        ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c
                 FROM WorkItem__c
                 WHERE Id IN :workItemIds
@@ -144,7 +144,7 @@ public without sharing class DeliverySyncEngine {
                             continue;
                         }
 
-                        Boolean vendorPushEnabled = parentWorkItem.ClientNetworkEntityId__r.EnableVendorPushBool__c == true
+                        Boolean vendorPushEnabled = parentWorkItem.ClientNetworkEntityId__r.EnableVendorPushDateTime__c != null
                             && String.isNotBlank(parentWorkItem.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c);
 
                         itemsToInsert.add(createSyncItem(rec, null, allowedFields, globalSourceId, vendorPushEnabled));

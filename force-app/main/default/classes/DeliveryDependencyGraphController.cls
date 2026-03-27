@@ -214,7 +214,7 @@ public with sharing class DeliveryDependencyGraphController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                    WorkflowTypeTxt__c, OwnerId, Owner.Name
             FROM WorkItem__c
-            WHERE IsActiveBool__c = true
+            WHERE ActivatedDateTime__c != null
             AND WorkflowTypeTxt__c = :workflowType
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE

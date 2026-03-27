@@ -21,9 +21,9 @@ public class DeliveryRecurringItemServiceTest {
                 PriorityPk__c = 'Medium',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsRecurringBool__c = true,
-                IsTemplateBool__c = false,
+                ActivatedDateTime__c = Datetime.now(),
+                RecurringEnabledDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = null,
                 RecurrenceScheduleTxt__c = 'Weekly',
                 RecurrenceDayTxt__c = 'Monday',
                 NextRecurrenceDate__c = Date.today(),
@@ -37,9 +37,9 @@ public class DeliveryRecurringItemServiceTest {
                 PriorityPk__c = 'High',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsRecurringBool__c = true,
-                IsTemplateBool__c = false,
+                ActivatedDateTime__c = Datetime.now(),
+                RecurringEnabledDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = null,
                 RecurrenceScheduleTxt__c = 'Monthly',
                 RecurrenceDayTxt__c = '15',
                 NextRecurrenceDate__c = Date.today(),
@@ -52,9 +52,9 @@ public class DeliveryRecurringItemServiceTest {
                 PriorityPk__c = 'Low',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsRecurringBool__c = true,
-                IsTemplateBool__c = false,
+                ActivatedDateTime__c = Datetime.now(),
+                RecurringEnabledDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = null,
                 RecurrenceScheduleTxt__c = 'Quarterly',
                 RecurrenceDayTxt__c = '1',
                 NextRecurrenceDate__c = Date.today()
@@ -66,9 +66,9 @@ public class DeliveryRecurringItemServiceTest {
                 PriorityPk__c = 'High',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsTemplateBool__c = true,
-                IsRecurringBool__c = false,
+                ActivatedDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = Datetime.now(),
+                RecurringEnabledDateTime__c = null,
                 Tags__c = 'bug,template',
                 EstimatedHoursNumber__c = 8,
                 DeveloperDaysSizeNumber__c = 2
@@ -78,18 +78,18 @@ public class DeliveryRecurringItemServiceTest {
                 BriefDescriptionTxt__c = 'Normal Work Item',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsTemplateBool__c = false,
-                IsRecurringBool__c = false
+                ActivatedDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = null,
+                RecurringEnabledDateTime__c = null
             ),
             // Future recurring item (should NOT be processed today)
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Future Recurring',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsRecurringBool__c = true,
-                IsTemplateBool__c = false,
+                ActivatedDateTime__c = Datetime.now(),
+                RecurringEnabledDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = null,
                 RecurrenceScheduleTxt__c = 'Weekly',
                 RecurrenceDayTxt__c = 'Friday',
                 NextRecurrenceDate__c = Date.today().addDays(30)
@@ -107,31 +107,31 @@ public class DeliveryRecurringItemServiceTest {
     @IsTest
     static void testProcessRecurringItemsCreatesClones() {
         // 3 recurring items have NextRecurrenceDate__c <= today
-        Integer countBefore = [SELECT COUNT() FROM WorkItem__c WHERE IsRecurringBool__c = false AND IsTemplateBool__c = false];
+        Integer countBefore = [SELECT COUNT() FROM WorkItem__c WHERE RecurringEnabledDateTime__c = null AND TemplateMarkedDateTime__c = null];
 
         Test.startTest();
         DeliveryRecurringItemService.processRecurringItems();
         Test.stopTest();
 
         // Should have created 3 new cloned items
-        Integer countAfter = [SELECT COUNT() FROM WorkItem__c WHERE IsRecurringBool__c = false AND IsTemplateBool__c = false];
+        Integer countAfter = [SELECT COUNT() FROM WorkItem__c WHERE RecurringEnabledDateTime__c = null AND TemplateMarkedDateTime__c = null];
         System.assertEquals(countBefore + 3, countAfter, 'Should have created 3 clones from recurring items');
 
         // Verify cloned fields on the weekly item clone
         WorkItem__c weeklyClone = [
             SELECT BriefDescriptionTxt__c, PriorityPk__c, Tags__c, TemplateSourceId__c,
-                   IsRecurringBool__c, IsTemplateBool__c, IsActiveBool__c
+                   RecurringEnabledDateTime__c, TemplateMarkedDateTime__c, ActivatedDateTime__c
             FROM WorkItem__c
             WHERE TemplateSourceId__c != null
             AND BriefDescriptionTxt__c = 'Weekly Standup Notes'
-            AND IsRecurringBool__c = false
+            AND RecurringEnabledDateTime__c = null
             LIMIT 1
         ];
         System.assertEquals('Medium', weeklyClone.PriorityPk__c, 'Priority should be cloned');
         System.assertEquals('standup,recurring', weeklyClone.Tags__c, 'Tags should be cloned');
-        System.assertEquals(false, weeklyClone.IsRecurringBool__c, 'Clone should not be recurring');
-        System.assertEquals(false, weeklyClone.IsTemplateBool__c, 'Clone should not be a template');
-        System.assertEquals(true, weeklyClone.IsActiveBool__c, 'Clone should be active');
+        System.assertEquals(null, weeklyClone.RecurringEnabledDateTime__c, 'Clone should not be recurring');
+        System.assertEquals(null, weeklyClone.TemplateMarkedDateTime__c, 'Clone should not be a template');
+        System.assertNotEquals(null, weeklyClone.ActivatedDateTime__c, 'Clone should be active');
         System.assertNotEquals(null, weeklyClone.TemplateSourceId__c, 'TemplateSourceId should be set');
     }
 
@@ -141,7 +141,7 @@ public class DeliveryRecurringItemServiceTest {
             SELECT NextRecurrenceDate__c
             FROM WorkItem__c
             WHERE BriefDescriptionTxt__c = 'Weekly Standup Notes'
-            AND IsRecurringBool__c = true
+            AND RecurringEnabledDateTime__c != null
         ];
         Date originalDate = weeklyBefore.NextRecurrenceDate__c;
 
@@ -153,7 +153,7 @@ public class DeliveryRecurringItemServiceTest {
             SELECT NextRecurrenceDate__c
             FROM WorkItem__c
             WHERE BriefDescriptionTxt__c = 'Weekly Standup Notes'
-            AND IsRecurringBool__c = true
+            AND RecurringEnabledDateTime__c != null
         ];
         System.assert(weeklyAfter.NextRecurrenceDate__c > originalDate, 'Next recurrence date should be advanced');
     }
@@ -212,8 +212,8 @@ public class DeliveryRecurringItemServiceTest {
 
         WorkItem__c clone = [
             SELECT BriefDescriptionTxt__c, PriorityPk__c, Tags__c, EstimatedHoursNumber__c,
-                   DeveloperDaysSizeNumber__c, TemplateSourceId__c, IsTemplateBool__c,
-                   IsActiveBool__c
+                   DeveloperDaysSizeNumber__c, TemplateSourceId__c, TemplateMarkedDateTime__c,
+                   ActivatedDateTime__c
             FROM WorkItem__c
             WHERE Id = :newId
         ];
@@ -223,8 +223,8 @@ public class DeliveryRecurringItemServiceTest {
         System.assertEquals(8, clone.EstimatedHoursNumber__c, 'Estimated hours should be cloned');
         System.assertEquals(2, clone.DeveloperDaysSizeNumber__c, 'Developer days should be cloned');
         System.assertEquals(template.Id, clone.TemplateSourceId__c, 'Source Id should reference the template');
-        System.assertEquals(false, clone.IsTemplateBool__c, 'Clone should not be a template');
-        System.assertEquals(true, clone.IsActiveBool__c, 'Clone should be active');
+        System.assertEquals(null, clone.TemplateMarkedDateTime__c, 'Clone should not be a template');
+        System.assertNotEquals(null, clone.ActivatedDateTime__c, 'Clone should be active');
     }
 
     @IsTest

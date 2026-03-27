@@ -32,7 +32,7 @@ public without sharing class DeliveryBountyService {
                        ClientNetworkEntityId__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
-                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
                     AND BountyDifficultyPk__c = :difficulty AND BountySkillsTxt__c LIKE :skillFilter
                 WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
             ];
@@ -45,7 +45,7 @@ public without sharing class DeliveryBountyService {
                        ClientNetworkEntityId__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
-                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
                     AND BountyDifficultyPk__c = :difficulty
                 WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
             ];
@@ -58,7 +58,7 @@ public without sharing class DeliveryBountyService {
                        ClientNetworkEntityId__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
-                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
                     AND BountySkillsTxt__c LIKE :skillFilter
                 WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
             ];
@@ -71,7 +71,7 @@ public without sharing class DeliveryBountyService {
                        ClientNetworkEntityId__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
-                WHERE IsBountyBool__c = true AND BountyStatusPk__c = 'Open' AND IsActiveBool__c = true
+                WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
                 WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 100
             ];
         }
@@ -103,8 +103,8 @@ public without sharing class DeliveryBountyService {
                     ORDER BY ClaimedDateTime__c ASC)
             FROM WorkItem__c
             WHERE BountyTokenTxt__c = :token
-                AND IsBountyBool__c = true
-                AND IsActiveBool__c = true
+                AND BountyEnabledDateTime__c != null
+                AND ActivatedDateTime__c != null
             WITH SYSTEM_MODE
             LIMIT 1
         ];
@@ -248,9 +248,9 @@ public without sharing class DeliveryBountyService {
     private static WorkItem__c getBountyWorkItem(String token) {
         List<WorkItem__c> items = [
             SELECT Id, BountyStatusPk__c, BountyDeadlineDate__c, BountyMaxClaimsNumber__c,
-                   IsBountyBool__c, IsActiveBool__c
+                   BountyEnabledDateTime__c, ActivatedDateTime__c
             FROM WorkItem__c
-            WHERE BountyTokenTxt__c = :token AND IsBountyBool__c = true AND IsActiveBool__c = true
+            WHERE BountyTokenTxt__c = :token AND BountyEnabledDateTime__c != null AND ActivatedDateTime__c != null
             WITH SYSTEM_MODE
             LIMIT 1
         ];

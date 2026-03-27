@@ -15,24 +15,24 @@ private class DeliveryScoreServiceTest {
         List<WorkItem__c> items = new List<WorkItem__c>{
             // Backlog items
             new WorkItem__c(BriefDescriptionTxt__c = 'Backlog 1', StageNamePk__c = 'Backlog',
-                            PriorityPk__c = 'Low', SortOrderNumber__c = 1, IsActiveBool__c = true),
+                            PriorityPk__c = 'Low', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now()),
             new WorkItem__c(BriefDescriptionTxt__c = 'Backlog 2', StageNamePk__c = 'Backlog',
-                            PriorityPk__c = 'Medium', SortOrderNumber__c = 2, IsActiveBool__c = true),
+                            PriorityPk__c = 'Medium', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now()),
             // In Development items
             new WorkItem__c(BriefDescriptionTxt__c = 'Dev 1', StageNamePk__c = 'In Development',
-                            PriorityPk__c = 'High', SortOrderNumber__c = 3, IsActiveBool__c = true),
+                            PriorityPk__c = 'High', SortOrderNumber__c = 3, ActivatedDateTime__c = Datetime.now()),
             new WorkItem__c(BriefDescriptionTxt__c = 'Dev 2', StageNamePk__c = 'In Development',
-                            PriorityPk__c = 'Medium', SortOrderNumber__c = 4, IsActiveBool__c = true),
+                            PriorityPk__c = 'Medium', SortOrderNumber__c = 4, ActivatedDateTime__c = Datetime.now()),
             // QA items
             new WorkItem__c(BriefDescriptionTxt__c = 'QA 1', StageNamePk__c = 'QA In Progress',
-                            PriorityPk__c = 'High', SortOrderNumber__c = 5, IsActiveBool__c = true),
+                            PriorityPk__c = 'High', SortOrderNumber__c = 5, ActivatedDateTime__c = Datetime.now()),
             // Done items
             new WorkItem__c(BriefDescriptionTxt__c = 'Done 1', StageNamePk__c = 'Done',
-                            PriorityPk__c = 'Medium', SortOrderNumber__c = 6, IsActiveBool__c = true),
+                            PriorityPk__c = 'Medium', SortOrderNumber__c = 6, ActivatedDateTime__c = Datetime.now()),
             new WorkItem__c(BriefDescriptionTxt__c = 'Done 2', StageNamePk__c = 'Done',
-                            PriorityPk__c = 'Low', SortOrderNumber__c = 7, IsActiveBool__c = true),
+                            PriorityPk__c = 'Low', SortOrderNumber__c = 7, ActivatedDateTime__c = Datetime.now()),
             new WorkItem__c(BriefDescriptionTxt__c = 'Done 3', StageNamePk__c = 'Done',
-                            PriorityPk__c = 'Low', SortOrderNumber__c = 8, IsActiveBool__c = true)
+                            PriorityPk__c = 'Low', SortOrderNumber__c = 8, ActivatedDateTime__c = Datetime.now())
         };
         insert items;
 
@@ -198,7 +198,7 @@ private class DeliveryScoreServiceTest {
                 StageNamePk__c = 'Done',
                 PriorityPk__c = 'Low',
                 SortOrderNumber__c = i + 1,
-                IsActiveBool__c = true
+                ActivatedDateTime__c = Datetime.now()
             ));
         }
         insert doneItems;
@@ -229,7 +229,7 @@ private class DeliveryScoreServiceTest {
                 StageNamePk__c = 'In Development',
                 PriorityPk__c = 'High',
                 SortOrderNumber__c = i + 1,
-                IsActiveBool__c = true
+                ActivatedDateTime__c = Datetime.now()
             ));
         }
         insert items;
@@ -259,7 +259,7 @@ private class DeliveryScoreServiceTest {
                 StageNamePk__c = 'In Development',
                 PriorityPk__c = 'Medium',
                 SortOrderNumber__c = i + 1,
-                IsActiveBool__c = true
+                ActivatedDateTime__c = Datetime.now()
             ));
         }
         insert items;

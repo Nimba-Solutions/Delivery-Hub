@@ -19,9 +19,9 @@ private class DeliveryTemplateManagerControllerTest {
                 PriorityPk__c = 'High',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsTemplateBool__c = true,
-                IsRecurringBool__c = false,
+                ActivatedDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = Datetime.now(),
+                RecurringEnabledDateTime__c = null,
                 EstimatedHoursNumber__c = 4,
                 DeveloperDaysSizeNumber__c = 1
             ),
@@ -31,18 +31,18 @@ private class DeliveryTemplateManagerControllerTest {
                 PriorityPk__c = 'Low',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = false,
-                IsTemplateBool__c = true,
-                IsRecurringBool__c = false,
+                ActivatedDateTime__c = null,
+                TemplateMarkedDateTime__c = Datetime.now(),
+                RecurringEnabledDateTime__c = null,
                 EstimatedHoursNumber__c = 2
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Normal Item',
                 StageNamePk__c = 'Backlog',
                 WorkflowTypeTxt__c = 'Software_Delivery',
-                IsActiveBool__c = true,
-                IsTemplateBool__c = false,
-                IsRecurringBool__c = false
+                ActivatedDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = null,
+                RecurringEnabledDateTime__c = null
             )
         };
         insert items;
@@ -88,12 +88,12 @@ private class DeliveryTemplateManagerControllerTest {
         System.assertNotEquals(null, newId, 'Should return new record Id');
 
         WorkItem__c clone = [
-            SELECT BriefDescriptionTxt__c, IsTemplateBool__c, IsActiveBool__c
+            SELECT BriefDescriptionTxt__c, TemplateMarkedDateTime__c, ActivatedDateTime__c
             FROM WorkItem__c WHERE Id = :newId
         ];
         System.assertEquals('Active Template', clone.BriefDescriptionTxt__c, 'Clone should copy title');
-        System.assertEquals(false, clone.IsTemplateBool__c, 'Clone should not be a template');
-        System.assertEquals(true, clone.IsActiveBool__c, 'Clone should be active');
+        System.assertEquals(null, clone.TemplateMarkedDateTime__c, 'Clone should not be a template');
+        System.assertNotEquals(null, clone.ActivatedDateTime__c, 'Clone should be active');
     }
 
     @isTest
@@ -138,8 +138,8 @@ private class DeliveryTemplateManagerControllerTest {
         DeliveryTemplateManagerController.deactivateTemplate(template.Id);
         Test.stopTest();
 
-        WorkItem__c updated = [SELECT IsActiveBool__c FROM WorkItem__c WHERE Id = :template.Id];
-        System.assertEquals(false, updated.IsActiveBool__c, 'Template should be deactivated');
+        WorkItem__c updated = [SELECT ActivatedDateTime__c FROM WorkItem__c WHERE Id = :template.Id];
+        System.assertEquals(null, updated.ActivatedDateTime__c, 'Template should be deactivated');
     }
 
     @isTest
@@ -161,8 +161,8 @@ private class DeliveryTemplateManagerControllerTest {
         DeliveryTemplateManagerController.activateTemplate(template.Id);
         Test.stopTest();
 
-        WorkItem__c updated = [SELECT IsActiveBool__c FROM WorkItem__c WHERE Id = :template.Id];
-        System.assertEquals(true, updated.IsActiveBool__c, 'Template should be reactivated');
+        WorkItem__c updated = [SELECT ActivatedDateTime__c FROM WorkItem__c WHERE Id = :template.Id];
+        System.assertNotEquals(null, updated.ActivatedDateTime__c, 'Template should be reactivated');
     }
 
     @isTest

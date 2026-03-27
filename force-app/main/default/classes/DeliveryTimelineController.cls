@@ -53,8 +53,8 @@ public with sharing class DeliveryTimelineController {
                 + 'WorkflowTypeTxt__c, '
                 + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
                 + 'FROM WorkItem__c '
-                + 'WHERE IsActiveBool__c = true '
-                + 'AND IsTemplateBool__c = false ';
+                + 'WHERE ActivatedDateTime__c != null '
+                + 'AND TemplateMarkedDateTime__c = null ';
 
             if (String.isNotBlank(workflowTypeName)) {
                 query += 'AND WorkflowTypeTxt__c = :workflowTypeName ';

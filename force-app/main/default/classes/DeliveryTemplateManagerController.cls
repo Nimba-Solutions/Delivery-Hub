@@ -18,10 +18,10 @@ public with sharing class DeliveryTemplateManagerController {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c,
                    Tags__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
-                   DeveloperDaysSizeNumber__c, StageNamePk__c, Epic__c, IsActiveBool__c,
+                   DeveloperDaysSizeNumber__c, StageNamePk__c, Epic__c, ActivatedDateTime__c,
                    CreatedDate, LastModifiedDate
             FROM WorkItem__c
-            WHERE IsTemplateBool__c = true
+            WHERE TemplateMarkedDateTime__c != null
             WITH SYSTEM_MODE
             ORDER BY WorkflowTypeTxt__c ASC, BriefDescriptionTxt__c ASC
         ];
@@ -45,7 +45,7 @@ public with sharing class DeliveryTemplateManagerController {
     }
 
     /**
-     * @description Deactivates a template by setting IsActiveBool__c to false.
+     * @description Deactivates a template by setting ActivatedDateTime__c to null.
      *              This hides it from the template browser without deleting it.
      * @param templateId The Id of the template WorkItem__c to deactivate.
      */
@@ -57,10 +57,10 @@ public with sharing class DeliveryTemplateManagerController {
             throw ex;
         }
         List<WorkItem__c> templates = [
-            SELECT Id, IsActiveBool__c, IsTemplateBool__c
+            SELECT Id, ActivatedDateTime__c, TemplateMarkedDateTime__c
             FROM WorkItem__c
             WHERE Id = :templateId
-            AND IsTemplateBool__c = true
+            AND TemplateMarkedDateTime__c != null
             WITH SYSTEM_MODE
             LIMIT 1
         ];
@@ -69,7 +69,7 @@ public with sharing class DeliveryTemplateManagerController {
             ex.setMessage('Template not found.');
             throw ex;
         }
-        templates[0].IsActiveBool__c = false;
+        templates[0].ActivatedDateTime__c = null;
         Database.update(templates, AccessLevel.SYSTEM_MODE);
     }
 
@@ -85,10 +85,10 @@ public with sharing class DeliveryTemplateManagerController {
             throw ex;
         }
         List<WorkItem__c> templates = [
-            SELECT Id, IsActiveBool__c, IsTemplateBool__c
+            SELECT Id, ActivatedDateTime__c, TemplateMarkedDateTime__c
             FROM WorkItem__c
             WHERE Id = :templateId
-            AND IsTemplateBool__c = true
+            AND TemplateMarkedDateTime__c != null
             WITH SYSTEM_MODE
             LIMIT 1
         ];
@@ -97,7 +97,7 @@ public with sharing class DeliveryTemplateManagerController {
             ex.setMessage('Template not found.');
             throw ex;
         }
-        templates[0].IsActiveBool__c = true;
+        templates[0].ActivatedDateTime__c = Datetime.now();
         Database.update(templates, AccessLevel.SYSTEM_MODE);
     }
 }

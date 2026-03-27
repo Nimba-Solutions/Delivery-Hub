@@ -125,8 +125,8 @@ public with sharing class DeliveryRecurringItemService {
                    Tags__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
                    DeveloperDaysSizeNumber__c, Epic__c
             FROM WorkItem__c
-            WHERE IsTemplateBool__c = true
-            AND IsActiveBool__c = true
+            WHERE TemplateMarkedDateTime__c != null
+            AND ActivatedDateTime__c != null
             WITH SYSTEM_MODE
             ORDER BY WorkflowTypeTxt__c ASC, BriefDescriptionTxt__c ASC
         ];
@@ -168,10 +168,10 @@ public with sharing class DeliveryRecurringItemService {
         String fieldList = String.escapeSingleQuotes(CLONE_FIELDS_CSV);
 
         String query = 'SELECT Id, OwnerId, ' + fieldList +
-            ', IsRecurringBool__c, RecurrenceScheduleTxt__c, RecurrenceDayTxt__c, NextRecurrenceDate__c' +
+            ', RecurringEnabledDateTime__c, RecurrenceScheduleTxt__c, RecurrenceDayTxt__c, NextRecurrenceDate__c' +
             ' FROM WorkItem__c' +
-            ' WHERE IsRecurringBool__c = true' +
-            ' AND IsTemplateBool__c = false' +
+            ' WHERE RecurringEnabledDateTime__c != null' +
+            ' AND TemplateMarkedDateTime__c = null' +
             ' AND NextRecurrenceDate__c <= :today' +
             ' AND NextRecurrenceDate__c != null';
 
@@ -182,7 +182,7 @@ public with sharing class DeliveryRecurringItemService {
         String fieldList = String.escapeSingleQuotes(CLONE_FIELDS_CSV);
 
         String query = 'SELECT Id, OwnerId, ' + fieldList +
-            ', IsTemplateBool__c' +
+            ', TemplateMarkedDateTime__c' +
             ' FROM WorkItem__c WHERE Id = :templateId WITH SYSTEM_MODE LIMIT 1';
 
         List<WorkItem__c> templates = Database.query(query);
@@ -213,9 +213,9 @@ public with sharing class DeliveryRecurringItemService {
 
     private static WorkItem__c initClone(String workflowType, Id sourceId, Id ownerId) {
         WorkItem__c clone = new WorkItem__c();
-        clone.IsActiveBool__c = true;
-        clone.IsTemplateBool__c = false;
-        clone.IsRecurringBool__c = false;
+        clone.ActivatedDateTime__c = Datetime.now();
+        clone.TemplateMarkedDateTime__c = null;
+        clone.RecurringEnabledDateTime__c = null;
         clone.StageNamePk__c = getFirstStageForWorkflow(workflowType);
         clone.TemplateSourceId__c = sourceId;
         clone.OwnerId = ownerId;

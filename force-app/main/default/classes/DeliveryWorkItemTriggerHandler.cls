@@ -60,7 +60,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'ProjectedUATReadyDate__c',
             'AcceptanceCriteriaTxt__c',
             'StepsToReproduceTxt__c',
-            'IsBountyBool__c',
+            'BountyEnabledDateTime__c',
             'BountyAmountCurrency__c',
             'BountyDeadlineDate__c',
             'BountyStatusPk__c',
@@ -225,11 +225,11 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     public static void handleBeforeUpdate(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
         stampStageEnteredOnUpdate(newWorkItems, oldMap);
 
-        // Auto-generate bounty token when IsBountyBool__c flips to true on update
+        // Auto-generate bounty token when BountyEnabledDateTime__c flips to true on update
         for (WorkItem__c workItem : newWorkItems) {
             WorkItem__c oldItem = oldMap.get(workItem.Id);
-            if (workItem.IsBountyBool__c == true
-                && (oldItem == null || oldItem.IsBountyBool__c != true)
+            if (workItem.BountyEnabledDateTime__c != null
+                && (oldItem == null || oldItem.BountyEnabledDateTime__c == null)
                 && String.isBlank(workItem.BountyTokenTxt__c)) {
                 workItem.BountyTokenTxt__c = DeliveryBountyService.generateBountyToken();
             }
@@ -270,11 +270,14 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
         for (WorkItem__c workItem : newWorkItems) {
+            if (workItem.ActivatedDateTime__c == null) {
+                workItem.ActivatedDateTime__c = now;
+            }
             if (workItem.StageEnteredDateTime__c == null) {
                 workItem.StageEnteredDateTime__c = now;
             }
             // Auto-generate bounty token when published as a bounty
-            if (workItem.IsBountyBool__c == true && String.isBlank(workItem.BountyTokenTxt__c)) {
+            if (workItem.BountyEnabledDateTime__c != null && String.isBlank(workItem.BountyTokenTxt__c)) {
                 workItem.BountyTokenTxt__c = DeliveryBountyService.generateBountyToken();
             }
         }

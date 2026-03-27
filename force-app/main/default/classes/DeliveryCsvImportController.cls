@@ -196,7 +196,7 @@ public with sharing class DeliveryCsvImportController {
     private static WorkItem__c buildWorkItem(Map<String, String> csvRow, String workflowType) {
         WorkItem__c wi = new WorkItem__c();
         wi.WorkflowTypeTxt__c = workflowType;
-        wi.IsActiveBool__c = true;
+        wi.ActivatedDateTime__c = Datetime.now();
 
         for (String fieldName : csvRow.keySet()) {
             String val = csvRow.get(fieldName);
