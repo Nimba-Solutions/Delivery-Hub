@@ -52,8 +52,10 @@ public with sharing class DeliveryActivityDashboardController {
         ];
         result.put('totalThisMonth', totalThisMonth);
 
-        // Top 5 most active users
+        // Top 5 most active users — resolve IDs to names
         List<RankedItem> topUsers = new List<RankedItem>();
+        List<String> userIds = new List<String>();
+        List<Integer> userCounts = new List<Integer>();
         for (AggregateResult agg : [
             SELECT UserIdTxt__c userId, COUNT(Id) cnt
             FROM ActivityLog__c
@@ -64,9 +66,21 @@ public with sharing class DeliveryActivityDashboardController {
             ORDER BY COUNT(Id) DESC
             LIMIT 5
         ]) {
+            userIds.add((String) agg.get('userId'));
+            userCounts.add(((Decimal) agg.get('cnt')).intValue());
+        }
+        Map<Id, User> userMap = new Map<Id, User>();
+        if (!userIds.isEmpty()) {
+            try {
+                userMap = new Map<Id, User>([SELECT Id, Name FROM User WHERE Id IN :userIds WITH SYSTEM_MODE]);
+            } catch (Exception ignored) { /* non-critical — fall back to IDs */ }
+        }
+        for (Integer i = 0; i < userIds.size(); i++) {
             RankedItem item = new RankedItem();
-            item.label = (String) agg.get('userId');
-            item.count = ((Decimal) agg.get('cnt')).intValue();
+            Id uid = null;
+            try { uid = (Id) userIds[i]; } catch (Exception ignored) { /* not a valid Id */ }
+            item.label = (uid != null && userMap.containsKey(uid)) ? userMap.get(uid).Name : userIds[i];
+            item.count = userCounts[i];
             topUsers.add(item);
         }
         result.put('topUsers', topUsers);

@@ -63,12 +63,21 @@ public without sharing class DeliveryPortalController {
         ];
         result.put('attentionCount', attentionCount);
 
-        // Phase distribution
+        // Phase distribution — dynamically derived from CMT stage-to-phase mapping
         Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
-        Map<String, Integer> phaseCounts = new Map<String, Integer>{
-            'Planning' => 0, 'Approval' => 0, 'Development' => 0,
-            'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
-        };
+
+        // Build an ordered list of unique phases and initialize counts dynamically
+        List<String> orderedPhases = new List<String>();
+        Set<String> seenPhases = new Set<String>();
+        Map<String, Integer> phaseCounts = new Map<String, Integer>();
+        for (String stageVal : stageToPhase.keySet()) {
+            String phase = stageToPhase.get(stageVal);
+            if (!seenPhases.contains(phase)) {
+                seenPhases.add(phase);
+                orderedPhases.add(phase);
+                phaseCounts.put(phase, 0);
+            }
+        }
 
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
@@ -85,7 +94,7 @@ public without sharing class DeliveryPortalController {
         }
 
         List<Map<String, Object>> phases = new List<Map<String, Object>>();
-        for (String ph : new List<String>{ 'Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment' }) {
+        for (String ph : orderedPhases) {
             Map<String, Object> phaseEntry = new Map<String, Object>();
             phaseEntry.put('label', ph);
             phaseEntry.put('count', phaseCounts.get(ph));

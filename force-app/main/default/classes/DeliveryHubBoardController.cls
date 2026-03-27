@@ -190,12 +190,27 @@ public with sharing class DeliveryHubBoardController {
     /**
      * @description Returns board-level KPI metrics: active items, weekly/monthly throughput,
      * average cycle time, blocked count, and attention-needed count.
+     * Optionally scoped to a single NetworkEntity when entityId is provided.
      * @param workflowType The workflow type DeveloperName (defaults to 'Software_Delivery').
      * @return Map of metric name to value.
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getBoardMetrics(String workflowType) {
+        return getBoardMetricsForEntity(workflowType, null);
+    }
+
+    /**
+     * @description Returns board-level KPI metrics scoped to an optional NetworkEntity.
+     * When entityId is null, returns metrics across all entities (admin view).
+     * When entityId is provided, filters all counts to that single client entity.
+     * @param workflowType The workflow type DeveloperName (defaults to 'Software_Delivery').
+     * @param entityId Optional ClientNetworkEntityId__c to scope metrics. Null for all entities.
+     * @return Map of metric name to value.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getBoardMetricsForEntity(String workflowType, Id entityId) {
         if (String.isBlank(workflowType)) {
             workflowType = 'Software_Delivery';
         }
@@ -205,53 +220,105 @@ public with sharing class DeliveryHubBoardController {
         Set<String> attentionStages = DeliveryWorkflowConfigService.getAttentionStageValues(workflowType);
 
         // 1. Active items (non-terminal)
-        Integer activeCount = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE StageNamePk__c NOT IN :terminalStages
-            AND WorkflowTypeTxt__c = :workflowType
-            WITH SYSTEM_MODE
-        ];
+        Integer activeCount;
+        if (entityId != null) {
+            activeCount = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c NOT IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE
+            ];
+        } else {
+            activeCount = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c NOT IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                WITH SYSTEM_MODE
+            ];
+        }
         metrics.put('activeCount', activeCount);
 
         // 2. Completed this week
         Date weekStart = Date.today().toStartOfWeek();
         Datetime weekStartDt = Datetime.newInstance(weekStart, Time.newInstance(0, 0, 0, 0));
-        Integer completedThisWeek = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE StageNamePk__c IN :terminalStages
-            AND WorkflowTypeTxt__c = :workflowType
-            AND LastModifiedDate >= :weekStartDt
-            WITH SYSTEM_MODE
-        ];
+        Integer completedThisWeek;
+        if (entityId != null) {
+            completedThisWeek = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND LastModifiedDate >= :weekStartDt
+                AND ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE
+            ];
+        } else {
+            completedThisWeek = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND LastModifiedDate >= :weekStartDt
+                WITH SYSTEM_MODE
+            ];
+        }
         metrics.put('completedThisWeek', completedThisWeek);
 
         // 3. Completed this month (throughput)
         Date monthStart = Date.today().toStartOfMonth();
         Datetime monthStartDt = Datetime.newInstance(monthStart, Time.newInstance(0, 0, 0, 0));
-        Integer completedThisMonth = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE StageNamePk__c IN :terminalStages
-            AND WorkflowTypeTxt__c = :workflowType
-            AND LastModifiedDate >= :monthStartDt
-            WITH SYSTEM_MODE
-        ];
+        Integer completedThisMonth;
+        if (entityId != null) {
+            completedThisMonth = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND LastModifiedDate >= :monthStartDt
+                AND ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE
+            ];
+        } else {
+            completedThisMonth = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND LastModifiedDate >= :monthStartDt
+                WITH SYSTEM_MODE
+            ];
+        }
         metrics.put('completedThisMonth', completedThisMonth);
 
         // 4. Average cycle time (days from creation to terminal stage, last 30 days)
         Date thirtyDaysAgo = Date.today().addDays(-30);
         Datetime thirtyDaysAgoDt = Datetime.newInstance(thirtyDaysAgo, Time.newInstance(0, 0, 0, 0));
-        List<WorkItem__c> completedRecent = [
-            SELECT CreatedDate, LastModifiedDate
-            FROM WorkItem__c
-            WHERE StageNamePk__c IN :terminalStages
-            AND WorkflowTypeTxt__c = :workflowType
-            AND LastModifiedDate >= :thirtyDaysAgoDt
-            WITH SYSTEM_MODE
-            LIMIT 200
-        ];
+        List<WorkItem__c> completedRecent;
+        if (entityId != null) {
+            completedRecent = [
+                SELECT CreatedDate, LastModifiedDate
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND LastModifiedDate >= :thirtyDaysAgoDt
+                AND ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE
+                LIMIT 200
+            ];
+        } else {
+            completedRecent = [
+                SELECT CreatedDate, LastModifiedDate
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :terminalStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND LastModifiedDate >= :thirtyDaysAgoDt
+                WITH SYSTEM_MODE
+                LIMIT 200
+            ];
+        }
         Decimal totalDays = 0;
         for (WorkItem__c wi : completedRecent) {
             Long msecDiff = wi.LastModifiedDate.getTime() - wi.CreatedDate.getTime();
@@ -264,34 +331,134 @@ public with sharing class DeliveryHubBoardController {
 
         // 5. Blocked items count (items that have unresolved blocking dependencies)
         Set<Id> blockedIds = new Set<Id>();
-        for (WorkItemDependency__c dep : [
-            SELECT BlockedWorkItemId__c
-            FROM WorkItemDependency__c
-            WHERE BlockedWorkItemId__c IN (
-                SELECT Id FROM WorkItem__c
-                WHERE StageNamePk__c NOT IN :terminalStages
-                AND WorkflowTypeTxt__c = :workflowType
-            )
-            AND BlockingWorkItemId__c IN (
-                SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
-            )
-            WITH SYSTEM_MODE
-        ]) {
-            blockedIds.add(dep.BlockedWorkItemId__c);
+        if (entityId != null) {
+            for (WorkItemDependency__c dep : [
+                SELECT BlockedWorkItemId__c
+                FROM WorkItemDependency__c
+                WHERE BlockedWorkItemId__c IN (
+                    SELECT Id FROM WorkItem__c
+                    WHERE StageNamePk__c NOT IN :terminalStages
+                    AND WorkflowTypeTxt__c = :workflowType
+                    AND ClientNetworkEntityId__c = :entityId
+                )
+                AND BlockingWorkItemId__c IN (
+                    SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
+                )
+                WITH SYSTEM_MODE
+            ]) {
+                blockedIds.add(dep.BlockedWorkItemId__c);
+            }
+        } else {
+            for (WorkItemDependency__c dep : [
+                SELECT BlockedWorkItemId__c
+                FROM WorkItemDependency__c
+                WHERE BlockedWorkItemId__c IN (
+                    SELECT Id FROM WorkItem__c
+                    WHERE StageNamePk__c NOT IN :terminalStages
+                    AND WorkflowTypeTxt__c = :workflowType
+                )
+                AND BlockingWorkItemId__c IN (
+                    SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
+                )
+                WITH SYSTEM_MODE
+            ]) {
+                blockedIds.add(dep.BlockedWorkItemId__c);
+            }
         }
         metrics.put('blockedCount', blockedIds.size());
 
         // 6. Attention-needed items
-        Integer attentionCount = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE StageNamePk__c IN :attentionStages
-            AND WorkflowTypeTxt__c = :workflowType
-            WITH SYSTEM_MODE
-        ];
+        Integer attentionCount;
+        if (entityId != null) {
+            attentionCount = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :attentionStages
+                AND WorkflowTypeTxt__c = :workflowType
+                AND ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE
+            ];
+        } else {
+            attentionCount = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN :attentionStages
+                AND WorkflowTypeTxt__c = :workflowType
+                WITH SYSTEM_MODE
+            ];
+        }
         metrics.put('attentionCount', attentionCount);
 
         return metrics;
+    }
+
+    /**
+     * @description Returns active work items scoped to an optional NetworkEntity.
+     * When entityId is null, returns all active work items for the workflow type (admin view).
+     * When entityId is provided, filters to only that entity's work items (client view).
+     * @param workflowType The workflow type DeveloperName (defaults to 'Software_Delivery').
+     * @param entityId Optional ClientNetworkEntityId__c to scope results. Null for all entities.
+     * @return List of active WorkItem__c records with related dependencies and comments.
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    @AuraEnabled(cacheable=true)
+    public static List<WorkItem__c> getWorkItemsForEntity(String workflowType, Id entityId) {
+        if (String.isBlank(workflowType)) {
+            workflowType = 'Software_Delivery';
+        }
+        if (entityId != null) {
+            return [
+                SELECT Id,
+                    BriefDescriptionTxt__c,
+                    CalculatedETADate__c,
+                    DeveloperDaysSizeNumber__c,
+                    StageNamePk__c,
+                    ClientIntentionPk__c,
+                    SortOrderNumber__c,
+                    Epic__c,
+                    Tags__c,
+                    WorkflowTypeTxt__c,
+                    TotalLoggedHoursNumber__c,
+                    EstimatedHoursNumber__c,
+                    LastModifiedDate,
+                    PriorityPk__c,
+                    (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
+                    (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                    (SELECT Id FROM WorkItemComments__r LIMIT 100)
+                FROM WorkItem__c
+                WHERE IsActiveBool__c = true
+                AND IsTemplateBool__c = false
+                AND WorkflowTypeTxt__c = :workflowType
+                AND ClientNetworkEntityId__c = :entityId
+                WITH SYSTEM_MODE
+                ORDER BY SortOrderNumber__c
+            ];
+        }
+        return [
+            SELECT Id,
+                BriefDescriptionTxt__c,
+                CalculatedETADate__c,
+                DeveloperDaysSizeNumber__c,
+                StageNamePk__c,
+                ClientIntentionPk__c,
+                SortOrderNumber__c,
+                Epic__c,
+                Tags__c,
+                WorkflowTypeTxt__c,
+                TotalLoggedHoursNumber__c,
+                EstimatedHoursNumber__c,
+                LastModifiedDate,
+                PriorityPk__c,
+                (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
+                (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                (SELECT Id FROM WorkItemComments__r LIMIT 100)
+            FROM WorkItem__c
+            WHERE IsActiveBool__c = true
+            AND IsTemplateBool__c = false
+            AND WorkflowTypeTxt__c = :workflowType
+            WITH SYSTEM_MODE
+            ORDER BY SortOrderNumber__c
+        ];
     }
 
     /**
