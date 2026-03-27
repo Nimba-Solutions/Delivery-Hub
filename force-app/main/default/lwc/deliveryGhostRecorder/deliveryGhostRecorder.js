@@ -1,36 +1,40 @@
-/* eslint-disable new-cap, sort-imports */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
+import { LightningElement, api, track, wire } from 'lwc';
 import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import { LightningElement, api, track, wire } from 'lwc';
-import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
-import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
+import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
+import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import linkFilesAndSync from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync';
 import userId from '@salesforce/user/Id';
 
-export default class DeliveryGhostRecorder extends NavigationMixin(LightningElement) {
-    @api enableShortcut = false; 
-    @api displayMode = 'Card';   
-    
+const NAV_LOG_DEBOUNCE_MS = 3000;
+const SUBJECT_TRUNCATE_LEN = 95;
+const HEX_RADIX = 16;
+const SESSION_ID_RANDOM_RANGE = 16;
+
+export default class DeliveryGhostRecorder extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
+    @api enableShortcut = false;
+    @api displayMode = 'Card';
+
     @track isOpen = false;
-    @track requestType = 'Bug'; // Default to Bug
-    @track subject = ''; 
+    @track requestType = 'Bug';
+    @track subject = '';
     @track description = '';
     @track priority = 'Medium';
     @track isSending = false;
     @track uploadedFileIds = [];
-    
+
     currentPageRef;
     currentUserId = userId;
-    _sessionId = '';
-    _lastLoggedUrl = '';
-    _lastLoggedTime = 0;
+    sessionIdValue = '';
+    lastLoggedUrl = '';
+    lastLoggedTime = 0;
 
     @wire(getAttentionCount)
     wiredAttentionCount;
@@ -44,15 +48,17 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     get attentionLabel() {
-        const n = this.attentionCount;
-        return `${n} item${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} your attention`;
+        const count = this.attentionCount;
+        const plural = count === 1 ? '' : 's';
+        const verb = count === 1 ? 's' : '';
+        return `${count} item${plural} need${verb} your attention`;
     }
 
     handleAttentionClick() {
         // Try report first, fall back to list view
         getReportIds({ developerNames: ['Attention_Items'] })
             .then(ids => {
-                const reportId = ids.Attention_Items; // eslint-disable-line dot-notation
+                const reportId = ids.Attention_Items;
                 if (reportId) {
                     this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                         attributes: { actionName: 'view', objectApiName: 'Report', recordId: reportId },
@@ -73,10 +79,14 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
         });
     }
 
-    // --- GETTERS FOR DYNAMIC UI ---
-    get isCardMode() { return this.displayMode === 'Card'; }
-    get isFloatingMode() { return this.displayMode === 'Floating Button'; }
-    
+    get isCardMode() {
+        return this.displayMode === 'Card';
+    }
+
+    get isFloatingMode() {
+        return this.displayMode === 'Floating Button';
+    }
+
     get typeOptions() {
         return [
             { label: 'Report Issue', value: 'Bug' },
@@ -84,27 +94,57 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
         ];
     }
 
-    get isBug() { return this.requestType === 'Bug'; }
-
-    get cardTitle() { return this.isBug ? 'Report Issue' : 'New Feature Request'; }
-    get cardIcon() { return this.isBug ? 'utility:bug' : 'utility:light_bulb'; }
-    
-    get subjectLabel() { return this.isBug ? 'Summary' : 'Feature Name'; }
-    get subjectPlaceholder() { return this.isBug ? 'e.g., Sort not working...' : 'e.g., Dark Mode for Dashboard...'; }
-    
-    get detailsPlaceholder() { 
-        return this.isBug 
-            ? 'Steps to reproduce, expected behavior, error messages...' 
-            : 'What problem does this solve? How should it work?'; 
+    get isBug() {
+        return this.requestType === 'Bug';
     }
 
-    get submitButtonLabel() { return this.isBug ? 'Report Bug' : 'Submit Feature'; }
+    get cardTitle() {
+        if (this.isBug) {
+            return 'Report Issue';
+        }
+        return 'New Feature Request';
+    }
+
+    get cardIcon() {
+        if (this.isBug) {
+            return 'utility:bug';
+        }
+        return 'utility:light_bulb';
+    }
+
+    get subjectLabel() {
+        if (this.isBug) {
+            return 'Summary';
+        }
+        return 'Feature Name';
+    }
+
+    get subjectPlaceholder() {
+        if (this.isBug) {
+            return 'e.g., Sort not working...';
+        }
+        return 'e.g., Dark Mode for Dashboard...';
+    }
+
+    get detailsPlaceholder() {
+        if (this.isBug) {
+            return 'Steps to reproduce, expected behavior, error messages...';
+        }
+        return 'What problem does this solve? How should it work?';
+    }
+
+    get submitButtonLabel() {
+        if (this.isBug) {
+            return 'Report Bug';
+        }
+        return 'Submit Feature';
+    }
 
     get priorityOptions() {
         return [
-            { label: 'Low',    value: 'Low' },
+            { label: 'Low', value: 'Low' },
             { label: 'Medium', value: 'Medium' },
-            { label: 'High',   value: 'High' },
+            { label: 'High', value: 'High' }
         ];
     }
 
@@ -114,13 +154,13 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
 
     get contextDisplayName() {
         try {
-            const parsed = this._parseUrlContext();
+            const parsed = this.parseUrlContext();
             return parsed.pageLabel || 'General';
-        } catch (e) {
+        } catch (err) {
             return 'General';
         }
     }
-    
+
     @wire(CurrentPageReference)
     getStateParameters(currentPageReference) {
         if (currentPageReference) {
@@ -130,7 +170,7 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     connectedCallback() {
-        this._sessionId = this._generateSessionId();
+        this.sessionIdValue = DeliveryGhostRecorder.generateSessionId();
         if (this.enableShortcut) {
             window.addEventListener('keydown', this.handleShortcut);
         }
@@ -150,18 +190,20 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
         try {
             const href = window.location.href;
             const now = Date.now();
-            if (href === this._lastLoggedUrl && (now - this._lastLoggedTime) < 3000) {
+            if (href === this.lastLoggedUrl && (now - this.lastLoggedTime) < NAV_LOG_DEBOUNCE_MS) {
                 return;
             }
-            this._lastLoggedUrl = href;
-            this._lastLoggedTime = now;
+            this.lastLoggedUrl = href;
+            this.lastLoggedTime = now;
 
             const context = this.gatherContext();
             logActivity({
                 actionType: 'Navigation',
                 contextData: JSON.stringify(context)
-            }).catch(() => { /* silent */ });
-        } catch (e) {
+            }).catch(() => {
+                // Silent — never break user experience for telemetry
+            });
+        } catch (err) {
             // Never break user experience
         }
     }
@@ -170,7 +212,6 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
         this.isOpen = !this.isOpen;
     }
 
-    // --- HANDLERS ---
     handleTypeChange(event) {
         this.requestType = event.detail.value;
     }
@@ -189,65 +230,65 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
 
     handleUploadFinished(event) {
         const files = event.detail.files;
-        this.uploadedFileIds.push(...files.map(f => f.documentId));
+        this.uploadedFileIds.push(...files.map(file => file.documentId));
     }
 
     handleSubmit() {
-        if (!this.description && !this.subject) return;
-        
-        this.isSending = true;
-        const context = this.gatherContext();
-        
-        // Add Type to the context so Apex knows what it is
-        // Or better yet, send it as a dedicated param if the controller supports it
-        // For now, we prepend it to the description or subject if we don't want to change Apex params
-        // But the best way is to update Apex to accept 'type'.
-        // Assuming current Apex is rigid, we pass it in context or modify subject slightly.
-        
-        // Pass workItemType to distinguish intake vs. bug vs. feature
-        
-        let finalSubject = this.subject;
-        if (!finalSubject && this.description) {
-            finalSubject = (this.description.length > 95 ? this.description.substring(0, 95) + '...' : this.description);
-        }
-        if (!finalSubject) {
-            finalSubject = (this.isBug ? 'Issue' : 'Feature') + ' on ' + (context.objectName || 'Home Page');
+        if (!this.description && !this.subject) {
+            return;
         }
 
-        createWorkItem({ 
-            subject: finalSubject,
+        this.isSending = true;
+        const context = this.gatherContext();
+
+        // Build a subject from the description if the user only provided a description
+        let finalSubject = this.subject;
+        if (!finalSubject && this.description) {
+            if (this.description.length > SUBJECT_TRUNCATE_LEN) {
+                finalSubject = `${this.description.substring(0, SUBJECT_TRUNCATE_LEN)}...`;
+            } else {
+                finalSubject = this.description;
+            }
+        }
+        if (!finalSubject) {
+            const typeLabel = this.isBug ? 'Issue' : 'Feature';
+            finalSubject = `${typeLabel} on ${context.objectName || 'Home Page'}`;
+        }
+
+        createWorkItem({
+            contextData: JSON.stringify(context),
             description: this.description,
             priority: this.priority,
-            contextData: JSON.stringify(context),
-            workItemType: this.requestType // NEW PARAMETER
+            subject: finalSubject,
+            workItemType: this.requestType
         })
         .then(workItemId => {
             if (this.uploadedFileIds.length > 0) {
                 linkFilesAndSync({
-                    workItemId: workItemId,
-                    contentDocumentIds: this.uploadedFileIds
+                    contentDocumentIds: this.uploadedFileIds,
+                    workItemId
                 }).catch(() => {
                     this.dispatchEvent(new ShowToastEvent({
-                        title: 'File Attachment Failed',
                         message: 'Work item was created but attached files could not be linked. Please attach them from the work item record.',
-                        variant: 'warning',
-                        mode: 'sticky'
+                        mode: 'sticky',
+                        title: 'File Attachment Failed',
+                        variant: 'warning'
                     }));
                 });
             }
 
             this.dispatchEvent(new ShowToastEvent({
-                title: this.isBug ? 'Bug Reported' : 'Feature Requested',
                 message: 'Thank you for your feedback.',
+                title: this.isBug ? 'Bug Reported' : 'Feature Requested',
                 variant: 'success'
             }));
-            
+
             this.resetForm();
         })
         .catch(error => {
             this.dispatchEvent(new ShowToastEvent({
-                title: 'Error',
                 message: error.body ? error.body.message : error.message,
+                title: 'Error',
                 variant: 'error'
             }));
         })
@@ -262,81 +303,81 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
         this.priority = 'Medium';
         this.uploadedFileIds = [];
         this.isOpen = false;
-        this.requestType = 'Bug'; // Reset to default
+        this.requestType = 'Bug';
     }
 
     gatherContext() {
         try {
-            const parsed = this._parseUrlContext();
+            const parsed = this.parseUrlContext();
             return {
-                url: window.location.href,
                 browser: navigator.userAgent,
                 objectName: parsed.objectName,
-                recordId: parsed.recordId,
                 pageLabel: parsed.pageLabel,
-                sessionId: this._sessionId
+                recordId: parsed.recordId,
+                sessionId: this.sessionIdValue,
+                url: window.location.href
             };
-        } catch (e) {
+        } catch (err) {
             return {
-                url: window.location.href || '',
                 browser: '',
                 objectName: 'Unknown',
-                recordId: '',
                 pageLabel: 'Unknown',
-                sessionId: ''
+                recordId: '',
+                sessionId: '',
+                url: window.location.href || ''
             };
         }
     }
 
-    _parseUrlContext() {
+    parseUrlContext() {
         const href = window.location.href;
         // Pattern: /lightning/r/{objectApiName}/{recordId}/view
-        const recordMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/view/);
+        const recordMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/view/u);
         if (recordMatch) {
-            return { objectName: recordMatch[1], recordId: recordMatch[2], pageLabel: recordMatch[1] };
+            return { objectName: recordMatch[1], pageLabel: recordMatch[1], recordId: recordMatch[2] };
         }
         // Pattern: /lightning/o/{objectApiName}/home (list view)
-        const listMatch = href.match(/\/lightning\/o\/([^/]+)\/home/);
+        const listMatch = href.match(/\/lightning\/o\/([^/]+)\/home/u);
         if (listMatch) {
-            return { objectName: listMatch[1], recordId: '', pageLabel: listMatch[1] + ' List' };
+            return { objectName: listMatch[1], pageLabel: `${listMatch[1]} List`, recordId: '' };
         }
         // Pattern: /lightning/o/{objectApiName}/list
-        const listMatch2 = href.match(/\/lightning\/o\/([^/]+)\/list/);
-        if (listMatch2) {
-            return { objectName: listMatch2[1], recordId: '', pageLabel: listMatch2[1] + ' List' };
+        const listAltMatch = href.match(/\/lightning\/o\/([^/]+)\/list/u);
+        if (listAltMatch) {
+            return { objectName: listAltMatch[1], pageLabel: `${listAltMatch[1]} List`, recordId: '' };
         }
         // Pattern: /lightning/page/home
         if (href.includes('/lightning/page/home')) {
-            return { objectName: 'Home', recordId: '', pageLabel: 'Home' };
+            return { objectName: 'Home', pageLabel: 'Home', recordId: '' };
         }
         // Pattern: /lightning/page/chatter
         if (href.includes('/lightning/page/chatter')) {
-            return { objectName: 'Chatter', recordId: '', pageLabel: 'Chatter' };
+            return { objectName: 'Chatter', pageLabel: 'Chatter', recordId: '' };
         }
         // Pattern: /lightning/setup/...
         if (href.includes('/lightning/setup/')) {
-            return { objectName: 'Setup', recordId: '', pageLabel: 'Setup' };
+            return { objectName: 'Setup', pageLabel: 'Setup', recordId: '' };
         }
         // Pattern: /lightning/r/{objectApiName}/{recordId}/related/...
-        const relatedMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/related/);
+        const relatedMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/related/u);
         if (relatedMatch) {
-            return { objectName: relatedMatch[1], recordId: relatedMatch[2], pageLabel: relatedMatch[1] + ' Related' };
+            return { objectName: relatedMatch[1], pageLabel: `${relatedMatch[1]} Related`, recordId: relatedMatch[2] };
         }
         // Fallback: try CurrentPageReference attributes
         const attrs = this.currentPageRef?.attributes || {};
         return {
             objectName: attrs.objectApiName || attrs.name || 'Unknown',
-            recordId: attrs.recordId || '',
-            pageLabel: attrs.objectApiName || attrs.name || 'Unknown'
+            pageLabel: attrs.objectApiName || attrs.name || 'Unknown',
+            recordId: attrs.recordId || ''
         };
     }
 
-    _generateSessionId() {
+    static generateSessionId() {
         try {
-            return 'xxxxxxxx-xxxx-4xxx'.replace(/[x]/g, () =>
-                (Math.random() * 16 | 0).toString(16)
+            return 'xxxxxxxx-xxxx-4xxx'.replace(/[x]/gu, () =>
+                (Math.random() * SESSION_ID_RANDOM_RANGE | 0).toString(HEX_RADIX) // eslint-disable-line no-bitwise
             );
-        } catch (e) {
+        } catch (err) {
             return 'unknown';
         }
     }

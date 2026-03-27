@@ -109,7 +109,27 @@ Generate professional invoices, status reports, client agreements, and contracto
 
 ### Configurable Workflows
 
-Not just software delivery &mdash; the workflow engine supports any stage-based process. Ships with Software Delivery (40+ stages) and Loan Approval (8 stages) out of the box. Define your own workflow types, stages, personas, and transitions through Custom Metadata.
+Not just software delivery &mdash; the workflow engine supports any stage-based process. Ships with five workflow types out of the box: Software Delivery (40+ stages), Loan Approval (8 stages), Customer Onboarding, HR Recruiting, and Marketing Campaign. Define your own workflow types, stages, personas, and transitions through Custom Metadata. The Workflow Builder admin tab provides a visual editor for creating and modifying workflows without touching metadata files.
+
+### Workspace
+
+A unified tabbed interface combining Board, Timeline, Activity Feed, Documents, Guide, Templates, Analytics, Velocity, Settings, and Workflow Builder. Admin-only tabs are conditionally shown based on user permissions. The workspace replaces the need for multiple app pages and keeps all delivery tools in one screen.
+
+### Activity Dashboard
+
+Tracks user adoption and engagement across the platform. Shows weekly and monthly activity counts, top users, most-used components, and page navigation patterns. All data comes from the Ghost Recorder's background activity logging, providing actionable insights into how the team uses Delivery Hub.
+
+### Report Navigation
+
+Dashboard tiles and metrics link directly to pre-deployed Salesforce reports (Attention Items, In-Flight Work Items, Blocked, Recently Completed, Monthly Hours, and per-phase breakdowns). When a report isn't found in the org, navigation falls back gracefully to the corresponding list view.
+
+### Self-Service Onboarding (Phase 3)
+
+Getting Started wizard handles full org setup in 4 steps &mdash; configures scheduled jobs, connection handshake, default settings, and entity registration. No Apex scripts or manual configuration required. Global classes (`DeliveryHubScheduler`, `SyncItemProcessor`, `DeliveryActivityLogCleanup`) ensure subscriber orgs can schedule managed package jobs.
+
+### Velocity and Capacity Planning (Phase 4)
+
+Velocity tracking service calculates team and developer completion rates over configurable time windows. Projected completion dates extrapolate from current velocity and remaining backlog. Capacity utilization reads from `DeveloperCapacity__mdt` configuration to show allocated vs. available hours per developer. What-if analysis lets admins model the impact of adding items to the backlog.
 
 ### Admin Settings
 
@@ -151,10 +171,10 @@ The engine is retry-aware (configurable limit, default 3 attempts), handles name
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 148 (75 production + 73 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService |
-| **LWC Components** | 57 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryTimelineView |
+| **Apex Classes** | 150 (76 production + 74 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService |
+| **LWC Components** | 58 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryTimelineView |
 | **Custom Objects** | 15 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c |
-| **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt |
+| **Custom Metadata** | 11 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, DeveloperCapacity\_\_mdt |
 | **Platform Events** | 4 | DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e |
 | **Triggers** | 5 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger |
 
@@ -187,7 +207,7 @@ cci task run retrieve_changes --org dev
 git push origin feature/your-feature
 ```
 
-Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 600+ Apex tests (75%+ coverage enforced), runs PMD static analysis (zero violations enforced), and tears everything down.
+Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 700+ Apex tests (89%+ coverage), runs PMD static analysis (zero violations enforced), and runs ESLint on all LWC JavaScript.
 
 ### Reconciliation
 
