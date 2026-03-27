@@ -76,4 +76,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTimelineControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityDashboardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTemplateManagerControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryVelocityServiceTest</testClassName>
 </ApexTestSuite>

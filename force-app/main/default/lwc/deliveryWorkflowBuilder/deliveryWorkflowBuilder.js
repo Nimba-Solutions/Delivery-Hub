@@ -1,17 +1,15 @@
-/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import deployWorkflow from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowBuilderController.deployWorkflow';
 import getWorkflowStages from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowBuilderController.getWorkflowStages';
 import getWorkflowTypes from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowBuilderController.getWorkflowTypes';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
-// eslint-disable-next-line one-var
 const PHASE_OPTIONS = [
     { label: 'Planning', value: 'Planning' },
     { label: 'Approval', value: 'Approval' },
@@ -21,7 +19,6 @@ const PHASE_OPTIONS = [
     { label: 'Deployment', value: 'Deployment' }
 ];
 
-// eslint-disable-next-line one-var
 const COLOR_PRESETS = [
     { label: 'Gray', value: '#e2e8f0' },
     { label: 'Blue', value: '#bfdbfe' },
@@ -71,41 +68,71 @@ export default class DeliveryWorkflowBuilder extends LightningElement {
         this.wiredTypesResult = result;
         this.isLoading = false;
         if (result.data) {
-            this.workflowTypes = result.data.map(t => ({
-                ...t,
+            this.workflowTypes = result.data.map(wfType => ({
+                ...wfType,
                 cardClass: 'wb-type-card',
-                stageLabel: t.stageCount === 1 ? '1 stage' : t.stageCount + ' stages',
-                iconName: t.icon || 'utility:flow'
+                iconName: wfType.icon || 'utility:flow',
+                stageLabel: wfType.stageCount === 1 ? '1 stage' : `${wfType.stageCount} stages`
             }));
         } else if (result.error) {
             this.showToast('Error', 'Could not load workflow types.', 'error');
         }
     }
 
-    // ── Getters ──────────────────────────────────────────────────────────
-    get isListScreen() { return this.currentScreen === 'list'; }
-    get isEditorScreen() { return this.currentScreen === 'editor'; }
-    get hasWorkflowTypes() { return this.workflowTypes.length > 0; }
-    get phaseOptions() { return PHASE_OPTIONS; }
-    get colorOptions() { return COLOR_PRESETS; }
-    get hasStages() { return this.stages.length > 0; }
-    get editorTitle() {
-        return this.editingExisting ? 'Edit Workflow: ' + this.workflowLabel : 'Create New Workflow';
+    get isListScreen() {
+        return this.currentScreen === 'list';
     }
+
+    get isEditorScreen() {
+        return this.currentScreen === 'editor';
+    }
+
+    get hasWorkflowTypes() {
+        return this.workflowTypes.length > 0;
+    }
+
+    get phaseOptions() {
+        return PHASE_OPTIONS;
+    }
+
+    get colorOptions() {
+        return COLOR_PRESETS;
+    }
+
+    get hasStages() {
+        return this.stages.length > 0;
+    }
+
+    get editorTitle() {
+        if (this.editingExisting) {
+            return `Edit Workflow: ${this.workflowLabel}`;
+        }
+        return 'Create New Workflow';
+    }
+
     get canDeploy() {
         return this.workflowName && this.workflowLabel && this.stages.length > 0 && !this.isDeploying;
     }
-    get deployDisabled() { return !this.canDeploy; }
-    get deployButtonLabel() { return this.isDeploying ? 'Deploying...' : 'Save & Deploy'; }
+
+    get deployDisabled() {
+        return !this.canDeploy;
+    }
+
+    get deployButtonLabel() {
+        if (this.isDeploying) {
+            return 'Deploying...';
+        }
+        return 'Save & Deploy';
+    }
 
     get indexedStages() {
-        return this.stages.map((s, idx) => ({
-            ...s,
-            index: idx,
+        return this.stages.map((stg, idx) => ({
+            ...stg,
+            colorStyle: `background-color: ${stg.color}; width: 24px; height: 24px; border-radius: 4px; border: 1px solid #cbd5e1;`,
             displayIndex: idx + 1,
+            index: idx,
             isFirst: idx === 0,
-            isLast: idx === this.stages.length - 1,
-            colorStyle: 'background-color: ' + s.color + '; width: 24px; height: 24px; border-radius: 4px; border: 1px solid #cbd5e1;'
+            isLast: idx === this.stages.length - 1
         }));
     }
 
@@ -168,7 +195,7 @@ export default class DeliveryWorkflowBuilder extends LightningElement {
     }
 
     handleApiNameChange(event) {
-        this.workflowName = event.target.value.replace(/[^a-zA-Z0-9_]/g, '');
+        this.workflowName = event.target.value.replace(/[^a-zA-Z0-9_]/gu, '');
     }
 
     handleDescriptionChange(event) {
@@ -211,7 +238,7 @@ export default class DeliveryWorkflowBuilder extends LightningElement {
         updated[idx] = {
             ...updated[idx],
             label: event.target.value,
-            name: event.target.value.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')
+            name: event.target.value.replace(/[^a-zA-Z0-9\s]/gu, '').replace(/\s+/gu, '_')
         };
         this.stages = updated;
     }
@@ -284,8 +311,7 @@ export default class DeliveryWorkflowBuilder extends LightningElement {
             .then(deploymentId => {
                 this.showToast(
                     'Deployment Queued',
-                    'Workflow deployment started. ID: ' + deploymentId +
-                    '. Metadata changes may take a moment to appear.',
+                    `Workflow deployment started. ID: ${deploymentId}. Metadata changes may take a moment to appear.`,
                     'success'
                 );
                 this.isDeploying = false;

@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -12,18 +11,21 @@ import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 
-import getTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.getTemplates';
+import activateTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.activateTemplate';
 import createFromTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.createFromTemplate';
 import deactivateTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.deactivateTemplate';
-import activateTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.activateTemplate';
+import getTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.getTemplates';
+
+const DESC_PREVIEW_LENGTH = 80;
+const DEFAULT_PRIORITY_COLOR = '#94a3b8';
 
 const PRIORITY_COLORS = {
     High: '#dc2626',
-    Medium: '#f59e0b',
-    Low: '#22c55e'
+    Low: '#22c55e',
+    Medium: '#f59e0b'
 };
 
-export default class DeliveryTemplateManager extends NavigationMixin(LightningElement) {
+export default class DeliveryTemplateManager extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @track templates = [];
     @track isLoading = true;
     @track error = '';
@@ -34,27 +36,14 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
     @track overridePriority = '';
     @track showInactive = false;
 
-    _wiredResult;
+    wiredResult;
 
     @wire(getTemplates)
     wiredTemplates(result) {
-        this._wiredResult = result;
+        this.wiredResult = result;
         this.isLoading = false;
         if (result.data) {
-            this.templates = result.data.map(t => ({
-                ...t,
-                priorityColor: PRIORITY_COLORS[t.PriorityPk__c] || '#94a3b8',
-                priorityStyle: 'color: ' + (PRIORITY_COLORS[t.PriorityPk__c] || '#94a3b8') + '; font-weight: 600;',
-                workflowLabel: (t.WorkflowTypeTxt__c || 'None').replace(/_/g, ' '),
-                descPreview: t.DetailsTxt__c
-                    ? t.DetailsTxt__c.replace(/<[^>]*>/g, '').substring(0, 80) + (t.DetailsTxt__c.length > 80 ? '...' : '')
-                    : 'No description',
-                estimateLabel: this._buildEstimate(t),
-                statusLabel: t.IsActiveBool__c ? 'Active' : 'Inactive',
-                statusClass: t.IsActiveBool__c ? 'tm-status tm-status--active' : 'tm-status tm-status--inactive',
-                isActive: t.IsActiveBool__c === true,
-                toggleLabel: t.IsActiveBool__c ? 'Deactivate' : 'Activate'
-            }));
+            this.templates = result.data.map(tmpl => this.enrichTemplate(tmpl));
             this.error = '';
         } else if (result.error) {
             this.error = result.error.body?.message || result.error.message || 'Failed to load templates.';
@@ -62,20 +51,48 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
         }
     }
 
+    enrichTemplate(tmpl) {
+        const color = PRIORITY_COLORS[tmpl.PriorityPk__c] || DEFAULT_PRIORITY_COLOR;
+        const descRaw = tmpl.DetailsTxt__c
+            ? tmpl.DetailsTxt__c.replace(/<[^>]*>/gu, '').substring(0, DESC_PREVIEW_LENGTH)
+            : '';
+        const descSuffix = tmpl.DetailsTxt__c && tmpl.DetailsTxt__c.length > DESC_PREVIEW_LENGTH ? '...' : '';
+        return {
+            ...tmpl,
+            descPreview: descRaw ? `${descRaw}${descSuffix}` : 'No description',
+            estimateLabel: DeliveryTemplateManager.buildEstimate(tmpl),
+            isActive: tmpl.IsActiveBool__c === true,
+            priorityColor: color,
+            priorityStyle: `color: ${color}; font-weight: 600;`,
+            statusClass: tmpl.IsActiveBool__c ? 'tm-status tm-status--active' : 'tm-status tm-status--inactive',
+            statusLabel: tmpl.IsActiveBool__c ? 'Active' : 'Inactive',
+            toggleLabel: tmpl.IsActiveBool__c ? 'Deactivate' : 'Activate',
+            workflowLabel: (tmpl.WorkflowTypeTxt__c || 'None').replace(/_/gu, ' ')
+        };
+    }
+
     get filteredTemplates() {
         if (this.showInactive) {
             return this.templates;
         }
-        return this.templates.filter(t => t.isActive);
+        return this.templates.filter(tmpl => tmpl.isActive);
     }
 
     get hasTemplates() {
         return this.filteredTemplates.length > 0;
     }
 
-    get showEmptyState() { return !this.hasTemplates; }
-    get isLoaded() { return !this.isLoading; }
-    get noError() { return !this.error; }
+    get showEmptyState() {
+        return !this.hasTemplates;
+    }
+
+    get isLoaded() {
+        return !this.isLoading;
+    }
+
+    get noError() {
+        return !this.error;
+    }
 
     get templateCount() {
         return this.filteredTemplates.length;
@@ -86,7 +103,10 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
     }
 
     get toggleInactiveLabel() {
-        return this.showInactive ? 'Hide Inactive' : 'Show Inactive';
+        if (this.showInactive) {
+            return 'Hide Inactive';
+        }
+        return 'Show Inactive';
     }
 
     get priorityOptions() {
@@ -98,28 +118,26 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
         ];
     }
 
-    // ---- Event Handlers ----
-
     handleToggleInactive() {
         this.showInactive = !this.showInactive;
     }
 
     handleNewTemplate() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__objectPage',
+        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
-                objectApiName: '%%%NAMESPACE%%%WorkItem__c',
-                actionName: 'new'
+                actionName: 'new',
+                objectApiName: '%%%NAMESPACE%%%WorkItem__c'
             },
             state: {
                 defaultFieldValues: 'IsTemplateBool__c=true'
-            }
+            },
+            type: 'standard__objectPage'
         });
     }
 
     handleUseTemplate(event) {
         const templateId = event.currentTarget.dataset.id;
-        this.selectedTemplate = this.templates.find(t => t.Id === templateId);
+        this.selectedTemplate = this.templates.find(tmpl => tmpl.Id === templateId);
         this.overrideTitle = '';
         this.overridePriority = '';
         this.showCloneModal = true;
@@ -127,19 +145,21 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
 
     handleViewTemplate(event) {
         const templateId = event.currentTarget.dataset.id;
-        this[NavigationMixin.Navigate]({
-            type: 'standard__recordPage',
+        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
-                recordId: templateId,
-                actionName: 'view'
-            }
+                actionName: 'view',
+                recordId: templateId
+            },
+            type: 'standard__recordPage'
         });
     }
 
     async handleToggleActive(event) {
         const templateId = event.currentTarget.dataset.id;
-        const tmpl = this.templates.find(t => t.Id === templateId);
-        if (!tmpl) return;
+        const tmpl = this.templates.find(item => item.Id === templateId);
+        if (!tmpl) {
+            return;
+        }
 
         try {
             if (tmpl.isActive) {
@@ -147,16 +167,16 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
             } else {
                 await activateTemplate({ templateId });
             }
-            await refreshApex(this._wiredResult);
+            await refreshApex(this.wiredResult);
             this.dispatchEvent(new ShowToastEvent({
-                title: 'Success',
                 message: tmpl.isActive ? 'Template deactivated.' : 'Template activated.',
+                title: 'Success',
                 variant: 'success'
             }));
-        } catch (error) {
+        } catch (err) {
             this.dispatchEvent(new ShowToastEvent({
+                message: err.body?.message || err.message || 'Operation failed.',
                 title: 'Error',
-                message: error.body?.message || error.message || 'Operation failed.',
                 variant: 'error'
             }));
         }
@@ -176,7 +196,9 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
     }
 
     async handleCloneConfirm() {
-        if (!this.selectedTemplate) return;
+        if (!this.selectedTemplate) {
+            return;
+        }
 
         this.isCloning = true;
         try {
@@ -188,32 +210,33 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
                 overrides.PriorityPk__c = this.overridePriority;
             }
 
+            const hasOverrides = Object.keys(overrides).length > 0;
             const newId = await createFromTemplate({
-                templateId: this.selectedTemplate.Id,
-                overrides: Object.keys(overrides).length > 0 ? overrides : null
+                overrides: hasOverrides ? overrides : null,
+                templateId: this.selectedTemplate.Id
             });
 
             this.showCloneModal = false;
             this.selectedTemplate = null;
 
             this.dispatchEvent(new ShowToastEvent({
-                title: 'Success',
                 message: 'Work item created from template.',
+                title: 'Success',
                 variant: 'success'
             }));
 
-            this[NavigationMixin.Navigate]({
-                type: 'standard__recordPage',
+            this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
-                    recordId: newId,
+                    actionName: 'view',
                     objectApiName: '%%%NAMESPACE%%%WorkItem__c',
-                    actionName: 'view'
-                }
+                    recordId: newId
+                },
+                type: 'standard__recordPage'
             });
-        } catch (error) {
+        } catch (err) {
             this.dispatchEvent(new ShowToastEvent({
+                message: err.body?.message || err.message || 'Failed to create from template.',
                 title: 'Error',
-                message: error.body?.message || error.message || 'Failed to create from template.',
                 variant: 'error'
             }));
         } finally {
@@ -221,15 +244,13 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
         }
     }
 
-    // ---- Private ----
-
-    _buildEstimate(t) {
+    static buildEstimate(tmpl) {
         const parts = [];
-        if (t.EstimatedHoursNumber__c != null) {
-            parts.push(t.EstimatedHoursNumber__c + 'h');
+        if (tmpl.EstimatedHoursNumber__c !== undefined && tmpl.EstimatedHoursNumber__c !== null) {
+            parts.push(`${tmpl.EstimatedHoursNumber__c}h`);
         }
-        if (t.DeveloperDaysSizeNumber__c != null) {
-            parts.push(t.DeveloperDaysSizeNumber__c + 'd');
+        if (tmpl.DeveloperDaysSizeNumber__c !== undefined && tmpl.DeveloperDaysSizeNumber__c !== null) {
+            parts.push(`${tmpl.DeveloperDaysSizeNumber__c}d`);
         }
         return parts.join(' / ') || '--';
     }

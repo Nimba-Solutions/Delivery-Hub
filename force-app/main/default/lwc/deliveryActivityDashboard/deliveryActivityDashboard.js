@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -6,11 +5,19 @@
  */
 import { LightningElement, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
+import { refreshApex } from '@salesforce/apex';
 import getActivitySummary from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityDashboardController.getActivitySummary';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
-import { refreshApex } from '@salesforce/apex';
 
-export default class DeliveryActivityDashboard extends NavigationMixin(LightningElement) {
+const BAR_PERCENT_SCALE = 100;
+const BAR_MIN_PERCENT = 5;
+const BAR_HEIGHT_SCALE = 80;
+const BAR_MIN_HEIGHT = 2;
+const PAGE_LABEL_MAX = 50;
+const PAGE_LABEL_TRUNCATE = 47;
+const BAR_COLOR = '#0176d3';
+
+export default class DeliveryActivityDashboard extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @track totalThisWeek = 0;
     @track totalThisMonth = 0;
     @track topUsers = [];
@@ -19,7 +26,9 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
     @track dailyCounts = [];
     @track hasData = false;
 
-    get isEmpty() { return !this.isLoading && !this.hasData; }
+    get isEmpty() {
+        return !this.isLoading && !this.hasData;
+    }
 
     wiredSummaryResult;
     maxDailyCount = 1;
@@ -35,8 +44,6 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
             this.topPages = this.formatPageItems(result.data.topPages || []);
             this.processDailyCounts(result.data.dailyCounts || []);
             this.hasData = this.totalThisMonth > 0;
-        } else if (result.error) {
-            console.error('Error loading activity summary', result.error);
         }
     }
 
@@ -45,13 +52,16 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
             return [];
         }
         const maxCount = items[0].count || 1;
-        return items.map((item, index) => ({
-            key: item.label + '-' + index,
-            label: item.label,
-            count: item.count,
-            barWidth: Math.max(Math.round((item.count / maxCount) * 100), 5),
-            barStyle: 'width: ' + Math.max(Math.round((item.count / maxCount) * 100), 5) + '%; height: 6px; border-radius: 3px; background: #0176d3;'
-        }));
+        return items.map((item, index) => {
+            const pct = Math.max(Math.round((item.count / maxCount) * BAR_PERCENT_SCALE), BAR_MIN_PERCENT);
+            return {
+                barStyle: `width: ${pct}%; height: 6px; border-radius: 3px; background: ${BAR_COLOR};`,
+                barWidth: pct,
+                count: item.count,
+                key: `${item.label}-${index}`,
+                label: item.label
+            };
+        });
     }
 
     formatPageItems(items) {
@@ -64,19 +74,20 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
             // Extract meaningful part of URL
             if (shortLabel.includes('/lightning/')) {
                 const parts = shortLabel.split('/lightning/');
-                shortLabel = '/lightning/' + (parts[1] || '');
+                shortLabel = `/lightning/${parts[1] || ''}`;
             }
             // Truncate if too long
-            if (shortLabel.length > 50) {
-                shortLabel = shortLabel.substring(0, 47) + '...';
+            if (shortLabel.length > PAGE_LABEL_MAX) {
+                shortLabel = `${shortLabel.substring(0, PAGE_LABEL_TRUNCATE)}...`;
             }
+            const pct = Math.max(Math.round((item.count / maxCount) * BAR_PERCENT_SCALE), BAR_MIN_PERCENT);
             return {
-                key: item.label + '-' + index,
-                label: shortLabel,
-                fullUrl: item.label,
+                barStyle: `width: ${pct}%; height: 6px; border-radius: 3px; background: ${BAR_COLOR};`,
+                barWidth: pct,
                 count: item.count,
-                barWidth: Math.max(Math.round((item.count / maxCount) * 100), 5),
-                barStyle: 'width: ' + Math.max(Math.round((item.count / maxCount) * 100), 5) + '%; height: 6px; border-radius: 3px; background: #0176d3;'
+                fullUrl: item.label,
+                key: `${item.label}-${index}`,
+                label: shortLabel
             };
         });
     }
@@ -87,14 +98,17 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
             this.maxDailyCount = 1;
             return;
         }
-        this.maxDailyCount = Math.max(...counts.map(d => d.count), 1);
-        this.dailyCounts = counts.map((d, index) => ({
-            key: d.dateLabel + '-' + index,
-            label: d.dateLabel,
-            count: d.count,
-            barHeight: Math.max(Math.round((d.count / this.maxDailyCount) * 80), 2),
-            barStyle: 'height: ' + Math.max(Math.round((d.count / this.maxDailyCount) * 80), 2) + 'px; width: 100%; border-radius: 3px 3px 0 0; background: #0176d3;'
-        }));
+        this.maxDailyCount = Math.max(...counts.map(day => day.count), 1);
+        this.dailyCounts = counts.map((day, index) => {
+            const height = Math.max(Math.round((day.count / this.maxDailyCount) * BAR_HEIGHT_SCALE), BAR_MIN_HEIGHT);
+            return {
+                barHeight: height,
+                barStyle: `height: ${height}px; width: 100%; border-radius: 3px 3px 0 0; background: ${BAR_COLOR};`,
+                count: day.count,
+                key: `${day.dateLabel}-${index}`,
+                label: day.dateLabel
+            };
+        });
     }
 
     get hasTopUsers() {
@@ -122,7 +136,7 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
             .then(ids => {
                 const reportId = ids.User_Activity_Summary;
                 if (reportId) {
-                    this[NavigationMixin.Navigate]({
+                    this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                         attributes: {
                             actionName: 'view',
                             objectApiName: 'Report',
@@ -138,7 +152,7 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
     }
 
     navigateToActivityLogs() {
-        this[NavigationMixin.Navigate]({
+        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
                 actionName: 'list',
                 objectApiName: '%%%NAMESPACED_ORG%%%ActivityLog__c'

@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -17,27 +16,31 @@ import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 // Fallback phase order used when CMT config is not yet loaded
 const FALLBACK_PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 'UAT', 'Deployment'];
 
+const HOUR_NOON = 12;
+const HOUR_EVENING = 17;
+const DAYS_IN_WEEK = 7;
+const WEEK_END_OFFSET = 6;
+
 const PHASE_LIST_VIEWS = {
-    'Approval':    'WorkItems_Approval',
-    'Deployment':  'WorkItems_Deployment',
-    'Development': 'WorkItems_Development',
-    'Planning':    'WorkItems_Planning',
-    'Testing':     'WorkItems_Testing',
-    'UAT':         'WorkItems_UAT'
+    Approval: 'WorkItems_Approval',
+    Deployment: 'WorkItems_Deployment',
+    Development: 'WorkItems_Development',
+    Planning: 'WorkItems_Planning',
+    Testing: 'WorkItems_Testing',
+    UAT: 'WorkItems_UAT'
 };
 
-// Maps phase name → badge CSS modifier (for attention work item styling)
+// Maps phase name to badge CSS modifier (for attention work item styling)
 const PHASE_BADGE_SUFFIX = {
-    'Approval':   'approval',
-    'UAT':        'uat',
-    'Deployment': 'signoff'
+    Approval: 'approval',
+    Deployment: 'signoff',
+    UAT: 'uat'
 };
 
-export default class DeliveryClientDashboard extends NavigationMixin(LightningElement) {
+export default class DeliveryClientDashboard extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @api hideAttentionSection = false;
     @api hideInFlightSection = false;
     @api hideRecentSection = false;
-
     @api hideThisWeekSection = false;
 
     @track selectedTimeRange = 'thisWeek';
@@ -54,8 +57,8 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     @track workflowConfig = null;
     @track reportIds = {};
 
-    _wiredResult;
-    _pendingData = null; // holds dashboard data until config is ready
+    wiredDashboardResult;
+    pendingData = null;
 
     @wire(getRecord, { recordId: USER_ID, fields: [FIRST_NAME_FIELD] })
     wiredUser;
@@ -68,108 +71,118 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             'WorkItems_Testing', 'WorkItems_UAT', 'WorkItems_Deployment'
         ]}).then(data => {
             this.reportIds = data;
-        }).catch(err => { console.error('getReportIds failed', err); });
+        }).catch(() => {
+            // Report IDs not available — navigation will fall back to list views
+        });
     }
 
     @wire(getWorkflowConfig, { workflowTypeName: '$activeWorkflowType' })
-    wiredConfig({ data, error }) {
+    wiredConfig({ data }) {
         if (data) {
             this.workflowConfig = data;
             // If dashboard data arrived before config, process it now
-            if (this._pendingData) {
-                this._processData(this._pendingData);
-                this._pendingData = null;
+            if (this.pendingData) {
+                this.processData(this.pendingData);
+                this.pendingData = null;
             }
-        } else if (error) {
-            console.error('[DeliveryClientDashboard] getWorkflowConfig error:', error);
         }
     }
 
     @wire(getClientDashboard, { timeRange: '$selectedTimeRange', workflowType: '$activeWorkflowType' })
     wiredDashboard(result) {
-        this._wiredResult = result;
+        this.wiredDashboardResult = result;
         const { data, error } = result;
         if (data) {
             if (this.workflowConfig) {
-                this._processData(data);
+                this.processData(data);
             } else {
-                this._pendingData = data; // wait for config
+                // Wait for config
+                this.pendingData = data;
             }
             this.isLoading = false;
         } else if (error) {
-            console.error('Error loading client dashboard', error);
             this.isLoading = false;
         }
     }
 
     // CMT-driven badge class for a given stage
-    _getBadgeClass(stage) {
-        const stageData = (this.workflowConfig?.stages || []).find(s => s.apiValue === stage);
+    getBadgeClass(stage) {
+        const stageData = (this.workflowConfig?.stages || []).find(stg => stg.apiValue === stage);
         const phase = stageData?.phase;
         const suffix = PHASE_BADGE_SUFFIX[phase] || null;
         const base = 'slds-badge slds-badge_lightest stage-badge';
-        return suffix ? `${base} stage-badge--${suffix}` : base;
+        if (suffix) {
+            return `${base} stage-badge--${suffix}`;
+        }
+        return base;
     }
 
     // CMT-driven phase order (distinct non-terminal phases in CMT sort order)
-    get _phaseOrder() {
-        if (!this.workflowConfig?.stages) return FALLBACK_PHASE_ORDER;
+    get phaseOrder() {
+        if (!this.workflowConfig?.stages) {
+            return FALLBACK_PHASE_ORDER;
+        }
         const seen = new Set();
         const order = [];
-        this.workflowConfig.stages.forEach(s => {
-            if (!s.isTerminal && s.phase && !seen.has(s.phase)) {
-                seen.add(s.phase);
-                order.push(s.phase);
+        this.workflowConfig.stages.forEach(stg => {
+            if (!stg.isTerminal && stg.phase && !seen.has(stg.phase)) {
+                seen.add(stg.phase);
+                order.push(stg.phase);
             }
         });
-        return order.length > 0 ? order : FALLBACK_PHASE_ORDER;
+        if (order.length > 0) {
+            return order;
+        }
+        return FALLBACK_PHASE_ORDER;
     }
 
-    _processData(data) {
+    processData(data) {
         // Attention work items (pre-sorted by attention score from Apex)
-        this.attentionWorkItems = (data.attentionWorkItems || []).map(t => ({
-            id: t.id,
-            name: t.name,
-            title: t.title || null,
-            stage: t.stage,
-            badgeClass: this._getBadgeClass(t.stage),
-            attentionScore: t.attentionScore || 0,
-            urgency: t.urgency || 'low',
-            priority: t.priority || '',
-            daysInStage: t.daysInStage || 0,
-            urgencyClass: `urgency-dot urgency-dot--${t.urgency || 'low'}`,
-            scoreLabel: this._formatScoreLabel(t)
+        this.attentionWorkItems = (data.attentionWorkItems || []).map(item => ({
+            attentionScore: item.attentionScore || 0,
+            badgeClass: this.getBadgeClass(item.stage),
+            daysInStage: item.daysInStage || 0,
+            id: item.id,
+            name: item.name,
+            priority: item.priority || '',
+            scoreLabel: DeliveryClientDashboard.formatScoreLabel(item),
+            stage: item.stage,
+            title: item.title || null,
+            urgency: item.urgency || 'low',
+            urgencyClass: `urgency-dot urgency-dot--${item.urgency || 'low'}`
         }));
 
         // Phase counts
         const phaseCounts = {};
-        (data.phases || []).forEach(p => {
-            phaseCounts[p.label] = p.count || 0;
+        (data.phases || []).forEach(phaseItem => {
+            phaseCounts[phaseItem.label] = phaseItem.count || 0;
         });
 
         const largePhase = !this.hasAttentionItems;
-        this.phases = this._phaseOrder.map(label => {
+        this.phases = this.phaseOrder.map(label => {
             const count = phaseCounts[label] || 0;
             return {
-                label,
+                colClass: largePhase
+                    ? 'slds-col slds-size_1-of-2 slds-m-bottom_x-small'
+                    : 'slds-col slds-size_1-of-3 slds-m-bottom_x-small',
                 count,
+                label,
                 tileClass: [
                     'phase-tile phase-tile--btn slds-box slds-box_x-small slds-text-align_center',
                     count > 0 ? 'phase-tile--active' : 'phase-tile--empty',
                     largePhase ? 'phase-tile--large' : ''
-                ].join(' ').trim(),
-                colClass: largePhase ? 'slds-col slds-size_1-of-2 slds-m-bottom_x-small' : 'slds-col slds-size_1-of-3 slds-m-bottom_x-small'
+                ].join(' ').trim()
             };
         });
 
         // Recent work items (includes both work items and comments)
-        this.recentWorkItems = (data.recentWorkItems || []).map(t => ({
-            id: t.id,
-            isComment: t.isComment || false,
-            lastModified: t.lastModified,
-            name: t.name,
-            stage: t.stage,
-            title: t.title || null
+        this.recentWorkItems = (data.recentWorkItems || []).map(item => ({
+            id: item.id,
+            isComment: item.isComment || false,
+            lastModified: item.lastModified,
+            name: item.name,
+            stage: item.stage,
+            title: item.title || null
         }));
 
         // Vendor announcements (one per active vendor with a message)
@@ -181,32 +194,56 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         // This Week metrics
         if (data.thisWeek) {
             this.thisWeek = {
+                blocked: data.thisWeek.blocked || 0,
                 completed: data.thisWeek.completed || 0,
-                moved: data.thisWeek.moved || 0,
                 hoursLogged: data.thisWeek.hoursLogged || 0,
-                blocked: data.thisWeek.blocked || 0
+                moved: data.thisWeek.moved || 0
             };
         }
     }
 
-    _formatScoreLabel(t) {
+    static formatScoreLabel(item) {
         const parts = [];
-        if (t.daysInStage > 0) parts.push(`${t.daysInStage}d`);
-        if (t.priority) parts.push(t.priority);
-        return parts.join(' · ');
+        if (item.daysInStage > 0) {
+            parts.push(`${item.daysInStage}d`);
+        }
+        if (item.priority) {
+            parts.push(item.priority);
+        }
+        return parts.join(' \u00b7 ');
     }
 
-    // ── Derived getters ──
+    get showAttentionSection() {
+        return !this.hideAttentionSection;
+    }
 
-    // ── Negated getters for lwc:if migration ──
-    get showAttentionSection() { return !this.hideAttentionSection; }
-    get showInFlightSection()  { return !this.hideInFlightSection; }
-    get showRecentSection()    { return !this.hideRecentSection; }
-    get showThisWeekSection()  { return !this.hideThisWeekSection; }
-    get isLoaded()             { return !this.isLoading; }
-    get inFlightExpanded()     { return !this.inFlightCollapsed; }
-    get recentExpanded()       { return !this.recentCollapsed; }
-    get thisWeekExpanded()     { return !this.thisWeekCollapsed; }
+    get showInFlightSection() {
+        return !this.hideInFlightSection;
+    }
+
+    get showRecentSection() {
+        return !this.hideRecentSection;
+    }
+
+    get showThisWeekSection() {
+        return !this.hideThisWeekSection;
+    }
+
+    get isLoaded() {
+        return !this.isLoading;
+    }
+
+    get inFlightExpanded() {
+        return !this.inFlightCollapsed;
+    }
+
+    get recentExpanded() {
+        return !this.recentCollapsed;
+    }
+
+    get thisWeekExpanded() {
+        return !this.thisWeekCollapsed;
+    }
 
     get hasAttentionItems() {
         return this.attentionWorkItems && this.attentionWorkItems.length > 0;
@@ -221,13 +258,20 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     get attentionCount() {
-        return this.attentionWorkItems ? this.attentionWorkItems.length : 0;
+        if (this.attentionWorkItems) {
+            return this.attentionWorkItems.length;
+        }
+        return 0;
     }
 
     get greeting() {
         const hour = new Date().getHours();
-        if (hour < 12) return 'Good morning';
-        if (hour < 17) return 'Good afternoon';
+        if (hour < HOUR_NOON) {
+            return 'Good morning';
+        }
+        if (hour < HOUR_EVENING) {
+            return 'Good afternoon';
+        }
         return 'Good evening';
     }
 
@@ -237,10 +281,14 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     get greetingLine() {
         const name = this.firstName ? `, ${this.firstName}` : '';
-        if (this.isLoading) return `${this.greeting}${name}`;
+        if (this.isLoading) {
+            return `${this.greeting}${name}`;
+        }
         if (this.hasAttentionItems) {
-            const n = this.attentionCount;
-            return `${this.greeting}${name} \u2014 ${n} item${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} your attention`;
+            const count = this.attentionCount;
+            const plural = count === 1 ? '' : 's';
+            const verb = count === 1 ? 's' : '';
+            return `${this.greeting}${name} \u2014 ${count} item${plural} need${verb} your attention`;
         }
         return `${this.greeting}${name} \u2014 You\u2019re all caught up`;
     }
@@ -253,11 +301,14 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     get greetingClass() {
-        return this.hasAttentionItems ? 'cd-greeting cd-greeting--attention' : 'cd-greeting cd-greeting--clean';
+        if (this.hasAttentionItems) {
+            return 'cd-greeting cd-greeting--attention';
+        }
+        return 'cd-greeting cd-greeting--clean';
     }
 
     get hasThisWeek() {
-        return this.thisWeek != null;
+        return this.thisWeek !== undefined && this.thisWeek !== null;
     }
 
     timeRangeOptions = [
@@ -274,15 +325,38 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         return 'This Week';
     }
 
-    get inFlightChevronIcon() { return this.inFlightCollapsed ? 'utility:chevronright' : 'utility:chevrondown'; }
-    get recentChevronIcon()   { return this.recentCollapsed   ? 'utility:chevronright' : 'utility:chevrondown'; }
-    get thisWeekChevronIcon() { return this.thisWeekCollapsed  ? 'utility:chevronright' : 'utility:chevrondown'; }
+    get inFlightChevronIcon() {
+        if (this.inFlightCollapsed) {
+            return 'utility:chevronright';
+        }
+        return 'utility:chevrondown';
+    }
 
-    // ── Handlers ──
+    get recentChevronIcon() {
+        if (this.recentCollapsed) {
+            return 'utility:chevronright';
+        }
+        return 'utility:chevrondown';
+    }
 
-    toggleInFlight()  { this.inFlightCollapsed  = !this.inFlightCollapsed;  }
-    toggleRecent()    { this.recentCollapsed    = !this.recentCollapsed;   }
-    toggleThisWeek()  { this.thisWeekCollapsed  = !this.thisWeekCollapsed; }
+    get thisWeekChevronIcon() {
+        if (this.thisWeekCollapsed) {
+            return 'utility:chevronright';
+        }
+        return 'utility:chevrondown';
+    }
+
+    toggleInFlight() {
+        this.inFlightCollapsed = !this.inFlightCollapsed;
+    }
+
+    toggleRecent() {
+        this.recentCollapsed = !this.recentCollapsed;
+    }
+
+    toggleThisWeek() {
+        this.thisWeekCollapsed = !this.thisWeekCollapsed;
+    }
 
     handleTimeRangeChange(event) {
         this.selectedTimeRange = event.detail.value;
@@ -290,13 +364,13 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     handleWorkItemClick(event) {
         const recordId = event.currentTarget.dataset.id;
-        this[NavigationMixin.Navigate]({
-            type: 'standard__recordPage',
+        this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
-                recordId: recordId,
+                actionName: 'view',
                 objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c',
-                actionName: 'view'
-            }
+                recordId
+            },
+            type: 'standard__recordPage'
         });
     }
 
@@ -306,93 +380,98 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         if (!listView) {
             return;
         }
-        this._navigateToReport(listView, listView);
+        this.navigateToReport(listView, listView);
     }
 
-    _getDateRange() {
+    getDateRange() {
         const now = new Date();
-        let start, end;
+        let start;
+        let end;
         if (this.selectedTimeRange === 'lastWeek') {
-            const day = now.getDay();
-            start = new Date(now); start.setDate(now.getDate() - day - 7);
-            end = new Date(start); end.setDate(start.getDate() + 6);
+            const dayOfWeek = now.getDay();
+            start = new Date(now);
+            start.setDate(now.getDate() - dayOfWeek - DAYS_IN_WEEK);
+            end = new Date(start);
+            end.setDate(start.getDate() + WEEK_END_OFFSET);
         } else if (this.selectedTimeRange === 'thisMonth') {
             start = new Date(now.getFullYear(), now.getMonth(), 1);
             end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         } else {
-            // thisWeek (default) — Sunday to Saturday
-            const day = now.getDay();
-            start = new Date(now); start.setDate(now.getDate() - day);
-            end = new Date(start); end.setDate(start.getDate() + 6);
+            // ThisWeek (default) — Sunday to Saturday
+            const dayOfWeek = now.getDay();
+            start = new Date(now);
+            start.setDate(now.getDate() - dayOfWeek);
+            end = new Date(start);
+            end.setDate(start.getDate() + WEEK_END_OFFSET);
         }
-        const fmt = d => d.toISOString().split('T')[0];
-        return { start: fmt(start), end: fmt(end) };
+        const formatDate = dateObj => dateObj.toISOString().split('T')[0];
+        return { end: formatDate(end), start: formatDate(start) };
     }
 
-    _navigateToReport(reportDevName, fallbackListView, fallbackObject) {
+    navigateToReport(reportDevName, fallbackListView, fallbackObject) {
         const reportId = this.reportIds[reportDevName];
         if (reportId) {
-            this[NavigationMixin.Navigate]({
-                type: 'standard__recordPage',
+            this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
-                    recordId: reportId,
+                    actionName: 'view',
                     objectApiName: 'Report',
-                    actionName: 'view'
-                }
+                    recordId: reportId
+                },
+                type: 'standard__recordPage'
             });
         } else {
-            this[NavigationMixin.Navigate]({
-                type: 'standard__objectPage',
+            this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
-                    objectApiName: fallbackObject || '%%%NAMESPACED_ORG%%%WorkItem__c',
-                    actionName: 'list'
+                    actionName: 'list',
+                    objectApiName: fallbackObject || '%%%NAMESPACED_ORG%%%WorkItem__c'
                 },
-                state: { filterName: fallbackListView }
+                state: { filterName: fallbackListView },
+                type: 'standard__objectPage'
             });
         }
     }
 
     handleCompletedClick() {
-        this._navigateToReport('Recently_Completed', 'Recently_Completed');
+        this.navigateToReport('Recently_Completed', 'Recently_Completed');
     }
 
     handleInProgressClick() {
-        this._navigateToReport('In_Flight_Work_Items', 'In_Flight');
+        this.navigateToReport('In_Flight_Work_Items', 'In_Flight');
     }
 
     handleHoursClick() {
-        const reportId = this.reportIds.Monthly_Hours; // eslint-disable-line dot-notation
+        const reportId = this.reportIds.Monthly_Hours;
         if (reportId) {
-            const { start, end } = this._getDateRange();
-            this[NavigationMixin.Navigate]({
-                type: 'standard__webPage',
+            const { start, end } = this.getDateRange();
+            this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     url: `/lightning/r/Report/${reportId}/view?fv0=${start}&fv1=${end}`
-                }
+                },
+                type: 'standard__webPage'
             });
         } else {
-            this[NavigationMixin.Navigate]({
-                type: 'standard__objectPage',
+            this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
-                    objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c',
-                    actionName: 'list'
+                    actionName: 'list',
+                    objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c'
                 },
-                state: { filterName: 'This_Month' }
+                state: { filterName: 'This_Month' },
+                type: 'standard__objectPage'
             });
         }
     }
 
     handleBlockedClick() {
-        this._navigateToReport('Blocked_Work_Items', 'Blocked');
+        this.navigateToReport('Blocked_Work_Items', 'Blocked');
     }
 
     handleViewAllAttention() {
-        this._navigateToReport('Attention_Items', 'In_Flight');
+        this.navigateToReport('Attention_Items', 'In_Flight');
     }
 
     handleRefresh() {
         this.isLoading = true;
-        refreshApex(this._wiredResult).then(() => {
+        refreshApex(this.wiredDashboardResult).then(() => {
             this.isLoading = false;
         });
     }

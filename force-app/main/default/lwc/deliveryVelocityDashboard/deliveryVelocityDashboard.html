@@ -1,0 +1,149 @@
+<template>
+    <template lwc:if={isLoading}>
+        <lightning-spinner alternative-text="Loading velocity data"></lightning-spinner>
+    </template>
+
+    <template lwc:if={isLoaded}>
+        <div class="slds-grid slds-wrap slds-gutters_small">
+
+            <!-- Velocity Chart -->
+            <div class="slds-col slds-size_1-of-1 slds-m-bottom_small">
+                <lightning-card title="Team Velocity" icon-name="utility:trending">
+                    <lightning-button-icon slot="actions" icon-name="utility:refresh"
+                        alternative-text="Refresh" onclick={handleRefresh}></lightning-button-icon>
+
+                    <div class="slds-p-around_small">
+                        <template lwc:if={hasVelocityData}>
+                            <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                                Items completed per week (last 8 weeks)
+                            </p>
+                            <div class="vd-chart">
+                                <template for:each={weeklyVelocity} for:item="week">
+                                    <div key={week.key} class="vd-chart__bar-group">
+                                        <span class="vd-chart__count">{week.completedCount}</span>
+                                        <div class="vd-chart__bar-wrapper">
+                                            <div style={week.barStyle}></div>
+                                        </div>
+                                        <span class="vd-chart__label">{week.label}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template lwc:else>
+                            <p class="slds-text-body_regular slds-text-color_weak">
+                                No velocity data available. Complete work items to see trends.
+                            </p>
+                        </template>
+                    </div>
+                </lightning-card>
+            </div>
+
+            <!-- Projected Completion -->
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_small">
+                <lightning-card title="Projected Completion" icon-name="utility:date_time">
+                    <template lwc:if={hasProjection}>
+                        <div class="slds-p-around_small">
+                            <div class="slds-grid slds-wrap slds-gutters_x-small">
+                                <div class="slds-col slds-size_1-of-2 slds-m-bottom_x-small">
+                                    <div class="vd-metric">
+                                        <span class="vd-metric__value">{projection.remainingItems}</span>
+                                        <span class="vd-metric__label">Remaining Items</span>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-m-bottom_x-small">
+                                    <div class="vd-metric">
+                                        <span class="vd-metric__value">{projection.averageVelocity}</span>
+                                        <span class="vd-metric__label">Avg Items/Week</span>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-m-bottom_x-small">
+                                    <div class="vd-metric">
+                                        <span class="vd-metric__value">{projection.estimatedWeeks}</span>
+                                        <span class="vd-metric__label">Estimated Weeks</span>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-m-bottom_x-small">
+                                    <div class="vd-metric">
+                                        <span class="vd-metric__value">{projectedDateFormatted}</span>
+                                        <span class="vd-metric__label">Target Date</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- What-If Section -->
+                            <div class="slds-m-top_small slds-box slds-box_x-small slds-theme_shade">
+                                <p class="slds-text-title_caps slds-m-bottom_xx-small">What-If Analysis</p>
+                                <div class="slds-form-element slds-m-bottom_x-small">
+                                    <label class="slds-form-element__label">If we add this many items:</label>
+                                    <div class="slds-form-element__control">
+                                        <input type="number" class="slds-input" min="0"
+                                            value={whatIfItems} onchange={handleWhatIfChange}>
+                                    </div>
+                                </div>
+                                <template lwc:if={hasWhatIfResult}>
+                                    <p class="slds-text-body_small">
+                                        Total items: <strong>{whatIfProjection.totalItems}</strong> |
+                                        Estimated weeks: <strong>{whatIfProjection.newEstimatedWeeks}</strong> |
+                                        Shift: <strong>{whatIfProjection.shiftDays} days</strong>
+                                    </p>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </lightning-card>
+            </div>
+
+            <!-- Capacity Utilization -->
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_small">
+                <lightning-card title="Capacity Utilization" icon-name="utility:groups">
+                    <template lwc:if={hasCapacity}>
+                        <div class="slds-p-around_small">
+                            <div class="slds-grid slds-wrap slds-gutters_x-small slds-m-bottom_small">
+                                <div class="slds-col slds-size_1-of-3">
+                                    <div class="vd-metric">
+                                        <span class="vd-metric__value">{capacity.developerCount}</span>
+                                        <span class="vd-metric__label">Developers</span>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-3">
+                                    <div class="vd-metric">
+                                        <span class="vd-metric__value">{capacity.totalCapacityHours}h</span>
+                                        <span class="vd-metric__label">Total Capacity</span>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-3">
+                                    <div class="vd-metric">
+                                        <span class="vd-metric__value">{capacity.utilizationPercent}%</span>
+                                        <span class="vd-metric__label">Utilization</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <template lwc:if={hasDevelopers}>
+                                <template for:each={capacity.developers} for:item="dev">
+                                    <div key={dev.key} class="vd-dev-row">
+                                        <div class="slds-grid slds-grid_align-spread slds-m-bottom_xx-small">
+                                            <span class="slds-text-body_small slds-text-title_bold">{dev.name}</span>
+                                            <span class="slds-text-body_small slds-text-color_weak">
+                                                {dev.activeItemCount} items | {dev.allocatedHours}h / {dev.weeklyCapacity}h
+                                            </span>
+                                        </div>
+                                        <div class="vd-dev-bar-bg">
+                                            <div style={dev.barStyle}></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                            <template lwc:else>
+                                <p class="slds-text-body_small slds-text-color_weak">
+                                    No developer capacity configured. Add DeveloperCapacity__mdt records to see utilization.
+                                </p>
+                            </template>
+                        </div>
+                    </template>
+                </lightning-card>
+            </div>
+
+        </div>
+    </template>
+</template>
