@@ -52,7 +52,8 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
                 estimateLabel: this._buildEstimate(t),
                 statusLabel: t.IsActiveBool__c ? 'Active' : 'Inactive',
                 statusClass: t.IsActiveBool__c ? 'tm-status tm-status--active' : 'tm-status tm-status--inactive',
-                isActive: t.IsActiveBool__c === true
+                isActive: t.IsActiveBool__c === true,
+                toggleLabel: t.IsActiveBool__c ? 'Deactivate' : 'Activate'
             }));
             this.error = '';
         } else if (result.error) {

@@ -22,24 +22,28 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
     wiredTemplates({ data, error }) {
         this.isLoading = false;
         if (data) {
-            this.templates = data.map(t => ({
-                ...t,
-                isSelected: t.developerName === this.selectedTemplate,
-                cardClass: 'tp-card' + (t.developerName === this.selectedTemplate ? ' tp-card--selected' : ''),
-                stageLabel: t.stageCount + (t.stageCount === 1 ? ' stage' : ' stages'),
-                personaLabel: (t.personas || []).join(', ').replace(/_/g, ' '),
-                personaCount: (t.personas || []).length,
-                hasPhases: (t.phases || []).length > 0,
-                phaseList: (t.phases || []).map((phase, idx) => ({
-                    key: `${t.developerName}_phase_${idx}`,
-                    label: phase
-                })),
-                pipelineDots: (t.stageColors || []).map((color, idx) => ({
-                    key: `${t.developerName}_dot_${idx}`,
-                    style: `background-color: ${color}`
-                })),
-                defaultBadge: t.isDefault === true
-            }));
+            this.templates = data.map(t => {
+                const selected = t.developerName === this.selectedTemplate;
+                const phases = t.phases || [];
+                return {
+                    ...t,
+                    cardClass: selected ? 'tp-card tp-card--selected' : 'tp-card',
+                    defaultBadge: t.isDefault === true,
+                    hasPhases: phases.length >= 1,
+                    isSelected: selected,
+                    personaCount: (t.personas || []).length,
+                    personaLabel: (t.personas || []).join(', ').replace(/_/g, ' '),
+                    phaseList: phases.map((phase, idx) => ({
+                        key: `${t.developerName}_phase_${idx}`,
+                        label: phase
+                    })),
+                    pipelineDots: (t.stageColors || []).map((color, idx) => ({
+                        key: `${t.developerName}_dot_${idx}`,
+                        style: `background-color: ${color}`
+                    })),
+                    stageLabel: `${t.stageCount} ${t.stageCount === 1 ? 'stage' : 'stages'}`
+                };
+            });
             this.error = '';
         } else if (error) {
             this.error = error.body?.message || error.message || 'Failed to load workflow templates.';

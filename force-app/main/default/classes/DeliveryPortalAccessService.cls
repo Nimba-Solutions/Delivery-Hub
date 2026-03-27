@@ -104,6 +104,7 @@ public without sharing class DeliveryPortalAccessService {
      * @param role The portal role (Admin or Member). Defaults to Member if blank.
      * @return PortalAccess__c The created access record with the generated token.
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity')
     @AuraEnabled
     public static PortalAccess__c generatePortalAccess(Id entityId, String email, String role) {
         if (entityId == null) {
