@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
@@ -90,7 +89,11 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 }
                 this.slackWebhookUrl = data.slackWebhookUrl || '';
                 this.emailNotificationsEnabled = data.emailNotificationsEnabled || false;
-                this.showBoardMetrics = (data.showBoardMetrics !== undefined && data.showBoardMetrics !== null) ? data.showBoardMetrics : true;
+                if (data.showBoardMetrics !== undefined && data.showBoardMetrics !== null) {
+                    this.showBoardMetrics = data.showBoardMetrics;
+                } else {
+                    this.showBoardMetrics = true;
+                }
 
                 // New feature toggles
                 this.activityLoggingEnabled = data.activityLoggingEnabled || false;
@@ -98,7 +101,11 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 this.bellNotificationsEnabled = data.bellNotificationsEnabled || false;
                 this.weeklyDigestEnabled = data.weeklyDigestEnabled || false;
                 this.statusPageEnabled = data.statusPageEnabled || false;
-                this.autoCreateWorkRequest = (data.autoCreateWorkRequest !== undefined && data.autoCreateWorkRequest !== null) ? data.autoCreateWorkRequest : true;
+                if (data.autoCreateWorkRequest !== undefined && data.autoCreateWorkRequest !== null) {
+                    this.autoCreateWorkRequest = data.autoCreateWorkRequest;
+                } else {
+                    this.autoCreateWorkRequest = true;
+                }
                 this.requireWorkLogApproval = data.requireWorkLogApproval || false;
 
                 // Activation dates
@@ -353,12 +360,18 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     }
 
     get slackTestLabel() {
-        return this.isSlackTesting ? 'Testing...' : 'Test';
+        if (this.isSlackTesting) {
+            return 'Testing...';
+        }
+        return 'Test';
     }
 
     get slackResultClass() {
         const isSuccess = this.slackTestResult && this.slackTestResult.startsWith('Connected');
-        return isSuccess ? 'slack-result slack-result--success' : 'slack-result slack-result--error';
+        if (isSuccess) {
+            return 'slack-result slack-result--success';
+        }
+        return 'slack-result slack-result--error';
     }
 
     // ── Conditional visibility getters ──────────────────────────────────

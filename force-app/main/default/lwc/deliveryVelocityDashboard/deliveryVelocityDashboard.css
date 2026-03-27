@@ -1,0 +1,74 @@
+/* Velocity chart */
+.vd-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 160px;
+    padding-top: 20px;
+}
+
+.vd-chart__bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.vd-chart__count {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.vd-chart__bar-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+}
+
+.vd-chart__label {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+/* Metric cards */
+.vd-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 8px 4px;
+}
+
+.vd-metric__value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+.vd-metric__label {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* Developer utilization rows */
+.vd-dev-row {
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.vd-dev-row:last-child {
+    border-bottom: none;
+}
+
+.vd-dev-bar-bg {
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    overflow: hidden;
+}
