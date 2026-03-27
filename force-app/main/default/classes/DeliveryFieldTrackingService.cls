@@ -18,6 +18,102 @@ public with sharing class DeliveryFieldTrackingService {
     private static List<DeliveryFieldChangeService.FieldChangeRequest> lastChangeRequests;
 
     /**
+     * @description Logs creation of records. For each tracked field on the object,
+     *              logs the initial value as a field change with dmlType = Created.
+     *              Safe to call from any after-insert trigger context. Returns silently
+     *              when field tracking is disabled via DeliveryHubSettings__c.
+     * @param newRecords The list of newly inserted SObject records (Trigger.new).
+     */
+    public static void trackCreates(List<SObject> newRecords) {
+        if (newRecords == null || newRecords.isEmpty()) {
+            return;
+        }
+
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+        if (settings == null || settings.EnableFieldTrackingDateTime__c == null) {
+            return;
+        }
+
+        String objectApiName = newRecords[0].getSObjectType().getDescribe().getLocalName();
+        List<TrackedField__mdt> trackedFields = getTrackedFieldsForObject(objectApiName);
+        if (trackedFields.isEmpty()) {
+            return;
+        }
+
+        List<DeliveryFieldChangeService.FieldChangeRequest> changeRequests =
+            new List<DeliveryFieldChangeService.FieldChangeRequest>();
+
+        for (SObject newRecord : newRecords) {
+            for (TrackedField__mdt tf : trackedFields) {
+                Object newValue = newRecord.get(tf.FieldApiName__c);
+                DeliveryFieldChangeService.FieldChangeRequest req =
+                    new DeliveryFieldChangeService.FieldChangeRequest();
+                req.recordId   = newRecord.Id;
+                req.fieldName  = tf.FieldApiName__c;
+                req.fieldLabel = tf.FieldLabel__c;
+                req.objectName = objectApiName;
+                req.oldValue   = null;
+                req.newValue   = newValue != null ? String.valueOf(newValue) : null;
+                req.extraContext = '{"dmlType":"Created"}';
+                changeRequests.add(req);
+            }
+        }
+
+        if (!changeRequests.isEmpty()) {
+            lastChangeRequests = changeRequests;
+            DeliveryFieldChangeService.captureFieldChanges(changeRequests);
+        }
+    }
+
+    /**
+     * @description Logs deletion of records. For each tracked field on the object,
+     *              logs the final value as a field change with dmlType = Deleted.
+     *              Safe to call from any before-delete trigger context. Returns silently
+     *              when field tracking is disabled via DeliveryHubSettings__c.
+     * @param oldRecords The list of SObject records being deleted (Trigger.old).
+     */
+    public static void trackDeletes(List<SObject> oldRecords) {
+        if (oldRecords == null || oldRecords.isEmpty()) {
+            return;
+        }
+
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+        if (settings == null || settings.EnableFieldTrackingDateTime__c == null) {
+            return;
+        }
+
+        String objectApiName = oldRecords[0].getSObjectType().getDescribe().getLocalName();
+        List<TrackedField__mdt> trackedFields = getTrackedFieldsForObject(objectApiName);
+        if (trackedFields.isEmpty()) {
+            return;
+        }
+
+        List<DeliveryFieldChangeService.FieldChangeRequest> changeRequests =
+            new List<DeliveryFieldChangeService.FieldChangeRequest>();
+
+        for (SObject oldRecord : oldRecords) {
+            for (TrackedField__mdt tf : trackedFields) {
+                Object oldValue = oldRecord.get(tf.FieldApiName__c);
+                DeliveryFieldChangeService.FieldChangeRequest req =
+                    new DeliveryFieldChangeService.FieldChangeRequest();
+                req.recordId   = oldRecord.Id;
+                req.fieldName  = tf.FieldApiName__c;
+                req.fieldLabel = tf.FieldLabel__c;
+                req.objectName = objectApiName;
+                req.oldValue   = oldValue != null ? String.valueOf(oldValue) : null;
+                req.newValue   = null;
+                req.extraContext = '{"dmlType":"Deleted"}';
+                changeRequests.add(req);
+            }
+        }
+
+        if (!changeRequests.isEmpty()) {
+            lastChangeRequests = changeRequests;
+            DeliveryFieldChangeService.captureFieldChanges(changeRequests);
+        }
+    }
+
+    /**
      * @description Compares old and new field values for every enabled TrackedField__mdt
      *              record that matches the SObject type of the given records. For each
      *              detected change, builds a FieldChangeRequest and delegates to

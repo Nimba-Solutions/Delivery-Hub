@@ -78,4 +78,10 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTemplateManagerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryVelocityServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryInvoiceGenerationServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocumentTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryNetworkEntityTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkRequestTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTransactionTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDependencyTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryOverdueReminderServiceTest</testClassName>
 </ApexTestSuite>
