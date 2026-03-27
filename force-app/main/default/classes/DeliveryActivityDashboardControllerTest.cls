@@ -45,7 +45,7 @@ private class DeliveryActivityDashboardControllerTest {
         List<DeliveryActivityDashboardController.RankedItem> topUsers =
             (List<DeliveryActivityDashboardController.RankedItem>) result.get('topUsers');
         System.assert(topUsers.size() >= 1, 'Should have at least one top user');
-        System.assertEquals(UserInfo.getUserId(), topUsers[0].label, 'Top user should be the one with 5 logs');
+        System.assertEquals(UserInfo.getName(), topUsers[0].label, 'Top user should show name, not ID');
         System.assertEquals(5, topUsers[0].count, 'Top user should have 5 activities');
 
         // Validate top components
