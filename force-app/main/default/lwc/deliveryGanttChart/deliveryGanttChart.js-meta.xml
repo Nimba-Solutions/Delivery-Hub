@@ -7,6 +7,12 @@
         <target>lightning__RecordPage</target>
         <target>lightning__HomePage</target>
     </targets>
-    <masterLabel>Delivery Gantt Chart</masterLabel>
-    <description>Visual timeline of active work items plotted against their projected UAT dates.</description>
+    <targetConfigs>
+        <targetConfig targets="lightning__AppPage,lightning__RecordPage,lightning__HomePage">
+            <property name="showCompleted" type="Boolean" label="Show Completed Items" description="When checked, includes completed (inactive) work items in the Gantt chart." default="false" />
+            <property name="initialZoom" type="String" label="Initial Zoom Level" description="The default zoom level when the chart loads." datasource="day,week,month,quarter" default="month" />
+        </targetConfig>
+    </targetConfigs>
+    <masterLabel>Delivery Gantt Chart (DHTMLX)</masterLabel>
+    <description>Interactive Gantt chart powered by DHTMLX Gantt. Shows work items grouped by client with progress bars, stage color-coding, zoom controls, and click-to-navigate.</description>
 </LightningComponentBundle>
