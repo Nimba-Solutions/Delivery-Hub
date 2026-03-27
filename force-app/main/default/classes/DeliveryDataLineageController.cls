@@ -23,7 +23,7 @@ public with sharing class DeliveryDataLineageController {
         List<NetworkEntity__c> entities = [
             SELECT Id, Name, EntityTypePk__c, StatusPk__c, ConnectionStatusPk__c,
                    IntegrationEndpointUrlTxt__c, OrgIdTxt__c, LastInboundSyncDateTime__c,
-                   EnableVendorPushBool__c
+                   EnableVendorPushDateTime__c
             FROM NetworkEntity__c
             WHERE StatusPk__c = 'Active'
             WITH SYSTEM_MODE
@@ -52,7 +52,7 @@ public with sharing class DeliveryDataLineageController {
                 'connectionStatus' => e.ConnectionStatusPk__c,
                 'endpoint' => e.IntegrationEndpointUrlTxt__c,
                 'orgId' => e.OrgIdTxt__c,
-                'vendorPush' => e.EnableVendorPushBool__c,
+                'vendorPush' => e.EnableVendorPushDateTime__c,
                 'healthPct' => healthPct,
                 'syncedCount' => succeeded,
                 'failedCount' => failed,

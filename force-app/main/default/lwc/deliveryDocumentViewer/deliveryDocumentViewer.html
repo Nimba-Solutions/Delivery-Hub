@@ -29,6 +29,14 @@
          ════════════════════════════════════════════════════ -->
     <template lwc:elseif={isListMode}>
             <lightning-card title="Documents" icon-name="standard:document">
+                <!-- Pending invoices banner -->
+                <template lwc:if={hasPendingInvoices}>
+                    <div class="pending-banner">
+                        <lightning-icon icon-name="utility:warning" alternative-text="Pending" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        <span>{pendingInvoiceBannerText}</span>
+                    </div>
+                </template>
+
                 <!-- Header actions -->
                 <div slot="actions" class="doc-header-actions">
                     <c-delivery-info-popover component-name="deliveryDocumentViewer"></c-delivery-info-popover>

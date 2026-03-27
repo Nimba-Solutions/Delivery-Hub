@@ -16,7 +16,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
             EntityTypePk__c = 'Client',
             StatusPk__c = 'Active',
             ConnectionStatusPk__c = 'Connected',
-            EnableVendorPushBool__c = true,
+            EnableVendorPushDateTime__c = Datetime.now(),
             IntegrationEndpointUrlTxt__c = 'https://test.salesforce.com/services/apexrest/delivery/deliveryhub/v1/sync',
             ApiKeyTxt__c = 'test-key-bounty-claim'
         );
@@ -25,8 +25,8 @@ private class DeliveryBountyClaimTriggerHandlerTest {
         WorkItem__c bounty = new WorkItem__c(
             BriefDescriptionTxt__c = 'Sync Test Bounty',
             StageNamePk__c = 'Backlog',
-            IsActiveBool__c = true,
-            IsBountyBool__c = true,
+            ActivatedDateTime__c = Datetime.now(),
+            BountyEnabledDateTime__c = Datetime.now(),
             BountyAmountCurrency__c = 400.00,
             BountyStatusPk__c = 'Open',
             BountyTokenTxt__c = 'sync-test-token-001',
@@ -98,7 +98,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
             EntityTypePk__c = 'Client',
             StatusPk__c = 'Active',
             ConnectionStatusPk__c = 'Connected',
-            EnableVendorPushBool__c = false,
+            EnableVendorPushDateTime__c = null,
             ApiKeyTxt__c = 'no-push-key'
         );
         insert noPushEntity;
@@ -106,8 +106,8 @@ private class DeliveryBountyClaimTriggerHandlerTest {
         WorkItem__c bounty = new WorkItem__c(
             BriefDescriptionTxt__c = 'No Push Bounty',
             StageNamePk__c = 'Backlog',
-            IsActiveBool__c = true,
-            IsBountyBool__c = true,
+            ActivatedDateTime__c = Datetime.now(),
+            BountyEnabledDateTime__c = Datetime.now(),
             BountyAmountCurrency__c = 200.00,
             BountyStatusPk__c = 'Open',
             BountyTokenTxt__c = 'no-push-token-001',

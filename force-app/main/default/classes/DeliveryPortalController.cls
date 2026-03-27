@@ -309,7 +309,7 @@ public without sharing class DeliveryPortalController {
         newItem.PriorityPk__c = String.isNotBlank(priority) ? priority : 'Medium';
         newItem.RequestTypePk__c = String.isNotBlank(requestType) ? requestType : 'Internal';
         newItem.StageNamePk__c = 'Backlog';
-        newItem.IsActiveBool__c = true;
+        newItem.ActivatedDateTime__c = Datetime.now();
         newItem.StatusPk__c = 'New';
 
         if (String.isNotBlank(networkEntityId)) {

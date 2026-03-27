@@ -137,7 +137,7 @@ public with sharing class DeliveryGhostController {
             t.DetailsTxt__c = fullDescription;
             t.PriorityPk__c = priority;
             t.StageNamePk__c = 'Backlog';
-            t.IsActiveBool__c = true;
+            t.ActivatedDateTime__c = Datetime.now();
             t.StatusPk__c = 'New';
 
             if (Schema.sObjectType.WorkItem__c.isCreateable()) {

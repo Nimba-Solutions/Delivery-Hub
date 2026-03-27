@@ -90,7 +90,7 @@ private class DeliveryPublicSubmissionServiceTest {
         WorkItem__c created = [
             SELECT BriefDescriptionTxt__c, DetailsTxt__c, ExternalRequesterEmailTxt__c,
                    StageNamePk__c, PriorityPk__c, RequestTypePk__c, Tags__c,
-                   IsActiveBool__c, StatusPk__c, ClientNetworkEntityId__c
+                   ActivatedDateTime__c, StatusPk__c, ClientNetworkEntityId__c
             FROM WorkItem__c
             WHERE Id = :(String) result.get('workItemId')
             LIMIT 1
@@ -102,7 +102,7 @@ private class DeliveryPublicSubmissionServiceTest {
         System.assertEquals('High', created.PriorityPk__c, 'Priority should match');
         System.assertEquals('Feature', created.RequestTypePk__c, 'Request type should match');
         System.assertEquals('portal,urgent', created.Tags__c, 'Tags should match');
-        System.assertEquals(true, created.IsActiveBool__c, 'Should be active');
+        System.assertNotEquals(null, created.ActivatedDateTime__c, 'Should be active');
         System.assertEquals('New', created.StatusPk__c, 'Status should be New');
         System.assertEquals(entity.Id, created.ClientNetworkEntityId__c, 'Should be linked to the entity');
         System.assert(created.DetailsTxt__c.contains('John Doe'), 'Description should contain submitter name');
@@ -248,7 +248,7 @@ private class DeliveryPublicSubmissionServiceTest {
                 BriefDescriptionTxt__c = '[Public] Existing ' + i,
                 StageNamePk__c = 'Backlog',
                 ExternalRequesterEmailTxt__c = rateLimitEmail,
-                IsActiveBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New'
             ));
         }
@@ -280,7 +280,7 @@ private class DeliveryPublicSubmissionServiceTest {
                 BriefDescriptionTxt__c = '[Public] Existing ' + i,
                 StageNamePk__c = 'Backlog',
                 ExternalRequesterEmailTxt__c = legitimateEmail,
-                IsActiveBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New'
             ));
         }

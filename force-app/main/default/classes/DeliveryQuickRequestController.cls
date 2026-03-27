@@ -42,7 +42,7 @@ public with sharing class DeliveryQuickRequestController {
             wi.BriefDescriptionTxt__c = title.trim();
             wi.PriorityPk__c = String.isNotBlank(priority) ? priority : 'Medium';
             wi.StageNamePk__c = 'Backlog';
-            wi.IsActiveBool__c = true;
+            wi.ActivatedDateTime__c = Datetime.now();
             wi.StatusPk__c = 'New';
 
             if (String.isNotBlank(description)) {

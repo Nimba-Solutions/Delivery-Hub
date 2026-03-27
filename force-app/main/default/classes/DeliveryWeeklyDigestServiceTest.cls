@@ -37,19 +37,19 @@ private class DeliveryWeeklyDigestServiceTest {
             BriefDescriptionTxt__c = 'Implement login page',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
-            IsActiveBool__c = true
+            ActivatedDateTime__c = Datetime.now()
         ));
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Design database schema',
             StageNamePk__c = 'Ready for Client Approval',
             PriorityPk__c = 'Critical',
-            IsActiveBool__c = true
+            ActivatedDateTime__c = Datetime.now()
         ));
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Write unit tests',
             StageNamePk__c = 'Done',
             PriorityPk__c = 'Medium',
-            IsActiveBool__c = false
+            ActivatedDateTime__c = null
         ));
         insert items;
     }
@@ -306,21 +306,21 @@ private class DeliveryWeeklyDigestServiceTest {
             BriefDescriptionTxt__c = 'SLA tracked item',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
-            IsActiveBool__c = true,
+            ActivatedDateTime__c = Datetime.now(),
             SLATargetDate__c = Date.today().addDays(5)
         ));
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'SLA at-risk item',
             StageNamePk__c = 'In QA',
             PriorityPk__c = 'Medium',
-            IsActiveBool__c = true,
+            ActivatedDateTime__c = Datetime.now(),
             SLATargetDate__c = Date.today().addDays(1)
         ));
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'SLA breached item',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Critical',
-            IsActiveBool__c = true,
+            ActivatedDateTime__c = Datetime.now(),
             SLATargetDate__c = Date.today().addDays(-3)
         ));
         insert items;

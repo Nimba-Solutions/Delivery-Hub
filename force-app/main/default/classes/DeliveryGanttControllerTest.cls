@@ -14,20 +14,20 @@ private class DeliveryGanttControllerTest {
                 BriefDescriptionTxt__c  = 'Build login page',
                 StageNamePk__c          = 'In Development',
                 PriorityPk__c           = 'High',
-                IsActiveBool__c         = true,
+                ActivatedDateTime__c         = Datetime.now(),
                 ProjectedUATReadyDate__c = Date.today().addDays(14)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c  = 'Fix export bug',
                 StageNamePk__c          = 'Ready for QA',
                 PriorityPk__c           = 'Medium',
-                IsActiveBool__c         = true,
+                ActivatedDateTime__c         = Datetime.now(),
                 ProjectedUATReadyDate__c = Date.today().addDays(7)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c  = 'No UAT date work item',
                 StageNamePk__c          = 'Backlog',
-                IsActiveBool__c         = true
+                ActivatedDateTime__c         = Datetime.now()
                 // ProjectedUATReadyDate__c intentionally null — should be excluded
             )
         };

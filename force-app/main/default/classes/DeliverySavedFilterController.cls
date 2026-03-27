@@ -20,7 +20,7 @@ public with sharing class DeliverySavedFilterController {
         }
         return [
             SELECT Id, Name, LabelTxt__c, FilterJsonTxt__c,
-                   IsDefaultBool__c, WorkflowTypeTxt__c
+                   DefaultSetDateTime__c, WorkflowTypeTxt__c
             FROM DeliverySavedFilter__c
             WHERE OwnerId = :UserInfo.getUserId()
             AND WorkflowTypeTxt__c = :workflowType
@@ -69,7 +69,7 @@ public with sharing class DeliverySavedFilterController {
                 Id = filterId,
                 LabelTxt__c = label,
                 FilterJsonTxt__c = filterJson,
-                IsDefaultBool__c = isDefault == true,
+                DefaultSetDateTime__c = (isDefault == true) ? Datetime.now() : null,
                 WorkflowTypeTxt__c = workflowType
             );
             update sf;
@@ -77,7 +77,7 @@ public with sharing class DeliverySavedFilterController {
             sf = new DeliverySavedFilter__c(
                 LabelTxt__c = label,
                 FilterJsonTxt__c = filterJson,
-                IsDefaultBool__c = isDefault == true,
+                DefaultSetDateTime__c = (isDefault == true) ? Datetime.now() : null,
                 WorkflowTypeTxt__c = workflowType
             );
             insert sf;
@@ -116,17 +116,17 @@ public with sharing class DeliverySavedFilterController {
      */
     private static void clearExistingDefaults(String workflowType, Id excludeId) {
         List<DeliverySavedFilter__c> existingDefaults = [
-            SELECT Id, IsDefaultBool__c FROM DeliverySavedFilter__c
+            SELECT Id, DefaultSetDateTime__c FROM DeliverySavedFilter__c
             WHERE OwnerId = :UserInfo.getUserId()
             AND WorkflowTypeTxt__c = :workflowType
-            AND IsDefaultBool__c = true
+            AND DefaultSetDateTime__c != null
             AND Id != :excludeId
             WITH SYSTEM_MODE
             LIMIT 50
         ];
         if (!existingDefaults.isEmpty()) {
             for (DeliverySavedFilter__c f : existingDefaults) {
-                f.IsDefaultBool__c = false;
+                f.DefaultSetDateTime__c = null;
             }
             update existingDefaults;
         }

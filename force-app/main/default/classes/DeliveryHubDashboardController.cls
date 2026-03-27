@@ -42,7 +42,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT Count(Id) total
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
 
         ];
 
@@ -71,7 +71,7 @@ public with sharing class DeliveryHubDashboardController {
             SELECT LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];

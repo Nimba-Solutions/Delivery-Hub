@@ -32,7 +32,7 @@ private class DeliveryPortalControllerTest {
                 BriefDescriptionTxt__c = 'Active Item 1',
                 StageNamePk__c = 'In Development',
                 PriorityPk__c = 'High',
-                IsActiveBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
                 ClientNetworkEntityId__c = entityA.Id,
                 DetailsTxt__c = '<p>Some <b>HTML</b> description for testing.</p>'
@@ -41,7 +41,7 @@ private class DeliveryPortalControllerTest {
                 BriefDescriptionTxt__c = 'Active Item 2',
                 StageNamePk__c = 'Ready for Client UAT',
                 PriorityPk__c = 'Medium',
-                IsActiveBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
                 ClientNetworkEntityId__c = entityA.Id
             ),
@@ -49,7 +49,7 @@ private class DeliveryPortalControllerTest {
                 BriefDescriptionTxt__c = 'Completed Item',
                 StageNamePk__c = 'Done',
                 PriorityPk__c = 'Low',
-                IsActiveBool__c = false,
+                ActivatedDateTime__c = null,
                 StatusPk__c = 'Closed',
                 ClientNetworkEntityId__c = entityA.Id
             ),
@@ -58,7 +58,7 @@ private class DeliveryPortalControllerTest {
                 BriefDescriptionTxt__c = 'Other Org Item',
                 StageNamePk__c = 'Backlog',
                 PriorityPk__c = 'Low',
-                IsActiveBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
                 ClientNetworkEntityId__c = entityB.Id
             )
@@ -254,7 +254,7 @@ private class DeliveryPortalControllerTest {
 
         WorkItem__c created = [
             SELECT BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c,
-                   StageNamePk__c, IsActiveBool__c, ClientNetworkEntityId__c
+                   StageNamePk__c, ActivatedDateTime__c, ClientNetworkEntityId__c
             FROM WorkItem__c
             WHERE Id = :newItemId
             LIMIT 1
@@ -264,7 +264,7 @@ private class DeliveryPortalControllerTest {
         System.assertEquals('Please add dark mode support.', created.DetailsTxt__c, 'Description should match');
         System.assertEquals('High', created.PriorityPk__c, 'Priority should match');
         System.assertEquals('Backlog', created.StageNamePk__c, 'New items should start in Backlog');
-        System.assertEquals(true, created.IsActiveBool__c, 'Should be active');
+        System.assertNotEquals(null, created.ActivatedDateTime__c, 'Should be active');
         System.assertEquals(entityA.Id, created.ClientNetworkEntityId__c, 'Should be linked to the entity');
     }
 

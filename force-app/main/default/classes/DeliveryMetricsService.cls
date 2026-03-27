@@ -115,7 +115,7 @@ public with sharing class DeliveryMetricsService {
             WHERE StageNamePk__c IN :terminalStages
             AND StageNamePk__c != 'Cancelled'
             AND LastModifiedDate >= :fourWeeksAgoDt
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
         ];
 
@@ -151,7 +151,7 @@ public with sharing class DeliveryMetricsService {
             SELECT COUNT()
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
         ];
     }
@@ -166,7 +166,7 @@ public with sharing class DeliveryMetricsService {
             SELECT StageNamePk__c stage, COUNT(Id) cnt
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
             ORDER BY COUNT(Id) DESC
@@ -191,7 +191,7 @@ public with sharing class DeliveryMetricsService {
             SELECT PriorityPk__c priority, COUNT(Id) cnt
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
             GROUP BY PriorityPk__c
         ]) {
@@ -223,7 +223,7 @@ public with sharing class DeliveryMetricsService {
             WHERE StageNamePk__c IN :terminalStages
             AND StageNamePk__c != 'Cancelled'
             AND LastModifiedDate >= :thirtyDaysAgo
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
         ];
         result.avgThroughputDays = calcAvgDays(currentCompleted);
@@ -236,7 +236,7 @@ public with sharing class DeliveryMetricsService {
             AND StageNamePk__c != 'Cancelled'
             AND LastModifiedDate >= :sixtyDaysAgo
             AND LastModifiedDate < :thirtyDaysAgo
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
         ];
         result.prevAvgThroughputDays = calcAvgDays(prevCompleted);
@@ -268,7 +268,7 @@ public with sharing class DeliveryMetricsService {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, StageEnteredDateTime__c, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             AND (
                 (StageEnteredDateTime__c != null AND StageEnteredDateTime__c <= :threeDaysAgo)
                 OR (StageEnteredDateTime__c = null AND LastModifiedDate <= :threeDaysAgo)
@@ -307,7 +307,7 @@ public with sharing class DeliveryMetricsService {
             WHERE StageNamePk__c IN :terminalStages
             AND StageNamePk__c != 'Cancelled'
             AND LastModifiedDate >= :thirtyDaysAgo
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
         ];
 
@@ -315,7 +315,7 @@ public with sharing class DeliveryMetricsService {
             SELECT COUNT()
             FROM WorkItem__c
             WHERE CreatedDate >= :thirtyDaysAgo
-            AND IsTemplateBool__c = false
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
         ];
 

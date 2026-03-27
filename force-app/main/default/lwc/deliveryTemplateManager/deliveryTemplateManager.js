@@ -61,12 +61,12 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
             ...tmpl,
             descPreview: descRaw ? `${descRaw}${descSuffix}` : 'No description',
             estimateLabel: DeliveryTemplateManager.buildEstimate(tmpl),
-            isActive: tmpl.IsActiveBool__c === true,
+            isActive: tmpl.ActivatedDateTime__c != null,
             priorityColor: color,
             priorityStyle: `color: ${color}; font-weight: 600;`,
-            statusClass: tmpl.IsActiveBool__c ? 'tm-status tm-status--active' : 'tm-status tm-status--inactive',
-            statusLabel: tmpl.IsActiveBool__c ? 'Active' : 'Inactive',
-            toggleLabel: tmpl.IsActiveBool__c ? 'Deactivate' : 'Activate',
+            statusClass: tmpl.ActivatedDateTime__c != null ? 'tm-status tm-status--active' : 'tm-status tm-status--inactive',
+            statusLabel: tmpl.ActivatedDateTime__c != null ? 'Active' : 'Inactive',
+            toggleLabel: tmpl.ActivatedDateTime__c != null ? 'Deactivate' : 'Activate',
             workflowLabel: (tmpl.WorkflowTypeTxt__c || 'None').replace(/_/gu, ' ')
         };
     }
@@ -129,7 +129,7 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
                 objectApiName: '%%%NAMESPACE%%%WorkItem__c'
             },
             state: {
-                defaultFieldValues: 'IsTemplateBool__c=true'
+                defaultFieldValues: 'TemplateMarkedDateTime__c=' + new Date().toISOString()
             },
             type: 'standard__objectPage'
         });

@@ -45,7 +45,7 @@ const INFO_REGISTRY = {
             'Delivery analytics dashboard showing velocity (items completed per week over 4 weeks), average throughput in days, work-in-progress gauge, stage distribution bar, aging alerts for stale items, priority breakdown, and 30-day completion rate.',
         friendlyName: 'Board Metrics',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.IsActiveBool__c, WorkItem__c.CreatedDate, WorkItem__c.PriorityPk__c, WorkItem__c.DaysInStageNumber__c, WorkflowStage__mdt.Phase'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.CreatedDate, WorkItem__c.PriorityPk__c, WorkItem__c.DaysInStageNumber__c, WorkflowStage__mdt.Phase'
     },
     deliveryBudgetSummary: {
         dataSource:
@@ -54,7 +54,7 @@ const INFO_REGISTRY = {
             'Quick health check showing active work item count, hours logged this month vs. last month, and (optionally) sync connection health with success/failure counts.',
         friendlyName: 'System Pulse',
         keyFields:
-            'WorkItem__c.IsActiveBool__c, WorkLog__c.HoursNumber__c, WorkLog__c.WorkDateDate__c, Sync_Item__c.StatusPk__c'
+            'WorkItem__c.ActivatedDateTime__c, WorkLog__c.HoursNumber__c, WorkLog__c.WorkDateDate__c, Sync_Item__c.StatusPk__c'
     },
     deliveryClientDashboard: {
         dataSource:
@@ -63,7 +63,7 @@ const INFO_REGISTRY = {
             'Your personal delivery overview. Shows a greeting, items needing your attention ranked by urgency, a phase-by-phase count of active work, a "This Week" snapshot, and recently updated items.',
         friendlyName: 'Client Dashboard',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.IsActiveBool__c, WorkItem__c.PriorityPk__c, WorkItem__c.DaysInStageNumber__c, WorkLog__c.HoursNumber__c, WorkflowStage__mdt (phase, isTerminal)'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.PriorityPk__c, WorkItem__c.DaysInStageNumber__c, WorkLog__c.HoursNumber__c, WorkflowStage__mdt (phase, isTerminal)'
     },
     deliveryClientOnboarding: {
         dataSource:
@@ -135,7 +135,7 @@ const INFO_REGISTRY = {
             'The main drag-and-drop board for managing work items through workflow stages. Columns, transitions, and colors are driven by Custom Metadata, not hardcoded. Supports persona-based views (Client, Developer, PM), filtering by tags/priority/developer, swimlanes, and card quick-actions.',
         friendlyName: 'Kanban Board',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.IsActiveBool__c, WorkItem__c.WorkflowTypeTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.Developer__c, WorkItem__c.Tags__c, WorkflowType__mdt, WorkflowStage__mdt, WorkflowPersonaView__mdt'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.WorkflowTypeTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.Developer__c, WorkItem__c.Tags__c, WorkflowType__mdt, WorkflowStage__mdt, WorkflowPersonaView__mdt'
     },
     deliveryHubSetup: {
         dataSource:
@@ -162,7 +162,7 @@ const INFO_REGISTRY = {
             'A 0-100 health rating for your delivery pipeline shown as an animated gauge. Breaks down into weighted factors like velocity, cycle time, WIP balance, and blocked-item ratio.',
         friendlyName: 'Delivery Score',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.IsActiveBool__c, WorkItem__c.PriorityPk__c, WorkItem__c.CreatedDate, WorkItem__c.DaysInStageNumber__c, NetworkEntity__c.Id'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.PriorityPk__c, WorkItem__c.CreatedDate, WorkItem__c.DaysInStageNumber__c, NetworkEntity__c.Id'
     },
     deliverySyncRetryPanel: {
         dataSource:

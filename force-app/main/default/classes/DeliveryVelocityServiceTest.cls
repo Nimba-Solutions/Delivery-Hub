@@ -15,25 +15,25 @@ private class DeliveryVelocityServiceTest {
         List<WorkItem__c> items = new List<WorkItem__c>{
             // Active items (non-terminal)
             new WorkItem__c(BriefDescriptionTxt__c = 'Active 1', StageNamePk__c = 'In Development',
-                            PriorityPk__c = 'High', SortOrderNumber__c = 1, IsActiveBool__c = true,
+                            PriorityPk__c = 'High', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(),
                             WorkflowTypeTxt__c = 'Software_Delivery'),
             new WorkItem__c(BriefDescriptionTxt__c = 'Active 2', StageNamePk__c = 'QA In Progress',
-                            PriorityPk__c = 'Medium', SortOrderNumber__c = 2, IsActiveBool__c = true,
+                            PriorityPk__c = 'Medium', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(),
                             WorkflowTypeTxt__c = 'Software_Delivery'),
             new WorkItem__c(BriefDescriptionTxt__c = 'Active 3', StageNamePk__c = 'Backlog',
-                            PriorityPk__c = 'Low', SortOrderNumber__c = 3, IsActiveBool__c = true,
+                            PriorityPk__c = 'Low', SortOrderNumber__c = 3, ActivatedDateTime__c = Datetime.now(),
                             WorkflowTypeTxt__c = 'Software_Delivery'),
             // Completed items
             new WorkItem__c(BriefDescriptionTxt__c = 'Done 1', StageNamePk__c = 'Done',
-                            PriorityPk__c = 'Medium', SortOrderNumber__c = 4, IsActiveBool__c = true,
+                            PriorityPk__c = 'Medium', SortOrderNumber__c = 4, ActivatedDateTime__c = Datetime.now(),
                             WorkflowTypeTxt__c = 'Software_Delivery'),
             new WorkItem__c(BriefDescriptionTxt__c = 'Done 2', StageNamePk__c = 'Done',
-                            PriorityPk__c = 'Low', SortOrderNumber__c = 5, IsActiveBool__c = true,
+                            PriorityPk__c = 'Low', SortOrderNumber__c = 5, ActivatedDateTime__c = Datetime.now(),
                             WorkflowTypeTxt__c = 'Software_Delivery'),
             // Template (should be excluded)
             new WorkItem__c(BriefDescriptionTxt__c = 'Template 1', StageNamePk__c = 'Done',
-                            PriorityPk__c = 'Low', SortOrderNumber__c = 6, IsActiveBool__c = true,
-                            IsTemplateBool__c = true, WorkflowTypeTxt__c = 'Software_Delivery')
+                            PriorityPk__c = 'Low', SortOrderNumber__c = 6, ActivatedDateTime__c = Datetime.now(),
+                            TemplateMarkedDateTime__c = Datetime.now(), WorkflowTypeTxt__c = 'Software_Delivery')
         };
         insert items;
 

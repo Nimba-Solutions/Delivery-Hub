@@ -40,12 +40,12 @@ private class DeliveryGhostControllerTest {
         );
         Test.stopTest();
 
-        WorkItem__c t = [SELECT BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c, IsActiveBool__c, StatusPk__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+        WorkItem__c t = [SELECT BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c, ActivatedDateTime__c, StatusPk__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
 
         System.assertEquals('[Bug] Test Issue - Something is broken', t.BriefDescriptionTxt__c, 'Work Item Name should include [Bug] prefix and description');
         System.assertEquals('High', t.PriorityPk__c, 'Priority should match');
         System.assert(t.DetailsTxt__c.contains('Auto-Captured Context'), 'Details should contain context header');
-        System.assertEquals(true, t.IsActiveBool__c, 'Ghost Reporter workItem should be active');
+        System.assertNotEquals(null, t.ActivatedDateTime__c, 'Ghost Reporter workItem should be active');
         System.assertEquals('New', t.StatusPk__c, 'Ghost Reporter workItem should have New status');
     }
 

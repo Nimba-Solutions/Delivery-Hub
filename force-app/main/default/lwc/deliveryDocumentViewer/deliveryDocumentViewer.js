@@ -17,6 +17,7 @@ import getDocumentTransactions from '@salesforce/apex/%%%NAMESPACE_DOT%%%Deliver
 import getDocumentsForEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentsForEntity';
 import recordPayment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.recordPayment';
 import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.sendDocumentEmail';
+import getPendingInvoices from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getPendingInvoices';
 import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { currency: 'USD', style: 'currency' });
@@ -49,6 +50,9 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track isLoading = true;
     @track error = null;
     @track mode = 'list';
+
+    // Pending invoices banner
+    @track pendingInvoiceCount = 0;
 
     // Generate form state
     @track showGenerateForm = false;
@@ -101,6 +105,28 @@ export default class DeliveryDocumentViewer extends LightningElement {
         // Fallback: if no entity context, load from DefaultBillingEntityId setting
         if (!this.networkEntityId && !this.documentId) {
             this.loadDefaultBillingEntity();
+        }
+        this.loadPendingInvoices();
+    }
+
+    get hasPendingInvoices() {
+        return this.pendingInvoiceCount > 0;
+    }
+
+    get pendingInvoiceBannerText() {
+        const count = this.pendingInvoiceCount;
+        if (count === 1) {
+            return '1 document pending review';
+        }
+        return `${count} documents pending review`;
+    }
+
+    async loadPendingInvoices() {
+        try {
+            const result = await getPendingInvoices();
+            this.pendingInvoiceCount = result ? result.count : 0;
+        } catch (e) {
+            this.pendingInvoiceCount = 0;
         }
     }
 

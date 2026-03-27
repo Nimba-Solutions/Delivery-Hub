@@ -449,6 +449,32 @@
             </div>
 
             <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:money" alternative-text="Invoice Generation" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Auto-Generate Invoices</label>
+                        </div>
+                        <div class="toggle-help">
+                            Automatically generate invoices and daily hour summaries for billing-enabled entities based on their configured frequency.
+                        </div>
+                        <template lwc:if={invoiceGenerationActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {invoiceGenerationActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={invoiceGenerationEnabled}
+                                onchange={handleInvoiceGenerationToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
                 <div class="slds-grid slds-wrap slds-gutters_small" style="padding: 0.75rem;">
                     <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
                         <lightning-input

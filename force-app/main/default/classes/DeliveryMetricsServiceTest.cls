@@ -151,7 +151,7 @@ private class DeliveryMetricsServiceTest {
             BriefDescriptionTxt__c = 'Template Item',
             StageNamePk__c = 'Backlog',
             PriorityPk__c = 'High',
-            IsTemplateBool__c = true
+            TemplateMarkedDateTime__c = Datetime.now()
         );
 
         Test.startTest();

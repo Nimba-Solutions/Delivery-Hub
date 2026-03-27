@@ -26,11 +26,11 @@ public class DeliveryHubBoardControllerTest {
         insert new List<NetworkEntity__c>{ entityA, entityB };
 
         List<WorkItem__c> workItems = new List<WorkItem__c>{
-            new WorkItem__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true, ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true, ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Blocked Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 1, IsActiveBool__c = true, ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Blocking Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 2, IsActiveBool__c = true, ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1, IsActiveBool__c = true, ClientNetworkEntityId__c = entityB.Id)
+            new WorkItem__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocked Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocking Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityB.Id)
         };
         insert workItems;
 
@@ -286,7 +286,7 @@ public class DeliveryHubBoardControllerTest {
             BriefDescriptionTxt__c = 'Completed Item',
             StageNamePk__c = 'Done',
             SortOrderNumber__c = 1,
-            IsActiveBool__c = true,
+            ActivatedDateTime__c = Datetime.now(),
             WorkflowTypeTxt__c = 'Software_Delivery'
         );
         insert completedItem;

@@ -28,7 +28,7 @@ private class DeliveryAiControllerTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'High',
             EstimatedHoursNumber__c = 8,
-            IsActiveBool__c = true
+            ActivatedDateTime__c = Datetime.now()
         );
         insert t;
         return t;
