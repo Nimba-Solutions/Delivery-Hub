@@ -82,9 +82,9 @@
         </template>
 
         <!-- Empty State -->
-        <template lwc:if={!hasTemplates}>
-            <template lwc:if={!isLoading}>
-                <template lwc:if={!error}>
+        <template lwc:if={showEmptyState}>
+            <template lwc:if={isLoaded}>
+                <template lwc:if={noError}>
                     <div class="slds-p-around_medium slds-text-align_center" style="color: #706e6b;">
                         <lightning-icon icon-name="utility:info" size="small" class="slds-m-bottom_small"></lightning-icon>
                         <p>No templates found. Create a work item and mark it as a template to get started.</p>

@@ -73,6 +73,10 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
         return this.filteredTemplates.length > 0;
     }
 
+    get showEmptyState() { return !this.hasTemplates; }
+    get isLoaded() { return !this.isLoading; }
+    get noError() { return !this.error; }
+
     get templateCount() {
         return this.filteredTemplates.length;
     }
