@@ -71,11 +71,6 @@ FIELD_META = {
         "inlineHelpText": "Active entities participate in sync and routing. Inactive entities are excluded from all automated processes.",
     },
 
-    # ── OpenAIConfiguration__mdt ────────────────────────────────────────────
-    "OpenAIConfiguration__mdt/API_Key__c": {
-        "inlineHelpText": "OpenAI API key stored in custom metadata. Used by AI estimation and description features.",
-    },
-
     # ── Request__c ───────────────────────────────────────────────────────────
     "Request__c/BudgetUtilizationPercent__c": {
         "inlineHelpText": "Auto-calculated: (Total Logged Hours / Pre-Approved Hours) × 100. Alerts when nearing 100%.",
