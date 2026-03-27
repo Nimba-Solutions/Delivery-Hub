@@ -411,31 +411,15 @@ public with sharing class DeliveryWorkItemController {
         return content.substring(startIndex, endIndex + 1);
     }
 
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     private static String getOpenAIApiKey() {
         try {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            
-            if (settings != null && settings.OpenAiApiTestedBool__c == true && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
-                System.debug(LoggingLevel.INFO, 'Giving custom setttngs api key');
+            if (settings != null && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
                 return settings.OpenAIApiKeyTxt__c;
             }
-
-            List<OpenAIConfiguration__mdt> configs = [
-                SELECT ApiKeyTxt__c 
-                FROM OpenAIConfiguration__mdt 
-                WHERE DeveloperName = 'OpenAI' 
-                LIMIT 1
-            ];
-            
-            if (!configs.isEmpty() && String.isNotBlank(configs[0].ApiKeyTxt__c)) {
-                return configs[0].ApiKeyTxt__c;
-            }
-            
         } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Error retrieving OpenAI API key: ' + e.getMessage());
+            // Settings not configured — return null
         }
-
         return null;
     }
 

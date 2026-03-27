@@ -8,6 +8,7 @@
  */
 import { LightningElement, api, wire } from "lwc";
 import { getRecord, getFieldValue, updateRecord } from "lightning/uiRecordApi";
+import { NavigationMixin } from "lightning/navigation";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
 import IS_RECURRING_FIELD from "@salesforce/schema/WorkItem__c.IsRecurringBool__c";
@@ -49,7 +50,7 @@ const DAY_OF_MONTH_OPTIONS = Array.from({ length: 28 }, (_, i) => ({
     value: String(i + 1)
 }));
 
-export default class DeliveryRecurringConfig extends LightningElement {
+export default class DeliveryRecurringConfig extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @api recordId;
 
     isRecurring = false;
@@ -123,6 +124,19 @@ export default class DeliveryRecurringConfig extends LightningElement {
 
     handleTemplateToggle(event) {
         this.isTemplate = event.target.checked;
+    }
+
+    navigateToTemplate() {
+        if (this.templateSourceId) {
+            this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
+                type: "standard__recordPage",
+                attributes: {
+                    recordId: this.templateSourceId,
+                    objectApiName: "WorkItem__c",
+                    actionName: "view"
+                }
+            });
+        }
     }
 
     handleScheduleChange(event) {
