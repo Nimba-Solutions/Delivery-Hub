@@ -19,7 +19,7 @@ private class DeliveryTimelineControllerTest {
                 BriefDescriptionTxt__c     = 'Build login page',
                 StageNamePk__c             = 'In Development',
                 PriorityPk__c              = 'High',
-                IsActiveBool__c            = true,
+                ActivatedDateTime__c            = Datetime.now(),
                 WorkflowTypeTxt__c         = 'Software_Delivery',
                 ClientNetworkEntityId__c   = entity.Id,
                 EstimatedStartDevDate__c   = Date.today(),
@@ -29,7 +29,7 @@ private class DeliveryTimelineControllerTest {
                 BriefDescriptionTxt__c     = 'Fix export bug',
                 StageNamePk__c             = 'Ready for QA',
                 PriorityPk__c              = 'Medium',
-                IsActiveBool__c            = true,
+                ActivatedDateTime__c            = Datetime.now(),
                 WorkflowTypeTxt__c         = 'Software_Delivery',
                 ClientNetworkEntityId__c   = entity.Id,
                 ProjectedUATReadyDate__c   = Date.today().addDays(7)
@@ -37,17 +37,21 @@ private class DeliveryTimelineControllerTest {
             new WorkItem__c(
                 BriefDescriptionTxt__c     = 'Unassigned item',
                 StageNamePk__c             = 'Backlog',
-                IsActiveBool__c            = true,
+                ActivatedDateTime__c            = Datetime.now(),
                 WorkflowTypeTxt__c         = 'Software_Delivery'
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c     = 'Inactive item',
                 StageNamePk__c             = 'Done',
-                IsActiveBool__c            = false,
+                ActivatedDateTime__c            = null,
                 WorkflowTypeTxt__c         = 'Software_Delivery'
             )
         };
         insert workItems;
+
+        // Deactivate the last item after insert (trigger auto-sets ActivatedDateTime)
+        workItems[3].ActivatedDateTime__c = null;
+        update workItems[3];
     }
 
     @IsTest

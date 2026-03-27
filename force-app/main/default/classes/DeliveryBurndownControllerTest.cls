@@ -14,28 +14,28 @@ private class DeliveryBurndownControllerTest {
                 BriefDescriptionTxt__c  = 'Active open item',
                 StageNamePk__c          = 'In Development',
                 PriorityPk__c           = 'High',
-                IsActiveBool__c         = true,
+                ActivatedDateTime__c         = Datetime.now(),
                 WorkflowTypeTxt__c      = 'Software_Delivery'
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c  = 'Another in-progress item',
                 StageNamePk__c          = 'Ready for QA',
                 PriorityPk__c           = 'Medium',
-                IsActiveBool__c         = true,
+                ActivatedDateTime__c         = Datetime.now(),
                 WorkflowTypeTxt__c      = 'Software_Delivery'
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c  = 'Completed item',
                 StageNamePk__c          = 'Done',
                 PriorityPk__c           = 'Low',
-                IsActiveBool__c         = false,
+                ActivatedDateTime__c         = null,
                 WorkflowTypeTxt__c      = 'Software_Delivery'
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c  = 'Cancelled item',
                 StageNamePk__c          = 'Cancelled',
                 PriorityPk__c           = 'Low',
-                IsActiveBool__c         = false,
+                ActivatedDateTime__c         = null,
                 WorkflowTypeTxt__c      = 'Software_Delivery'
             )
         };

@@ -14,12 +14,12 @@ public class DeliveryDependencyGraphControllerTest {
         DeliveryTriggerControl.disableAfterLogic();
 
         List<WorkItem__c> workItems = new List<WorkItem__c>{
-            new WorkItem__c(BriefDescriptionTxt__c = 'Alpha', StageNamePk__c = 'Backlog', PriorityPk__c = 'High', SortOrderNumber__c = 1, IsActiveBool__c = true, WorkflowTypeTxt__c = 'Software_Delivery'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Bravo', StageNamePk__c = 'In Progress', PriorityPk__c = 'Medium', SortOrderNumber__c = 2, IsActiveBool__c = true, WorkflowTypeTxt__c = 'Software_Delivery'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Charlie', StageNamePk__c = 'Open', PriorityPk__c = 'Low', SortOrderNumber__c = 3, IsActiveBool__c = true, WorkflowTypeTxt__c = 'Software_Delivery'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Delta', StageNamePk__c = 'Open', PriorityPk__c = 'High', SortOrderNumber__c = 4, IsActiveBool__c = true, WorkflowTypeTxt__c = 'Software_Delivery'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Echo Isolated', StageNamePk__c = 'Open', PriorityPk__c = 'Medium', SortOrderNumber__c = 5, IsActiveBool__c = true, WorkflowTypeTxt__c = 'Software_Delivery'),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Done Item', StageNamePk__c = 'Done', PriorityPk__c = 'Low', SortOrderNumber__c = 6, IsActiveBool__c = true, WorkflowTypeTxt__c = 'Software_Delivery')
+            new WorkItem__c(BriefDescriptionTxt__c = 'Alpha', StageNamePk__c = 'Backlog', PriorityPk__c = 'High', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), WorkflowTypeTxt__c = 'Software_Delivery'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Bravo', StageNamePk__c = 'In Progress', PriorityPk__c = 'Medium', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(), WorkflowTypeTxt__c = 'Software_Delivery'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Charlie', StageNamePk__c = 'Open', PriorityPk__c = 'Low', SortOrderNumber__c = 3, ActivatedDateTime__c = Datetime.now(), WorkflowTypeTxt__c = 'Software_Delivery'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Delta', StageNamePk__c = 'Open', PriorityPk__c = 'High', SortOrderNumber__c = 4, ActivatedDateTime__c = Datetime.now(), WorkflowTypeTxt__c = 'Software_Delivery'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Echo Isolated', StageNamePk__c = 'Open', PriorityPk__c = 'Medium', SortOrderNumber__c = 5, ActivatedDateTime__c = Datetime.now(), WorkflowTypeTxt__c = 'Software_Delivery'),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Done Item', StageNamePk__c = 'Done', PriorityPk__c = 'Low', SortOrderNumber__c = 6, ActivatedDateTime__c = Datetime.now(), WorkflowTypeTxt__c = 'Software_Delivery')
         };
         insert workItems;
 

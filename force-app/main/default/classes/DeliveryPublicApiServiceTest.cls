@@ -59,7 +59,7 @@ private class DeliveryPublicApiServiceTest {
                 BriefDescriptionTxt__c = 'API Active Item',
                 StageNamePk__c = 'In Development',
                 PriorityPk__c = 'High',
-                IsActiveBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
                 ClientNetworkEntityId__c = entityA.Id,
                 DetailsTxt__c = 'Active item for API testing'
@@ -68,7 +68,7 @@ private class DeliveryPublicApiServiceTest {
                 BriefDescriptionTxt__c = 'API Done Item',
                 StageNamePk__c = 'Done',
                 PriorityPk__c = 'Low',
-                IsActiveBool__c = false,
+                ActivatedDateTime__c = null,
                 StatusPk__c = 'Closed',
                 ClientNetworkEntityId__c = entityA.Id
             ),
@@ -77,7 +77,7 @@ private class DeliveryPublicApiServiceTest {
                 BriefDescriptionTxt__c = 'Other Corp Item',
                 StageNamePk__c = 'Backlog',
                 PriorityPk__c = 'Medium',
-                IsActiveBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
                 ClientNetworkEntityId__c = entityB.Id
             )

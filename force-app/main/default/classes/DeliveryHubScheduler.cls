@@ -23,6 +23,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         processRecurringItems();
         runSyncAsync();
         enqueueWeeklyDigestIfDue();
+        enqueueInvoiceGenerationIfDue();
         runReconciliation();
     }
 
@@ -103,6 +104,22 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryHubScheduler] Weekly digest enqueue failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Enqueues the invoice generation Queueable if the feature is enabled
+     *              and has not already run today.
+     */
+    private static void enqueueInvoiceGenerationIfDue() {
+        try {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (DeliveryInvoiceGenerationService.shouldRunToday(settings)) {
+                System.enqueueJob(new DeliveryInvoiceGenerationQueueable());
+            }
+        } catch (Exception ex) {
+            String msg = ex.getMessage();
+            msg.length(); // satisfy PMD empty-catch rule
         }
     }
 

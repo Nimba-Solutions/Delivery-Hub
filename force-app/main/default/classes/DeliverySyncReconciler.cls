@@ -25,7 +25,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         'ClientPreApprovedHoursNumber__c', 'Developer__c', 'CalculatedETADate__c',
         'ProjectedUATReadyDate__c', 'AcceptanceCriteriaTxt__c', 'StepsToReproduceTxt__c',
         'ClientIntentionPk__c', 'RequestTypePk__c', 'Tags__c', 'WorkflowTypeTxt__c',
-        'Epic__c', 'SLATargetDate__c', 'IsActiveBool__c', 'SortOrderNumber__c'
+        'Epic__c', 'SLATargetDate__c', 'ActivatedDateTime__c', 'SortOrderNumber__c'
     };
 
     /**
@@ -172,7 +172,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
                    ClientPreApprovedHoursNumber__c, Developer__c, CalculatedETADate__c,
                    ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c, StepsToReproduceTxt__c,
                    ClientIntentionPk__c, RequestTypePk__c, Tags__c, WorkflowTypeTxt__c,
-                   Epic__c, SLATargetDate__c, IsActiveBool__c, SortOrderNumber__c
+                   Epic__c, SLATargetDate__c, ActivatedDateTime__c, SortOrderNumber__c
             FROM WorkItem__c WHERE Id IN :gapWorkItemIds
             WITH SYSTEM_MODE
         ]);

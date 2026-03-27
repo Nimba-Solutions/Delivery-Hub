@@ -117,6 +117,11 @@ public with sharing class DeliveryHubSettingsController {
         @AuraEnabled public String stagesToAutoShare { get; set; }
         /** @description External webhook URL for real-time push notifications */
         @AuraEnabled public String webhookUrl { get; set; }
+
+        /** @description Invoice generation enabled (computed from DateTime) */
+        @AuraEnabled public Boolean invoiceGenerationEnabled { get; set; }
+        /** @description Formatted date when invoice generation was activated */
+        @AuraEnabled public String invoiceGenerationActivatedAt { get; set; }
     }
 
     /**
@@ -191,6 +196,10 @@ public with sharing class DeliveryHubSettingsController {
             dto.defaultBillingEntityId = settings.DefaultBillingEntityIdTxt__c;
             dto.stagesToAutoShare = settings.StagesToAutoShareWithDevTeamTxt__c;
             dto.webhookUrl = settings.WebhookUrlTxt__c;
+
+            // Invoice generation
+            dto.invoiceGenerationEnabled = settings.EnableInvoiceGenerationDateTime__c != null;
+            dto.invoiceGenerationActivatedAt = formatActivationDate(settings.EnableInvoiceGenerationDateTime__c);
         } else {
             // Fresh Install Defaults — match what DeliveryHubInstallHandler sets
             dto.enableNotifications = true;
@@ -214,6 +223,7 @@ public with sharing class DeliveryHubSettingsController {
             dto.escalationCooldownHours = 24;
             dto.fieldChangeRetentionDays = 0;
             dto.weeklyDigestDay = 'Monday';
+            dto.invoiceGenerationEnabled = false;
         }
         return dto;
     }
@@ -308,6 +318,7 @@ public with sharing class DeliveryHubSettingsController {
             settings.EnableStatusPageDateTime__c = dto.statusPageEnabled ? (settings.EnableStatusPageDateTime__c != null ? settings.EnableStatusPageDateTime__c : Datetime.now()) : null;
             settings.EnableAutoCreateWorkRequestDateTime__c = dto.autoCreateWorkRequest ? (settings.EnableAutoCreateWorkRequestDateTime__c != null ? settings.EnableAutoCreateWorkRequestDateTime__c : Datetime.now()) : null;
             settings.RequireWorkLogApprovalDate__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDate__c != null ? settings.RequireWorkLogApprovalDate__c : Datetime.now()) : null;
+            settings.EnableInvoiceGenerationDateTime__c = dto.invoiceGenerationEnabled == true ? (settings.EnableInvoiceGenerationDateTime__c != null ? settings.EnableInvoiceGenerationDateTime__c : Datetime.now()) : null;
 
             // Keep legacy booleans in sync
             settings.EnableActivityLoggingBool__c = dto.activityLoggingEnabled == true;

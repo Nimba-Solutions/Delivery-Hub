@@ -45,7 +45,7 @@ private class DeliveryWorkItemControllerTest {
                 DeveloperDaysSizeNumber__c = 2,
                 StageNamePk__c = 'Backlog',
                 SortOrderNumber__c = 1,
-                IsActiveBool__c = true
+                ActivatedDateTime__c = Datetime.now()
             )
         };
         insert workItems;

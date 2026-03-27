@@ -51,7 +51,7 @@ public with sharing class DeliveryScoreService {
                        ClientNetworkEntityId__c, LastModifiedDate,
                        (SELECT Id FROM WorkItemComments__r)
                 FROM WorkItem__c
-                WHERE IsTemplateBool__c = false
+                WHERE TemplateMarkedDateTime__c = null
                 AND ClientNetworkEntityId__c = :entityId
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
@@ -62,7 +62,7 @@ public with sharing class DeliveryScoreService {
                        ClientNetworkEntityId__c, LastModifiedDate,
                        (SELECT Id FROM WorkItemComments__r)
                 FROM WorkItem__c
-                WHERE IsTemplateBool__c = false
+                WHERE TemplateMarkedDateTime__c = null
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
             ];

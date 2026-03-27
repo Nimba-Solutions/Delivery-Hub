@@ -763,3 +763,18 @@
         border-top-color: #000;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════
+ * Pending Invoices Banner
+ * ═══════════════════════════════════════════════════════════ */
+
+.pending-banner {
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    background-color: #fef3cd;
+    border-bottom: 1px solid #f0d56e;
+    color: #664d03;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}

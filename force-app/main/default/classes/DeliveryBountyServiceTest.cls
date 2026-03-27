@@ -27,8 +27,8 @@ private class DeliveryBountyServiceTest {
                 AcceptanceCriteriaTxt__c = '1. Shows live data\n2. Refreshes every 30s',
                 StageNamePk__c = 'Backlog',
                 PriorityPk__c = 'High',
-                IsActiveBool__c = true,
-                IsBountyBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
+                BountyEnabledDateTime__c = Datetime.now(),
                 BountyAmountCurrency__c = 500.00,
                 BountyDeadlineDate__c = Date.today().addDays(30),
                 BountyStatusPk__c = 'Open',
@@ -43,8 +43,8 @@ private class DeliveryBountyServiceTest {
                 DetailsTxt__c = 'Batch job fails on large data sets',
                 StageNamePk__c = 'Backlog',
                 PriorityPk__c = 'Medium',
-                IsActiveBool__c = true,
-                IsBountyBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
+                BountyEnabledDateTime__c = Datetime.now(),
                 BountyAmountCurrency__c = 250.00,
                 BountyDeadlineDate__c = Date.today().addDays(14),
                 BountyStatusPk__c = 'Open',
@@ -57,8 +57,8 @@ private class DeliveryBountyServiceTest {
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Expired Bounty',
                 StageNamePk__c = 'Backlog',
-                IsActiveBool__c = true,
-                IsBountyBool__c = true,
+                ActivatedDateTime__c = Datetime.now(),
+                BountyEnabledDateTime__c = Datetime.now(),
                 BountyAmountCurrency__c = 100.00,
                 BountyDeadlineDate__c = Date.today().addDays(-1),
                 BountyStatusPk__c = 'Open',
@@ -71,8 +71,8 @@ private class DeliveryBountyServiceTest {
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Regular Work Item',
                 StageNamePk__c = 'In Development',
-                IsActiveBool__c = true,
-                IsBountyBool__c = false,
+                ActivatedDateTime__c = Datetime.now(),
+                BountyEnabledDateTime__c = null,
                 ClientNetworkEntityId__c = entity.Id
             )
         };

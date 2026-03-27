@@ -66,7 +66,7 @@ public with sharing class DeliveryVelocityService {
         List<WorkItem__c> completed = [
             SELECT Id, LastModifiedDate
             FROM WorkItem__c
-            WHERE IsTemplateBool__c = false
+            WHERE TemplateMarkedDateTime__c = null
             AND StageNamePk__c IN :terminalStages
             AND WorkflowTypeTxt__c = :workflowType
             AND LastModifiedDate >= :startDate
@@ -98,7 +98,7 @@ public with sharing class DeliveryVelocityService {
         List<WorkItem__c> completed = [
             SELECT Id, LastModifiedDate
             FROM WorkItem__c
-            WHERE IsTemplateBool__c = false
+            WHERE TemplateMarkedDateTime__c = null
             AND StageNamePk__c IN :allTerminalStages
             AND Developer__c = :developerId
             AND LastModifiedDate >= :startDate
@@ -120,7 +120,7 @@ public with sharing class DeliveryVelocityService {
         Integer remaining = [
             SELECT COUNT()
             FROM WorkItem__c
-            WHERE IsTemplateBool__c = false
+            WHERE TemplateMarkedDateTime__c = null
             AND StageNamePk__c NOT IN :terminalStages
             AND WorkflowTypeTxt__c = :workflowType
             WITH SYSTEM_MODE
@@ -166,7 +166,7 @@ public with sharing class DeliveryVelocityService {
         for (AggregateResult ar : [
             SELECT Developer__c devId, COUNT(Id) cnt
             FROM WorkItem__c
-            WHERE IsTemplateBool__c = false
+            WHERE TemplateMarkedDateTime__c = null
             AND StageNamePk__c NOT IN :terminalStages
             AND WorkflowTypeTxt__c = :workflowType
             AND Developer__c != null

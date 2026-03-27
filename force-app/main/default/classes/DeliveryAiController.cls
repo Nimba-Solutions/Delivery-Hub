@@ -78,8 +78,8 @@ public with sharing class DeliveryAiController {
         List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
             FROM WorkItem__c
-            WHERE IsActiveBool__c = true
-            AND IsTemplateBool__c = false
+            WHERE ActivatedDateTime__c != null
+            AND TemplateMarkedDateTime__c = null
             WITH SYSTEM_MODE
             ORDER BY StageNamePk__c, SortOrderNumber__c
         ];

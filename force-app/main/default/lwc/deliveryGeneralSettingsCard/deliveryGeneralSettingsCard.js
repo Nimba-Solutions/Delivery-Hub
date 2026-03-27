@@ -29,6 +29,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track statusPageEnabled = false;
     @track autoCreateWorkRequest = true;
     @track requireWorkLogApproval = false;
+    @track invoiceGenerationEnabled = false;
 
     // ── Activation-date display strings ─────────────────────────────────
     @track notificationsActivatedAt = null;
@@ -42,6 +43,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track statusPageActivatedAt = null;
     @track autoCreateWorkRequestActivatedAt = null;
     @track requireWorkLogApprovalActivatedAt = null;
+    @track invoiceGenerationActivatedAt = null;
 
     // ── Advanced configurable number settings ───────────────────────────
     @track reconciliationHour = 6;
@@ -107,6 +109,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                     this.autoCreateWorkRequest = true;
                 }
                 this.requireWorkLogApproval = data.requireWorkLogApproval || false;
+                this.invoiceGenerationEnabled = data.invoiceGenerationEnabled || false;
 
                 // Activation dates
                 this.notificationsActivatedAt = data.notificationsActivatedAt || null;
@@ -120,6 +123,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 this.statusPageActivatedAt = data.statusPageActivatedAt || null;
                 this.autoCreateWorkRequestActivatedAt = data.autoCreateWorkRequestActivatedAt || null;
                 this.requireWorkLogApprovalActivatedAt = data.requireWorkLogApprovalActivatedAt || null;
+                this.invoiceGenerationActivatedAt = data.invoiceGenerationActivatedAt || null;
 
                 // Advanced configurable settings
                 this.reconciliationHour = data.reconciliationHour !== null ? data.reconciliationHour : 6;
@@ -199,6 +203,11 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
 
     handleRequireWorkLogApprovalToggle(event) {
         this.requireWorkLogApproval = event.target.checked;
+        this.saveExtended();
+    }
+
+    handleInvoiceGenerationToggle(event) {
+        this.invoiceGenerationEnabled = event.target.checked;
         this.saveExtended();
     }
 
@@ -312,6 +321,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                     statusPageEnabled: this.statusPageEnabled,
                     autoCreateWorkRequest: this.autoCreateWorkRequest,
                     requireWorkLogApproval: this.requireWorkLogApproval,
+                    invoiceGenerationEnabled: this.invoiceGenerationEnabled,
                     fieldChangeRetentionDays: this.fieldChangeRetentionDays,
                     weeklyDigestDay: this.weeklyDigestDay,
                     weeklyDigestRecipients: this.weeklyDigestRecipients,

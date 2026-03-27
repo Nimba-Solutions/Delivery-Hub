@@ -129,7 +129,7 @@ public with sharing class DeliveryEscalationService {
                    LastModifiedDate, LastEscalatedDateTime__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN :triggerStages
-            AND IsActiveBool__c = true
+            AND ActivatedDateTime__c != null
             WITH SYSTEM_MODE
         ];
 
@@ -280,7 +280,7 @@ public with sharing class DeliveryEscalationService {
                    StageEnteredDateTime__c, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c IN :triggerStages
-            AND IsActiveBool__c = true
+            AND ActivatedDateTime__c != null
             WITH SYSTEM_MODE
         ];
 

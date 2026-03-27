@@ -42,8 +42,8 @@ public with sharing class DeliveryGanttController {
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                        ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate
                 FROM WorkItem__c
-                WHERE IsActiveBool__c = true
-                AND IsTemplateBool__c = false
+                WHERE ActivatedDateTime__c != null
+                AND TemplateMarkedDateTime__c = null
                 AND ProjectedUATReadyDate__c != null
                 WITH SYSTEM_MODE
                 ORDER BY ProjectedUATReadyDate__c ASC
