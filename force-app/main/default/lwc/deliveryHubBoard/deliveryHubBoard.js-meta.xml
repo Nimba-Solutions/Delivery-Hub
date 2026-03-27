@@ -10,10 +10,7 @@
         <target>lightning__Tab</target>
     </targets>
     <targetConfigs>
-        <targetConfig targets="lightning__RecordPage">
-            <property name="networkEntityId" type="String" label="Network Entity ID" description="Optional. When set, scopes work items to this entity. Leave blank for admin view (all entities)." />
-        </targetConfig>
-        <targetConfig targets="lightning__AppPage,lightning__HomePage,lightning__Tab">
+        <targetConfig targets="lightning__RecordPage,lightning__AppPage,lightning__HomePage">
             <property name="networkEntityId" type="String" label="Network Entity ID" description="Optional. When set, scopes work items to this entity. Leave blank for admin view (all entities)." />
         </targetConfig>
     </targetConfigs>
