@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "no-magic-numbers": ["error", { "ignore": [0, 1, -1, 2, 100] }],
+    "no-ternary": "off",
+    "one-var": "off",
+    "max-lines-per-function": "off",
+    "max-lines": "off",
+    "max-statements": "off",
+    "id-length": ["error", { "min": 1 }],
+    "no-undefined": "off",
+    "class-methods-use-this": "off"
+  }
+}
