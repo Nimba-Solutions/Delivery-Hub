@@ -48,6 +48,10 @@ private class DeliveryTimelineControllerTest {
             )
         };
         insert workItems;
+
+        // Deactivate the last item after insert (trigger auto-sets ActivatedDateTime)
+        workItems[3].ActivatedDateTime__c = null;
+        update workItems[3];
     }
 
     @IsTest
