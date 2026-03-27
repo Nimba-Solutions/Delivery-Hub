@@ -33,6 +33,11 @@ export default class DeliveryWorkflowTemplatePicker extends LightningElement {
                     key: t.developerName + '_dot_' + idx,
                     style: 'background-color: ' + color
                 })),
+                phaseList: (t.phases || []).map((p, idx) => ({
+                    key: t.developerName + '_phase_' + idx,
+                    label: p
+                })),
+                hasPhases: (t.phases || []).length > 0,
                 defaultBadge: t.isDefault === true
             }));
             this.error = '';

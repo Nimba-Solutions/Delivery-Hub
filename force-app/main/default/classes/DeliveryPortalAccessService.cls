@@ -96,6 +96,69 @@ public without sharing class DeliveryPortalAccessService {
     }
 
     /**
+     * @description Auto-generates a portal access record with a random UUID-style
+     *              token for a given entity and email. Used by the self-service
+     *              onboarding flow to provision portal credentials.
+     * @param entityId The NetworkEntity__c Id to grant access to.
+     * @param email The portal user's email address.
+     * @param role The portal role (Admin or Member). Defaults to Member if blank.
+     * @return PortalAccess__c The created access record with the generated token.
+     */
+    @AuraEnabled
+    public static PortalAccess__c generatePortalAccess(Id entityId, String email, String role) {
+        if (entityId == null) {
+            AuraHandledException ex = new AuraHandledException('Entity Id is required.');
+            ex.setMessage('Entity Id is required.');
+            throw ex;
+        }
+        if (String.isBlank(email)) {
+            AuraHandledException ex = new AuraHandledException('Email is required.');
+            ex.setMessage('Email is required.');
+            throw ex;
+        }
+
+        // Verify entity exists
+        List<NetworkEntity__c> entities = [
+            SELECT Id FROM NetworkEntity__c
+            WHERE Id = :entityId
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (entities.isEmpty()) {
+            AuraHandledException ex = new AuraHandledException('Network Entity not found.');
+            ex.setMessage('Network Entity not found.');
+            throw ex;
+        }
+
+        // Check for existing access to avoid duplicates
+        List<PortalAccess__c> existing = [
+            SELECT Id, AccessTokenTxt__c, RolePk__c
+            FROM PortalAccess__c
+            WHERE NetworkEntityId__c = :entityId
+            AND EmailTxt__c = :email
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (!existing.isEmpty()) {
+            // Update role and regenerate token if already exists
+            PortalAccess__c pa = existing[0];
+            pa.RolePk__c = String.isNotBlank(role) ? role : 'Member';
+            pa.AccessTokenTxt__c = EncodingUtil.convertToHex(Crypto.generateAesKey(128));
+            Database.update(pa, AccessLevel.SYSTEM_MODE);
+            return pa;
+        }
+
+        String token = EncodingUtil.convertToHex(Crypto.generateAesKey(128));
+        PortalAccess__c pa = new PortalAccess__c(
+            NetworkEntityId__c = entityId,
+            EmailTxt__c = email,
+            RolePk__c = String.isNotBlank(role) ? role : 'Member',
+            AccessTokenTxt__c = token
+        );
+        Database.insert(pa, AccessLevel.SYSTEM_MODE);
+        return pa;
+    }
+
+    /**
      * @description Validates that the given email has a PortalAccess__c record
      * for the specified NetworkEntity__c.
      * @param email The portal user's email address
