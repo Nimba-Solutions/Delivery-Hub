@@ -121,13 +121,16 @@ export default class DeliveryTimelineView extends NavigationMixin(LightningEleme
     get unscheduledItems() {
         return this._unscheduledRows.map(row => {
             const color = this.stageColorMap[row.stage] || '#6B7280';
+            let tooltip = row.name + ': ' + (row.description || '') + '\nStage: ' + row.stage;
+            if (row.developerName) { tooltip += '\nDeveloper: ' + row.developerName; }
+            tooltip += '\nNo dates set';
             return {
                 workItemId: row.workItemId,
                 name: row.name,
                 description: row.description,
                 stage: row.stage,
                 swatchStyle: 'background-color: ' + color + ';',
-                tooltipText: row.name + ': ' + (row.description || '') + '\nStage: ' + row.stage + '\nNo dates set'
+                tooltipText: tooltip
             };
         });
     }
@@ -244,13 +247,34 @@ export default class DeliveryTimelineView extends NavigationMixin(LightningEleme
             const itemIndex = grouped[eName].items.length;
             const top = itemIndex * (BAR_HEIGHT + ROW_GAP);
 
+            // Build rich tooltip
+            let tooltip = row.name + ': ' + (row.description || '') + '\nStage: ' + row.stage;
+            if (row.priority) { tooltip += '\nPriority: ' + row.priority; }
+            if (row.developerName) { tooltip += '\nDeveloper: ' + row.developerName; }
+            tooltip += '\n' + row.startDate + ' → ' + row.endDate;
+            if (row.estimatedHours) {
+                const logged = row.loggedHours || 0;
+                tooltip += '\nHours: ' + logged + ' / ' + row.estimatedHours;
+            }
+
+            // Progress bar width (percentage of the bar)
+            const progressPct = row.progress != null ? Math.round(row.progress * 100) : 0;
+            const progressStyle = 'width: ' + progressPct + '%;';
+            const hasProgress = row.estimatedHours != null && row.estimatedHours > 0;
+
+            // Bar label: name + developer
+            const displayName = row.name + (row.developerName ? ' (' + row.developerName.split(' ')[0] + ')' : '');
+
             grouped[eName].items.push({
                 workItemId: row.workItemId,
-                name: row.name,
+                name: displayName,
                 description: row.description,
                 stage: row.stage,
-                tooltipText: row.name + ': ' + (row.description || '') + '\nStage: ' + row.stage + '\n' + row.startDate + ' - ' + row.endDate,
-                barStyle: 'left: ' + left + 'px; width: ' + width + 'px; top: ' + top + 'px; background-color: ' + color + '; height: ' + BAR_HEIGHT + 'px;'
+                tooltipText: tooltip,
+                barStyle: 'left: ' + left + 'px; width: ' + width + 'px; top: ' + top + 'px; background-color: ' + color + '; height: ' + BAR_HEIGHT + 'px;',
+                progressStyle: progressStyle,
+                hasProgress: hasProgress,
+                progressPct: progressPct
             });
         });
 

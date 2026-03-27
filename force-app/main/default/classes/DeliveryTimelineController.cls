@@ -12,28 +12,21 @@ public with sharing class DeliveryTimelineController {
      * @description Data Transfer Object representing a single timeline bar row.
      */
     public class TimelineRow {
-        /** @description Salesforce record Id */
         @AuraEnabled public String workItemId { get; set; }
-        /** @description Auto-number work item name (e.g. WI-0001) */
         @AuraEnabled public String name { get; set; }
-        /** @description Brief one-line description of the work item */
         @AuraEnabled public String description { get; set; }
-        /** @description Current stage of the work item */
         @AuraEnabled public String stage { get; set; }
-        /** @description Priority label */
         @AuraEnabled public String priority { get; set; }
-        /** @description Effective start date (ISO YYYY-MM-DD) */
         @AuraEnabled public String startDate { get; set; }
-        /** @description Effective end date (ISO YYYY-MM-DD) */
         @AuraEnabled public String endDate { get; set; }
-        /** @description Network Entity name (grouping label) */
         @AuraEnabled public String entityName { get; set; }
-        /** @description Network Entity Id */
         @AuraEnabled public String entityId { get; set; }
-        /** @description Workflow type developer name */
         @AuraEnabled public String workflowType { get; set; }
-        /** @description True when the item has at least one explicitly set date field */
         @AuraEnabled public Boolean hasExplicitDates { get; set; }
+        @AuraEnabled public String developerName { get; set; }
+        @AuraEnabled public Decimal estimatedHours { get; set; }
+        @AuraEnabled public Decimal loggedHours { get; set; }
+        @AuraEnabled public Decimal progress { get; set; }
     }
 
     /**
@@ -51,6 +44,8 @@ public with sharing class DeliveryTimelineController {
                 + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
                 + 'WorkflowTypeTxt__c, '
+                + 'EstimatedHoursNumber__c, TotalLoggedHoursNumber__c, '
+                + 'Developer__r.Name, '
                 + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
                 + 'FROM WorkItem__c '
                 + 'WHERE IsActiveBool__c = true '
@@ -95,6 +90,17 @@ public with sharing class DeliveryTimelineController {
         row.entityName = item.ClientNetworkEntityId__r != null
             ? item.ClientNetworkEntityId__r.Name : 'Unassigned';
         row.entityId = item.ClientNetworkEntityId__c;
+
+        // Developer + hours
+        row.developerName = item.Developer__r != null ? item.Developer__r.Name : null;
+        row.estimatedHours = item.EstimatedHoursNumber__c;
+        row.loggedHours = item.TotalLoggedHoursNumber__c;
+        if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
+            Decimal logged = item.TotalLoggedHoursNumber__c != null ? item.TotalLoggedHoursNumber__c : 0;
+            row.progress = Math.min(logged / item.EstimatedHoursNumber__c, 1.0);
+        } else {
+            row.progress = 0;
+        }
 
         // Determine if the item has at least one explicitly set date
         Boolean hasStart = item.EstimatedStartDevDate__c != null;
