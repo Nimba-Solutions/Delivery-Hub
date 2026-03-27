@@ -178,15 +178,12 @@ private class DeliveryScoreServiceTest {
     }
 
     @isTest
-    static void testGetGradeLabelMappings() {
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(95));
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(85));
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(75));
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(65));
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(55));
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(45));
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(35));
-        System.assertNotEquals(null, DeliveryScoreService.getGradeLabel(10));
+    static void testGradeLabelPopulatedViaPublicApi() {
+        // Grade label is private — verify it populates through the public getDeliveryScore method
+        Test.startTest();
+        DeliveryScoreService.DeliveryScoreResult result = DeliveryScoreService.getDeliveryScore('Software_Delivery');
+        Test.stopTest();
+        System.assertNotEquals(null, result.gradeLabel, 'Grade label should be populated via public API');
     }
 
     @isTest
