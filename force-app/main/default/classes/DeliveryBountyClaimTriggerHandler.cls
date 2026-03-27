@@ -27,8 +27,14 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     public static void handleAfter(List<BountyClaim__c> newClaims, Map<Id, BountyClaim__c> oldMap, Boolean isInsert, Boolean isUpdate) {
-        if (isInsert) { handleAfterInsert(newClaims); }
-        if (isUpdate) { handleAfterUpdate(newClaims, oldMap); }
+        if (isInsert) {
+            DeliveryFieldTrackingService.trackCreates(newClaims);
+            handleAfterInsert(newClaims);
+        }
+        if (isUpdate) {
+            DeliveryFieldTrackingService.trackChanges(newClaims, oldMap);
+            handleAfterUpdate(newClaims, oldMap);
+        }
     }
 
     /**
