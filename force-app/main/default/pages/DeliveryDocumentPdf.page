@@ -73,16 +73,16 @@
                     <td style="font-size: 7.5pt; font-weight: bold; color: #333333; padding: 3px 6px; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; text-align: right;">RATE</td>
                     <td style="font-size: 8.5pt; font-weight: bold; color: #333333; padding: 3px 6px; border-bottom: 1px solid #cccccc;">{!formattedDefaultRate}</td>
                 </tr>
-                <apex:outputPanel rendered="{!hasPriorBalance}">
+                <apex:outputPanel layout="none" rendered="{!hasPriorBalance}">
                     <tr>
-                        <td style="font-size: 7.5pt; font-weight: bold; color: #333333; padding: 3px 6px; border-right: 1px solid #cccccc; text-align: right;">CURRENT ACCOUNT BALANCE</td>
-                        <td style="font-size: 9pt; font-weight: bold; color: #333333; padding: 3px 6px;">{!formattedPriorBalance}</td>
+                        <td style="font-size: 7.5pt; font-weight: bold; color: #333333; padding: 3px 6px; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; text-align: right;">CURRENT ACCOUNT BALANCE</td>
+                        <td style="font-size: 9pt; font-weight: bold; color: #333333; padding: 3px 6px; border-bottom: 1px solid #cccccc;">{!formattedPriorBalance}</td>
                     </tr>
                 </apex:outputPanel>
-                <apex:outputPanel rendered="{!NOT(hasPriorBalance)}">
+                <apex:outputPanel layout="none" rendered="{!NOT(hasPriorBalance)}">
                     <tr>
-                        <td style="font-size: 7.5pt; font-weight: bold; color: #333333; padding: 3px 6px; border-right: 1px solid #cccccc; text-align: right;">CURRENT ACCOUNT BALANCE</td>
-                        <td style="font-size: 9pt; font-weight: bold; color: #333333; padding: 3px 6px;">$0.00</td>
+                        <td style="font-size: 7.5pt; font-weight: bold; color: #333333; padding: 3px 6px; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; text-align: right;">CURRENT ACCOUNT BALANCE</td>
+                        <td style="font-size: 9pt; font-weight: bold; color: #333333; padding: 3px 6px; border-bottom: 1px solid #cccccc;">$0.00</td>
                     </tr>
                 </apex:outputPanel>
             </table>
@@ -111,26 +111,39 @@
 </apex:outputPanel>
 
 <!-- ========== WORK ITEMS ========== -->
-<apex:outputPanel rendered="{!hasWorkItems}">
+<apex:outputPanel layout="none" rendered="{!hasWorkItems}">
     <table style="width: 100%; font-size: 8pt; border: 1px solid #999999; margin-bottom: 4px;" cellpadding="0" cellspacing="0">
         <tr style="background-color: #e8e8e8;">
             <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 10%;">NAME</th>
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 38%;">DESCRIPTION</th>
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 14%;">STAGE</th>
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 10%;">HOURS</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 32%;">DESCRIPTION</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 12%;">STAGE</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 9%;">PERIOD HRS</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 9%;">TOTAL HRS</th>
             <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 12%;">RATE</th>
             <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; width: 16%;">SUBTOTAL</th>
         </tr>
         <apex:repeat value="{!workItemRows}" var="wi">
             <tr>
-                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;"><a href="/{!wi.id}" style="color: #0176d3; text-decoration: none;">{!wi.name}</a></td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;">
+                    <apex:outputPanel layout="none" rendered="{!NOT(renderAsPdf)}"><a href="/{!wi.id}" style="color: #0176d3; text-decoration: none;">{!wi.name}</a></apex:outputPanel>
+                    <apex:outputPanel layout="none" rendered="{!renderAsPdf}">{!wi.name}</apex:outputPanel>
+                </td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee;">{!wi.description}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-size: 7.5pt;">{!wi.stage}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wi.hours}</td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right; color: #888888;">{!wi.totalHours}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wi.formattedRate}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; text-align: right; font-weight: bold;">{!wi.formattedSubtotal}</td>
             </tr>
         </apex:repeat>
+        <!-- TOTALS ROW -->
+        <tr style="background-color: #f0f0f0; font-weight: bold;">
+            <td style="padding: 4px 6px; border-top: 2px solid #999999; border-right: 1px solid #cccccc;" colspan="3">TOTAL ({!workItemCount} items)</td>
+            <td style="padding: 4px 6px; border-top: 2px solid #999999; border-right: 1px solid #cccccc; text-align: right;">{!totalHours}</td>
+            <td style="padding: 4px 6px; border-top: 2px solid #999999; border-right: 1px solid #cccccc; text-align: right; color: #888888;">{!grandTotalHours}</td>
+            <td style="padding: 4px 6px; border-top: 2px solid #999999; border-right: 1px solid #cccccc; text-align: right;"></td>
+            <td style="padding: 4px 6px; border-top: 2px solid #999999; text-align: right; font-size: 9pt;">{!formattedTotalCost}</td>
+        </tr>
     </table>
 </apex:outputPanel>
 
@@ -149,7 +162,10 @@
         <apex:repeat value="{!workLogRows}" var="wl">
             <tr>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee;">{!wl.workDate}</td>
-                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;"><a href="/{!wl.workItemId}" style="color: #0176d3; text-decoration: none;">{!wl.workItemName}</a></td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;">
+                    <apex:outputPanel layout="none" rendered="{!NOT(renderAsPdf)}"><a href="/{!wl.workItemId}" style="color: #0176d3; text-decoration: none;">{!wl.workItemName}</a></apex:outputPanel>
+                    <apex:outputPanel layout="none" rendered="{!renderAsPdf}">{!wl.workItemName}</apex:outputPanel>
+                </td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wl.hours}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wl.formattedRate}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right; font-weight: bold;">{!wl.formattedAmount}</td>
@@ -223,7 +239,7 @@
                         <td style="padding: 4px 8px; border-bottom: 1px solid #cccccc; font-size: 8pt; font-weight: bold; text-align: right; border-right: 1px solid #cccccc;">TAX</td>
                         <td style="padding: 4px 8px; border-bottom: 1px solid #cccccc; font-size: 9pt; text-align: right;">$0.00</td>
                     </tr>
-                    <apex:outputPanel rendered="{!hasPriorBalance}">
+                    <apex:outputPanel layout="none" rendered="{!hasPriorBalance}">
                         <tr>
                             <td style="padding: 4px 8px; border-bottom: 1px solid #cccccc; font-size: 8pt; font-weight: bold; text-align: right; border-right: 1px solid #cccccc;">PRIOR BALANCE</td>
                             <td style="padding: 4px 8px; border-bottom: 1px solid #cccccc; font-size: 9pt; text-align: right;">{!formattedPriorBalance}</td>
