@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessiveClassLength, PMD.ExcessiveParameterList')
-public with sharing class DeliveryDocumentController {
+global with sharing class DeliveryDocumentController {
 
     /**
      * @description Generates a new document by querying all relevant data for the given
