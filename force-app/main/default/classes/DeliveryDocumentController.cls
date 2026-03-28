@@ -21,7 +21,7 @@ global with sharing class DeliveryDocumentController {
      * @return The Id of the created DeliveryDocument__c record.
      */
     @AuraEnabled
-    public static Id generateDocument(Id entityId, String templateType, Date periodStart, Date periodEnd, String metadata) {
+    global static Id generateDocument(Id entityId, String templateType, Date periodStart, Date periodEnd, String metadata) {
         if (entityId == null) {
             throw new AuraHandledException('Please select a client before generating a document.');
         }
@@ -117,7 +117,7 @@ global with sharing class DeliveryDocumentController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static Map<String, Object> getPendingInvoices() {
+    global static Map<String, Object> getPendingInvoices() {
         List<DeliveryDocument__c> drafts = [
             SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c,
                    TotalCurrency__c, NetworkEntityId__r.Name
@@ -515,7 +515,7 @@ global with sharing class DeliveryDocumentController {
      * @return Map with 'success' and 'recipientEmail' keys.
      */
     @AuraEnabled
-    public static Map<String, Object> sendDocumentEmail(Id documentId, String recipientEmail) {
+    global static Map<String, Object> sendDocumentEmail(Id documentId, String recipientEmail) {
         DeliveryDocument__c doc = [
             SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
                    NetworkEntityId__r.ContactEmailTxt__c,
