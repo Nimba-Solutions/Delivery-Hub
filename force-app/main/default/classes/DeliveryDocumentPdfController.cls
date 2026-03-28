@@ -514,6 +514,10 @@ public without sharing class DeliveryDocumentPdfController {
             row.totalHours = item.get('totalLoggedHours') != null ? (Decimal) item.get('totalLoggedHours') : 0;
             row.rate = item.get('billableRate') != null ? (Decimal) item.get('billableRate') : defaultRate;
             row.subtotal = row.hours * row.rate;
+            // For invoices, only include items with hours in this billing period
+            if (getIsInvoice() && row.hours <= 0) {
+                continue;
+            }
             row.formattedRate = formatCurrency(row.rate);
             row.formattedSubtotal = formatCurrency(row.subtotal);
             workItemRows.add(row);
