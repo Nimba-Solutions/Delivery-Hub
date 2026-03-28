@@ -20,7 +20,7 @@
                         <div class="slds-media__figure">
                             <lightning-icon icon-name="standard:case" size="medium"></lightning-icon>
                         </div>
-                        <div class="slds-media__body">
+                        <div class="slds-media__body" style="cursor: pointer;" onclick={handleActiveItemsClick}>
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
                                 <strong>{metrics.activeRequests}</strong>
                             </div>
@@ -34,12 +34,12 @@
                         <div class="slds-media__figure">
                             <lightning-icon icon-name="standard:log_a_call" size="medium"></lightning-icon>
                         </div>
-                        <div class="slds-media__body">
+                        <div class="slds-media__body" style="cursor: pointer;" onclick={handleHoursThisMonthClick}>
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
                                 <strong>{metrics.hoursThisMonth}</strong>
                             </div>
                             <div class="slds-text-title_caps slds-text-color_weak">Hours This Month</div>
-                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small" onclick={handleHoursLastMonthClick}>
                                 Last Month: {metrics.hoursLastMonth} hrs
                             </div>
                         </div>

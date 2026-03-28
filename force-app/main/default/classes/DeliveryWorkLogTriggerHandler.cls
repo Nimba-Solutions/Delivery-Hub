@@ -17,9 +17,16 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      * @param newLogs List of WorkLog__c records being inserted.
      */
     public static void onBeforeInsert(List<WorkLog__c> newLogs) {
-        // Check if resource title auto-fill is enabled
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || settings.EnableResourceTitleAutoFillDateTime__c == null) {
+        if (settings == null) {
+            return;
+        }
+
+        // Enforce hour lockout for billing periods
+        enforceLockout(newLogs, settings);
+
+        // Auto-fill resource title (if enabled)
+        if (settings.EnableResourceTitleAutoFillDateTime__c == null) {
             return;
         }
 
@@ -122,6 +129,36 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
         createSyncItemsForLogs(newlyApproved);
+    }
+
+    // ── Hour lockout enforcement ────────────────────────────────────────
+
+    private static void enforceLockout(List<WorkLog__c> logs, DeliveryHubSettings__c settings) {
+        if (settings.InvoiceHourLockoutDayNumber__c == null) {
+            return;
+        }
+        Integer lockoutDay = (Integer) settings.InvoiceHourLockoutDayNumber__c;
+        Integer lockoutHour = settings.InvoiceHourLockoutTimeNumber__c != null
+            ? (Integer) settings.InvoiceHourLockoutTimeNumber__c : 22; // default 5pm EST
+
+        Datetime now = Datetime.now();
+        Integer todayDay = now.dayGmt();
+        Integer todayHour = now.hourGmt();
+        Boolean pastLockout = todayDay > lockoutDay || (todayDay == lockoutDay && todayHour >= lockoutHour);
+
+        if (!pastLockout) {
+            return;
+        }
+
+        // After lockout: block work logs for the prior month
+        Date priorMonthEnd = Date.today().toStartOfMonth().addDays(-1);
+        for (WorkLog__c wl : logs) {
+            if (wl.WorkDateDate__c != null && wl.WorkDateDate__c <= priorMonthEnd) {
+                wl.addError('Hours for ' + priorMonthEnd.month() + '/' + priorMonthEnd.year()
+                    + ' are locked. Entries must be submitted by day '
+                    + lockoutDay + ' at ' + lockoutHour + ':00 UTC.');
+            }
+        }
     }
 
     // ── Shared sync item creation ──────────────────────────────────────
