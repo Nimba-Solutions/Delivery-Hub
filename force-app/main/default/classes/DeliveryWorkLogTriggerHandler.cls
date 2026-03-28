@@ -60,7 +60,11 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             }
         }
 
-        String userTitle = UserInfo.getTitle();
+        String userTitle = null;
+        List<User> currentUser = [SELECT Title FROM User WHERE Id = :UserInfo.getUserId() WITH SYSTEM_MODE LIMIT 1];
+        if (!currentUser.isEmpty()) {
+            userTitle = currentUser[0].Title;
+        }
 
         for (WorkLog__c wl : newLogs) {
             if (String.isNotBlank(wl.ResourceTitleTxt__c)) {
