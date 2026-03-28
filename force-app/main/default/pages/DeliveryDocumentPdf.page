@@ -152,12 +152,13 @@
     <div style="font-size: 8pt; font-weight: bold; color: #333333; margin-top: 10px; margin-bottom: 4px;">TIME LOG DETAIL</div>
     <table style="width: 100%; font-size: 8pt; border: 1px solid #999999; margin-bottom: 4px;" cellpadding="0" cellspacing="0">
         <tr style="background-color: #e8e8e8;">
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 12%;">DATE</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 10%;">DATE</th>
             <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 10%;">WORK ITEM</th>
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 8%;">HOURS</th>
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 12%;">RATE</th>
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 14%;">AMOUNT</th>
-            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; width: 44%;">DESCRIPTION</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 14%;">RESOURCE</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 7%;">HOURS</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 10%;">RATE</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: right; border-bottom: 1px solid #999999; border-right: 1px solid #cccccc; width: 12%;">AMOUNT</th>
+            <th style="font-size: 7pt; font-weight: bold; padding: 4px 6px; text-align: left; border-bottom: 1px solid #999999; width: 37%;">DESCRIPTION</th>
         </tr>
         <apex:repeat value="{!workLogRows}" var="wl">
             <tr>
@@ -165,6 +166,10 @@
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-weight: bold;">
                     <apex:outputPanel layout="none" rendered="{!NOT(renderAsPdf)}"><a href="/{!wl.workItemId}" style="color: #0176d3; text-decoration: none;">{!wl.workItemName}</a></apex:outputPanel>
                     <apex:outputPanel layout="none" rendered="{!renderAsPdf}">{!wl.workItemName}</apex:outputPanel>
+                </td>
+                <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; font-size: 7pt;">
+                    <apex:outputPanel layout="none" rendered="{!wl.resourceTitle != null}">{!wl.resourceTitle}</apex:outputPanel>
+                    <apex:outputPanel layout="none" rendered="{!wl.resourceTitle == null}">{!wl.resourceName}</apex:outputPanel>
                 </td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wl.hours}</td>
                 <td style="padding: 3px 6px; border-bottom: 1px solid #dddddd; border-right: 1px solid #eeeeee; text-align: right;">{!wl.formattedRate}</td>
