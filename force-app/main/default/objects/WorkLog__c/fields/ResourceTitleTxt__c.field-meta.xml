@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ResourceTitleTxt__c</fullName>
+    <description>Role or title of the person who logged these hours (e.g. Sr SFDC Developer, Salesforce Administrator). Auto-populated from User.Title on insert, editable for override. Shown on invoice time log detail.</description>
+    <inlineHelpText>Your role for this time entry (e.g. "Sr SFDC Developer"). Auto-filled from your user profile.</inlineHelpText>
+    <label>Resource Title</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

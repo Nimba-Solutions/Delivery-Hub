@@ -99,9 +99,15 @@ CSV import wizard maps spreadsheet columns to work item fields and creates items
 
 ### Billing & Approval
 
-WorkLog approval workflow gates logged hours behind a Draft &rarr; Approved &rarr; Synced pipeline. Enable the `RequireWorkLogApprovalDate__c` setting and all new hours save as Draft until a manager approves them. Batch approve or reject directly from the Activity Feed. When the setting is null, existing behavior is unchanged &mdash; hours sync immediately.
+WorkLog approval workflow gates logged hours behind a Draft &rarr; Approved &rarr; Synced pipeline. Enable the `RequireWorkLogApprovalDate__c` setting and all new hours save as Draft until a manager approves them. Batch approve or reject directly from the Activity Feed. When the setting is null, existing behavior is unchanged &mdash; hours sync immediately. Invoices only include **Approved** work logs &mdash; Draft and unapproved hours are excluded from all generated documents.
 
 The Activity Feed provides a unified, cross-item timeline of comments, hours, and stage/field changes. Date-grouped entries, conversation threads with inline reply, batch WorkLog approval actions, and 30-second polling keep the entire team on the same page without switching between records.
+
+### Invoice Automation
+
+Scheduled invoice generation runs on the DeliveryHubScheduler and produces documents automatically based on each NetworkEntity's billing frequency. Four frequencies are supported: **Daily** (hours summary only), **Weekly**, **Monthly** (full dollar invoice), and **Quarterly**. Enable billing on any entity by setting `EnableBillingDateTime__c` and `BillingFrequencyPk__c` on the NetworkEntity record. The `EnableInvoiceGenerationDateTime__c` setting on DeliveryHubSettings__c activates the scheduler-level invoice generation service.
+
+The engine generates Draft invoices that can be reviewed before sending. Overdue invoice detection automatically marks past-due invoices as Overdue. A pending invoices banner in the Document Viewer alerts users to documents awaiting review. The `LastInvoiceGenerationDate__c` setting tracks when the last generation run completed to prevent duplicate processing.
 
 ### Document Engine
 
@@ -144,6 +150,8 @@ Central settings page with DateTime activation toggles that record who enabled e
 
 All four settings are wired into the Apex runtime &mdash; the DeliveryHubScheduler, DeliveryActivityLogCleanup, and DeliveryEscalationService read from `DeliveryHubSettings__c` on every execution. The admin page uses dynamic forms for field-level layout control.
 
+**Bool &rarr; DateTime migration:** As of PR #477, boolean toggle fields across the schema are being replaced with DateTime stamps. Instead of `IsActiveBool__c = true`, the field becomes `ActivatedDateTime__c = 2026-03-27T14:30:00Z`. This tells you both **if** and **when** the flag was set. Six fields were converted in this batch: `IsActiveBool__c` &rarr; `ActivatedDateTime__c`, `IsBountyBool__c` &rarr; `BountyEnabledDateTime__c`, `IsRecurringBool__c` &rarr; `RecurringEnabledDateTime__c`, `IsTemplateBool__c` &rarr; `TemplateMarkedDateTime__c` (all on WorkItem\_\_c), `EnableVendorPushBool__c` &rarr; `EnableVendorPushDateTime__c` (NetworkEntity\_\_c), and `IsDefaultBool__c` &rarr; `DefaultSetDateTime__c` (DeliverySavedFilter\_\_c). The philosophy: booleans have no value in 2026 &mdash; DateTime stamps provide richer audit data at zero extra cost.
+
 ---
 
 ## How It Works
@@ -171,10 +179,10 @@ The engine is retry-aware (configurable limit, default 3 attempts), handles name
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 150 (76 production + 74 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService |
+| **Apex Classes** | 152 (77 production + 75 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService, InvoiceGenerationService |
 | **LWC Components** | 58 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryTimelineView |
 | **Custom Objects** | 15 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c |
-| **Custom Metadata** | 11 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, OpenAIConfiguration\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, DeveloperCapacity\_\_mdt |
+| **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, DeveloperCapacity\_\_mdt |
 | **Platform Events** | 4 | DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e |
 | **Triggers** | 5 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger |
 
@@ -277,7 +285,7 @@ All requests require an `X-Api-Key` header matched against a NetworkEntity recor
 | POST | `/bounties/{token}/submit` | X-Api-Key | Submit completed work with proof URL |
 | POST | `/bounties/{token}/withdraw` | X-Api-Key | Withdraw an active claim |
 
-Any WorkItem with `IsBountyBool__c = true` is published to the marketplace. Claims are tracked via `BountyClaim__c` and synced to origin orgs automatically. See the [Bounty API Guide](docs/BOUNTY_API_GUIDE.md) for details.
+Any WorkItem with `BountyEnabledDateTime__c` set (non-null) is published to the marketplace. Claims are tracked via `BountyClaim__c` and synced to origin orgs automatically. See the [Bounty API Guide](docs/BOUNTY_API_GUIDE.md) for details.
 
 For org-to-org synchronization, see the [Sync API Guide](docs/SYNC_API_GUIDE.md).
 
@@ -332,6 +340,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Activity Feed** | Cross-item unified timeline of comments, hours, and changes with inline reply |
 | **Data Lineage** | Visual sync chain with per-entity health metrics on admin home |
 | **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering with hyperlinks to SF records, zero-hour filtering, runtime namespace detection for VF URLs, email delivery with CC, payment tracking, A/R balance, white-label vendor branding, and cloudnimbusllc.com footer. Document versioning tracks regeneration history with version numbers and superseded-document chains. |
+| **Invoice Automation** | Scheduled invoice generation via DeliveryInvoiceGenerationService. Supports Daily (hours summary), Weekly, Monthly (full dollar invoice), and Quarterly frequencies per NetworkEntity. Auto-generates Draft invoices on schedule, detects overdue invoices and marks them past-due, and shows a pending invoices banner in the Document Viewer. Invoices only include Approved work logs. |
 | **Invoice Approval Flow** | Client-facing approve/dispute workflow via portal. Clients review invoices by public token and either approve or dispute with a reason. Dispute details stored in DisputeReasonTxt__c. All actions logged to ActivityLog for audit trail. |
 | **Timeline View** | Gantt-style horizontal timeline showing active work items grouped by NetworkEntity. CSS Grid-based bars with zoom (week/month/quarter), scroll controls, today-line marker, stage-based colors from workflow config, and click-to-navigate to work item records. Available as the Delivery Timeline tab. |
 | **Saved Filters** | Save and recall board filter configurations. Per-user filters (Private sharing model) with default filter auto-applied on board load. Stored as JSON in DeliverySavedFilter__c. Accessible from a dropdown in the board toolbar. |

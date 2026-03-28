@@ -8,8 +8,78 @@
  *              onAfterUpdate.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryWorkLogTriggerHandler {
+
+    /**
+     * @description Auto-populates ResourceTitleTxt__c from the running user's Title
+     *              if not already set. Runs before insert so the value is saved with the record.
+     * @param newLogs List of WorkLog__c records being inserted.
+     */
+    public static void onBeforeInsert(List<WorkLog__c> newLogs) {
+        // Check if resource title auto-fill is enabled
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null || settings.EnableResourceTitleAutoFillDateTime__c == null) {
+            return;
+        }
+
+        // Collect work item IDs to resolve client entity context
+        Set<Id> workItemIds = new Set<Id>();
+        for (WorkLog__c wl : newLogs) {
+            if (String.isBlank(wl.ResourceTitleTxt__c) && wl.WorkItemId__c != null) {
+                workItemIds.add(wl.WorkItemId__c);
+            }
+        }
+        if (workItemIds.isEmpty()) {
+            return;
+        }
+
+        // Build workItemId → clientEntityId map
+        Map<Id, Id> itemToEntityMap = new Map<Id, Id>();
+        for (WorkItem__c wi : [
+            SELECT Id, ClientNetworkEntityId__c FROM WorkItem__c
+            WHERE Id IN :workItemIds WITH SYSTEM_MODE
+        ]) {
+            itemToEntityMap.put(wi.Id, wi.ClientNetworkEntityId__c);
+        }
+
+        // Find last used title per entity for this user
+        Map<Id, String> entityTitleMap = new Map<Id, String>();
+        for (WorkLog__c recent : [
+            SELECT ResourceTitleTxt__c, WorkItemId__r.ClientNetworkEntityId__c
+            FROM WorkLog__c
+            WHERE CreatedById = :UserInfo.getUserId()
+            AND ResourceTitleTxt__c != null
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 50
+        ]) {
+            Id entityId = recent.WorkItemId__r.ClientNetworkEntityId__c;
+            if (entityId != null && !entityTitleMap.containsKey(entityId)) {
+                entityTitleMap.put(entityId, recent.ResourceTitleTxt__c);
+            }
+        }
+
+        String userTitle = null;
+        List<User> currentUser = [SELECT Title FROM User WHERE Id = :UserInfo.getUserId() WITH SYSTEM_MODE LIMIT 1];
+        if (!currentUser.isEmpty()) {
+            userTitle = currentUser[0].Title;
+        }
+
+        for (WorkLog__c wl : newLogs) {
+            if (String.isNotBlank(wl.ResourceTitleTxt__c)) {
+                continue;
+            }
+            // Priority: last title for this engagement > User.Title
+            Id entityId = itemToEntityMap.get(wl.WorkItemId__c);
+            String contextTitle = entityId != null ? entityTitleMap.get(entityId) : null;
+            if (String.isNotBlank(contextTitle)) {
+                wl.ResourceTitleTxt__c = contextTitle;
+            } else if (String.isNotBlank(userTitle)) {
+                wl.ResourceTitleTxt__c = userTitle;
+            }
+        }
+    }
 
     /**
      * @description Processes newly inserted WorkLog records and creates outbound sync items
