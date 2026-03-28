@@ -19,6 +19,10 @@ public without sharing class DeliveryDocumentPdfController {
     public String templateDisplay { get; private set; }
     /** @description Sum of hours across all work logs in the period. */
     public Decimal totalHours { get; private set; }
+    /** @description Sum of all-time hours across work items. */
+    public Decimal grandTotalHours { get; private set; }
+    /** @description Number of work items with hours in the period. */
+    public Integer workItemCount { get; private set; }
     /** @description Sum of (hours x rate) across all work logs. */
     public Decimal totalCost { get; private set; }
     /** @description Formatted total cost string (e.g. $7,065.00). */
@@ -89,8 +93,10 @@ public without sharing class DeliveryDocumentPdfController {
         public String description { get; set; }
         /** @description Current workflow stage. */
         public String stage { get; set; }
-        /** @description Total logged hours for this item in the period. */
+        /** @description Logged hours for this item in the billing period. */
         public Decimal hours { get; set; }
+        /** @description Total all-time hours for this item. */
+        public Decimal totalHours { get; set; }
         /** @description Billable hourly rate. */
         public Decimal rate { get; set; }
         /** @description Calculated subtotal (hours x rate). */
@@ -178,6 +184,8 @@ public without sharing class DeliveryDocumentPdfController {
         agreementClauseRows = new List<AgreementClauseRow>();
         defaultRate = 0;
         totalHours = 0;
+        grandTotalHours = 0;
+        workItemCount = 0;
         totalCost = 0;
         priorBalance = 0;
         amountDue = 0;
@@ -476,21 +484,39 @@ public without sharing class DeliveryDocumentPdfController {
         if (!snapshot.containsKey('workItems')) {
             return;
         }
+
+        // Build period hours per work item from work logs
+        Map<String, Decimal> periodHoursMap = new Map<String, Decimal>();
+        if (snapshot.containsKey('workLogs')) {
+            for (Object lo : (List<Object>) snapshot.get('workLogs')) {
+                Map<String, Object> log = (Map<String, Object>) lo;
+                String wiId = (String) log.get('workItemId');
+                Decimal hrs = log.get('hours') != null ? (Decimal) log.get('hours') : 0;
+                periodHoursMap.put(wiId, (periodHoursMap.containsKey(wiId) ? periodHoursMap.get(wiId) : 0) + hrs);
+            }
+        }
+
+        Decimal runningGrandTotal = 0;
         List<Object> items = (List<Object>) snapshot.get('workItems');
         for (Object o : items) {
             Map<String, Object> item = (Map<String, Object>) o;
+            String itemId = (String) item.get('id');
             WorkItemRow row = new WorkItemRow();
-            row.id = (String) item.get('id');
+            row.id = itemId;
             row.name = (String) item.get('name');
             row.description = (String) item.get('description');
             row.stage = (String) item.get('stage');
-            row.hours = item.get('totalLoggedHours') != null ? (Decimal) item.get('totalLoggedHours') : 0;
+            row.hours = periodHoursMap.containsKey(itemId) ? periodHoursMap.get(itemId) : 0;
+            row.totalHours = item.get('totalLoggedHours') != null ? (Decimal) item.get('totalLoggedHours') : 0;
             row.rate = item.get('billableRate') != null ? (Decimal) item.get('billableRate') : defaultRate;
             row.subtotal = row.hours * row.rate;
             row.formattedRate = formatCurrency(row.rate);
             row.formattedSubtotal = formatCurrency(row.subtotal);
             workItemRows.add(row);
+            runningGrandTotal += row.totalHours;
         }
+        grandTotalHours = runningGrandTotal;
+        workItemCount = workItemRows.size();
     }
 
     private void parseWorkLogs(Map<String, Object> snapshot) {
