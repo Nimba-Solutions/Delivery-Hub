@@ -914,7 +914,8 @@ public with sharing class DeliveryDocumentController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                    EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
                    BillableRateCurrency__c, BudgetVarianceNumber__c,
-                   ClientNetworkEntityId__c, WorkflowTypeTxt__c
+                   ClientNetworkEntityId__c, WorkflowTypeTxt__c,
+                   Developer__c, Developer__r.Name, Developer__r.Title
             FROM WorkItem__c
             WHERE ClientNetworkEntityId__c = :entityId
             WITH SYSTEM_MODE
@@ -1012,6 +1013,8 @@ public with sharing class DeliveryDocumentController {
             m.put('billableRate', wi.BillableRateCurrency__c);
             m.put('budgetVariance', wi.BudgetVarianceNumber__c);
             m.put('workflowType', wi.WorkflowTypeTxt__c);
+            m.put('developerName', wi.Developer__r != null ? wi.Developer__r.Name : null);
+            m.put('developerTitle', wi.Developer__r != null ? wi.Developer__r.Title : null);
             result.add(m);
         }
         return result;
