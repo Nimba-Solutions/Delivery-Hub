@@ -33,7 +33,7 @@ global with sharing class DeliveryDocumentController {
         // Auto-calculate prior balance for invoices: sum of all unpaid invoices for this entity
         Decimal priorBalance = 0;
         if (templateType == 'Invoice' && entityId != null) {
-            priorBalance = calculatePriorBalance(entityId);
+            priorBalance = calculatePriorBalance(entityId, periodStart);
         }
 
         // Merge A/R data into metadata
@@ -157,7 +157,7 @@ global with sharing class DeliveryDocumentController {
      * @return The total unpaid prior balance.
      */
     @TestVisible
-    private static Decimal calculatePriorBalance(Id entityId) {
+    private static Decimal calculatePriorBalance(Id entityId, Date currentPeriodStart) {
         List<DeliveryDocument__c> unpaidDocs = [
             SELECT Id, TotalCurrency__c
             FROM DeliveryDocument__c
@@ -165,6 +165,7 @@ global with sharing class DeliveryDocumentController {
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
             AND StatusPk__c != 'Superseded'
+            AND PeriodStartDate__c < :currentPeriodStart
             WITH SYSTEM_MODE
         ];
         if (unpaidDocs.isEmpty()) {
