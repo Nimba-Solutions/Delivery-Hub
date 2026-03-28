@@ -831,7 +831,7 @@ private class DeliveryDocumentControllerTest {
         generateTestDocument(entity.Id);
         Id docId2 = generateTestDocument(entity.Id);
         Test.startTest();
-        Decimal balance = DeliveryDocumentController.calculatePriorBalance(entity.Id);
+        Decimal balance = DeliveryDocumentController.calculatePriorBalance(entity.Id, Date.today().addMonths(1));
         Test.stopTest();
         DeliveryDocument__c v2 = [
             SELECT TotalCurrency__c FROM DeliveryDocument__c WHERE Id = :docId2
