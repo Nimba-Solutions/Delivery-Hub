@@ -929,7 +929,8 @@ public with sharing class DeliveryDocumentController {
         if (templateType == 'Invoice' || templateType == 'Daily_Hours_Summary') {
             logs = [
                 SELECT Id, Name, WorkItemId__c, WorkItemId__r.Name,
-                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
+                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
+                       ResourceTitleTxt__c
                 FROM WorkLog__c
                 WHERE WorkItemId__c IN :itemIds
                 AND WorkDateDate__c >= :periodStart
@@ -941,7 +942,8 @@ public with sharing class DeliveryDocumentController {
         } else {
             logs = [
                 SELECT Id, Name, WorkItemId__c, WorkItemId__r.Name,
-                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
+                       HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
+                       ResourceTitleTxt__c
                 FROM WorkLog__c
                 WHERE WorkItemId__c IN :itemIds
                 AND WorkDateDate__c >= :periodStart
@@ -1030,6 +1032,7 @@ public with sharing class DeliveryDocumentController {
             m.put('hours', wl.HoursLoggedNumber__c);
             m.put('date', String.valueOf(wl.WorkDateDate__c));
             m.put('description', wl.WorkDescriptionTxt__c);
+            m.put('resourceTitle', wl.ResourceTitleTxt__c);
             result.add(m);
         }
         return result;

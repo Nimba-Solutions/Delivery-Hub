@@ -2,7 +2,10 @@
  * @description Trigger for WorkLog__c. Delegates all logic to DeliveryWorkLogTriggerHandler.
  * @author Cloud Nimbus LLC
  */
-trigger DeliveryWorkLogTrigger on WorkLog__c (after insert, after update) { // NOPMD
+trigger DeliveryWorkLogTrigger on WorkLog__c (before insert, after insert, after update) { // NOPMD
+    if (Trigger.isBefore && Trigger.isInsert) {
+        DeliveryWorkLogTriggerHandler.onBeforeInsert(Trigger.new);
+    }
     if (Trigger.isAfter && Trigger.isInsert) {
         DeliveryWorkLogTriggerHandler.onAfterInsert(Trigger.new);
     }

@@ -575,8 +575,11 @@ public without sharing class DeliveryDocumentPdfController {
             row.amount = row.hours * row.rate;
             row.formattedRate = formatCurrency(row.rate);
             row.formattedAmount = formatCurrency(row.amount);
+            // Resource title: prefer per-log value, fall back to developer title from work item
+            String logTitle = (String) log.get('resourceTitle');
+            row.resourceTitle = String.isNotBlank(logTitle) ? logTitle
+                : (devTitleMap.containsKey(workItemId) ? devTitleMap.get(workItemId) : null);
             row.resourceName = devNameMap.containsKey(workItemId) ? devNameMap.get(workItemId) : null;
-            row.resourceTitle = devTitleMap.containsKey(workItemId) ? devTitleMap.get(workItemId) : null;
             workLogRows.add(row);
         }
     }
