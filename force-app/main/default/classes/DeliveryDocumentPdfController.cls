@@ -127,6 +127,10 @@ public without sharing class DeliveryDocumentPdfController {
         public String workDate { get; set; }
         /** @description Work description text. */
         public String description { get; set; }
+        /** @description Developer/resource name. */
+        public String resourceName { get; set; }
+        /** @description Developer role/title (e.g. Sr SFDC Developer). */
+        public String resourceTitle { get; set; }
     }
 
     /** @description Row data for unpaid invoices A/R summary table. */
@@ -523,14 +527,22 @@ public without sharing class DeliveryDocumentPdfController {
         if (!snapshot.containsKey('workLogs')) {
             return;
         }
-        // Build rate map: workItemId -> rate (from items, overridden by requests)
+        // Build rate + developer maps from work items
         Map<String, Decimal> rateMap = new Map<String, Decimal>();
+        Map<String, String> devNameMap = new Map<String, String>();
+        Map<String, String> devTitleMap = new Map<String, String>();
         if (snapshot.containsKey('workItems')) {
             for (Object o : (List<Object>) snapshot.get('workItems')) {
                 Map<String, Object> item = (Map<String, Object>) o;
                 String itemId = (String) item.get('id');
                 Decimal itemRate = item.get('billableRate') != null ? (Decimal) item.get('billableRate') : defaultRate;
                 rateMap.put(itemId, itemRate);
+                if (item.get('developerName') != null) {
+                    devNameMap.put(itemId, (String) item.get('developerName'));
+                }
+                if (item.get('developerTitle') != null) {
+                    devTitleMap.put(itemId, (String) item.get('developerTitle'));
+                }
             }
         }
         if (snapshot.containsKey('workRequests')) {
@@ -563,6 +575,8 @@ public without sharing class DeliveryDocumentPdfController {
             row.amount = row.hours * row.rate;
             row.formattedRate = formatCurrency(row.rate);
             row.formattedAmount = formatCurrency(row.amount);
+            row.resourceName = devNameMap.containsKey(workItemId) ? devNameMap.get(workItemId) : null;
+            row.resourceTitle = devTitleMap.containsKey(workItemId) ? devTitleMap.get(workItemId) : null;
             workLogRows.add(row);
         }
     }
