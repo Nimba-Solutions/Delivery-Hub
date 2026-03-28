@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>InvoiceHourLockoutTimeNumber__c</fullName>
+    <description>Hour (0-23, UTC) when work log entries are locked for the prior billing period. For 5pm EST, set to 22 (EST is UTC-5, so 17+5=22). Combined with InvoiceHourLockoutDayNumber__c to form the full cutoff. Null defaults to 22 (5pm EST).</description>
+    <inlineHelpText>Hour in UTC when lockout takes effect (e.g., 22 = 5pm EST). Null defaults to 22.</inlineHelpText>
+    <label>Invoice Hour Lockout Time (UTC)</label>
+    <precision>2</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
