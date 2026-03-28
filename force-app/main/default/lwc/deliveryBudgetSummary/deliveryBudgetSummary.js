@@ -107,4 +107,42 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
     handleRefresh() {
         refreshApex(this.wiredMetricsResult);
     }
+
+    handleActiveItemsClick() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: {
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c',
+                actionName: 'list'
+            },
+            state: { filterName: 'In_Flight' }
+        });
+    }
+
+    handleHoursThisMonthClick() {
+        const now = new Date();
+        const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${lastDay}`;
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: {
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c',
+                actionName: 'list'
+            },
+            state: { filterName: 'This_Month' }
+        });
+    }
+
+    handleHoursLastMonthClick(event) {
+        event.stopPropagation();
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: {
+                objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c',
+                actionName: 'list'
+            },
+            state: { filterName: 'Last_Month' }
+        });
+    }
 }
