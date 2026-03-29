@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryDataLineageController {
+global with sharing class DeliveryDataLineageController {
 
     /**
      * @description Returns all active NetworkEntity records with sync health metrics
@@ -15,7 +15,7 @@ public with sharing class DeliveryDataLineageController {
      * @return Map containing localOrgName, localOrgId, and entities list.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getNetworkEntities() {
+    global static Map<String, Object> getNetworkEntities() {
         Map<String, Object> result = new Map<String, Object>();
         result.put('localOrgName', buildOrgDisplayName());
         result.put('localOrgId', UserInfo.getOrganizationId());
@@ -69,7 +69,7 @@ public with sharing class DeliveryDataLineageController {
      * @return Map of entity health with synced/failed counts.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getSyncHealth() {
+    global static Map<String, Object> getSyncHealth() {
         Map<Id, Map<String, Integer>> healthByEntity = getSyncHealthByEntity();
         Map<String, Object> result = new Map<String, Object>();
         for (Id entityId : healthByEntity.keySet()) {

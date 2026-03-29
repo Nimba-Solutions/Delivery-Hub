@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryCycleTimeController {
+global with sharing class DeliveryCycleTimeController {
 
     /** @description Number of days to look back for completed work items */
     private static final Integer LOOKBACK_DAYS = 90;
@@ -25,7 +25,7 @@ public with sharing class DeliveryCycleTimeController {
      * @return List of maps with weekLabel (String), avgCycleDays (Decimal), itemCount (Integer)
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getCycleTimeData(String workflowTypeName) {
+    global static List<Map<String, Object>> getCycleTimeData(String workflowTypeName) {
         try {
             String resolvedType = resolveWorkflowType(workflowTypeName);
             Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(resolvedType);
@@ -48,7 +48,7 @@ public with sharing class DeliveryCycleTimeController {
      * @return List of maps with stageName (String), avgDays (Decimal), itemCount (Integer)
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getCurrentStageAges(String workflowTypeName) {
+    global static List<Map<String, Object>> getCurrentStageAges(String workflowTypeName) {
         try {
             String resolvedType = resolveWorkflowType(workflowTypeName);
             Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(resolvedType);

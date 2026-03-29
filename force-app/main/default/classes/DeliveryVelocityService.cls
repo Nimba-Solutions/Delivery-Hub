@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexDoc, PMD.ExcessivePublicCount')
-public with sharing class DeliveryVelocityService {
+global with sharing class DeliveryVelocityService {
 
     private static final Integer DEFAULT_WEEKS = 8;
     private static final Integer DAYS_PER_WEEK = 7;
@@ -15,13 +15,13 @@ public with sharing class DeliveryVelocityService {
 
     // ── Result wrappers ──────────────────────────────────────────────────
 
-    public class WeeklyVelocity {
+    global class WeeklyVelocity {
         @AuraEnabled public String weekLabel;
         @AuraEnabled public Integer completedCount;
         @AuraEnabled public Date weekStart;
     }
 
-    public class DeveloperUtilization {
+    global class DeveloperUtilization {
         @AuraEnabled public String developerName;
         @AuraEnabled public String developerId;
         @AuraEnabled public Decimal weeklyCapacityHours;
@@ -30,14 +30,14 @@ public with sharing class DeliveryVelocityService {
         @AuraEnabled public Integer activeItemCount;
     }
 
-    public class ProjectionResult {
+    global class ProjectionResult {
         @AuraEnabled public Integer remainingItems;
         @AuraEnabled public Decimal averageVelocity;
         @AuraEnabled public Integer estimatedWeeks;
         @AuraEnabled public Date projectedCompletionDate;
     }
 
-    public class CapacityResult {
+    global class CapacityResult {
         @AuraEnabled public Decimal totalCapacityHours;
         @AuraEnabled public Decimal allocatedHours;
         @AuraEnabled public Decimal utilizationPercent;
@@ -45,7 +45,7 @@ public with sharing class DeliveryVelocityService {
         @AuraEnabled public List<DeveloperUtilization> developers;
     }
 
-    public class VelocityDashboard {
+    global class VelocityDashboard {
         @AuraEnabled public List<WeeklyVelocity> weeklyVelocity;
         @AuraEnabled public ProjectionResult projection;
         @AuraEnabled public CapacityResult capacity;
@@ -55,7 +55,7 @@ public with sharing class DeliveryVelocityService {
 
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static List<WeeklyVelocity> getTeamVelocity(String workflowType, Integer weeks) {
+    global static List<WeeklyVelocity> getTeamVelocity(String workflowType, Integer weeks) {
         if (weeks == null || weeks <= 0) { weeks = DEFAULT_WEEKS; }
         if (String.isBlank(workflowType)) { workflowType = 'Software_Delivery'; }
 
@@ -79,7 +79,7 @@ public with sharing class DeliveryVelocityService {
 
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static List<WeeklyVelocity> getDeveloperVelocity(String developerId, Integer weeks) {
+    global static List<WeeklyVelocity> getDeveloperVelocity(String developerId, Integer weeks) {
         if (weeks == null || weeks <= 0) { weeks = DEFAULT_WEEKS; }
         if (String.isBlank(developerId)) {
             return new List<WeeklyVelocity>();
@@ -111,7 +111,7 @@ public with sharing class DeliveryVelocityService {
 
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static ProjectionResult getProjectedCompletion(String workflowType) {
+    global static ProjectionResult getProjectedCompletion(String workflowType) {
         if (String.isBlank(workflowType)) { workflowType = 'Software_Delivery'; }
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
@@ -147,7 +147,7 @@ public with sharing class DeliveryVelocityService {
 
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static CapacityResult getCapacityUtilization(String workflowType) {
+    global static CapacityResult getCapacityUtilization(String workflowType) {
         if (String.isBlank(workflowType)) { workflowType = 'Software_Delivery'; }
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
@@ -212,7 +212,7 @@ public with sharing class DeliveryVelocityService {
     }
 
     @AuraEnabled(cacheable=true)
-    public static VelocityDashboard getVelocityDashboard(String workflowType) {
+    global static VelocityDashboard getVelocityDashboard(String workflowType) {
         if (String.isBlank(workflowType)) { workflowType = 'Software_Delivery'; }
 
         VelocityDashboard dashboard = new VelocityDashboard();

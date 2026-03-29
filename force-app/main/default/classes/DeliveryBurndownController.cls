@@ -6,7 +6,7 @@
  *              totals of created, completed, and open items over a 12-week window.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryBurndownController {
+global with sharing class DeliveryBurndownController {
 
     /** @description Number of weeks of history to return. */
     private static final Integer WEEKS_TO_SHOW = 12;
@@ -30,7 +30,7 @@ public with sharing class DeliveryBurndownController {
      * @return List of maps with keys: date, totalCreated, totalCompleted, openCount.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getBurndownData(String workflowTypeName) {
+    global static List<Map<String, Object>> getBurndownData(String workflowTypeName) {
         try {
             if (String.isBlank(workflowTypeName)) {
                 workflowTypeName = 'Software_Delivery';

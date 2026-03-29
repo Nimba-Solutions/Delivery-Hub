@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidDebugStatements,PMD.CyclomaticComplexity')
-public with sharing class DeliveryWorkflowBuilderController {
+global with sharing class DeliveryWorkflowBuilderController {
 
     // ── Query Methods ────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ public with sharing class DeliveryWorkflowBuilderController {
      * @return List of maps with: developerName, label, description, icon, stageCount, isDefault
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getWorkflowTypes() {
+    global static List<Map<String, Object>> getWorkflowTypes() {
         List<WorkflowType__mdt> types = [
             SELECT DeveloperName, Label, DescriptionTxt__c, IconName__c,
                    SortOrderNumber__c, IsDefaultBool__c
@@ -57,7 +57,7 @@ public with sharing class DeliveryWorkflowBuilderController {
      * @return List of maps with stage field values.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getWorkflowStages(String workflowTypeName) {
+    global static List<Map<String, Object>> getWorkflowStages(String workflowTypeName) {
         List<WorkflowStage__mdt> stages = [
             SELECT DeveloperName, Label, ApiValueTxt__c, DisplayNameTxt__c,
                    SortOrderNumber__c, PhaseTxt__c, CardColorTxt__c,
@@ -104,7 +104,7 @@ public with sharing class DeliveryWorkflowBuilderController {
      * @return The deployment ID for tracking.
      */
     @AuraEnabled
-    public static String deployWorkflow(String workflowJson) {
+    global static String deployWorkflow(String workflowJson) {
         Map<String, Object> workflow = (Map<String, Object>) JSON.deserializeUntyped(workflowJson);
 
         String typeName = (String) workflow.get('name');

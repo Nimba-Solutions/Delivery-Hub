@@ -7,7 +7,7 @@
  * but validates access via NetworkEntity relationship.
  * @author Cloud Nimbus LLC
  */
-public without sharing class DeliveryPortalController {
+global without sharing class DeliveryPortalController {
 
     /**
      * @description Returns a portal dashboard payload scoped to a single NetworkEntity.
@@ -17,7 +17,7 @@ public without sharing class DeliveryPortalController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getPortalDashboard(Id networkEntityId) {
+    global static Map<String, Object> getPortalDashboard(Id networkEntityId) {
         validateEntityAccess(networkEntityId);
         Map<String, Object> result = new Map<String, Object>();
 
@@ -142,7 +142,7 @@ public without sharing class DeliveryPortalController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getPortalWorkItems(Id networkEntityId, String statusFilter) {
+    global static List<Map<String, Object>> getPortalWorkItems(Id networkEntityId, String statusFilter) {
         validateEntityAccess(networkEntityId);
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
@@ -215,7 +215,7 @@ public without sharing class DeliveryPortalController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
-    public static Map<String, Object> getPortalWorkItemDetail(Id workItemId, Id networkEntityId) {
+    global static Map<String, Object> getPortalWorkItemDetail(Id workItemId, Id networkEntityId) {
         validateEntityAccess(networkEntityId);
 
         List<WorkItem__c> items = [
@@ -292,7 +292,7 @@ public without sharing class DeliveryPortalController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
-    public static Id submitPortalRequest(Map<String, String> requestData) {
+    global static Id submitPortalRequest(Map<String, String> requestData) {
         String title = requestData.get('title');
         String description = requestData.get('description');
         String priority = requestData.get('priority');
@@ -328,7 +328,7 @@ public without sharing class DeliveryPortalController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
-    public static Id addPortalComment(Id workItemId, String commentBody) {
+    global static Id addPortalComment(Id workItemId, String commentBody) {
         if (String.isBlank(commentBody)) {
             throw createAuraException('Comment body is required.');
         }

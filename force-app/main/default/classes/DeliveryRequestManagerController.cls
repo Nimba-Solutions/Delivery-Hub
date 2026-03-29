@@ -8,7 +8,7 @@
  */
 // without sharing: Required so vendor request routing, status updates, and SyncItem creation
 // succeed regardless of the running user's sharing rules on WorkRequest__c / SyncItem__c.
-public without sharing class DeliveryRequestManagerController {
+global without sharing class DeliveryRequestManagerController {
     
     /**
      * @description Sends a work request to the vendor by updating its status to 'Offer Sent'
@@ -17,7 +17,7 @@ public without sharing class DeliveryRequestManagerController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void sendRequestToVendor(Id requestId) {
+    global static void sendRequestToVendor(Id requestId) {
         // 1. Fetch the Request using SYSTEM_MODE to ensure availability
         WorkRequest__c req = [
             SELECT Id, WorkItemId__c, StatusPk__c 
@@ -47,7 +47,7 @@ public without sharing class DeliveryRequestManagerController {
      * @return String formatted status message or error if not found
      */
     @AuraEnabled
-    public static String checkRequestStatus(Id requestId) {
+    global static String checkRequestStatus(Id requestId) {
         List<WorkRequest__c> reqs = [
             SELECT Id, StatusPk__c, RemoteWorkItemIdTxt__c, LastModifiedDate
             FROM WorkRequest__c

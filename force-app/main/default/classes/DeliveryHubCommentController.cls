@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryHubCommentController {
+global with sharing class DeliveryHubCommentController {
 
     /**
      * @description Fetches comments related to the current context (Request or Work Item).
@@ -15,7 +15,7 @@ public with sharing class DeliveryHubCommentController {
      * @return List of comments.
      */
     @AuraEnabled(cacheable=true)
-    public static List<WorkItemComment__c> getLiveComments(Id requestId) {
+    global static List<WorkItemComment__c> getLiveComments(Id requestId) {
         try {
             Id workItemId = resolveWorkItemId(requestId);
 
@@ -41,7 +41,7 @@ public with sharing class DeliveryHubCommentController {
      * @param body The comment text.
      */
     @AuraEnabled
-    public static void postLiveComment(Id requestId, String body) {
+    global static void postLiveComment(Id requestId, String body) {
         try {
             Id workItemId = resolveWorkItemId(requestId);
 
@@ -69,7 +69,7 @@ public with sharing class DeliveryHubCommentController {
      * @return Map of comment Id (String) → list of file name strings.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, List<String>> getCommentFiles(List<Id> commentIds) {
+    global static Map<String, List<String>> getCommentFiles(List<Id> commentIds) {
         Map<String, List<String>> result = new Map<String, List<String>>();
         if (commentIds == null || commentIds.isEmpty()) {
             return result;

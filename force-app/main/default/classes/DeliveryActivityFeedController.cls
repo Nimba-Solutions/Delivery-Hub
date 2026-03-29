@@ -9,7 +9,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidDebugStatements,PMD.ExcessiveParameterList,PMD.CyclomaticComplexity')
-public with sharing class DeliveryActivityFeedController {
+global with sharing class DeliveryActivityFeedController {
 
     private static final Integer PAGE_SIZE = 25;
 
@@ -26,7 +26,7 @@ public with sharing class DeliveryActivityFeedController {
      * @return Map containing events list, totalCount, and hasMore flag.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getActivityFeed(
+    global static Map<String, Object> getActivityFeed(
         String filterType,
         Integer pageOffset,
         Id networkEntityId,
@@ -80,7 +80,7 @@ public with sharing class DeliveryActivityFeedController {
      * @return List of conversation thread maps.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getConversations(
+    global static List<Map<String, Object>> getConversations(
         Integer pageOffset,
         Id networkEntityId
     ) {
@@ -180,7 +180,7 @@ public with sharing class DeliveryActivityFeedController {
      * @return Map containing approvals list and totalCount.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getPendingApprovals(
+    global static Map<String, Object> getPendingApprovals(
         Integer pageOffset,
         Id networkEntityId
     ) {
@@ -250,7 +250,7 @@ public with sharing class DeliveryActivityFeedController {
      * @param workLogIds List of WorkLog__c Ids to approve.
      */
     @AuraEnabled
-    public static void approveWorkLogs(List<Id> workLogIds) {
+    global static void approveWorkLogs(List<Id> workLogIds) {
         DeliveryTimeLoggerController.approveWorkLogs(workLogIds);
     }
 
@@ -259,7 +259,7 @@ public with sharing class DeliveryActivityFeedController {
      * @param workLogIds List of WorkLog__c Ids to reject.
      */
     @AuraEnabled
-    public static void rejectWorkLogs(List<Id> workLogIds) {
+    global static void rejectWorkLogs(List<Id> workLogIds) {
         DeliveryTimeLoggerController.rejectWorkLogs(workLogIds);
     }
 
@@ -271,7 +271,7 @@ public with sharing class DeliveryActivityFeedController {
      * @param body The comment text.
      */
     @AuraEnabled
-    public static void postCommentFromFeed(Id workItemId, String body) {
+    global static void postCommentFromFeed(Id workItemId, String body) {
         if (workItemId == null || String.isBlank(body)) {
             throw new AuraHandledException('Work item and comment body are required.');
         }

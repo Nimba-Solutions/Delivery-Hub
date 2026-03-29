@@ -6,12 +6,12 @@
  *               and stage info so the component can render a CSS-based horizontal Gantt chart.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryTimelineController {
+global with sharing class DeliveryTimelineController {
 
     /**
      * @description Data Transfer Object representing a single timeline bar row.
      */
-    public class TimelineRow {
+    global class TimelineRow {
         /** @description Salesforce record Id */
         @AuraEnabled public String workItemId { get; set; }
         /** @description Auto-number work item name (e.g. WI-0001) */
@@ -45,7 +45,7 @@ public with sharing class DeliveryTimelineController {
      * @return List of TimelineRow ordered by entity name then start date.
      */
     @AuraEnabled(cacheable=true)
-    public static List<TimelineRow> getTimelineData(String workflowTypeName) {
+    global static List<TimelineRow> getTimelineData(String workflowTypeName) {
         try {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
                 + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '

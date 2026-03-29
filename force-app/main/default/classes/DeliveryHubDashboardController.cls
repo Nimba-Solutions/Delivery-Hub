@@ -6,10 +6,10 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
-public with sharing class DeliveryHubDashboardController {
+global with sharing class DeliveryHubDashboardController {
 
     /** @description Wrapper for a work item summary row used in the client dashboard. */
-    public class WorkItemSummary {
+    global class WorkItemSummary {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
         @AuraEnabled public String title;
@@ -23,7 +23,7 @@ public with sharing class DeliveryHubDashboardController {
     }
 
     /** @description Wrapper for a phase bucket count used in the client dashboard. */
-    public class PhaseItem {
+    global class PhaseItem {
         @AuraEnabled public String label;
         @AuraEnabled public Integer count;
     }
@@ -33,7 +33,7 @@ public with sharing class DeliveryHubDashboardController {
      * @return Map<String, Object> Metrics map (Object type to support String dates).
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getBudgetMetrics() {
+    global static Map<String, Object> getBudgetMetrics() {
         Map<String, Object> metrics = new Map<String, Object>();
 
         // 1. Work Item Metrics (Active Count) — use CMT terminal stages so no hardcoded 'Closed'
@@ -120,7 +120,7 @@ public with sharing class DeliveryHubDashboardController {
      * @return Integer count of attention-requiring work items.
      */
     @AuraEnabled(cacheable=true)
-    public static Integer getAttentionCount() {
+    global static Integer getAttentionCount() {
         Set<String> clientStages = DeliveryWorkflowConfigService.getAttentionStageValues('Software_Delivery');
         return [
             SELECT COUNT()
@@ -137,7 +137,7 @@ public with sharing class DeliveryHubDashboardController {
      * @return Map containing attentionWorkItems, phases, recentWorkItems, announcements, and thisWeek keys.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getClientDashboard(String timeRange, String workflowType) {
+    global static Map<String, Object> getClientDashboard(String timeRange, String workflowType) {
         if (String.isBlank(timeRange)) {
             timeRange = 'thisWeek';
         }
@@ -495,7 +495,7 @@ public with sharing class DeliveryHubDashboardController {
      * @return Map of DeveloperName to Report Id (only found reports included).
      */
     @AuraEnabled
-    public static Map<String, String> getReportIds(List<String> developerNames) {
+    global static Map<String, String> getReportIds(List<String> developerNames) {
         Map<String, String> result = new Map<String, String>();
         for (Report r : [
             SELECT Id, DeveloperName
@@ -513,7 +513,7 @@ public with sharing class DeliveryHubDashboardController {
      * @return True if the user is a Delivery Hub admin.
      */
     @AuraEnabled(cacheable=true)
-    public static Boolean isAdminUser() {
+    global static Boolean isAdminUser() {
         return ![
             SELECT Id FROM PermissionSetAssignment
             WHERE AssigneeId = :UserInfo.getUserId()

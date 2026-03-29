@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryTemplateManagerController {
+global with sharing class DeliveryTemplateManagerController {
 
     /**
      * @description Returns all work item templates with fields needed for the
@@ -14,7 +14,7 @@ public with sharing class DeliveryTemplateManagerController {
      * @return List of template WorkItem__c records.
      */
     @AuraEnabled(cacheable=true)
-    public static List<WorkItem__c> getTemplates() {
+    global static List<WorkItem__c> getTemplates() {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c,
                    Tags__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
@@ -35,7 +35,7 @@ public with sharing class DeliveryTemplateManagerController {
      * @return Id The Id of the newly created work item.
      */
     @AuraEnabled
-    public static Id createFromTemplate(Id templateId, Map<String, Object> overrides) {
+    global static Id createFromTemplate(Id templateId, Map<String, Object> overrides) {
         if (templateId == null) {
             AuraHandledException ex = new AuraHandledException('Template Id is required.');
             ex.setMessage('Template Id is required.');
@@ -50,7 +50,7 @@ public with sharing class DeliveryTemplateManagerController {
      * @param templateId The Id of the template WorkItem__c to deactivate.
      */
     @AuraEnabled
-    public static void deactivateTemplate(Id templateId) {
+    global static void deactivateTemplate(Id templateId) {
         if (templateId == null) {
             AuraHandledException ex = new AuraHandledException('Template Id is required.');
             ex.setMessage('Template Id is required.');
@@ -78,7 +78,7 @@ public with sharing class DeliveryTemplateManagerController {
      * @param templateId The Id of the template WorkItem__c to reactivate.
      */
     @AuraEnabled
-    public static void activateTemplate(Id templateId) {
+    global static void activateTemplate(Id templateId) {
         if (templateId == null) {
             AuraHandledException ex = new AuraHandledException('Template Id is required.');
             ex.setMessage('Template Id is required.');
