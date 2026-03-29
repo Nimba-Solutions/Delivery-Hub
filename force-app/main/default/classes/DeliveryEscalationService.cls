@@ -774,7 +774,7 @@ global with sharing class DeliveryEscalationService {
     /**
      * @description Wrapper returned by getEscalationSummary() for LWC consumption.
      */
-    public class EscalationSummary {
+    global class EscalationSummary {
         @AuraEnabled public Id workItemId;
         @AuraEnabled public String workItemName;
         @AuraEnabled public String ruleName;

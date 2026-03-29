@@ -11,7 +11,7 @@
 global without sharing class DeliveryHubSetupController {
 
     /** @description DTO holding the org's Delivery Hub connection status for the setup LWC. */
-    public class SetupStatus {
+    global class SetupStatus {
         @AuraEnabled public Boolean isConnected;
         @AuraEnabled public Boolean isMothership;
         @AuraEnabled public String requiredRemoteSite;
@@ -19,7 +19,7 @@ global without sharing class DeliveryHubSetupController {
     }
 
     /** @description DTO holding prerequisite check results for the setup wizard. */
-    public class PrerequisiteStatus {
+    global class PrerequisiteStatus {
         @AuraEnabled public Boolean siteExists;
         @AuraEnabled public Boolean siteActive;
         @AuraEnabled public Boolean guestUserConfigured;

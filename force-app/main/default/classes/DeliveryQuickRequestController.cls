@@ -11,7 +11,7 @@ global with sharing class DeliveryQuickRequestController {
     /**
      * @description Wrapper returned to the LWC after work item creation.
      */
-    public class QuickRequestResult {
+    global class QuickRequestResult {
         /** @description The Id of the created WorkItem__c record */
         @AuraEnabled public Id recordId { get; set; }
         /** @description The auto-number Name of the created WorkItem__c record */

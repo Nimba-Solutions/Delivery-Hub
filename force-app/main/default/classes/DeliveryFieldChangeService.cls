@@ -14,7 +14,7 @@ global with sharing class DeliveryFieldChangeService {
      * @description Input wrapper for the invocable method.
      *              Each field change event is represented as one FieldChangeRequest.
      */
-    public class FieldChangeRequest {
+    global class FieldChangeRequest {
         @InvocableVariable(label='Record ID' description='The Salesforce record ID of the changed record' required=true)
         public String recordId;
 

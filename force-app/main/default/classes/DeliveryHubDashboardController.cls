@@ -9,7 +9,7 @@
 global with sharing class DeliveryHubDashboardController {
 
     /** @description Wrapper for a work item summary row used in the client dashboard. */
-    public class WorkItemSummary {
+    global class WorkItemSummary {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
         @AuraEnabled public String title;
@@ -23,7 +23,7 @@ global with sharing class DeliveryHubDashboardController {
     }
 
     /** @description Wrapper for a phase bucket count used in the client dashboard. */
-    public class PhaseItem {
+    global class PhaseItem {
         @AuraEnabled public String label;
         @AuraEnabled public Integer count;
     }

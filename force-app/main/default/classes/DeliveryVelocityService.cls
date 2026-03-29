@@ -15,13 +15,13 @@ global with sharing class DeliveryVelocityService {
 
     // ── Result wrappers ──────────────────────────────────────────────────
 
-    public class WeeklyVelocity {
+    global class WeeklyVelocity {
         @AuraEnabled public String weekLabel;
         @AuraEnabled public Integer completedCount;
         @AuraEnabled public Date weekStart;
     }
 
-    public class DeveloperUtilization {
+    global class DeveloperUtilization {
         @AuraEnabled public String developerName;
         @AuraEnabled public String developerId;
         @AuraEnabled public Decimal weeklyCapacityHours;
@@ -30,14 +30,14 @@ global with sharing class DeliveryVelocityService {
         @AuraEnabled public Integer activeItemCount;
     }
 
-    public class ProjectionResult {
+    global class ProjectionResult {
         @AuraEnabled public Integer remainingItems;
         @AuraEnabled public Decimal averageVelocity;
         @AuraEnabled public Integer estimatedWeeks;
         @AuraEnabled public Date projectedCompletionDate;
     }
 
-    public class CapacityResult {
+    global class CapacityResult {
         @AuraEnabled public Decimal totalCapacityHours;
         @AuraEnabled public Decimal allocatedHours;
         @AuraEnabled public Decimal utilizationPercent;
@@ -45,7 +45,7 @@ global with sharing class DeliveryVelocityService {
         @AuraEnabled public List<DeveloperUtilization> developers;
     }
 
-    public class VelocityDashboard {
+    global class VelocityDashboard {
         @AuraEnabled public List<WeeklyVelocity> weeklyVelocity;
         @AuraEnabled public ProjectionResult projection;
         @AuraEnabled public CapacityResult capacity;

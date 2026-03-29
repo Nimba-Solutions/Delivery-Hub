@@ -11,7 +11,7 @@ global with sharing class DeliveryHubSettingsController {
     /**
      * @description Data Transfer Object for settings data to/from LWC
      */
-    public class SettingsDTO {
+    global class SettingsDTO {
         /** @description Enable notifications setting */
         @AuraEnabled public Boolean enableNotifications { get; set; }
         

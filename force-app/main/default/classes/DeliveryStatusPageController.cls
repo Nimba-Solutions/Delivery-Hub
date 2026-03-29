@@ -12,7 +12,7 @@
 global without sharing class DeliveryStatusPageController {
 
     /** @description Simple wrapper for a completed item shown on the VF page */
-    public class CompletionItem {
+    global class CompletionItem {
         /** @description Title/description of the completed work item */
         public String title { get; set; }
         /** @description Formatted completion date string */
@@ -20,7 +20,7 @@ global without sharing class DeliveryStatusPageController {
     }
 
     /** @description Wrapper returned by the VF page getters */
-    public class StatusPageData {
+    global class StatusPageData {
         /** @description Display name of the network entity */
         public String entityName { get; set; }
         /** @description Map of phase names to active work-item counts */

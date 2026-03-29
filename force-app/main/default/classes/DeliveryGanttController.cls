@@ -11,7 +11,7 @@ global with sharing class DeliveryGanttController {
     /**
      * @description Data Transfer Object representing a single Gantt row.
      */
-    public class GanttRow {
+    global class GanttRow {
         /** @description Salesforce record Id */
         @AuraEnabled public String workItemId { get; set; }
         /** @description Auto-number work item name (e.g. WI-0001) */

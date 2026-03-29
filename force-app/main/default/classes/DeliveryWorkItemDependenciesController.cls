@@ -8,7 +8,7 @@
 global with sharing class DeliveryWorkItemDependenciesController {
 
     /** @description Summary of a related work item shown in the dependency view. */
-    public class DependencyRow {
+    global class DependencyRow {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
         @AuraEnabled public String title;

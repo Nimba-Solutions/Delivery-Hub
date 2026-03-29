@@ -245,7 +245,7 @@ global with sharing class DeliveryWorkItemController {
     /**
      * @description Wrapper class to structure the AI suggestion data returned to the LWC.
      */
-    public class AISuggestionWrapper {
+    global class AISuggestionWrapper {
         /** @description The AI-suggested title for the work item */
         @AuraEnabled public String title { get; set; }
         /** @description The AI-suggested description with technical requirements */

@@ -14,7 +14,7 @@ global with sharing class DeliveryScoreService {
     // Wrapper classes
     // -------------------------------------------------------------------------
 
-    public class ScoreFactor {
+    global class ScoreFactor {
         @AuraEnabled public String name;
         @AuraEnabled public Integer score;       // 0-100
         @AuraEnabled public Decimal weight;      // 0.0-1.0
@@ -22,7 +22,7 @@ global with sharing class DeliveryScoreService {
         @AuraEnabled public String status;       // good | warning | critical
     }
 
-    public class DeliveryScoreResult {
+    global class DeliveryScoreResult {
         @AuraEnabled public Integer score;       // 0-100
         @AuraEnabled public String grade;        // A+, A, B+, B, C+, C, D, F
         @AuraEnabled public String scoreColor;   // hex color

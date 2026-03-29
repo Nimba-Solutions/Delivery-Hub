@@ -9,13 +9,13 @@
 global with sharing class DeliveryActivityDashboardController {
 
     /** @description Wrapper for a ranked item (user or component) with its activity count. */
-    public class RankedItem {
+    global class RankedItem {
         @AuraEnabled public String label;
         @AuraEnabled public Integer count;
     }
 
     /** @description Wrapper for a single day's activity count. */
-    public class DailyCount {
+    global class DailyCount {
         @AuraEnabled public String dateLabel;
         @AuraEnabled public Integer count;
     }

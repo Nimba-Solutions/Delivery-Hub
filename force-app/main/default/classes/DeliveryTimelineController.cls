@@ -11,7 +11,7 @@ global with sharing class DeliveryTimelineController {
     /**
      * @description Data Transfer Object representing a single timeline bar row.
      */
-    public class TimelineRow {
+    global class TimelineRow {
         /** @description Salesforce record Id */
         @AuraEnabled public String workItemId { get; set; }
         /** @description Auto-number work item name (e.g. WI-0001) */

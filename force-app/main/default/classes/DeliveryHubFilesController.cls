@@ -8,7 +8,7 @@
 global with sharing class DeliveryHubFilesController {
 
     /** @description Represents a single file attachment linked to a work item or its related records. */
-    public class FileItem {
+    global class FileItem {
         @AuraEnabled public String documentId;
         @AuraEnabled public String title;
         @AuraEnabled public String extension;

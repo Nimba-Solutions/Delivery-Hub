@@ -9,7 +9,7 @@
 global with sharing class DeliveryWorkItemQuotesController {
 
     /** @description Represents a single vendor quote (WorkRequest__c) on a work item. */
-    public class QuoteRow {
+    global class QuoteRow {
         @AuraEnabled public String id;
         @AuraEnabled public String vendorName;
         @AuraEnabled public String vendorId;

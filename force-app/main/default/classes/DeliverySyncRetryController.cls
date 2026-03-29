@@ -9,7 +9,7 @@
 global with sharing class DeliverySyncRetryController {
 
     /** @description Summary of a failed sync item for display. */
-    public class FailedSyncRow {
+    global class FailedSyncRow {
         @AuraEnabled public String id;
         @AuraEnabled public String objectType;
         @AuraEnabled public String errorLog;

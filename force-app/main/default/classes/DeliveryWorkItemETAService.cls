@@ -92,7 +92,7 @@ global with sharing class DeliveryWorkItemETAService {
     /**
      * @description Data Transfer Object (DTO) to send results back to the LWC.
      */
-    public class ETAResult {
+    global class ETAResult {
         /** @description List of work items with calculated ETA data. */
         @AuraEnabled public List<WorkItemETADTO> workItems { get; set; }
         /** @description Work item numbers that were pushed back during calculation. */
@@ -100,7 +100,7 @@ global with sharing class DeliveryWorkItemETAService {
     }
 
     /** @description DTO containing ETA calculation results for a single work item. */
-    public class WorkItemETADTO {
+    global class WorkItemETADTO {
         /** @description Salesforce Id of the work item. */
         @AuraEnabled public Id workItemId { get; set; }
         /** @description Calculated estimated completion date. */

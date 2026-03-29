@@ -15,7 +15,7 @@ global with sharing class DeliveryMetricsService {
     // -------------------------------------------------------------------------
 
     /** Top-level wrapper returned by getBoardMetrics. */
-    public class BoardMetrics {
+    global class BoardMetrics {
         @AuraEnabled public List<WeeklyVelocity> velocity;
         @AuraEnabled public Decimal avgThroughputDays;
         @AuraEnabled public Decimal prevAvgThroughputDays;
@@ -30,26 +30,26 @@ global with sharing class DeliveryMetricsService {
     }
 
     /** Weekly velocity data point (one per week, last 4 weeks). */
-    public class WeeklyVelocity {
+    global class WeeklyVelocity {
         @AuraEnabled public String weekLabel;
         @AuraEnabled public Integer count;
     }
 
     /** Count of items in a given stage. */
-    public class StageCount {
+    global class StageCount {
         @AuraEnabled public String stage;
         @AuraEnabled public String phase;
         @AuraEnabled public Integer count;
     }
 
     /** Count of items at a given priority level. */
-    public class PriorityCount {
+    global class PriorityCount {
         @AuraEnabled public String priority;
         @AuraEnabled public Integer count;
     }
 
     /** A work item that has not moved in 3+ days. */
-    public class AgingItem {
+    global class AgingItem {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
         @AuraEnabled public String title;
