@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryStageHistoryController {
+global with sharing class DeliveryStageHistoryController {
 
     /**
      * @description Returns a list of stage change events for a given Work Item,
@@ -18,7 +18,7 @@ public with sharing class DeliveryStageHistoryController {
      *         newStage, durationHours, workItemName.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getStageHistory(Id workItemId) {
+    global static List<Map<String, Object>> getStageHistory(Id workItemId) {
         if (workItemId == null) {
             return new List<Map<String, Object>>();
         }

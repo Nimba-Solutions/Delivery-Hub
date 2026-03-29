@@ -9,7 +9,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryTimeLoggerController {
+global with sharing class DeliveryTimeLoggerController {
 
     /**
      * @description Inserts a WorkLog__c record linked to the given work item.
@@ -22,7 +22,7 @@ public with sharing class DeliveryTimeLoggerController {
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
-    public static void logHours(Id workItemId, Decimal hours, String workNotes, Date workDate) {
+    global static void logHours(Id workItemId, Decimal hours, String workNotes, Date workDate) {
         List<WorkRequest__c> activeReqs = [
             SELECT Id FROM WorkRequest__c
             WHERE WorkItemId__c = :workItemId
@@ -54,7 +54,7 @@ public with sharing class DeliveryTimeLoggerController {
      * @return true when RequireWorkLogApprovalDate__c is set.
      */
     @AuraEnabled(cacheable=true)
-    public static Boolean isApprovalRequired() {
+    global static Boolean isApprovalRequired() {
         return DeliveryWorkLogTriggerHandler.isApprovalRequired();
     }
 
@@ -64,7 +64,7 @@ public with sharing class DeliveryTimeLoggerController {
      * @param workLogIds List of WorkLog__c Ids to approve.
      */
     @AuraEnabled
-    public static void approveWorkLogs(List<Id> workLogIds) {
+    global static void approveWorkLogs(List<Id> workLogIds) {
         if (workLogIds == null || workLogIds.isEmpty()) {
             return;
         }
@@ -86,7 +86,7 @@ public with sharing class DeliveryTimeLoggerController {
      * @param workLogIds List of WorkLog__c Ids to reject.
      */
     @AuraEnabled
-    public static void rejectWorkLogs(List<Id> workLogIds) {
+    global static void rejectWorkLogs(List<Id> workLogIds) {
         if (workLogIds == null || workLogIds.isEmpty()) {
             return;
         }

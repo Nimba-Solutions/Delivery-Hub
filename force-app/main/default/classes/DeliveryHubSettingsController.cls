@@ -6,12 +6,12 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
-public with sharing class DeliveryHubSettingsController {
+global with sharing class DeliveryHubSettingsController {
 
     /**
      * @description Data Transfer Object for settings data to/from LWC
      */
-    public class SettingsDTO {
+    global class SettingsDTO {
         /** @description Enable notifications setting */
         @AuraEnabled public Boolean enableNotifications { get; set; }
         
@@ -130,7 +130,7 @@ public with sharing class DeliveryHubSettingsController {
      */
     @SuppressWarnings('PMD.CyclomaticComplexity')
     @AuraEnabled
-    public static SettingsDTO getSettings() {
+    global static SettingsDTO getSettings() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         SettingsDTO dto = new SettingsDTO();
 
@@ -263,7 +263,7 @@ public with sharing class DeliveryHubSettingsController {
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
-    public static void saveGeneralSettings(
+    global static void saveGeneralSettings(
         Boolean enableNotifications,
         Boolean autoCreateRequest,
         Boolean autoSendRequest,
@@ -305,7 +305,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param settingsJson JSON string matching SettingsDTO shape
      */
     @AuraEnabled
-    public static void saveExtendedSettings(String settingsJson) {
+    global static void saveExtendedSettings(String settingsJson) {
         try {
             SettingsDTO dto = (SettingsDTO) JSON.deserialize(settingsJson, SettingsDTO.class);
             DeliveryHubSettings__c settings = getOrCreateSettings();
@@ -357,7 +357,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param estimation Enable AI estimation
      */
     @AuraEnabled
-    public static void saveAiSettings(Boolean suggestions, Boolean descriptions, Boolean estimation) {
+    global static void saveAiSettings(Boolean suggestions, Boolean descriptions, Boolean estimation) {
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
 
@@ -382,7 +382,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param tested Whether the API has been tested
      */
     @AuraEnabled
-    public static void saveOpenAISettings(String apiKey, String model, boolean tested) {
+    global static void saveOpenAISettings(String apiKey, String model, boolean tested) {
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
 
@@ -407,7 +407,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param webhookUrl The Slack webhook URL (or blank to clear)
      */
     @AuraEnabled
-    public static void saveSlackWebhookUrl(String webhookUrl) {
+    global static void saveSlackWebhookUrl(String webhookUrl) {
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
             settings.SlackWebhookUrl__c = webhookUrl;
@@ -426,7 +426,7 @@ public with sharing class DeliveryHubSettingsController {
      * @param settingsJson JSON string matching SettingsDTO shape
      */
     @AuraEnabled
-    public static void saveAllAiSettings(String settingsJson) {
+    global static void saveAllAiSettings(String settingsJson) {
         try {
             SettingsDTO dto = (SettingsDTO) JSON.deserialize(settingsJson, SettingsDTO.class);
             DeliveryHubSettings__c settings = getOrCreateSettings();
@@ -454,7 +454,7 @@ public with sharing class DeliveryHubSettingsController {
      */
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
     @AuraEnabled
-    public static String testOpenAIConnection(String apiKey) {
+    global static String testOpenAIConnection(String apiKey) {
         HttpRequest req = new HttpRequest();
         req.setEndpoint('https://api.openai.com/v1/chat/completions');
         req.setMethod('POST');

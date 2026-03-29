@@ -6,7 +6,7 @@
  * color maps, transition maps, and persona column maps in deliveryHubBoard.js.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryWorkflowConfigService {
+global with sharing class DeliveryWorkflowConfigService {
 
     // -------------------------------------------------------------------------
     // AuraEnabled — called by board / gantt / dashboard LWC components
@@ -18,7 +18,7 @@ public with sharing class DeliveryWorkflowConfigService {
      * @return List of Maps, each representing one WorkflowType__mdt record.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String,Object>> getWorkflowTypes() {
+    global static List<Map<String,Object>> getWorkflowTypes() {
         List<Map<String,Object>> result = new List<Map<String,Object>>();
         for (WorkflowType__mdt wt : [
             SELECT DeveloperName, Label, SortOrderNumber__c, IconName__c, IsDefaultBool__c, UseSimplifiedViewBool__c
@@ -58,7 +58,7 @@ public with sharing class DeliveryWorkflowConfigService {
      * @return Map containing 'type', 'stages', and 'personaViews' keys.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String,Object> getWorkflowConfig(String workflowTypeName) {
+    global static Map<String,Object> getWorkflowConfig(String workflowTypeName) {
         if (String.isBlank(workflowTypeName)) {
             workflowTypeName = 'Software_Delivery';
         }
@@ -150,7 +150,7 @@ public with sharing class DeliveryWorkflowConfigService {
      * @return List of Maps, each representing one WorkflowType__mdt with enriched data.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String,Object>> getWorkflowTemplates() {
+    global static List<Map<String,Object>> getWorkflowTemplates() {
         // Load all types
         List<WorkflowType__mdt> types = [
             SELECT DeveloperName, Label, DescriptionTxt__c, IconName__c,

@@ -6,7 +6,7 @@
  *              data into JSON snapshots that the portal renders as web pages and PDFs.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessiveClassLength, PMD.ExcessiveParameterList')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessiveClassLength, PMD.ExcessiveParameterList, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryDocumentController {
 
     /**
@@ -154,6 +154,7 @@ global with sharing class DeliveryDocumentController {
      *              DeliveryTransaction__c amounts per document to compute paid totals.
      *              Balance = sum of (docTotal - paidTotal) for each unpaid invoice.
      * @param entityId The NetworkEntity__c Id.
+     * @param currentPeriodStart Only includes invoices with periods before this date.
      * @return The total unpaid prior balance.
      */
     @TestVisible
@@ -194,7 +195,7 @@ global with sharing class DeliveryDocumentController {
      * @param note Optional reference number, check number, or note.
      */
     @AuraEnabled
-    public static void recordPayment(Id documentId, Decimal amount, Date paymentDate, String note) {
+    global static void recordPayment(Id documentId, Decimal amount, Date paymentDate, String note) {
         if (documentId == null || amount == null || amount <= 0) {
             throw new AuraHandledException('A valid document ID and positive payment amount are required.');
         }
@@ -279,7 +280,7 @@ global with sharing class DeliveryDocumentController {
      * @return Map containing the document record fields and parsed snapshot.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getDocumentByToken(String publicToken) {
+    global static Map<String, Object> getDocumentByToken(String publicToken) {
         List<DeliveryDocument__c> docs = [
             SELECT Id, Name, TemplatePk__c, NetworkEntityId__c,
                    NetworkEntityId__r.Name, NetworkEntityId__r.DefaultHourlyRateCurrency__c,
@@ -342,7 +343,7 @@ global with sharing class DeliveryDocumentController {
      * @return Map containing the document record fields and parsed snapshot.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getDocumentById(Id documentId) {
+    global static Map<String, Object> getDocumentById(Id documentId) {
         List<DeliveryDocument__c> docs = [
             SELECT Id, Name, TemplatePk__c, NetworkEntityId__c,
                    NetworkEntityId__r.Name, NetworkEntityId__r.DefaultHourlyRateCurrency__c,
@@ -399,7 +400,7 @@ global with sharing class DeliveryDocumentController {
      * @return List of document summary maps.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getDocumentsForEntity(Id entityId) {
+    global static List<Map<String, Object>> getDocumentsForEntity(Id entityId) {
         List<Map<String, Object>> results = new List<Map<String, Object>>();
 
         String query = 'SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c, '
@@ -437,7 +438,7 @@ global with sharing class DeliveryDocumentController {
      * @param newStatus The new status value.
      */
     @AuraEnabled
-    public static void updateDocumentStatus(Id documentId, String newStatus) {
+    global static void updateDocumentStatus(Id documentId, String newStatus) {
         DeliveryDocument__c doc = [
             SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c,
                    TemplatePk__c, NetworkEntityId__r.Name
@@ -475,7 +476,7 @@ global with sharing class DeliveryDocumentController {
      * @param narrative The AI-generated text to store.
      */
     @AuraEnabled
-    public static void saveAiNarrative(Id documentId, String narrative) {
+    global static void saveAiNarrative(Id documentId, String narrative) {
         DeliveryDocument__c doc = new DeliveryDocument__c(
             Id = documentId,
             AiNarrativeTxt__c = narrative
@@ -490,7 +491,7 @@ global with sharing class DeliveryDocumentController {
      * @return List of maps with 'value' (DeveloperName), 'label', and 'description' keys.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, String>> getDocumentTemplates() {
+    global static List<Map<String, String>> getDocumentTemplates() {
         List<Map<String, String>> templates = new List<Map<String, String>>();
         for (DocumentTemplate__mdt tmpl : [
             SELECT DeveloperName, Label, DescriptionTxt__c
@@ -594,13 +595,155 @@ global with sharing class DeliveryDocumentController {
     }
 
     /**
+     * @description Returns a preview of the email that would be sent for this document,
+     *              including the subject, HTML body, recipient, CC, attachment name, and
+     *              PDF preview URL. Nothing is sent — this is read-only preview data.
+     * @param documentId The DeliveryDocument__c Id.
+     * @param recipientEmail Optional explicit recipient. Falls back to entity contact email.
+     * @return Map with keys: toEmail, ccEmail, subject, bodyHtml, attachmentName, pdfPreviewUrl, entityName.
+     */
+    @AuraEnabled
+    global static Map<String, Object> previewDocumentEmail(Id documentId, String recipientEmail) {
+        DeliveryDocument__c doc = [
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                   NetworkEntityId__r.ContactEmailTxt__c,
+                   PeriodStartDate__c, PeriodEndDate__c,
+                   StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
+                   TermsTxt__c, DueDateDate__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        String toEmail = String.isNotBlank(recipientEmail)
+            ? recipientEmail.trim()
+            : doc.NetworkEntityId__r.ContactEmailTxt__c;
+
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        String ccEmail = (settings != null) ? settings.DocumentCcEmailTxt__c : null;
+
+        String vendorName = resolveVendorName();
+        String templateDisplay = doc.TemplatePk__c.replace('_', ' ');
+        String subject = vendorName + ' \u2014 ' + templateDisplay + ' ' + doc.Name;
+        String bodyHtml = buildDocumentEmailBody(doc, templateDisplay, vendorName);
+        String attachmentName = doc.Name + ' - ' + templateDisplay + '.pdf';
+
+        Map<String, Object> preview = new Map<String, Object>();
+        preview.put('toEmail', toEmail != null ? toEmail : '');
+        preview.put('ccEmail', ccEmail != null ? ccEmail : '');
+        preview.put('subject', subject);
+        preview.put('bodyHtml', bodyHtml);
+        preview.put('attachmentName', attachmentName);
+        preview.put('pdfPreviewUrl', '/apex/DeliveryDocumentPdf?id=' + documentId);
+        preview.put('entityName', doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '');
+        return preview;
+    }
+
+    /**
+     * @description Schedules a document to be automatically emailed at a future date/time.
+     *              Sets the scheduled send fields and marks the document as Ready if currently Draft.
+     * @param documentId The DeliveryDocument__c Id.
+     * @param recipientEmail The recipient email to lock in for the scheduled send.
+     * @param sendAt The future DateTime when the email should be sent.
+     * @return Map with 'success' and 'scheduledSend' keys.
+     */
+    @AuraEnabled
+    global static Map<String, Object> scheduleDocumentSend(Id documentId, String recipientEmail, Datetime sendAt) {
+        if (sendAt == null || sendAt <= Datetime.now()) {
+            throw new AuraHandledException('Scheduled send time must be in the future.');
+        }
+        if (String.isBlank(recipientEmail)) {
+            throw new AuraHandledException('Recipient email is required for scheduled send.');
+        }
+
+        DeliveryDocument__c doc = [
+            SELECT Id, StatusPk__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        doc.ScheduledSendDateTime__c = sendAt;
+        doc.ScheduledRecipientEmailTxt__c = recipientEmail.trim();
+        if (doc.StatusPk__c == 'Draft') {
+            doc.StatusPk__c = 'Ready';
+        }
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('success', true);
+        result.put('scheduledSend', String.valueOf(sendAt));
+        return result;
+    }
+
+    /**
+     * @description Cancels a previously scheduled document send by clearing the
+     *              scheduled send fields.
+     * @param documentId The DeliveryDocument__c Id.
+     * @return Map with 'success' key.
+     */
+    @AuraEnabled
+    global static Map<String, Object> cancelScheduledSend(Id documentId) {
+        DeliveryDocument__c doc = [
+            SELECT Id
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+
+        doc.ScheduledSendDateTime__c = null;
+        doc.ScheduledRecipientEmailTxt__c = null;
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('success', true);
+        return result;
+    }
+
+    /**
+     * @description Processes all documents whose scheduled send time has passed.
+     *              Called by DeliveryHubScheduler every 15 minutes. Sends each document
+     *              via sendDocumentEmail and clears the schedule fields afterward.
+     */
+    public static void processScheduledDocumentSends() {
+        List<DeliveryDocument__c> dueDocs = [
+            SELECT Id, ScheduledRecipientEmailTxt__c
+            FROM DeliveryDocument__c
+            WHERE ScheduledSendDateTime__c <= :Datetime.now()
+            AND ScheduledSendDateTime__c != null
+            AND SentDateTime__c = null
+            WITH SYSTEM_MODE
+            LIMIT 50
+        ];
+
+        for (DeliveryDocument__c doc : dueDocs) {
+            try {
+                sendDocumentEmail(doc.Id, doc.ScheduledRecipientEmailTxt__c);
+            } catch (Exception e) {
+                System.debug(LoggingLevel.ERROR,
+                    '[DeliveryDocumentController] Scheduled send failed for ' + doc.Id + ': ' + e.getMessage());
+            }
+            // Clear schedule fields regardless of success (sendDocumentEmail already sets Sent on success;
+            // on failure we don't want infinite retries — the admin can reschedule manually)
+            doc.ScheduledSendDateTime__c = null;
+            doc.ScheduledRecipientEmailTxt__c = null;
+        }
+        if (!dueDocs.isEmpty()) {
+            Database.update(dueDocs, AccessLevel.SYSTEM_MODE);
+        }
+    }
+
+    /**
      * @description Retrieves the transaction history for a document. Allows the LWC
      *              to refresh the transaction list independently after recording a payment.
      * @param documentId The DeliveryDocument__c Id.
      * @return List of maps containing transaction fields (id, name, type, amount, date, note, method).
      */
     @AuraEnabled
-    public static List<Map<String, Object>> getDocumentTransactions(Id documentId) {
+    global static List<Map<String, Object>> getDocumentTransactions(Id documentId) {
         return getTransactionsForDocument(documentId);
     }
 
@@ -611,7 +754,7 @@ global with sharing class DeliveryDocumentController {
      * @return The 18-character NetworkEntity__c ID, or null if not configured.
      */
     @AuraEnabled(cacheable=true)
-    public static String getDefaultBillingEntityId() {
+    global static String getDefaultBillingEntityId() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null) {
             return null;

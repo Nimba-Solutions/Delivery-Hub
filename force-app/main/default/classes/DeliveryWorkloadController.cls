@@ -6,7 +6,7 @@
  * breakdown to help managers identify overloaded developers and unassigned items.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryWorkloadController {
+global with sharing class DeliveryWorkloadController {
 
     /**
      * @description Returns workload data for each developer who has active (non-terminal)
@@ -17,7 +17,7 @@ public with sharing class DeliveryWorkloadController {
      * @return List of Maps, each representing one developer's workload summary.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getWorkloadData(String workflowTypeName) {
+    global static List<Map<String, Object>> getWorkloadData(String workflowTypeName) {
         try {
             if (String.isBlank(workflowTypeName)) {
                 workflowTypeName = 'Software_Delivery';
@@ -39,7 +39,7 @@ public with sharing class DeliveryWorkloadController {
      * @return Integer count of unassigned, non-terminal work items.
      */
     @AuraEnabled(cacheable=true)
-    public static Integer getUnassignedCount(String workflowTypeName) {
+    global static Integer getUnassignedCount(String workflowTypeName) {
         try {
             if (String.isBlank(workflowTypeName)) {
                 workflowTypeName = 'Software_Delivery';

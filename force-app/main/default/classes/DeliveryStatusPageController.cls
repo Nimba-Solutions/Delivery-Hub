@@ -9,10 +9,10 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public without sharing class DeliveryStatusPageController {
+global without sharing class DeliveryStatusPageController {
 
     /** @description Simple wrapper for a completed item shown on the VF page */
-    public class CompletionItem {
+    global class CompletionItem {
         /** @description Title/description of the completed work item */
         public String title { get; set; }
         /** @description Formatted completion date string */
@@ -20,7 +20,7 @@ public without sharing class DeliveryStatusPageController {
     }
 
     /** @description Wrapper returned by the VF page getters */
-    public class StatusPageData {
+    global class StatusPageData {
         /** @description Display name of the network entity */
         public String entityName { get; set; }
         /** @description Map of phase names to active work-item counts */
@@ -50,7 +50,7 @@ public without sharing class DeliveryStatusPageController {
      *         recentCompletions, activeCount, completedCount, lastUpdated, overallHealth
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getStatusPageData(String entityToken) {
+    global static Map<String, Object> getStatusPageData(String entityToken) {
         Map<String, Object> result = new Map<String, Object>();
 
         // --- Guard: check master toggle ---

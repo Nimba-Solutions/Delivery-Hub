@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
-public with sharing class DeliveryGhostController {
+global with sharing class DeliveryGhostController {
 
     /**
      * @description Logs a user navigation or action event to the ActivityLog__c object.
@@ -17,7 +17,7 @@ public with sharing class DeliveryGhostController {
      */
     @SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
     @AuraEnabled
-    public static void logUserActivity(String actionType, String contextData) {
+    global static void logUserActivity(String actionType, String contextData) {
         try {
             // Gate: activity logging must be explicitly enabled in org settings
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
@@ -115,7 +115,7 @@ public with sharing class DeliveryGhostController {
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
-    public static String createQuickRequest(String subject, String description, String priority, String contextData, String workItemType) {
+    global static String createQuickRequest(String subject, String description, String priority, String contextData, String workItemType) {
         try {
             // 1. Format the Description with Context
             String fullDescription = description;

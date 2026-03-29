@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ScheduledSendDateTime__c</fullName>
+    <description>When this document should be automatically emailed. Null means no scheduled send. The scheduler checks every 15 minutes and sends documents whose scheduled time has passed.</description>
+    <inlineHelpText>Set a future date/time to auto-send this document. Leave blank for manual send only.</inlineHelpText>
+    <label>Scheduled Send</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

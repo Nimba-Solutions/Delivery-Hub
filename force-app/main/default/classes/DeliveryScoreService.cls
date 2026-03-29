@@ -8,13 +8,13 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount, PMD.ApexDoc')
-public with sharing class DeliveryScoreService {
+global with sharing class DeliveryScoreService {
 
     // -------------------------------------------------------------------------
     // Wrapper classes
     // -------------------------------------------------------------------------
 
-    public class ScoreFactor {
+    global class ScoreFactor {
         @AuraEnabled public String name;
         @AuraEnabled public Integer score;       // 0-100
         @AuraEnabled public Decimal weight;      // 0.0-1.0
@@ -22,7 +22,7 @@ public with sharing class DeliveryScoreService {
         @AuraEnabled public String status;       // good | warning | critical
     }
 
-    public class DeliveryScoreResult {
+    global class DeliveryScoreResult {
         @AuraEnabled public Integer score;       // 0-100
         @AuraEnabled public String grade;        // A+, A, B+, B, C+, C, D, F
         @AuraEnabled public String scoreColor;   // hex color
@@ -42,7 +42,7 @@ public with sharing class DeliveryScoreService {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static DeliveryScoreResult getDeliveryScore(Id entityId) {
+    global static DeliveryScoreResult getDeliveryScore(Id entityId) {
         // Use static SOQL so CCI namespace-injects the child relationship name
         List<WorkItem__c> items;
         if (entityId != null) {

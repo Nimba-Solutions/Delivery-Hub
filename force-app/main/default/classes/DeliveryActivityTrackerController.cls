@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryActivityTrackerController {
+global with sharing class DeliveryActivityTrackerController {
 
     /**
      * @description Logs a single user activity event to ActivityLog__c.
@@ -23,7 +23,7 @@ public with sharing class DeliveryActivityTrackerController {
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
-    public static void logActivity(
+    global static void logActivity(
         String actionType,
         String componentName,
         String recordId,

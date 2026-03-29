@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public without sharing class DeliveryPortalAccessService {
+global without sharing class DeliveryPortalAccessService {
 
     /**
      * @description Returns the list of NetworkEntities that the given email has access to,
@@ -106,7 +106,7 @@ public without sharing class DeliveryPortalAccessService {
      */
     @SuppressWarnings('PMD.CyclomaticComplexity')
     @AuraEnabled
-    public static PortalAccess__c generatePortalAccess(Id entityId, String email, String role) {
+    global static PortalAccess__c generatePortalAccess(Id entityId, String email, String role) {
         if (entityId == null) {
             AuraHandledException ex = new AuraHandledException('Entity Id is required.');
             ex.setMessage('Entity Id is required.');

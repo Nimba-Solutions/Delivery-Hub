@@ -8,13 +8,13 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
-public with sharing class DeliveryFieldChangeService {
+global with sharing class DeliveryFieldChangeService {
 
     /**
      * @description Input wrapper for the invocable method.
      *              Each field change event is represented as one FieldChangeRequest.
      */
-    public class FieldChangeRequest {
+    global class FieldChangeRequest {
         @InvocableVariable(label='Record ID' description='The Salesforce record ID of the changed record' required=true)
         public String recordId;
 
@@ -85,7 +85,7 @@ public with sharing class DeliveryFieldChangeService {
      *         fieldLabel, objectName, oldValue, newValue, delta, notes, extraContext.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getFieldChangeHistory(String recordId, String fieldName, Integer limitCount) {
+    global static List<Map<String, Object>> getFieldChangeHistory(String recordId, String fieldName, Integer limitCount) {
         if (String.isBlank(recordId)) {
             return new List<Map<String, Object>>();
         }
@@ -140,7 +140,7 @@ public with sharing class DeliveryFieldChangeService {
      * @return List of Maps with keys: timestamp, value, label.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getFieldChangeTrend(String recordId, String fieldName, Integer limitCount) {
+    global static List<Map<String, Object>> getFieldChangeTrend(String recordId, String fieldName, Integer limitCount) {
         if (String.isBlank(recordId)) {
             return new List<Map<String, Object>>();
         }

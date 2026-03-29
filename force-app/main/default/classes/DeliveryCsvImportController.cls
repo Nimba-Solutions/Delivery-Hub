@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity')
-public with sharing class DeliveryCsvImportController {
+global with sharing class DeliveryCsvImportController {
 
     private static final Integer BATCH_SIZE = 200;
 
@@ -74,7 +74,7 @@ public with sharing class DeliveryCsvImportController {
      *         errors (List<Map<String,String>> with row/message), createdIds (List<String>).
      */
     @AuraEnabled
-    public static Map<String, Object> importWorkItems(List<Map<String, String>> records, String workflowType) {
+    global static Map<String, Object> importWorkItems(List<Map<String, String>> records, String workflowType) {
         ImportResult importResult = new ImportResult();
 
         if (records == null || records.isEmpty()) {
@@ -152,7 +152,7 @@ public with sharing class DeliveryCsvImportController {
      * @return List of Maps with keys: apiName, label, type.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, String>> getWorkItemFields() {
+    global static List<Map<String, String>> getWorkItemFields() {
         List<Map<String, String>> fieldList = new List<Map<String, String>>();
         Map<String, Schema.SObjectField> fieldMap =
             Schema.SObjectType.WorkItem__c.fields.getMap();

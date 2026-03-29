@@ -6,7 +6,7 @@
  *              updateDocumentStatus, saveAiNarrative, cost hierarchy, and parseDueDate.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity')
 @isTest
 private class DeliveryDocumentControllerTest {
 
@@ -1062,5 +1062,125 @@ private class DeliveryDocumentControllerTest {
         ];
         System.assertEquals('Status_Report', doc.TemplatePk__c, 'Template should be Status_Report');
         System.assertNotEquals(null, doc.SnapshotTxt__c, 'Snapshot should exist');
+    }
+
+    // ── Preview & Scheduling ────────────────────────────────────────────────
+
+    @isTest
+    static void testPreviewDocumentEmail() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        Test.startTest();
+        Map<String, Object> preview = DeliveryDocumentController.previewDocumentEmail(docId, 'test@example.com');
+        Test.stopTest();
+
+        System.assertEquals('test@example.com', preview.get('toEmail'), 'Recipient should match');
+        System.assertNotEquals(null, preview.get('subject'), 'Subject should not be null');
+        System.assertNotEquals(null, preview.get('bodyHtml'), 'Body HTML should not be null');
+        System.assertNotEquals(null, preview.get('attachmentName'), 'Attachment name should not be null');
+        System.assertNotEquals(null, preview.get('pdfPreviewUrl'), 'PDF preview URL should not be null');
+        System.assert(((String) preview.get('attachmentName')).endsWith('.pdf'), 'Attachment should be PDF');
+    }
+
+    @isTest
+    static void testPreviewDocumentEmailFallsBackToEntityEmail() {
+        NetworkEntity__c entity = getEntity();
+        entity.ContactEmailTxt__c = 'client@corp.com';
+        update entity;
+        Id docId = generateTestDocument(entity.Id);
+
+        Test.startTest();
+        Map<String, Object> preview = DeliveryDocumentController.previewDocumentEmail(docId, null);
+        Test.stopTest();
+
+        System.assertEquals('client@corp.com', preview.get('toEmail'), 'Should fall back to entity email');
+    }
+
+    @isTest
+    static void testScheduleDocumentSend() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+        Datetime futureTime = Datetime.now().addDays(1);
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.scheduleDocumentSend(
+            docId, 'recipient@test.com', futureTime
+        );
+        Test.stopTest();
+
+        System.assertEquals(true, result.get('success'), 'Should succeed');
+        DeliveryDocument__c doc = [
+            SELECT ScheduledSendDateTime__c, ScheduledRecipientEmailTxt__c, StatusPk__c
+            FROM DeliveryDocument__c WHERE Id = :docId
+        ];
+        System.assertEquals(futureTime, doc.ScheduledSendDateTime__c, 'Scheduled time should match');
+        System.assertEquals('recipient@test.com', doc.ScheduledRecipientEmailTxt__c, 'Recipient should match');
+        System.assertEquals('Ready', doc.StatusPk__c, 'Draft should be promoted to Ready');
+    }
+
+    @isTest
+    static void testScheduleDocumentSendRejectsPast() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        Test.startTest();
+        Boolean threw = false;
+        try {
+            DeliveryDocumentController.scheduleDocumentSend(
+                docId, 'recipient@test.com', Datetime.now().addHours(-1)
+            );
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw, 'Should reject past datetime');
+    }
+
+    @isTest
+    static void testCancelScheduledSend() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+        DeliveryDocumentController.scheduleDocumentSend(
+            docId, 'recipient@test.com', Datetime.now().addDays(1)
+        );
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryDocumentController.cancelScheduledSend(docId);
+        Test.stopTest();
+
+        System.assertEquals(true, result.get('success'), 'Should succeed');
+        DeliveryDocument__c doc = [
+            SELECT ScheduledSendDateTime__c, ScheduledRecipientEmailTxt__c
+            FROM DeliveryDocument__c WHERE Id = :docId
+        ];
+        System.assertEquals(null, doc.ScheduledSendDateTime__c, 'Schedule should be cleared');
+        System.assertEquals(null, doc.ScheduledRecipientEmailTxt__c, 'Recipient should be cleared');
+    }
+
+    @isTest
+    static void testProcessScheduledDocumentSends() {
+        NetworkEntity__c entity = getEntity();
+        Id docId = generateTestDocument(entity.Id);
+
+        // Schedule for the past so it triggers immediately
+        DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c WHERE Id = :docId];
+        doc.ScheduledSendDateTime__c = Datetime.now().addMinutes(-5);
+        doc.ScheduledRecipientEmailTxt__c = 'scheduled@test.com';
+        doc.StatusPk__c = 'Ready';
+        update doc;
+
+        Test.startTest();
+        DeliveryDocumentController.processScheduledDocumentSends();
+        Test.stopTest();
+
+        DeliveryDocument__c updated = [
+            SELECT StatusPk__c, SentDateTime__c, ScheduledSendDateTime__c
+            FROM DeliveryDocument__c WHERE Id = :docId
+        ];
+        System.assertEquals('Sent', updated.StatusPk__c, 'Should be sent');
+        System.assertNotEquals(null, updated.SentDateTime__c, 'SentDateTime should be set');
+        System.assertEquals(null, updated.ScheduledSendDateTime__c, 'Schedule should be cleared after send');
     }
 }

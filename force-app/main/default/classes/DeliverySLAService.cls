@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliverySLAService {
+global with sharing class DeliverySLAService {
 
     /** @description Hardcoded fallback: days for Critical priority (used when no CMT rules exist) */
     private static final Integer FALLBACK_CRITICAL_DAYS = 3;
@@ -112,7 +112,7 @@ public with sharing class DeliverySLAService {
      * @return Map of SLA status label to count
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Integer> getSLAStatusCounts(String workflowTypeName) {
+    global static Map<String, Integer> getSLAStatusCounts(String workflowTypeName) {
         Map<String, Integer> counts = new Map<String, Integer>{
             'On Track' => 0,
             'At Risk' => 0,

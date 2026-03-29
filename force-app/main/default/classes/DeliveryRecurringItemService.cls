@@ -5,7 +5,7 @@
  * Handles scheduled creation of recurring items and on-demand cloning from templates.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryRecurringItemService {
+global with sharing class DeliveryRecurringItemService {
 
     // Fields to copy when cloning a work item (descriptive / config fields only)
     private static final List<String> CLONE_FIELDS = new List<String>{
@@ -92,7 +92,7 @@ public with sharing class DeliveryRecurringItemService {
      * @return Id The Id of the newly created work item.
      */
     @AuraEnabled
-    public static Id cloneFromTemplate(Id templateId, Map<String, Object> overrides) {
+    global static Id cloneFromTemplate(Id templateId, Map<String, Object> overrides) {
         if (templateId == null) {
             AuraHandledException ex = new AuraHandledException('Template Id is required.');
             ex.setMessage('Template Id is required.');
@@ -119,7 +119,7 @@ public with sharing class DeliveryRecurringItemService {
      * @return List of template WorkItem__c records.
      */
     @AuraEnabled(cacheable=true)
-    public static List<WorkItem__c> getTemplates() {
+    global static List<WorkItem__c> getTemplates() {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c,
                    Tags__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
