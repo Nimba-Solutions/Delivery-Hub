@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryClientOnboardingController {
+global with sharing class DeliveryClientOnboardingController {
 
     private static final String DEFAULT_WORKFLOW = 'Software_Delivery';
 
@@ -25,7 +25,7 @@ public with sharing class DeliveryClientOnboardingController {
      *         portalAccessId, and accessToken keys.
      */
     @AuraEnabled
-    public static Map<String, Object> onboardClient(
+    global static Map<String, Object> onboardClient(
         String clientName, String contactEmail, Decimal hourlyRate,
         String contactPhone, String address
     ) {
@@ -124,7 +124,7 @@ public with sharing class DeliveryClientOnboardingController {
      * @return List of maps with id and name keys.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, String>> getExistingClients() {
+    global static List<Map<String, String>> getExistingClients() {
         List<Map<String, String>> clients = new List<Map<String, String>>();
         for (NetworkEntity__c ne : [
             SELECT Id, Name

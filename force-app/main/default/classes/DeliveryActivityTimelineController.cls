@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity,PMD.AvoidDebugStatements')
-public with sharing class DeliveryActivityTimelineController {
+global with sharing class DeliveryActivityTimelineController {
 
     private static final Integer PAGE_SIZE = 20;
 
@@ -21,7 +21,7 @@ public with sharing class DeliveryActivityTimelineController {
      * @return List of Maps, each representing one timeline event.
      */
     @AuraEnabled(cacheable=true)
-    public static List<Map<String, Object>> getTimelineEvents(
+    global static List<Map<String, Object>> getTimelineEvents(
         Id workItemId,
         String filterType,
         Integer pageOffset

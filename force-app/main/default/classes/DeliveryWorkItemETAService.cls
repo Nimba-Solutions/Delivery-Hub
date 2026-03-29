@@ -9,7 +9,7 @@
  * @author Mahipal Jat
  * @date July 22, 2025
  */
-public with sharing class DeliveryWorkItemETAService {
+global with sharing class DeliveryWorkItemETAService {
 
     // #################################################################################
     // SECTION 1: LWC Integration & DTOs
@@ -25,7 +25,7 @@ public with sharing class DeliveryWorkItemETAService {
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
     // <<< FIX 1: Changed parameter from Set<Id> to List<Id> which is supported by AuraEnabled.
-    public static ETAResult getWorkItemETAsWithPriority(Integer numberOfDevs, List<Id> prioritizedWorkItemIds) {
+    global static ETAResult getWorkItemETAsWithPriority(Integer numberOfDevs, List<Id> prioritizedWorkItemIds) {
         return getWorkItemETAsWithPriorityForType(numberOfDevs, prioritizedWorkItemIds, null);
     }
 
@@ -40,7 +40,7 @@ public with sharing class DeliveryWorkItemETAService {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static ETAResult getWorkItemETAsWithPriorityForType(Integer numberOfDevs, List<Id> prioritizedWorkItemIds, String workflowType) {
+    global static ETAResult getWorkItemETAsWithPriorityForType(Integer numberOfDevs, List<Id> prioritizedWorkItemIds, String workflowType) {
         ETAResult result = new ETAResult();
         result.workItems = new List<WorkItemETADTO>();
         result.pushedBackWorkItemNumbers = new List<String>(); // Compatibility with original LWC structure
@@ -92,7 +92,7 @@ public with sharing class DeliveryWorkItemETAService {
     /**
      * @description Data Transfer Object (DTO) to send results back to the LWC.
      */
-    public class ETAResult {
+    global class ETAResult {
         /** @description List of work items with calculated ETA data. */
         @AuraEnabled public List<WorkItemETADTO> workItems { get; set; }
         /** @description Work item numbers that were pushed back during calculation. */
@@ -100,7 +100,7 @@ public with sharing class DeliveryWorkItemETAService {
     }
 
     /** @description DTO containing ETA calculation results for a single work item. */
-    public class WorkItemETADTO {
+    global class WorkItemETADTO {
         /** @description Salesforce Id of the work item. */
         @AuraEnabled public Id workItemId { get; set; }
         /** @description Calculated estimated completion date. */

@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
-public with sharing class DeliverySlackService {
+global with sharing class DeliverySlackService {
 
     // ── Public API ───────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ public with sharing class DeliverySlackService {
      * @return String 'Success' on 200, otherwise an error description
      */
     @AuraEnabled
-    public static String testWebhook(String webhookUrl) {
+    global static String testWebhook(String webhookUrl) {
         if (String.isBlank(webhookUrl)) {
             throw new AuraHandledException('Please enter a Slack Webhook URL first.');
         }

@@ -3,7 +3,7 @@
  * Provides org context and Ghost Recorder installation detection.
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryGuideController {
+global with sharing class DeliveryGuideController {
 
     private static final Set<String> GHOST_RECORDER_APP_NAMES = new Set<String>{
         'DeliveryHub', 'DeliveryHubAdmin',
@@ -16,7 +16,7 @@ public with sharing class DeliveryGuideController {
      * @return Map containing orgDomain, setupAppManager URL, and apps list
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getGuideContext() {
+    global static Map<String, Object> getGuideContext() {
         Map<String, Object> ctx = new Map<String, Object>();
 
         String orgDomain = URL.getOrgDomainUrl().toExternalForm();

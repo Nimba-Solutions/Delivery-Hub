@@ -6,12 +6,12 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ExcessiveParameterList, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
-public with sharing class DeliveryQuickRequestController {
+global with sharing class DeliveryQuickRequestController {
 
     /**
      * @description Wrapper returned to the LWC after work item creation.
      */
-    public class QuickRequestResult {
+    global class QuickRequestResult {
         /** @description The Id of the created WorkItem__c record */
         @AuraEnabled public Id recordId { get; set; }
         /** @description The auto-number Name of the created WorkItem__c record */
@@ -29,7 +29,7 @@ public with sharing class DeliveryQuickRequestController {
      * @return QuickRequestResult containing the created record Id and Name.
      */
     @AuraEnabled
-    public static QuickRequestResult createWorkRequest(
+    global static QuickRequestResult createWorkRequest(
         String title, String priority, String description, Boolean aiEnhance
     ) {
         if (String.isBlank(title)) {

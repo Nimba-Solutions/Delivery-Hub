@@ -79,7 +79,7 @@ const FIELDS = {
 
 export default class DeliveryHubBoard extends NavigationMixin(LightningElement) {
     /** @api Optional NetworkEntity record Id. When provided, scopes work items to this entity. Null/undefined = admin view (all entities). */
-    @api networkEntityId;
+    @api networkEntityId = null;
 
     persona = "Client";
     sizeMode = "equalSized";

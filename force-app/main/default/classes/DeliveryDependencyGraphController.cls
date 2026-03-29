@@ -6,7 +6,7 @@
  *              of work item dependencies for visualization.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryDependencyGraphController {
+global with sharing class DeliveryDependencyGraphController {
 
     /**
      * @description Returns the full connected dependency graph starting from a single work item.
@@ -17,7 +17,7 @@ public with sharing class DeliveryDependencyGraphController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static Map<String, Object> getDependencyGraph(Id workItemId) {
+    global static Map<String, Object> getDependencyGraph(Id workItemId) {
         Map<String, Object> result = new Map<String, Object>();
 
         if (workItemId == null) {
@@ -199,7 +199,7 @@ public with sharing class DeliveryDependencyGraphController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static Map<String, Object> getProjectDependencyGraph(String workflowType) {
+    global static Map<String, Object> getProjectDependencyGraph(String workflowType) {
         Map<String, Object> result = new Map<String, Object>();
 
         if (String.isBlank(workflowType)) {

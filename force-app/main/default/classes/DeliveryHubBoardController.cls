@@ -5,7 +5,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
-public with sharing class DeliveryHubBoardController {
+global with sharing class DeliveryHubBoardController {
 
     /**
      * @description Updates the stage of a single work item.
@@ -13,7 +13,7 @@ public with sharing class DeliveryHubBoardController {
      * @param newStage The new stage picklist value to set.
      */
     @AuraEnabled
-    public static void updateWorkItemStage(Id workItemId, String newStage) {
+    global static void updateWorkItemStage(Id workItemId, String newStage) {
         try {
             if (Schema.sObjectType.WorkItem__c.isUpdateable()) {
                 WorkItem__c workItem = new WorkItem__c(Id = workItemId, StageNamePk__c = newStage);
@@ -33,7 +33,7 @@ public with sharing class DeliveryHubBoardController {
      * @param newIndex The zero-based position within the target stage column.
      */
     @AuraEnabled
-    public static void reorderWorkItem(Id workItemId, String newStage, Integer newIndex) {
+    global static void reorderWorkItem(Id workItemId, String newStage, Integer newIndex) {
         try {
             // 1. Get existing work items in this stage (EXCLUDING the one we are moving)
             // FIX: Removed 'WITH SECURITY_ENFORCED' to prevent FLS errors on SortOrderNumber__c/ActivatedDateTime__c
@@ -107,7 +107,7 @@ public with sharing class DeliveryHubBoardController {
      * @return The newly created WorkItemDependency__c record.
      */
     @AuraEnabled
-    public static WorkItemDependency__c createDependency(Id blockedWorkItemId, Id blockingWorkItemId) {
+    global static WorkItemDependency__c createDependency(Id blockedWorkItemId, Id blockingWorkItemId) {
         if (blockedWorkItemId == blockingWorkItemId) {
             throw createAuraException('A work item cannot block itself.');
         }
@@ -134,7 +134,7 @@ public with sharing class DeliveryHubBoardController {
      * @param dependencyId The Id of the WorkItemDependency__c to delete.
      */
     @AuraEnabled
-    public static void removeDependency(Id dependencyId) {
+    global static void removeDependency(Id dependencyId) {
         try {
             if (Schema.sObjectType.WorkItemDependency__c.isDeletable()) {
                 WorkItemDependency__c dep = [SELECT Id FROM WorkItemDependency__c WHERE Id = :dependencyId LIMIT 1];
@@ -158,7 +158,7 @@ public with sharing class DeliveryHubBoardController {
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled(cacheable=true)
-    public static List<WorkItem__c> searchForPotentialBlockers(String searchTerm, Id currentWorkItemId, List<Id> existingDependencyIds, String workflowType) {
+    global static List<WorkItem__c> searchForPotentialBlockers(String searchTerm, Id currentWorkItemId, List<Id> existingDependencyIds, String workflowType) {
         String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';
         Set<Id> exclusionIds = new Set<Id>();
         if (currentWorkItemId != null) {
@@ -196,7 +196,7 @@ public with sharing class DeliveryHubBoardController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getBoardMetrics(String workflowType) {
+    global static Map<String, Object> getBoardMetrics(String workflowType) {
         return getBoardMetricsForEntity(workflowType, null);
     }
 
@@ -210,7 +210,7 @@ public with sharing class DeliveryHubBoardController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getBoardMetricsForEntity(String workflowType, Id entityId) {
+    global static Map<String, Object> getBoardMetricsForEntity(String workflowType, Id entityId) {
         if (String.isBlank(workflowType)) {
             workflowType = 'Software_Delivery';
         }
@@ -402,7 +402,7 @@ public with sharing class DeliveryHubBoardController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
-    public static List<WorkItem__c> getWorkItemsForEntity(String workflowType, Id entityId) {
+    global static List<WorkItem__c> getWorkItemsForEntity(String workflowType, Id entityId) {
         if (String.isBlank(workflowType)) {
             workflowType = 'Software_Delivery';
         }
@@ -471,7 +471,7 @@ public with sharing class DeliveryHubBoardController {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
-    public static Map<String, Object> getWorkItemDetail(Id workItemId) {
+    global static Map<String, Object> getWorkItemDetail(Id workItemId) {
         Map<String, Object> result = new Map<String, Object>();
 
         // 1. Fetch the work item with key fields

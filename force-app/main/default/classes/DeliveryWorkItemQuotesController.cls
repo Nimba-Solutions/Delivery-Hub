@@ -6,10 +6,10 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryWorkItemQuotesController {
+global with sharing class DeliveryWorkItemQuotesController {
 
     /** @description Represents a single vendor quote (WorkRequest__c) on a work item. */
-    public class QuoteRow {
+    global class QuoteRow {
         @AuraEnabled public String id;
         @AuraEnabled public String vendorName;
         @AuraEnabled public String vendorId;
@@ -28,7 +28,7 @@ public with sharing class DeliveryWorkItemQuotesController {
      * @return List of QuoteRow wrappers.
      */
     @AuraEnabled(cacheable=true)
-    public static List<QuoteRow> getQuotes(Id workItemId) {
+    global static List<QuoteRow> getQuotes(Id workItemId) {
         List<QuoteRow> rows = new List<QuoteRow>();
         for (WorkRequest__c req : [
             SELECT Id, DeliveryEntityId__r.Name, DeliveryEntityId__c,
@@ -64,7 +64,7 @@ public with sharing class DeliveryWorkItemQuotesController {
      * @param workItemId  The parent WorkItem__c for context (used to deactivate other bids).
      */
     @AuraEnabled
-    public static void acceptQuote(Id requestId, Id workItemId) {
+    global static void acceptQuote(Id requestId, Id workItemId) {
         List<WorkRequest__c> allRequests = [
             SELECT Id, StatusPk__c
             FROM WorkRequest__c
