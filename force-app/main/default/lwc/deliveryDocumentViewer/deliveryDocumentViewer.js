@@ -433,6 +433,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
     }
 
     get isSendDisabled() {
+        return this.isSendingEmail;
+    }
+
+    get isSendNowDisabled() {
         return this.isSendingEmail || !this.sendRecipientEmail;
     }
 
