@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliveryActivityDashboardController {
+global with sharing class DeliveryActivityDashboardController {
 
     /** @description Wrapper for a ranked item (user or component) with its activity count. */
     public class RankedItem {
@@ -25,7 +25,7 @@ public with sharing class DeliveryActivityDashboardController {
      * @return Map containing totalThisWeek, totalThisMonth, topUsers, topComponents, and dailyCounts keys.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getActivitySummary() {
+    global static Map<String, Object> getActivitySummary() {
         Map<String, Object> result = new Map<String, Object>();
 
         Date today = Date.today();

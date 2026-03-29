@@ -5,7 +5,7 @@
  *              Returns blocking and blocked-by work item relationships for a given work item.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryWorkItemDependenciesController {
+global with sharing class DeliveryWorkItemDependenciesController {
 
     /** @description Summary of a related work item shown in the dependency view. */
     public class DependencyRow {
@@ -22,7 +22,7 @@ public with sharing class DeliveryWorkItemDependenciesController {
      * @return Map with 'blocking' and 'blockedBy' lists of DependencyRow.
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getDependencies(Id workItemId) {
+    global static Map<String, Object> getDependencies(Id workItemId) {
         Map<String, Object> result = new Map<String, Object>();
         result.put('blocking',   fetchBlocking(workItemId));
         result.put('blockedBy',  fetchBlockedBy(workItemId));

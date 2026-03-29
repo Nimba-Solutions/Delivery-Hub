@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ScheduledRecipientEmailTxt__c</fullName>
+    <description>The recipient email address locked in when a scheduled send is configured. Used by the scheduler to send the document email at the scheduled time.</description>
+    <inlineHelpText>Recipient email for the scheduled send.</inlineHelpText>
+    <label>Scheduled Recipient Email</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

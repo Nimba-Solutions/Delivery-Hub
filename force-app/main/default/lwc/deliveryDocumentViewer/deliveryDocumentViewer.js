@@ -17,6 +17,8 @@ import getDocumentTransactions from '@salesforce/apex/%%%NAMESPACE_DOT%%%Deliver
 import getDocumentsForEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentsForEntity';
 import recordPayment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.recordPayment';
 import sendDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.sendDocumentEmail';
+import previewDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.previewDocumentEmail';
+import scheduleDocumentSend from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.scheduleDocumentSend';
 import getPendingInvoices from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getPendingInvoices';
 import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
 
@@ -76,6 +78,12 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track showSendModal = false;
     @track sendRecipientEmail = '';
     @track isSendingEmail = false;
+    @track emailPreview = null;
+    @track isLoadingEmailPreview = false;
+    @track isScheduleMode = false;
+    @track scheduledDateTime = null;
+    @track isScheduling = false;
+    _emailBodyRendered = false;
 
     // Record payment state
     @track showPaymentModal = false;
@@ -107,6 +115,16 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.loadDefaultBillingEntity();
         }
         this.loadPendingInvoices();
+    }
+
+    renderedCallback() {
+        if (this.emailPreview?.bodyHtml && !this._emailBodyRendered) {
+            const container = this.template.querySelector('.email-body-preview');
+            if (container) {
+                container.innerHTML = this.emailPreview.bodyHtml;
+                this._emailBodyRendered = true;
+            }
+        }
     }
 
     get hasPendingInvoices() {
@@ -415,14 +433,23 @@ export default class DeliveryDocumentViewer extends LightningElement {
     }
 
     get isSendDisabled() {
-        return this.isSendingEmail;
+        return this.isSendingEmail || !this.sendRecipientEmail;
     }
 
     get sendButtonLabel() {
-        if (this.isSendingEmail) {
-            return 'Sending...';
-        }
-        return 'Send Email';
+        return this.isSendingEmail ? 'Sending...' : 'Send Now';
+    }
+
+    get scheduleButtonLabel() {
+        return this.isScheduling ? 'Scheduling...' : 'Schedule Send';
+    }
+
+    get isScheduleDisabled() {
+        return this.isScheduling || !this.scheduledDateTime || !this.sendRecipientEmail;
+    }
+
+    get minScheduleDateTime() {
+        return new Date().toISOString();
     }
 
     get canMarkPaid() {
@@ -554,19 +581,63 @@ export default class DeliveryDocumentViewer extends LightningElement {
         await this.updateDocStatus('Paid');
     }
 
-    handleOpenSendModal() {
-        // Default recipient to entity contact email from snapshot
+    async handleOpenSendModal() {
         this.sendRecipientEmail = this.snapshot?.entity?.email || '';
+        this.emailPreview = null;
+        this.isScheduleMode = false;
+        this.scheduledDateTime = null;
+        this._emailBodyRendered = false;
         this.showSendModal = true;
+        this.isLoadingEmailPreview = true;
+        try {
+            this.emailPreview = await previewDocumentEmail({
+                documentId: this.previewDoc.id,
+                recipientEmail: this.sendRecipientEmail
+            });
+            if (this.emailPreview.toEmail) {
+                this.sendRecipientEmail = this.emailPreview.toEmail;
+            }
+        } catch (err) {
+            this.showToast('Error', this.extractError(err), 'error');
+            this.showSendModal = false;
+        } finally {
+            this.isLoadingEmailPreview = false;
+        }
     }
 
     handleCloseSendModal() {
         this.showSendModal = false;
         this.sendRecipientEmail = '';
+        this.emailPreview = null;
+        this.isScheduleMode = false;
+        this.scheduledDateTime = null;
+        this._emailBodyRendered = false;
     }
 
     handleSendRecipientChange(event) {
         this.sendRecipientEmail = event.detail.value;
+    }
+
+    handleScheduleToggle(event) {
+        this.isScheduleMode = event.target.checked;
+        if (this.isScheduleMode && !this.scheduledDateTime) {
+            this.handleSetNextBusinessDay();
+        }
+    }
+
+    handleScheduleDateTimeChange(event) {
+        this.scheduledDateTime = event.detail.value;
+    }
+
+    handleSetNextBusinessDay() {
+        const now = new Date();
+        let target = new Date(now);
+        target.setDate(target.getDate() + 1);
+        while (target.getDay() === 0 || target.getDay() === 6) {
+            target.setDate(target.getDate() + 1);
+        }
+        target.setHours(8, 0, 0, 0);
+        this.scheduledDateTime = target.toISOString();
     }
 
     async handleSendEmail() {
@@ -582,12 +653,41 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.previewDoc = { ...this.previewDoc, status: 'Sent' };
             this.showSendModal = false;
             this.sendRecipientEmail = '';
+            this.emailPreview = null;
             this.showToast('Email Sent', `Document emailed to ${result.recipientEmail}`, 'success');
             refreshApex(this.wiredDocsResult);
         } catch (err) {
             this.showToast('Error', this.extractError(err), 'error');
         } finally {
             this.isSendingEmail = false;
+        }
+    }
+
+    async handleScheduleSend() {
+        if (!this.previewDoc?.id || !this.scheduledDateTime) {
+            return;
+        }
+        this.isScheduling = true;
+        try {
+            await scheduleDocumentSend({
+                documentId: this.previewDoc.id,
+                recipientEmail: this.sendRecipientEmail,
+                sendAt: this.scheduledDateTime
+            });
+            const dt = new Date(this.scheduledDateTime);
+            const formatted = dt.toLocaleString(undefined, {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit'
+            });
+            this.previewDoc = { ...this.previewDoc, status: 'Ready' };
+            this.showSendModal = false;
+            this.emailPreview = null;
+            this.showToast('Scheduled', `Email scheduled for ${formatted}`, 'success');
+            refreshApex(this.wiredDocsResult);
+        } catch (err) {
+            this.showToast('Error', this.extractError(err), 'error');
+        } finally {
+            this.isScheduling = false;
         }
     }
 

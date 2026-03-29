@@ -552,9 +552,9 @@
                 </div>
             </template>
 
-            <!-- ── Send Email Modal ── -->
+            <!-- ── Review & Send Email Modal ── -->
             <template lwc:if={showSendModal}>
-                <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large">
                     <div class="slds-modal__container">
                         <header class="slds-modal__header">
                             <lightning-button-icon
@@ -564,21 +564,90 @@
                                 class="slds-modal__close"
                                 onclick={handleCloseSendModal}
                             ></lightning-button-icon>
-                            <h2 class="slds-text-heading_medium">Send Document via Email</h2>
+                            <h2 class="slds-text-heading_medium">Review &amp; Send</h2>
                         </header>
                         <div class="slds-modal__content slds-p-around_medium">
-                            <lightning-input
-                                type="email"
-                                label="Recipient Email"
-                                value={sendRecipientEmail}
-                                onchange={handleSendRecipientChange}
-                                placeholder="recipient@example.com"
-                                required
-                            ></lightning-input>
-                            <p class="slds-text-color_weak slds-m-top_small slds-text-body_small">
-                                A PDF of this document will be attached to the email.
-                                You will be CC'd on the email per your org settings.
-                            </p>
+                            <!-- Loading preview -->
+                            <template lwc:if={isLoadingEmailPreview}>
+                                <div class="slds-align_absolute-center slds-p-around_large">
+                                    <lightning-spinner alternative-text="Loading preview" size="medium"></lightning-spinner>
+                                </div>
+                            </template>
+
+                            <!-- Preview loaded -->
+                            <template lwc:if={emailPreview}>
+                                <!-- Email metadata -->
+                                <div class="slds-box slds-m-bottom_small" style="background: #fafaf9;">
+                                    <div class="slds-grid slds-wrap slds-gutters_x-small">
+                                        <div class="slds-col slds-size_1-of-1 slds-m-bottom_xx-small">
+                                            <span class="slds-text-title_caps slds-text-color_weak">To:</span>
+                                            <lightning-input
+                                                type="email"
+                                                value={sendRecipientEmail}
+                                                onchange={handleSendRecipientChange}
+                                                variant="label-hidden"
+                                                placeholder="recipient@example.com"
+                                                class="slds-m-left_x-small"
+                                                style="display: inline-block; width: 300px;"
+                                            ></lightning-input>
+                                        </div>
+                                        <template lwc:if={emailPreview.ccEmail}>
+                                            <div class="slds-col slds-size_1-of-1 slds-m-bottom_xx-small">
+                                                <span class="slds-text-title_caps slds-text-color_weak">CC:</span>
+                                                <span class="slds-m-left_x-small">{emailPreview.ccEmail}</span>
+                                            </div>
+                                        </template>
+                                        <div class="slds-col slds-size_1-of-1 slds-m-bottom_xx-small">
+                                            <span class="slds-text-title_caps slds-text-color_weak">Subject:</span>
+                                            <span class="slds-m-left_x-small slds-text-body_regular">{emailPreview.subject}</span>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1">
+                                            <span class="slds-text-title_caps slds-text-color_weak">Attachment:</span>
+                                            <lightning-icon icon-name="doctype:pdf" size="xx-small" class="slds-m-left_x-small"></lightning-icon>
+                                            <a href={emailPreview.pdfPreviewUrl} target="_blank" class="slds-m-left_xx-small">{emailPreview.attachmentName}</a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Email body preview -->
+                                <div class="slds-box slds-m-bottom_small" style="max-height: 350px; overflow-y: auto; background: white;">
+                                    <div lwc:dom="manual" class="email-body-preview"></div>
+                                </div>
+
+                                <!-- Schedule options -->
+                                <div class="slds-box slds-m-bottom_small" style="background: #fafaf9;">
+                                    <lightning-input
+                                        type="toggle"
+                                        label="Schedule for later"
+                                        checked={isScheduleMode}
+                                        onchange={handleScheduleToggle}
+                                        message-toggle-active="Scheduled"
+                                        message-toggle-inactive="Send now"
+                                        class="slds-m-bottom_x-small"
+                                    ></lightning-input>
+                                    <template lwc:if={isScheduleMode}>
+                                        <div class="slds-grid slds-gutters_x-small slds-wrap">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning-input
+                                                    type="datetime"
+                                                    label="Send at"
+                                                    value={scheduledDateTime}
+                                                    onchange={handleScheduleDateTimeChange}
+                                                    min={minScheduleDateTime}
+                                                ></lightning-input>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2 slds-grid slds-grid_vertical-align-end">
+                                                <lightning-button
+                                                    label="Next business day at 8 AM"
+                                                    variant="neutral"
+                                                    icon-name="utility:clock"
+                                                    onclick={handleSetNextBusinessDay}
+                                                ></lightning-button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                         <footer class="slds-modal__footer">
                             <lightning-button
@@ -586,13 +655,24 @@
                                 variant="neutral"
                                 onclick={handleCloseSendModal}
                             ></lightning-button>
-                            <lightning-button
-                                label={sendButtonLabel}
-                                variant="brand"
-                                onclick={handleSendEmail}
-                                disabled={isSendDisabled}
-                                class="slds-m-left_x-small"
-                            ></lightning-button>
+                            <template lwc:if={isScheduleMode}>
+                                <lightning-button
+                                    label={scheduleButtonLabel}
+                                    variant="brand"
+                                    onclick={handleScheduleSend}
+                                    disabled={isScheduleDisabled}
+                                    class="slds-m-left_x-small"
+                                ></lightning-button>
+                            </template>
+                            <template lwc:else>
+                                <lightning-button
+                                    label={sendButtonLabel}
+                                    variant="brand"
+                                    onclick={handleSendEmail}
+                                    disabled={isSendDisabled}
+                                    class="slds-m-left_x-small"
+                                ></lightning-button>
+                            </template>
                         </footer>
                     </div>
                 </section>

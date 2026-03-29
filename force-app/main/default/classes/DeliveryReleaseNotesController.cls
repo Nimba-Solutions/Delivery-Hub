@@ -6,7 +6,7 @@
  * returns structured data for formatted release notes display.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryReleaseNotesController {
+global with sharing class DeliveryReleaseNotesController {
 
     /** @description Default workflow type when none is specified. */
     private static final String DEFAULT_WORKFLOW = 'Software_Delivery';
@@ -27,7 +27,7 @@ public with sharing class DeliveryReleaseNotesController {
      * @return Map containing title, totalItems, and sections keys.
      */
     @AuraEnabled
-    public static Map<String, Object> generateReleaseNotes(
+    global static Map<String, Object> generateReleaseNotes(
         Date startDate, Date endDate, String workflowTypeName
     ) {
         try {

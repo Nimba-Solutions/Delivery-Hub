@@ -7,7 +7,7 @@
  * V3: Polls all active vendors, not just the first one.
  * @author Cloud Nimbus LLC
  */
-public without sharing class DeliveryHubPoller {
+global without sharing class DeliveryHubPoller {
 
     /**
      * @description Polls all active vendor endpoints for new sync items since the last
@@ -17,7 +17,7 @@ public without sharing class DeliveryHubPoller {
      */
     @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     @AuraEnabled
-    public static String pollUpdates() {
+    global static String pollUpdates() {
         try {
             // Query ALL Active Vendors (Including 'Both' types)
             List<NetworkEntity__c> vendors = [

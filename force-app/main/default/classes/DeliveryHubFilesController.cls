@@ -5,7 +5,7 @@
  * Returns all files linked to a Work Item and its related Comments and Requests.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryHubFilesController {
+global with sharing class DeliveryHubFilesController {
 
     /** @description Represents a single file attachment linked to a work item or its related records. */
     public class FileItem {
@@ -25,7 +25,7 @@ public with sharing class DeliveryHubFilesController {
      * @return List of FileItem wrappers with document metadata.
      */
     @AuraEnabled(cacheable=true)
-    public static List<FileItem> getWorkItemFiles(Id workItemId) {
+    global static List<FileItem> getWorkItemFiles(Id workItemId) {
         // 1. Collect all entity IDs: work item + comments + requests
         Set<Id> entityIds = new Set<Id>{ workItemId };
 

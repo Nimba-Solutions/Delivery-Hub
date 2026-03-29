@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliverySyncRetryController {
+global with sharing class DeliverySyncRetryController {
 
     /** @description Summary of a failed sync item for display. */
     public class FailedSyncRow {
@@ -21,7 +21,7 @@ public with sharing class DeliverySyncRetryController {
      * @return Map with 'failedCount' (Integer) and 'recentErrors' (List<FailedSyncRow>).
      */
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getSyncHealth() {
+    global static Map<String, Object> getSyncHealth() {
         Map<String, Object> result = new Map<String, Object>();
 
         result.put('failedCount', [
@@ -54,7 +54,7 @@ public with sharing class DeliverySyncRetryController {
      * @description Resets all failed SyncItem__c records to Queued so the scheduler retries them.
      */
     @AuraEnabled
-    public static void retryFailed() {
+    global static void retryFailed() {
         List<SyncItem__c> failed = [
             SELECT Id
             FROM SyncItem__c

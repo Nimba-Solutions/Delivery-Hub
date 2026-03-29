@@ -8,7 +8,7 @@
 // without sharing: Required so any user (including Standard Users without sharing rules)
 // can read/write NetworkEntity__c and DeliveryHubSettings__c during initial org setup.
 @SuppressWarnings('PMD.ApexSharingViolations, PMD.CyclomaticComplexity')
-public without sharing class DeliveryHubSetupController {
+global without sharing class DeliveryHubSetupController {
 
     /** @description DTO holding the org's Delivery Hub connection status for the setup LWC. */
     public class SetupStatus {
@@ -38,7 +38,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static SetupStatus getSetupStatus() {
+    global static SetupStatus getSetupStatus() {
         SetupStatus status = new SetupStatus();
         CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
 
@@ -78,7 +78,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static NetworkEntity__c prepareLocalEntity() {
+    global static NetworkEntity__c prepareLocalEntity() {
         List<NetworkEntity__c> existingEntities = [
             SELECT Id, Name FROM NetworkEntity__c 
             WHERE Name LIKE 'Cloud Nimbus LLC%' 
@@ -111,7 +111,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.ApexCRUDViolation')
     @AuraEnabled
-    public static void performHandshake(Id localEntityId) {
+    global static void performHandshake(Id localEntityId) {
         if (localEntityId == null) {
             throw new AuraHandledException('Setup Error: Local Entity ID missing.');
         }
@@ -235,7 +235,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static Integer getPendingApprovalCount() {
+    global static Integer getPendingApprovalCount() {
         return [
             SELECT Count()
             FROM NetworkEntity__c
@@ -251,7 +251,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static List<NetworkEntity__c> getPendingApprovals() {
+    global static List<NetworkEntity__c> getPendingApprovals() {
         return [
             SELECT Id, Name, EntityTypePk__c, OrgIdTxt__c, IntegrationEndpointUrlTxt__c,
                    ConnectionStatusPk__c, CreatedDate
@@ -269,7 +269,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void approveConnection(Id networkEntityId) {
+    global static void approveConnection(Id networkEntityId) {
         if (networkEntityId == null) {
             throw new AuraHandledException('Network Entity ID is required.');
         }
@@ -297,7 +297,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void rejectConnection(Id networkEntityId) {
+    global static void rejectConnection(Id networkEntityId) {
         if (networkEntityId == null) {
             throw new AuraHandledException('Network Entity ID is required.');
         }
@@ -325,7 +325,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void configureGuestUserAccess() {
+    global static void configureGuestUserAccess() {
         try {
             List<Site> sites = [
                 SELECT GuestUserId FROM Site
@@ -382,7 +382,7 @@ public without sharing class DeliveryHubSetupController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static PrerequisiteStatus checkPrerequisites() {
+    global static PrerequisiteStatus checkPrerequisites() {
         PrerequisiteStatus prereqs = new PrerequisiteStatus();
 
         // Org domain for deep links

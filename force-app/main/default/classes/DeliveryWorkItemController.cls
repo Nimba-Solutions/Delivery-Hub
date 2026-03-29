@@ -5,7 +5,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
-public with sharing class DeliveryWorkItemController {
+global with sharing class DeliveryWorkItemController {
 
     /**
      * @description Returns active WorkItem__c records, ordered by SortOrderNumber__c.
@@ -16,7 +16,7 @@ public with sharing class DeliveryWorkItemController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static List<WorkItem__c> getWorkItems(String workflowType) {
+    global static List<WorkItem__c> getWorkItems(String workflowType) {
         if (!Schema.sObjectType.WorkItem__c.isAccessible()
             || !Schema.sObjectType.WorkItem__c.fields.StageNamePk__c.isAccessible()) {
             return new List<WorkItem__c>();
@@ -79,7 +79,7 @@ public with sharing class DeliveryWorkItemController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static List<WorkItem__c> createDummyWorkItems() {
+    global static List<WorkItem__c> createDummyWorkItems() {
         List<WorkItem__c> demo = new List<WorkItem__c>{
             new WorkItem__c(
                 BriefDescriptionTxt__c='Alpha summary',
@@ -125,7 +125,7 @@ public with sharing class DeliveryWorkItemController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void updateWorkItemSortOrders(List<Map<String, Object>> updates) {
+    global static void updateWorkItemSortOrders(List<Map<String, Object>> updates) {
         List<WorkItem__c> workItems = new List<WorkItem__c>();
         for (Map<String, Object> u : updates) {
             Object sortOrderRaw = getFieldValue(u, 'SortOrderNumber__c');
@@ -159,7 +159,7 @@ public with sharing class DeliveryWorkItemController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static Boolean isMarketingEnabled() {
+    global static Boolean isMarketingEnabled() {
         try {
             CloudNimbusGlobalSettings__mdt m = [
                 SELECT EnabledBool__c
@@ -180,7 +180,7 @@ public with sharing class DeliveryWorkItemController {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static void linkFilesToWorkItem(Id workItemId, List<Id> contentDocumentIds) {
+    global static void linkFilesToWorkItem(Id workItemId, List<Id> contentDocumentIds) {
         List<ContentDocumentLink> links = new List<ContentDocumentLink>();
         for (Id docId : contentDocumentIds) {
             links.add(new ContentDocumentLink(
@@ -199,7 +199,7 @@ public with sharing class DeliveryWorkItemController {
      * @param contentDocumentIds List of ContentDocument Ids to link.
      */
     @AuraEnabled
-    public static void linkFilesAndSync(Id workItemId, List<Id> contentDocumentIds) {
+    global static void linkFilesAndSync(Id workItemId, List<Id> contentDocumentIds) {
         List<ContentDocumentLink> links = new List<ContentDocumentLink>();
         for (Id docId : contentDocumentIds) {
             links.add(new ContentDocumentLink(
@@ -223,7 +223,7 @@ public with sharing class DeliveryWorkItemController {
      */
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static List<String> getRequiredFieldsForStage(String targetStage) {
+    global static List<String> getRequiredFieldsForStage(String targetStage) {
         List<WorkflowStageRequirement__mdt> requirements = [
             SELECT RequiredFieldsTxt__c
             FROM WorkflowStageRequirement__mdt
@@ -261,7 +261,7 @@ public with sharing class DeliveryWorkItemController {
      * @return AISuggestionWrapper An object containing the enhanced details.
      */
     @AuraEnabled
-    public static AISuggestionWrapper getAiEnhancedWorkItemDetails(String currentTitle, String currentDescription) {
+    global static AISuggestionWrapper getAiEnhancedWorkItemDetails(String currentTitle, String currentDescription) {
         if (String.isBlank(currentTitle) && String.isBlank(currentDescription)) {
             throw new AuraHandledException('Please provide at least a title or description for AI enhancement.');
         }

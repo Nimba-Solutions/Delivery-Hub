@@ -25,6 +25,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         enqueueWeeklyDigestIfDue();
         enqueueInvoiceGenerationIfDue();
         enqueueOverdueRemindersIfEnabled();
+        processScheduledDocumentSends();
         runReconciliation();
     }
 
@@ -141,6 +142,32 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         } catch (Exception ex) {
             String msg = ex.getMessage();
             msg.length();
+        }
+    }
+
+    /**
+     * @description Checks for documents with a scheduled send time that has passed
+     * and sends them. Runs inline (no Queueable needed since sendDocumentEmail
+     * does not make HTTP callouts).
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private static void processScheduledDocumentSends() {
+        try {
+            Integer dueCount = [
+                SELECT COUNT()
+                FROM DeliveryDocument__c
+                WHERE ScheduledSendDateTime__c <= :Datetime.now()
+                AND ScheduledSendDateTime__c != null
+                AND SentDateTime__c = null
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
+            if (dueCount > 0) {
+                DeliveryDocumentController.processScheduledDocumentSends();
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] Scheduled document send failed: ' + e.getMessage());
         }
     }
 

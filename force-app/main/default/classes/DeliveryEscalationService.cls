@@ -12,7 +12,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount, PMD.ExcessiveParameterList')
-public with sharing class DeliveryEscalationService {
+global with sharing class DeliveryEscalationService {
 
     /** @description Priority escalation ladder: Low -> Medium -> High -> Critical */
     private static final Map<String, String> PRIORITY_BUMP_MAP = new Map<String, String>{
@@ -36,7 +36,7 @@ public with sharing class DeliveryEscalationService {
      * @return List of EscalationSummary wrappers for items currently breaching SLA.
      */
     @AuraEnabled(cacheable=true)
-    public static List<EscalationSummary> getEscalationSummary() {
+    global static List<EscalationSummary> getEscalationSummary() {
         List<WorkflowEscalationRule__mdt> rules = queryActiveRules();
         return buildSummary(rules);
     }

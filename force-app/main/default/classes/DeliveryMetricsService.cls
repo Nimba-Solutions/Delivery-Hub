@@ -8,7 +8,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexDoc, PMD.ExcessivePublicCount')
-public with sharing class DeliveryMetricsService {
+global with sharing class DeliveryMetricsService {
 
     // -------------------------------------------------------------------------
     // Wrapper classes — typed response for LWC
@@ -67,7 +67,7 @@ public with sharing class DeliveryMetricsService {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
-    public static BoardMetrics getBoardMetrics() {
+    global static BoardMetrics getBoardMetrics() {
         BoardMetrics result = new BoardMetrics();
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');

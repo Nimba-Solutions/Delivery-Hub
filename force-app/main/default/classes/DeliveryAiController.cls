@@ -10,7 +10,7 @@
  */
 // Complexity is distributed across many small, focused helper methods — aggregate is expected.
 @SuppressWarnings('PMD.CyclomaticComplexity')
-public with sharing class DeliveryAiController {
+global with sharing class DeliveryAiController {
 
     /**
      * @description Generates a professional client-facing status update for a work item
@@ -19,7 +19,7 @@ public with sharing class DeliveryAiController {
      * @return String The drafted status update text.
      */
     @AuraEnabled
-    public static String draftStatusUpdate(Id workItemId) {
+    global static String draftStatusUpdate(Id workItemId) {
         DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
@@ -47,7 +47,7 @@ public with sharing class DeliveryAiController {
      * @return String Bulleted acceptance criteria text.
      */
     @AuraEnabled
-    public static String suggestAcceptanceCriteria(Id workItemId) {
+    global static String suggestAcceptanceCriteria(Id workItemId) {
         DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
@@ -72,7 +72,7 @@ public with sharing class DeliveryAiController {
      * @return String The generated weekly status text.
      */
     @AuraEnabled
-    public static String draftBoardSummary() {
+    global static String draftBoardSummary() {
         DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
@@ -99,7 +99,7 @@ public with sharing class DeliveryAiController {
      * @return String The generated release notes text.
      */
     @AuraEnabled
-    public static String draftReleaseNotes() {
+    global static String draftReleaseNotes() {
         DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [

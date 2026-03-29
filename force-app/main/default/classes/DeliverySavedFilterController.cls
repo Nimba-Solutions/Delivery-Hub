@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DeliverySavedFilterController {
+global with sharing class DeliverySavedFilterController {
 
     /**
      * @description Returns all saved filters owned by the running user for a given workflow type.
@@ -14,7 +14,7 @@ public with sharing class DeliverySavedFilterController {
      * @return List of DeliverySavedFilter__c records ordered by label.
      */
     @AuraEnabled(cacheable=true)
-    public static List<DeliverySavedFilter__c> getSavedFilters(String workflowType) {
+    global static List<DeliverySavedFilter__c> getSavedFilters(String workflowType) {
         if (String.isBlank(workflowType)) {
             workflowType = 'Software_Delivery';
         }
@@ -42,7 +42,7 @@ public with sharing class DeliverySavedFilterController {
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
-    public static DeliverySavedFilter__c saveBoardFilter(
+    global static DeliverySavedFilter__c saveBoardFilter(
         Id filterId,
         String label,
         String filterJson,
@@ -90,7 +90,7 @@ public with sharing class DeliverySavedFilterController {
      * @param filterId The Id of the DeliverySavedFilter__c to delete.
      */
     @AuraEnabled
-    public static void deleteSavedFilter(Id filterId) {
+    global static void deleteSavedFilter(Id filterId) {
         if (filterId == null) {
             throw createAuraException('Filter Id is required.');
         }

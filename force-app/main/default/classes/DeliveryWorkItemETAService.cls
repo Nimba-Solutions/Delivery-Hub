@@ -9,7 +9,7 @@
  * @author Mahipal Jat
  * @date July 22, 2025
  */
-public with sharing class DeliveryWorkItemETAService {
+global with sharing class DeliveryWorkItemETAService {
 
     // #################################################################################
     // SECTION 1: LWC Integration & DTOs
@@ -25,7 +25,7 @@ public with sharing class DeliveryWorkItemETAService {
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
     // <<< FIX 1: Changed parameter from Set<Id> to List<Id> which is supported by AuraEnabled.
-    public static ETAResult getWorkItemETAsWithPriority(Integer numberOfDevs, List<Id> prioritizedWorkItemIds) {
+    global static ETAResult getWorkItemETAsWithPriority(Integer numberOfDevs, List<Id> prioritizedWorkItemIds) {
         return getWorkItemETAsWithPriorityForType(numberOfDevs, prioritizedWorkItemIds, null);
     }
 
@@ -40,7 +40,7 @@ public with sharing class DeliveryWorkItemETAService {
      */
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    public static ETAResult getWorkItemETAsWithPriorityForType(Integer numberOfDevs, List<Id> prioritizedWorkItemIds, String workflowType) {
+    global static ETAResult getWorkItemETAsWithPriorityForType(Integer numberOfDevs, List<Id> prioritizedWorkItemIds, String workflowType) {
         ETAResult result = new ETAResult();
         result.workItems = new List<WorkItemETADTO>();
         result.pushedBackWorkItemNumbers = new List<String>(); // Compatibility with original LWC structure

@@ -6,7 +6,7 @@
  *              component to render a CSS-based horizontal bar chart.
  * @author Cloud Nimbus LLC
  */
-public with sharing class DeliveryGanttController {
+global with sharing class DeliveryGanttController {
 
     /**
      * @description Data Transfer Object representing a single Gantt row.
@@ -36,7 +36,7 @@ public with sharing class DeliveryGanttController {
      * @return List&lt;GanttRow&gt; Ordered list of work item timeline rows.
      */
     @AuraEnabled(cacheable=true)
-    public static List<GanttRow> getWorkItemsForGantt() {
+    global static List<GanttRow> getWorkItemsForGantt() {
         try {
             List<WorkItem__c> items = [
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
