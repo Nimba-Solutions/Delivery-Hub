@@ -444,6 +444,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return this.isSendingEmail ? 'Sending...' : 'Send Now';
     }
 
+    get sendEmailToolbarLabel() {
+        return 'Prepare Email';
+    }
+
     get scheduleButtonLabel() {
         return this.isScheduling ? 'Scheduling...' : 'Schedule Send';
     }
