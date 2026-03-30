@@ -1079,7 +1079,7 @@ private class DeliveryDocumentControllerTest {
         System.assertNotEquals(null, preview.get('subject'), 'Subject should not be null');
         System.assertNotEquals(null, preview.get('bodyHtml'), 'Body HTML should not be null');
         System.assertNotEquals(null, preview.get('attachmentName'), 'Attachment name should not be null');
-        System.assertNotEquals(null, preview.get('pdfPreviewUrl'), 'PDF preview URL should not be null');
+        System.assertNotEquals(null, preview.get('documentId'), 'Document ID should not be null');
         System.assert(((String) preview.get('attachmentName')).endsWith('.pdf'), 'Attachment should be PDF');
     }
 
