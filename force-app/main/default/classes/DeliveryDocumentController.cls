@@ -1007,7 +1007,7 @@ global with sharing class DeliveryDocumentController {
                     amountDue = ((Decimal) meta.get('amountDue')).setScale(2);
                 }
             } catch (Exception e) {
-                // Ignore parse errors — fall back to current charges only
+                System.debug(LoggingLevel.WARN, '[DeliveryDocumentController] Metadata parse error: ' + e.getMessage());
             }
         }
 
