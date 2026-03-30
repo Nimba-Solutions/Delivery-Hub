@@ -504,7 +504,7 @@ private class DeliveryDocumentControllerTest {
                    PeriodStartDate__c, PeriodEndDate__c,
                    StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
                    TermsTxt__c, DueDateDate__c, SentDateTime__c,
-                   PublicTokenTxt__c
+                   PublicTokenTxt__c, MetadataTxt__c
             FROM DeliveryDocument__c
             WHERE Id = :docId
         ];
