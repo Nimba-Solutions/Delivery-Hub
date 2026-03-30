@@ -773,6 +773,12 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return '';
     }
 
+    handlePreviewPdf() {
+        const docId = this.emailPreview?.documentId || this.previewDoc?.id;
+        if (!docId) { return; }
+        window.open(`/apex/${this.vfPrefix}DeliveryDocumentPdf?id=${docId}&pdf=true`, '_blank');
+    }
+
     handleViewPdf() {
         if (!this.previewDoc?.id) {
             return;
