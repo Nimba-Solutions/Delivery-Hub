@@ -562,10 +562,19 @@ global with sharing class DeliveryDocumentController {
         Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
         email.setToAddresses(new List<String>{ toEmail });
 
-        // CC from org settings
+        // CC from org settings (supports comma-separated list)
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings != null && String.isNotBlank(settings.DocumentCcEmailTxt__c)) {
-            email.setCcAddresses(new List<String>{ settings.DocumentCcEmailTxt__c });
+            List<String> ccAddresses = new List<String>();
+            for (String addr : settings.DocumentCcEmailTxt__c.split(',')) {
+                String trimmed = addr.trim();
+                if (String.isNotBlank(trimmed)) {
+                    ccAddresses.add(trimmed);
+                }
+            }
+            if (!ccAddresses.isEmpty()) {
+                email.setCcAddresses(ccAddresses);
+            }
         }
 
         // Resolve vendor name for email subject/body
