@@ -604,7 +604,7 @@
                                         <div class="slds-col slds-size_1-of-1">
                                             <span class="slds-text-title_caps slds-text-color_weak">Attachment:</span>
                                             <lightning-icon icon-name="doctype:pdf" size="xx-small" class="slds-m-left_x-small"></lightning-icon>
-                                            <a href={emailPreview.pdfPreviewUrl} target="_blank" class="slds-m-left_xx-small">{emailPreview.attachmentName}</a>
+                                            <a href="javascript:void(0)" onclick={handlePreviewPdf} class="slds-m-left_xx-small">{emailPreview.attachmentName}</a>
                                         </div>
                                     </div>
                                 </div>

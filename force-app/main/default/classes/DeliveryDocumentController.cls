@@ -644,7 +644,7 @@ global with sharing class DeliveryDocumentController {
         preview.put('subject', subject);
         preview.put('bodyHtml', bodyHtml);
         preview.put('attachmentName', attachmentName);
-        preview.put('pdfPreviewUrl', URL.getOrgDomainURL().toExternalForm() + '/apex/DeliveryDocumentPdf?id=' + documentId);
+        preview.put('documentId', documentId);
         preview.put('entityName', doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '');
         return preview;
     }
