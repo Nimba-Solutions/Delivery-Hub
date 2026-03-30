@@ -107,11 +107,17 @@ private class DeliveryPermissionAnalyzerControllerTest {
     }
 
     @isTest
-    static void testGetUserDetailInvalidUser() {
+    static void testGetUserDetailNoActivity() {
+        // Use a valid user ID that has no activity logs
+        List<User> otherUsers = [SELECT Id FROM User WHERE Id != :UserInfo.getUserId() AND IsActive = true LIMIT 1];
+        String noActivityUserId = otherUsers.isEmpty() ? UserInfo.getUserId() : String.valueOf(otherUsers[0].Id);
+        // Delete any logs for this user to ensure clean state
+        delete [SELECT Id FROM ActivityLog__c WHERE UserIdTxt__c = :noActivityUserId];
+
         Test.startTest();
-        Map<String, Object> detail = DeliveryPermissionAnalyzerController.getUserDetail('005000000000000');
+        Map<String, Object> detail = DeliveryPermissionAnalyzerController.getUserDetail(noActivityUserId);
         Test.stopTest();
 
-        System.assertEquals(0, (Integer) detail.get('totalPageViews'), 'Should have 0 views for invalid user');
+        System.assertEquals(0, (Integer) detail.get('totalPageViews'), 'Should have 0 views');
     }
 }
