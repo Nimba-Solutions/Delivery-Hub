@@ -523,7 +523,7 @@ global with sharing class DeliveryDocumentController {
                    PeriodStartDate__c, PeriodEndDate__c,
                    StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
                    TermsTxt__c, DueDateDate__c, SentDateTime__c,
-                   PublicTokenTxt__c
+                   PublicTokenTxt__c, MetadataTxt__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -609,7 +609,7 @@ global with sharing class DeliveryDocumentController {
                    NetworkEntityId__r.ContactEmailTxt__c,
                    PeriodStartDate__c, PeriodEndDate__c,
                    StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
-                   TermsTxt__c, DueDateDate__c
+                   TermsTxt__c, DueDateDate__c, MetadataTxt__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -635,7 +635,7 @@ global with sharing class DeliveryDocumentController {
         preview.put('subject', subject);
         preview.put('bodyHtml', bodyHtml);
         preview.put('attachmentName', attachmentName);
-        preview.put('pdfPreviewUrl', '/apex/DeliveryDocumentPdf?id=' + documentId);
+        preview.put('pdfPreviewUrl', URL.getOrgDomainURL().toExternalForm() + '/apex/DeliveryDocumentPdf?id=' + documentId);
         preview.put('entityName', doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '');
         return preview;
     }
@@ -994,14 +994,37 @@ global with sharing class DeliveryDocumentController {
             + '<p style="color: #706e6b; font-size: 13px; margin: 0 0 20px;">Prepared for '
             + String.valueOf(entityName).escapeHtml4() + '</p>';
 
+        // Parse prior balance from metadata
+        Decimal priorBalance = 0;
+        Decimal amountDue = totalCost;
+        if (String.isNotBlank(doc.MetadataTxt__c)) {
+            try {
+                Map<String, Object> meta = (Map<String, Object>) JSON.deserializeUntyped(doc.MetadataTxt__c);
+                if (meta.containsKey('priorBalance') && meta.get('priorBalance') != null) {
+                    priorBalance = ((Decimal) meta.get('priorBalance')).setScale(2);
+                }
+                if (meta.containsKey('amountDue') && meta.get('amountDue') != null) {
+                    amountDue = ((Decimal) meta.get('amountDue')).setScale(2);
+                }
+            } catch (Exception e) {
+                // Ignore parse errors — fall back to current charges only
+            }
+        }
+
         // Summary
         if (doc.TemplatePk__c != 'Client_Agreement' && doc.TemplatePk__c != 'Contractor_Agreement') {
             body += '<div style="background: #f3f3f5; border-radius: 6px; padding: 16px 20px; margin-bottom: 20px;">'
                 + '<table style="width: 100%;"><tr>'
                 + '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Total Hours</div>'
                 + '<div style="font-size: 18px; font-weight: 700; color: #1a1a2e;">' + totalHours.setScale(1) + '</div></td>'
-                + '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Total Due</div>'
-                + '<div style="font-size: 18px; font-weight: 700; color: #0176d3;">$' + totalCost.setScale(2).format() + '</div></td>'
+                + '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">This Invoice</div>'
+                + '<div style="font-size: 18px; font-weight: 700; color: #1a1a2e;">$' + totalCost.setScale(2).format() + '</div></td>';
+            if (priorBalance > 0) {
+                body += '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Prior Balance</div>'
+                    + '<div style="font-size: 18px; font-weight: 700; color: #c23934;">$' + priorBalance.format() + '</div></td>';
+            }
+            body += '<td style="text-align: center;"><div style="font-size: 11px; color: #706e6b; text-transform: uppercase;">Amount Due</div>'
+                + '<div style="font-size: 18px; font-weight: 700; color: #0176d3;">$' + amountDue.format() + '</div></td>'
                 + '</tr></table></div>';
         }
 
