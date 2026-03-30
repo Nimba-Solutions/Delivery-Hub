@@ -1,0 +1,163 @@
+<template>
+    <lightning-card title="Permission Analyzer" icon-name="utility:shield">
+        <!-- Header with refresh button and analysis range badge -->
+        <div slot="actions">
+            <lightning-button label="Refresh" icon-name="utility:refresh" onclick={handleRefresh} variant="neutral"></lightning-button>
+        </div>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="slds-align_absolute-center slds-p-around_large">
+                <lightning-spinner alternative-text="Analyzing" size="medium"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={error}>
+            <div class="slds-p-around_medium">
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <span>{error}</span>
+                </div>
+            </div>
+        </template>
+
+        <!-- Summary View -->
+        <template lwc:if={showSummary}>
+            <div class="slds-p-around_medium">
+                <!-- Stats row -->
+                <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                    <div class="slds-col slds-size_1-of-3">
+                        <div class="slds-box slds-text-align_center">
+                            <div class="slds-text-heading_large">{analysis.totalUsers}</div>
+                            <div class="slds-text-title">Active Users</div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <div class="slds-box slds-text-align_center">
+                            <div class="slds-text-heading_large">{analysis.totalLogs}</div>
+                            <div class="slds-text-title">Page Views</div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <div class="slds-box slds-text-align_center">
+                            <div class="slds-text-heading_large">{objectCount}</div>
+                            <div class="slds-text-title">Objects Accessed</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Activity Table -->
+                <h3 class="slds-text-heading_small slds-m-bottom_x-small">User Activity</h3>
+                <div class="slds-scrollable_x slds-m-bottom_medium">
+                    <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Profile</th>
+                                <th>Page Views</th>
+                                <th>Objects</th>
+                                <th>Top Objects</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={analysis.users} for:item="user">
+                                <tr key={user.userId} data-userid={user.userId} onclick={handleUserClick} class="slds-hint-parent" style="cursor: pointer;">
+                                    <td><a>{user.userName}</a></td>
+                                    <td>{user.profileName}</td>
+                                    <td>{user.totalViews}</td>
+                                    <td>{user.uniqueObjects}</td>
+                                    <td>
+                                        <template for:each={user.topObjects} for:item="obj">
+                                            <lightning-badge key={obj} label={obj} class="slds-m-right_xx-small"></lightning-badge>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <lightning-badge label={user.riskLevel} class={user.riskClass}></lightning-badge>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Object Usage Table -->
+                <h3 class="slds-text-heading_small slds-m-bottom_x-small">Object Usage</h3>
+                <div class="slds-scrollable_x slds-m-bottom_medium">
+                    <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                        <thead>
+                            <tr>
+                                <th>Object</th>
+                                <th>Total Views</th>
+                                <th>Unique Users</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={analysis.objects} for:item="obj">
+                                <tr key={obj.objectName}>
+                                    <td>{obj.objectName}</td>
+                                    <td>{obj.totalViews}</td>
+                                    <td>{obj.uniqueUsers}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Recommendations -->
+                <template lwc:if={hasRecommendations}>
+                    <h3 class="slds-text-heading_small slds-m-bottom_x-small">Recommendations</h3>
+                    <div class="slds-box slds-theme_shade slds-m-bottom_medium">
+                        <ul class="slds-list_dotted">
+                            <template for:each={analysis.recommendations} for:item="rec">
+                                <li key={rec} class="slds-m-bottom_xx-small">{rec}</li>
+                            </template>
+                        </ul>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Detail View -->
+        <template lwc:if={showDetail}>
+            <div class="slds-p-around_medium">
+                <lightning-button label="Back to Summary" icon-name="utility:back" onclick={handleBackToSummary} variant="neutral" class="slds-m-bottom_medium"></lightning-button>
+
+                <template lwc:if={isLoadingDetail}>
+                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                </template>
+
+                <template lwc:if={userDetail}>
+                    <h3 class="slds-text-heading_medium slds-m-bottom_small">{userDetail.userName}</h3>
+                    <p class="slds-text-color_weak slds-m-bottom_medium">Profile: {userDetail.profileName} | Sessions: {userDetail.sessions} | Avg pages/session: {userDetail.avgSessionPages}</p>
+
+                    <!-- Object breakdown -->
+                    <h4 class="slds-text-heading_small slds-m-bottom_x-small">Objects Accessed</h4>
+                    <div class="slds-scrollable_x slds-m-bottom_medium">
+                        <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                            <thead><tr><th>Object</th><th>Views</th></tr></thead>
+                            <tbody>
+                                <template for:each={userDetail.objectBreakdown} for:item="item">
+                                    <tr key={item.name}><td>{item.name}</td><td>{item.count}</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Page breakdown -->
+                    <h4 class="slds-text-heading_small slds-m-bottom_x-small">Top Pages</h4>
+                    <div class="slds-scrollable_x">
+                        <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                            <thead><tr><th>Page</th><th>Views</th></tr></thead>
+                            <tbody>
+                                <template for:each={userDetail.pageBreakdown} for:item="item">
+                                    <tr key={item.name}><td class="slds-truncate" style="max-width: 400px;">{item.name}</td><td>{item.count}</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </lightning-card>
+</template>
