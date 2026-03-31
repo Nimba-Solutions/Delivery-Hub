@@ -111,7 +111,11 @@ The engine generates Draft invoices that can be reviewed before sending. Overdue
 
 ### Document Engine
 
-Generate professional invoices, status reports, client agreements, and contractor agreements directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. Zero-hour work items are automatically filtered from invoices so only billable items appear. PDF rendering via Visualforce produces print-ready output with clickable hyperlinks to the source Salesforce records. The VF URL builder detects the namespace at runtime, so PDF and web preview links work correctly in both managed and unmanaged installations. Email delivery sends the document to the client contact with an optional CC address (configurable via `DocumentCcEmailTxt__c`). Payment tracking through `DeliveryTransaction__c` records supports multiple transaction types (payment, credit, refund, adjustment, write-off) per document. The A/R summary on each invoice shows outstanding prior balances. White-label vendor branding pulls the issuing entity's name, address, email, and phone from the vendor NetworkEntity record. Every invoice footer links to cloudnimbusllc.com. Document versioning preserves history when regenerating &mdash; superseded documents link back via version chain. Client-facing invoice approval flow lets clients approve or dispute invoices from the portal with full audit trail.
+Generate professional invoices, status reports, client agreements, contractor agreements, and security audit reports directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. Zero-hour work items are automatically filtered from invoices so only billable items appear. PDF rendering via Visualforce produces print-ready output with clickable hyperlinks to the source Salesforce records. The VF URL builder detects the namespace at runtime, so PDF and web preview links work correctly in both managed and unmanaged installations.
+
+**Email Preview & Scheduled Send:** The "Prepare Email" button opens a full preview modal showing the rendered email body, subject line, recipient (editable), CC addresses, and a clickable PDF attachment link &mdash; all before anything is sent. Send immediately or toggle "Schedule for later" with a datetime picker and a "Next business day at 8 AM" shortcut. The DeliveryHubScheduler checks every 15 minutes for scheduled sends and delivers them automatically. Multiple CC addresses are supported via comma-separated values in `DocumentCcEmailTxt__c`. The email body includes This Invoice, Prior Balance (if outstanding), and Amount Due breakdowns.
+
+Payment tracking through `DeliveryTransaction__c` records supports multiple transaction types (payment, credit, refund, adjustment, write-off) per document. The A/R summary on each invoice shows outstanding prior balances. White-label vendor branding pulls the issuing entity's name, address, email, and phone from the vendor NetworkEntity record. Every invoice footer links to cloudnimbusllc.com. Document versioning preserves history when regenerating &mdash; superseded documents link back via version chain. Client-facing invoice approval flow lets clients approve or dispute invoices from the portal with full audit trail.
 
 ### Configurable Workflows
 
@@ -123,7 +127,11 @@ A unified tabbed interface combining Board, Timeline, Activity Feed, Documents, 
 
 ### Activity Dashboard
 
-Tracks user adoption and engagement across the platform. Shows weekly and monthly activity counts, top users, most-used components, and page navigation patterns. All data comes from the Ghost Recorder's background activity logging, providing actionable insights into how the team uses Delivery Hub.
+Tracks user adoption and engagement across the platform. Shows weekly and monthly activity counts, top users, most-used components, and page navigation patterns. All data comes from the Ghost Recorder's background activity logging, providing actionable insights into how the team uses Delivery Hub. The Ghost Recorder now tracks page duration (seconds on each page) and exit method (navigation vs tab close), stored in the existing `ContextDataTxt__c` JSON &mdash; no additional fields required.
+
+### Permission Analyzer
+
+Analyzes 30 days of activity log data to produce permission recommendations based on actual user behavior. The summary view shows active user count, total page views, objects accessed, a per-user activity table (with profile, view count, unique objects, top objects, and risk level), and an object usage table. Click any user row to drill into their detailed breakdown: object frequency, top pages, session count, and average pages per session. Plain-English recommendations flag overprivileged users who have admin access but only touch a small number of objects. Output can be rendered as a Security Audit document via the Document Engine for PDF/email delivery to executives.
 
 ### Report Navigation
 
@@ -344,7 +352,9 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Invoice Approval Flow** | Client-facing approve/dispute workflow via portal. Clients review invoices by public token and either approve or dispute with a reason. Dispute details stored in DisputeReasonTxt__c. All actions logged to ActivityLog for audit trail. |
 | **Timeline View** | Gantt-style horizontal timeline showing active work items grouped by NetworkEntity. CSS Grid-based bars with zoom (week/month/quarter), scroll controls, today-line marker, stage-based colors from workflow config, and click-to-navigate to work item records. Available as the Delivery Timeline tab. |
 | **Saved Filters** | Save and recall board filter configurations. Per-user filters (Private sharing model) with default filter auto-applied on board load. Stored as JSON in DeliverySavedFilter__c. Accessible from a dropdown in the board toolbar. |
-| **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking |
+| **Email Preview & Scheduled Send** | Full email preview before sending (subject, HTML body, recipient, CC, PDF link). Schedule sends for a future date/time with "Next business day at 8 AM" shortcut. Multi-CC support via comma-separated addresses. |
+| **Permission Analyzer** | Analyzes activity logs to recommend permission sets based on actual user behavior. User heatmaps, object usage, risk flags, drill-down per user, Security Audit document template. |
+| **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking + page duration logging (seconds on page, exit method) |
 | **Delivery Guide** | In-app documentation with Ghost Recorder utility bar detection across all Lightning apps |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
 | **Public Status Page** | Shareable delivery status view &mdash; no Salesforce login required |

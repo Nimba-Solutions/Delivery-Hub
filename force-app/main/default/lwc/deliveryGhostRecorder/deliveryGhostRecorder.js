@@ -35,6 +35,8 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     sessionIdValue = '';
     lastLoggedUrl = '';
     lastLoggedTime = 0;
+    _pageArrivalTime = 0;
+    _previousContext = null;
 
     @wire(getAttentionCount)
     wiredAttentionCount;
@@ -171,13 +173,40 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
 
     connectedCallback() {
         this.sessionIdValue = DeliveryGhostRecorder.generateSessionId();
+        this._pageArrivalTime = Date.now();
         if (this.enableShortcut) {
             window.addEventListener('keydown', this.handleShortcut);
         }
+        document.addEventListener('visibilitychange', this._handleVisibilityChange);
     }
 
     disconnectedCallback() {
         window.removeEventListener('keydown', this.handleShortcut);
+        document.removeEventListener('visibilitychange', this._handleVisibilityChange);
+    }
+
+    _handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden' && this._pageArrivalTime > 0) {
+            this._logPageDuration('tab_hidden');
+        }
+    }
+
+    _logPageDuration(exitType) {
+        if (!this._previousContext || this._pageArrivalTime <= 0) {
+            return;
+        }
+        const durationSec = Math.round((Date.now() - this._pageArrivalTime) / 1000);
+        if (durationSec < 1) {
+            return;
+        }
+        const ctx = Object.assign({}, this._previousContext, {
+            duration: durationSec,
+            exitType: exitType
+        });
+        logActivity({
+            actionType: 'Page_Duration',
+            contextData: JSON.stringify(ctx)
+        }).catch(() => { /* silent */ });
     }
 
     handleShortcut = (event) => {
@@ -193,10 +222,16 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
             if (href === this.lastLoggedUrl && (now - this.lastLoggedTime) < NAV_LOG_DEBOUNCE_MS) {
                 return;
             }
+
+            // Log duration of the PREVIOUS page before recording the new one
+            this._logPageDuration('navigation');
+
             this.lastLoggedUrl = href;
             this.lastLoggedTime = now;
+            this._pageArrivalTime = now;
 
             const context = this.gatherContext();
+            this._previousContext = context;
             logActivity({
                 actionType: 'Navigation',
                 contextData: JSON.stringify(context)
