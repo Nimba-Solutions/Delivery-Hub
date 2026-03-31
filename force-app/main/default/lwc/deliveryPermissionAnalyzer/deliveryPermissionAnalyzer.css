@@ -1,3 +1,48 @@
 .slds-hint-parent:hover {
     background-color: #f3f3f5;
 }
+
+.activity-chart-container {
+    overflow-x: auto;
+}
+
+.activity-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 120px;
+    min-width: 500px;
+}
+
+.activity-bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.activity-bar {
+    width: 100%;
+    min-width: 8px;
+    background-color: #0176d3;
+    border-radius: 2px 2px 0 0;
+    transition: background-color 0.2s;
+}
+
+.activity-bar:hover {
+    background-color: #014486;
+}
+
+.activity-bar-label {
+    font-size: 0.55rem;
+    color: #706e6b;
+    margin-top: 2px;
+    white-space: nowrap;
+    transform: rotate(-45deg);
+    transform-origin: top left;
+    display: block;
+    width: 0;
+    height: 30px;
+}

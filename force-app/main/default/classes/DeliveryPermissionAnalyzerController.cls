@@ -6,7 +6,7 @@
  * usage summaries and plain-English permission recommendations.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier, PMD.NcssMethodCount, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier, PMD.AvoidDebugStatements, PMD.NcssMethodCount, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global with sharing class DeliveryPermissionAnalyzerController {
 
     private static final Integer ANALYSIS_DAYS = 30;
@@ -52,7 +52,7 @@ global with sharing class DeliveryPermissionAnalyzerController {
      * of Navigation activity logs.
      * @return Map with keys: users, objects, recommendations, totalUsers, totalLogs, analysisRange
      */
-    @AuraEnabled(cacheable=true)
+    @AuraEnabled
     global static Map<String, Object> getPermissionAnalysis() {
         Map<String, Object> result = new Map<String, Object>();
         Datetime cutoff = Datetime.now().addDays(-ANALYSIS_DAYS);
@@ -93,7 +93,9 @@ global with sharing class DeliveryPermissionAnalyzerController {
                     WHERE Id IN :userComponentMap.keySet()
                     WITH SYSTEM_MODE
                 ]);
-            } catch (Exception ignored) { /* fall back to IDs */ }
+            } catch (Exception ex) {
+                System.debug(LoggingLevel.WARN, 'PermissionAnalyzer: failed to resolve users — ' + ex.getMessage());
+            }
         }
 
         // ── 3. Build UserActivity list ───────────────────────────────
@@ -185,7 +187,7 @@ global with sharing class DeliveryPermissionAnalyzerController {
      * @return Map with keys: userName, profileName, totalPageViews, uniqueObjects,
      *         objectBreakdown, pageBreakdown, dailyActivity, sessions, avgSessionPages
      */
-    @AuraEnabled(cacheable=true)
+    @AuraEnabled
     global static Map<String, Object> getUserDetail(String userId) {
         Map<String, Object> result = new Map<String, Object>();
         Datetime cutoff = Datetime.now().addDays(-ANALYSIS_DAYS);
@@ -203,7 +205,9 @@ global with sharing class DeliveryPermissionAnalyzerController {
             ];
             userName = u.Name;
             profileName = u.Profile.Name;
-        } catch (Exception ignored) { /* fall back */ }
+        } catch (Exception ex) {
+            System.debug(LoggingLevel.WARN, 'PermissionAnalyzer: failed to resolve user ' + userId + ' — ' + ex.getMessage());
+        }
         result.put('userName', userName);
         result.put('profileName', profileName);
 

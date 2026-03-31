@@ -131,6 +131,21 @@
                     <h3 class="slds-text-heading_medium slds-m-bottom_small">{userDetail.userName}</h3>
                     <p class="slds-text-color_weak slds-m-bottom_medium">Profile: {userDetail.profileName} | Sessions: {userDetail.sessions} | Avg pages/session: {userDetail.avgSessionPages}</p>
 
+                    <!-- Daily Activity Chart -->
+                    <template lwc:if={hasDailyActivity}>
+                        <h4 class="slds-text-heading_small slds-m-bottom_x-small">Daily Activity (Last 30 Days)</h4>
+                        <div class="slds-box slds-m-bottom_medium activity-chart-container">
+                            <div class="activity-chart">
+                                <template for:each={dailyActivityBars} for:item="bar">
+                                    <div key={bar.key} class="activity-bar-wrapper" title={bar.count}>
+                                        <div class="activity-bar" style={bar.barStyle}></div>
+                                        <span class="activity-bar-label">{bar.label}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
                     <!-- Object breakdown -->
                     <h4 class="slds-text-heading_small slds-m-bottom_x-small">Objects Accessed</h4>
                     <div class="slds-scrollable_x slds-m-bottom_medium">
