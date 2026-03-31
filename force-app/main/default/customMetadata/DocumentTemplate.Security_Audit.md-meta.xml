@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Security Audit</label>
+    <protected>false</protected>
+    <values>
+        <field>PortalComponentTxt__c</field>
+        <value xsi:type="xsd:string">SecurityAuditDocument</value>
+    </values>
+    <values>
+        <field>DataQueryTxt__c</field>
+        <value xsi:type="xsd:string">{"objects":["ActivityLog__c","User"],"groupBy":"User","sortBy":"count"}</value>
+    </values>
+    <values>
+        <field>AiPromptTxt__c</field>
+        <value xsi:type="xsd:string">You are writing an executive security audit summary for a Salesforce org. Analyze the user activity data and permission levels. Identify users with excessive permissions relative to their actual usage patterns. Recommend specific permission set changes. Keep it professional, actionable, and organized by risk level (High, Medium, Low). 2-3 paragraphs.</value>
+    </values>
+    <values>
+        <field>WorkflowTypeTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>OutputFormatsTxt__c</field>
+        <value xsi:type="xsd:string">web,pdf,email</value>
+    </values>
+    <values>
+        <field>DescriptionTxt__c</field>
+        <value xsi:type="xsd:string">Security audit report analyzing user activity patterns against permission levels. Identifies overprivileged users, recommends permission set changes, and provides an executive risk summary.</value>
+    </values>
+</CustomMetadata>
