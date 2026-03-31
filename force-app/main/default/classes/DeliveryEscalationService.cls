@@ -86,7 +86,7 @@ global with sharing class DeliveryEscalationService {
             SELECT MasterLabel, WorkflowTypeTxt__c, TriggerStageTxt__c,
                    DaysThresholdNum__c, ActionTypePk__c, TargetValueTxt__c,
                    PriorityFilterTxt__c, NotifyFieldTxt__c, SeverityLevelPk__c,
-                   IsActiveBool__c, SortOrderNum__c
+                   IsActiveBool__c, SortOrderNum__c, RequireNoResponseBool__c
             FROM WorkflowEscalationRule__mdt
             WHERE IsActiveBool__c = true
             WITH SYSTEM_MODE
@@ -124,7 +124,7 @@ global with sharing class DeliveryEscalationService {
         // Query all active work items in any of the trigger stages
         List<WorkItem__c> allCandidates = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   PriorityPk__c, OwnerId, Developer__c,
+                   PriorityPk__c, OwnerId, Developer__c, CreatedById,
                    WorkflowTypeTxt__c, StageEnteredDateTime__c,
                    LastModifiedDate, LastEscalatedDateTime__c
             FROM WorkItem__c
@@ -145,6 +145,34 @@ global with sharing class DeliveryEscalationService {
                 stageToItems.put(stage, new List<WorkItem__c>());
             }
             stageToItems.get(stage).add(wi);
+        }
+
+        // Pre-compute "has response" for no-response rules: work items where
+        // someone OTHER than the creator has commented
+        Boolean anyNoResponseRules = false;
+        for (WorkflowEscalationRule__mdt rule : rules) {
+            if (rule.RequireNoResponseBool__c == true) {
+                anyNoResponseRules = true;
+                break;
+            }
+        }
+        Set<Id> workItemsWithResponse = new Set<Id>();
+        if (anyNoResponseRules && !allCandidates.isEmpty()) {
+            Map<Id, Id> candidateCreators = new Map<Id, Id>();
+            for (WorkItem__c wi : allCandidates) {
+                candidateCreators.put(wi.Id, wi.CreatedById);
+            }
+            for (WorkItemComment__c c : [
+                SELECT WorkItemId__c, CreatedById
+                FROM WorkItemComment__c
+                WHERE WorkItemId__c IN :candidateCreators.keySet()
+                WITH SYSTEM_MODE
+            ]) {
+                Id creator = candidateCreators.get(c.WorkItemId__c);
+                if (creator != null && c.CreatedById != creator) {
+                    workItemsWithResponse.add(c.WorkItemId__c);
+                }
+            }
         }
 
         // Track which work items need DML updates (Bump_Priority, Move_Stage, Reassign, LastEscalated)
@@ -209,6 +237,12 @@ global with sharing class DeliveryEscalationService {
                     if (hoursSinceLastEscalation < cooldownHours) {
                         continue;
                     }
+                }
+
+                // No-response check — skip if rule requires no response but someone responded
+                if (rule.RequireNoResponseBool__c == true
+                    && workItemsWithResponse.contains(wi.Id)) {
+                    continue;
                 }
 
                 // Mark as escalated
