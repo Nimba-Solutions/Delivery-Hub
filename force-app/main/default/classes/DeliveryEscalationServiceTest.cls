@@ -1274,6 +1274,100 @@ private class DeliveryEscalationServiceTest {
             'Priority should remain Critical — cannot bump beyond Critical');
     }
 
+    /**
+     * @description Verifies RequireNoResponseBool__c rule fires when work item
+     *              has no comments from a different user than the creator.
+     */
+    @IsTest
+    static void testNoResponseRuleFiresWhenNoComments() {
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'In Development'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+
+        String ns = getNamespace();
+        Map<String, Object> fieldMap = new Map<String, Object>{
+            'MasterLabel' => 'No Response Rule',
+            ns + 'WorkflowTypeTxt__c' => 'Software_Delivery',
+            ns + 'TriggerStageTxt__c' => 'In Development',
+            ns + 'DaysThresholdNum__c' => 0,
+            ns + 'ActionTypePk__c' => 'Email',
+            ns + 'TargetValueTxt__c' => null,
+            ns + 'PriorityFilterTxt__c' => null,
+            ns + 'SeverityLevelPk__c' => 'Warning',
+            ns + 'IsActiveBool__c' => true,
+            ns + 'SortOrderNum__c' => 1,
+            ns + 'RequireNoResponseBool__c' => true
+        };
+        WorkflowEscalationRule__mdt rule = (WorkflowEscalationRule__mdt) JSON.deserialize(
+            JSON.serialize(fieldMap), WorkflowEscalationRule__mdt.class
+        );
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(new List<WorkflowEscalationRule__mdt>{ rule });
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!logs.isEmpty(),
+            'No-response rule should fire when work item has no comments from other users');
+    }
+
+    /**
+     * @description Verifies RequireNoResponseBool__c rule is skipped when a comment
+     *              exists from a different user than the creator. Since tests run as
+     *              a single user, we verify the inverse: a self-comment does NOT count
+     *              as a response and the rule still fires.
+     */
+    @IsTest
+    static void testNoResponseRuleSelfCommentStillFires() {
+        WorkItem__c wi = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c = 'In Development'
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+
+        // Add a comment from the same user who created the work item (running user)
+        insert new WorkItemComment__c(
+            WorkItemId__c = wi.Id,
+            BodyTxt__c = 'Self-comment should not count as a response'
+        );
+
+        String ns = getNamespace();
+        Map<String, Object> fieldMap = new Map<String, Object>{
+            'MasterLabel' => 'No Response Self Comment',
+            ns + 'WorkflowTypeTxt__c' => 'Software_Delivery',
+            ns + 'TriggerStageTxt__c' => 'In Development',
+            ns + 'DaysThresholdNum__c' => 0,
+            ns + 'ActionTypePk__c' => 'Email',
+            ns + 'TargetValueTxt__c' => null,
+            ns + 'PriorityFilterTxt__c' => null,
+            ns + 'SeverityLevelPk__c' => 'Warning',
+            ns + 'IsActiveBool__c' => true,
+            ns + 'SortOrderNum__c' => 1,
+            ns + 'RequireNoResponseBool__c' => true
+        };
+        WorkflowEscalationRule__mdt rule = (WorkflowEscalationRule__mdt) JSON.deserialize(
+            JSON.serialize(fieldMap), WorkflowEscalationRule__mdt.class
+        );
+
+        Test.startTest();
+        DeliveryEscalationService.processEscalations(new List<WorkflowEscalationRule__mdt>{ rule });
+        Test.stopTest();
+
+        List<ActivityLog__c> logs = [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ComponentNameTxt__c = 'DeliveryEscalationService'
+            WITH SYSTEM_MODE
+        ];
+        System.assert(!logs.isEmpty(),
+            'No-response rule should still fire when only the creator has commented');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**

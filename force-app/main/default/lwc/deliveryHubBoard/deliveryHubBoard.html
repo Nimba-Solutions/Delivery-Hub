@@ -874,6 +874,12 @@
                             <span class="detail-meta-label">Assignee</span>
                             <span class="detail-meta-value">{detailOwner}</span>
                         </div>
+                        <template lwc:if={hasDetailCreatedBy}>
+                            <div class="detail-meta-item">
+                                <span class="detail-meta-label">Created By</span>
+                                <span class="detail-meta-value">{detailCreatedBy}</span>
+                            </div>
+                        </template>
                         <template lwc:if={hasDetailDeveloper}>
                             <div class="detail-meta-item">
                                 <span class="detail-meta-label">Developer</span>
