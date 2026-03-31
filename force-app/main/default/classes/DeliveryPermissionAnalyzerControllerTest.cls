@@ -90,7 +90,7 @@ private class DeliveryPermissionAnalyzerControllerTest {
         Test.stopTest();
 
         System.assertNotEquals(null, report, 'Report should not be null');
-        System.assertEquals('Security_Audit', report.get('templateType'), 'Should be Security_Audit');
+        System.assertEquals('Security_Audit', report.get('templateName'), 'Should be Security_Audit');
     }
 
     @isTest
