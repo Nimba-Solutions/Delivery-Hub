@@ -110,4 +110,27 @@ export default class DeliveryPermissionAnalyzer extends LightningElement {
         }
         return '';
     }
+
+    get hasDailyActivity() {
+        return this.userDetail?.dailyActivity?.length > 0;
+    }
+
+    get dailyActivityBars() {
+        const data = this.userDetail?.dailyActivity;
+        if (!data || data.length === 0) {
+            return [];
+        }
+        const maxCount = Math.max(...data.map((d) => d.count), 1);
+        return data.map((d) => {
+            const pct = Math.round((d.count / maxCount) * 100);
+            const label = d.dateLabel.substring(5);
+            return {
+                key: d.dateLabel,
+                label,
+                count: d.count,
+                barStyle: 'height: ' + pct + '%',
+                hasActivity: d.count > 0
+            };
+        });
+    }
 }

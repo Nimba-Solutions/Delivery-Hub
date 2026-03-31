@@ -449,6 +449,7 @@ global with sharing class DeliveryHubBoardController {
                 EstimatedHoursNumber__c,
                 LastModifiedDate,
                 PriorityPk__c,
+                CreatedBy.Name,
                 (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
                 (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
                 (SELECT Id FROM WorkItemComments__r LIMIT 100)
@@ -481,6 +482,7 @@ global with sharing class DeliveryHubBoardController {
                    DeveloperDaysSizeNumber__c, TotalLoggedHoursNumber__c,
                    EstimatedHoursNumber__c, CalculatedETADate__c,
                    Tags__c, WorkflowTypeTxt__c, CreatedDate, LastModifiedDate,
+                   CreatedBy.Name,
                    Developer__c, Developer__r.Name, Epic__c,
                    ProjectedUATReadyDate__c, ClientIntentionPk__c
             FROM WorkItem__c

@@ -1610,8 +1610,10 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
     get detailEpicName() { return this.detailWorkItem?.Epic__r?.Name || this.detailWorkItem?.delivery__Epic__r?.Name || ''; }
     get detailDeveloperName() { return this.detailWorkItem?.Developer__r?.Name || this.detailWorkItem?.delivery__Developer__r?.Name || ''; }
+    get detailCreatedBy() { return this.detailWorkItem?.CreatedBy?.Name || this.detailWorkItem?.delivery__CreatedBy?.Name || ''; }
     get hasDetailEpic() { return !!this.detailEpicName; }
     get hasDetailDeveloper() { return !!this.detailDeveloperName; }
+    get hasDetailCreatedBy() { return !!this.detailCreatedBy; }
     get isDetailLoaded() { return !this.isDetailLoading; }
 
     handleTitleClick(e) {
