@@ -63,7 +63,7 @@ No consultants. No manual REST endpoint configuration. No Apex scripts to run.
 
 ### Kanban Board
 
-Drag-and-drop board with 40+ configurable stages from **Backlog** to **Deployed to Production**. Stage gate enforcement blocks bad transitions until required fields are filled. Persona-based views show clients, developers, and managers exactly what they need to see &mdash; nothing more.
+Drag-and-drop board with 40+ configurable stages from **Backlog** to **Deployed to Production**. Stage gate enforcement blocks bad transitions until required fields are filled. Persona-based views show clients, developers, and managers exactly what they need to see &mdash; nothing more. The slide-out detail panel shows Created By alongside Assignee, Developer, and Epic so you always know who submitted each work item.
 
 ### Cross-Org Sync
 
@@ -75,7 +75,7 @@ OpenAI integration that estimates hours, generates descriptions, and drafts acce
 
 ### Escalation Engine
 
-Rule-based automated escalations defined through Custom Metadata. Configure conditions like "stuck in QA for 3+ days" or "high priority with no assignee" &mdash; the engine evaluates on every scheduler run and fires email notifications automatically. No manual follow-up needed.
+Rule-based automated escalations defined through Custom Metadata. Configure conditions like "stuck in QA for 3+ days" or "high priority with no assignee" &mdash; the engine evaluates on every scheduler run and fires email notifications automatically. No-response detection flags work items where the submitter hasn't received a reply: enable `RequireNoResponseBool__c` on any escalation rule and the engine checks whether anyone other than the creator has commented before firing. No manual follow-up needed.
 
 ### Board Metrics and Analytics
 
@@ -131,7 +131,7 @@ Tracks user adoption and engagement across the platform. Shows weekly and monthl
 
 ### Permission Analyzer
 
-Analyzes 30 days of activity log data to produce permission recommendations based on actual user behavior. The summary view shows active user count, total page views, objects accessed, a per-user activity table (with profile, view count, unique objects, top objects, and risk level), and an object usage table. Click any user row to drill into their detailed breakdown: object frequency, top pages, session count, and average pages per session. Plain-English recommendations flag overprivileged users who have admin access but only touch a small number of objects. Output can be rendered as a Security Audit document via the Document Engine for PDF/email delivery to executives.
+Analyzes 30 days of activity log data to produce permission recommendations based on actual user behavior. The summary view shows active user count, total page views, objects accessed, a per-user activity table (with profile, view count, unique objects, top objects, and risk level), and an object usage table. Click any user row to drill into their detailed breakdown: object frequency, top pages, daily activity bar chart (30-day trend), session count, and average pages per session. Plain-English recommendations flag overprivileged users who have admin access but only touch a small number of objects. Output can be rendered as a Security Audit document via the Document Engine for PDF/email delivery to executives. Available as a dedicated tab in the Delivery Hub Admin app.
 
 ### Report Navigation
 
@@ -328,7 +328,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 
 | Feature | What It Does |
 |---|---|
-| **Kanban Board** | Drag-and-drop, 40+ stages, persona views, column color coding |
+| **Kanban Board** | Drag-and-drop, 40+ stages, persona views, column color coding, Created By in detail panel |
 | **Stage Gates** | Block transitions when required fields are missing |
 | **Fast Track** | Skip approval queue when estimate fits pre-approved budget |
 | **Cross-Org Sync** | Bidirectional REST with retry, echo suppression, audit ledger |
@@ -336,7 +336,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **AI Estimation** | Hours estimate, description, acceptance criteria from one line |
 | **AI Weekly Digest** | Scheduled email summarizing delivery status across all active work |
 | **ETA Engine** | Projected dates from velocity, queue depth, and dependencies |
-| **Escalation Engine** | Rule-based auto-escalations with email alerts on SLA breaches |
+| **Escalation Engine** | Rule-based auto-escalations with email alerts on SLA breaches, no-response detection for unacknowledged submissions |
 | **Burndown Chart** | Sprint progress tracking against ideal pace |
 | **Developer Workload** | Team capacity distribution dashboard |
 | **Cycle Time Analytics** | Stage duration measurement to identify bottlenecks |
@@ -353,7 +353,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Timeline View** | Gantt-style horizontal timeline showing active work items grouped by NetworkEntity. CSS Grid-based bars with zoom (week/month/quarter), scroll controls, today-line marker, stage-based colors from workflow config, and click-to-navigate to work item records. Available as the Delivery Timeline tab. |
 | **Saved Filters** | Save and recall board filter configurations. Per-user filters (Private sharing model) with default filter auto-applied on board load. Stored as JSON in DeliverySavedFilter__c. Accessible from a dropdown in the board toolbar. |
 | **Email Preview & Scheduled Send** | Full email preview before sending (subject, HTML body, recipient, CC, PDF link). Schedule sends for a future date/time with "Next business day at 8 AM" shortcut. Multi-CC support via comma-separated addresses. |
-| **Permission Analyzer** | Analyzes activity logs to recommend permission sets based on actual user behavior. User heatmaps, object usage, risk flags, drill-down per user, Security Audit document template. |
+| **Permission Analyzer** | Analyzes activity logs to recommend permission sets based on actual user behavior. User heatmaps, object usage, risk flags, drill-down per user with daily activity chart, Security Audit document template. Dedicated admin tab. |
 | **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking + page duration logging (seconds on page, exit method) |
 | **Delivery Guide** | In-app documentation with Ghost Recorder utility bar detection across all Lightning apps |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
