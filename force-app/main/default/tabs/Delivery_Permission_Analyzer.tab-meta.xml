@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Analyzes activity logs to recommend permission sets based on actual user behavior.</description>
+    <label>Permission Analyzer</label>
+    <lwcComponent>deliveryPermissionAnalyzer</lwcComponent>
+    <motif>Custom92: Shield</motif>
+</CustomTab>
