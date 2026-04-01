@@ -1,0 +1,67 @@
+<template>
+    <div class="gantt-root">
+
+        <!-- Shared toolbar (same API as deliveryFrappeGantt) -->
+        <c-delivery-gantt-toolbar
+            title="Project Timeline"
+            subtitle={subtitleText}
+            zoom-levels="Day,Week,Month,Quarter"
+            current-zoom={currentZoomLabel}
+            entity-options={entityOptions}
+            selected-entity={selectedEntity}
+            show-dependency-toggle
+            dependencies-active={showDependencies}
+            show-completed-toggle
+            completed-active={showCompleted}
+            show-my-work-toggle
+            my-work-active={myWorkOnly}
+            onzoomchange={handleZoomChange}
+            onentitychange={handleEntityChange}
+            ontoggledependencies={handleToggleDependencies}
+            ontogglecompleted={handleToggleCompleted}
+            ontogglemywork={handleToggleMyWork}
+            onscrolltoday={handleScrollToday}
+            onrefresh={handleRefresh}
+        ></c-delivery-gantt-toolbar>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="gantt-loading">
+                <lightning-spinner alternative-text="Loading Gantt chart..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={hasError}>
+            <div class="gantt-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <!-- Empty state -->
+        <template lwc:if={isEmpty}>
+            <div class="gantt-empty">
+                <lightning-icon icon-name="utility:date_time" size="medium" class="gantt-empty-icon"></lightning-icon>
+                <p>No work items found to display on the timeline.</p>
+                <p class="gantt-empty-sub">Create work items with estimated start/end dates to see them here.</p>
+                <p class="gantt-empty-sub">Tip: Drag bars to reschedule items directly on the chart.</p>
+            </div>
+        </template>
+
+        <!-- Nimbus Gantt container (manual DOM — canvas rendered by library) -->
+        <template lwc:if={hasData}>
+            <div class="gantt-container" lwc:ref="ganttContainer" lwc:dom="manual"></div>
+        </template>
+
+    </div>
+
+    <!-- Quick-edit modal -->
+    <template lwc:if={showQuickEdit}>
+        <c-delivery-gantt-quick-edit
+            record-id={selectedWorkItemId}
+            onsave={handleQuickEditSave}
+            onclose={handleQuickEditClose}
+        ></c-delivery-gantt-quick-edit>
+    </template>
+</template>

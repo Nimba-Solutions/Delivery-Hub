@@ -1,0 +1,59 @@
+/* deliveryNimbusGantt — Nimbus Gantt LWC adapter styles */
+
+.gantt-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 500px;
+}
+
+.gantt-container {
+    flex: 1;
+    min-height: 400px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Loading state */
+.gantt-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+/* Error state */
+.gantt-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+}
+
+/* Empty state */
+.gantt-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    padding: 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.gantt-empty-icon {
+    margin-bottom: 1rem;
+}
+
+.gantt-empty-sub {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+}

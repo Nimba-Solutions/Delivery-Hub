@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>High-performance Gantt timeline powered by Nimbus Gantt</description>
+    <label>Nimbus Timeline</label>
+    <lwcComponent>deliveryNimbusGantt</lwcComponent>
+    <motif>Custom67: Gears</motif>
+</CustomTab>
