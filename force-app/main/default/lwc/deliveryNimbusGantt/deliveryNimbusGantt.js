@@ -157,6 +157,14 @@ export default class DeliveryNimbusGantt extends LightningElement {
         return tasks;
     }
 
+    get dayVariant()     { return this.currentZoom === 'day' ? 'brand' : 'neutral'; }
+    get weekVariant()    { return this.currentZoom === 'week' ? 'brand' : 'neutral'; }
+    get monthVariant()   { return this.currentZoom === 'month' ? 'brand' : 'neutral'; }
+    get quarterVariant() { return this.currentZoom === 'quarter' ? 'brand' : 'neutral'; }
+    get myWorkVariant()  { return this.myWorkOnly ? 'brand' : 'border'; }
+    get completedVariant() { return this.showCompleted ? 'brand' : 'border'; }
+    get hasMultipleEntities() { return this.entityOptions.length > 2; }
+
     get entityOptions() {
         if (!this._rawTasks) { return []; }
         const entities = new Set();
@@ -365,22 +373,24 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
     // ── Toolbar Handlers ───────────────────────────────────────────────
 
-    handleZoomChange(event) {
-        const label = event.detail.value;
-        this.currentZoom = ZOOM_MAP[label] || 'week';
+    handleZoomDay()     { this._setZoom('day'); }
+    handleZoomWeek()    { this._setZoom('week'); }
+    handleZoomMonth()   { this._setZoom('month'); }
+    handleZoomQuarter() { this._setZoom('quarter'); }
+
+    _setZoom(level) {
+        this.currentZoom = level;
         this._savePrefs();
         if (this._gantt) {
-            this._gantt.setZoom(this.currentZoom);
+            this._gantt.setZoom(level);
             requestAnimationFrame(() => {
-                if (this._gantt) {
-                    this._gantt.scrollToDate(new Date());
-                }
+                if (this._gantt) { this._gantt.scrollToDate(new Date()); }
             });
         }
     }
 
     handleEntityChange(event) {
-        this.selectedEntity = event.detail.value;
+        this.selectedEntity = event.detail.value || '';
         this._savePrefs();
         this._rebuildChart();
     }
@@ -428,6 +438,14 @@ export default class DeliveryNimbusGantt extends LightningElement {
     handleQuickEditClose() {
         this.showQuickEdit = false;
         this.selectedWorkItemId = null;
+    }
+
+    handleQuickEditError(event) {
+        this.dispatchEvent(new ShowToastEvent({
+            title: 'Error Saving',
+            message: event.detail.message || 'An error occurred.',
+            variant: 'error'
+        }));
     }
 
     // ── Private: localStorage persistence ──────────────────────────────

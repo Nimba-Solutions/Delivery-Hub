@@ -1,33 +1,53 @@
 <template>
     <div class="gantt-root">
 
-        <!-- Shared toolbar (same API as deliveryFrappeGantt) -->
-        <c-delivery-gantt-toolbar
-            title="Project Timeline"
-            subtitle={subtitleText}
-            zoom-levels="Day,Week,Month,Quarter"
-            current-zoom={currentZoomLabel}
-            entity-options={entityOptions}
-            selected-entity={selectedEntity}
-            show-dependency-toggle
-            dependencies-active={showDependencies}
-            show-completed-toggle
-            completed-active={showCompleted}
-            show-my-work-toggle
-            my-work-active={myWorkOnly}
-            onzoomchange={handleZoomChange}
-            onentitychange={handleEntityChange}
-            ontoggledependencies={handleToggleDependencies}
-            ontogglecompleted={handleToggleCompleted}
-            ontogglemywork={handleToggleMyWork}
-            onscrolltoday={handleScrollToday}
-            onrefresh={handleRefresh}
-        ></c-delivery-gantt-toolbar>
+        <!-- Inline toolbar -->
+        <div class="gantt-toolbar">
+            <div class="toolbar-left">
+                <span class="toolbar-title">Project Timeline</span>
+                <span class="toolbar-subtitle">{subtitleText}</span>
+            </div>
+            <div class="toolbar-center">
+                <lightning-button-group>
+                    <lightning-button label="Day" variant={dayVariant}
+                        onclick={handleZoomDay}></lightning-button>
+                    <lightning-button label="Week" variant={weekVariant}
+                        onclick={handleZoomWeek}></lightning-button>
+                    <lightning-button label="Month" variant={monthVariant}
+                        onclick={handleZoomMonth}></lightning-button>
+                    <lightning-button label="Quarter" variant={quarterVariant}
+                        onclick={handleZoomQuarter}></lightning-button>
+                </lightning-button-group>
+                <lightning-button label="Today" icon-name="utility:date_input"
+                    onclick={handleScrollToday} class="slds-m-left_x-small"></lightning-button>
+            </div>
+            <div class="toolbar-right">
+                <template lwc:if={hasMultipleEntities}>
+                    <lightning-combobox value={selectedEntity}
+                        options={entityOptions} variant="label-hidden"
+                        placeholder="All Entities"
+                        onchange={handleEntityChange}
+                        class="entity-picker"></lightning-combobox>
+                </template>
+                <lightning-button-icon icon-name="utility:filterList"
+                    alternative-text="My Work" variant={myWorkVariant}
+                    onclick={handleToggleMyWork}
+                    class="slds-m-left_x-small"></lightning-button-icon>
+                <lightning-button-icon icon-name="utility:check"
+                    alternative-text="Show Completed" variant={completedVariant}
+                    onclick={handleToggleCompleted}
+                    class="slds-m-left_xx-small"></lightning-button-icon>
+                <lightning-button-icon icon-name="utility:refresh"
+                    alternative-text="Refresh"
+                    onclick={handleRefresh}
+                    class="slds-m-left_xx-small"></lightning-button-icon>
+            </div>
+        </div>
 
         <!-- Loading -->
         <template lwc:if={isLoading}>
             <div class="gantt-loading">
-                <lightning-spinner alternative-text="Loading Gantt chart..." size="small"></lightning-spinner>
+                <lightning-spinner alternative-text="Loading..." size="small"></lightning-spinner>
             </div>
         </template>
 
@@ -42,26 +62,72 @@
         <!-- Empty state -->
         <template lwc:if={isEmpty}>
             <div class="gantt-empty">
-                <lightning-icon icon-name="utility:date_time" size="medium" class="gantt-empty-icon"></lightning-icon>
-                <p>No work items found to display on the timeline.</p>
-                <p class="gantt-empty-sub">Create work items with estimated start/end dates to see them here.</p>
-                <p class="gantt-empty-sub">Tip: Drag bars to reschedule items directly on the chart.</p>
+                <lightning-icon icon-name="utility:date_time" size="medium"
+                    class="gantt-empty-icon"></lightning-icon>
+                <p>No work items to display on the timeline.</p>
+                <p class="gantt-empty-sub">Create work items with start/end dates to see them here.</p>
             </div>
         </template>
 
-        <!-- Nimbus Gantt container (manual DOM — canvas rendered by library) -->
+        <!-- Nimbus Gantt canvas container -->
         <template lwc:if={hasData}>
             <div class="gantt-container" lwc:ref="ganttContainer" lwc:dom="manual"></div>
         </template>
 
     </div>
 
-    <!-- Quick-edit modal -->
+    <!-- Inline quick-edit modal -->
     <template lwc:if={showQuickEdit}>
-        <c-delivery-gantt-quick-edit
-            record-id={selectedWorkItemId}
-            onsave={handleQuickEditSave}
-            onclose={handleQuickEditClose}
-        ></c-delivery-gantt-quick-edit>
+        <section class="slds-modal slds-fade-in-open" role="dialog" aria-modal="true"
+            aria-labelledby="modal-heading">
+            <div class="slds-modal__container">
+                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                    onclick={handleQuickEditClose}>
+                    <lightning-icon icon-name="utility:close" size="small"
+                        variant="inverse"></lightning-icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+                <div class="slds-modal__header">
+                    <h2 id="modal-heading" class="slds-modal__title">Edit Work Item</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <lightning-record-edit-form
+                        record-id={selectedWorkItemId}
+                        object-api-name="delivery__WorkItem__c"
+                        onsuccess={handleQuickEditSave}
+                        onerror={handleQuickEditError}>
+                        <div class="slds-grid slds-wrap slds-gutters_small">
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-input-field field-name="delivery__BriefDescriptionTxt__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__StageNamePk__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__PriorityPk__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__EstimatedStartDevDate__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__EstimatedEndDevDate__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__EstimatedHoursNumber__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__Developer__c"></lightning-input-field>
+                            </div>
+                        </div>
+                        <div class="slds-m-top_medium slds-text-align_right">
+                            <lightning-button label="Cancel" onclick={handleQuickEditClose}
+                                class="slds-m-right_x-small"></lightning-button>
+                            <lightning-button label="Save" variant="brand" type="submit"></lightning-button>
+                        </div>
+                    </lightning-record-edit-form>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" onclick={handleQuickEditClose}></div>
     </template>
 </template>
