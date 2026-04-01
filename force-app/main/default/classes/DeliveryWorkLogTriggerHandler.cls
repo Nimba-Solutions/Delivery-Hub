@@ -22,6 +22,13 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
 
+        // Require parent Work Item — prevents orphaned logs that drop off invoices
+        for (WorkLog__c wl : newLogs) {
+            if (wl.WorkItemId__c == null) {
+                wl.addError('A Work Item is required. Work logs without a parent work item are excluded from invoices and reports.');
+            }
+        }
+
         // Enforce hour lockout for billing periods
         enforceLockout(newLogs, settings);
 
