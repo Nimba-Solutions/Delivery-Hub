@@ -43,14 +43,28 @@
                     </div>
                 </div>
 
-                <lightning-textarea 
-                    label="Details" 
-                    placeholder={detailsPlaceholder} 
+                <lightning-textarea
+                    label="Details"
+                    placeholder={detailsPlaceholder}
                     value={description}
                     onchange={handleInputChange}
                     class="slds-m-bottom_small"
                     rows="4">
                 </lightning-textarea>
+
+                <template lwc:if={voiceSupported}>
+                    <div class="gr-voice-panel slds-m-bottom_small">
+                        <div class="gr-voice-row">
+                            <button class={voiceButtonClass} onclick={handleVoiceToggle} title={voiceButtonTitle} type="button">
+                                <lightning-icon icon-name={voiceIconName} size="xx-small" class="gr-voice-icon"></lightning-icon>
+                            </button>
+                            <span class="gr-voice-hint">{voiceStatusText}</span>
+                        </div>
+                        <template lwc:if={hasVoiceContent}>
+                            <p class="gr-voice-transcript">{voiceLiveText}</p>
+                        </template>
+                    </div>
+                </template>
 
                 <div class="slds-m-vertical_small upload-container slds-p-around_small">
                     <lightning-file-upload
@@ -133,13 +147,27 @@
                             class="slds-m-bottom_small">
                         </lightning-input>
 
-                        <lightning-textarea 
-                            label="Details" 
-                            placeholder={detailsPlaceholder} 
+                        <lightning-textarea
+                            label="Details"
+                            placeholder={detailsPlaceholder}
                             value={description}
                             onchange={handleInputChange}
                             rows="5">
                         </lightning-textarea>
+
+                        <template lwc:if={voiceSupported}>
+                            <div class="gr-voice-panel slds-m-top_small">
+                                <div class="gr-voice-row">
+                                    <button class={voiceButtonClass} onclick={handleVoiceToggle} title={voiceButtonTitle} type="button">
+                                        <lightning-icon icon-name={voiceIconName} size="xx-small" class="gr-voice-icon"></lightning-icon>
+                                    </button>
+                                    <span class="gr-voice-hint">{voiceStatusText}</span>
+                                </div>
+                                <template lwc:if={hasVoiceContent}>
+                                    <p class="gr-voice-transcript">{voiceLiveText}</p>
+                                </template>
+                            </div>
+                        </template>
 
                         <div class="slds-m-top_small slds-p-around_x-small slds-theme_shade">
                             <lightning-file-upload
