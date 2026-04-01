@@ -270,6 +270,23 @@ export default class DeliveryNimbusGantt extends LightningElement {
                 }
             });
 
+            // Register plugins
+            if (NimbusGanttLib.UndoRedoPlugin) {
+                this._gantt.use(NimbusGanttLib.UndoRedoPlugin({ depth: 20 }));
+            }
+            if (NimbusGanttLib.KeyboardPlugin) {
+                this._gantt.use(NimbusGanttLib.KeyboardPlugin());
+            }
+            if (NimbusGanttLib.TelemetryPlugin) {
+                this._gantt.use(NimbusGanttLib.TelemetryPlugin({
+                    onEvent: function(event) {
+                        if (event.type.includes('error') || event.type === 'gantt.session.duration') {
+                            console.info('[NimbusGantt]', event.type, event.data);
+                        }
+                    }
+                }));
+            }
+
             // Scroll to today after init
             requestAnimationFrame(() => {
                 if (this._gantt) {
