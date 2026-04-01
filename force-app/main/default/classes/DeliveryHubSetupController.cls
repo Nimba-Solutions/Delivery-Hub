@@ -208,6 +208,7 @@ global without sharing class DeliveryHubSetupController {
                 EnableAIEstimationDateTime__c = now,
                 EnableEmailNotificationsDateTime__c = now,
                 EnableActivityLoggingDateTime__c = now,
+                EnableFieldTrackingDateTime__c = now,
                 EnableBoardMetricsDateTime__c = now,
                 StagesToAutoShareWithDevTeamTxt__c = 'All'
             );
