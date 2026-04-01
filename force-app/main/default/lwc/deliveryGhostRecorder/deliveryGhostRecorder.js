@@ -30,6 +30,13 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     @track isSending = false;
     @track uploadedFileIds = [];
 
+    // Voice capture state
+    @track isListening = false;
+    @track voiceTranscript = '';
+    @track voiceInterim = '';
+    @track voiceSupported = false;
+    _recognition = null;
+
     currentPageRef;
     currentUserId = userId;
     sessionIdValue = '';
@@ -178,11 +185,13 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
             window.addEventListener('keydown', this.handleShortcut);
         }
         document.addEventListener('visibilitychange', this._handleVisibilityChange);
+        this._initVoiceRecognition();
     }
 
     disconnectedCallback() {
         window.removeEventListener('keydown', this.handleShortcut);
         document.removeEventListener('visibilitychange', this._handleVisibilityChange);
+        this._destroyVoiceRecognition();
     }
 
     _handleVisibilityChange = () => {
@@ -207,6 +216,139 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
             actionType: 'Page_Duration',
             contextData: JSON.stringify(ctx)
         }).catch(() => { /* silent */ });
+    }
+
+    /* ── Voice Recognition (Web Speech API) ── */
+
+    _initVoiceRecognition() {
+        try {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                return;
+            }
+            this.voiceSupported = true;
+
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                let finalText = '';
+                let interimText = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalText += event.results[i][0].transcript;
+                    } else {
+                        interimText += event.results[i][0].transcript;
+                    }
+                }
+                if (finalText) {
+                    this.voiceTranscript = this.voiceTranscript
+                        ? this.voiceTranscript + ' ' + finalText
+                        : finalText;
+                }
+                this.voiceInterim = interimText;
+            };
+
+            recognition.onerror = () => {
+                this.isListening = false;
+            };
+
+            recognition.onend = () => {
+                // Browser may auto-stop; keep state in sync
+                if (this.isListening) {
+                    this.isListening = false;
+                }
+            };
+
+            this._recognition = recognition;
+        } catch (err) {
+            // Voice not available in this context — silent
+        }
+    }
+
+    _destroyVoiceRecognition() {
+        if (this._recognition) {
+            try {
+                this._recognition.abort();
+            } catch (err) {
+                // silent
+            }
+            this._recognition = null;
+        }
+    }
+
+    handleVoiceToggle() {
+        if (this.isListening) {
+            this.stopVoice();
+        } else {
+            this.startVoice();
+        }
+    }
+
+    startVoice() {
+        if (!this._recognition) {
+            return;
+        }
+        this.voiceTranscript = '';
+        this.voiceInterim = '';
+        try {
+            this._recognition.start();
+            this.isListening = true;
+        } catch (err) {
+            // Already started or not permitted
+        }
+    }
+
+    stopVoice() {
+        if (!this._recognition) {
+            return;
+        }
+        this._recognition.stop();
+        this.isListening = false;
+
+        // Append captured voice text to description
+        const text = this.voiceTranscript.trim();
+        if (text) {
+            const voiceEntry = '[Voice] ' + text;
+            this.description = this.description
+                ? this.description + '\n\n' + voiceEntry
+                : voiceEntry;
+        }
+    }
+
+    get hasVoiceContent() {
+        return Boolean(this.voiceTranscript || this.voiceInterim);
+    }
+
+    get voiceLiveText() {
+        let result = '';
+        if (this.voiceTranscript) {
+            result += this.voiceTranscript;
+        }
+        if (this.voiceInterim) {
+            result += (result ? ' ' : '') + this.voiceInterim;
+        }
+        return result;
+    }
+
+    get voiceButtonTitle() {
+        return this.isListening ? 'Stop recording' : 'Dictate feedback';
+    }
+
+    get voiceStatusText() {
+        return this.isListening ? 'Listening... click to stop' : 'Click mic to dictate feedback';
+    }
+
+    get voiceButtonClass() {
+        return this.isListening
+            ? 'gr-voice-btn gr-voice-btn--active'
+            : 'gr-voice-btn';
+    }
+
+    get voiceIconName() {
+        return this.isListening ? 'utility:stop' : 'utility:mic';
     }
 
     handleShortcut = (event) => {
@@ -339,6 +481,12 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
         this.uploadedFileIds = [];
         this.isOpen = false;
         this.requestType = 'Bug';
+        this.voiceTranscript = '';
+        this.voiceInterim = '';
+        if (this.isListening) {
+            try { this._recognition.stop(); } catch (err) { /* silent */ }
+            this.isListening = false;
+        }
     }
 
     gatherContext() {
