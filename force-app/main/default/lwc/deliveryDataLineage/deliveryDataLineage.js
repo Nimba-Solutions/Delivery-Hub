@@ -7,7 +7,6 @@
  */
 import { LightningElement, wire, track } from 'lwc';
 import getNetworkEntities from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDataLineageController.getNetworkEntities';
-import getSyncHealth from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDataLineageController.getSyncHealth';
 
 export default class DeliveryDataLineage extends LightningElement {
     @track entities = [];
