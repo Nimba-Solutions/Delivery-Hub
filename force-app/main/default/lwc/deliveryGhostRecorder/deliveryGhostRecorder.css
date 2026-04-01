@@ -72,3 +72,61 @@ lightning-card {
     background-color: #014486;
     box-shadow: 0 10px 15px rgba(0,0,0,0.1);
 }
+
+/* ── Voice Capture ── */
+.gr-voice-panel {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    background-color: #f9fafb;
+}
+.gr-voice-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.gr-voice-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e0f2fe;
+    color: #0284c7;
+    transition: background-color 0.15s, transform 0.15s;
+    flex-shrink: 0;
+    --lwc-colorTextIconDefault: #0284c7;
+}
+.gr-voice-btn:hover {
+    background-color: #bae6fd;
+    transform: scale(1.05);
+}
+.gr-voice-btn--active {
+    background-color: #ef4444;
+    color: #fff;
+    animation: gr-pulse 1.5s ease-in-out infinite;
+    --lwc-colorTextIconDefault: #ffffff;
+}
+.gr-voice-btn--active:hover {
+    background-color: #dc2626;
+}
+.gr-voice-icon {
+    pointer-events: none;
+}
+.gr-voice-hint {
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+.gr-voice-transcript {
+    margin-top: 0.375rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #374151;
+}
+@keyframes gr-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
