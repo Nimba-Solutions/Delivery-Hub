@@ -208,6 +208,27 @@ private class DeliveryWorkLogTriggerHandlerTest {
     }
 
     @IsTest
+    static void testOrphanWorkLogBlocked() {
+        WorkRequest__c request = [SELECT Id FROM WorkRequest__c LIMIT 1];
+
+        Test.startTest();
+        try {
+            insert new WorkLog__c(
+                RequestId__c           = request.Id,
+                WorkItemId__c            = null,
+                HoursLoggedNumber__c   = 2.0,
+                WorkDateDate__c        = Date.today(),
+                WorkDescriptionTxt__c  = 'Orphan log should fail'
+            );
+            System.assert(false, 'Should have thrown DmlException for missing WorkItemId');
+        } catch (DmlException e) {
+            System.assert(e.getMessage().contains('Work Item is required'),
+                'Error should mention Work Item requirement: ' + e.getMessage());
+        }
+        Test.stopTest();
+    }
+
+    @IsTest
     static void testBulkApproval() {
         // Enable approval
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
