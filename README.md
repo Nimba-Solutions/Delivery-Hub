@@ -83,7 +83,7 @@ Burndown chart tracks sprint progress against ideal pace. Developer Workload das
 
 ### Real-Time Collaboration
 
-Polling-based chat on every work item. File rollup panel that aggregates every file from the work item, its comments, and related requests into a single view. Ghost Recorder &mdash; a floating form available anywhere in the app for instant issue submission without leaving your current screen. Activity timeline provides a full audit trail of every change on a work item.
+Polling-based chat on every work item. File rollup panel that aggregates every file from the work item, its comments, and related requests into a single view. Ghost Recorder &mdash; a floating form available anywhere in the app for instant issue submission without leaving your current screen, with built-in **voice dictation** via the Web Speech API for hands-free feedback capture. Activity timeline provides a full audit trail of every change on a work item.
 
 ### Client Transparency
 
@@ -187,12 +187,14 @@ The engine is retry-aware (configurable limit, default 3 attempts), handles name
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 152 (77 production + 75 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService, InvoiceGenerationService |
-| **LWC Components** | 58 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryTimelineView |
-| **Custom Objects** | 15 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c |
+| **Apex Classes** | 178 (89 production + 89 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService, InvoiceGenerationService, PermissionAnalyzerController, FieldTrackingService, FieldChangeService, GhostController |
+| **LWC Components** | 64 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryTimelineView, deliveryPermissionAnalyzer, deliveryHubWorkspace, deliveryWorkflowBuilder |
+| **Custom Objects** | 14 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c |
 | **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, DeveloperCapacity\_\_mdt |
 | **Platform Events** | 4 | DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e |
-| **Triggers** | 5 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger |
+| **Triggers** | 12 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger, DocumentTrigger, DependencyTrigger, NetworkEntityTrigger, TransactionTrigger, WorkRequestTrigger, SyncEventTrigger, DocEventTrigger |
+| **FlexiPages** | 15 | Record pages, admin home, and workspace pages for all major objects |
+| **Reports** | 25 | Attention Items, In-Flight, Blocked, Recently Completed, Monthly Hours, phase breakdowns, activity tracking, budget health |
 
 ---
 
@@ -223,7 +225,7 @@ cci task run retrieve_changes --org dev
 git push origin feature/your-feature
 ```
 
-Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 700+ Apex tests (89%+ coverage), runs PMD static analysis (zero violations enforced), and runs ESLint on all LWC JavaScript.
+Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 860+ Apex tests (90%+ coverage), and runs PMD static analysis (zero violations enforced).
 
 ### Reconciliation
 
@@ -354,7 +356,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Saved Filters** | Save and recall board filter configurations. Per-user filters (Private sharing model) with default filter auto-applied on board load. Stored as JSON in DeliverySavedFilter__c. Accessible from a dropdown in the board toolbar. |
 | **Email Preview & Scheduled Send** | Full email preview before sending (subject, HTML body, recipient, CC, PDF link). Schedule sends for a future date/time with "Next business day at 8 AM" shortcut. Multi-CC support via comma-separated addresses. |
 | **Permission Analyzer** | Analyzes activity logs to recommend permission sets based on actual user behavior. User heatmaps, object usage, risk flags, drill-down per user with daily activity chart, Security Audit document template. Dedicated admin tab. |
-| **Ghost Recorder** | Floating submission form with keyboard shortcut + background navigation tracking + page duration logging (seconds on page, exit method) |
+| **Ghost Recorder** | Floating submission form with keyboard shortcut, background navigation tracking, page duration logging (seconds on page, exit method), and **voice dictation** via Web Speech API &mdash; click the mic, speak, and transcribed text auto-appends to the description as `[Voice]` entries |
 | **Delivery Guide** | In-app documentation with Ghost Recorder utility bar detection across all Lightning apps |
 | **Client Dashboard** | Phase counts, attention items, recent activity |
 | **Public Status Page** | Shareable delivery status view &mdash; no Salesforce login required |
@@ -378,7 +380,8 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Portal Time Entry** | Enhanced portal time logging with entity scoping, workItemId filtering on GET /work-logs, cross-entity validation on POST /log-hours (403 if work item belongs to another entity), and activity log auditing for portal hour submissions. |
 | **Demo Org Flow** | One-command demo org setup via `cci flow run demo_org --org dev`. Creates a scratch org, deploys the package, loads realistic sample data (2 entities, 10 work items, 21 work logs, comments, a draft invoice), configures org defaults, and schedules all background jobs. |
 | **Task API (Versioned)** | CI/CD and AI agent endpoints moved to `/deliveryhub/v1/tasks/*` to match the URL convention used by all other REST endpoints. |
-| **Native Reports** | Full Salesforce reporting on all delivery data |
+| **Field Change Tracking** | Automatic audit trail of field changes on all DH objects via triggers. Configured declaratively through TrackedField\_\_mdt &mdash; add a metadata record to track any field. Captures old/new values, delta for numeric fields, and stores as ActivityLog entries. Enabled by default on new installs. |
+| **Native Reports** | Full Salesforce reporting on all delivery data &mdash; 25 pre-built reports ship with the package |
 
 ---
 
