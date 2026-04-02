@@ -1757,14 +1757,18 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
     }
 
+    _getRemoteField(payload, fieldName) {
+        /* Support both namespaced (managed pkg) and non-namespaced (scratch org) */
+        return payload[fieldName] || payload['delivery__' + fieldName] || '';
+    }
+
     _handleRemoteEvent(message) {
         var payload = message.data.payload;
-        /* Support both namespaced (managed pkg) and non-namespaced (scratch org) field names */
-        var sessionId = payload.SessionIdTxt__c || payload.delivery__SessionIdTxt__c;
+        var sessionId = this._getRemoteField(payload, 'SessionIdTxt__c');
         if (sessionId !== this._remoteSessionId) { return; }
 
-        var action = payload.ActionTxt__c || payload.delivery__ActionTxt__c;
-        var value = payload.ValueTxt__c || payload.delivery__ValueTxt__c;
+        var action = this._getRemoteField(payload, 'ActionTxt__c');
+        var value = this._getRemoteField(payload, 'ValueTxt__c');
 
         switch (action) {
             case 'scroll':

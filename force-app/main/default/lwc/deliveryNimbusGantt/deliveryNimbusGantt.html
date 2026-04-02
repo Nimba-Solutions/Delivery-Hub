@@ -53,6 +53,11 @@
                     alternative-text="Show Completed" variant={completedVariant}
                     onclick={handleToggleCompleted}
                     class="slds-m-left_xx-small"></lightning-button-icon>
+                <lightning-button icon-name="utility:phone_portrait" label="Remote"
+                    variant="neutral"
+                    onclick={handleConnectPhone}
+                    class="slds-m-left_xx-small"
+                    title="Control this Gantt chart from your phone"></lightning-button>
                 <lightning-button icon-name="utility:play" label="Demo"
                     variant="neutral"
                     onclick={handleRunDiagnostics}
@@ -157,5 +162,73 @@
             </div>
         </section>
         <div class="slds-backdrop slds-backdrop_open" onclick={handleQuickEditClose}></div>
+    </template>
+
+    <!-- Phone Remote Control modal -->
+    <template lwc:if={showRemoteModal}>
+        <section class="slds-modal slds-fade-in-open" role="dialog" aria-modal="true"
+            aria-labelledby="remote-modal-heading">
+            <div class="slds-modal__container">
+                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                    onclick={handleRemoteModalClose}>
+                    <lightning-icon icon-name="utility:close" size="small"
+                        variant="inverse"></lightning-icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+                <div class="slds-modal__header">
+                    <h2 id="remote-modal-heading" class="slds-modal__title">
+                        <lightning-icon icon-name="utility:phone_portrait" size="small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        Connect Phone Remote
+                    </h2>
+                </div>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-text-align_center slds-m-bottom_medium">
+                        <p class="slds-text-body_regular">
+                            Open this link on your phone to use it as a remote control
+                            for this Gantt chart. Tilt to scroll, swipe to zoom, tap for today.
+                        </p>
+                    </div>
+                    <div class="slds-box slds-m-bottom_medium"
+                        style="background: #f8fafc; border-radius: 8px; word-break: break-all;">
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_xx-small">
+                            Remote Control URL:
+                        </p>
+                        <p class="slds-text-body_regular" style="font-family: monospace; font-size: 13px;">
+                            {remoteUrl}
+                        </p>
+                    </div>
+                    <div class="slds-grid slds-gutters_small slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-box slds-text-align_center" style="background: #f0f9ff; border-radius: 8px;">
+                                <p class="slds-text-body_small slds-text-color_weak">Session ID</p>
+                                <p class="slds-text-heading_small" style="font-family: monospace;">
+                                    {remoteSessionDisplay}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-box slds-text-align_center" style="background: #f0fdf4; border-radius: 8px;">
+                                <p class="slds-text-body_small slds-text-color_weak">Status</p>
+                                <p class="slds-text-heading_small">Listening</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-text-align_center slds-m-bottom_small">
+                        <lightning-button label={remoteCopyLabel} variant={remoteCopyVariant}
+                            icon-name="utility:copy" onclick={handleCopyRemoteLink}></lightning-button>
+                    </div>
+                    <div class="slds-text-align_center">
+                        <p class="slds-text-body_small slds-text-color_weak">
+                            Text this link to yourself, open it on your phone, and tap Start.
+                        </p>
+                    </div>
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={handleRemoteModalClose}></lightning-button>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" onclick={handleRemoteModalClose}></div>
     </template>
 </template>
