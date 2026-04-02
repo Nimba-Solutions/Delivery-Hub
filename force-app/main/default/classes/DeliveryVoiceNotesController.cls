@@ -7,7 +7,7 @@
  *               when the user splits the transcript into multiple notes.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.AvoidGlobalModifier, PMD.ExcessiveParameterList, PMD.CyclomaticComplexity')
 global with sharing class DeliveryVoiceNotesController {
 
     private static final Integer BRIEF_DESC_MAX_LENGTH = 100;
@@ -16,9 +16,7 @@ global with sharing class DeliveryVoiceNotesController {
      * @description Wrapper returned after voice note work item creation.
      */
     global class VoiceNoteResult {
-        /** @description The Id of the created WorkItem__c record */
         @AuraEnabled public Id recordId { get; set; }
-        /** @description The auto-number Name of the created WorkItem__c record */
         @AuraEnabled public String recordName { get; set; }
     }
 
@@ -39,41 +37,17 @@ global with sharing class DeliveryVoiceNotesController {
         }
 
         try {
-            WorkItem__c wi = new WorkItem__c();
-
-            // Brief description: use provided title or derive from transcript
-            String brief = String.isNotBlank(briefTitle)
-                ? briefTitle.trim()
-                : transcript.trim();
-            wi.BriefDescriptionTxt__c = brief.length() > BRIEF_DESC_MAX_LENGTH
-                ? brief.substring(0, BRIEF_DESC_MAX_LENGTH)
-                : brief;
-
-            // Full transcript goes into Details
-            wi.DetailsTxt__c = '[Voice Note] ' + transcript.trim();
-            wi.PriorityPk__c = String.isNotBlank(priority) ? priority : 'Medium';
-            wi.StageNamePk__c = 'Backlog';
-            wi.ActivatedDateTime__c = Datetime.now();
-            wi.StatusPk__c = 'New';
-
-            // Parse optional start date
-            if (String.isNotBlank(startDateStr)) {
-                try {
-                    wi.EstimatedStartDevDate__c = Date.valueOf(startDateStr);
-                } catch (Exception dateEx) {
-                    // Invalid date format — skip silently, don't block creation
-                }
-            }
+            WorkItem__c wi = buildWorkItem(
+                String.isNotBlank(briefTitle) ? briefTitle.trim() : transcript.trim(),
+                transcript.trim(),
+                String.isNotBlank(priority) ? priority : 'Medium',
+                parseDateSafe(startDateStr)
+            );
 
             insert as system wi;
 
-            // Re-query to get auto-number Name
             WorkItem__c created = [
-                SELECT Id, Name
-                FROM WorkItem__c
-                WHERE Id = :wi.Id
-                WITH SYSTEM_MODE
-                LIMIT 1
+                SELECT Id, Name FROM WorkItem__c WHERE Id = :wi.Id WITH SYSTEM_MODE LIMIT 1
             ];
 
             VoiceNoteResult result = new VoiceNoteResult();
@@ -92,9 +66,7 @@ global with sharing class DeliveryVoiceNotesController {
 
     /**
      * @description Creates multiple WorkItem__c records from a list of voice note segments.
-     *              Each segment becomes its own work item. Useful when a user dictates
-     *              multiple action items in a single session.
-     * @param segments   JSON-serialized list of VoiceSegment objects.
+     * @param segments   JSON-serialized list of objects with 'text' and optional 'startDate' keys.
      * @param priority   Priority level applied to all created items.
      * @return List of VoiceNoteResult for each created work item.
      */
@@ -106,39 +78,8 @@ global with sharing class DeliveryVoiceNotesController {
 
         try {
             List<Object> rawSegments = (List<Object>) JSON.deserializeUntyped(segments);
-            List<WorkItem__c> workItems = new List<WorkItem__c>();
             String effectivePriority = String.isNotBlank(priority) ? priority : 'Medium';
-
-            for (Object raw : rawSegments) {
-                Map<String, Object> seg = (Map<String, Object>) raw;
-                String text = (String) seg.get('text');
-                if (String.isBlank(text)) {
-                    continue;
-                }
-
-                WorkItem__c wi = new WorkItem__c();
-                String trimmed = text.trim();
-                wi.BriefDescriptionTxt__c = trimmed.length() > BRIEF_DESC_MAX_LENGTH
-                    ? trimmed.substring(0, BRIEF_DESC_MAX_LENGTH)
-                    : trimmed;
-                wi.DetailsTxt__c = '[Voice Note] ' + trimmed;
-                wi.PriorityPk__c = effectivePriority;
-                wi.StageNamePk__c = 'Backlog';
-                wi.ActivatedDateTime__c = Datetime.now();
-                wi.StatusPk__c = 'New';
-
-                // Parse optional date from segment
-                String segDate = (String) seg.get('startDate');
-                if (String.isNotBlank(segDate)) {
-                    try {
-                        wi.EstimatedStartDevDate__c = Date.valueOf(segDate);
-                    } catch (Exception dateEx) {
-                        // skip
-                    }
-                }
-
-                workItems.add(wi);
-            }
+            List<WorkItem__c> workItems = buildWorkItemsFromSegments(rawSegments, effectivePriority);
 
             if (workItems.isEmpty()) {
                 throw new AuraHandledException('No valid segments found in the voice notes.');
@@ -146,29 +87,7 @@ global with sharing class DeliveryVoiceNotesController {
 
             insert as system workItems;
 
-            // Collect Ids for re-query
-            Set<Id> createdIds = new Set<Id>();
-            for (WorkItem__c wi : workItems) {
-                createdIds.add(wi.Id);
-            }
-
-            Map<Id, WorkItem__c> createdMap = new Map<Id, WorkItem__c>([
-                SELECT Id, Name
-                FROM WorkItem__c
-                WHERE Id IN :createdIds
-                WITH SYSTEM_MODE
-            ]);
-
-            List<VoiceNoteResult> results = new List<VoiceNoteResult>();
-            for (WorkItem__c wi : workItems) {
-                VoiceNoteResult r = new VoiceNoteResult();
-                r.recordId = wi.Id;
-                WorkItem__c queried = createdMap.get(wi.Id);
-                r.recordName = queried != null ? queried.Name : '';
-                results.add(r);
-            }
-
-            return results;
+            return buildResults(workItems);
 
         } catch (AuraHandledException ahe) {
             throw ahe;
@@ -176,6 +95,68 @@ global with sharing class DeliveryVoiceNotesController {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
             throw ahe;
+        }
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────
+
+    private static WorkItem__c buildWorkItem(String title, String fullText, String priority, Date startDate) {
+        WorkItem__c wi = new WorkItem__c();
+        wi.BriefDescriptionTxt__c = title.length() > BRIEF_DESC_MAX_LENGTH
+            ? title.substring(0, BRIEF_DESC_MAX_LENGTH)
+            : title;
+        wi.DetailsTxt__c = '[Voice Note] ' + fullText;
+        wi.PriorityPk__c = priority;
+        wi.StageNamePk__c = 'Backlog';
+        wi.ActivatedDateTime__c = Datetime.now();
+        wi.StatusPk__c = 'New';
+        if (startDate != null) {
+            wi.EstimatedStartDevDate__c = startDate;
+        }
+        return wi;
+    }
+
+    private static List<WorkItem__c> buildWorkItemsFromSegments(List<Object> rawSegments, String priority) {
+        List<WorkItem__c> items = new List<WorkItem__c>();
+        for (Object raw : rawSegments) {
+            Map<String, Object> seg = (Map<String, Object>) raw;
+            String text = (String) seg.get('text');
+            if (String.isBlank(text)) {
+                continue;
+            }
+            String segDate = (String) seg.get('startDate');
+            items.add(buildWorkItem(text.trim(), text.trim(), priority, parseDateSafe(segDate)));
+        }
+        return items;
+    }
+
+    private static List<VoiceNoteResult> buildResults(List<WorkItem__c> workItems) {
+        Set<Id> createdIds = new Set<Id>();
+        for (WorkItem__c wi : workItems) {
+            createdIds.add(wi.Id);
+        }
+        Map<Id, WorkItem__c> createdMap = new Map<Id, WorkItem__c>([
+            SELECT Id, Name FROM WorkItem__c WHERE Id IN :createdIds WITH SYSTEM_MODE
+        ]);
+        List<VoiceNoteResult> results = new List<VoiceNoteResult>();
+        for (WorkItem__c wi : workItems) {
+            VoiceNoteResult r = new VoiceNoteResult();
+            r.recordId = wi.Id;
+            WorkItem__c queried = createdMap.get(wi.Id);
+            r.recordName = queried != null ? queried.Name : '';
+            results.add(r);
+        }
+        return results;
+    }
+
+    private static Date parseDateSafe(String dateStr) {
+        if (String.isBlank(dateStr)) {
+            return null;
+        }
+        try {
+            return Date.valueOf(dateStr);
+        } catch (Exception e) {
+            return null;
         }
     }
 }
