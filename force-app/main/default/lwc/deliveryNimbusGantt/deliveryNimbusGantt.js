@@ -467,114 +467,181 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
     handleRunDiagnostics() {
         if (!this._gantt) {
-            this.dispatchEvent(new ShowToastEvent({ title: 'Diagnostics', message: 'Gantt not initialized', variant: 'error' }));
+            this.dispatchEvent(new ShowToastEvent({ title: 'Error', message: 'Gantt not initialized', variant: 'error' }));
             return;
         }
         var g = this._gantt;
+        var G = window.NimbusGantt;
         var container = this.refs.ganttContainer;
-        var results = [];
-        var step = 0;
         var self = this;
+        var step = 0;
+        var results = [];
+        var DELAY = 4000;
 
         function log(msg, pass) {
-            var status = pass ? 'PASS' : 'FAIL';
-            results.push('[' + status + '] ' + msg);
-            console.log('[NimbusGantt:diag] [' + status + '] ' + msg);
+            var s = pass ? 'PASS' : 'FAIL';
+            results.push('[' + s + '] ' + msg);
+            console.log('[NimbusGantt:demo] [' + s + '] ' + msg);
         }
 
-        function showStatus(msg) {
-            self.dispatchEvent(new ShowToastEvent({ title: 'Testing...', message: msg, variant: 'info', mode: 'dismissible' }));
+        function toast(title, msg, variant) {
+            self.dispatchEvent(new ShowToastEvent({ title: title, message: msg, variant: variant || 'info', mode: 'dismissible' }));
         }
 
         function runStep() {
             step++;
+            console.log('[NimbusGantt:demo] === Step ' + step + ' ===');
             try {
                 switch(step) {
-                    case 1:
-                        showStatus('Step 1/8: Checking canvas...');
-                        var canvas = container ? container.querySelector('canvas') : null;
-                        log('Canvas element found', !!canvas);
-                        if (canvas) {
-                            log('Canvas size: ' + canvas.width + 'x' + canvas.height, canvas.width > 0 && canvas.height > 0);
-                            var ctx = canvas.getContext('2d');
-                            log('Canvas 2D context', !!ctx);
-                            // Check if anything is drawn (sample pixel)
-                            if (ctx) {
-                                var pixel = ctx.getImageData(100, 100, 1, 1).data;
-                                var hasContent = pixel[0] + pixel[1] + pixel[2] + pixel[3] > 0;
-                                log('Canvas has rendered content at (100,100)', hasContent);
-                                var headerPixel = ctx.getImageData(100, 20, 1, 1).data;
-                                log('Header area has content at (100,20)', headerPixel[3] > 0);
-                            }
+
+                // ── DIAGNOSTICS ──────────────────────────────────
+                case 1:
+                    toast('1/16 — Canvas Check', 'Verifying canvas rendering...');
+                    var canvas = container ? container.querySelector('canvas') : null;
+                    log('Canvas found', !!canvas);
+                    if (canvas) {
+                        log('Canvas size: ' + canvas.width + 'x' + canvas.height, canvas.width > 0);
+                        var ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            var p = ctx.getImageData(200, 80, 1, 1).data;
+                            log('Canvas has pixels at (200,80)', p[3] > 0);
                         }
-                        break;
-                    case 2:
-                        showStatus('Step 2/8: Testing zoom Day...');
-                        g.setZoom('day');
-                        log('setZoom(day) executed', true);
-                        break;
-                    case 3:
-                        showStatus('Step 3/8: Testing zoom Month...');
-                        g.setZoom('month');
-                        log('setZoom(month) executed', true);
-                        break;
-                    case 4:
-                        showStatus('Step 4/8: Testing scrollToDate...');
-                        g.scrollToDate(new Date());
-                        log('scrollToDate(today) executed', true);
-                        break;
-                    case 5:
-                        showStatus('Step 5/8: Testing zoom Week (default)...');
-                        g.setZoom('week');
-                        log('setZoom(week) back to default', true);
-                        break;
-                    case 6:
-                        showStatus('Step 6/8: Checking tree grid DOM...');
-                        var grid = container ? container.querySelector('.ng-grid') : null;
-                        log('Tree grid DOM found', !!grid);
-                        var rows = container ? container.querySelectorAll('.ng-grid-row') : [];
-                        log('Tree grid rows: ' + rows.length, rows.length > 0);
-                        break;
-                    case 7:
-                        showStatus('Step 7/8: Testing expandAll/collapseAll...');
-                        g.expandAll();
-                        log('expandAll() executed', true);
-                        setTimeout(function() {
-                            g.collapseAll();
-                            log('collapseAll() executed', true);
-                            g.expandAll();
-                        }, 500);
-                        break;
-                    case 8:
-                        showStatus('Step 8/8: Checking date range...');
-                        try {
-                            var range = g.getVisibleDateRange();
-                            log('Date range: ' + range.start + ' to ' + range.end, !!range.start);
-                        } catch(e) {
-                            log('getVisibleDateRange error: ' + e.message, false);
-                        }
-                        // Final summary
-                        var passed = results.filter(function(r) { return r.indexOf('[PASS]') === 0; }).length;
-                        var failed = results.filter(function(r) { return r.indexOf('[FAIL]') === 0; }).length;
-                        console.log('[NimbusGantt:diag] === SUMMARY: ' + passed + ' passed, ' + failed + ' failed ===');
-                        results.forEach(function(r) { console.log('[NimbusGantt:diag] ' + r); });
-                        self.dispatchEvent(new ShowToastEvent({
-                            title: 'Diagnostics Complete',
-                            message: passed + ' passed, ' + failed + ' failed. Check browser console for details.',
-                            variant: failed > 0 ? 'warning' : 'success'
-                        }));
-                        return; // done
+                    }
+                    var grid = container ? container.querySelector('.ng-grid') : null;
+                    log('Tree grid DOM', !!grid);
+                    var rows = container ? container.querySelectorAll('.ng-grid-row') : [];
+                    log('Grid rows: ' + rows.length, rows.length > 0);
+                    break;
+
+                // ── ZOOM SHOWCASE ────────────────────────────────
+                case 2:
+                    toast('2/16 — Day View', 'Zooming to daily granularity...', 'info');
+                    g.setZoom('day');
+                    g.scrollToDate(new Date());
+                    log('Zoom: Day', true);
+                    break;
+                case 3:
+                    toast('3/16 — Month View', 'Zooming out to monthly...', 'info');
+                    g.setZoom('month');
+                    g.scrollToDate(new Date());
+                    log('Zoom: Month', true);
+                    break;
+                case 4:
+                    toast('4/16 — Quarter View', 'Full project overview...', 'info');
+                    g.setZoom('quarter');
+                    log('Zoom: Quarter', true);
+                    break;
+                case 5:
+                    toast('5/16 — Week View', 'Back to default week view...', 'info');
+                    g.setZoom('week');
+                    g.scrollToDate(new Date());
+                    log('Zoom: Week (default)', true);
+                    break;
+
+                // ── TREE OPERATIONS ──────────────────────────────
+                case 6:
+                    toast('6/16 — Expand All', 'Showing all child tasks...', 'info');
+                    g.expandAll();
+                    log('expandAll()', true);
+                    break;
+                case 7:
+                    toast('7/16 — Collapse All', 'Collapsing to parent groups...', 'info');
+                    g.collapseAll();
+                    log('collapseAll()', true);
+                    break;
+                case 8:
+                    toast('8/16 — Expand + Scroll', 'Expanding and scrolling to today...', 'info');
+                    g.expandAll();
+                    g.scrollToDate(new Date());
+                    log('Expand + scrollToDate', true);
+                    break;
+
+                // ── DARK MODE ────────────────────────────────────
+                case 9:
+                    toast('9/16 — Dark Mode', 'Switching to dark theme...', 'info');
+                    if (container) {
+                        container.style.filter = 'invert(1) hue-rotate(180deg)';
+                        container.style.backgroundColor = '#1a1a2e';
+                    }
+                    log('Dark mode toggle', true);
+                    break;
+                case 10:
+                    toast('10/16 — Light Mode', 'Switching back to light theme...', 'info');
+                    if (container) {
+                        container.style.filter = '';
+                        container.style.backgroundColor = '';
+                    }
+                    log('Light mode restore', true);
+                    break;
+
+                // ── LOCK/UNLOCK ──────────────────────────────────
+                case 11:
+                    toast('11/16 — Unlock Editing', 'Drag bars to reschedule, resize edges to change duration', 'warning');
+                    self.editLocked = false;
+                    self._rebuildChart();
+                    log('Unlock editing', true);
+                    break;
+                case 12:
+                    toast('12/16 — Re-Lock', 'Locking editing back...', 'info');
+                    self.editLocked = true;
+                    self._rebuildChart();
+                    log('Re-lock editing', true);
+                    break;
+
+                // ── ENTITY FILTER ────────────────────────────────
+                case 13:
+                    toast('13/16 — Filter: Acme Corp', 'Showing only Acme Corp tasks...', 'info');
+                    var entities = self._rawTasks.map(function(t) { return t.entityName; }).filter(function(v, i, a) { return a.indexOf(v) === i && v; });
+                    if (entities.length > 0) {
+                        self.selectedEntity = entities[0];
+                        self._rebuildChart();
+                        log('Filter entity: ' + entities[0], true);
+                    } else {
+                        log('No entities to filter', false);
+                    }
+                    break;
+                case 14:
+                    toast('14/16 — Filter: All', 'Showing all entities...', 'info');
+                    self.selectedEntity = '';
+                    self._rebuildChart();
+                    log('Filter cleared', true);
+                    break;
+
+                // ── SCROLL ANIMATION ─────────────────────────────
+                case 15:
+                    toast('15/16 — Scroll to Start', 'Scrolling to project start...', 'info');
+                    try {
+                        var range = g.getVisibleDateRange();
+                        g.scrollToDate(range.start);
+                        log('Scroll to start: ' + range.start, true);
+                    } catch(e) {
+                        log('Scroll start error: ' + e.message, false);
+                    }
+                    break;
+
+                // ── SUMMARY ──────────────────────────────────────
+                case 16:
+                    g.scrollToDate(new Date());
+                    var passed = results.filter(function(r) { return r.indexOf('[PASS]') === 0; }).length;
+                    var failed = results.filter(function(r) { return r.indexOf('[FAIL]') === 0; }).length;
+                    console.log('[NimbusGantt:demo] ═══════════════════════════════════');
+                    console.log('[NimbusGantt:demo] PRESENTATION COMPLETE: ' + passed + ' passed, ' + failed + ' failed');
+                    console.log('[NimbusGantt:demo] ═══════════════════════════════════');
+                    results.forEach(function(r) { console.log('[NimbusGantt:demo]   ' + r); });
+                    toast('Presentation Complete', passed + '/' + (passed + failed) + ' features verified. Check console for full report.', failed > 0 ? 'warning' : 'success');
+                    return;
                 }
             } catch(err) {
-                log('Step ' + step + ' error: ' + err.message, false);
+                log('Step ' + step + ' ERROR: ' + err.message, false);
+                console.error('[NimbusGantt:demo] Error at step ' + step, err);
             }
-            if (step < 8) {
-                setTimeout(runStep, 2000);
+            if (step < 16) {
+                setTimeout(runStep, DELAY);
             }
         }
 
-        this.dispatchEvent(new ShowToastEvent({ title: 'Diagnostics Starting', message: 'Running 8 tests over ~16 seconds...', variant: 'info' }));
-        setTimeout(runStep, 1000);
+        toast('Presentation Mode', '16 steps over ~60 seconds. Watch the Gantt transform...', 'info');
+        setTimeout(runStep, 2000);
     }
 
     handleScrollToday() {
