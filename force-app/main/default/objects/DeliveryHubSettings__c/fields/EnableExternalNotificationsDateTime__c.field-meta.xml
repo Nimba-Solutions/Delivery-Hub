@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableExternalNotificationsDateTime__c</fullName>
+    <description>When non-null, external requester email notifications are active. Sends stage-change and SLA-breach emails to the ExternalRequesterEmailTxt__c address on work items. Requires EnableEmailNotificationsDateTime__c to also be set.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to enable external requester notifications. Leave blank to disable.</inlineHelpText>
+    <label>Enable External Notifications</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
