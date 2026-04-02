@@ -278,15 +278,48 @@ export default class DeliveryNimbusGantt extends LightningElement {
                 }
             });
 
-            // Register plugins
-            if (NimbusGanttLib.UndoRedoPlugin) {
-                this._gantt.use(NimbusGanttLib.UndoRedoPlugin({ depth: 20 }));
-            }
-            if (NimbusGanttLib.KeyboardPlugin) {
-                this._gantt.use(NimbusGanttLib.KeyboardPlugin());
-            }
-            if (NimbusGanttLib.TelemetryPlugin) {
-                this._gantt.use(NimbusGanttLib.TelemetryPlugin({
+            // Register ALL plugins
+            var G = NimbusGanttLib;
+            var g = this._gantt;
+            var use = function(P, opts) { if (P) { g.use(opts ? P(opts) : P()); } };
+
+            // Core interactions
+            use(G.UndoRedoPlugin, { depth: 30 });
+            use(G.KeyboardPlugin);
+            use(G.MilestonePlugin);
+            use(G.GroupingPlugin);
+
+            // Analysis & intelligence
+            use(G.CriticalPathPlugin);
+            use(G.RiskAnalysisPlugin);
+            use(G.MonteCarloPlugin, { iterations: 500, variability: 0.3 });
+
+            // Visualization
+            use(G.MiniMapPlugin);
+            use(G.ConfigPanelPlugin);
+            use(G.TimelineNotesPlugin, { notes: [] });
+            use(G.NarrativePlugin);
+            use(G.TimeTravelPlugin, { maxSnapshots: 200 });
+            use(G.WhatIfPlugin);
+
+            // Work calendar
+            use(G.WorkCalendarPlugin);
+
+            // Virtual scroll for performance
+            use(G.VirtualScrollPlugin);
+
+            // Dark mode (auto-detect system preference)
+            use(G.DarkThemePlugin, { auto: true });
+
+            // Export (PNG/SVG)
+            use(G.ExportPlugin);
+
+            // Sonification (play project as music)
+            use(G.SonificationPlugin, { tempo: 120, scale: 'pentatonic', volume: 0.3 });
+
+            // Telemetry (local logging only, no external endpoint)
+            if (G.TelemetryPlugin) {
+                g.use(G.TelemetryPlugin({
                     onEvent: function(event) {
                         if (event.type.includes('error') || event.type === 'gantt.session.duration') {
                             console.info('[NimbusGantt]', event.type, event.data);
