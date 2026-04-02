@@ -921,7 +921,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── DIAGNOSTICS ──────────────────────────────────
                 case 1:
-                    toast('1/16 — Canvas Check', 'Verifying canvas rendering...');
+                    toast('1/35 — Canvas Check', 'Verifying canvas rendering...');
                     var canvas = container ? container.querySelector('canvas') : null;
                     log('Canvas found', !!canvas);
                     if (canvas) {
@@ -940,24 +940,24 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── ZOOM SHOWCASE ────────────────────────────────
                 case 2:
-                    toast('2/16 — Day View', 'Zooming to daily granularity...', 'info');
+                    toast('2/35 — Day View', 'Zooming to daily granularity...', 'info');
                     g.setZoom('day');
                     g.scrollToDate(new Date());
                     log('Zoom: Day', true);
                     break;
                 case 3:
-                    toast('3/16 — Month View', 'Zooming out to monthly...', 'info');
+                    toast('3/35 — Month View', 'Zooming out to monthly...', 'info');
                     g.setZoom('month');
                     g.scrollToDate(new Date());
                     log('Zoom: Month', true);
                     break;
                 case 4:
-                    toast('4/16 — Quarter View', 'Full project overview...', 'info');
+                    toast('4/35 — Quarter View', 'Full project overview...', 'info');
                     g.setZoom('quarter');
                     log('Zoom: Quarter', true);
                     break;
                 case 5:
-                    toast('5/16 — Week View', 'Back to default week view...', 'info');
+                    toast('5/35 — Week View', 'Back to default week view...', 'info');
                     g.setZoom('week');
                     g.scrollToDate(new Date());
                     log('Zoom: Week (default)', true);
@@ -965,17 +965,17 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── TREE OPERATIONS ──────────────────────────────
                 case 6:
-                    toast('6/16 — Expand All', 'Showing all child tasks...', 'info');
+                    toast('6/35 — Expand All', 'Showing all child tasks...', 'info');
                     g.expandAll();
                     log('expandAll()', true);
                     break;
                 case 7:
-                    toast('7/16 — Collapse All', 'Collapsing to parent groups...', 'info');
+                    toast('7/35 — Collapse All', 'Collapsing to parent groups...', 'info');
                     g.collapseAll();
                     log('collapseAll()', true);
                     break;
                 case 8:
-                    toast('8/16 — Expand + Scroll', 'Expanding and scrolling to today...', 'info');
+                    toast('8/35 — Expand + Scroll', 'Expanding and scrolling to today...', 'info');
                     g.expandAll();
                     g.scrollToDate(new Date());
                     log('Expand + scrollToDate', true);
@@ -983,7 +983,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── DARK MODE ────────────────────────────────────
                 case 9:
-                    toast('9/16 — Dark Mode', 'Switching to dark theme...', 'info');
+                    toast('9/35 — Dark Mode', 'Switching to dark theme...', 'info');
                     if (container) {
                         container.style.filter = 'invert(1) hue-rotate(180deg)';
                         container.style.backgroundColor = '#1a1a2e';
@@ -991,7 +991,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     log('Dark mode toggle', true);
                     break;
                 case 10:
-                    toast('10/16 — Light Mode', 'Switching back to light theme...', 'info');
+                    toast('10/35 — Light Mode', 'Switching back to light theme...', 'info');
                     if (container) {
                         container.style.filter = '';
                         container.style.backgroundColor = '';
@@ -1001,13 +1001,13 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── LOCK/UNLOCK ──────────────────────────────────
                 case 11:
-                    toast('11/16 — Unlock Editing', 'Drag bars to reschedule, resize edges to change duration', 'warning');
+                    toast('11/35 — Unlock Editing', 'Drag bars to reschedule, resize edges to change duration', 'warning');
                     self.editLocked = false;
                     self._rebuildChart();
                     log('Unlock editing', true);
                     break;
                 case 12:
-                    toast('12/16 — Re-Lock', 'Locking editing back...', 'info');
+                    toast('12/35 — Re-Lock', 'Locking editing back...', 'info');
                     self.editLocked = true;
                     self._rebuildChart();
                     log('Re-lock editing', true);
@@ -1015,7 +1015,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── ENTITY FILTER ────────────────────────────────
                 case 13:
-                    toast('13/16 — Filter: Acme Corp', 'Showing only Acme Corp tasks...', 'info');
+                    toast('13/35 — Filter: Acme Corp', 'Showing only Acme Corp tasks...', 'info');
                     var entities = self._rawTasks.map(function(t) { return t.entityName; }).filter(function(v, i, a) { return a.indexOf(v) === i && v; });
                     if (entities.length > 0) {
                         self.selectedEntity = entities[0];
@@ -1026,7 +1026,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     }
                     break;
                 case 14:
-                    toast('14/16 — Filter: All', 'Showing all entities...', 'info');
+                    toast('14/35 — Filter: All', 'Showing all entities...', 'info');
                     self.selectedEntity = '';
                     self._rebuildChart();
                     log('Filter cleared', true);
@@ -1034,60 +1034,164 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── ALTERNATIVE VISUALIZATIONS ────────────────────
                 case 15:
-                    toast('15/20 — Treemap View', 'Size = estimated hours, color = stage', 'info');
-                    self.currentView = 'treemap';
-                    self._renderAltViz();
-                    log('Treemap rendered', true);
-                    break;
+                    toast('15/35 — Treemap', 'Rectangles sized by hours, colored by stage', 'info');
+                    self.currentView = 'treemap'; self._renderAltViz();
+                    log('Treemap rendered', true); break;
                 case 16:
-                    toast('16/20 — Bubble Chart', 'X = timeline, Y = entity, size = hours', 'info');
-                    self.currentView = 'bubbles';
-                    self._renderAltViz();
-                    log('Bubble chart rendered', true);
-                    break;
+                    toast('16/35 — Bubble Chart', 'X = timeline, Y = entity, size = hours, color = stage', 'info');
+                    self.currentView = 'bubbles'; self._renderAltViz();
+                    log('Bubble chart rendered', true); break;
                 case 17:
-                    toast('17/20 — Calendar Heatmap', 'Task density per day — green = busy', 'info');
-                    self.currentView = 'calendar';
-                    self._renderAltViz();
-                    log('Calendar heatmap rendered', true);
-                    break;
+                    toast('17/35 — Calendar Heatmap', 'GitHub-style daily task density grid', 'info');
+                    self.currentView = 'calendar'; self._renderAltViz();
+                    log('Calendar heatmap rendered', true); break;
                 case 18:
-                    toast('18/20 — Stage Flow', 'Tasks flowing through workflow stages', 'info');
-                    self.currentView = 'flow';
-                    self._renderAltViz();
-                    log('Stage flow rendered', true);
+                    toast('18/35 — Stage Flow', 'Task distribution across workflow stages', 'info');
+                    self.currentView = 'flow'; self._renderAltViz();
+                    log('Stage flow rendered', true); break;
+
+                // ── BACK TO GANTT FOR PLUGIN DEMOS ───────────────
+                case 19:
+                    toast('19/35 — Back to Gantt', 'Returning to timeline for plugin demos...', 'info');
+                    self.currentView = 'gantt'; self._rebuildChart();
+                    log('Gantt restored', true); break;
+
+                // ── PLUGIN SHOWCASES ─────────────────────────────
+                case 20:
+                    toast('20/35 — Scroll Entity by Entity', 'Scrolling to each client group...', 'info');
+                    var ents = self._rawTasks.map(function(t) { return t.entityName; }).filter(function(v, i, a) { return a.indexOf(v) === i && v; });
+                    if (ents.length > 1 && self._gantt) {
+                        self.selectedEntity = ents[0]; self._rebuildChart();
+                        setTimeout(function() {
+                            if (ents.length > 1) { self.selectedEntity = ents[1]; self._rebuildChart(); }
+                        }, 1500);
+                        setTimeout(function() {
+                            if (ents.length > 2) { self.selectedEntity = ents[2]; self._rebuildChart(); }
+                        }, 3000);
+                    }
+                    log('Entity scroll: ' + ents.join(', '), true); break;
+                case 21:
+                    toast('21/35 — All Entities', 'Showing full project view...', 'info');
+                    self.selectedEntity = ''; self._rebuildChart();
+                    log('All entities', true); break;
+                case 22:
+                    toast('22/35 — Scroll to Project Start', 'Beginning of the timeline...', 'info');
+                    try { var r2 = g.getVisibleDateRange(); g.scrollToDate(r2.start); log('Scroll start', true); }
+                    catch(e2) { log('Scroll start: ' + e2.message, false); }
+                    break;
+                case 23:
+                    toast('23/35 — Scroll to Project End', 'End of the timeline...', 'info');
+                    try { var r3 = g.getVisibleDateRange(); g.scrollToDate(r3.end); log('Scroll end', true); }
+                    catch(e3) { log('Scroll end: ' + e3.message, false); }
+                    break;
+                case 24:
+                    toast('24/35 — Scroll to Today', 'Centering on today...', 'info');
+                    g.scrollToDate(new Date());
+                    log('Scroll today', true); break;
+
+                // ── SONIFICATION ─────────────────────────────────
+                case 25:
+                    toast('25/35 — Sonification', '♫ Playing the project schedule as music...', 'warning');
+                    try {
+                        var ac = new (window.AudioContext || window.webkitAudioContext)();
+                        var scale = [261.6, 293.7, 329.6, 349.2, 392.0, 440.0, 493.9, 523.3];
+                        self.filteredTasks.slice(0, 8).forEach(function(t, i) {
+                            var osc = ac.createOscillator();
+                            var gain = ac.createGain();
+                            osc.frequency.value = scale[i % scale.length];
+                            osc.type = 'triangle';
+                            gain.gain.value = 0.15;
+                            osc.connect(gain); gain.connect(ac.destination);
+                            osc.start(ac.currentTime + i * 0.3);
+                            osc.stop(ac.currentTime + i * 0.3 + 0.25);
+                        });
+                        log('Sonification: played 8 task notes', true);
+                    } catch(se) { log('Sonification: ' + se.message, false); }
                     break;
 
-                // ── BACK TO GANTT ────────────────────────────────
-                case 19:
-                    toast('19/20 — Back to Gantt', 'Returning to timeline view...', 'info');
-                    self.currentView = 'gantt';
-                    self._rebuildChart();
-                    log('Gantt restored', true);
-                    break;
+                // ── RAPID ZOOM CYCLE ─────────────────────────────
+                case 26:
+                    toast('26/35 — Rapid Zoom Cycle', 'Day → Week → Month → Quarter → Week', 'info');
+                    g.setZoom('day');
+                    setTimeout(function() { g.setZoom('week'); }, 700);
+                    setTimeout(function() { g.setZoom('month'); }, 1400);
+                    setTimeout(function() { g.setZoom('quarter'); }, 2100);
+                    setTimeout(function() { g.setZoom('week'); g.scrollToDate(new Date()); }, 2800);
+                    log('Rapid zoom cycle', true); break;
+
+                // ── DARK MODE + ALT VIEWS ────────────────────────
+                case 27:
+                    toast('27/35 — Dark Treemap', 'Treemap in dark mode...', 'info');
+                    self.currentView = 'treemap'; self._renderAltViz();
+                    requestAnimationFrame(function() {
+                        var c = self.refs.altCanvas;
+                        if (c && c.parentElement) { c.parentElement.style.filter = 'invert(1) hue-rotate(180deg)'; }
+                    });
+                    log('Dark treemap', true); break;
+                case 28:
+                    toast('28/35 — Dark Bubbles', 'Bubble chart in dark mode...', 'info');
+                    self.currentView = 'bubbles'; self._renderAltViz();
+                    log('Dark bubbles', true); break;
+                case 29:
+                    toast('29/35 — Light Mode Restore', 'Clearing dark mode...', 'info');
+                    var altC = self.refs.altCanvas;
+                    if (altC && altC.parentElement) { altC.parentElement.style.filter = ''; }
+                    self.currentView = 'gantt'; self._rebuildChart();
+                    if (container) { container.style.filter = ''; container.style.backgroundColor = ''; }
+                    log('Light restore', true); break;
+
+                // ── EXPAND + COLLAPSE INDIVIDUAL ──────────────────
+                case 30:
+                    toast('30/35 — Collapse All → Expand One', 'Focusing on one group...', 'info');
+                    g.collapseAll();
+                    var firstTask = self.filteredTasks[0];
+                    if (firstTask && firstTask.workItemId) {
+                        try { g.expandTask(firstTask.workItemId); } catch(ex) { /* may not be parent */ }
+                    }
+                    log('Collapse + expand one', true); break;
+                case 31:
+                    toast('31/35 — Expand All Again', 'Full view restored...', 'info');
+                    g.expandAll(); g.scrollToDate(new Date());
+                    log('Full expand', true); break;
+
+                // ── SECOND ENTITY FILTER CYCLE ───────────────────
+                case 32:
+                    toast('32/35 — Filter Second Entity', 'Isolating another client...', 'info');
+                    var ents2 = self._rawTasks.map(function(t) { return t.entityName; }).filter(function(v, i, a) { return a.indexOf(v) === i && v; });
+                    if (ents2.length > 1) { self.selectedEntity = ents2[1]; self._rebuildChart(); }
+                    log('Filter entity 2', true); break;
+                case 33:
+                    toast('33/35 — Clear Filter', 'All entities visible...', 'info');
+                    self.selectedEntity = ''; self._rebuildChart();
+                    log('Filter cleared', true); break;
+
+                // ── FINAL FLOURISH ───────────────────────────────
+                case 34:
+                    toast('34/35 — Final View', 'Week view, all tasks, centered on today', 'info');
+                    g.setZoom('week'); g.expandAll(); g.scrollToDate(new Date());
+                    log('Final view set', true); break;
 
                 // ── SUMMARY ──────────────────────────────────────
-                case 20:
-                    if (self._gantt) { self._gantt.scrollToDate(new Date()); }
+                case 35:
                     var passed = results.filter(function(r) { return r.indexOf('[PASS]') === 0; }).length;
                     var failed = results.filter(function(r) { return r.indexOf('[FAIL]') === 0; }).length;
-                    console.log('[NimbusGantt:demo] ═══════════════════════════════════');
-                    console.log('[NimbusGantt:demo] PRESENTATION COMPLETE: ' + passed + ' passed, ' + failed + ' failed');
-                    console.log('[NimbusGantt:demo] ═══════════════════════════════════');
+                    console.log('[NimbusGantt:demo] ═══════════════════════════════════════════');
+                    console.log('[NimbusGantt:demo] FULL PRESENTATION: ' + passed + ' passed, ' + failed + ' failed');
+                    console.log('[NimbusGantt:demo] ═══════════════════════════════════════════');
                     results.forEach(function(r) { console.log('[NimbusGantt:demo]   ' + r); });
-                    toast('Presentation Complete', passed + '/' + (passed + failed) + ' features demonstrated. Console has full report.', failed > 0 ? 'warning' : 'success');
+                    toast('Demo Complete ✓', passed + '/' + (passed + failed) + ' features demonstrated across 5 views, ' + self.filteredTasks.length + ' tasks. Full report in console.', failed > 0 ? 'warning' : 'success');
                     return;
                 }
             } catch(err) {
                 log('Step ' + step + ' ERROR: ' + err.message, false);
                 console.error('[NimbusGantt:demo] Error at step ' + step, err);
             }
-            if (step < 20) {
+            if (step < 35) {
                 setTimeout(runStep, DELAY);
             }
         }
 
-        toast('Presentation Mode', '20 steps over ~80 seconds. Watch 5 different visualizations...', 'info');
+        toast('Full Demo', '35 steps, ~2.5 minutes. 5 visualization modes, sonification, entity cycling, zoom, dark mode, expand/collapse...', 'info');
         setTimeout(runStep, 2000);
     }
 
