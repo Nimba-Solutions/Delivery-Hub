@@ -53,6 +53,16 @@
                     alternative-text="Show Completed" variant={completedVariant}
                     onclick={handleToggleCompleted}
                     class="slds-m-left_xx-small"></lightning-button-icon>
+                <lightning-button-icon icon-name="utility:warning"
+                    alternative-text="Overdue Only" variant={overdueVariant}
+                    onclick={handleToggleOverdue}
+                    class="slds-m-left_xx-small"
+                    title="Show only overdue items"></lightning-button-icon>
+                <lightning-button-icon icon-name="utility:linked"
+                    alternative-text="Dependencies" variant={dependenciesVariant}
+                    onclick={handleToggleDependencies}
+                    class="slds-m-left_xx-small"
+                    title="Toggle dependency arrows"></lightning-button-icon>
                 <lightning-button icon-name="utility:phone_portrait" label="Remote"
                     variant="neutral"
                     onclick={handleConnectPhone}
@@ -185,9 +195,13 @@
                 <div class="slds-modal__content slds-p-around_medium">
                     <div class="slds-text-align_center slds-m-bottom_medium">
                         <p class="slds-text-body_regular">
-                            Open this link on your phone to use it as a remote control
-                            for this Gantt chart. Tilt to scroll, swipe to zoom, tap for today.
+                            Scan the QR code or open the link on your phone to use it as a
+                            remote control. Tilt to scroll, swipe to zoom, tap for today.
                         </p>
+                    </div>
+                    <div class="slds-text-align_center slds-m-bottom_medium">
+                        <canvas lwc:ref="qrCanvas" width="200" height="200"
+                            style="border: 8px solid #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); background: #ffffff;"></canvas>
                     </div>
                     <div class="slds-box slds-m-bottom_medium"
                         style="background: #f8fafc; border-radius: 8px; word-break: break-all;">
@@ -220,7 +234,7 @@
                     </div>
                     <div class="slds-text-align_center">
                         <p class="slds-text-body_small slds-text-color_weak">
-                            Text this link to yourself, open it on your phone, and tap Start.
+                            Scan the QR code with your phone camera, or copy the link.
                         </p>
                     </div>
                 </div>

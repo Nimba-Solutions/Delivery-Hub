@@ -78,7 +78,7 @@
         .gesture-area {
             position: relative;
             margin: 16px;
-            height: calc(100vh - 340px);
+            height: calc(100vh - 420px);
             min-height: 200px;
             background: rgba(30, 41, 59, 0.8);
             border: 2px dashed #334155;
@@ -199,6 +199,24 @@
             font-weight: 700;
             cursor: pointer;
         }
+        .btn-nav {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            flex: 1;
+            max-width: 140px;
+        }
+        .btn-entity {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            flex: 1;
+            max-width: 140px;
+        }
+        .btn-overdue {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            flex: 1;
+            max-width: 140px;
+        }
         .event-count {
             font-size: 11px;
             color: #475569;
@@ -247,6 +265,13 @@
         <button class="btn btn-start" id="btnStart" onclick="startStreaming()">Start</button>
         <button class="btn btn-stop" id="btnStop" onclick="stopStreaming()" style="display:none;">Stop</button>
         <button class="btn btn-today" onclick="sendAction('tap','')">Today</button>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-nav" onclick="sendAction('prev-task','')">Prev Task</button>
+        <button class="btn btn-nav" onclick="sendAction('next-task','')">Next Task</button>
+        <button class="btn btn-entity" onclick="sendAction('next-entity','')">Next Client</button>
+        <button class="btn btn-overdue" onclick="sendAction('toggle-overdue','')">Overdue</button>
     </div>
 
     <div class="event-count" id="eventCount">Events sent: 0</div>
@@ -327,17 +352,12 @@
 
                 /* Only send if tilt exceeds dead zone */
                 if (Math.abs(currentBeta) > DEAD_ZONE || Math.abs(currentGamma) > DEAD_ZONE) {
-                    var scrollX = 0;
-                    var scrollY = 0;
-                    /* Map beta (left/right tilt) to horizontal scroll */
-                    if (Math.abs(currentBeta) > DEAD_ZONE) {
-                        scrollX = Math.round(currentBeta * 2);
-                    }
-                    /* Map gamma (forward/back tilt) to vertical scroll */
-                    if (Math.abs(currentGamma) > DEAD_ZONE) {
-                        scrollY = Math.round(currentGamma * 2);
-                    }
-                    sendAction('scroll', JSON.stringify({x: scrollX, y: scrollY}));
+                    /* Send raw gamma/beta angles for velocity-based scrolling.
+                       The LWC translates tilt angle to scroll velocity. */
+                    sendAction('scroll', JSON.stringify({
+                        gamma: Math.abs(currentGamma) > DEAD_ZONE ? currentGamma : 0,
+                        beta: Math.abs(currentBeta) > DEAD_ZONE ? currentBeta : 0
+                    }));
                 }
             }, true);
         }

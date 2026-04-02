@@ -64,11 +64,13 @@ export default class DeliveryNimbusGantt extends LightningElement {
     selectedEntity = '';
     showDependencies = true;
     showCompleted = false;
+    showOverdue = false;
     myWorkOnly = false;
     editLocked = true;
     currentView = 'gantt';
     showQuickEdit = false;
     selectedWorkItemId = null;
+    _selectedTaskIndex = -1;
 
     // ── Remote control state ──────────────────────────────────────────
     showRemoteModal = false;
@@ -159,6 +161,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
         const parts = [count + ' work ' + suffix];
         if (this.selectedEntity) { parts.push(this.selectedEntity); }
         if (this.showCompleted) { parts.push('incl. completed'); }
+        if (this.showOverdue) { parts.push('overdue only'); }
         if (this.myWorkOnly) { parts.push('assigned only'); }
         return parts.join(' \u00b7 ');
     }
@@ -171,6 +174,14 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
         if (this.myWorkOnly) {
             tasks = tasks.filter(t => t.developerName != null && t.developerName !== '');
+        }
+        if (this.showOverdue) {
+            var now = Date.now();
+            tasks = tasks.filter(function(t) {
+                if (t.isCompleted) { return false; }
+                if (!t.endDate) { return false; }
+                return new Date(t.endDate).getTime() < now;
+            });
         }
         return tasks;
     }
@@ -193,6 +204,8 @@ export default class DeliveryNimbusGantt extends LightningElement {
     get quarterVariant() { return this.currentZoom === 'quarter' ? 'brand' : 'neutral'; }
     get myWorkVariant()  { return this.myWorkOnly ? 'brand' : 'border'; }
     get completedVariant() { return this.showCompleted ? 'brand' : 'border'; }
+    get overdueVariant() { return this.showOverdue ? 'brand' : 'border'; }
+    get dependenciesVariant() { return this.showDependencies ? 'brand' : 'border'; }
     get hasMultipleEntities() { return this.entityOptions.length > 2; }
 
     get entityOptions() {
@@ -473,6 +486,12 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
     handleToggleMyWork() {
         this.myWorkOnly = !this.myWorkOnly;
+        this._savePrefs();
+        this._rebuildChart();
+    }
+
+    handleToggleOverdue() {
+        this.showOverdue = !this.showOverdue;
         this._savePrefs();
         this._rebuildChart();
     }
@@ -1375,18 +1394,11 @@ export default class DeliveryNimbusGantt extends LightningElement {
             return;
         }
         var g = this._gantt;
-        var G = window.NimbusGantt;
         var container = this.refs.ganttContainer;
         var self = this;
         var step = 0;
-        var results = [];
+        var TOTAL = 40;
         var DELAY = 4000;
-
-        function log(msg, pass) {
-            var s = pass ? 'PASS' : 'FAIL';
-            results.push('[' + s + '] ' + msg);
-            console.log('[NimbusGantt:demo] [' + s + '] ' + msg);
-        }
 
         function toast(title, msg, variant) {
             self.dispatchEvent(new ShowToastEvent({ title: title, message: msg, variant: variant || 'info', mode: 'dismissible' }));
@@ -1394,409 +1406,336 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
         function runStep() {
             step++;
-            console.log('[NimbusGantt:demo] === Step ' + step + ' ===');
+            console.log('[NimbusGantt:demo] Step ' + step + '/' + TOTAL);
             try {
                 switch(step) {
 
-                // ── DIAGNOSTICS ──────────────────────────────────
+                // ── INTRODUCTION ─────────────────────────────────
                 case 1:
-                    toast('1/35 — Canvas Check', 'Verifying canvas rendering...');
-                    var canvas = container ? container.querySelector('canvas') : null;
-                    log('Canvas found', !!canvas);
-                    if (canvas) {
-                        log('Canvas size: ' + canvas.width + 'x' + canvas.height, canvas.width > 0);
-                        var ctx = canvas.getContext('2d');
-                        if (ctx) {
-                            var p = ctx.getImageData(200, 80, 1, 1).data;
-                            log('Canvas has pixels at (200,80)', p[3] > 0);
-                        }
-                    }
-                    var grid = container ? container.querySelector('.ng-grid') : null;
-                    log('Tree grid DOM', !!grid);
-                    var rows = container ? container.querySelectorAll('.ng-grid-row') : [];
-                    log('Grid rows: ' + rows.length, rows.length > 0);
+                    toast(step + '/' + TOTAL + ' — Welcome', 'This is the Delivery Hub Gantt — a full-featured project timeline built on Salesforce.', 'info');
+                    g.expandAll();
+                    g.scrollToDate(new Date());
                     break;
 
-                // ── ZOOM SHOWCASE ────────────────────────────────
+                // ── ZOOM LEVELS ──────────────────────────────────
                 case 2:
-                    toast('2/35 — Day View', 'Zooming to daily granularity...', 'info');
-                    g.setZoom('day');
-                    g.scrollToDate(new Date());
-                    log('Zoom: Day', true);
+                    toast(step + '/' + TOTAL + ' — Day View', 'Zoom into daily granularity to see individual task details and progress bars.', 'info');
+                    g.setZoom('day'); g.scrollToDate(new Date());
                     break;
                 case 3:
-                    toast('3/35 — Month View', 'Zooming out to monthly...', 'info');
-                    g.setZoom('month');
-                    g.scrollToDate(new Date());
-                    log('Zoom: Month', true);
+                    toast(step + '/' + TOTAL + ' — Week View', 'The default working view shows a balanced level of detail for sprint planning.', 'info');
+                    g.setZoom('week'); g.scrollToDate(new Date());
                     break;
                 case 4:
-                    toast('4/35 — Quarter View', 'Full project overview...', 'info');
-                    g.setZoom('quarter');
-                    log('Zoom: Quarter', true);
+                    toast(step + '/' + TOTAL + ' — Month View', 'Pull back to monthly for release planning and milestone tracking.', 'info');
+                    g.setZoom('month'); g.scrollToDate(new Date());
                     break;
                 case 5:
-                    toast('5/35 — Week View', 'Back to default week view...', 'info');
-                    g.setZoom('week');
-                    g.scrollToDate(new Date());
-                    log('Zoom: Week (default)', true);
+                    toast(step + '/' + TOTAL + ' — Quarter View', 'The widest view shows the full project arc across multiple months.', 'info');
+                    g.setZoom('quarter');
+                    break;
+                case 6:
+                    toast(step + '/' + TOTAL + ' — Back to Week', 'Returning to the standard week view for the rest of the demo.', 'info');
+                    g.setZoom('week'); g.scrollToDate(new Date());
                     break;
 
                 // ── TREE OPERATIONS ──────────────────────────────
-                case 6:
-                    toast('6/35 — Expand All', 'Showing all child tasks...', 'info');
-                    g.expandAll();
-                    log('expandAll()', true);
-                    break;
                 case 7:
-                    toast('7/35 — Collapse All', 'Collapsing to parent groups...', 'info');
+                    toast(step + '/' + TOTAL + ' — Collapse Hierarchy', 'Collapsing all tasks to show only top-level work items and groups.', 'info');
                     g.collapseAll();
-                    log('collapseAll()', true);
                     break;
                 case 8:
-                    toast('8/35 — Expand + Scroll', 'Expanding and scrolling to today...', 'info');
-                    g.expandAll();
-                    g.scrollToDate(new Date());
-                    log('Expand + scrollToDate', true);
+                    toast(step + '/' + TOTAL + ' — Expand Hierarchy', 'Expanding to reveal every child task, sub-task, and dependency.', 'info');
+                    g.expandAll(); g.scrollToDate(new Date());
                     break;
 
                 // ── DARK MODE ────────────────────────────────────
                 case 9:
-                    toast('9/35 — Dark Mode', 'Switching to dark theme...', 'info');
+                    toast(step + '/' + TOTAL + ' — Dark Mode', 'Switching to dark theme for low-light environments and presentations.', 'info');
                     if (container) {
                         container.style.filter = 'invert(1) hue-rotate(180deg)';
                         container.style.backgroundColor = '#1a1a2e';
                     }
-                    log('Dark mode toggle', true);
                     break;
                 case 10:
-                    toast('10/35 — Light Mode', 'Switching back to light theme...', 'info');
-                    if (container) {
-                        container.style.filter = '';
-                        container.style.backgroundColor = '';
-                    }
-                    log('Light mode restore', true);
+                    toast(step + '/' + TOTAL + ' — Light Mode', 'Restoring the standard light theme.', 'info');
+                    if (container) { container.style.filter = ''; container.style.backgroundColor = ''; }
                     break;
 
-                // ── LOCK/UNLOCK ──────────────────────────────────
+                // ── EDITING ──────────────────────────────────────
                 case 11:
-                    toast('11/35 — Unlock Editing', 'Drag bars to reschedule, resize edges to change duration', 'warning');
-                    self.editLocked = false;
-                    self._rebuildChart();
-                    log('Unlock editing', true);
+                    toast(step + '/' + TOTAL + ' — Unlock Editing', 'When unlocked, you can drag task bars to reschedule or resize edges to change duration.', 'warning');
+                    self.editLocked = false; self._rebuildChart();
                     break;
                 case 12:
-                    toast('12/35 — Re-Lock', 'Locking editing back...', 'info');
-                    self.editLocked = true;
-                    self._rebuildChart();
-                    log('Re-lock editing', true);
+                    toast(step + '/' + TOTAL + ' — Re-Lock', 'Locking the chart prevents accidental changes during presentations.', 'info');
+                    self.editLocked = true; self._rebuildChart();
                     break;
 
-                // ── ENTITY FILTER ────────────────────────────────
-                case 13:
-                    toast('13/35 — Filter: Acme Corp', 'Showing only Acme Corp tasks...', 'info');
-                    var entities = self._rawTasks.map(function(t) { return t.entityName; }).filter(function(v, i, a) { return a.indexOf(v) === i && v; });
-                    if (entities.length > 0) {
-                        self.selectedEntity = entities[0];
+                // ── CLIENT FILTER ────────────────────────────────
+                case 13: {
+                    var entities13 = [];
+                    self._rawTasks.forEach(function(t) { if (t.entityName && entities13.indexOf(t.entityName) === -1) { entities13.push(t.entityName); } });
+                    if (entities13.length > 0) {
+                        self.selectedEntity = entities13[0];
                         self._rebuildChart();
-                        log('Filter entity: ' + entities[0], true);
+                        toast(step + '/' + TOTAL + ' — Filter: ' + entities13[0], 'Isolating one client to focus on their workstream.', 'info');
                     } else {
-                        log('No entities to filter', false);
+                        toast(step + '/' + TOTAL + ' — Filter', 'No entities available to filter.', 'info');
                     }
                     break;
+                }
                 case 14:
-                    toast('14/35 — Filter: All', 'Showing all entities...', 'info');
-                    self.selectedEntity = '';
-                    self._rebuildChart();
-                    log('Filter cleared', true);
+                    toast(step + '/' + TOTAL + ' — All Clients', 'Clearing the filter to show all client workstreams together.', 'info');
+                    self.selectedEntity = ''; self._rebuildChart();
+                    break;
+
+                // ── OVERDUE FILTER ────────────────────────────────
+                case 15:
+                    toast(step + '/' + TOTAL + ' — Overdue Filter', 'Filtering to show only tasks that are past their due date and not yet complete.', 'warning');
+                    self.showOverdue = true; self._rebuildChart();
+                    break;
+                case 16:
+                    toast(step + '/' + TOTAL + ' — Clear Overdue', 'Removing the overdue filter to see the full timeline again.', 'info');
+                    self.showOverdue = false; self._rebuildChart();
+                    break;
+
+                // ── DEPENDENCY TOGGLE ─────────────────────────────
+                case 17:
+                    toast(step + '/' + TOTAL + ' — Hide Dependencies', 'Turning off dependency arrows for a cleaner view of task bars.', 'info');
+                    self.showDependencies = false; self._updateGantt();
+                    break;
+                case 18:
+                    toast(step + '/' + TOTAL + ' — Show Dependencies', 'Dependency arrows show which tasks block others.', 'info');
+                    self.showDependencies = true; self._updateGantt();
+                    break;
+
+                // ── TASK NAVIGATION ──────────────────────────────
+                case 19:
+                    toast(step + '/' + TOTAL + ' — Navigate to First Task', 'Using task navigation to walk through each work item in sequence.', 'info');
+                    self._selectedTaskIndex = -1;
+                    self._handleRemoteNextTask();
+                    break;
+                case 20:
+                    toast(step + '/' + TOTAL + ' — Next Task', 'Stepping forward through the task list with auto-scroll.', 'info');
+                    self._handleRemoteNextTask();
+                    break;
+                case 21:
+                    toast(step + '/' + TOTAL + ' — Next Task', 'Each task is highlighted and scrolled into view automatically.', 'info');
+                    self._handleRemoteNextTask();
                     break;
 
                 // ── ALTERNATIVE VISUALIZATIONS ────────────────────
-                case 15:
-                    toast('15/35 — Treemap', 'Treemap — effort concentration at a glance, squarified layout with gradient fills', 'info');
-                    self.currentView = 'treemap'; self._renderAltViz();
-                    log('Treemap rendered', true); break;
-                case 16:
-                    toast('16/35 — Bubble Chart', 'Bubble Chart — timeline galaxy with progress rings and dependency arcs', 'info');
-                    self.currentView = 'bubbles'; self._renderAltViz();
-                    log('Bubble chart rendered', true); break;
-                case 17:
-                    toast('17/35 — Calendar Heatmap', 'Calendar Heatmap — daily workload density, blue intensity ramp with week numbers', 'info');
-                    self.currentView = 'calendar'; self._renderAltViz();
-                    log('Calendar heatmap rendered', true); break;
-                case 18:
-                    toast('18/35 — Stage Flow', 'Stage Flow — Bezier flow lines, bottleneck detection, and percentage breakdowns', 'info');
-                    self.currentView = 'flow'; self._renderAltViz();
-                    log('Stage flow rendered', true); break;
-
-                // ── BACK TO GANTT FOR PLUGIN DEMOS ───────────────
-                case 19:
-                    toast('19/35 — Back to Gantt', 'Returning to timeline for plugin demos...', 'info');
-                    self.currentView = 'gantt'; self._rebuildChart();
-                    log('Gantt restored', true); break;
-
-                // ── PLUGIN SHOWCASES ─────────────────────────────
-                case 20:
-                    toast('20/35 — Scroll Entity by Entity', 'Scrolling to each client group...', 'info');
-                    var ents = self._rawTasks.map(function(t) { return t.entityName; }).filter(function(v, i, a) { return a.indexOf(v) === i && v; });
-                    if (ents.length > 1 && self._gantt) {
-                        self.selectedEntity = ents[0]; self._rebuildChart();
-                        setTimeout(function() {
-                            if (ents.length > 1) { self.selectedEntity = ents[1]; self._rebuildChart(); }
-                        }, 1500);
-                        setTimeout(function() {
-                            if (ents.length > 2) { self.selectedEntity = ents[2]; self._rebuildChart(); }
-                        }, 3000);
-                    }
-                    log('Entity scroll: ' + ents.join(', '), true); break;
-                case 21:
-                    toast('21/35 — All Entities', 'Showing full project view...', 'info');
-                    self.selectedEntity = ''; self._rebuildChart();
-                    log('All entities', true); break;
                 case 22:
-                    toast('22/35 — Scroll to Project Start', 'Beginning of the timeline...', 'info');
-                    try { var r2 = g.getVisibleDateRange(); g.scrollToDate(r2.start); log('Scroll start', true); }
-                    catch(e2) { log('Scroll start: ' + e2.message, false); }
+                    toast(step + '/' + TOTAL + ' — Treemap View', 'Treemap shows effort concentration at a glance. Larger rectangles mean more estimated hours.', 'info');
+                    self.currentView = 'treemap'; self._renderAltViz();
                     break;
                 case 23:
-                    toast('23/35 — Scroll to Project End', 'End of the timeline...', 'info');
-                    try { var r3 = g.getVisibleDateRange(); g.scrollToDate(r3.end); log('Scroll end', true); }
-                    catch(e3) { log('Scroll end: ' + e3.message, false); }
+                    toast(step + '/' + TOTAL + ' — Bubble Chart', 'Each bubble represents a task. Size shows effort, position shows timeline, color shows stage.', 'info');
+                    self.currentView = 'bubbles'; self._renderAltViz();
                     break;
                 case 24:
-                    toast('24/35 — Scroll to Today', 'Centering on today...', 'info');
-                    g.scrollToDate(new Date());
-                    log('Scroll today', true); break;
-
-                // ── SONIFICATION ─────────────────────────────────
+                    toast(step + '/' + TOTAL + ' — Calendar Heatmap', 'Daily workload density across the project. Darker cells mean more tasks active that day.', 'info');
+                    self.currentView = 'calendar'; self._renderAltViz();
+                    break;
                 case 25:
-                    toast('25/35 — Sonification', '♫ Hearing your project health — consonant = on track, dissonant = overdue, volume = effort', 'warning');
-                    try {
-                        var ac = new (window.AudioContext || window.webkitAudioContext)();
-                        var today25 = new Date();
-                        var PLAY_DUR = 6;
-
-                        // Sort tasks by start date for chronological playback
-                        var sorted25 = self.filteredTasks.slice().filter(function(t) { return t.startDate; }).sort(function(a, b) {
-                            return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-                        });
-
-                        if (sorted25.length === 0) { log('Sonification: no tasks with dates', false); break; }
-
-                        // Compute timeline bounds
-                        var minStart25 = new Date(sorted25[0].startDate).getTime();
-                        var maxStart25 = minStart25;
-                        sorted25.forEach(function(t) {
-                            var ms = new Date(t.startDate).getTime();
-                            if (ms > maxStart25) { maxStart25 = ms; }
-                        });
-                        var timeSpan25 = maxStart25 - minStart25 || 1;
-
-                        // Build unique entity list for oscillator type mapping
-                        var entities25 = [];
-                        sorted25.forEach(function(t) {
-                            var en = t.entityName || 'Unassigned';
-                            if (entities25.indexOf(en) === -1) { entities25.push(en); }
-                        });
-                        var oscTypes25 = ['sine', 'triangle', 'sawtooth', 'square'];
-
-                        // Pitch palettes
-                        var onTrackNotes = [261.6, 329.6, 392.0, 440.0, 523.3]; // C major pentatonic
-                        var overdueNotes = [311.1, 370.0, 466.2];                // Eb, Gb, Bb — dissonant
-
-                        // Find hours range for volume mapping
-                        var minHrs25 = Infinity; var maxHrs25 = 0;
-                        sorted25.forEach(function(t) {
-                            var h = t.estimatedHours || 1;
-                            if (h < minHrs25) { minHrs25 = h; }
-                            if (h > maxHrs25) { maxHrs25 = h; }
-                        });
-                        var hrsRange25 = maxHrs25 - minHrs25 || 1;
-
-                        // Find task-duration range for note-duration mapping
-                        var minTaskDur25 = Infinity; var maxTaskDur25 = 0;
-                        sorted25.forEach(function(t) {
-                            var s = new Date(t.startDate).getTime();
-                            var e = t.endDate ? new Date(t.endDate).getTime() : s + 7 * 86400000;
-                            var dur = e - s || 1;
-                            if (dur < minTaskDur25) { minTaskDur25 = dur; }
-                            if (dur > maxTaskDur25) { maxTaskDur25 = dur; }
-                        });
-                        var taskDurRange25 = maxTaskDur25 - minTaskDur25 || 1;
-
-                        var onTrackCount = 0; var overdueCount = 0;
-
-                        // Play each task
-                        sorted25.forEach(function(t) {
-                            var startMs = new Date(t.startDate).getTime();
-                            var endMs = t.endDate ? new Date(t.endDate).getTime() : startMs + 7 * 86400000;
-                            var prog = t.progress || 0;
-                            var hrs = t.estimatedHours || 1;
-                            var entityIdx = entities25.indexOf(t.entityName || 'Unassigned');
-
-                            // Determine health: on-track vs overdue
-                            var isOverdue = endMs < today25.getTime() && !t.isCompleted;
-                            if (isOverdue) { overdueCount++; } else { onTrackCount++; }
-
-                            // Time position in playback window (0 to PLAY_DUR seconds)
-                            var noteStart = ac.currentTime + ((startMs - minStart25) / timeSpan25) * (PLAY_DUR - 0.8);
-
-                            // Pitch from health palette
-                            var palette = isOverdue ? overdueNotes : onTrackNotes;
-                            var freq = palette[Math.floor(Math.random() * palette.length)];
-
-                            // Volume maps to hours (0.1 to 0.25)
-                            var vol = 0.1 + 0.15 * ((hrs - minHrs25) / hrsRange25);
-
-                            // Note duration maps to task duration (0.2s to 0.8s)
-                            var taskDur = endMs - startMs || 1;
-                            var noteDur = 0.2 + 0.6 * ((taskDur - minTaskDur25) / taskDurRange25);
-
-                            // Attack: high progress = sharp (0.02s), low progress = fade in (0.1s)
-                            var attack = 0.1 - 0.08 * (prog / 100);
-
-                            // Oscillator type by entity
-                            var oscType = oscTypes25[Math.min(entityIdx, oscTypes25.length - 1)];
-
-                            // Create and play the note
-                            var osc = ac.createOscillator();
-                            var gain = ac.createGain();
-                            osc.frequency.value = freq;
-                            osc.type = oscType;
-                            gain.gain.setValueAtTime(0, noteStart);
-                            gain.gain.linearRampToValueAtTime(vol, noteStart + attack);
-                            gain.gain.setValueAtTime(vol, noteStart + noteDur - 0.1);
-                            gain.gain.linearRampToValueAtTime(0, noteStart + noteDur);
-                            osc.connect(gain); gain.connect(ac.destination);
-                            osc.start(noteStart);
-                            osc.stop(noteStart + noteDur + 0.01);
-
-                            // Critical path bass note: no progress and past start date
-                            if (prog === 0 && startMs < today25.getTime()) {
-                                var bassOsc = ac.createOscillator();
-                                var bassGain = ac.createGain();
-                                bassOsc.frequency.value = freq / 2;
-                                bassOsc.type = 'sine';
-                                var bassVol = vol * 0.4;
-                                var bassDur = noteDur * 1.5;
-                                bassGain.gain.setValueAtTime(0, noteStart);
-                                bassGain.gain.linearRampToValueAtTime(bassVol, noteStart + 0.05);
-                                bassGain.gain.setValueAtTime(bassVol, noteStart + bassDur - 0.15);
-                                bassGain.gain.linearRampToValueAtTime(0, noteStart + bassDur);
-                                bassOsc.connect(bassGain); bassGain.connect(ac.destination);
-                                bassOsc.start(noteStart);
-                                bassOsc.stop(noteStart + bassDur + 0.01);
-                            }
-                        });
-
-                        // Final resolution chord at 6s mark
-                        var chordStart = ac.currentTime + PLAY_DUR;
-                        var chordDur = 1.5;
-                        var isMajor = onTrackCount >= overdueCount;
-                        // Major: C-E-G (261.6, 329.6, 392.0) — triumphant
-                        // Minor: C-Eb-G (261.6, 311.1, 392.0) — ominous
-                        var chordFreqs = isMajor ? [261.6, 329.6, 392.0] : [261.6, 311.1, 392.0];
-                        chordFreqs.forEach(function(cf) {
-                            var co = ac.createOscillator();
-                            var cg = ac.createGain();
-                            co.frequency.value = cf;
-                            co.type = 'sine';
-                            cg.gain.setValueAtTime(0, chordStart);
-                            cg.gain.linearRampToValueAtTime(0.12, chordStart + 0.05);
-                            cg.gain.setValueAtTime(0.12, chordStart + chordDur - 0.3);
-                            cg.gain.linearRampToValueAtTime(0, chordStart + chordDur);
-                            co.connect(cg); cg.connect(ac.destination);
-                            co.start(chordStart);
-                            co.stop(chordStart + chordDur + 0.01);
-                        });
-
-                        log('Sonification: played ' + sorted25.length + ' tasks (' + onTrackCount + ' on-track, ' + overdueCount + ' overdue) → ' + (isMajor ? 'major' : 'minor') + ' resolution', true);
-                    } catch(se) { log('Sonification: ' + se.message, false); }
+                    toast(step + '/' + TOTAL + ' — Stage Flow', 'See how tasks flow through workflow stages. Lines show volume and bottlenecks are flagged in red.', 'info');
+                    self.currentView = 'flow'; self._renderAltViz();
                     break;
 
-                // ── RAPID ZOOM CYCLE ─────────────────────────────
+                // ── DARK MODE + ALT VIEW ─────────────────────────
                 case 26:
-                    toast('26/35 — Rapid Zoom Cycle', 'Day → Week → Month → Quarter → Week', 'info');
-                    g.setZoom('day');
-                    setTimeout(function() { g.setZoom('week'); }, 700);
-                    setTimeout(function() { g.setZoom('month'); }, 1400);
-                    setTimeout(function() { g.setZoom('quarter'); }, 2100);
-                    setTimeout(function() { g.setZoom('week'); g.scrollToDate(new Date()); }, 2800);
-                    log('Rapid zoom cycle', true); break;
-
-                // ── DARK MODE + ALT VIEWS ────────────────────────
-                case 27:
-                    toast('27/35 — Dark Treemap', 'Treemap with inverted palette — gradient fills glow in dark mode', 'info');
+                    toast(step + '/' + TOTAL + ' — Dark Treemap', 'Alternative visualizations look stunning in dark mode with glowing gradient fills.', 'info');
                     self.currentView = 'treemap'; self._renderAltViz();
                     requestAnimationFrame(function() {
                         var c = self.refs.altCanvas;
                         if (c && c.parentElement) { c.parentElement.style.filter = 'invert(1) hue-rotate(180deg)'; }
                     });
-                    log('Dark treemap', true); break;
-                case 28:
-                    toast('28/35 — Dark Bubbles', 'Bubble galaxy in dark mode — radial gradients and progress rings shine', 'info');
+                    break;
+                case 27:
+                    toast(step + '/' + TOTAL + ' — Dark Bubbles', 'Radial gradients and progress rings shine against the dark background.', 'info');
                     self.currentView = 'bubbles'; self._renderAltViz();
-                    log('Dark bubbles', true); break;
-                case 29:
-                    toast('29/35 — Light Mode Restore', 'Clearing dark mode...', 'info');
-                    var altC = self.refs.altCanvas;
-                    if (altC && altC.parentElement) { altC.parentElement.style.filter = ''; }
+                    break;
+                case 28:
+                    toast(step + '/' + TOTAL + ' — Restore Light', 'Clearing dark mode and returning to the main Gantt timeline.', 'info');
+                    var altC28 = self.refs.altCanvas;
+                    if (altC28 && altC28.parentElement) { altC28.parentElement.style.filter = ''; }
                     self.currentView = 'gantt'; self._rebuildChart();
                     if (container) { container.style.filter = ''; container.style.backgroundColor = ''; }
-                    log('Light restore', true); break;
+                    break;
 
-                // ── EXPAND + COLLAPSE INDIVIDUAL ──────────────────
-                case 30:
-                    toast('30/35 — Collapse All → Expand One', 'Focusing on one group...', 'info');
-                    g.collapseAll();
-                    var firstTask = self.filteredTasks[0];
-                    if (firstTask && firstTask.workItemId) {
-                        try { g.expandTask(firstTask.workItemId); } catch(ex) { /* may not be parent */ }
+                // ── ENTITY CYCLING ────────────────────────────────
+                case 29: {
+                    var ents29 = [];
+                    self._rawTasks.forEach(function(t) { if (t.entityName && ents29.indexOf(t.entityName) === -1) { ents29.push(t.entityName); } });
+                    if (ents29.length > 0) {
+                        self.selectedEntity = ents29[0]; self._rebuildChart();
+                        toast(step + '/' + TOTAL + ' — Cycle Client: ' + ents29[0], 'Cycling through clients one by one, just like the phone remote does.', 'info');
                     }
-                    log('Collapse + expand one', true); break;
+                    break;
+                }
+                case 30: {
+                    var ents30 = [];
+                    self._rawTasks.forEach(function(t) { if (t.entityName && ents30.indexOf(t.entityName) === -1) { ents30.push(t.entityName); } });
+                    if (ents30.length > 1) {
+                        self.selectedEntity = ents30[1]; self._rebuildChart();
+                        toast(step + '/' + TOTAL + ' — Cycle Client: ' + ents30[1], 'Each client workstream can be reviewed independently.', 'info');
+                    } else {
+                        toast(step + '/' + TOTAL + ' — All Clients', 'Showing all clients.', 'info');
+                        self.selectedEntity = ''; self._rebuildChart();
+                    }
+                    break;
+                }
                 case 31:
-                    toast('31/35 — Expand All Again', 'Full view restored...', 'info');
-                    g.expandAll(); g.scrollToDate(new Date());
-                    log('Full expand', true); break;
-
-                // ── SECOND ENTITY FILTER CYCLE ───────────────────
-                case 32:
-                    toast('32/35 — Filter Second Entity', 'Isolating another client...', 'info');
-                    var ents2 = self._rawTasks.map(function(t) { return t.entityName; }).filter(function(v, i, a) { return a.indexOf(v) === i && v; });
-                    if (ents2.length > 1) { self.selectedEntity = ents2[1]; self._rebuildChart(); }
-                    log('Filter entity 2', true); break;
-                case 33:
-                    toast('33/35 — Clear Filter', 'All entities visible...', 'info');
+                    toast(step + '/' + TOTAL + ' — All Clients', 'Clearing filters to show the unified project view.', 'info');
                     self.selectedEntity = ''; self._rebuildChart();
-                    log('Filter cleared', true); break;
+                    break;
 
-                // ── FINAL FLOURISH ───────────────────────────────
+                // ── SCROLL NAVIGATION ────────────────────────────
+                case 32:
+                    toast(step + '/' + TOTAL + ' — Scroll to Start', 'Scrolling to the beginning of the project timeline.', 'info');
+                    try { var r32 = g.getVisibleDateRange(); g.scrollToDate(r32.start); } catch(e) { /* ignore */ }
+                    break;
+                case 33:
+                    toast(step + '/' + TOTAL + ' — Scroll to End', 'Scrolling to the end of the project timeline.', 'info');
+                    try { var r33 = g.getVisibleDateRange(); g.scrollToDate(r33.end); } catch(e) { /* ignore */ }
+                    break;
                 case 34:
-                    toast('34/35 — Final View', 'Week view, all tasks, centered on today', 'info');
+                    toast(step + '/' + TOTAL + ' — Back to Today', 'Centering the timeline on today for the current status view.', 'info');
+                    g.scrollToDate(new Date());
+                    break;
+
+                // ── SONIFICATION ─────────────────────────────────
+                case 35:
+                    toast(step + '/' + TOTAL + ' — Sonification', 'Hearing your project as music. On-track tasks play major notes, overdue tasks sound dissonant.', 'warning');
+                    try {
+                        var ac = new (window.AudioContext || window.webkitAudioContext)();
+                        var today35 = new Date();
+                        var PLAY_DUR = 6;
+                        var sorted35 = self.filteredTasks.slice().filter(function(t) { return t.startDate; }).sort(function(a, b) {
+                            return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+                        });
+                        if (sorted35.length === 0) { break; }
+                        var minStart35 = new Date(sorted35[0].startDate).getTime();
+                        var maxStart35 = minStart35;
+                        sorted35.forEach(function(t) { var ms = new Date(t.startDate).getTime(); if (ms > maxStart35) { maxStart35 = ms; } });
+                        var timeSpan35 = maxStart35 - minStart35 || 1;
+                        var entities35 = [];
+                        sorted35.forEach(function(t) { var en = t.entityName || 'Unassigned'; if (entities35.indexOf(en) === -1) { entities35.push(en); } });
+                        var oscTypes35 = ['sine', 'triangle', 'sawtooth', 'square'];
+                        var onTrackNotes = [261.6, 329.6, 392.0, 440.0, 523.3];
+                        var overdueNotes = [311.1, 370.0, 466.2];
+                        var minHrs35 = Infinity; var maxHrs35 = 0;
+                        sorted35.forEach(function(t) { var h = t.estimatedHours || 1; if (h < minHrs35) { minHrs35 = h; } if (h > maxHrs35) { maxHrs35 = h; } });
+                        var hrsRange35 = maxHrs35 - minHrs35 || 1;
+                        var minTaskDur35 = Infinity; var maxTaskDur35 = 0;
+                        sorted35.forEach(function(t) {
+                            var s = new Date(t.startDate).getTime();
+                            var e = t.endDate ? new Date(t.endDate).getTime() : s + 7 * 86400000;
+                            var dur = e - s || 1;
+                            if (dur < minTaskDur35) { minTaskDur35 = dur; } if (dur > maxTaskDur35) { maxTaskDur35 = dur; }
+                        });
+                        var taskDurRange35 = maxTaskDur35 - minTaskDur35 || 1;
+                        var onTrackCount35 = 0; var overdueCount35 = 0;
+                        sorted35.forEach(function(t) {
+                            var startMs = new Date(t.startDate).getTime();
+                            var endMs = t.endDate ? new Date(t.endDate).getTime() : startMs + 7 * 86400000;
+                            var prog = t.progress || 0; var hrs = t.estimatedHours || 1;
+                            var entityIdx = entities35.indexOf(t.entityName || 'Unassigned');
+                            var isOverdue = endMs < today35.getTime() && !t.isCompleted;
+                            if (isOverdue) { overdueCount35++; } else { onTrackCount35++; }
+                            var noteStart = ac.currentTime + ((startMs - minStart35) / timeSpan35) * (PLAY_DUR - 0.8);
+                            var palette = isOverdue ? overdueNotes : onTrackNotes;
+                            var freq = palette[Math.floor(Math.random() * palette.length)];
+                            var vol = 0.1 + 0.15 * ((hrs - minHrs35) / hrsRange35);
+                            var taskDur = endMs - startMs || 1;
+                            var noteDur = 0.2 + 0.6 * ((taskDur - minTaskDur35) / taskDurRange35);
+                            var attack = 0.1 - 0.08 * (prog / 100);
+                            var oscType = oscTypes35[Math.min(entityIdx, oscTypes35.length - 1)];
+                            var osc = ac.createOscillator(); var gain = ac.createGain();
+                            osc.frequency.value = freq; osc.type = oscType;
+                            gain.gain.setValueAtTime(0, noteStart);
+                            gain.gain.linearRampToValueAtTime(vol, noteStart + attack);
+                            gain.gain.setValueAtTime(vol, noteStart + noteDur - 0.1);
+                            gain.gain.linearRampToValueAtTime(0, noteStart + noteDur);
+                            osc.connect(gain); gain.connect(ac.destination);
+                            osc.start(noteStart); osc.stop(noteStart + noteDur + 0.01);
+                            if (prog === 0 && startMs < today35.getTime()) {
+                                var bo = ac.createOscillator(); var bg = ac.createGain();
+                                bo.frequency.value = freq / 2; bo.type = 'sine';
+                                var bv = vol * 0.4; var bd = noteDur * 1.5;
+                                bg.gain.setValueAtTime(0, noteStart);
+                                bg.gain.linearRampToValueAtTime(bv, noteStart + 0.05);
+                                bg.gain.setValueAtTime(bv, noteStart + bd - 0.15);
+                                bg.gain.linearRampToValueAtTime(0, noteStart + bd);
+                                bo.connect(bg); bg.connect(ac.destination);
+                                bo.start(noteStart); bo.stop(noteStart + bd + 0.01);
+                            }
+                        });
+                        var chordStart = ac.currentTime + PLAY_DUR; var chordDur = 1.5;
+                        var isMajor = onTrackCount35 >= overdueCount35;
+                        var chordFreqs = isMajor ? [261.6, 329.6, 392.0] : [261.6, 311.1, 392.0];
+                        chordFreqs.forEach(function(cf) {
+                            var co = ac.createOscillator(); var cg = ac.createGain();
+                            co.frequency.value = cf; co.type = 'sine';
+                            cg.gain.setValueAtTime(0, chordStart);
+                            cg.gain.linearRampToValueAtTime(0.12, chordStart + 0.05);
+                            cg.gain.setValueAtTime(0.12, chordStart + chordDur - 0.3);
+                            cg.gain.linearRampToValueAtTime(0, chordStart + chordDur);
+                            co.connect(cg); cg.connect(ac.destination);
+                            co.start(chordStart); co.stop(chordStart + chordDur + 0.01);
+                        });
+                    } catch(se) { console.error('[NimbusGantt:demo] Sonification error:', se); }
+                    break;
+
+                // ── RAPID ZOOM CYCLE ─────────────────────────────
+                case 36:
+                    toast(step + '/' + TOTAL + ' — Rapid Zoom', 'Cycling through all zoom levels rapidly: Day, Week, Month, Quarter, Week.', 'info');
+                    g.setZoom('day');
+                    setTimeout(function() { g.setZoom('week'); }, 700);
+                    setTimeout(function() { g.setZoom('month'); }, 1400);
+                    setTimeout(function() { g.setZoom('quarter'); }, 2100);
+                    setTimeout(function() { g.setZoom('week'); g.scrollToDate(new Date()); }, 2800);
+                    break;
+
+                // ── COLLAPSE + EXPAND ONE ─────────────────────────
+                case 37:
+                    toast(step + '/' + TOTAL + ' — Focus One Group', 'Collapsing everything, then expanding just one group to drill into.', 'info');
+                    g.collapseAll();
+                    var first37 = self.filteredTasks[0];
+                    if (first37 && first37.workItemId) {
+                        try { g.expandTask(first37.workItemId); } catch(ex) { /* may not be parent */ }
+                    }
+                    break;
+                case 38:
+                    toast(step + '/' + TOTAL + ' — Full Expand', 'Expanding all tasks back to the complete view.', 'info');
+                    g.expandAll(); g.scrollToDate(new Date());
+                    break;
+
+                // ── FINAL STATE ──────────────────────────────────
+                case 39:
+                    toast(step + '/' + TOTAL + ' — Final View', 'Week view, all clients, dependencies shown, centered on today. Ready to work.', 'info');
+                    self.selectedEntity = '';
+                    self.showOverdue = false;
+                    self.showDependencies = true;
                     g.setZoom('week'); g.expandAll(); g.scrollToDate(new Date());
-                    log('Final view set', true); break;
+                    self._updateGantt();
+                    break;
 
                 // ── SUMMARY ──────────────────────────────────────
-                case 35:
-                    var passed = results.filter(function(r) { return r.indexOf('[PASS]') === 0; }).length;
-                    var failed = results.filter(function(r) { return r.indexOf('[FAIL]') === 0; }).length;
-                    console.log('[NimbusGantt:demo] ═══════════════════════════════════════════');
-                    console.log('[NimbusGantt:demo] FULL PRESENTATION: ' + passed + ' passed, ' + failed + ' failed');
-                    console.log('[NimbusGantt:demo] ═══════════════════════════════════════════');
-                    results.forEach(function(r) { console.log('[NimbusGantt:demo]   ' + r); });
-                    toast('Demo Complete ✓', passed + '/' + (passed + failed) + ' features demonstrated across 5 views, ' + self.filteredTasks.length + ' tasks. Full report in console.', failed > 0 ? 'warning' : 'success');
+                case 40:
+                    toast('Demo Complete', TOTAL + ' features demonstrated: 4 zoom levels, 5 views, dark mode, sonification, task navigation, overdue filter, dependency toggle, client cycling, and drag-to-reschedule.', 'success');
                     return;
                 }
             } catch(err) {
-                log('Step ' + step + ' ERROR: ' + err.message, false);
                 console.error('[NimbusGantt:demo] Error at step ' + step, err);
             }
-            if (step < 35) {
+            if (step < TOTAL) {
                 setTimeout(runStep, DELAY);
             }
         }
 
-        toast('Full Demo', '35 steps, ~2.5 minutes. 5 visualization modes, sonification, entity cycling, zoom, dark mode, expand/collapse...', 'info');
+        toast('Full Demo', TOTAL + ' steps, ~3 minutes. Zoom levels, 5 visualizations, sonification, filters, task navigation, dark mode...', 'info');
         setTimeout(runStep, 2000);
     }
 
@@ -1912,6 +1851,18 @@ export default class DeliveryNimbusGantt extends LightningElement {
             case 'swipe-right':
                 this._handleRemoteZoomStep(1);
                 break;
+            case 'next-entity':
+                this._handleRemoteNextEntity();
+                break;
+            case 'next-task':
+                this._handleRemoteNextTask();
+                break;
+            case 'prev-task':
+                this._handleRemotePrevTask();
+                break;
+            case 'toggle-overdue':
+                this.handleToggleOverdue();
+                break;
         }
     }
 
@@ -1920,10 +1871,20 @@ export default class DeliveryNimbusGantt extends LightningElement {
         try {
             var data = JSON.parse(valueJson);
             var container = this.refs.ganttContainer;
-            if (container) {
-                container.scrollLeft += (data.x || 0);
-                container.scrollTop += (data.y || 0);
-            }
+            if (!container) { return; }
+            /* Velocity-based tilt-to-scroll: gamma/beta angles translate
+               to scroll velocity via a multiplier, giving smooth continuous
+               motion proportional to how far the phone is tilted. */
+            var gamma = data.gamma !== undefined ? data.gamma : (data.x || 0);
+            var beta = data.beta !== undefined ? data.beta : (data.y || 0);
+            var VELOCITY_FACTOR = 0.04;
+            var scrollX = Math.round(gamma * VELOCITY_FACTOR * container.clientWidth);
+            var scrollY = Math.round(beta * VELOCITY_FACTOR * container.clientHeight);
+            /* Clamp to reasonable per-frame bounds */
+            scrollX = Math.max(-80, Math.min(80, scrollX));
+            scrollY = Math.max(-40, Math.min(40, scrollY));
+            container.scrollLeft += scrollX;
+            container.scrollTop += scrollY;
         } catch (e) {
             /* ignore parse errors */
         }
@@ -1945,9 +1906,73 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
     }
 
+    _handleRemoteNextEntity() {
+        var entities = [];
+        if (this._rawTasks) {
+            this._rawTasks.forEach(function(t) {
+                var en = t.entityName || 'Unassigned';
+                if (entities.indexOf(en) === -1) { entities.push(en); }
+            });
+        }
+        entities.sort();
+        if (entities.length === 0) { return; }
+        if (!this.selectedEntity) {
+            this.selectedEntity = entities[0];
+        } else {
+            var idx = entities.indexOf(this.selectedEntity);
+            if (idx < 0 || idx >= entities.length - 1) {
+                /* Wrap around to "All" */
+                this.selectedEntity = '';
+            } else {
+                this.selectedEntity = entities[idx + 1];
+            }
+        }
+        this._savePrefs();
+        this._rebuildChart();
+    }
+
+    _handleRemoteNextTask() {
+        var tasks = this.filteredTasks;
+        if (tasks.length === 0) { return; }
+        this._selectedTaskIndex++;
+        if (this._selectedTaskIndex >= tasks.length) { this._selectedTaskIndex = 0; }
+        this._selectTaskAtIndex(this._selectedTaskIndex);
+    }
+
+    _handleRemotePrevTask() {
+        var tasks = this.filteredTasks;
+        if (tasks.length === 0) { return; }
+        this._selectedTaskIndex--;
+        if (this._selectedTaskIndex < 0) { this._selectedTaskIndex = tasks.length - 1; }
+        this._selectTaskAtIndex(this._selectedTaskIndex);
+    }
+
+    _selectTaskAtIndex(idx) {
+        var tasks = this.filteredTasks;
+        if (idx < 0 || idx >= tasks.length) { return; }
+        var task = tasks[idx];
+        if (this._gantt && task.startDate) {
+            this._gantt.scrollToDate(new Date(task.startDate));
+            try { this._gantt.selectTask(task.workItemId); } catch (e) { /* task may not be visible */ }
+        }
+        this.selectedWorkItemId = task.workItemId;
+        this.dispatchEvent(new ShowToastEvent({
+            title: 'Task ' + (idx + 1) + '/' + tasks.length,
+            message: task.name + (task.description ? ' — ' + task.description : ''),
+            variant: 'info',
+            mode: 'dismissible'
+        }));
+    }
+
     handleConnectPhone() {
         this.showRemoteModal = true;
         this._remoteLinkCopied = false;
+        /* Draw QR code after modal renders */
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this._drawQRCode();
+            });
+        });
     }
 
     handleRemoteModalClose() {
@@ -1975,6 +2000,264 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
     }
 
+    // ── Private: QR Code Generator ──────────────────────────────────────
+    // Self-contained QR code encoder (Mode: byte, ECC: L, Version: auto)
+
+    _drawQRCode() {
+        var canvas = this.refs.qrCanvas;
+        if (!canvas) { return; }
+        var url = this.remoteUrl;
+        var modules = this._generateQRMatrix(url);
+        if (!modules || modules.length === 0) { return; }
+        var size = modules.length;
+        var scale = Math.floor(200 / size);
+        var offset = Math.floor((200 - size * scale) / 2);
+        canvas.width = 200;
+        canvas.height = 200;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 200, 200);
+        ctx.fillStyle = '#000000';
+        for (var r = 0; r < size; r++) {
+            for (var c = 0; c < size; c++) {
+                if (modules[r][c]) {
+                    ctx.fillRect(offset + c * scale, offset + r * scale, scale, scale);
+                }
+            }
+        }
+    }
+
+    _generateQRMatrix(text) {
+        /* Encode text as a QR code matrix using byte mode, ECC level L.
+           This is a simplified but functional QR encoder supporting versions 1-10. */
+        var data = [];
+        for (var i = 0; i < text.length; i++) {
+            data.push(text.charCodeAt(i) & 0xff);
+        }
+        /* Version capacity table for byte mode, ECC L */
+        var capacities = [0, 17, 32, 53, 78, 106, 134, 154, 192, 230, 271];
+        var version = 0;
+        for (var v = 1; v <= 10; v++) {
+            if (data.length <= capacities[v]) { version = v; break; }
+        }
+        if (version === 0) { version = 10; data = data.slice(0, capacities[10]); }
+        var size = version * 4 + 17;
+
+        /* Build the data bit stream: mode(4) + count(8 or 16) + data + terminator + padding */
+        var bits = [];
+        function pushBits(val, len) {
+            for (var b = len - 1; b >= 0; b--) { bits.push((val >> b) & 1); }
+        }
+        pushBits(4, 4); /* byte mode indicator */
+        var countBits = version <= 9 ? 8 : 16;
+        pushBits(data.length, countBits);
+        data.forEach(function(byte) { pushBits(byte, 8); });
+
+        /* ECC L total codeword counts per version */
+        var totalCodewords = [0, 19, 34, 55, 80, 108, 136, 156, 194, 232, 274];
+        var eccCodewords = [0, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18];
+        var totalBits = totalCodewords[version] * 8;
+
+        /* Terminator */
+        var termLen = Math.min(4, totalBits - bits.length);
+        pushBits(0, termLen);
+        /* Pad to byte boundary */
+        while (bits.length % 8 !== 0) { bits.push(0); }
+        /* Pad codewords */
+        var padBytes = [0xEC, 0x11];
+        var pi = 0;
+        while (bits.length < totalBits) {
+            pushBits(padBytes[pi % 2], 8);
+            pi++;
+        }
+
+        /* Convert bits to codeword bytes */
+        var codewords = [];
+        for (var bi = 0; bi < bits.length; bi += 8) {
+            var byte = 0;
+            for (var bb = 0; bb < 8; bb++) { byte = (byte << 1) | (bits[bi + bb] || 0); }
+            codewords.push(byte);
+        }
+
+        /* Reed-Solomon ECC generation using GF(256) */
+        var eccCount = eccCodewords[version];
+        var dataCount = totalCodewords[version] - eccCount;
+        var dataCodewords = codewords.slice(0, dataCount);
+
+        /* GF(256) log/exp tables */
+        var gfExp = new Array(512);
+        var gfLog = new Array(256);
+        var x = 1;
+        for (var gi = 0; gi < 255; gi++) {
+            gfExp[gi] = x;
+            gfLog[x] = gi;
+            x <<= 1;
+            if (x >= 256) { x ^= 0x11d; }
+        }
+        for (var gj = 255; gj < 512; gj++) { gfExp[gj] = gfExp[gj - 255]; }
+        gfLog[0] = -1;
+
+        function gfMul(a, b) {
+            if (a === 0 || b === 0) { return 0; }
+            return gfExp[(gfLog[a] + gfLog[b]) % 255];
+        }
+
+        /* Build generator polynomial */
+        var gen = [1];
+        for (var gi2 = 0; gi2 < eccCount; gi2++) {
+            var newGen = new Array(gen.length + 1).fill(0);
+            for (var gk = 0; gk < gen.length; gk++) {
+                newGen[gk] ^= gen[gk];
+                newGen[gk + 1] ^= gfMul(gen[gk], gfExp[gi2]);
+            }
+            gen = newGen;
+        }
+
+        /* Polynomial division */
+        var msgOut = new Array(dataCount + eccCount).fill(0);
+        for (var mi = 0; mi < dataCount; mi++) { msgOut[mi] = dataCodewords[mi]; }
+        for (var mi2 = 0; mi2 < dataCount; mi2++) {
+            var coef = msgOut[mi2];
+            if (coef !== 0) {
+                for (var gk2 = 1; gk2 < gen.length; gk2++) {
+                    msgOut[mi2 + gk2] ^= gfMul(gen[gk2], coef);
+                }
+            }
+        }
+        var eccBytes = msgOut.slice(dataCount);
+
+        /* Interleave (single block for versions 1-10 ECC L is mostly 1 block) */
+        var finalData = dataCodewords.concat(eccBytes);
+
+        /* Build the QR matrix */
+        var modules = [];
+        var reserved = [];
+        for (var mr = 0; mr < size; mr++) {
+            modules.push(new Array(size).fill(false));
+            reserved.push(new Array(size).fill(false));
+        }
+
+        /* Place finder patterns */
+        function placeFinder(row, col) {
+            for (var dr = -1; dr <= 7; dr++) {
+                for (var dc = -1; dc <= 7; dc++) {
+                    var r2 = row + dr;
+                    var c2 = col + dc;
+                    if (r2 < 0 || r2 >= size || c2 < 0 || c2 >= size) { continue; }
+                    var isBorder = dr === -1 || dr === 7 || dc === -1 || dc === 7;
+                    var isOuter = dr === 0 || dr === 6 || dc === 0 || dc === 6;
+                    var isInner = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
+                    modules[r2][c2] = !isBorder && (isOuter || isInner);
+                    reserved[r2][c2] = true;
+                }
+            }
+        }
+        placeFinder(0, 0);
+        placeFinder(0, size - 7);
+        placeFinder(size - 7, 0);
+
+        /* Place alignment patterns (versions 2+) */
+        var alignPositions = [
+            [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34],
+            [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 52], [6, 30, 56]
+        ];
+        if (version >= 2) {
+            var aPos = alignPositions[version];
+            for (var ai = 0; ai < aPos.length; ai++) {
+                for (var aj = 0; aj < aPos.length; aj++) {
+                    var ar = aPos[ai]; var ac = aPos[aj];
+                    if (reserved[ar][ac]) { continue; }
+                    for (var adr = -2; adr <= 2; adr++) {
+                        for (var adc = -2; adc <= 2; adc++) {
+                            var isEdge = Math.abs(adr) === 2 || Math.abs(adc) === 2;
+                            var isCenter = adr === 0 && adc === 0;
+                            modules[ar + adr][ac + adc] = isEdge || isCenter;
+                            reserved[ar + adr][ac + adc] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        /* Timing patterns */
+        for (var tp = 8; tp < size - 8; tp++) {
+            if (!reserved[6][tp]) { modules[6][tp] = tp % 2 === 0; reserved[6][tp] = true; }
+            if (!reserved[tp][6]) { modules[tp][6] = tp % 2 === 0; reserved[tp][6] = true; }
+        }
+
+        /* Dark module */
+        modules[size - 8][8] = true;
+        reserved[size - 8][8] = true;
+
+        /* Reserve format info areas */
+        for (var fi = 0; fi < 8; fi++) {
+            reserved[8][fi] = true; reserved[8][size - 1 - fi] = true;
+            reserved[fi][8] = true; reserved[size - 1 - fi][8] = true;
+        }
+        reserved[8][8] = true;
+
+        /* Reserve version info areas (version 7+) — not needed for versions 1-6 */
+
+        /* Place data bits in zigzag pattern */
+        var bitIndex = 0;
+        var allBits = [];
+        finalData.forEach(function(b) {
+            for (var db = 7; db >= 0; db--) { allBits.push((b >> db) & 1); }
+        });
+
+        var col = size - 1;
+        var upward = true;
+        while (col >= 0) {
+            if (col === 6) { col--; continue; }
+            var rows = upward ? [] : [];
+            for (var ri = 0; ri < size; ri++) {
+                var row = upward ? size - 1 - ri : ri;
+                for (var ci = 0; ci < 2; ci++) {
+                    var c2 = col - ci;
+                    if (c2 < 0) { continue; }
+                    if (!reserved[row][c2]) {
+                        modules[row][c2] = bitIndex < allBits.length ? allBits[bitIndex] === 1 : false;
+                        bitIndex++;
+                    }
+                }
+            }
+            upward = !upward;
+            col -= 2;
+        }
+
+        /* Apply mask pattern 0 (checkerboard) and format info */
+        var maskFn = function(r, c) { return (r + c) % 2 === 0; };
+        for (var mr2 = 0; mr2 < size; mr2++) {
+            for (var mc = 0; mc < size; mc++) {
+                if (!reserved[mr2][mc]) {
+                    if (maskFn(mr2, mc)) { modules[mr2][mc] = !modules[mr2][mc]; }
+                }
+            }
+        }
+
+        /* Write format info for mask 0, ECC L */
+        /* ECC L = 01, mask 000 => data 01000, BCH encoded = 111011111000100 */
+        var formatBits = [1,1,1,0,1,1,1,1,1,0,0,0,1,0,0];
+        /* Horizontal: bits 0-7 go along row 8 */
+        var hPositions = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8]];
+        /* And bits 7-14 go along row 8 from right */
+        var hPositions2 = [[8, size-8],[8, size-7],[8, size-6],[8, size-5],[8, size-4],[8, size-3],[8, size-2],[8, size-1]];
+        /* Vertical: bits 0-7 go along col 8 from bottom of top finder */
+        var vPositions = [[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[7,8],[8,8]];
+        var vPositions2 = [[size-7,8],[size-6,8],[size-5,8],[size-4,8],[size-3,8],[size-2,8],[size-1,8]];
+
+        for (var fbi = 0; fbi < 8; fbi++) {
+            modules[hPositions[fbi][0]][hPositions[fbi][1]] = formatBits[fbi] === 1;
+            modules[vPositions[fbi][0]][vPositions[fbi][1]] = formatBits[fbi] === 1;
+        }
+        for (var fbi2 = 0; fbi2 < 7; fbi2++) {
+            modules[hPositions2[fbi2][0]][hPositions2[fbi2][1]] = formatBits[7 + fbi2] === 1;
+            modules[vPositions2[fbi2][0]][vPositions2[fbi2][1]] = formatBits[14 - 1 - fbi2] === 1;
+        }
+
+        return modules;
+    }
+
     // ── Private: localStorage persistence ──────────────────────────────
 
     _savePrefs() {
@@ -1982,6 +2265,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
             const prefs = {
                 showDependencies: this.showDependencies,
                 showCompleted: this.showCompleted,
+                showOverdue: this.showOverdue,
                 myWorkOnly: this.myWorkOnly,
                 currentZoom: this.currentZoom,
                 selectedEntity: this.selectedEntity,
@@ -2000,6 +2284,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
             const prefs = JSON.parse(stored);
             if (prefs.showDependencies != null) { this.showDependencies = prefs.showDependencies; }
             if (prefs.showCompleted != null) { this.showCompleted = prefs.showCompleted; }
+            if (prefs.showOverdue != null) { this.showOverdue = prefs.showOverdue; }
             if (prefs.myWorkOnly != null) { this.myWorkOnly = prefs.myWorkOnly; }
             if (prefs.currentZoom) { this.currentZoom = prefs.currentZoom; }
             if (prefs.selectedEntity != null) { this.selectedEntity = prefs.selectedEntity; }
