@@ -107,8 +107,8 @@ public with sharing class DeliveryExternalNotificationService {
         try {
             Messaging.sendEmail(emails);
         } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryExternalNotificationService] send failed: ' + e.getMessage());
+            // Silent failure — email dispatch is non-critical
+            String ignored = e.getMessage();
         }
     }
 
