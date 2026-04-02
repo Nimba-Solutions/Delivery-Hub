@@ -11,6 +11,7 @@ import { LightningElement, wire, api } from 'lwc';
 import { loadScript } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
+import { subscribe, unsubscribe, onError } from 'lightning/empApi';
 import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
 import getGanttData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttData';
 import getGanttDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttDependencies';
@@ -45,6 +46,12 @@ const ZOOM_REVERSE = {
     quarter: 'Quarter'
 };
 
+// Ordered zoom levels for swipe zoom in/out
+const ZOOM_LEVELS = ['day', 'week', 'month', 'quarter'];
+
+// Platform Event channel for phone remote control
+const REMOTE_EVENT_CHANNEL = '/event/%%%NAMESPACE_PREFIX%%%GanttRemoteEvent__e';
+
 export default class DeliveryNimbusGantt extends LightningElement {
 
     // ── Public API ─────────────────────────────────────────────────────
@@ -63,6 +70,12 @@ export default class DeliveryNimbusGantt extends LightningElement {
     showQuickEdit = false;
     selectedWorkItemId = null;
 
+    // ── Remote control state ──────────────────────────────────────────
+    showRemoteModal = false;
+    _remoteSessionId = '';
+    _remoteSubscription = null;
+    _remoteLinkCopied = false;
+
     _gantt = null;
     _scriptLoaded = false;
     _scriptLoading = false;
@@ -77,6 +90,8 @@ export default class DeliveryNimbusGantt extends LightningElement {
     connectedCallback() {
         this._restorePrefs();
         this.currentZoom = this.currentZoom || ZOOM_MAP[this.initialViewMode] || 'week';
+        this._generateRemoteSessionId();
+        this._subscribeRemoteEvents();
     }
 
     renderedCallback() {
@@ -96,6 +111,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
             this._gantt = null;
         }
         this._ganttInitialized = false;
+        this._unsubscribeRemoteEvents();
     }
 
     // ── Wired Data ─────────────────────────────────────────────────────
@@ -509,52 +525,209 @@ export default class DeliveryNimbusGantt extends LightningElement {
         if (total === 0) { total = 1; }
 
         var sorted = tasks.slice().sort(function(a, b) { return (b.estimatedHours || 1) - (a.estimatedHours || 1); });
-        var rects = [];
-        var x = 10; var y = 50; var areaW = w - 20; var areaH = h - 60;
-        var remaining = sorted.slice();
-        var rx = x; var ry = y; var rw = areaW; var rh = areaH;
 
-        // Simple slice-and-dice treemap
-        var horizontal = true;
-        remaining.forEach(function(t, i) {
-            var fraction = (t.estimatedHours || 1) / total;
-            var rect;
-            if (horizontal) {
-                var bw = Math.max(rw * fraction * (remaining.length / (remaining.length - i)), 30);
-                if (bw > rw) { bw = rw; }
-                rect = { x: rx, y: ry, w: bw - 2, h: rh - 2, task: t };
-                rx += bw;
-                rw -= bw;
-            } else {
-                var bh = Math.max(rh * fraction * (remaining.length / (remaining.length - i)), 20);
-                if (bh > rh) { bh = rh; }
-                rect = { x: rx, y: ry, w: rw - 2, h: bh - 2, task: t };
-                ry += bh;
-                rh -= bh;
+        // --- Squarified treemap layout ---
+        function worstRatio(row, sideLen) {
+            var s = 0;
+            row.forEach(function(v) { s += v; });
+            if (s === 0 || sideLen === 0) { return Infinity; }
+            var s2 = s * s;
+            var maxV = -Infinity; var minV = Infinity;
+            row.forEach(function(v) { if (v > maxV) { maxV = v; } if (v < minV) { minV = v; } });
+            var r1 = (sideLen * sideLen * maxV) / s2;
+            var r2 = s2 / (sideLen * sideLen * minV);
+            return Math.max(r1, r2);
+        }
+
+        function squarify(items, rect) {
+            if (items.length === 0) { return []; }
+            if (items.length === 1) {
+                return [{ x: rect.x, y: rect.y, w: rect.w, h: rect.h, task: items[0].task }];
             }
-            if (i % 3 === 2) { horizontal = !horizontal; }
-            rects.push(rect);
+            var totalArea = 0;
+            items.forEach(function(it) { totalArea += it.area; });
+            if (totalArea === 0) { totalArea = 1; }
+
+            var results = [];
+            var remaining = items.slice();
+            var cx = rect.x; var cy = rect.y; var cw = rect.w; var ch = rect.h;
+
+            while (remaining.length > 0) {
+                var isHorizontal = cw >= ch;
+                var sideLen = isHorizontal ? ch : cw;
+                var row = [];
+                var rowAreas = [];
+                var remTotal = 0;
+                remaining.forEach(function(it) { remTotal += it.area; });
+                var scaleFactor = (cw * ch) / (remTotal || 1);
+
+                row.push(remaining[0]);
+                rowAreas.push(remaining[0].area * scaleFactor);
+                var best = worstRatio(rowAreas, sideLen);
+                var idx = 1;
+
+                while (idx < remaining.length) {
+                    var testAreas = rowAreas.slice();
+                    testAreas.push(remaining[idx].area * scaleFactor);
+                    var testRatio = worstRatio(testAreas, sideLen);
+                    if (testRatio <= best) {
+                        row.push(remaining[idx]);
+                        rowAreas.push(remaining[idx].area * scaleFactor);
+                        best = testRatio;
+                        idx++;
+                    } else {
+                        break;
+                    }
+                }
+
+                remaining = remaining.slice(idx);
+                var rowTotal = 0;
+                rowAreas.forEach(function(a) { rowTotal += a; });
+
+                if (isHorizontal) {
+                    var rowW = rowTotal / (sideLen || 1);
+                    var oy = cy;
+                    row.forEach(function(item, ri) {
+                        var itemH = rowAreas[ri] / (rowW || 1);
+                        results.push({ x: cx, y: oy, w: rowW - 2, h: itemH - 2, task: item.task });
+                        oy += itemH;
+                    });
+                    cx += rowW;
+                    cw -= rowW;
+                } else {
+                    var rowH = rowTotal / (sideLen || 1);
+                    var ox = cx;
+                    row.forEach(function(item, ri) {
+                        var itemW = rowAreas[ri] / (rowH || 1);
+                        results.push({ x: ox, y: cy, w: itemW - 2, h: rowH - 2, task: item.task });
+                        ox += itemW;
+                    });
+                    cy += rowH;
+                    ch -= rowH;
+                }
+            }
+            return results;
+        }
+
+        var legendH = 40;
+        var areaRect = { x: 10, y: 50, w: w - 20, h: h - 60 - legendH };
+        var items = sorted.map(function(t) { return { task: t, area: t.estimatedHours || 1 }; });
+        var rects = squarify(items, areaRect);
+
+        // Find largest rect for glow highlight
+        var largestIdx = 0; var largestArea = 0;
+        rects.forEach(function(r, i) {
+            var a = r.w * r.h;
+            if (a > largestArea) { largestArea = a; largestIdx = i; }
         });
 
-        rects.forEach(function(r) {
-            var color = colors[r.task.stage] || '#94a3b8';
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.roundRect(r.x, r.y, Math.max(r.w, 4), Math.max(r.h, 4), 4);
-            ctx.fill();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1;
-            ctx.stroke();
+        var today = new Date();
 
-            if (r.w > 60 && r.h > 25) {
+        rects.forEach(function(r, i) {
+            var color = colors[r.task.stage] || '#94a3b8';
+            var rw = Math.max(r.w, 4); var rh = Math.max(r.h, 4);
+
+            // Gradient fill (top lighter, bottom darker)
+            var grad = ctx.createLinearGradient(r.x, r.y, r.x, r.y + rh);
+            grad.addColorStop(0, color);
+            grad.addColorStop(1, color + 'b0');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(r.x, r.y, rw, rh, 6);
+            ctx.fill();
+
+            // Overdue red tint overlay
+            var endMs = r.task.endDate ? new Date(r.task.endDate).getTime() : 0;
+            if (endMs > 0 && endMs < today.getTime() && !r.task.isCompleted) {
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.18)';
+                ctx.beginPath();
+                ctx.roundRect(r.x, r.y, rw, rh, 6);
+                ctx.fill();
+            }
+
+            // Inner shadow: darker border on bottom-right
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(r.x, r.y, rw, rh, 6);
+            ctx.clip();
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(r.x + rw, r.y + 4);
+            ctx.lineTo(r.x + rw, r.y + rh);
+            ctx.lineTo(r.x + 4, r.y + rh);
+            ctx.stroke();
+            // Top-left highlight
+            ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(r.x, r.y + rh - 4);
+            ctx.lineTo(r.x, r.y);
+            ctx.lineTo(r.x + rw - 4, r.y);
+            ctx.stroke();
+            ctx.restore();
+
+            // Glow on largest rect
+            if (i === largestIdx) {
+                ctx.save();
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 12;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(r.x, r.y, rw, rh, 6);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Text layout
+            if (rw > 60 && rh > 30) {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 11px -apple-system, sans-serif';
-                var label = r.task.name + ' — ' + (r.task.description || '');
-                if (label.length > Math.floor(r.w / 6)) { label = label.substring(0, Math.floor(r.w / 6)) + '…'; }
-                ctx.fillText(label, r.x + 6, r.y + 16);
+                var label = r.task.name + (r.task.description ? ' \u2014 ' + r.task.description : '');
+                var maxChars = Math.floor(rw / 7);
+                if (label.length > maxChars) { label = label.substring(0, maxChars) + '\u2026'; }
+                ctx.fillText(label, r.x + 8, r.y + 18);
+
+                // Line 2: hours + stage badge
+                var hours = (r.task.estimatedHours || 0) + 'h';
+                var stage = r.task.stage || '';
                 ctx.font = '10px -apple-system, sans-serif';
-                ctx.fillText((r.task.estimatedHours || 0) + 'h · ' + (r.task.stage || ''), r.x + 6, r.y + 30);
+                ctx.fillText(hours, r.x + 8, r.y + 32);
+
+                if (stage && rw > 100) {
+                    var badgeX = r.x + 8 + ctx.measureText(hours + '  ').width;
+                    var badgeW = ctx.measureText(stage).width + 10;
+                    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                    ctx.beginPath();
+                    ctx.roundRect(badgeX, r.y + 23, badgeW, 14, 3);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '9px -apple-system, sans-serif';
+                    ctx.fillText(stage, badgeX + 5, r.y + 33);
+                }
             }
+        });
+
+        // Legend bar at bottom
+        var ly = h - legendH + 5;
+        var lx = 10;
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.fillText('Stages:', lx, ly + 12);
+        lx += 52;
+        var stagesSeen = {};
+        tasks.forEach(function(t) { if (t.stage) { stagesSeen[t.stage] = true; } });
+        Object.keys(stagesSeen).forEach(function(s) {
+            var c = colors[s] || '#94a3b8';
+            ctx.fillStyle = c;
+            ctx.beginPath();
+            ctx.roundRect(lx, ly, 12, 12, 2);
+            ctx.fill();
+            ctx.fillStyle = '#374151';
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.fillText(s, lx + 16, ly + 10);
+            lx += ctx.measureText(s).width + 30;
         });
     }
 
@@ -563,7 +736,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
         ctx.fillRect(0, 0, w, h);
         ctx.fillStyle = '#111827';
         ctx.font = 'bold 16px -apple-system, sans-serif';
-        ctx.fillText('Bubble Chart — Size = Hours, X = Timeline, Y = Entity, Color = Stage', 20, 30);
+        ctx.fillText('Bubble Chart \u2014 Size = Hours, X = Timeline, Y = Entity, Color = Stage', 20, 30);
 
         var today = new Date();
         var entities = [];
@@ -572,24 +745,9 @@ export default class DeliveryNimbusGantt extends LightningElement {
             if (entities.indexOf(en) === -1) { entities.push(en); }
         });
 
-        // Axes
-        var padL = 140; var padR = 30; var padT = 60; var padB = 40;
+        var padL = 140; var padR = 40; var padT = 60; var padB = 50;
         var plotW = w - padL - padR;
         var plotH = h - padT - padB;
-
-        // Y axis labels
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '12px -apple-system, sans-serif';
-        entities.forEach(function(e, i) {
-            var y = padT + (i + 0.5) * (plotH / entities.length);
-            ctx.fillText(e, 10, y + 4);
-            ctx.strokeStyle = '#e5e7eb';
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(padL, y);
-            ctx.lineTo(w - padR, y);
-            ctx.stroke();
-        });
 
         // Find date range
         var minDate = Infinity; var maxDate = -Infinity;
@@ -599,6 +757,71 @@ export default class DeliveryNimbusGantt extends LightningElement {
         });
         if (minDate === Infinity) { minDate = today.getTime() - 30 * 86400000; maxDate = today.getTime() + 30 * 86400000; }
         var dateSpan = maxDate - minDate || 1;
+
+        // Dashed gridlines (vertical, time-based)
+        var numVLines = Math.min(Math.floor(plotW / 80), 10);
+        ctx.setLineDash([3, 4]);
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 0.5;
+        for (var vi = 0; vi <= numVLines; vi++) {
+            var gx = padL + (vi / numVLines) * plotW;
+            ctx.beginPath();
+            ctx.moveTo(gx, padT);
+            ctx.lineTo(gx, h - padB);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // X-axis tick marks + date labels
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        for (var ti = 0; ti <= numVLines; ti++) {
+            var tx = padL + (ti / numVLines) * plotW;
+            var tickDate = new Date(minDate + (ti / numVLines) * dateSpan);
+            var tickLabel = (tickDate.getUTCMonth() + 1) + '/' + tickDate.getUTCDate();
+            ctx.beginPath();
+            ctx.moveTo(tx, h - padB);
+            ctx.lineTo(tx, h - padB + 5);
+            ctx.strokeStyle = '#9ca3af';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillText(tickLabel, tx, h - padB + 16);
+        }
+        ctx.textAlign = 'left';
+
+        // Y axis labels with horizontal gridlines (dashed)
+        ctx.fillStyle = '#374151';
+        ctx.font = '12px -apple-system, sans-serif';
+        entities.forEach(function(e, i) {
+            var y = padT + (i + 0.5) * (plotH / entities.length);
+            ctx.fillText(e, 10, y + 4);
+            // Y-axis tick
+            ctx.strokeStyle = '#9ca3af';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padL - 4, y);
+            ctx.lineTo(padL, y);
+            ctx.stroke();
+            // Dashed gridline
+            ctx.setLineDash([3, 4]);
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(w - padR, y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        });
+
+        // Axes border
+        ctx.strokeStyle = '#d1d5db';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, h - padB);
+        ctx.lineTo(w - padR, h - padB);
+        ctx.stroke();
 
         // Today line
         var todayX = padL + ((today.getTime() - minDate) / dateSpan) * plotW;
@@ -611,11 +834,14 @@ export default class DeliveryNimbusGantt extends LightningElement {
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = '#ef4444';
-        ctx.font = '10px -apple-system, sans-serif';
-        ctx.fillText('Today', todayX - 14, h - padB + 14);
+        ctx.font = 'bold 10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Today', todayX, h - padB + 16);
+        ctx.textAlign = 'left';
 
-        // Bubbles
-        tasks.forEach(function(t) {
+        // Build bubble positions for dependency lines
+        var bubblePos = {};
+        tasks.forEach(function(t, idx) {
             if (!t.startDate) { return; }
             var startMs = new Date(t.startDate).getTime();
             var endMs = t.endDate ? new Date(t.endDate).getTime() : startMs + 14 * 86400000;
@@ -623,39 +849,116 @@ export default class DeliveryNimbusGantt extends LightningElement {
             var bx = padL + ((midMs - minDate) / dateSpan) * plotW;
             var entityIdx = entities.indexOf(t.entityName || 'Unassigned');
             var by = padT + (entityIdx + 0.5) * (plotH / entities.length);
+            // Subtle floating: randomize Y by +/-3px based on index
+            by += ((idx % 7) - 3) * 1;
             var hours = t.estimatedHours || 5;
             var radius = Math.max(Math.min(Math.sqrt(hours) * 4, 40), 8);
+            bubblePos[t.workItemId] = { x: bx, y: by, radius: radius };
+        });
+
+        // Dependency connecting lines (thin, curved)
+        if (this._rawDependencies) {
+            ctx.strokeStyle = 'rgba(100,116,139,0.35)';
+            ctx.lineWidth = 1;
+            this._rawDependencies.forEach(function(dep) {
+                var src = bubblePos[dep.source];
+                var tgt = bubblePos[dep.target];
+                if (src && tgt) {
+                    ctx.beginPath();
+                    var cpX = (src.x + tgt.x) / 2;
+                    var cpY = Math.min(src.y, tgt.y) - 20;
+                    ctx.moveTo(src.x + src.radius, src.y);
+                    ctx.quadraticCurveTo(cpX, cpY, tgt.x - tgt.radius, tgt.y);
+                    ctx.stroke();
+                    // Small arrowhead
+                    var angle = Math.atan2(tgt.y - cpY, tgt.x - tgt.radius - cpX);
+                    ctx.fillStyle = 'rgba(100,116,139,0.5)';
+                    ctx.beginPath();
+                    ctx.moveTo(tgt.x - tgt.radius, tgt.y);
+                    ctx.lineTo(tgt.x - tgt.radius - 6 * Math.cos(angle - 0.4), tgt.y - 6 * Math.sin(angle - 0.4));
+                    ctx.lineTo(tgt.x - tgt.radius - 6 * Math.cos(angle + 0.4), tgt.y - 6 * Math.sin(angle + 0.4));
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Draw bubbles
+        tasks.forEach(function(t, idx) {
+            if (!t.startDate) { return; }
+            var bp = bubblePos[t.workItemId];
+            if (!bp) { return; }
+            var bx = bp.x; var by = bp.y; var radius = bp.radius;
+            var hours = t.estimatedHours || 5;
             var color = colors[t.stage] || '#94a3b8';
+            var endMs = t.endDate ? new Date(t.endDate).getTime() : 0;
+            var overdue = endMs > 0 && endMs < today.getTime();
 
-            // Is it overdue?
-            var overdue = endMs < today.getTime();
-
-            ctx.globalAlpha = 0.7;
+            // Drop shadow
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.15)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
             ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(bx, by, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Radial gradient fill (center lighter, edge darker)
+            var radGrad = ctx.createRadialGradient(bx - radius * 0.3, by - radius * 0.3, radius * 0.1, bx, by, radius);
+            radGrad.addColorStop(0, color + 'dd');
+            radGrad.addColorStop(0.5, color);
+            radGrad.addColorStop(1, color + '99');
+            ctx.globalAlpha = 0.85;
+            ctx.fillStyle = radGrad;
             ctx.beginPath();
             ctx.arc(bx, by, radius, 0, Math.PI * 2);
             ctx.fill();
             ctx.globalAlpha = 1;
 
+            // Progress ring
+            var progress = t.progress || 0;
+            if (progress > 0) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(bx, by, radius + 3, -Math.PI / 2, -Math.PI / 2 + (progress / 100) * Math.PI * 2);
+                ctx.stroke();
+                // Track (dimmer full ring)
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(bx, by, radius + 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Overdue ring
             if (overdue) {
                 ctx.strokeStyle = '#ef4444';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(bx, by, radius + 2, 0, Math.PI * 2);
+                ctx.arc(bx, by, radius + (progress > 0 ? 6 : 3), 0, Math.PI * 2);
                 ctx.stroke();
             }
 
-            ctx.strokeStyle = '#ffffff';
+            // White border
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(bx, by, radius, 0, Math.PI * 2);
             ctx.stroke();
 
+            // Labels
             if (radius > 12) {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 9px -apple-system, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(t.name, bx, by - 2);
+                var name = t.name;
+                var maxLen = Math.floor(radius * 2 / 6);
+                if (name.length > maxLen) { name = name.substring(0, maxLen) + '\u2026'; }
+                ctx.fillText(name, bx, by - 2);
                 ctx.font = '8px -apple-system, sans-serif';
                 ctx.fillText(hours + 'h', bx, by + 9);
                 ctx.textAlign = 'left';
@@ -668,9 +971,10 @@ export default class DeliveryNimbusGantt extends LightningElement {
         ctx.fillRect(0, 0, w, h);
         ctx.fillStyle = '#111827';
         ctx.font = 'bold 16px -apple-system, sans-serif';
-        ctx.fillText('Calendar Heatmap — Task density per day', 20, 30);
+        ctx.fillText('Calendar Heatmap \u2014 Task density per day', 20, 30);
 
         var today = new Date();
+        var todayKey = today.toISOString().slice(0, 10);
         var minDate = Infinity; var maxDate = -Infinity;
         tasks.forEach(function(t) {
             if (t.startDate) { var d = new Date(t.startDate).getTime(); if (d < minDate) { minDate = d; } }
@@ -695,25 +999,32 @@ export default class DeliveryNimbusGantt extends LightningElement {
         Object.keys(dayCounts).forEach(function(k) { if (dayCounts[k] > maxCount) { maxCount = dayCounts[k]; } });
         if (maxCount === 0) { maxCount = 1; }
 
-        // Draw grid
-        var cellSize = 18;
+        // Larger cells
+        var cellSize = 22;
         var gap = 3;
-        var padL = 50;
-        var padT = 60;
+        var padL = 80;
+        var padT = 65;
         var startDate = new Date(minDate);
         startDate.setUTCDate(startDate.getUTCDate() - startDate.getUTCDay()); // align to Sunday
 
-        var dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        // Day name labels
+        var dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         dayNames.forEach(function(d, i) {
             ctx.fillStyle = '#6b7280';
             ctx.font = '10px -apple-system, sans-serif';
-            ctx.fillText(d, padL - 20, padT + i * (cellSize + gap) + 13);
+            ctx.textAlign = 'right';
+            ctx.fillText(d, padL - 8, padT + i * (cellSize + gap) + 15);
         });
+        ctx.textAlign = 'left';
 
         var col = 0;
         var current = new Date(startDate);
         var endDt = new Date(maxDate);
         endDt.setUTCDate(endDt.getUTCDate() + 7);
+        var todayCellX = 0; var todayCellY = 0; var foundToday = false;
+
+        // Track week numbers for left axis
+        var drawnWeeks = {};
 
         while (current <= endDt) {
             var key = current.toISOString().slice(0, 10);
@@ -722,62 +1033,114 @@ export default class DeliveryNimbusGantt extends LightningElement {
             var x = padL + col * (cellSize + gap);
             var y = padT + dow * (cellSize + gap);
 
-            if (dow === 0 && col > 0) {
-                // Month label on first Sunday of month
-                if (current.getUTCDate() <= 7) {
-                    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                    ctx.fillStyle = '#374151';
-                    ctx.font = '10px -apple-system, sans-serif';
-                    ctx.fillText(months[current.getUTCMonth()], x, padT - 8);
+            // Week number label on left (first time we see this week)
+            if (dow === 0) {
+                var oneJan = new Date(Date.UTC(current.getUTCFullYear(), 0, 1));
+                var weekNum = Math.ceil(((current.getTime() - oneJan.getTime()) / MS_DAY + oneJan.getUTCDay() + 1) / 7);
+                var weekKey = current.getUTCFullYear() + '-W' + weekNum;
+                if (!drawnWeeks[weekKey] && col > 0) {
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.font = '9px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('W' + weekNum, x + cellSize / 2, padT - 22);
+                    ctx.textAlign = 'left';
+                    drawnWeeks[weekKey] = true;
                 }
             }
 
-            // Color intensity
-            var intensity = count / maxCount;
-            var r, gr, b;
-            if (count === 0) {
-                r = 235; gr = 238; b = 241; // gray
-            } else if (intensity < 0.33) {
-                r = 187; gr = 247; b = 208; // light green
-            } else if (intensity < 0.66) {
-                r = 74; gr = 222; b = 128; // medium green
-            } else {
-                r = 22; gr = 163; b = 74; // dark green
+            if (dow === 0 && col > 0) {
+                // Month label on first Sunday of month - larger and bolder
+                if (current.getUTCDate() <= 7) {
+                    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    ctx.fillStyle = '#1f2937';
+                    ctx.font = 'bold 13px -apple-system, sans-serif';
+                    ctx.fillText(months[current.getUTCMonth()], x, padT - 10);
+                }
             }
 
-            ctx.fillStyle = 'rgb(' + r + ',' + gr + ',' + b + ')';
+            // Blue color ramp: gray -> light blue -> blue -> dark blue
+            var intensity = count / maxCount;
+            var cr, cg, cb;
+            if (count === 0) {
+                cr = 235; cg = 238; cb = 241; // gray
+            } else if (intensity < 0.25) {
+                cr = 191; cg = 219; cb = 254; // light blue
+            } else if (intensity < 0.5) {
+                cr = 96; cg = 165; cb = 250; // medium blue
+            } else if (intensity < 0.75) {
+                cr = 59; cg = 130; cb = 246; // blue
+            } else {
+                cr = 29; cg = 78; cb = 216; // dark blue
+            }
+
+            ctx.fillStyle = 'rgb(' + cr + ',' + cg + ',' + cb + ')';
             ctx.beginPath();
-            ctx.roundRect(x, y, cellSize, cellSize, 2);
+            ctx.roundRect(x, y, cellSize, cellSize, 3);
             ctx.fill();
 
+            // Subtle cell border
+            ctx.strokeStyle = count === 0 ? 'rgba(209,213,219,0.5)' : 'rgba(59,130,246,0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.roundRect(x, y, cellSize, cellSize, 3);
+            ctx.stroke();
+
+            // Count number inside cells with 3+ tasks
+            if (count >= 3) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(count.toString(), x + cellSize / 2, y + cellSize / 2 + 4);
+                ctx.textAlign = 'left';
+            }
+
             // Today highlight
-            if (key === today.toISOString().slice(0, 10)) {
+            if (key === todayKey) {
+                ctx.save();
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 6;
                 ctx.strokeStyle = '#ef4444';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.roundRect(x - 1, y - 1, cellSize + 2, cellSize + 2, 3);
+                ctx.roundRect(x - 1, y - 1, cellSize + 2, cellSize + 2, 4);
                 ctx.stroke();
+                ctx.restore();
+                todayCellX = x;
+                todayCellY = y;
+                foundToday = true;
             }
 
             current.setUTCDate(current.getUTCDate() + 1);
             if (dow === 6) { col++; }
         }
 
-        // Legend
+        // Today label below highlighted cell
+        if (foundToday) {
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 9px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Today', todayCellX + cellSize / 2, todayCellY + cellSize + 12);
+            ctx.textAlign = 'left';
+        }
+
+        // Legend with blue ramp
         var lx = padL;
-        var ly = padT + 7 * (cellSize + gap) + 20;
+        var ly = padT + 7 * (cellSize + gap) + 25;
         ctx.fillStyle = '#6b7280';
         ctx.font = '11px -apple-system, sans-serif';
-        ctx.fillText('Less', lx, ly + 12);
-        var legendColors = ['#ebedf1', '#bbf7d0', '#4ade80', '#16a34a'];
+        ctx.fillText('Less', lx, ly + 14);
+        var legendColors = ['#ebedf1', '#bfdbfe', '#60a5fa', '#3b82f6', '#1d4ed8'];
         legendColors.forEach(function(c, i) {
             ctx.fillStyle = c;
             ctx.beginPath();
-            ctx.roundRect(lx + 32 + i * (cellSize + 2), ly, cellSize, cellSize, 2);
+            ctx.roundRect(lx + 36 + i * (cellSize + 3), ly, cellSize, cellSize, 3);
             ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
         });
         ctx.fillStyle = '#6b7280';
-        ctx.fillText('More', lx + 32 + 4 * (cellSize + 2) + 4, ly + 12);
+        ctx.fillText('More', lx + 36 + 5 * (cellSize + 3) + 4, ly + 14);
     }
 
     _drawFlow(ctx, w, h, tasks, colors) {
@@ -785,7 +1148,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
         ctx.fillRect(0, 0, w, h);
         ctx.fillStyle = '#111827';
         ctx.font = 'bold 16px -apple-system, sans-serif';
-        ctx.fillText('Stage Flow — Tasks flowing through workflow stages', 20, 30);
+        ctx.fillText('Stage Flow \u2014 Tasks flowing through workflow stages', 20, 30);
 
         // Count tasks per stage
         var stages = ['Backlog', 'Submitted', 'In Development', 'Code Review', 'UAT Ready', 'Deployment', 'Done'];
@@ -800,81 +1163,197 @@ export default class DeliveryNimbusGantt extends LightningElement {
         });
         if (totalTasks === 0) { totalTasks = 1; }
 
-        var padL = 30; var padR = 30; var padT = 70; var padB = 60;
+        var padL = 30; var padR = 30; var padT = 70; var padB = 70;
         var plotW = w - padL - padR;
         var plotH = h - padT - padB;
         var colW = plotW / stages.length;
         var maxCount = 0;
-        stages.forEach(function(s) { if (stageCounts[s] > maxCount) { maxCount = stageCounts[s]; } });
+        var maxStageIdx = 0;
+        stages.forEach(function(s, i) {
+            if (stageCounts[s] > maxCount) { maxCount = stageCounts[s]; maxStageIdx = i; }
+        });
         if (maxCount === 0) { maxCount = 1; }
 
-        // Draw columns
+        // Detect bottleneck: stage with most non-Done tasks accumulating
+        var bottleneckIdx = -1;
+        var bottleneckMax = 0;
+        stages.forEach(function(s, i) {
+            if (s !== 'Done' && s !== 'Backlog' && stageCounts[s] > bottleneckMax) {
+                bottleneckMax = stageCounts[s];
+                bottleneckIdx = i;
+            }
+        });
+        // Only mark as bottleneck if it has at least 3 tasks and is the clear leader
+        if (bottleneckMax < 3) { bottleneckIdx = -1; }
+
+        // Draw curved Bezier flow lines between stages first (behind bars)
+        stages.forEach(function(s, i) {
+            if (i >= stages.length - 1) { return; }
+            var count = stageCounts[s];
+            var nextCount = stageCounts[stages[i + 1]];
+            var flowCount = Math.min(count, nextCount);
+            if (flowCount === 0 && count === 0) { return; }
+
+            var x1 = padL + i * colW + colW - 8;
+            var x2 = padL + (i + 1) * colW + 8;
+            var barH1 = (count / maxCount) * plotH;
+            var barH2 = (nextCount / maxCount) * plotH;
+            var midY1 = padT + plotH - barH1 / 2;
+            var midY2 = padT + plotH - barH2 / 2;
+
+            var lineW = Math.max(1.5, Math.min(Math.max(count, nextCount) * 1.5, 8));
+            var cpOffset = (x2 - x1) * 0.45;
+            var color1 = colors[s] || '#94a3b8';
+            var color2 = colors[stages[i + 1]] || '#94a3b8';
+
+            // Gradient along the curve
+            var lineGrad = ctx.createLinearGradient(x1, 0, x2, 0);
+            lineGrad.addColorStop(0, color1 + '80');
+            lineGrad.addColorStop(1, color2 + '80');
+
+            ctx.strokeStyle = lineGrad;
+            ctx.lineWidth = lineW;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x1, midY1);
+            ctx.bezierCurveTo(x1 + cpOffset, midY1, x2 - cpOffset, midY2, x2, midY2);
+            ctx.stroke();
+
+            // Subtle arrowhead at end
+            ctx.fillStyle = color2 + '90';
+            var angle = Math.atan2(midY2 - midY1, x2 - x1 + cpOffset);
+            ctx.beginPath();
+            ctx.moveTo(x2, midY2);
+            ctx.lineTo(x2 - 8, midY2 - 5);
+            ctx.lineTo(x2 - 8, midY2 + 5);
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        // Draw pill-shaped bars
         stages.forEach(function(s, i) {
             var x = padL + i * colW;
             var count = stageCounts[s];
-            var barH = (count / maxCount) * plotH;
+            var barH = Math.max((count / maxCount) * plotH, count > 0 ? 20 : 0);
             var barY = padT + plotH - barH;
             var color = colors[s] || '#94a3b8';
+            var barW = colW - 20;
+            var barX = x + 10;
+            var pillRadius = Math.min(barW / 2, 14);
 
-            // Bar
-            ctx.fillStyle = color;
-            ctx.globalAlpha = 0.8;
-            ctx.beginPath();
-            ctx.roundRect(x + 8, barY, colW - 16, barH, 6);
-            ctx.fill();
-            ctx.globalAlpha = 1;
+            // Gradient fill (top lighter, bottom darker)
+            var barGrad = ctx.createLinearGradient(barX, barY, barX, barY + barH);
+            barGrad.addColorStop(0, color);
+            barGrad.addColorStop(1, color + 'a0');
 
-            // Count label
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px -apple-system, sans-serif';
-            ctx.textAlign = 'center';
-            if (barH > 30) {
-                ctx.fillText(count.toString(), x + colW / 2, barY + barH / 2 + 7);
+            // Pulsing glow on stage with most tasks
+            if (i === maxStageIdx && count > 0) {
+                ctx.save();
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 14;
+                ctx.fillStyle = color + '30';
+                ctx.beginPath();
+                ctx.roundRect(barX - 4, barY - 4, barW + 8, barH + 8, pillRadius + 4);
+                ctx.fill();
+                ctx.restore();
             }
 
-            // Stage label
+            // Pill bar
+            ctx.fillStyle = barGrad;
+            ctx.beginPath();
+            ctx.roundRect(barX, barY, barW, barH, pillRadius);
+            ctx.fill();
+
+            // Light top highlight
+            if (barH > 10) {
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.beginPath();
+                ctx.roundRect(barX + 2, barY + 1, barW - 4, Math.min(barH * 0.4, 20), [pillRadius - 1, pillRadius - 1, 0, 0]);
+                ctx.fill();
+            }
+
+            // Bottleneck indicator (red outline)
+            if (i === bottleneckIdx) {
+                ctx.save();
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 6;
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, pillRadius + 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+
+                // Bottleneck label
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 9px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('BOTTLENECK', x + colW / 2, barY - 8);
+            }
+
+            // Percentage label inside bar
+            var pct = Math.round((count / totalTasks) * 100);
+            if (barH > 40) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(count.toString(), x + colW / 2, barY + barH / 2 + 2);
+                ctx.font = '11px -apple-system, sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillText(pct + '%', x + colW / 2, barY + barH / 2 + 18);
+            } else if (barH > 20) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 13px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(count.toString(), x + colW / 2, barY + barH / 2 + 5);
+            }
+
+            // Stage label below
             ctx.fillStyle = '#374151';
             ctx.font = '11px -apple-system, sans-serif';
             var label = s;
-            if (label.length > 12) { label = label.substring(0, 11) + '…'; }
+            if (label.length > 12) { label = label.substring(0, 11) + '\u2026'; }
             ctx.fillText(label, x + colW / 2, h - padB + 16);
             ctx.textAlign = 'left';
-
-            // Flow arrows between columns
-            if (i < stages.length - 1) {
-                var nextCount = stageCounts[stages[i + 1]];
-                var arrowY = padT + plotH / 2;
-                var arrowX = x + colW;
-                ctx.strokeStyle = '#d1d5db';
-                ctx.lineWidth = Math.max(1, Math.min(count, 4));
-                ctx.beginPath();
-                ctx.moveTo(arrowX - 6, arrowY);
-                ctx.lineTo(arrowX + 6, arrowY);
-                ctx.stroke();
-                // Arrowhead
-                ctx.fillStyle = '#d1d5db';
-                ctx.beginPath();
-                ctx.moveTo(arrowX + 6, arrowY);
-                ctx.lineTo(arrowX, arrowY - 4);
-                ctx.lineTo(arrowX, arrowY + 4);
-                ctx.closePath();
-                ctx.fill();
-            }
         });
 
-        // Percentage bar at bottom
-        var barY2 = h - 25;
-        var barX = padL;
-        stages.forEach(function(s, i) {
+        // Percentage strip at bottom with rounded ends
+        var stripY = h - 30;
+        var stripH = 14;
+        var stripX = padL;
+        var stripRadius = stripH / 2;
+
+        // Draw full rounded background
+        ctx.fillStyle = '#e5e7eb';
+        ctx.beginPath();
+        ctx.roundRect(padL, stripY, plotW, stripH, stripRadius);
+        ctx.fill();
+
+        // Draw segments clipped to the rounded rect
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(padL, stripY, plotW, stripH, stripRadius);
+        ctx.clip();
+        var segX = padL;
+        stages.forEach(function(s) {
             var pct = stageCounts[s] / totalTasks;
             var segW = pct * plotW;
-            ctx.fillStyle = colors[s] || '#94a3b8';
-            ctx.fillRect(barX, barY2, segW, 12);
-            barX += segW;
+            if (segW > 0) {
+                ctx.fillStyle = colors[s] || '#94a3b8';
+                ctx.fillRect(segX, stripY, segW, stripH);
+                segX += segW;
+            }
         });
-        ctx.strokeStyle = '#e5e7eb';
+        ctx.restore();
+
+        // Strip border
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(padL, barY2, plotW, 12);
+        ctx.beginPath();
+        ctx.roundRect(padL, stripY, plotW, stripH, stripRadius);
+        ctx.stroke();
     }
 
     handleToggleLock() {
@@ -1034,19 +1513,19 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── ALTERNATIVE VISUALIZATIONS ────────────────────
                 case 15:
-                    toast('15/35 — Treemap', 'Rectangles sized by hours, colored by stage', 'info');
+                    toast('15/35 — Treemap', 'Treemap — effort concentration at a glance, squarified layout with gradient fills', 'info');
                     self.currentView = 'treemap'; self._renderAltViz();
                     log('Treemap rendered', true); break;
                 case 16:
-                    toast('16/35 — Bubble Chart', 'X = timeline, Y = entity, size = hours, color = stage', 'info');
+                    toast('16/35 — Bubble Chart', 'Bubble Chart — timeline galaxy with progress rings and dependency arcs', 'info');
                     self.currentView = 'bubbles'; self._renderAltViz();
                     log('Bubble chart rendered', true); break;
                 case 17:
-                    toast('17/35 — Calendar Heatmap', 'GitHub-style daily task density grid', 'info');
+                    toast('17/35 — Calendar Heatmap', 'Calendar Heatmap — daily workload density, blue intensity ramp with week numbers', 'info');
                     self.currentView = 'calendar'; self._renderAltViz();
                     log('Calendar heatmap rendered', true); break;
                 case 18:
-                    toast('18/35 — Stage Flow', 'Task distribution across workflow stages', 'info');
+                    toast('18/35 — Stage Flow', 'Stage Flow — Bezier flow lines, bottleneck detection, and percentage breakdowns', 'info');
                     self.currentView = 'flow'; self._renderAltViz();
                     log('Stage flow rendered', true); break;
 
@@ -1121,7 +1600,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── DARK MODE + ALT VIEWS ────────────────────────
                 case 27:
-                    toast('27/35 — Dark Treemap', 'Treemap in dark mode...', 'info');
+                    toast('27/35 — Dark Treemap', 'Treemap with inverted palette — gradient fills glow in dark mode', 'info');
                     self.currentView = 'treemap'; self._renderAltViz();
                     requestAnimationFrame(function() {
                         var c = self.refs.altCanvas;
@@ -1129,7 +1608,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     });
                     log('Dark treemap', true); break;
                 case 28:
-                    toast('28/35 — Dark Bubbles', 'Bubble chart in dark mode...', 'info');
+                    toast('28/35 — Dark Bubbles', 'Bubble galaxy in dark mode — radial gradients and progress rings shine', 'info');
                     self.currentView = 'bubbles'; self._renderAltViz();
                     log('Dark bubbles', true); break;
                 case 29:
