@@ -183,6 +183,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             // Email notifications for stage changes
             if (!changedIds.isEmpty()) {
                 DeliveryEmailNotificationService.sendStageChangeEmails(changedIds, emailStageMap);
+                DeliveryExternalNotificationService.sendExternalStageChangeEmails(changedIds, emailStageMap);
             }
         }
     }
