@@ -1570,21 +1570,147 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── SONIFICATION ─────────────────────────────────
                 case 25:
-                    toast('25/35 — Sonification', '♫ Playing the project schedule as music...', 'warning');
+                    toast('25/35 — Sonification', '♫ Hearing your project health — consonant = on track, dissonant = overdue, volume = effort', 'warning');
                     try {
                         var ac = new (window.AudioContext || window.webkitAudioContext)();
-                        var scale = [261.6, 293.7, 329.6, 349.2, 392.0, 440.0, 493.9, 523.3];
-                        self.filteredTasks.slice(0, 8).forEach(function(t, i) {
+                        var today25 = new Date();
+                        var PLAY_DUR = 6;
+
+                        // Sort tasks by start date for chronological playback
+                        var sorted25 = self.filteredTasks.slice().filter(function(t) { return t.startDate; }).sort(function(a, b) {
+                            return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+                        });
+
+                        if (sorted25.length === 0) { log('Sonification: no tasks with dates', false); break; }
+
+                        // Compute timeline bounds
+                        var minStart25 = new Date(sorted25[0].startDate).getTime();
+                        var maxStart25 = minStart25;
+                        sorted25.forEach(function(t) {
+                            var ms = new Date(t.startDate).getTime();
+                            if (ms > maxStart25) { maxStart25 = ms; }
+                        });
+                        var timeSpan25 = maxStart25 - minStart25 || 1;
+
+                        // Build unique entity list for oscillator type mapping
+                        var entities25 = [];
+                        sorted25.forEach(function(t) {
+                            var en = t.entityName || 'Unassigned';
+                            if (entities25.indexOf(en) === -1) { entities25.push(en); }
+                        });
+                        var oscTypes25 = ['sine', 'triangle', 'sawtooth', 'square'];
+
+                        // Pitch palettes
+                        var onTrackNotes = [261.6, 329.6, 392.0, 440.0, 523.3]; // C major pentatonic
+                        var overdueNotes = [311.1, 370.0, 466.2];                // Eb, Gb, Bb — dissonant
+
+                        // Find hours range for volume mapping
+                        var minHrs25 = Infinity; var maxHrs25 = 0;
+                        sorted25.forEach(function(t) {
+                            var h = t.estimatedHours || 1;
+                            if (h < minHrs25) { minHrs25 = h; }
+                            if (h > maxHrs25) { maxHrs25 = h; }
+                        });
+                        var hrsRange25 = maxHrs25 - minHrs25 || 1;
+
+                        // Find task-duration range for note-duration mapping
+                        var minTaskDur25 = Infinity; var maxTaskDur25 = 0;
+                        sorted25.forEach(function(t) {
+                            var s = new Date(t.startDate).getTime();
+                            var e = t.endDate ? new Date(t.endDate).getTime() : s + 7 * 86400000;
+                            var dur = e - s || 1;
+                            if (dur < minTaskDur25) { minTaskDur25 = dur; }
+                            if (dur > maxTaskDur25) { maxTaskDur25 = dur; }
+                        });
+                        var taskDurRange25 = maxTaskDur25 - minTaskDur25 || 1;
+
+                        var onTrackCount = 0; var overdueCount = 0;
+
+                        // Play each task
+                        sorted25.forEach(function(t) {
+                            var startMs = new Date(t.startDate).getTime();
+                            var endMs = t.endDate ? new Date(t.endDate).getTime() : startMs + 7 * 86400000;
+                            var prog = t.progress || 0;
+                            var hrs = t.estimatedHours || 1;
+                            var entityIdx = entities25.indexOf(t.entityName || 'Unassigned');
+
+                            // Determine health: on-track vs overdue
+                            var isOverdue = endMs < today25.getTime() && !t.isCompleted;
+                            if (isOverdue) { overdueCount++; } else { onTrackCount++; }
+
+                            // Time position in playback window (0 to PLAY_DUR seconds)
+                            var noteStart = ac.currentTime + ((startMs - minStart25) / timeSpan25) * (PLAY_DUR - 0.8);
+
+                            // Pitch from health palette
+                            var palette = isOverdue ? overdueNotes : onTrackNotes;
+                            var freq = palette[Math.floor(Math.random() * palette.length)];
+
+                            // Volume maps to hours (0.1 to 0.25)
+                            var vol = 0.1 + 0.15 * ((hrs - minHrs25) / hrsRange25);
+
+                            // Note duration maps to task duration (0.2s to 0.8s)
+                            var taskDur = endMs - startMs || 1;
+                            var noteDur = 0.2 + 0.6 * ((taskDur - minTaskDur25) / taskDurRange25);
+
+                            // Attack: high progress = sharp (0.02s), low progress = fade in (0.1s)
+                            var attack = 0.1 - 0.08 * (prog / 100);
+
+                            // Oscillator type by entity
+                            var oscType = oscTypes25[Math.min(entityIdx, oscTypes25.length - 1)];
+
+                            // Create and play the note
                             var osc = ac.createOscillator();
                             var gain = ac.createGain();
-                            osc.frequency.value = scale[i % scale.length];
-                            osc.type = 'triangle';
-                            gain.gain.value = 0.15;
+                            osc.frequency.value = freq;
+                            osc.type = oscType;
+                            gain.gain.setValueAtTime(0, noteStart);
+                            gain.gain.linearRampToValueAtTime(vol, noteStart + attack);
+                            gain.gain.setValueAtTime(vol, noteStart + noteDur - 0.1);
+                            gain.gain.linearRampToValueAtTime(0, noteStart + noteDur);
                             osc.connect(gain); gain.connect(ac.destination);
-                            osc.start(ac.currentTime + i * 0.3);
-                            osc.stop(ac.currentTime + i * 0.3 + 0.25);
+                            osc.start(noteStart);
+                            osc.stop(noteStart + noteDur + 0.01);
+
+                            // Critical path bass note: no progress and past start date
+                            if (prog === 0 && startMs < today25.getTime()) {
+                                var bassOsc = ac.createOscillator();
+                                var bassGain = ac.createGain();
+                                bassOsc.frequency.value = freq / 2;
+                                bassOsc.type = 'sine';
+                                var bassVol = vol * 0.4;
+                                var bassDur = noteDur * 1.5;
+                                bassGain.gain.setValueAtTime(0, noteStart);
+                                bassGain.gain.linearRampToValueAtTime(bassVol, noteStart + 0.05);
+                                bassGain.gain.setValueAtTime(bassVol, noteStart + bassDur - 0.15);
+                                bassGain.gain.linearRampToValueAtTime(0, noteStart + bassDur);
+                                bassOsc.connect(bassGain); bassGain.connect(ac.destination);
+                                bassOsc.start(noteStart);
+                                bassOsc.stop(noteStart + bassDur + 0.01);
+                            }
                         });
-                        log('Sonification: played 8 task notes', true);
+
+                        // Final resolution chord at 6s mark
+                        var chordStart = ac.currentTime + PLAY_DUR;
+                        var chordDur = 1.5;
+                        var isMajor = onTrackCount >= overdueCount;
+                        // Major: C-E-G (261.6, 329.6, 392.0) — triumphant
+                        // Minor: C-Eb-G (261.6, 311.1, 392.0) — ominous
+                        var chordFreqs = isMajor ? [261.6, 329.6, 392.0] : [261.6, 311.1, 392.0];
+                        chordFreqs.forEach(function(cf) {
+                            var co = ac.createOscillator();
+                            var cg = ac.createGain();
+                            co.frequency.value = cf;
+                            co.type = 'sine';
+                            cg.gain.setValueAtTime(0, chordStart);
+                            cg.gain.linearRampToValueAtTime(0.12, chordStart + 0.05);
+                            cg.gain.setValueAtTime(0.12, chordStart + chordDur - 0.3);
+                            cg.gain.linearRampToValueAtTime(0, chordStart + chordDur);
+                            co.connect(cg); cg.connect(ac.destination);
+                            co.start(chordStart);
+                            co.stop(chordStart + chordDur + 0.01);
+                        });
+
+                        log('Sonification: played ' + sorted25.length + ' tasks (' + onTrackCount + ' on-track, ' + overdueCount + ' overdue) → ' + (isMajor ? 'major' : 'minor') + ' resolution', true);
                     } catch(se) { log('Sonification: ' + se.message, false); }
                     break;
 
