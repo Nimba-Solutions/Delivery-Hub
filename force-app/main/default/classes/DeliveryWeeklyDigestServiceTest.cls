@@ -12,6 +12,8 @@
 @SuppressWarnings('PMD.CyclomaticComplexity')
 private class DeliveryWeeklyDigestServiceTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static DeliveryHubSettings__c createSettings(
@@ -67,16 +69,18 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSendDigestWithAiSuccess() {
-        createSettings(true, true, 'sk-test-key-123');
-        createWorkItems();
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', aiSuccessBody()));
+        System.runAs(testUser) {
+            createSettings(true, true, 'sk-test-key-123');
+            createWorkItems();
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', aiSuccessBody()));
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.sendWeeklyDigest();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.sendWeeklyDigest();
+            Test.stopTest();
 
-        // Email was dispatched (no exception thrown)
-        System.assert(true, 'Digest should send without error when AI is configured.');
+            // Email was dispatched (no exception thrown)
+            System.assert(true, 'Digest should send without error when AI is configured.');
+        }
     }
 
     /**
@@ -85,14 +89,16 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSendDigestWithoutAi() {
-        createSettings(true, false, '');
-        createWorkItems();
+        System.runAs(testUser) {
+            createSettings(true, false, '');
+            createWorkItems();
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.sendWeeklyDigest();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.sendWeeklyDigest();
+            Test.stopTest();
 
-        System.assert(true, 'Digest should send with metrics only when AI is not configured.');
+            System.assert(true, 'Digest should send with metrics only when AI is not configured.');
+        }
     }
 
     /**
@@ -101,16 +107,18 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSendDigestAiCalloutFails() {
-        createSettings(true, true, 'sk-bad-key');
-        createWorkItems();
-        Test.setMock(HttpCalloutMock.class,
-            new OpenAIMock(401, 'Unauthorized', '{"error":"Invalid key"}'));
+        System.runAs(testUser) {
+            createSettings(true, true, 'sk-bad-key');
+            createWorkItems();
+            Test.setMock(HttpCalloutMock.class,
+                new OpenAIMock(401, 'Unauthorized', '{"error":"Invalid key"}'));
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.sendWeeklyDigest();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.sendWeeklyDigest();
+            Test.stopTest();
 
-        System.assert(true, 'Digest should still send when AI callout fails.');
+            System.assert(true, 'Digest should still send when AI callout fails.');
+        }
     }
 
     /**
@@ -118,14 +126,16 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSendDigestDisabled() {
-        createSettings(false, false, '');
+        System.runAs(testUser) {
+            createSettings(false, false, '');
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.sendWeeklyDigest();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.sendWeeklyDigest();
+            Test.stopTest();
 
-        System.assertEquals(0, Limits.getEmailInvocations(),
-            'No emails should be sent when digest is disabled.');
+            System.assertEquals(0, Limits.getEmailInvocations(),
+                'No emails should be sent when digest is disabled.');
+        }
     }
 
     /**
@@ -133,12 +143,14 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSendDigestNoSettings() {
-        Test.startTest();
-        DeliveryWeeklyDigestService.sendWeeklyDigest();
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryWeeklyDigestService.sendWeeklyDigest();
+            Test.stopTest();
 
-        System.assertEquals(0, Limits.getEmailInvocations(),
-            'No emails should be sent when settings are missing.');
+            System.assertEquals(0, Limits.getEmailInvocations(),
+                'No emails should be sent when settings are missing.');
+        }
     }
 
     /**
@@ -147,16 +159,18 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSendDigestWithConfiguredRecipients() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestRecipientsTxt__c = 'alice@test.com, bob@test.com';
-        update s;
-        createWorkItems();
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestRecipientsTxt__c = 'alice@test.com, bob@test.com';
+            update s;
+            createWorkItems();
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.sendWeeklyDigest();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.sendWeeklyDigest();
+            Test.stopTest();
 
-        System.assert(true, 'Digest should send to configured recipients.');
+            System.assert(true, 'Digest should send to configured recipients.');
+        }
     }
 
     /**
@@ -165,14 +179,16 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSendDigestNoWorkItems() {
-        createSettings(true, false, '');
-        // No work items created
+        System.runAs(testUser) {
+            createSettings(true, false, '');
+            // No work items created
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.sendWeeklyDigest();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.sendWeeklyDigest();
+            Test.stopTest();
 
-        System.assert(true, 'Digest should send even with zero work items.');
+            System.assert(true, 'Digest should send even with zero work items.');
+        }
     }
 
     // ── Tests: recipient resolution ─────────────────────────────────────────
@@ -182,18 +198,20 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testResolveConfiguredRecipients() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestRecipientsTxt__c = 'alice@test.com, bob@test.com, charlie@test.com';
-        update s;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestRecipientsTxt__c = 'alice@test.com, bob@test.com, charlie@test.com';
+            update s;
 
-        Test.startTest();
-        List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
-        Test.stopTest();
+            Test.startTest();
+            List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
+            Test.stopTest();
 
-        System.assertEquals(3, recipients.size(),
-            'Should parse 3 comma-separated addresses.');
-        System.assert(recipients.contains('alice@test.com'),
-            'Should include alice.');
+            System.assertEquals(3, recipients.size(),
+                'Should parse 3 comma-separated addresses.');
+            System.assert(recipients.contains('alice@test.com'),
+                'Should include alice.');
+        }
     }
 
     /**
@@ -201,15 +219,17 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testResolveFallbackRecipients() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        // WeeklyDigestRecipientsTxt__c is null
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            // WeeklyDigestRecipientsTxt__c is null
 
-        Test.startTest();
-        List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
-        Test.stopTest();
+            Test.startTest();
+            List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
+            Test.stopTest();
 
-        System.assert(!recipients.isEmpty(),
-            'Fallback should return at least the running user.');
+            System.assert(!recipients.isEmpty(),
+                'Fallback should return at least the running user.');
+        }
     }
 
     /**
@@ -217,20 +237,22 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testResolveRecipientsWithExtraCommas() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestRecipientsTxt__c = ' alice@test.com , , bob@test.com , ';
-        update s;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestRecipientsTxt__c = ' alice@test.com , , bob@test.com , ';
+            update s;
 
-        Test.startTest();
-        List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
-        Test.stopTest();
+            Test.startTest();
+            List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
+            Test.stopTest();
 
-        System.assertEquals(2, recipients.size(),
-            'Should parse 2 valid addresses and skip blanks.');
-        System.assertEquals('alice@test.com', recipients[0],
-            'First address should be trimmed.');
-        System.assertEquals('bob@test.com', recipients[1],
-            'Second address should be trimmed.');
+            System.assertEquals(2, recipients.size(),
+                'Should parse 2 valid addresses and skip blanks.');
+            System.assertEquals('alice@test.com', recipients[0],
+                'First address should be trimmed.');
+            System.assertEquals('bob@test.com', recipients[1],
+                'Second address should be trimmed.');
+        }
     }
 
     /**
@@ -238,16 +260,18 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testResolveSingleRecipient() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestRecipientsTxt__c = 'solo@test.com';
-        update s;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestRecipientsTxt__c = 'solo@test.com';
+            update s;
 
-        Test.startTest();
-        List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
-        Test.stopTest();
+            Test.startTest();
+            List<String> recipients = DeliveryWeeklyDigestService.resolveRecipients(s);
+            Test.stopTest();
 
-        System.assertEquals(1, recipients.size(), 'Should parse exactly 1 address.');
-        System.assertEquals('solo@test.com', recipients[0], 'Address should match.');
+            System.assertEquals(1, recipients.size(), 'Should parse exactly 1 address.');
+            System.assertEquals('solo@test.com', recipients[0], 'Address should match.');
+        }
     }
 
     // ── Tests: gatherDigestData ─────────────────────────────────────────────
@@ -257,21 +281,23 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testGatherDigestDataWithWorkItems() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        createWorkItems();
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            createWorkItems();
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.DigestData data = DeliveryWeeklyDigestService.gatherDigestData(s);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.DigestData data = DeliveryWeeklyDigestService.gatherDigestData(s);
+            Test.stopTest();
 
-        System.assertNotEquals(null, data, 'DigestData should not be null.');
-        System.assert(data.newThisWeek >= 0, 'newThisWeek should be non-negative.');
-        System.assert(data.completedThisWeek >= 0, 'completedThisWeek should be non-negative.');
-        System.assert(data.activeItems >= 0, 'activeItems should be non-negative.');
-        System.assert(data.attentionItems >= 0, 'attentionItems should be non-negative.');
-        System.assert(data.hoursLogged >= 0, 'hoursLogged should be non-negative.');
-        System.assertNotEquals(null, data.slaCounts, 'slaCounts should be initialized.');
-        System.assertNotEquals(null, data.topAttentionItems, 'topAttentionItems should be initialized.');
+            System.assertNotEquals(null, data, 'DigestData should not be null.');
+            System.assert(data.newThisWeek >= 0, 'newThisWeek should be non-negative.');
+            System.assert(data.completedThisWeek >= 0, 'completedThisWeek should be non-negative.');
+            System.assert(data.activeItems >= 0, 'activeItems should be non-negative.');
+            System.assert(data.attentionItems >= 0, 'attentionItems should be non-negative.');
+            System.assert(data.hoursLogged >= 0, 'hoursLogged should be non-negative.');
+            System.assertNotEquals(null, data.slaCounts, 'slaCounts should be initialized.');
+            System.assertNotEquals(null, data.topAttentionItems, 'topAttentionItems should be initialized.');
+        }
     }
 
     /**
@@ -279,18 +305,20 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testGatherDigestDataEmpty() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.DigestData data = DeliveryWeeklyDigestService.gatherDigestData(s);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.DigestData data = DeliveryWeeklyDigestService.gatherDigestData(s);
+            Test.stopTest();
 
-        System.assertEquals(0, data.completedThisWeek, 'completedThisWeek should be 0.');
-        System.assertEquals(0, data.newThisWeek, 'newThisWeek should be 0.');
-        System.assertEquals(0, data.activeItems, 'activeItems should be 0.');
-        System.assertEquals(0, data.attentionItems, 'attentionItems should be 0.');
-        System.assertEquals(0, data.hoursLogged, 'hoursLogged should be 0.');
-        System.assert(data.topAttentionItems.isEmpty(), 'topAttentionItems should be empty.');
+            System.assertEquals(0, data.completedThisWeek, 'completedThisWeek should be 0.');
+            System.assertEquals(0, data.newThisWeek, 'newThisWeek should be 0.');
+            System.assertEquals(0, data.activeItems, 'activeItems should be 0.');
+            System.assertEquals(0, data.attentionItems, 'attentionItems should be 0.');
+            System.assertEquals(0, data.hoursLogged, 'hoursLogged should be 0.');
+            System.assert(data.topAttentionItems.isEmpty(), 'topAttentionItems should be empty.');
+        }
     }
 
     /**
@@ -299,43 +327,45 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testGatherDigestDataWithSlaItems() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        List<WorkItem__c> items = new List<WorkItem__c>();
-        // Active item with SLA target date (SLAStatusTxt__c is formula, so we set fields it depends on)
-        items.add(new WorkItem__c(
-            BriefDescriptionTxt__c = 'SLA tracked item',
-            StageNamePk__c = 'In Development',
-            PriorityPk__c = 'High',
-            ActivatedDateTime__c = Datetime.now(),
-            SLATargetDate__c = Date.today().addDays(5)
-        ));
-        items.add(new WorkItem__c(
-            BriefDescriptionTxt__c = 'SLA at-risk item',
-            StageNamePk__c = 'In QA',
-            PriorityPk__c = 'Medium',
-            ActivatedDateTime__c = Datetime.now(),
-            SLATargetDate__c = Date.today().addDays(1)
-        ));
-        items.add(new WorkItem__c(
-            BriefDescriptionTxt__c = 'SLA breached item',
-            StageNamePk__c = 'In Development',
-            PriorityPk__c = 'Critical',
-            ActivatedDateTime__c = Datetime.now(),
-            SLATargetDate__c = Date.today().addDays(-3)
-        ));
-        insert items;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            List<WorkItem__c> items = new List<WorkItem__c>();
+            // Active item with SLA target date (SLAStatusTxt__c is formula, so we set fields it depends on)
+            items.add(new WorkItem__c(
+                BriefDescriptionTxt__c = 'SLA tracked item',
+                StageNamePk__c = 'In Development',
+                PriorityPk__c = 'High',
+                ActivatedDateTime__c = Datetime.now(),
+                SLATargetDate__c = Date.today().addDays(5)
+            ));
+            items.add(new WorkItem__c(
+                BriefDescriptionTxt__c = 'SLA at-risk item',
+                StageNamePk__c = 'In QA',
+                PriorityPk__c = 'Medium',
+                ActivatedDateTime__c = Datetime.now(),
+                SLATargetDate__c = Date.today().addDays(1)
+            ));
+            items.add(new WorkItem__c(
+                BriefDescriptionTxt__c = 'SLA breached item',
+                StageNamePk__c = 'In Development',
+                PriorityPk__c = 'Critical',
+                ActivatedDateTime__c = Datetime.now(),
+                SLATargetDate__c = Date.today().addDays(-3)
+            ));
+            insert items;
 
-        Test.startTest();
-        DeliveryWeeklyDigestService.DigestData data = DeliveryWeeklyDigestService.gatherDigestData(s);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWeeklyDigestService.DigestData data = DeliveryWeeklyDigestService.gatherDigestData(s);
+            Test.stopTest();
 
-        System.assertNotEquals(null, data.slaCounts, 'slaCounts should be populated.');
-        // Verify the SLA counting loop ran (actual formula values may vary)
-        Integer totalSla = 0;
-        for (Integer v : data.slaCounts.values()) {
-            totalSla += v;
+            System.assertNotEquals(null, data.slaCounts, 'slaCounts should be populated.');
+            // Verify the SLA counting loop ran (actual formula values may vary)
+            Integer totalSla = 0;
+            for (Integer v : data.slaCounts.values()) {
+                totalSla += v;
+            }
+            System.assert(totalSla >= 0, 'Total SLA count should be non-negative.');
         }
-        System.assert(totalSla >= 0, 'Total SLA count should be non-negative.');
     }
 
     // ── Tests: tryGenerateAiSummary ─────────────────────────────────────────
@@ -345,14 +375,16 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testTryGenerateAiSummaryDisabled() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
 
-        Test.startTest();
-        String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
-        Test.stopTest();
+            Test.startTest();
+            String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
+            Test.stopTest();
 
-        System.assertEquals(null, summary,
-            'AI summary should be null when AI is disabled.');
+            System.assertEquals(null, summary,
+                'AI summary should be null when AI is disabled.');
+        }
     }
 
     /**
@@ -360,14 +392,16 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testTryGenerateAiSummaryNoKey() {
-        DeliveryHubSettings__c s = createSettings(true, true, '');
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, true, '');
 
-        Test.startTest();
-        String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
-        Test.stopTest();
+            Test.startTest();
+            String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
+            Test.stopTest();
 
-        System.assertEquals(null, summary,
-            'AI summary should be null when API key is blank.');
+            System.assertEquals(null, summary,
+                'AI summary should be null when API key is blank.');
+        }
     }
 
     /**
@@ -375,16 +409,18 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testTryGenerateAiSummarySuccess() {
-        DeliveryHubSettings__c s = createSettings(true, true, 'sk-test-key');
-        createWorkItems();
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', aiSuccessBody()));
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, true, 'sk-test-key');
+            createWorkItems();
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', aiSuccessBody()));
 
-        Test.startTest();
-        String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
-        Test.stopTest();
+            Test.startTest();
+            String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
+            Test.stopTest();
 
-        System.assertNotEquals(null, summary, 'AI summary should not be null on success.');
-        System.assert(summary.contains('productive'), 'Summary should contain mock response text.');
+            System.assertNotEquals(null, summary, 'AI summary should not be null on success.');
+            System.assert(summary.contains('productive'), 'Summary should contain mock response text.');
+        }
     }
 
     /**
@@ -392,18 +428,20 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testTryGenerateAiSummaryCalloutError() {
-        DeliveryHubSettings__c s = createSettings(true, true, 'sk-bad-key');
-        createWorkItems();
-        Test.setMock(HttpCalloutMock.class,
-            new OpenAIMock(500, 'Internal Server Error', '{"error":"server error"}'));
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, true, 'sk-bad-key');
+            createWorkItems();
+            Test.setMock(HttpCalloutMock.class,
+                new OpenAIMock(500, 'Internal Server Error', '{"error":"server error"}'));
 
-        Test.startTest();
-        String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
-        Test.stopTest();
+            Test.startTest();
+            String summary = DeliveryWeeklyDigestService.tryGenerateAiSummary(s);
+            Test.stopTest();
 
-        // The method should catch the exception and return null
-        // (Exact behavior depends on DeliveryAiController error handling)
-        System.assert(true, 'Should not throw an exception on callout failure.');
+            // The method should catch the exception and return null
+            // (Exact behavior depends on DeliveryAiController error handling)
+            System.assert(true, 'Should not throw an exception on callout failure.');
+        }
     }
 
     // ── Tests: HTML content ─────────────────────────────────────────────────
@@ -413,41 +451,43 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testBuildDigestHtmlWithAi() {
-        DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
-        data.aiSummary = 'Great progress this week across all workstreams.';
-        data.completedThisWeek = 3;
-        data.newThisWeek = 5;
-        data.activeItems = 12;
-        data.attentionItems = 2;
-        data.hoursLogged = 40.5;
-        data.slaCounts = new Map<String, Integer>{
-            'On Track' => 8, 'At Risk' => 2, 'Breached' => 1, 'Met' => 3
-        };
+        System.runAs(testUser) {
+            DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
+            data.aiSummary = 'Great progress this week across all workstreams.';
+            data.completedThisWeek = 3;
+            data.newThisWeek = 5;
+            data.activeItems = 12;
+            data.attentionItems = 2;
+            data.hoursLogged = 40.5;
+            data.slaCounts = new Map<String, Integer>{
+                'On Track' => 8, 'At Risk' => 2, 'Breached' => 1, 'Met' => 3
+            };
 
-        DeliveryWeeklyDigestService.AttentionItem ai = new DeliveryWeeklyDigestService.AttentionItem();
-        ai.name = 'WI-0001';
-        ai.title = 'Fix login timeout';
-        ai.stage = 'Ready for Client Approval';
-        ai.priority = 'Critical';
-        ai.daysInStage = 5;
-        data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>{ ai };
+            DeliveryWeeklyDigestService.AttentionItem ai = new DeliveryWeeklyDigestService.AttentionItem();
+            ai.name = 'WI-0001';
+            ai.title = 'Fix login timeout';
+            ai.stage = 'Ready for Client Approval';
+            ai.priority = 'Critical';
+            ai.daysInStage = 5;
+            data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>{ ai };
 
-        String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
+            String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
 
-        System.assert(html.contains('Board Summary'),
-            'HTML should contain Board Summary heading.');
-        System.assert(html.contains('Great progress'),
-            'HTML should contain the AI summary text.');
-        System.assert(html.contains('This Week at a Glance'),
-            'HTML should contain metrics heading.');
-        System.assert(html.contains('SLA Health'),
-            'HTML should contain SLA section.');
-        System.assert(html.contains('WI-0001'),
-            'HTML should contain the attention item name.');
-        System.assert(html.contains('Fix login timeout'),
-            'HTML should contain the attention item title.');
-        System.assert(html.contains('Powered by Delivery Hub | Cloud Nimbus LLC'),
-            'HTML should contain the footer branding.');
+            System.assert(html.contains('Board Summary'),
+                'HTML should contain Board Summary heading.');
+            System.assert(html.contains('Great progress'),
+                'HTML should contain the AI summary text.');
+            System.assert(html.contains('This Week at a Glance'),
+                'HTML should contain metrics heading.');
+            System.assert(html.contains('SLA Health'),
+                'HTML should contain SLA section.');
+            System.assert(html.contains('WI-0001'),
+                'HTML should contain the attention item name.');
+            System.assert(html.contains('Fix login timeout'),
+                'HTML should contain the attention item title.');
+            System.assert(html.contains('Powered by Delivery Hub | Cloud Nimbus LLC'),
+                'HTML should contain the footer branding.');
+        }
     }
 
     /**
@@ -455,28 +495,30 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testBuildDigestHtmlWithoutAi() {
-        DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
-        data.aiSummary = null;
-        data.completedThisWeek = 0;
-        data.newThisWeek = 1;
-        data.activeItems = 4;
-        data.attentionItems = 0;
-        data.hoursLogged = 0;
-        data.slaCounts = new Map<String, Integer>{
-            'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
-        };
-        data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
+        System.runAs(testUser) {
+            DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
+            data.aiSummary = null;
+            data.completedThisWeek = 0;
+            data.newThisWeek = 1;
+            data.activeItems = 4;
+            data.attentionItems = 0;
+            data.hoursLogged = 0;
+            data.slaCounts = new Map<String, Integer>{
+                'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
+            };
+            data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
 
-        String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
+            String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
 
-        System.assert(!html.contains('Board Summary'),
-            'HTML should not contain Board Summary when AI is null.');
-        System.assert(html.contains('This Week at a Glance'),
-            'HTML should still contain metrics heading.');
-        System.assert(!html.contains('SLA Health'),
-            'HTML should not contain SLA section when all counts are zero.');
-        System.assert(html.contains('Powered by Delivery Hub | Cloud Nimbus LLC'),
-            'HTML should contain the footer branding.');
+            System.assert(!html.contains('Board Summary'),
+                'HTML should not contain Board Summary when AI is null.');
+            System.assert(html.contains('This Week at a Glance'),
+                'HTML should still contain metrics heading.');
+            System.assert(!html.contains('SLA Health'),
+                'HTML should not contain SLA section when all counts are zero.');
+            System.assert(html.contains('Powered by Delivery Hub | Cloud Nimbus LLC'),
+                'HTML should contain the footer branding.');
+        }
     }
 
     /**
@@ -484,24 +526,26 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testBuildDigestHtmlWithHoursLogged() {
-        DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
-        data.aiSummary = null;
-        data.completedThisWeek = 2;
-        data.newThisWeek = 3;
-        data.activeItems = 10;
-        data.attentionItems = 1;
-        data.hoursLogged = 22.5;
-        data.slaCounts = new Map<String, Integer>{
-            'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
-        };
-        data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
+        System.runAs(testUser) {
+            DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
+            data.aiSummary = null;
+            data.completedThisWeek = 2;
+            data.newThisWeek = 3;
+            data.activeItems = 10;
+            data.attentionItems = 1;
+            data.hoursLogged = 22.5;
+            data.slaCounts = new Map<String, Integer>{
+                'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
+            };
+            data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
 
-        String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
+            String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
 
-        System.assert(html.contains('Hours Logged This Week'),
-            'HTML should contain hours logged section.');
-        System.assert(html.contains('22.5'),
-            'HTML should contain the hours value.');
+            System.assert(html.contains('Hours Logged This Week'),
+                'HTML should contain hours logged section.');
+            System.assert(html.contains('22.5'),
+                'HTML should contain the hours value.');
+        }
     }
 
     /**
@@ -509,22 +553,24 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testBuildDigestHtmlNoHours() {
-        DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
-        data.aiSummary = null;
-        data.completedThisWeek = 0;
-        data.newThisWeek = 0;
-        data.activeItems = 0;
-        data.attentionItems = 0;
-        data.hoursLogged = null;
-        data.slaCounts = new Map<String, Integer>{
-            'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
-        };
-        data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
+        System.runAs(testUser) {
+            DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
+            data.aiSummary = null;
+            data.completedThisWeek = 0;
+            data.newThisWeek = 0;
+            data.activeItems = 0;
+            data.attentionItems = 0;
+            data.hoursLogged = null;
+            data.slaCounts = new Map<String, Integer>{
+                'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
+            };
+            data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
 
-        String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
+            String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
 
-        System.assert(!html.contains('Hours Logged This Week'),
-            'HTML should not show hours section when hours is null.');
+            System.assert(!html.contains('Hours Logged This Week'),
+                'HTML should not show hours section when hours is null.');
+        }
     }
 
     /**
@@ -532,47 +578,49 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testBuildDigestHtmlMultipleAttentionItems() {
-        DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
-        data.aiSummary = null;
-        data.completedThisWeek = 1;
-        data.newThisWeek = 2;
-        data.activeItems = 5;
-        data.attentionItems = 3;
-        data.hoursLogged = 0;
-        data.slaCounts = new Map<String, Integer>{
-            'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
-        };
+        System.runAs(testUser) {
+            DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
+            data.aiSummary = null;
+            data.completedThisWeek = 1;
+            data.newThisWeek = 2;
+            data.activeItems = 5;
+            data.attentionItems = 3;
+            data.hoursLogged = 0;
+            data.slaCounts = new Map<String, Integer>{
+                'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
+            };
 
-        List<DeliveryWeeklyDigestService.AttentionItem> items = new List<DeliveryWeeklyDigestService.AttentionItem>();
+            List<DeliveryWeeklyDigestService.AttentionItem> items = new List<DeliveryWeeklyDigestService.AttentionItem>();
 
-        DeliveryWeeklyDigestService.AttentionItem a1 = new DeliveryWeeklyDigestService.AttentionItem();
-        a1.name = 'WI-0010';
-        a1.title = 'Blocked by vendor';
-        a1.stage = 'Blocked';
-        a1.priority = 'Critical';
-        a1.daysInStage = 10;
-        items.add(a1);
+            DeliveryWeeklyDigestService.AttentionItem a1 = new DeliveryWeeklyDigestService.AttentionItem();
+            a1.name = 'WI-0010';
+            a1.title = 'Blocked by vendor';
+            a1.stage = 'Blocked';
+            a1.priority = 'Critical';
+            a1.daysInStage = 10;
+            items.add(a1);
 
-        DeliveryWeeklyDigestService.AttentionItem a2 = new DeliveryWeeklyDigestService.AttentionItem();
-        a2.name = 'WI-0011';
-        a2.title = 'Waiting for approval';
-        a2.stage = 'Ready for Client Approval';
-        a2.priority = null; // Test the null priority '--' fallback
-        a2.daysInStage = 3;
-        items.add(a2);
+            DeliveryWeeklyDigestService.AttentionItem a2 = new DeliveryWeeklyDigestService.AttentionItem();
+            a2.name = 'WI-0011';
+            a2.title = 'Waiting for approval';
+            a2.stage = 'Ready for Client Approval';
+            a2.priority = null; // Test the null priority '--' fallback
+            a2.daysInStage = 3;
+            items.add(a2);
 
-        data.topAttentionItems = items;
+            data.topAttentionItems = items;
 
-        String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
+            String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
 
-        System.assert(html.contains('Top Items Needing Attention'),
-            'HTML should contain attention items heading.');
-        System.assert(html.contains('WI-0010'),
-            'HTML should contain first attention item.');
-        System.assert(html.contains('WI-0011'),
-            'HTML should contain second attention item.');
-        System.assert(html.contains('--'),
-            'HTML should show -- for null priority.');
+            System.assert(html.contains('Top Items Needing Attention'),
+                'HTML should contain attention items heading.');
+            System.assert(html.contains('WI-0010'),
+                'HTML should contain first attention item.');
+            System.assert(html.contains('WI-0011'),
+                'HTML should contain second attention item.');
+            System.assert(html.contains('--'),
+                'HTML should show -- for null priority.');
+        }
     }
 
     /**
@@ -580,26 +628,28 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testBuildDigestHtmlAiWithNewlines() {
-        DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
-        data.aiSummary = 'Paragraph one.\n\nParagraph two.\nLine two continued.';
-        data.completedThisWeek = 0;
-        data.newThisWeek = 0;
-        data.activeItems = 0;
-        data.attentionItems = 0;
-        data.hoursLogged = 0;
-        data.slaCounts = new Map<String, Integer>{
-            'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
-        };
-        data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
+        System.runAs(testUser) {
+            DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
+            data.aiSummary = 'Paragraph one.\n\nParagraph two.\nLine two continued.';
+            data.completedThisWeek = 0;
+            data.newThisWeek = 0;
+            data.activeItems = 0;
+            data.attentionItems = 0;
+            data.hoursLogged = 0;
+            data.slaCounts = new Map<String, Integer>{
+                'On Track' => 0, 'At Risk' => 0, 'Breached' => 0, 'Met' => 0
+            };
+            data.topAttentionItems = new List<DeliveryWeeklyDigestService.AttentionItem>();
 
-        String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
+            String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
 
-        System.assert(html.contains('Board Summary'),
-            'HTML should contain Board Summary heading.');
-        System.assert(html.contains('Paragraph one.'),
-            'HTML should contain first paragraph.');
-        System.assert(html.contains('<br/>'),
-            'HTML should convert single newlines to br tags.');
+            System.assert(html.contains('Board Summary'),
+                'HTML should contain Board Summary heading.');
+            System.assert(html.contains('Paragraph one.'),
+                'HTML should contain first paragraph.');
+            System.assert(html.contains('<br/>'),
+                'HTML should convert single newlines to br tags.');
+        }
     }
 
     /**
@@ -607,24 +657,26 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testBuildDigestHtmlNullSlaCounts() {
-        DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
-        data.aiSummary = null;
-        data.completedThisWeek = 0;
-        data.newThisWeek = 0;
-        data.activeItems = 0;
-        data.attentionItems = 0;
-        data.hoursLogged = 0;
-        data.slaCounts = null;
-        data.topAttentionItems = null;
+        System.runAs(testUser) {
+            DeliveryWeeklyDigestService.DigestData data = new DeliveryWeeklyDigestService.DigestData();
+            data.aiSummary = null;
+            data.completedThisWeek = 0;
+            data.newThisWeek = 0;
+            data.activeItems = 0;
+            data.attentionItems = 0;
+            data.hoursLogged = 0;
+            data.slaCounts = null;
+            data.topAttentionItems = null;
 
-        String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
+            String html = DeliveryWeeklyDigestService.buildDigestHtml(data);
 
-        System.assert(!html.contains('SLA Health'),
-            'HTML should not contain SLA section when slaCounts is null.');
-        System.assert(!html.contains('Top Items Needing Attention'),
-            'HTML should not contain attention section when list is null.');
-        System.assert(html.contains('Powered by Delivery Hub'),
-            'HTML should still contain footer.');
+            System.assert(!html.contains('SLA Health'),
+                'HTML should not contain SLA section when slaCounts is null.');
+            System.assert(!html.contains('Top Items Needing Attention'),
+                'HTML should not contain attention section when list is null.');
+            System.assert(html.contains('Powered by Delivery Hub'),
+                'HTML should still contain footer.');
+        }
     }
 
     // ── Tests: isTodayDigestDay ─────────────────────────────────────────────
@@ -634,13 +686,15 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testIsTodayDigestDayMatches() {
-        String todayName = Datetime.now().format('EEEE');
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestDayTxt__c = todayName;
-        update s;
+        System.runAs(testUser) {
+            String todayName = Datetime.now().format('EEEE');
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestDayTxt__c = todayName;
+            update s;
 
-        System.assertEquals(true, DeliveryWeeklyDigestService.isTodayDigestDay(s),
-            'Should return true when today matches configured day.');
+            System.assertEquals(true, DeliveryWeeklyDigestService.isTodayDigestDay(s),
+                'Should return true when today matches configured day.');
+        }
     }
 
     /**
@@ -648,15 +702,17 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testIsTodayDigestDayNoMatch() {
-        // Pick a day that is definitely not today
-        String todayName = Datetime.now().format('EEEE');
-        String otherDay = todayName == 'Monday' ? 'Friday' : 'Monday';
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestDayTxt__c = otherDay;
-        update s;
+        System.runAs(testUser) {
+            // Pick a day that is definitely not today
+            String todayName = Datetime.now().format('EEEE');
+            String otherDay = todayName == 'Monday' ? 'Friday' : 'Monday';
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestDayTxt__c = otherDay;
+            update s;
 
-        System.assertEquals(false, DeliveryWeeklyDigestService.isTodayDigestDay(s),
-            'Should return false when today does not match configured day.');
+            System.assertEquals(false, DeliveryWeeklyDigestService.isTodayDigestDay(s),
+                'Should return false when today does not match configured day.');
+        }
     }
 
     /**
@@ -664,10 +720,12 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testIsTodayDigestDayDisabled() {
-        DeliveryHubSettings__c s = createSettings(false, false, '');
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(false, false, '');
 
-        System.assertEquals(false, DeliveryWeeklyDigestService.isTodayDigestDay(s),
-            'Should return false when digest is disabled.');
+            System.assertEquals(false, DeliveryWeeklyDigestService.isTodayDigestDay(s),
+                'Should return false when digest is disabled.');
+        }
     }
 
     /**
@@ -675,8 +733,10 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testIsTodayDigestDayNullSettings() {
-        System.assertEquals(false, DeliveryWeeklyDigestService.isTodayDigestDay(null),
-            'Should return false when settings are null.');
+        System.runAs(testUser) {
+            System.assertEquals(false, DeliveryWeeklyDigestService.isTodayDigestDay(null),
+                'Should return false when settings are null.');
+        }
     }
 
     /**
@@ -684,15 +744,17 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testIsTodayDigestDayDefaultDay() {
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestDayTxt__c = '';
-        update s;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestDayTxt__c = '';
+            update s;
 
-        // Should use default day (Monday)
-        String todayName = Datetime.now().format('EEEE');
-        Boolean expected = todayName.equalsIgnoreCase('Monday');
-        System.assertEquals(expected, DeliveryWeeklyDigestService.isTodayDigestDay(s),
-            'Should default to Monday when digest day is blank.');
+            // Should use default day (Monday)
+            String todayName = Datetime.now().format('EEEE');
+            Boolean expected = todayName.equalsIgnoreCase('Monday');
+            System.assertEquals(expected, DeliveryWeeklyDigestService.isTodayDigestDay(s),
+                'Should default to Monday when digest day is blank.');
+        }
     }
 
     /**
@@ -700,13 +762,15 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testIsTodayDigestDayWithWhitespace() {
-        String todayName = Datetime.now().format('EEEE');
-        DeliveryHubSettings__c s = createSettings(true, false, '');
-        s.WeeklyDigestDayTxt__c = '  ' + todayName + '  ';
-        update s;
+        System.runAs(testUser) {
+            String todayName = Datetime.now().format('EEEE');
+            DeliveryHubSettings__c s = createSettings(true, false, '');
+            s.WeeklyDigestDayTxt__c = '  ' + todayName + '  ';
+            update s;
 
-        System.assertEquals(true, DeliveryWeeklyDigestService.isTodayDigestDay(s),
-            'Should trim whitespace and still match today.');
+            System.assertEquals(true, DeliveryWeeklyDigestService.isTodayDigestDay(s),
+                'Should trim whitespace and still match today.');
+        }
     }
 
     // ── Tests: Queueable ────────────────────────────────────────────────────
@@ -716,14 +780,16 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testQueueableExecution() {
-        createSettings(true, false, '');
-        createWorkItems();
+        System.runAs(testUser) {
+            createSettings(true, false, '');
+            createWorkItems();
 
-        Test.startTest();
-        System.enqueueJob(new DeliveryWeeklyDigestQueueable());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliveryWeeklyDigestQueueable());
+            Test.stopTest();
 
-        System.assert(true, 'Queueable should execute without error.');
+            System.assert(true, 'Queueable should execute without error.');
+        }
     }
 
     /**
@@ -731,15 +797,17 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testQueueableWithAiCallout() {
-        createSettings(true, true, 'sk-test-key-123');
-        createWorkItems();
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', aiSuccessBody()));
+        System.runAs(testUser) {
+            createSettings(true, true, 'sk-test-key-123');
+            createWorkItems();
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', aiSuccessBody()));
 
-        Test.startTest();
-        System.enqueueJob(new DeliveryWeeklyDigestQueueable());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliveryWeeklyDigestQueueable());
+            Test.stopTest();
 
-        System.assert(true, 'Queueable should execute with AI callout without error.');
+            System.assert(true, 'Queueable should execute with AI callout without error.');
+        }
     }
 
     /**
@@ -747,14 +815,16 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testQueueableDigestDisabled() {
-        createSettings(false, false, '');
+        System.runAs(testUser) {
+            createSettings(false, false, '');
 
-        Test.startTest();
-        System.enqueueJob(new DeliveryWeeklyDigestQueueable());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliveryWeeklyDigestQueueable());
+            Test.stopTest();
 
-        System.assertEquals(0, Limits.getEmailInvocations(),
-            'Queueable should not send email when digest is disabled.');
+            System.assertEquals(0, Limits.getEmailInvocations(),
+                'Queueable should not send email when digest is disabled.');
+        }
     }
 
     // ── Tests: Scheduler integration ────────────────────────────────────────
@@ -764,33 +834,35 @@ private class DeliveryWeeklyDigestServiceTest {
      */
     @IsTest
     static void testSchedulerWithDigest() {
-        insert new DeliveryHubSettings__c(
-            SetupOwnerId = UserInfo.getOrganizationId(),
-            EnableWeeklyDigestDateTime__c = Datetime.now(),
-            WeeklyDigestDayTxt__c = Datetime.now().format('EEEE'),
-            EnableAutoCreateWorkRequestDateTime__c = null,
-            EnableAutoSyncNetworkEntityDateTime__c = null
-        );
+        System.runAs(testUser) {
+            insert new DeliveryHubSettings__c(
+                SetupOwnerId = UserInfo.getOrganizationId(),
+                EnableWeeklyDigestDateTime__c = Datetime.now(),
+                WeeklyDigestDayTxt__c = Datetime.now().format('EEEE'),
+                EnableAutoCreateWorkRequestDateTime__c = null,
+                EnableAutoSyncNetworkEntityDateTime__c = null
+            );
 
-        NetworkEntity__c vendor = new NetworkEntity__c(
-            Name = 'Mothership',
-            StatusPk__c = 'Active',
-            EntityTypePk__c = 'Vendor',
-            IntegrationEndpointUrlTxt__c = 'https://mothership.example.com',
-            RemoteExternalIdTxt__c = 'CLIENT-XYZ'
-        );
-        insert vendor;
+            NetworkEntity__c vendor = new NetworkEntity__c(
+                Name = 'Mothership',
+                StatusPk__c = 'Active',
+                EntityTypePk__c = 'Vendor',
+                IntegrationEndpointUrlTxt__c = 'https://mothership.example.com',
+                RemoteExternalIdTxt__c = 'CLIENT-XYZ'
+            );
+            insert vendor;
 
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK',
-            '[{"objectType":"WorkItem__c","payload":"{}","syncItemId":"a0D000000000000EAA","createdDate":"2026-02-18T12:00:00.000Z"}]'));
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK',
+                '[{"objectType":"WorkItem__c","payload":"{}","syncItemId":"a0D000000000000EAA","createdDate":"2026-02-18T12:00:00.000Z"}]'));
 
-        Test.startTest();
-        String cronExp = '0 0 8 15 3 ? 2040';
-        String jobId = System.schedule('TestDigestScheduler', cronExp, new DeliveryHubScheduler());
-        Test.stopTest();
+            Test.startTest();
+            String cronExp = '0 0 8 15 3 ? 2040';
+            String jobId = System.schedule('TestDigestScheduler', cronExp, new DeliveryHubScheduler());
+            Test.stopTest();
 
-        CronTrigger ct = [SELECT Id, State FROM CronTrigger WHERE Id = :jobId];
-        System.assertNotEquals(null, ct, 'Scheduled job should exist.');
+            CronTrigger ct = [SELECT Id, State FROM CronTrigger WHERE Id = :jobId];
+            System.assertNotEquals(null, ct, 'Scheduled job should exist.');
+        }
     }
 
     // ── Mock ─────────────────────────────────────────────────────────────────

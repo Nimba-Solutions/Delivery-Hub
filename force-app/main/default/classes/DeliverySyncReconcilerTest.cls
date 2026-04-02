@@ -9,6 +9,8 @@
 @IsTest
 private class DeliverySyncReconcilerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void makeData() {
         // Prevent DeliverySyncEngine from firing during setup
@@ -64,22 +66,24 @@ private class DeliverySyncReconcilerTest {
      */
     @IsTest
     static void testReconcileFindsGap() {
-        // Ensure no SyncItems exist (gap scenario)
-        delete [SELECT Id FROM SyncItem__c];
+        System.runAs(testUser) {
+            // Ensure no SyncItems exist (gap scenario)
+            delete [SELECT Id FROM SyncItem__c];
 
-        Test.startTest();
-        System.enqueueJob(new DeliverySyncReconciler());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncReconciler());
+            Test.stopTest();
 
-        List<SyncItem__c> created = [
-            SELECT Id, ObjectTypePk__c, StatusPk__c, DirectionPk__c, RequestId__c
-            FROM SyncItem__c
-            WHERE ObjectTypePk__c = 'WorkItem__c'
-            AND DirectionPk__c = 'Outbound'
-        ];
-        System.assertEquals(1, created.size(), 'Reconciler should create exactly one WorkItem SyncItem for the gap.');
-        System.assertEquals('Queued', created[0].StatusPk__c, 'Gap SyncItem should be Queued for processing.');
-        System.assertNotEquals(null, created[0].RequestId__c, 'Gap SyncItem should be linked to the WorkRequest.');
+            List<SyncItem__c> created = [
+                SELECT Id, ObjectTypePk__c, StatusPk__c, DirectionPk__c, RequestId__c
+                FROM SyncItem__c
+                WHERE ObjectTypePk__c = 'WorkItem__c'
+                AND DirectionPk__c = 'Outbound'
+            ];
+            System.assertEquals(1, created.size(), 'Reconciler should create exactly one WorkItem SyncItem for the gap.');
+            System.assertEquals('Queued', created[0].StatusPk__c, 'Gap SyncItem should be Queued for processing.');
+            System.assertNotEquals(null, created[0].RequestId__c, 'Gap SyncItem should be linked to the WorkRequest.');
+        }
     }
 
     /**
@@ -88,45 +92,47 @@ private class DeliverySyncReconcilerTest {
      */
     @IsTest
     static void testReconcileSkipsSyncedItems() {
-        // Clear any noise
-        delete [SELECT Id FROM SyncItem__c];
+        System.runAs(testUser) {
+            // Clear any noise
+            delete [SELECT Id FROM SyncItem__c];
 
-        // Cover ALL WorkRequests (packaging org may auto-create extras)
-        List<WorkRequest__c> allReqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c];
-        List<WorkLog__c> allWLs = [SELECT Id, WorkItemId__c FROM WorkLog__c];
+            // Cover ALL WorkRequests (packaging org may auto-create extras)
+            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c];
+            List<WorkLog__c> allWLs = [SELECT Id, WorkItemId__c FROM WorkLog__c];
 
-        List<SyncItem__c> preCreated = new List<SyncItem__c>();
-        for (WorkRequest__c req : allReqs) {
-            preCreated.add(new SyncItem__c(
-                ObjectTypePk__c     = 'WorkItem__c',
-                LocalRecordIdTxt__c = req.WorkItemId__c,
-                WorkItemId__c       = req.WorkItemId__c,
-                RequestId__c        = req.Id,
-                DirectionPk__c      = 'Outbound',
-                StatusPk__c         = 'Synced',
-                PayloadTxt__c       = '{"test":"already synced"}'
-            ));
+            List<SyncItem__c> preCreated = new List<SyncItem__c>();
+            for (WorkRequest__c req : allReqs) {
+                preCreated.add(new SyncItem__c(
+                    ObjectTypePk__c     = 'WorkItem__c',
+                    LocalRecordIdTxt__c = req.WorkItemId__c,
+                    WorkItemId__c       = req.WorkItemId__c,
+                    RequestId__c        = req.Id,
+                    DirectionPk__c      = 'Outbound',
+                    StatusPk__c         = 'Synced',
+                    PayloadTxt__c       = '{"test":"already synced"}'
+                ));
+            }
+            for (WorkLog__c wl : allWLs) {
+                preCreated.add(new SyncItem__c(
+                    ObjectTypePk__c     = 'WorkLog__c',
+                    LocalRecordIdTxt__c = (String) wl.Id,
+                    WorkItemId__c       = wl.WorkItemId__c,
+                    DirectionPk__c      = 'Outbound',
+                    StatusPk__c         = 'Synced',
+                    PayloadTxt__c       = '{"test":"worklog already synced"}'
+                ));
+            }
+            insert preCreated;
+
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncReconciler());
+            Test.stopTest();
+
+            Integer queuedWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
+            Integer queuedWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
+            System.assertEquals(0, queuedWI, 'Reconciler should NOT create Queued WorkItem SyncItems when Synced item exists.');
+            System.assertEquals(0, queuedWL, 'Reconciler should NOT create Queued WorkLog SyncItems when Synced item exists.');
         }
-        for (WorkLog__c wl : allWLs) {
-            preCreated.add(new SyncItem__c(
-                ObjectTypePk__c     = 'WorkLog__c',
-                LocalRecordIdTxt__c = (String) wl.Id,
-                WorkItemId__c       = wl.WorkItemId__c,
-                DirectionPk__c      = 'Outbound',
-                StatusPk__c         = 'Synced',
-                PayloadTxt__c       = '{"test":"worklog already synced"}'
-            ));
-        }
-        insert preCreated;
-
-        Test.startTest();
-        System.enqueueJob(new DeliverySyncReconciler());
-        Test.stopTest();
-
-        Integer queuedWI = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
-        Integer queuedWL = [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Queued'];
-        System.assertEquals(0, queuedWI, 'Reconciler should NOT create Queued WorkItem SyncItems when Synced item exists.');
-        System.assertEquals(0, queuedWL, 'Reconciler should NOT create Queued WorkLog SyncItems when Synced item exists.');
     }
 
     /**
@@ -135,26 +141,28 @@ private class DeliverySyncReconcilerTest {
      */
     @IsTest
     static void testReconcileWorkLogs() {
-        // Clear all SyncItems (gap for both WorkItem and WorkLog)
-        delete [SELECT Id FROM SyncItem__c];
+        System.runAs(testUser) {
+            // Clear all SyncItems (gap for both WorkItem and WorkLog)
+            delete [SELECT Id FROM SyncItem__c];
 
-        Test.startTest();
-        System.enqueueJob(new DeliverySyncReconciler());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncReconciler());
+            Test.stopTest();
 
-        List<SyncItem__c> workItemSyncs = [
-            SELECT Id FROM SyncItem__c
-            WHERE ObjectTypePk__c = 'WorkItem__c'
-            AND DirectionPk__c = 'Outbound'
-        ];
-        List<SyncItem__c> workLogSyncs = [
-            SELECT Id, PayloadTxt__c FROM SyncItem__c
-            WHERE ObjectTypePk__c = 'WorkLog__c'
-            AND DirectionPk__c = 'Outbound'
-        ];
+            List<SyncItem__c> workItemSyncs = [
+                SELECT Id FROM SyncItem__c
+                WHERE ObjectTypePk__c = 'WorkItem__c'
+                AND DirectionPk__c = 'Outbound'
+            ];
+            List<SyncItem__c> workLogSyncs = [
+                SELECT Id, PayloadTxt__c FROM SyncItem__c
+                WHERE ObjectTypePk__c = 'WorkLog__c'
+                AND DirectionPk__c = 'Outbound'
+            ];
 
-        System.assertEquals(1, workItemSyncs.size(), 'Should create one WorkItem SyncItem.');
-        System.assertEquals(1, workLogSyncs.size(), 'Should create one WorkLog SyncItem.');
-        System.assert(workLogSyncs[0].PayloadTxt__c.contains('HoursLoggedNumber__c'), 'WorkLog payload should contain hours.');
+            System.assertEquals(1, workItemSyncs.size(), 'Should create one WorkItem SyncItem.');
+            System.assertEquals(1, workLogSyncs.size(), 'Should create one WorkLog SyncItem.');
+            System.assert(workLogSyncs[0].PayloadTxt__c.contains('HoursLoggedNumber__c'), 'WorkLog payload should contain hours.');
+        }
     }
 }

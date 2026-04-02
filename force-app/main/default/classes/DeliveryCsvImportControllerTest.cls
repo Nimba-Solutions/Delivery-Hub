@@ -7,6 +7,8 @@
 @isTest
 public class DeliveryCsvImportControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     // ── Namespace helpers ────────────────────────────────────────────
 
     /**
@@ -37,294 +39,314 @@ public class DeliveryCsvImportControllerTest {
 
     @isTest
     static void testImportSingleRecord() {
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
 
-        List<Map<String, String>> records = new List<Map<String, String>>();
-        Map<String, String> row = new Map<String, String>();
-        row.put(ns('BriefDescriptionTxt__c'), 'CSV Single Import');
-        row.put(ns('PriorityPk__c'), 'High');
-        row.put(ns('StageNamePk__c'), 'Backlog');
-        records.add(row);
+            List<Map<String, String>> records = new List<Map<String, String>>();
+            Map<String, String> row = new Map<String, String>();
+            row.put(ns('BriefDescriptionTxt__c'), 'CSV Single Import');
+            row.put(ns('PriorityPk__c'), 'High');
+            row.put(ns('StageNamePk__c'), 'Backlog');
+            records.add(row);
 
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(1, (Integer) result.get('successCount'),
-            'Expected 1 successful insert');
-        System.assertEquals(0, (Integer) result.get('errorCount'),
-            'Expected 0 errors');
+            System.assertEquals(1, (Integer) result.get('successCount'),
+                'Expected 1 successful insert');
+            System.assertEquals(0, (Integer) result.get('errorCount'),
+                'Expected 0 errors');
 
-        List<String> ids = (List<String>) result.get('createdIds');
-        System.assertEquals(1, ids.size(), 'Expected 1 created Id');
+            List<String> ids = (List<String>) result.get('createdIds');
+            System.assertEquals(1, ids.size(), 'Expected 1 created Id');
 
-        WorkItem__c wi = [
-            SELECT BriefDescriptionTxt__c, PriorityPk__c, WorkflowTypeTxt__c, ActivatedDateTime__c
-            FROM WorkItem__c
-            WHERE Id = :ids[0]
-            WITH SYSTEM_MODE
-        ];
-        System.assertEquals('CSV Single Import', wi.BriefDescriptionTxt__c);
-        System.assertEquals('High', wi.PriorityPk__c);
-        System.assertEquals('Software_Delivery', wi.WorkflowTypeTxt__c);
-        System.assertNotEquals(null, wi.ActivatedDateTime__c);
+            WorkItem__c wi = [
+                SELECT BriefDescriptionTxt__c, PriorityPk__c, WorkflowTypeTxt__c, ActivatedDateTime__c
+                FROM WorkItem__c
+                WHERE Id = :ids[0]
+                WITH SYSTEM_MODE
+            ];
+            System.assertEquals('CSV Single Import', wi.BriefDescriptionTxt__c);
+            System.assertEquals('High', wi.PriorityPk__c);
+            System.assertEquals('Software_Delivery', wi.WorkflowTypeTxt__c);
+            System.assertNotEquals(null, wi.ActivatedDateTime__c);
 
-        DeliveryTriggerControl.enableAfterLogic();
+            DeliveryTriggerControl.enableAfterLogic();
+        }
     }
 
     // ── Bulk import (10+ records) ────────────────────────────────────
 
     @isTest
     static void testImportBulkRecords() {
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
 
-        List<Map<String, String>> records = new List<Map<String, String>>();
-        for (Integer i = 0; i < 15; i++) {
-            Map<String, String> row = new Map<String, String>();
-            row.put(ns('BriefDescriptionTxt__c'), 'Bulk Item ' + i);
-            row.put(ns('PriorityPk__c'), 'Medium');
-            row.put(ns('StageNamePk__c'), 'Backlog');
-            records.add(row);
+            List<Map<String, String>> records = new List<Map<String, String>>();
+            for (Integer i = 0; i < 15; i++) {
+                Map<String, String> row = new Map<String, String>();
+                row.put(ns('BriefDescriptionTxt__c'), 'Bulk Item ' + i);
+                row.put(ns('PriorityPk__c'), 'Medium');
+                row.put(ns('StageNamePk__c'), 'Backlog');
+                records.add(row);
+            }
+
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
+            Test.stopTest();
+
+            System.assertEquals(15, (Integer) result.get('successCount'),
+                'All 15 records should succeed');
+            System.assertEquals(0, (Integer) result.get('errorCount'),
+                'Expected 0 errors');
+
+            Integer count = [
+                SELECT COUNT()
+                FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c LIKE 'Bulk Item%'
+                WITH SYSTEM_MODE
+            ];
+            System.assertEquals(15, count, 'Database should contain 15 bulk items');
+
+            DeliveryTriggerControl.enableAfterLogic();
         }
-
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
-        Test.stopTest();
-
-        System.assertEquals(15, (Integer) result.get('successCount'),
-            'All 15 records should succeed');
-        System.assertEquals(0, (Integer) result.get('errorCount'),
-            'Expected 0 errors');
-
-        Integer count = [
-            SELECT COUNT()
-            FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c LIKE 'Bulk Item%'
-            WITH SYSTEM_MODE
-        ];
-        System.assertEquals(15, count, 'Database should contain 15 bulk items');
-
-        DeliveryTriggerControl.enableAfterLogic();
     }
 
     // ── Partial failure handling ──────────────────────────────────────
 
     @isTest
     static void testImportPartialFailure() {
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
 
-        List<Map<String, String>> records = new List<Map<String, String>>();
+            List<Map<String, String>> records = new List<Map<String, String>>();
 
-        // Good record
-        Map<String, String> good = new Map<String, String>();
-        good.put(ns('BriefDescriptionTxt__c'), 'Good Record');
-        good.put(ns('StageNamePk__c'), 'Backlog');
-        records.add(good);
+            // Good record
+            Map<String, String> good = new Map<String, String>();
+            good.put(ns('BriefDescriptionTxt__c'), 'Good Record');
+            good.put(ns('StageNamePk__c'), 'Backlog');
+            records.add(good);
 
-        // Bad record — BriefDescriptionTxt__c is Text(100); exceed that limit to cause an error
-        Map<String, String> bad = new Map<String, String>();
-        String longVal = '';
-        for (Integer i = 0; i < 20; i++) {
-            longVal += 'ABCDEFGHIJ'; // 200 chars total — over the 100 char limit
+            // Bad record — BriefDescriptionTxt__c is Text(100); exceed that limit to cause an error
+            Map<String, String> bad = new Map<String, String>();
+            String longVal = '';
+            for (Integer i = 0; i < 20; i++) {
+                longVal += 'ABCDEFGHIJ'; // 200 chars total — over the 100 char limit
+            }
+            bad.put(ns('BriefDescriptionTxt__c'), longVal);
+            bad.put(ns('StageNamePk__c'), 'Backlog');
+            records.add(bad);
+
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
+            Test.stopTest();
+
+            System.assertEquals(1, (Integer) result.get('successCount'),
+                'One record should succeed');
+            System.assertEquals(1, (Integer) result.get('errorCount'),
+                'One record should fail');
+
+            List<Object> errors = (List<Object>) result.get('errors');
+            System.assertEquals(1, errors.size(), 'Should have 1 error entry');
+
+            DeliveryTriggerControl.enableAfterLogic();
         }
-        bad.put(ns('BriefDescriptionTxt__c'), longVal);
-        bad.put(ns('StageNamePk__c'), 'Backlog');
-        records.add(bad);
-
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
-        Test.stopTest();
-
-        System.assertEquals(1, (Integer) result.get('successCount'),
-            'One record should succeed');
-        System.assertEquals(1, (Integer) result.get('errorCount'),
-            'One record should fail');
-
-        List<Object> errors = (List<Object>) result.get('errors');
-        System.assertEquals(1, errors.size(), 'Should have 1 error entry');
-
-        DeliveryTriggerControl.enableAfterLogic();
     }
 
     // ── getWorkItemFields returns expected fields ─────────────────────
 
     @isTest
     static void testGetWorkItemFields() {
-        Test.startTest();
-        List<Map<String, String>> fields = DeliveryCsvImportController.getWorkItemFields();
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, String>> fields = DeliveryCsvImportController.getWorkItemFields();
+            Test.stopTest();
 
-        System.assert(fields.size() > 0, 'Should return at least one field');
+            System.assert(fields.size() > 0, 'Should return at least one field');
 
-        // Verify structure: every entry should have apiName, label, type
-        for (Map<String, String> f : fields) {
-            System.assert(f.containsKey('apiName'), 'Field entry missing apiName');
-            System.assert(f.containsKey('label'), 'Field entry missing label');
-            System.assert(f.containsKey('type'), 'Field entry missing type');
-        }
-
-        // BriefDescriptionTxt__c must be present (may be namespace-prefixed)
-        Boolean found = false;
-        for (Map<String, String> f : fields) {
-            String apiName = f.get('apiName');
-            if (apiName != null && apiName.endsWith('BriefDescriptionTxt__c')) {
-                found = true;
-                System.assertEquals('Brief Description', f.get('label'));
-                break;
+            // Verify structure: every entry should have apiName, label, type
+            for (Map<String, String> f : fields) {
+                System.assert(f.containsKey('apiName'), 'Field entry missing apiName');
+                System.assert(f.containsKey('label'), 'Field entry missing label');
+                System.assert(f.containsKey('type'), 'Field entry missing type');
             }
+
+            // BriefDescriptionTxt__c must be present (may be namespace-prefixed)
+            Boolean found = false;
+            for (Map<String, String> f : fields) {
+                String apiName = f.get('apiName');
+                if (apiName != null && apiName.endsWith('BriefDescriptionTxt__c')) {
+                    found = true;
+                    System.assertEquals('Brief Description', f.get('label'));
+                    break;
+                }
+            }
+            System.assert(found, 'BriefDescriptionTxt__c should be in the returned fields');
         }
-        System.assert(found, 'BriefDescriptionTxt__c should be in the returned fields');
     }
 
     // ── Different workflow types ──────────────────────────────────────
 
     @isTest
     static void testImportWithLoanApprovalWorkflow() {
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
 
-        List<Map<String, String>> records = new List<Map<String, String>>();
-        Map<String, String> row = new Map<String, String>();
-        row.put(ns('BriefDescriptionTxt__c'), 'Loan Work Item');
-        row.put(ns('StageNamePk__c'), 'Backlog');
-        records.add(row);
+            List<Map<String, String>> records = new List<Map<String, String>>();
+            Map<String, String> row = new Map<String, String>();
+            row.put(ns('BriefDescriptionTxt__c'), 'Loan Work Item');
+            row.put(ns('StageNamePk__c'), 'Backlog');
+            records.add(row);
 
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(records, 'Loan_Approval');
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(records, 'Loan_Approval');
+            Test.stopTest();
 
-        System.assertEquals(1, (Integer) result.get('successCount'));
+            System.assertEquals(1, (Integer) result.get('successCount'));
 
-        List<String> ids = (List<String>) result.get('createdIds');
-        WorkItem__c wi = [
-            SELECT WorkflowTypeTxt__c
-            FROM WorkItem__c
-            WHERE Id = :ids[0]
-            WITH SYSTEM_MODE
-        ];
-        System.assertEquals('Loan_Approval', wi.WorkflowTypeTxt__c,
-            'Workflow type should be Loan_Approval');
+            List<String> ids = (List<String>) result.get('createdIds');
+            WorkItem__c wi = [
+                SELECT WorkflowTypeTxt__c
+                FROM WorkItem__c
+                WHERE Id = :ids[0]
+                WITH SYSTEM_MODE
+            ];
+            System.assertEquals('Loan_Approval', wi.WorkflowTypeTxt__c,
+                'Workflow type should be Loan_Approval');
 
-        DeliveryTriggerControl.enableAfterLogic();
+            DeliveryTriggerControl.enableAfterLogic();
+        }
     }
 
     // ── Default workflow type when blank ──────────────────────────────
 
     @isTest
     static void testImportDefaultWorkflowType() {
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
 
-        List<Map<String, String>> records = new List<Map<String, String>>();
-        Map<String, String> row = new Map<String, String>();
-        row.put(ns('BriefDescriptionTxt__c'), 'Default WF Item');
-        row.put(ns('StageNamePk__c'), 'Backlog');
-        records.add(row);
+            List<Map<String, String>> records = new List<Map<String, String>>();
+            Map<String, String> row = new Map<String, String>();
+            row.put(ns('BriefDescriptionTxt__c'), 'Default WF Item');
+            row.put(ns('StageNamePk__c'), 'Backlog');
+            records.add(row);
 
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(records, '');
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(records, '');
+            Test.stopTest();
 
-        List<String> ids = (List<String>) result.get('createdIds');
-        WorkItem__c wi = [
-            SELECT WorkflowTypeTxt__c
-            FROM WorkItem__c
-            WHERE Id = :ids[0]
-            WITH SYSTEM_MODE
-        ];
-        System.assertEquals('Software_Delivery', wi.WorkflowTypeTxt__c,
-            'Blank workflow type should default to Software_Delivery');
+            List<String> ids = (List<String>) result.get('createdIds');
+            WorkItem__c wi = [
+                SELECT WorkflowTypeTxt__c
+                FROM WorkItem__c
+                WHERE Id = :ids[0]
+                WITH SYSTEM_MODE
+            ];
+            System.assertEquals('Software_Delivery', wi.WorkflowTypeTxt__c,
+                'Blank workflow type should default to Software_Delivery');
 
-        DeliveryTriggerControl.enableAfterLogic();
+            DeliveryTriggerControl.enableAfterLogic();
+        }
     }
 
     // ── Empty records list ───────────────────────────────────────────
 
     @isTest
     static void testImportEmptyRecords() {
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(
-                new List<Map<String, String>>(), 'Software_Delivery');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(
+                    new List<Map<String, String>>(), 'Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(0, (Integer) result.get('successCount'));
-        System.assertEquals(0, (Integer) result.get('errorCount'));
+            System.assertEquals(0, (Integer) result.get('successCount'));
+            System.assertEquals(0, (Integer) result.get('errorCount'));
+        }
     }
 
     // ── Null records list ────────────────────────────────────────────
 
     @isTest
     static void testImportNullRecords() {
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(null, 'Software_Delivery');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(null, 'Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(0, (Integer) result.get('successCount'));
-        System.assertEquals(0, (Integer) result.get('errorCount'));
+            System.assertEquals(0, (Integer) result.get('successCount'));
+            System.assertEquals(0, (Integer) result.get('errorCount'));
+        }
     }
 
     // ── Numeric field coercion ───────────────────────────────────────
 
     @isTest
     static void testImportWithNumericFields() {
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
 
-        List<Map<String, String>> records = new List<Map<String, String>>();
-        Map<String, String> row = new Map<String, String>();
-        row.put(ns('BriefDescriptionTxt__c'), 'Numeric Fields Test');
-        row.put(ns('EstimatedHoursNumber__c'), '24.5');
-        row.put(ns('DeveloperDaysSizeNumber__c'), '3');
-        row.put(ns('SortOrderNumber__c'), '5');
-        row.put(ns('StageNamePk__c'), 'Backlog');
-        records.add(row);
+            List<Map<String, String>> records = new List<Map<String, String>>();
+            Map<String, String> row = new Map<String, String>();
+            row.put(ns('BriefDescriptionTxt__c'), 'Numeric Fields Test');
+            row.put(ns('EstimatedHoursNumber__c'), '24.5');
+            row.put(ns('DeveloperDaysSizeNumber__c'), '3');
+            row.put(ns('SortOrderNumber__c'), '5');
+            row.put(ns('StageNamePk__c'), 'Backlog');
+            records.add(row);
 
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(1, (Integer) result.get('successCount'));
+            System.assertEquals(1, (Integer) result.get('successCount'));
 
-        List<String> ids = (List<String>) result.get('createdIds');
-        WorkItem__c wi = [
-            SELECT EstimatedHoursNumber__c, DeveloperDaysSizeNumber__c, SortOrderNumber__c
-            FROM WorkItem__c
-            WHERE Id = :ids[0]
-            WITH SYSTEM_MODE
-        ];
-        System.assertEquals(24.5, wi.EstimatedHoursNumber__c);
-        System.assertEquals(3, wi.DeveloperDaysSizeNumber__c);
-        System.assertEquals(5, wi.SortOrderNumber__c);
+            List<String> ids = (List<String>) result.get('createdIds');
+            WorkItem__c wi = [
+                SELECT EstimatedHoursNumber__c, DeveloperDaysSizeNumber__c, SortOrderNumber__c
+                FROM WorkItem__c
+                WHERE Id = :ids[0]
+                WITH SYSTEM_MODE
+            ];
+            System.assertEquals(24.5, wi.EstimatedHoursNumber__c);
+            System.assertEquals(3, wi.DeveloperDaysSizeNumber__c);
+            System.assertEquals(5, wi.SortOrderNumber__c);
 
-        DeliveryTriggerControl.enableAfterLogic();
+            DeliveryTriggerControl.enableAfterLogic();
+        }
     }
 
     // ── Unknown fields are gracefully skipped ────────────────────────
 
     @isTest
     static void testImportIgnoresUnknownFields() {
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
 
-        List<Map<String, String>> records = new List<Map<String, String>>();
-        Map<String, String> row = new Map<String, String>();
-        row.put(ns('BriefDescriptionTxt__c'), 'Unknown Field Test');
-        row.put('TotallyFakeField__c', 'should be ignored');
-        row.put(ns('StageNamePk__c'), 'Backlog');
-        records.add(row);
+            List<Map<String, String>> records = new List<Map<String, String>>();
+            Map<String, String> row = new Map<String, String>();
+            row.put(ns('BriefDescriptionTxt__c'), 'Unknown Field Test');
+            row.put('TotallyFakeField__c', 'should be ignored');
+            row.put(ns('StageNamePk__c'), 'Backlog');
+            records.add(row);
 
-        Test.startTest();
-        Map<String, Object> result =
-            DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result =
+                DeliveryCsvImportController.importWorkItems(records, 'Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(1, (Integer) result.get('successCount'),
-            'Unknown fields should be silently skipped');
+            System.assertEquals(1, (Integer) result.get('successCount'),
+                'Unknown fields should be silently skipped');
 
-        DeliveryTriggerControl.enableAfterLogic();
+            DeliveryTriggerControl.enableAfterLogic();
+        }
     }
 }

@@ -8,24 +8,28 @@
 @IsTest
 private class DeliveryHubCalloutServiceTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     /**
      * @description Test the POST method using a Mock interface
      */
     @IsTest
     static void testPost() {
-        Test.setMock(HttpCalloutMock.class, new MockHttpResponseGenerator());
-        
-        String testEndpoint = 'callout:Mothership/test';
-        Map<String, String> testPayload = new Map<String, String>{
-            'key' => 'value'
-        };
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockHttpResponseGenerator());
 
-        Test.startTest();
-        HttpResponse res = DeliveryHubCalloutService.post(testEndpoint, testPayload);
-        Test.stopTest();
+            String testEndpoint = 'callout:Mothership/test';
+            Map<String, String> testPayload = new Map<String, String>{
+                'key' => 'value'
+            };
 
-        System.assertEquals(200, res.getStatusCode(), 'Status code should be 200');
-        System.assertEquals('{"status":"success"}', res.getBody(), 'Body should match mock response');
+            Test.startTest();
+            HttpResponse res = DeliveryHubCalloutService.post(testEndpoint, testPayload);
+            Test.stopTest();
+
+            System.assertEquals(200, res.getStatusCode(), 'Status code should be 200');
+            System.assertEquals('{"status":"success"}', res.getBody(), 'Body should match mock response');
+        }
     }
 
     /**
@@ -33,15 +37,17 @@ private class DeliveryHubCalloutServiceTest {
      */
     @IsTest
     static void testGetBaseUrl() {
-        String defaultUrl = 'https://default.example.com';
-        
-        // 1. Test Valid URL (appends slash)
-        String url1 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com');
-        System.assertEquals('https://specific.example.com/', url1, 'Should append trailing slash');
+        System.runAs(testUser) {
+            String defaultUrl = 'https://default.example.com';
 
-        // 2. Test Valid URL (ignores existing slash)
-        String url2 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com/');
-        System.assertEquals('https://specific.example.com/', url2, 'Should not duplicate trailing slash');
+            // 1. Test Valid URL (appends slash)
+            String url1 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com');
+            System.assertEquals('https://specific.example.com/', url1, 'Should append trailing slash');
+
+            // 2. Test Valid URL (ignores existing slash)
+            String url2 = DeliveryHubCalloutService.getBaseUrl('https://specific.example.com/');
+            System.assertEquals('https://specific.example.com/', url2, 'Should not duplicate trailing slash');
+        }
     }
 
     /**
@@ -49,19 +55,21 @@ private class DeliveryHubCalloutServiceTest {
      */
     @IsTest
     static void testGetBaseUrlExceptions() {
-        Boolean exceptionCaught = false;
+        System.runAs(testUser) {
+            Boolean exceptionCaught = false;
 
-        Test.startTest();
-        try {
-            // This should fail because the service throws "Missing Endpoint URL" on null/empty
-            DeliveryHubCalloutService.getBaseUrl(null);
-        } catch (CalloutException e) {
-            exceptionCaught = true;
-            System.assert(e.getMessage().contains('Missing Endpoint URL'), 'Exception should mention missing URL');
+            Test.startTest();
+            try {
+                // This should fail because the service throws "Missing Endpoint URL" on null/empty
+                DeliveryHubCalloutService.getBaseUrl(null);
+            } catch (CalloutException e) {
+                exceptionCaught = true;
+                System.assert(e.getMessage().contains('Missing Endpoint URL'), 'Exception should mention missing URL');
+            }
+            Test.stopTest();
+
+            System.assert(exceptionCaught, 'A CalloutException should have been thrown for null input');
         }
-        Test.stopTest();
-
-        System.assert(exceptionCaught, 'A CalloutException should have been thrown for null input');
     }
 
     /** @description Mock HTTP response generator that returns a 200 JSON success response. */

@@ -6,7 +6,7 @@
  *               in one step.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ExcessiveParameterList')
 global with sharing class DeliveryClientOnboardingController {
 
     private static final String DEFAULT_WORKFLOW = 'Software_Delivery';

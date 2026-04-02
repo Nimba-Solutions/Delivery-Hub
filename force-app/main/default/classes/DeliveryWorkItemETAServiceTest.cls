@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryWorkItemETAServiceTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         // 1. Create Developer Users
@@ -57,29 +59,31 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testGetWorkItemETAsWithPriority() {
-        List<WorkItem__c> allWorkItems = [SELECT Id FROM WorkItem__c];
-        List<Id> prioritizedWorkItemIds = new List<Id>{allWorkItems[1].Id}; // Prioritize the Medium priority one
+        System.runAs(testUser) {
+            List<WorkItem__c> allWorkItems = [SELECT Id FROM WorkItem__c];
+            List<Id> prioritizedWorkItemIds = new List<Id>{allWorkItems[1].Id}; // Prioritize the Medium priority one
 
-        Test.startTest();
-        DeliveryWorkItemETAService.ETAResult result = DeliveryWorkItemETAService.getWorkItemETAsWithPriority(2, prioritizedWorkItemIds);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWorkItemETAService.ETAResult result = DeliveryWorkItemETAService.getWorkItemETAsWithPriority(2, prioritizedWorkItemIds);
+            Test.stopTest();
 
-        // Validate results
-        System.assertNotEquals(null, result, 'Result should not be null');
-        System.assert(result.workItems.size() > 0, 'Should have calculated ETAs for workItems');
-        
-        // Verify prioritized work item was processed with confidence
-        Boolean foundPrioritized = false;
-        for(DeliveryWorkItemETAService.WorkItemETADTO dto : result.workItems) {
-            if(dto.workItemId == prioritizedWorkItemIds[0]) {
-                foundPrioritized = true;
-                System.assertNotEquals(null, dto.calculatedETA, 'Prioritized work item should have an ETA');
-                System.assertNotEquals(null, dto.confidencePercent, 'DTO should include confidence percentage');
-                System.assert(dto.confidencePercent >= 0 && dto.confidencePercent <= 100,
-                    'Confidence should be between 0 and 100, got: ' + dto.confidencePercent);
+            // Validate results
+            System.assertNotEquals(null, result, 'Result should not be null');
+            System.assert(result.workItems.size() > 0, 'Should have calculated ETAs for workItems');
+
+            // Verify prioritized work item was processed with confidence
+            Boolean foundPrioritized = false;
+            for(DeliveryWorkItemETAService.WorkItemETADTO dto : result.workItems) {
+                if(dto.workItemId == prioritizedWorkItemIds[0]) {
+                    foundPrioritized = true;
+                    System.assertNotEquals(null, dto.calculatedETA, 'Prioritized work item should have an ETA');
+                    System.assertNotEquals(null, dto.confidencePercent, 'DTO should include confidence percentage');
+                    System.assert(dto.confidencePercent >= 0 && dto.confidencePercent <= 100,
+                        'Confidence should be between 0 and 100, got: ' + dto.confidencePercent);
+                }
             }
+            System.assert(foundPrioritized, 'Prioritized work item should be in the result set');
         }
-        System.assert(foundPrioritized, 'Prioritized work item should be in the result set');
     }
 
     /**
@@ -87,13 +91,15 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testQueueableExecution() {
-        Test.startTest();
-        System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
+            Test.stopTest();
 
-        // Verify database updates
-        List<WorkItem__c> updatedWorkItems = [SELECT Id, ProjectedUATReadyDate__c FROM WorkItem__c WHERE ProjectedUATReadyDate__c != NULL];
-        System.assert(updatedWorkItems.size() > 0, 'Queueable should have updated at least one work item ETA');
+            // Verify database updates
+            List<WorkItem__c> updatedWorkItems = [SELECT Id, ProjectedUATReadyDate__c FROM WorkItem__c WHERE ProjectedUATReadyDate__c != NULL];
+            System.assert(updatedWorkItems.size() > 0, 'Queueable should have updated at least one work item ETA');
+        }
     }
 
     /**
@@ -101,12 +107,14 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testSchedulableExecution() {
-        Test.startTest();
-        String cronExp = '0 0 0 15 3 ? 2040';
-        String jobId = System.schedule('TestNightlyRecalculation', cronExp, new DeliveryWorkItemETAService.NightlyRecalculation());
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            String cronExp = '0 0 0 15 3 ? 2040';
+            String jobId = System.schedule('TestNightlyRecalculation', cronExp, new DeliveryWorkItemETAService.NightlyRecalculation());
+            Test.stopTest();
 
-        System.assertNotEquals(null, jobId, 'Job should be scheduled');
+            System.assertNotEquals(null, jobId, 'Job should be scheduled');
+        }
     }
 
     /**
@@ -114,17 +122,19 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testBusinessDayLogic() {
-        DeliveryWorkItemETAService.ETACalculator calc = new DeliveryWorkItemETAService.ETACalculator(null, 'Software_Delivery');
-        
-        // Friday to Monday test
-        Date friday = Date.newInstance(2023, 10, 20); // A Friday
-        Date expectedMonday = Date.newInstance(2023, 10, 23);
-        
-        Test.startTest();
-        Date result = calc.addBusinessDays(friday, 1);
-        Test.stopTest();
+        System.runAs(testUser) {
+            DeliveryWorkItemETAService.ETACalculator calc = new DeliveryWorkItemETAService.ETACalculator(null, 'Software_Delivery');
 
-        System.assertEquals(expectedMonday, result, 'Adding 1 business day to Friday should result in Monday');
+            // Friday to Monday test
+            Date friday = Date.newInstance(2023, 10, 20); // A Friday
+            Date expectedMonday = Date.newInstance(2023, 10, 23);
+
+            Test.startTest();
+            Date result = calc.addBusinessDays(friday, 1);
+            Test.stopTest();
+
+            System.assertEquals(expectedMonday, result, 'Adding 1 business day to Friday should result in Monday');
+        }
     }
     
     /**
@@ -132,20 +142,22 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testAuraHandledException() {
-        Boolean exceptionThrown = false;
-        try {
-            Test.startTest();
-            // Passing nulls to force the service to handle or throw an exception
-            DeliveryWorkItemETAService.getWorkItemETAsWithPriority(null, null);
-            Test.stopTest();
-        } catch (AuraHandledException e) {
-            exceptionThrown = true;
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Unexpected exception: ' + e.getTypeName());
-        }
+        System.runAs(testUser) {
+            Boolean exceptionThrown = false;
+            try {
+                Test.startTest();
+                // Passing nulls to force the service to handle or throw an exception
+                DeliveryWorkItemETAService.getWorkItemETAsWithPriority(null, null);
+                Test.stopTest();
+            } catch (AuraHandledException e) {
+                exceptionThrown = true;
+            } catch (Exception e) {
+                System.debug(LoggingLevel.ERROR, 'Unexpected exception: ' + e.getTypeName());
+            }
 
-        // Either an AuraHandledException was caught or the method handled nulls gracefully
-        System.assert(exceptionThrown || !exceptionThrown, 'Method should handle null parameters without a fatal system exception');
+            // Either an AuraHandledException was caught or the method handled nulls gracefully
+            System.assert(exceptionThrown || !exceptionThrown, 'Method should handle null parameters without a fatal system exception');
+        }
     }
 
     /**
@@ -153,16 +165,18 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testGetWorkItemETAsWithPriorityForType() {
-        List<WorkItem__c> allWorkItems = [SELECT Id FROM WorkItem__c];
-        List<Id> prioritizedWorkItemIds = new List<Id>{allWorkItems[0].Id};
+        System.runAs(testUser) {
+            List<WorkItem__c> allWorkItems = [SELECT Id FROM WorkItem__c];
+            List<Id> prioritizedWorkItemIds = new List<Id>{allWorkItems[0].Id};
 
-        Test.startTest();
-        DeliveryWorkItemETAService.ETAResult result =
-            DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, prioritizedWorkItemIds, 'Software_Delivery');
-        Test.stopTest();
+            Test.startTest();
+            DeliveryWorkItemETAService.ETAResult result =
+                DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, prioritizedWorkItemIds, 'Software_Delivery');
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null');
-        System.assertNotEquals(null, result.workItems, 'Work items list should not be null');
+            System.assertNotEquals(null, result, 'Result should not be null');
+            System.assertNotEquals(null, result.workItems, 'Work items list should not be null');
+        }
     }
 
     /**
@@ -170,13 +184,15 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testGetWorkItemETAsWithPriorityForTypeDefault() {
-        Test.startTest();
-        DeliveryWorkItemETAService.ETAResult result =
-            DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, new List<Id>(), null);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryWorkItemETAService.ETAResult result =
+                DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, new List<Id>(), null);
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null for null workflow type');
-        System.assertNotEquals(null, result.workItems, 'Work items list should not be null');
+            System.assertNotEquals(null, result, 'Result should not be null for null workflow type');
+            System.assertNotEquals(null, result.workItems, 'Work items list should not be null');
+        }
     }
 
     /**
@@ -184,12 +200,14 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testGetWorkItemETAsWithPriorityForTypeBlank() {
-        Test.startTest();
-        DeliveryWorkItemETAService.ETAResult result =
-            DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, new List<Id>(), '');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryWorkItemETAService.ETAResult result =
+                DeliveryWorkItemETAService.getWorkItemETAsWithPriorityForType(2, new List<Id>(), '');
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null for blank workflow type');
+            System.assertNotEquals(null, result, 'Result should not be null for blank workflow type');
+        }
     }
 
     /**
@@ -197,11 +215,13 @@ private class DeliveryWorkItemETAServiceTest {
      */
     @IsTest
     static void testQueueableWithWorkflowType() {
-        Test.startTest();
-        System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable('Software_Delivery'));
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable('Software_Delivery'));
+            Test.stopTest();
 
-        List<WorkItem__c> updatedWorkItems = [SELECT Id, ProjectedUATReadyDate__c FROM WorkItem__c WHERE ProjectedUATReadyDate__c != NULL];
-        System.assert(updatedWorkItems.size() >= 0, 'Queueable with explicit type should execute without error');
+            List<WorkItem__c> updatedWorkItems = [SELECT Id, ProjectedUATReadyDate__c FROM WorkItem__c WHERE ProjectedUATReadyDate__c != NULL];
+            System.assert(updatedWorkItems.size() >= 0, 'Queueable with explicit type should execute without error');
+        }
     }
 }

@@ -6,7 +6,7 @@
  * Captures routing origins and Global Traceability IDs to explicitly prevent echo loops.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ApexCRUDViolation')
 public without sharing class DeliverySyncItemIngestor {
 
     private static String getNamespacePrefix() {

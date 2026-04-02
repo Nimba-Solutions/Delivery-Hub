@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryWorkRequestTriggerHandlerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         DeliveryTriggerControl.disableAfterLogic();
@@ -35,76 +37,82 @@ private class DeliveryWorkRequestTriggerHandlerTest {
 
     @IsTest
     static void testCreateTracking() {
-        WorkItem__c workItem = [SELECT Id FROM WorkItem__c LIMIT 1];
-        NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c LIMIT 1];
-        DeliveryFieldTrackingService.clearCache();
+        System.runAs(testUser) {
+            WorkItem__c workItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        WorkRequest__c request = new WorkRequest__c(
-            WorkItemId__c = workItem.Id,
-            DeliveryEntityId__c = vendor.Id,
-            StatusPk__c = 'Draft'
-        );
-        insert request;
-        Test.stopTest();
+            Test.startTest();
+            WorkRequest__c request = new WorkRequest__c(
+                WorkItemId__c = workItem.Id,
+                DeliveryEntityId__c = vendor.Id,
+                StatusPk__c = 'Draft'
+            );
+            insert request;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :request.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Create tracking should produce activity logs for work request');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :request.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Create tracking should produce activity logs for work request');
+        }
     }
 
     @IsTest
     static void testUpdateTracking() {
-        WorkItem__c workItem = [SELECT Id FROM WorkItem__c LIMIT 1];
-        NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c workItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c LIMIT 1];
 
-        DeliveryTriggerControl.disableAfterLogic();
-        WorkRequest__c request = new WorkRequest__c(
-            WorkItemId__c = workItem.Id,
-            DeliveryEntityId__c = vendor.Id,
-            StatusPk__c = 'Draft'
-        );
-        insert request;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+            DeliveryTriggerControl.disableAfterLogic();
+            WorkRequest__c request = new WorkRequest__c(
+                WorkItemId__c = workItem.Id,
+                DeliveryEntityId__c = vendor.Id,
+                StatusPk__c = 'Draft'
+            );
+            insert request;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        request.StatusPk__c = 'Accepted';
-        update request;
-        Test.stopTest();
+            Test.startTest();
+            request.StatusPk__c = 'Accepted';
+            update request;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :request.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Update tracking should produce activity logs for status change');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :request.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Update tracking should produce activity logs for status change');
+        }
     }
 
     @IsTest
     static void testDeleteTracking() {
-        WorkItem__c workItem = [SELECT Id FROM WorkItem__c LIMIT 1];
-        NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c workItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c LIMIT 1];
 
-        DeliveryTriggerControl.disableAfterLogic();
-        WorkRequest__c request = new WorkRequest__c(
-            WorkItemId__c = workItem.Id,
-            DeliveryEntityId__c = vendor.Id,
-            StatusPk__c = 'Draft'
-        );
-        insert request;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+            DeliveryTriggerControl.disableAfterLogic();
+            WorkRequest__c request = new WorkRequest__c(
+                WorkItemId__c = workItem.Id,
+                DeliveryEntityId__c = vendor.Id,
+                StatusPk__c = 'Draft'
+            );
+            insert request;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        delete request;
-        Test.stopTest();
+            Test.startTest();
+            delete request;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :request.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Delete tracking should produce activity logs');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :request.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Delete tracking should produce activity logs');
+        }
     }
 }

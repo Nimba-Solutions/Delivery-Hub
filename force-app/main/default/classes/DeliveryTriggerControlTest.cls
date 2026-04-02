@@ -7,20 +7,24 @@
 @IsTest
 private class DeliveryTriggerControlTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @IsTest
     static void testDisableAndEnableAfterLogic() {
-        // Default state
-        System.assertEquals(true, DeliveryTriggerControl.runAfterLogic,
-            'runAfterLogic should default to true');
+        System.runAs(testUser) {
+            // Default state
+            System.assertEquals(true, DeliveryTriggerControl.runAfterLogic,
+                'runAfterLogic should default to true');
 
-        // Disable
-        DeliveryTriggerControl.disableAfterLogic();
-        System.assertEquals(false, DeliveryTriggerControl.runAfterLogic,
-            'runAfterLogic should be false after disableAfterLogic()');
+            // Disable
+            DeliveryTriggerControl.disableAfterLogic();
+            System.assertEquals(false, DeliveryTriggerControl.runAfterLogic,
+                'runAfterLogic should be false after disableAfterLogic()');
 
-        // Re-enable
-        DeliveryTriggerControl.enableAfterLogic();
-        System.assertEquals(true, DeliveryTriggerControl.runAfterLogic,
-            'runAfterLogic should be true after enableAfterLogic()');
+            // Re-enable
+            DeliveryTriggerControl.enableAfterLogic();
+            System.assertEquals(true, DeliveryTriggerControl.runAfterLogic,
+                'runAfterLogic should be true after enableAfterLogic()');
+        }
     }
 }

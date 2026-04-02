@@ -6,7 +6,7 @@
  *               the DeliveryDocumentPdf.page consumes for professional document output.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssConstructorCount, PMD.ExcessivePublicCount')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssConstructorCount, PMD.ExcessivePublicCount, PMD.NcssMethodCount')
 public without sharing class DeliveryDocumentPdfController {
 
     /** @description The underlying DeliveryDocument__c record. */

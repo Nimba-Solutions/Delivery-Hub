@@ -6,7 +6,10 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
+@SuppressWarnings('PMD.CyclomaticComplexity')
 private class DeliveryPublicApiServiceTest {
+
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
 
     private static final String TEST_API_KEY = 'test-api-key-abc123def456';
 
@@ -124,49 +127,55 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testMissingApiKey() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
-        RestResponse res = new RestResponse();
-        // No X-Api-Key header
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+            RestResponse res = new RestResponse();
+            // No X-Api-Key header
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(401, res.statusCode, 'Should return 401 for missing API key');
-        assertErrorResponse(res, 'Missing X-Api-Key');
+            System.assertEquals(401, res.statusCode, 'Should return 401 for missing API key');
+            assertErrorResponse(res, 'Missing X-Api-Key');
+        }
     }
 
     @IsTest
     static void testInvalidApiKey() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
-        req.addHeader('X-Api-Key', 'totally-wrong-key');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+            req.addHeader('X-Api-Key', 'totally-wrong-key');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(401, res.statusCode, 'Should return 401 for invalid API key');
-        assertErrorResponse(res, 'Invalid API key');
+            System.assertEquals(401, res.statusCode, 'Should return 401 for invalid API key');
+            assertErrorResponse(res, 'Invalid API key');
+        }
     }
 
     @IsTest
     static void testDisabledEntityApiKey() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
-        req.addHeader('X-Api-Key', 'disabled-key-999');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+            req.addHeader('X-Api-Key', 'disabled-key-999');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(401, res.statusCode, 'Should return 401 for disabled entity');
+            System.assertEquals(401, res.statusCode, 'Should return 401 for disabled entity');
+        }
     }
 
     // ==========================================
@@ -175,22 +184,24 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetDashboard() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
 
-        Map<String, Object> data = (Map<String, Object>) body.get('data');
-        System.assertEquals('API Client Corp', data.get('entityName'), 'Entity name should match');
+            Map<String, Object> data = (Map<String, Object>) body.get('data');
+            System.assertEquals('API Client Corp', data.get('entityName'), 'Entity name should match');
+        }
     }
 
     // ==========================================
@@ -199,39 +210,43 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetWorkItems() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        List<Object> data = (List<Object>) body.get('data');
-        System.assertEquals(2, data.size(), 'Should return 2 items for this entity');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            List<Object> data = (List<Object>) body.get('data');
+            System.assertEquals(2, data.size(), 'Should return 2 items for this entity');
+        }
     }
 
     @IsTest
     static void testGetWorkItemsWithFilter() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        req.addParameter('status', 'active');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addParameter('status', 'active');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        List<Object> data = (List<Object>) body.get('data');
-        System.assertEquals(1, data.size(), 'Should return only 1 active item');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            List<Object> data = (List<Object>) body.get('data');
+            System.assertEquals(1, data.size(), 'Should return only 1 active item');
+        }
     }
 
     // ==========================================
@@ -240,44 +255,48 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetWorkItemDetail() {
-        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
 
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + item.Id);
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + item.Id);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) body.get('data');
-        System.assertEquals('API Active Item', data.get('title'), 'Title should match');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) body.get('data');
+            System.assertEquals('API Active Item', data.get('title'), 'Title should match');
 
-        List<Object> comments = (List<Object>) data.get('comments');
-        System.assertEquals(1, comments.size(), 'Should have 1 comment');
+            List<Object> comments = (List<Object>) data.get('comments');
+            System.assertEquals(1, comments.size(), 'Should have 1 comment');
+        }
     }
 
     @IsTest
     static void testGetWorkItemDetailCrossEntityBlocked() {
-        // Entity A's key trying to access Entity B's work item
-        WorkItem__c otherItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
+        System.runAs(testUser) {
+            // Entity A's key trying to access Entity B's work item
+            WorkItem__c otherItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
 
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + otherItem.Id);
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + otherItem.Id);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(403, res.statusCode, 'Should return 403 for cross-entity access');
-        assertErrorResponse(res, 'Access denied');
+            System.assertEquals(403, res.statusCode, 'Should return 403 for cross-entity access');
+            assertErrorResponse(res, 'Access denied');
+        }
     }
 
     // ==========================================
@@ -286,17 +305,19 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetUnknownResource() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/unknown');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/unknown');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(404, res.statusCode, 'Should return 404 for unknown resource');
+            System.assertEquals(404, res.statusCode, 'Should return 404 for unknown resource');
+        }
     }
 
     // ==========================================
@@ -305,58 +326,62 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testPostWorkItem() {
-        Map<String, Object> body = new Map<String, Object>{
-            'title' => 'New API Request',
-            'description' => 'Please build this feature.',
-            'priority' => 'High',
-            'type' => 'Internal'
-        };
+        System.runAs(testUser) {
+            Map<String, Object> body = new Map<String, Object>{
+                'title' => 'New API Request',
+                'description' => 'Please build this feature.',
+                'priority' => 'High',
+                'type' => 'Internal'
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/work-items',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/work-items',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(201, res.statusCode, 'Should return 201 Created');
-        Map<String, Object> responseBody = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
-        System.assertNotEquals(null, data.get('id'), 'Should return the new item Id');
+            System.assertEquals(201, res.statusCode, 'Should return 201 Created');
+            Map<String, Object> responseBody = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertNotEquals(null, data.get('id'), 'Should return the new item Id');
 
-        // Verify entity was auto-linked
-        WorkItem__c created = [
-            SELECT ClientNetworkEntityId__c, BriefDescriptionTxt__c
-            FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = '[Portal] New API Request'
-            LIMIT 1
-        ];
-        NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
-        System.assertEquals(entityA.Id, created.ClientNetworkEntityId__c, 'Should auto-link to authenticated entity');
+            // Verify entity was auto-linked
+            WorkItem__c created = [
+                SELECT ClientNetworkEntityId__c, BriefDescriptionTxt__c
+                FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = '[Portal] New API Request'
+                LIMIT 1
+            ];
+            NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+            System.assertEquals(entityA.Id, created.ClientNetworkEntityId__c, 'Should auto-link to authenticated entity');
+        }
     }
 
     @IsTest
     static void testPostWorkItemEmptyBody() {
-        RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/api/work-items';
-        req.httpMethod = 'POST';
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        // No request body
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/api/work-items';
+            req.httpMethod = 'POST';
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            // No request body
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 for empty body');
+            System.assertEquals(400, res.statusCode, 'Should return 400 for empty body');
+        }
     }
 
     // ==========================================
@@ -365,61 +390,65 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testPostComment() {
-        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'body' => 'Comment via API'
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'body' => 'Comment via API'
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + item.Id + '/comments',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + item.Id + '/comments',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(201, res.statusCode, 'Should return 201 Created');
+            System.assertEquals(201, res.statusCode, 'Should return 201 Created');
 
-        Map<String, Object> responseBody = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
-        Id commentId = (Id) data.get('id');
+            Map<String, Object> responseBody = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            Id commentId = (Id) data.get('id');
 
-        WorkItemComment__c comment = [
-            SELECT BodyTxt__c, AuthorTxt__c FROM WorkItemComment__c
-            WHERE Id = :commentId LIMIT 1
-        ];
-        System.assertEquals('Comment via API', comment.BodyTxt__c, 'Comment body should match');
-        System.assertEquals('Portal User', comment.AuthorTxt__c, 'Author should be Portal User');
+            WorkItemComment__c comment = [
+                SELECT BodyTxt__c, AuthorTxt__c FROM WorkItemComment__c
+                WHERE Id = :commentId LIMIT 1
+            ];
+            System.assertEquals('Comment via API', comment.BodyTxt__c, 'Comment body should match');
+            System.assertEquals('Portal User', comment.AuthorTxt__c, 'Author should be Portal User');
+        }
     }
 
     @IsTest
     static void testPostCommentCrossEntityBlocked() {
-        WorkItem__c otherItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c otherItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'body' => 'Sneaky cross-entity comment'
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'body' => 'Sneaky cross-entity comment'
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + otherItem.Id + '/comments',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/work-items/' + otherItem.Id + '/comments',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(403, res.statusCode, 'Should return 403 for cross-entity comment');
+            System.assertEquals(403, res.statusCode, 'Should return 403 for cross-entity comment');
+        }
     }
 
     // ==========================================
@@ -428,20 +457,22 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testPostUnknownResource() {
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/unknown',
-            new Map<String, Object>{ 'data' => 'test' }
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/unknown',
+                new Map<String, Object>{ 'data' => 'test' }
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(404, res.statusCode, 'Should return 404 for unknown POST resource');
+            System.assertEquals(404, res.statusCode, 'Should return 404 for unknown POST resource');
+        }
     }
 
     // ==========================================
@@ -450,43 +481,47 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetActivityFeed() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/activity-feed');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/activity-feed');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
 
-        Map<String, Object> data = (Map<String, Object>) body.get('data');
-        System.assert(data.containsKey('events'), 'Response should contain events');
-        System.assert(data.containsKey('totalCount'), 'Response should contain totalCount');
-        System.assert(data.containsKey('hasMore'), 'Response should contain hasMore');
+            Map<String, Object> data = (Map<String, Object>) body.get('data');
+            System.assert(data.containsKey('events'), 'Response should contain events');
+            System.assert(data.containsKey('totalCount'), 'Response should contain totalCount');
+            System.assert(data.containsKey('hasMore'), 'Response should contain hasMore');
+        }
     }
 
     @IsTest
     static void testGetActivityFeedWithParams() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/activity-feed');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        req.addParameter('filterType', 'comments');
-        req.addParameter('pageOffset', '0');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/activity-feed');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addParameter('filterType', 'comments');
+            req.addParameter('pageOffset', '0');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
+        }
     }
 
     // ==========================================
@@ -495,19 +530,21 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetConversations() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/conversations');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/conversations');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
+        }
     }
 
     // ==========================================
@@ -516,23 +553,25 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetPendingApprovals() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/pending-approvals');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/pending-approvals');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
 
-        Map<String, Object> data = (Map<String, Object>) body.get('data');
-        System.assert(data.containsKey('approvals'), 'Response should contain approvals');
-        System.assert(data.containsKey('totalCount'), 'Response should contain totalCount');
+            Map<String, Object> data = (Map<String, Object>) body.get('data');
+            System.assert(data.containsKey('approvals'), 'Response should contain approvals');
+            System.assert(data.containsKey('totalCount'), 'Response should contain totalCount');
+        }
     }
 
     // ==========================================
@@ -541,29 +580,31 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testPostApproveWorkLogs() {
-        WorkLog__c wl = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
+        System.runAs(testUser) {
+            WorkLog__c wl = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'workLogIds' => new List<String>{ wl.Id }
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'workLogIds' => new List<String>{ wl.Id }
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/approve-worklogs',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/approve-worklogs',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> responseBody = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
-        System.assertEquals('Approved', data.get('status'), 'Status should be Approved');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> responseBody = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertEquals('Approved', data.get('status'), 'Status should be Approved');
+        }
     }
 
     // ==========================================
@@ -572,29 +613,31 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testPostRejectWorkLogs() {
-        WorkLog__c wl = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
+        System.runAs(testUser) {
+            WorkLog__c wl = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'workLogIds' => new List<String>{ wl.Id }
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'workLogIds' => new List<String>{ wl.Id }
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/reject-worklogs',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/reject-worklogs',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> responseBody = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
-        System.assertEquals('Rejected', data.get('status'), 'Status should be Rejected');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> responseBody = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertEquals('Rejected', data.get('status'), 'Status should be Rejected');
+        }
     }
 
     // ==========================================
@@ -603,13 +646,15 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGenerateApiKey() {
-        Test.startTest();
-        String key1 = DeliveryPublicApiService.generateApiKey();
-        String key2 = DeliveryPublicApiService.generateApiKey();
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            String key1 = DeliveryPublicApiService.generateApiKey();
+            String key2 = DeliveryPublicApiService.generateApiKey();
+            Test.stopTest();
 
-        System.assertEquals(64, key1.length(), 'API key should be 64 hex characters');
-        System.assertNotEquals(key1, key2, 'Generated keys should be unique');
+            System.assertEquals(64, key1.length(), 'API key should be 64 hex characters');
+            System.assertNotEquals(key1, key2, 'Generated keys should be unique');
+        }
     }
 
     // ==========================================
@@ -618,40 +663,44 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetMyEntities() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/my-entities');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        req.addHeader('X-Portal-User', 'portal@example.com');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/my-entities');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addHeader('X-Portal-User', 'portal@example.com');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
 
-        List<Object> data = (List<Object>) body.get('data');
-        System.assertEquals(2, data.size(), 'portal@example.com should have access to 2 entities');
+            List<Object> data = (List<Object>) body.get('data');
+            System.assertEquals(2, data.size(), 'portal@example.com should have access to 2 entities');
+        }
     }
 
     @IsTest
     static void testGetMyEntitiesMissingHeader() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/my-entities');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        // No X-Portal-User header
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/my-entities');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            // No X-Portal-User header
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 when X-Portal-User is missing');
-        assertErrorResponse(res, 'X-Portal-User header is required');
+            System.assertEquals(400, res.statusCode, 'Should return 400 when X-Portal-User is missing');
+            assertErrorResponse(res, 'X-Portal-User header is required');
+        }
     }
 
     // ==========================================
@@ -660,73 +709,79 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetDashboardWithEntityId() {
-        NetworkEntity__c entityB = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Other Corp' LIMIT 1];
+        System.runAs(testUser) {
+            NetworkEntity__c entityB = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Other Corp' LIMIT 1];
 
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        req.addHeader('X-Portal-User', 'portal@example.com');
-        req.addParameter('entityId', entityB.Id);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addHeader('X-Portal-User', 'portal@example.com');
+            req.addParameter('entityId', entityB.Id);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200 for authorized portal user');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200 for authorized portal user');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
 
-        Map<String, Object> data = (Map<String, Object>) body.get('data');
-        System.assertEquals('Other Corp', data.get('entityName'), 'Should show Other Corp dashboard');
+            Map<String, Object> data = (Map<String, Object>) body.get('data');
+            System.assertEquals('Other Corp', data.get('entityName'), 'Should show Other Corp dashboard');
+        }
     }
 
     @IsTest
     static void testGetDashboardUnauthorizedEntity() {
-        // Create an entity that portal@example.com does NOT have access to
-        NetworkEntity__c noAccessEntity = new NetworkEntity__c(
-            Name = 'No Access Corp',
-            EntityTypePk__c = 'Client',
-            StatusPk__c = 'Active',
-            ApiKeyTxt__c = 'no-access-key-111',
-            ConnectionStatusPk__c = 'Connected'
-        );
-        insert noAccessEntity;
+        System.runAs(testUser) {
+            // Create an entity that portal@example.com does NOT have access to
+            NetworkEntity__c noAccessEntity = new NetworkEntity__c(
+                Name = 'No Access Corp',
+                EntityTypePk__c = 'Client',
+                StatusPk__c = 'Active',
+                ApiKeyTxt__c = 'no-access-key-111',
+                ConnectionStatusPk__c = 'Connected'
+            );
+            insert noAccessEntity;
 
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        req.addHeader('X-Portal-User', 'portal@example.com');
-        req.addParameter('entityId', noAccessEntity.Id);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addHeader('X-Portal-User', 'portal@example.com');
+            req.addParameter('entityId', noAccessEntity.Id);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(403, res.statusCode, 'Should return 403 for unauthorized entity access');
-        assertErrorResponse(res, 'Portal user does not have access');
+            System.assertEquals(403, res.statusCode, 'Should return 403 for unauthorized entity access');
+            assertErrorResponse(res, 'Portal user does not have access');
+        }
     }
 
     @IsTest
     static void testGetDashboardBackwardCompatible() {
-        // Without X-Portal-User and entityId, should fall back to API key entity
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            // Without X-Portal-User and entityId, should fall back to API key entity
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/dashboard');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200 with backward-compatible behavior');
-        Map<String, Object> body = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) body.get('data');
-        System.assertEquals('API Client Corp', data.get('entityName'), 'Should fall back to authenticated entity');
+            System.assertEquals(200, res.statusCode, 'Should return 200 with backward-compatible behavior');
+            Map<String, Object> body = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) body.get('data');
+            System.assertEquals('API Client Corp', data.get('entityName'), 'Should fall back to authenticated entity');
+        }
     }
 
     // ==========================================
@@ -735,19 +790,21 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetWorkLogs() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-logs');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-logs');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode);
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'));
+            System.assertEquals(200, res.statusCode);
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'));
+        }
     }
 
     // ==========================================
@@ -756,19 +813,21 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetFiles() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/files');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/files');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode);
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'));
+            System.assertEquals(200, res.statusCode);
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'));
+        }
     }
 
     // ==========================================
@@ -777,20 +836,22 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetBoardSummary() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/board-summary');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/board-summary');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        // Board summary may return null summary if AI is not configured — that's OK
-        System.assertEquals(200, res.statusCode);
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'));
+            // Board summary may return null summary if AI is not configured — that's OK
+            System.assertEquals(200, res.statusCode);
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'));
+        }
     }
 
     // ==========================================
@@ -799,19 +860,21 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetDocuments() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/documents');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/documents');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode);
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'));
+            System.assertEquals(200, res.statusCode);
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'));
+        }
     }
 
     // ==========================================
@@ -820,118 +883,126 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testPostLogHours() {
-        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'workItemId' => item.Id,
-            'hours' => 2.5,
-            'workNotes' => 'Portal time entry',
-            'workDate' => String.valueOf(Date.today())
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'workItemId' => item.Id,
+                'hours' => 2.5,
+                'workNotes' => 'Portal time entry',
+                'workDate' => String.valueOf(Date.today())
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(201, res.statusCode);
-        Map<String, Object> responseBody = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
-        System.assertEquals('Logged', data.get('status'));
+            System.assertEquals(201, res.statusCode);
+            Map<String, Object> responseBody = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertEquals('Logged', data.get('status'));
+        }
     }
 
     @IsTest
     static void testPostLogHoursMissingFields() {
-        Map<String, Object> body = new Map<String, Object>{
-            'workItemId' => null,
-            'hours' => null
-        };
+        System.runAs(testUser) {
+            Map<String, Object> body = new Map<String, Object>{
+                'workItemId' => null,
+                'hours' => null
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode);
+            System.assertEquals(400, res.statusCode);
+        }
     }
 
     @IsTest
     static void testPostLogHoursCrossEntityBlocked() {
-        WorkItem__c otherItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c otherItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'workItemId' => otherItem.Id,
-            'hours' => 1.5,
-            'workNotes' => 'Cross-entity attempt',
-            'workDate' => String.valueOf(Date.today())
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'workItemId' => otherItem.Id,
+                'hours' => 1.5,
+                'workNotes' => 'Cross-entity attempt',
+                'workDate' => String.valueOf(Date.today())
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(403, res.statusCode, 'Should block cross-entity hour logging');
-        assertErrorResponse(res, 'access denied');
+            System.assertEquals(403, res.statusCode, 'Should block cross-entity hour logging');
+            assertErrorResponse(res, 'access denied');
+        }
     }
 
     @IsTest
     static void testPostLogHoursCreatesActivityLog() {
-        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'workItemId' => item.Id,
-            'hours' => 3.0,
-            'workNotes' => 'Activity log test',
-            'workDate' => String.valueOf(Date.today())
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'workItemId' => item.Id,
+                'hours' => 3.0,
+                'workNotes' => 'Activity log test',
+                'workDate' => String.valueOf(Date.today())
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
-            body
-        );
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/log-hours',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(201, res.statusCode);
+            System.assertEquals(201, res.statusCode);
 
-        List<ActivityLog__c> logs = [
-            SELECT ActionTypePk__c, RecordIdTxt__c, ComponentNameTxt__c
-            FROM ActivityLog__c WHERE ActionTypePk__c = 'Portal_Hours_Logged'
-        ];
-        System.assertEquals(1, logs.size(), 'Should create an ActivityLog record');
-        System.assertEquals(item.Id, logs[0].RecordIdTxt__c, 'ActivityLog should reference the work item');
-        System.assertEquals('PortalTimeEntry', logs[0].ComponentNameTxt__c, 'ComponentName should be PortalTimeEntry');
+            List<ActivityLog__c> logs = [
+                SELECT ActionTypePk__c, RecordIdTxt__c, ComponentNameTxt__c
+                FROM ActivityLog__c WHERE ActionTypePk__c = 'Portal_Hours_Logged'
+            ];
+            System.assertEquals(1, logs.size(), 'Should create an ActivityLog record');
+            System.assertEquals(item.Id, logs[0].RecordIdTxt__c, 'ActivityLog should reference the work item');
+            System.assertEquals('PortalTimeEntry', logs[0].ComponentNameTxt__c, 'ComponentName should be PortalTimeEntry');
+        }
     }
 
     // ==========================================
@@ -940,27 +1011,29 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testGetWorkLogsFilteredByWorkItem() {
-        WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
 
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-logs');
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        req.addParameter('workItemId', item.Id);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/work-logs');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addParameter('workItemId', item.Id);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode);
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'));
+            System.assertEquals(200, res.statusCode);
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'));
 
-        List<Object> data = (List<Object>) body.get('data');
-        for (Object entry : data) {
-            Map<String, Object> log = (Map<String, Object>) entry;
-            System.assertEquals(item.Id, log.get('workItemId'), 'All logs should belong to filtered work item');
+            List<Object> data = (List<Object>) body.get('data');
+            for (Object entry : data) {
+                Map<String, Object> log = (Map<String, Object>) entry;
+                System.assertEquals(item.Id, log.get('workItemId'), 'All logs should belong to filtered work item');
+            }
         }
     }
 
@@ -970,77 +1043,83 @@ private class DeliveryPublicApiServiceTest {
 
     @IsTest
     static void testPostDocumentApprove() {
-        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
-        DeliveryTriggerControl.runAfterLogic = false;
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
-        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
-        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.runAs(testUser) {
+            NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+            DeliveryTriggerControl.runAfterLogic = false;
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
+            DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+            DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
 
-        Map<String, Object> body = new Map<String, Object>{ 'token' => doc.PublicTokenTxt__c };
-        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            Map<String, Object> body = new Map<String, Object>{ 'token' => doc.PublicTokenTxt__c };
+            RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> result = parseResponse(res);
-        System.assertEquals(true, result.get('success'), 'Should be successful');
-        Map<String, Object> data = (Map<String, Object>) result.get('data');
-        System.assertEquals('Approved', data.get('status'), 'Document should be Approved');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> result = parseResponse(res);
+            System.assertEquals(true, result.get('success'), 'Should be successful');
+            Map<String, Object> data = (Map<String, Object>) result.get('data');
+            System.assertEquals('Approved', data.get('status'), 'Document should be Approved');
+        }
     }
 
     @IsTest
     static void testPostDocumentDispute() {
-        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
-        DeliveryTriggerControl.runAfterLogic = false;
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
-        DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
-        DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+        System.runAs(testUser) {
+            NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+            DeliveryTriggerControl.runAfterLogic = false;
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
+            DeliveryDocumentController.updateDocumentStatus(docId, 'Sent');
+            DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'token' => doc.PublicTokenTxt__c, 'reason' => 'Hours are incorrect'
-        };
-        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-dispute', body);
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            Map<String, Object> body = new Map<String, Object>{
+                'token' => doc.PublicTokenTxt__c, 'reason' => 'Hours are incorrect'
+            };
+            RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-dispute', body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> result = parseResponse(res);
-        Map<String, Object> data = (Map<String, Object>) result.get('data');
-        System.assertEquals('Disputed', data.get('status'), 'Document should be Disputed');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> result = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) result.get('data');
+            System.assertEquals('Disputed', data.get('status'), 'Document should be Disputed');
+        }
     }
 
     @IsTest
     static void testPostDocumentApproveMissingToken() {
-        Map<String, Object> body = new Map<String, Object>{ 'action' => 'approve' };
-        RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
-        req.addHeader('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            Map<String, Object> body = new Map<String, Object>{ 'action' => 'approve' };
+            RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/document-approve', body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryPublicApiService.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 for missing token');
+            System.assertEquals(400, res.statusCode, 'Should return 400 for missing token');
+        }
     }
 
     // ==========================================
