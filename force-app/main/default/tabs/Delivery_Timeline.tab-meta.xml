@@ -2,6 +2,6 @@
 <CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
     <description>Horizontal Gantt-style timeline of active work items grouped by entity</description>
     <label>Timeline</label>
-    <lwcComponent>deliveryTimelineView</lwcComponent>
+    <lwcComponent>deliveryNimbusGantt</lwcComponent>
     <motif>Custom67: Gears</motif>
 </CustomTab>

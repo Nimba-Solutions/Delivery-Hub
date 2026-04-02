@@ -1,0 +1,234 @@
+<template>
+    <div class="gantt-root">
+
+        <!-- Inline toolbar -->
+        <div class="gantt-toolbar">
+            <div class="toolbar-left">
+                <span class="toolbar-title">Project Timeline</span>
+                <span class="toolbar-subtitle">{subtitleText}</span>
+            </div>
+            <div class="toolbar-center">
+                <lightning-button-group>
+                    <lightning-button label="Gantt" variant={ganttViewVariant}
+                        onclick={handleViewGantt}></lightning-button>
+                    <lightning-button label="Treemap" variant={treemapViewVariant}
+                        onclick={handleViewTreemap}></lightning-button>
+                    <lightning-button label="Bubbles" variant={bubblesViewVariant}
+                        onclick={handleViewBubbles}></lightning-button>
+                    <lightning-button label="Calendar" variant={calendarViewVariant}
+                        onclick={handleViewCalendar}></lightning-button>
+                    <lightning-button label="Flow" variant={flowViewVariant}
+                        onclick={handleViewFlow}></lightning-button>
+                </lightning-button-group>
+                <lightning-button-group class="slds-m-left_xx-small">
+                    <lightning-button label="Day" variant={dayVariant}
+                        onclick={handleZoomDay}></lightning-button>
+                    <lightning-button label="Week" variant={weekVariant}
+                        onclick={handleZoomWeek}></lightning-button>
+                    <lightning-button label="Month" variant={monthVariant}
+                        onclick={handleZoomMonth}></lightning-button>
+                    <lightning-button label="Quarter" variant={quarterVariant}
+                        onclick={handleZoomQuarter}></lightning-button>
+                </lightning-button-group>
+                <lightning-button label="Today" icon-name="utility:date_input"
+                    onclick={handleScrollToday} class="slds-m-left_x-small"></lightning-button>
+            </div>
+            <div class="toolbar-right">
+                <template lwc:if={hasMultipleEntities}>
+                    <lightning-combobox value={selectedEntity}
+                        options={entityOptions} variant="label-hidden"
+                        placeholder="All Entities"
+                        onchange={handleEntityChange}
+                        class="entity-picker"></lightning-combobox>
+                </template>
+                <lightning-button icon-name={lockIcon}
+                    label={lockLabel} variant={lockVariant}
+                    onclick={handleToggleLock}
+                    class="slds-m-left_x-small lock-btn"></lightning-button>
+                <lightning-button-icon icon-name="utility:filterList"
+                    alternative-text="My Work" variant={myWorkVariant}
+                    onclick={handleToggleMyWork}
+                    class="slds-m-left_x-small"></lightning-button-icon>
+                <lightning-button-icon icon-name="utility:check"
+                    alternative-text="Show Completed" variant={completedVariant}
+                    onclick={handleToggleCompleted}
+                    class="slds-m-left_xx-small"></lightning-button-icon>
+                <lightning-button icon-name="utility:phone_portrait" label="Remote"
+                    variant="neutral"
+                    onclick={handleConnectPhone}
+                    class="slds-m-left_xx-small"
+                    title="Control this Gantt chart from your phone"></lightning-button>
+                <lightning-button icon-name="utility:play" label="Demo"
+                    variant="neutral"
+                    onclick={handleRunDiagnostics}
+                    class="slds-m-left_xx-small"></lightning-button>
+                <lightning-button-icon icon-name="utility:refresh"
+                    alternative-text="Refresh"
+                    onclick={handleRefresh}
+                    class="slds-m-left_xx-small"></lightning-button-icon>
+                <c-delivery-info-popover component-name="deliveryNimbusGantt"></c-delivery-info-popover>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <template lwc:if={isLoading}>
+            <div class="gantt-loading">
+                <lightning-spinner alternative-text="Loading..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- Error -->
+        <template lwc:if={hasError}>
+            <div class="gantt-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <!-- Empty state -->
+        <template lwc:if={isEmpty}>
+            <div class="gantt-empty">
+                <lightning-icon icon-name="utility:date_time" size="medium"
+                    class="gantt-empty-icon"></lightning-icon>
+                <p>No work items to display on the timeline.</p>
+                <p class="gantt-empty-sub">Create work items with start/end dates to see them here.</p>
+            </div>
+        </template>
+
+        <!-- Nimbus Gantt canvas container -->
+        <template lwc:if={hasData}>
+            <template lwc:if={isGanttView}>
+                <div class="gantt-container" lwc:ref="ganttContainer" lwc:dom="manual"></div>
+            </template>
+            <template lwc:if={isAltView}>
+                <div class="gantt-container alt-viz-container">
+                    <canvas lwc:ref="altCanvas" class="alt-canvas"></canvas>
+                </div>
+            </template>
+        </template>
+
+    </div>
+
+    <!-- Inline quick-edit modal -->
+    <template lwc:if={showQuickEdit}>
+        <section class="slds-modal slds-fade-in-open" role="dialog" aria-modal="true"
+            aria-labelledby="modal-heading">
+            <div class="slds-modal__container">
+                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                    onclick={handleQuickEditClose}>
+                    <lightning-icon icon-name="utility:close" size="small"
+                        variant="inverse"></lightning-icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+                <div class="slds-modal__header">
+                    <h2 id="modal-heading" class="slds-modal__title">Edit Work Item</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <lightning-record-edit-form
+                        record-id={selectedWorkItemId}
+                        object-api-name="delivery__WorkItem__c"
+                        onsuccess={handleQuickEditSave}
+                        onerror={handleQuickEditError}>
+                        <div class="slds-grid slds-wrap slds-gutters_small">
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-input-field field-name="delivery__BriefDescriptionTxt__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__StageNamePk__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__PriorityPk__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__EstimatedStartDevDate__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__EstimatedEndDevDate__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__EstimatedHoursNumber__c"></lightning-input-field>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name="delivery__Developer__c"></lightning-input-field>
+                            </div>
+                        </div>
+                        <div class="slds-m-top_medium slds-text-align_right">
+                            <lightning-button label="Cancel" onclick={handleQuickEditClose}
+                                class="slds-m-right_x-small"></lightning-button>
+                            <lightning-button label="Save" variant="brand" type="submit"></lightning-button>
+                        </div>
+                    </lightning-record-edit-form>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" onclick={handleQuickEditClose}></div>
+    </template>
+
+    <!-- Phone Remote Control modal -->
+    <template lwc:if={showRemoteModal}>
+        <section class="slds-modal slds-fade-in-open" role="dialog" aria-modal="true"
+            aria-labelledby="remote-modal-heading">
+            <div class="slds-modal__container">
+                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                    onclick={handleRemoteModalClose}>
+                    <lightning-icon icon-name="utility:close" size="small"
+                        variant="inverse"></lightning-icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+                <div class="slds-modal__header">
+                    <h2 id="remote-modal-heading" class="slds-modal__title">
+                        <lightning-icon icon-name="utility:phone_portrait" size="small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        Connect Phone Remote
+                    </h2>
+                </div>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-text-align_center slds-m-bottom_medium">
+                        <p class="slds-text-body_regular">
+                            Open this link on your phone to use it as a remote control
+                            for this Gantt chart. Tilt to scroll, swipe to zoom, tap for today.
+                        </p>
+                    </div>
+                    <div class="slds-box slds-m-bottom_medium"
+                        style="background: #f8fafc; border-radius: 8px; word-break: break-all;">
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_xx-small">
+                            Remote Control URL:
+                        </p>
+                        <p class="slds-text-body_regular" style="font-family: monospace; font-size: 13px;">
+                            {remoteUrl}
+                        </p>
+                    </div>
+                    <div class="slds-grid slds-gutters_small slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-box slds-text-align_center" style="background: #f0f9ff; border-radius: 8px;">
+                                <p class="slds-text-body_small slds-text-color_weak">Session ID</p>
+                                <p class="slds-text-heading_small" style="font-family: monospace;">
+                                    {remoteSessionDisplay}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-box slds-text-align_center" style="background: #f0fdf4; border-radius: 8px;">
+                                <p class="slds-text-body_small slds-text-color_weak">Status</p>
+                                <p class="slds-text-heading_small">Listening</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-text-align_center slds-m-bottom_small">
+                        <lightning-button label={remoteCopyLabel} variant={remoteCopyVariant}
+                            icon-name="utility:copy" onclick={handleCopyRemoteLink}></lightning-button>
+                    </div>
+                    <div class="slds-text-align_center">
+                        <p class="slds-text-body_small slds-text-color_weak">
+                            Text this link to yourself, open it on your phone, and tap Start.
+                        </p>
+                    </div>
+                </div>
+                <div class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={handleRemoteModalClose}></lightning-button>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" onclick={handleRemoteModalClose}></div>
+    </template>
+</template>

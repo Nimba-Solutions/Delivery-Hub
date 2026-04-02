@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActionTxt__c</fullName>
+    <description>Action type: scroll, zoom, select, tap, swipe-left, swipe-right.</description>
+    <inlineHelpText>Remote control action type.</inlineHelpText>
+    <label>Action</label>
+    <length>50</length>
+    <type>Text</type>
+</CustomField>
