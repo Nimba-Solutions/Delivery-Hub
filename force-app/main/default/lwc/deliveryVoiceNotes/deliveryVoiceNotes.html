@@ -1,0 +1,198 @@
+<template>
+    <div class="vn-container">
+
+        <!-- ── HEADER ── -->
+        <div class="vn-header">
+            <lightning-icon icon-name="utility:mic" size="small" class="vn-header-icon"></lightning-icon>
+            <h1 class="vn-title">Voice Notes</h1>
+            <p class="vn-subtitle">Tap the microphone, speak your notes, and create work items instantly.</p>
+        </div>
+
+        <!-- ── RECORDING VIEW ── -->
+        <template lwc:if={isRecordingView}>
+            <div class="vn-recording-section">
+                <!-- Big mic button -->
+                <div class="vn-mic-area">
+                    <button class={voiceButtonClass}
+                            onclick={handleVoiceToggle}
+                            title={voiceButtonTitle}
+                            type="button"
+                            disabled={voiceNotSupported}>
+                        <lightning-icon icon-name={voiceIconName}
+                                        size="large"
+                                        class="vn-mic-icon"></lightning-icon>
+                    </button>
+                    <p class="vn-status-text">{voiceStatusText}</p>
+                </div>
+
+                <!-- Live transcript preview -->
+                <template lwc:if={hasVoiceContent}>
+                    <div class="vn-live-transcript">
+                        <h3 class="vn-section-label">Live Transcript</h3>
+                        <p class="vn-transcript-text">{voiceLiveText}</p>
+                    </div>
+                </template>
+
+                <template lwc:if={voiceNotSupported}>
+                    <div class="vn-unsupported-notice">
+                        <lightning-icon icon-name="utility:warning" size="small"></lightning-icon>
+                        <p>Voice recognition requires a modern browser (Chrome, Safari, Edge).
+                           Please use Chrome on Android or Safari on iOS for the best experience.</p>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- ── REVIEW VIEW ── -->
+        <template lwc:elseif={showReview}>
+            <div class="vn-review-section">
+                <h2 class="vn-section-heading">{reviewTitle}</h2>
+
+                <!-- Mode selector -->
+                <div class="vn-mode-selector slds-m-bottom_medium">
+                    <lightning-radio-group
+                        name="createMode"
+                        label="Creation Mode"
+                        options={modeOptions}
+                        value={createMode}
+                        onchange={handleModeChange}
+                        type="button"
+                        variant="label-hidden">
+                    </lightning-radio-group>
+                </div>
+
+                <!-- Priority -->
+                <div class="slds-m-bottom_medium">
+                    <lightning-combobox
+                        label="Priority"
+                        value={priority}
+                        options={priorityOptions}
+                        onchange={handlePriorityChange}>
+                    </lightning-combobox>
+                </div>
+
+                <!-- SINGLE MODE -->
+                <template lwc:if={isSingleMode}>
+                    <div class="slds-m-bottom_small">
+                        <lightning-input
+                            label="Title (optional)"
+                            placeholder="Short title for the work item"
+                            value={editableTitle}
+                            onchange={handleTitleChange}
+                            max-length="100">
+                        </lightning-input>
+                    </div>
+
+                    <div class="slds-m-bottom_small">
+                        <lightning-textarea
+                            label="Voice Transcript"
+                            value={editableTranscript}
+                            onchange={handleTranscriptChange}
+                            rows="6">
+                        </lightning-textarea>
+                    </div>
+
+                    <div class="slds-m-bottom_medium">
+                        <lightning-input
+                            type="date"
+                            label="Start Date (optional)"
+                            value={startDate}
+                            onchange={handleStartDateChange}>
+                        </lightning-input>
+                    </div>
+
+                    <template lwc:if={titlePreview}>
+                        <div class="vn-preview-box slds-m-bottom_medium">
+                            <p class="vn-preview-label">Brief Description Preview:</p>
+                            <p class="vn-preview-value">{titlePreview}</p>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- BATCH MODE -->
+                <template lwc:if={isBatchMode}>
+                    <template lwc:if={hasSegments}>
+                        <div class="vn-segments-list">
+                            <template for:each={segments} for:item="segment">
+                                <div key={segment.id} class="vn-segment-card slds-m-bottom_small">
+                                    <div class="vn-segment-header">
+                                        <span class="vn-segment-badge">Item</span>
+                                        <button class="vn-segment-remove"
+                                                data-segment-id={segment.id}
+                                                onclick={handleRemoveSegment}
+                                                title="Remove this item"
+                                                type="button">
+                                            <lightning-icon icon-name="utility:close" size="xx-small"></lightning-icon>
+                                        </button>
+                                    </div>
+                                    <lightning-textarea
+                                        label="Note"
+                                        value={segment.text}
+                                        data-segment-id={segment.id}
+                                        onchange={handleSegmentTextChange}
+                                        variant="label-hidden"
+                                        rows="2">
+                                    </lightning-textarea>
+                                    <template lwc:if={segment.startDate}>
+                                        <p class="vn-segment-date">
+                                            <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                                            Detected date: {segment.startDate}
+                                        </p>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- Actions -->
+                <div class="vn-review-actions">
+                    <lightning-button
+                        label="Back"
+                        onclick={handleBackToRecording}
+                        class="slds-m-right_small">
+                    </lightning-button>
+                    <lightning-button
+                        label={createButtonLabel}
+                        variant="brand"
+                        onclick={handleCreateWorkItem}
+                        disabled={isSaving}>
+                    </lightning-button>
+                </div>
+            </div>
+        </template>
+
+        <!-- ── SUCCESS VIEW ── -->
+        <template lwc:elseif={showSuccess}>
+            <div class="vn-success-section">
+                <div class="vn-success-icon-area">
+                    <lightning-icon icon-name="utility:check" size="large" variant="success"></lightning-icon>
+                </div>
+                <h2 class="vn-success-heading">Work Items Created</h2>
+                <p class="vn-success-subtext">Your voice notes have been saved as work items.</p>
+
+                <div class="vn-created-list">
+                    <template for:each={createdItems} for:item="item">
+                        <div key={item.recordId} class="vn-created-card"
+                             data-record-id={item.recordId}
+                             onclick={handleNavigateToItem}>
+                            <div class="vn-created-name">{item.recordName}</div>
+                            <div class="vn-created-title">{item.title}</div>
+                            <lightning-icon icon-name="utility:chevronright" size="xx-small" class="vn-created-chevron"></lightning-icon>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="vn-success-actions slds-m-top_large">
+                    <lightning-button
+                        label="Record Another"
+                        variant="brand"
+                        onclick={handleNewRecording}
+                        icon-name="utility:mic">
+                    </lightning-button>
+                </div>
+            </div>
+        </template>
+
+    </div>
+</template>

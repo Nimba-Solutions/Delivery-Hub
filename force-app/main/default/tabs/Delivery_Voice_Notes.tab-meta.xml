@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Mobile-friendly voice-to-work-item creation for field reps and on-the-go note capture.</description>
+    <label>Voice Notes</label>
+    <lwcComponent>deliveryVoiceNotes</lwcComponent>
+    <motif>Custom48: Megaphone</motif>
+</CustomTab>
