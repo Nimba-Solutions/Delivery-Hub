@@ -114,10 +114,16 @@ private class DeliveryExternalNotificationServiceTest {
         System.assert(stageHtml.contains('WI-0042'), 'Stage HTML contains work item name');
         System.assert(stageHtml.contains('In Development'), 'Stage HTML contains new stage');
 
-        String slaHtml = DeliveryExternalNotificationService.buildSLABreachHtml(
-            'WI-0042', 'Fix login bug', 'In Development', Date.today().addDays(-1)
+        WorkItem__c testWi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Fix login bug',
+            StageNamePk__c = 'In Development',
+            SLATargetDate__c = Date.today().addDays(-1),
+            PriorityPk__c = 'High'
         );
-        System.assert(slaHtml.contains('WI-0042'), 'SLA HTML contains work item name');
+        insert testWi;
+        testWi = [SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, SLATargetDate__c FROM WorkItem__c WHERE Id = :testWi.Id];
+        String slaHtml = DeliveryExternalNotificationService.buildSLABreachHtml(testWi);
+        System.assert(slaHtml.contains(testWi.Name), 'SLA HTML contains work item name');
         System.assert(slaHtml.contains('taking longer'), 'SLA HTML contains breach messaging');
     }
 }

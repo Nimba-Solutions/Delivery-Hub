@@ -67,13 +67,10 @@ public with sharing class DeliveryExternalNotificationService {
 
         List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
         for (WorkItem__c wi : workItems) {
-            String title = String.isNotBlank(wi.BriefDescriptionTxt__c)
-                ? wi.BriefDescriptionTxt__c : 'Your request';
-
             Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
             email.setToAddresses(new List<String>{ wi.ExternalRequesterEmailTxt__c });
             email.setSubject('Action needed: ' + wi.Name + ' is past its target date');
-            email.setHtmlBody(buildSLABreachHtml(wi.Name, title, wi.StageNamePk__c, wi.SLATargetDate__c));
+            email.setHtmlBody(buildSLABreachHtml(wi));
             email.setSaveAsActivity(false);
             emails.add(email);
         }
@@ -133,8 +130,11 @@ public with sharing class DeliveryExternalNotificationService {
     }
 
     @TestVisible
-    private static String buildSLABreachHtml(String workItemName, String title, String stage, Date targetDate) {
-        String dateStr = targetDate != null ? String.valueOf(targetDate) : 'unknown';
+    private static String buildSLABreachHtml(WorkItem__c wi) {
+        String workItemName = wi.Name;
+        String title = String.isNotBlank(wi.BriefDescriptionTxt__c) ? wi.BriefDescriptionTxt__c : 'Your request';
+        String stage = wi.StageNamePk__c;
+        String dateStr = wi.SLATargetDate__c != null ? String.valueOf(wi.SLATargetDate__c) : 'unknown';
         return '<div style="font-family: Arial, sans-serif; max-width: 600px;">'
             + '<h2 style="color: #ba0517;">Update on Your Request</h2>'
             + '<p>We wanted to let you know that your request is taking longer than expected:</p>'
