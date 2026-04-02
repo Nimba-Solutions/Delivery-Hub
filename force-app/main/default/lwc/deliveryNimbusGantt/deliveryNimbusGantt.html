@@ -29,6 +29,10 @@
                         onchange={handleEntityChange}
                         class="entity-picker"></lightning-combobox>
                 </template>
+                <lightning-button icon-name={lockIcon}
+                    label={lockLabel} variant={lockVariant}
+                    onclick={handleToggleLock}
+                    class="slds-m-left_x-small lock-btn"></lightning-button>
                 <lightning-button-icon icon-name="utility:filterList"
                     alternative-text="My Work" variant={myWorkVariant}
                     onclick={handleToggleMyWork}

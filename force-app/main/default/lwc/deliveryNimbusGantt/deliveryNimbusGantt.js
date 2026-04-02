@@ -58,6 +58,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
     showDependencies = true;
     showCompleted = false;
     myWorkOnly = false;
+    editLocked = true;
     showQuickEdit = false;
     selectedWorkItemId = null;
 
@@ -156,6 +157,10 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
         return tasks;
     }
+
+    get lockIcon()    { return this.editLocked ? 'utility:lock' : 'utility:unlock'; }
+    get lockLabel()   { return this.editLocked ? 'Locked' : 'Editing'; }
+    get lockVariant() { return this.editLocked ? 'neutral' : 'brand'; }
 
     get dayVariant()     { return this.currentZoom === 'day' ? 'brand' : 'neutral'; }
     get weekVariant()    { return this.currentZoom === 'week' ? 'brand' : 'neutral'; }
@@ -257,6 +262,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                 showToday: true,
                 showWeekends: true,
                 showProgress: true,
+                readOnly: this.editLocked,
                 snapToDays: true,
                 columns: [
                     { field: 'name', header: 'Work Item', width: 220, tree: true },
@@ -446,6 +452,19 @@ export default class DeliveryNimbusGantt extends LightningElement {
         this._rebuildChart();
     }
 
+    handleToggleLock() {
+        this.editLocked = !this.editLocked;
+        this._savePrefs();
+        this._rebuildChart();
+        if (!this.editLocked) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Edit Mode',
+                message: 'Drag bars to reschedule, resize edges to change duration. Click lock to re-lock.',
+                variant: 'info'
+            }));
+        }
+    }
+
     handleScrollToday() {
         if (this._gantt) {
             this._gantt.scrollToDate(new Date());
@@ -490,7 +509,8 @@ export default class DeliveryNimbusGantt extends LightningElement {
                 showCompleted: this.showCompleted,
                 myWorkOnly: this.myWorkOnly,
                 currentZoom: this.currentZoom,
-                selectedEntity: this.selectedEntity
+                selectedEntity: this.selectedEntity,
+                editLocked: this.editLocked
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
         } catch (e) {
@@ -508,6 +528,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
             if (prefs.myWorkOnly != null) { this.myWorkOnly = prefs.myWorkOnly; }
             if (prefs.currentZoom) { this.currentZoom = prefs.currentZoom; }
             if (prefs.selectedEntity != null) { this.selectedEntity = prefs.selectedEntity; }
+            if (prefs.editLocked != null) { this.editLocked = prefs.editLocked; }
         } catch (e) {
             // fail silently
         }

@@ -46,6 +46,10 @@
     align-items: center;
 }
 
+.lock-btn {
+    font-size: 0.8rem;
+}
+
 .entity-picker {
     min-width: 160px;
     max-width: 220px;
