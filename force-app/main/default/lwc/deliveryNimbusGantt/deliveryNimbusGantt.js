@@ -465,6 +465,118 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
     }
 
+    handleRunDiagnostics() {
+        if (!this._gantt) {
+            this.dispatchEvent(new ShowToastEvent({ title: 'Diagnostics', message: 'Gantt not initialized', variant: 'error' }));
+            return;
+        }
+        var g = this._gantt;
+        var container = this.refs.ganttContainer;
+        var results = [];
+        var step = 0;
+        var self = this;
+
+        function log(msg, pass) {
+            var status = pass ? 'PASS' : 'FAIL';
+            results.push('[' + status + '] ' + msg);
+            console.log('[NimbusGantt:diag] [' + status + '] ' + msg);
+        }
+
+        function showStatus(msg) {
+            self.dispatchEvent(new ShowToastEvent({ title: 'Testing...', message: msg, variant: 'info', mode: 'dismissible' }));
+        }
+
+        function runStep() {
+            step++;
+            try {
+                switch(step) {
+                    case 1:
+                        showStatus('Step 1/8: Checking canvas...');
+                        var canvas = container ? container.querySelector('canvas') : null;
+                        log('Canvas element found', !!canvas);
+                        if (canvas) {
+                            log('Canvas size: ' + canvas.width + 'x' + canvas.height, canvas.width > 0 && canvas.height > 0);
+                            var ctx = canvas.getContext('2d');
+                            log('Canvas 2D context', !!ctx);
+                            // Check if anything is drawn (sample pixel)
+                            if (ctx) {
+                                var pixel = ctx.getImageData(100, 100, 1, 1).data;
+                                var hasContent = pixel[0] + pixel[1] + pixel[2] + pixel[3] > 0;
+                                log('Canvas has rendered content at (100,100)', hasContent);
+                                var headerPixel = ctx.getImageData(100, 20, 1, 1).data;
+                                log('Header area has content at (100,20)', headerPixel[3] > 0);
+                            }
+                        }
+                        break;
+                    case 2:
+                        showStatus('Step 2/8: Testing zoom Day...');
+                        g.setZoom('day');
+                        log('setZoom(day) executed', true);
+                        break;
+                    case 3:
+                        showStatus('Step 3/8: Testing zoom Month...');
+                        g.setZoom('month');
+                        log('setZoom(month) executed', true);
+                        break;
+                    case 4:
+                        showStatus('Step 4/8: Testing scrollToDate...');
+                        g.scrollToDate(new Date());
+                        log('scrollToDate(today) executed', true);
+                        break;
+                    case 5:
+                        showStatus('Step 5/8: Testing zoom Week (default)...');
+                        g.setZoom('week');
+                        log('setZoom(week) back to default', true);
+                        break;
+                    case 6:
+                        showStatus('Step 6/8: Checking tree grid DOM...');
+                        var grid = container ? container.querySelector('.ng-grid') : null;
+                        log('Tree grid DOM found', !!grid);
+                        var rows = container ? container.querySelectorAll('.ng-grid-row') : [];
+                        log('Tree grid rows: ' + rows.length, rows.length > 0);
+                        break;
+                    case 7:
+                        showStatus('Step 7/8: Testing expandAll/collapseAll...');
+                        g.expandAll();
+                        log('expandAll() executed', true);
+                        setTimeout(function() {
+                            g.collapseAll();
+                            log('collapseAll() executed', true);
+                            g.expandAll();
+                        }, 500);
+                        break;
+                    case 8:
+                        showStatus('Step 8/8: Checking date range...');
+                        try {
+                            var range = g.getVisibleDateRange();
+                            log('Date range: ' + range.start + ' to ' + range.end, !!range.start);
+                        } catch(e) {
+                            log('getVisibleDateRange error: ' + e.message, false);
+                        }
+                        // Final summary
+                        var passed = results.filter(function(r) { return r.indexOf('[PASS]') === 0; }).length;
+                        var failed = results.filter(function(r) { return r.indexOf('[FAIL]') === 0; }).length;
+                        console.log('[NimbusGantt:diag] === SUMMARY: ' + passed + ' passed, ' + failed + ' failed ===');
+                        results.forEach(function(r) { console.log('[NimbusGantt:diag] ' + r); });
+                        self.dispatchEvent(new ShowToastEvent({
+                            title: 'Diagnostics Complete',
+                            message: passed + ' passed, ' + failed + ' failed. Check browser console for details.',
+                            variant: failed > 0 ? 'warning' : 'success'
+                        }));
+                        return; // done
+                }
+            } catch(err) {
+                log('Step ' + step + ' error: ' + err.message, false);
+            }
+            if (step < 8) {
+                setTimeout(runStep, 2000);
+            }
+        }
+
+        this.dispatchEvent(new ShowToastEvent({ title: 'Diagnostics Starting', message: 'Running 8 tests over ~16 seconds...', variant: 'info' }));
+        setTimeout(runStep, 1000);
+    }
+
     handleScrollToday() {
         if (this._gantt) {
             this._gantt.scrollToDate(new Date());
