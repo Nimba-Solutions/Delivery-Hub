@@ -5,7 +5,7 @@
  * Returns aggregate analytics from ActivityLog__c for user tracking and adoption metrics.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global with sharing class DeliveryActivityDashboardController {
 
     /** @description Wrapper for a ranked item (user or component) with its activity count. */

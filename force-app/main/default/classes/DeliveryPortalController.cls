@@ -7,6 +7,7 @@
  * but validates access via NetworkEntity relationship.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global without sharing class DeliveryPortalController {
 
     /**

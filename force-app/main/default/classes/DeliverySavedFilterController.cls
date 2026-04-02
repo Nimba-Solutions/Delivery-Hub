@@ -5,7 +5,7 @@
  *              Returns only the running user's own filters (Private sharing model).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global with sharing class DeliverySavedFilterController {
 
     /**

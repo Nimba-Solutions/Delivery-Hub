@@ -50,4 +50,4 @@ $RECYCLE.BIN/
 .vscode
 .idea
 .project
-.settings
+.settings.claude/worktrees/

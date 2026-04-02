@@ -9,6 +9,8 @@
 @IsTest
 private class DeliveryHubPollerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     // Helper to get the Org's namespace prefix
     private static String getNamespace() {
         String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
@@ -52,56 +54,64 @@ private class DeliveryHubPollerTest {
 
     @IsTest
     static void testPollUpdatesSuccess() {
-        Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockResponseSuccess());
 
-        Test.startTest();
-        String result = DeliveryHubPoller.pollUpdates();
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryHubPoller.pollUpdates();
+            Test.stopTest();
 
-        // 1. Verify Return Message
-        System.assert(result.contains('Success'), 'Result should indicate success: ' + result);
-        System.assert(result.contains('Synced 1 items'), 'Result should confirm 1 item was processed');
+            // 1. Verify Return Message
+            System.assert(result.contains('Success'), 'Result should indicate success: ' + result);
+            System.assert(result.contains('Synced 1 items'), 'Result should confirm 1 item was processed');
 
-        // 2. Verify Data Update (Dynamic Query to be safe)
-        String ns = getNamespace();
-        String q = 'SELECT ' + ns + 'StageNamePk__c FROM ' + ns + 'WorkItem__c LIMIT 1';
-        SObject updatedT = Database.query(q);
+            // 2. Verify Data Update (Dynamic Query to be safe)
+            String ns = getNamespace();
+            String q = 'SELECT ' + ns + 'StageNamePk__c FROM ' + ns + 'WorkItem__c LIMIT 1';
+            SObject updatedT = Database.query(q);
 
-        System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Work item stage should have been updated by the mock payload.');
+            System.assertEquals('In Development', (String)updatedT.get(ns + 'StageNamePk__c'), 'Work item stage should have been updated by the mock payload.');
+        }
     }
 
     @IsTest
     static void testPollUpdatesHttpError() {
-        Test.setMock(HttpCalloutMock.class, new MockResponseError());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockResponseError());
 
-        Test.startTest();
-        String result = DeliveryHubPoller.pollUpdates();
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryHubPoller.pollUpdates();
+            Test.stopTest();
 
-        System.assert(result.contains('HTTP 500'), 'Result should contain the HTTP error code: ' + result);
+            System.assert(result.contains('HTTP 500'), 'Result should contain the HTTP error code: ' + result);
+        }
     }
 
     @IsTest
     static void testPollUpdatesNoVendors() {
-        // Delete all vendors to trigger the "No Active Vendor" path
-        delete [SELECT Id FROM NetworkEntity__c];
+        System.runAs(testUser) {
+            // Delete all vendors to trigger the "No Active Vendor" path
+            delete [SELECT Id FROM NetworkEntity__c];
 
-        Test.startTest();
-        String result = DeliveryHubPoller.pollUpdates();
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryHubPoller.pollUpdates();
+            Test.stopTest();
 
-        System.assert(result.contains('No Active Vendor'), 'Result should indicate no vendor found: ' + result);
+            System.assert(result.contains('No Active Vendor'), 'Result should indicate no vendor found: ' + result);
+        }
     }
 
     @IsTest
     static void testPollUpdatesEmptyResponse() {
-        Test.setMock(HttpCalloutMock.class, new MockResponseEmpty());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockResponseEmpty());
 
-        Test.startTest();
-        String result = DeliveryHubPoller.pollUpdates();
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryHubPoller.pollUpdates();
+            Test.stopTest();
 
-        System.assert(result.contains('Synced 0 items'), 'Result should indicate zero items synced: ' + result);
+            System.assert(result.contains('Synced 0 items'), 'Result should indicate zero items synced: ' + result);
+        }
     }
 
     // --- Mock Implementations ---

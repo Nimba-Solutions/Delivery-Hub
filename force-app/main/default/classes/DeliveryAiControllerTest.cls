@@ -9,6 +9,8 @@
 @IsTest
 private class DeliveryAiControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static DeliveryHubSettings__c createSettings(Boolean aiEnabled, String apiKey) {
@@ -47,16 +49,18 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateSuccess() {
-        createSettings(true, 'sk-test-key-123');
-        WorkItem__c workItem = createWorkItem();
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', successBody()));
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            WorkItem__c workItem = createWorkItem();
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', successBody()));
 
-        Test.startTest();
-        String result = DeliveryAiController.draftStatusUpdate(workItem.Id);
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryAiController.draftStatusUpdate(workItem.Id);
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null on success.');
-        System.assert(result.length() > 10, 'Result should contain meaningful text.');
+            System.assertNotEquals(null, result, 'Result should not be null on success.');
+            System.assert(result.length() > 10, 'Result should contain meaningful text.');
+        }
     }
 
     /**
@@ -64,19 +68,21 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateAiDisabled() {
-        createSettings(false, 'sk-test-key-123');
-        WorkItem__c workItem = createWorkItem();
+        System.runAs(testUser) {
+            createSettings(false, 'sk-test-key-123');
+            WorkItem__c workItem = createWorkItem();
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftStatusUpdate(workItem.Id);
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftStatusUpdate(workItem.Id);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw AuraHandledException when AI is disabled.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw AuraHandledException when AI is disabled.');
     }
 
     /**
@@ -84,19 +90,21 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateNoApiKey() {
-        createSettings(true, '');
-        WorkItem__c workItem = createWorkItem();
+        System.runAs(testUser) {
+            createSettings(true, '');
+            WorkItem__c workItem = createWorkItem();
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftStatusUpdate(workItem.Id);
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftStatusUpdate(workItem.Id);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw AuraHandledException when API key is blank.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw AuraHandledException when API key is blank.');
     }
 
     /**
@@ -105,18 +113,20 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateNoSettingsRecord() {
-        WorkItem__c workItem = createWorkItem();
+        System.runAs(testUser) {
+            WorkItem__c workItem = createWorkItem();
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftStatusUpdate(workItem.Id);
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftStatusUpdate(workItem.Id);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw AuraHandledException when no settings record exists.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw AuraHandledException when no settings record exists.');
     }
 
     /**
@@ -125,21 +135,23 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateWorkItemNotFound() {
-        createSettings(true, 'sk-test-key-123');
-        WorkItem__c workItem = createWorkItem();
-        Id workItemId = workItem.Id;
-        delete workItem;
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            WorkItem__c workItem = createWorkItem();
+            Id workItemId = workItem.Id;
+            delete workItem;
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftStatusUpdate(workItemId);
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftStatusUpdate(workItemId);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw AuraHandledException when workItem does not exist.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw AuraHandledException when workItem does not exist.');
     }
 
     /**
@@ -148,21 +160,23 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateApiError() {
-        createSettings(true, 'sk-test-key-123');
-        WorkItem__c workItem = createWorkItem();
-        Test.setMock(HttpCalloutMock.class,
-            new OpenAIMock(401, 'Unauthorized', '{\"error\":{\"message\":\"Invalid API key.\"}}'));
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            WorkItem__c workItem = createWorkItem();
+            Test.setMock(HttpCalloutMock.class,
+                new OpenAIMock(401, 'Unauthorized', '{\"error\":{\"message\":\"Invalid API key.\"}}'));
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftStatusUpdate(workItem.Id);
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftStatusUpdate(workItem.Id);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw AuraHandledException on non-200 OpenAI response.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw AuraHandledException on non-200 OpenAI response.');
     }
 
     /**
@@ -170,20 +184,22 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftStatusUpdateEmptyChoices() {
-        createSettings(true, 'sk-test-key-123');
-        WorkItem__c workItem = createWorkItem();
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', '{\"choices\":[]}'));
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            WorkItem__c workItem = createWorkItem();
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', '{\"choices\":[]}'));
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftStatusUpdate(workItem.Id);
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftStatusUpdate(workItem.Id);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw AuraHandledException when choices array is empty.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw AuraHandledException when choices array is empty.');
     }
 
     /**
@@ -191,17 +207,19 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testSuggestAcceptanceCriteriaSuccess() {
-        createSettings(true, 'sk-test-key-123');
-        WorkItem__c workItem = createWorkItem();
-        String body = '{"choices":[{"message":{"content":"- The dashboard supports dark mode\\n- Toggle persists on refresh"}}]}';
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            WorkItem__c workItem = createWorkItem();
+            String body = '{"choices":[{"message":{"content":"- The dashboard supports dark mode\\n- Toggle persists on refresh"}}]}';
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
 
-        Test.startTest();
-        String result = DeliveryAiController.suggestAcceptanceCriteria(workItem.Id);
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryAiController.suggestAcceptanceCriteria(workItem.Id);
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null.');
-        System.assert(result.length() > 5, 'Result should contain criteria text.');
+            System.assertNotEquals(null, result, 'Result should not be null.');
+            System.assert(result.length() > 5, 'Result should contain criteria text.');
+        }
     }
 
     /**
@@ -209,21 +227,23 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testSuggestAcceptanceCriteriaWorkItemNotFound() {
-        createSettings(true, 'sk-test-key-123');
-        WorkItem__c workItem = createWorkItem();
-        Id workItemId = workItem.Id;
-        delete workItem;
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            WorkItem__c workItem = createWorkItem();
+            Id workItemId = workItem.Id;
+            delete workItem;
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.suggestAcceptanceCriteria(workItemId);
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.suggestAcceptanceCriteria(workItemId);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw when workItem does not exist.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw when workItem does not exist.');
     }
 
     /**
@@ -231,17 +251,19 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftBoardSummarySuccess() {
-        createSettings(true, 'sk-test-key-123');
-        createWorkItem();
-        String body = '{"choices":[{"message":{"content":"The team is making great progress this week."}}]}';
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            createWorkItem();
+            String body = '{"choices":[{"message":{"content":"The team is making great progress this week."}}]}';
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
 
-        Test.startTest();
-        String result = DeliveryAiController.draftBoardSummary();
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryAiController.draftBoardSummary();
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null.');
-        System.assert(result.length() > 5, 'Result should contain summary text.');
+            System.assertNotEquals(null, result, 'Result should not be null.');
+            System.assert(result.length() > 5, 'Result should contain summary text.');
+        }
     }
 
     /**
@@ -249,18 +271,20 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftBoardSummaryNoWorkItems() {
-        createSettings(true, 'sk-test-key-123');
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftBoardSummary();
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftBoardSummary();
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw when no active workItems exist.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw when no active workItems exist.');
     }
 
     /**
@@ -268,22 +292,24 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftReleaseNotesSuccess() {
-        createSettings(true, 'sk-test-key-123');
-        WorkItem__c workItem = new WorkItem__c(
-            BriefDescriptionTxt__c = 'Export workItems to CSV',
-            StageNamePk__c = 'Done',
-            PriorityPk__c = 'High'
-        );
-        insert workItem;
-        String body = '{"choices":[{"message":{"content":"This release includes the following improvements:\\n- Export to CSV is now available."}}]}';
-        Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
+            WorkItem__c workItem = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Export workItems to CSV',
+                StageNamePk__c = 'Done',
+                PriorityPk__c = 'High'
+            );
+            insert workItem;
+            String body = '{"choices":[{"message":{"content":"This release includes the following improvements:\\n- Export to CSV is now available."}}]}';
+            Test.setMock(HttpCalloutMock.class, new OpenAIMock(200, 'OK', body));
 
-        Test.startTest();
-        String result = DeliveryAiController.draftReleaseNotes();
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryAiController.draftReleaseNotes();
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null.');
-        System.assert(result.length() > 5, 'Result should contain release notes text.');
+            System.assertNotEquals(null, result, 'Result should not be null.');
+            System.assert(result.length() > 5, 'Result should contain release notes text.');
+        }
     }
 
     /**
@@ -291,18 +317,20 @@ private class DeliveryAiControllerTest {
      */
     @IsTest
     static void testDraftReleaseNotesNoWorkItems() {
-        createSettings(true, 'sk-test-key-123');
+        System.runAs(testUser) {
+            createSettings(true, 'sk-test-key-123');
 
-        Boolean threw = false;
-        Test.startTest();
-        try {
-            DeliveryAiController.draftReleaseNotes();
-        } catch (AuraHandledException e) {
-            threw = true;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryAiController.draftReleaseNotes();
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Should throw when no recently completed workItems exist.');
         }
-        Test.stopTest();
-
-        System.assert(threw, 'Should throw when no recently completed workItems exist.');
     }
 
     // ── Mock ─────────────────────────────────────────────────────────────────

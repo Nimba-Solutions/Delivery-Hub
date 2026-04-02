@@ -7,6 +7,8 @@
 @IsTest
 private class DeliveryOverdueReminderQueueableTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         insert new DeliveryHubSettings__c(
@@ -16,10 +18,12 @@ private class DeliveryOverdueReminderQueueableTest {
 
     @IsTest
     static void testExecuteRunsWithoutError() {
-        Test.startTest();
-        System.enqueueJob(new DeliveryOverdueReminderQueueable());
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            System.enqueueJob(new DeliveryOverdueReminderQueueable());
+            Test.stopTest();
 
-        System.assert(true, 'Queueable should execute without errors');
+            System.assert(true, 'Queueable should execute without errors');
+        }
     }
 }

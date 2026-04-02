@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ValueTxt__c</fullName>
+    <description>JSON payload containing orientation data, zoom level, or task ID depending on the action.</description>
+    <inlineHelpText>JSON value for the remote action.</inlineHelpText>
+    <label>Value</label>
+    <length>255</length>
+    <type>Text</type>
+</CustomField>

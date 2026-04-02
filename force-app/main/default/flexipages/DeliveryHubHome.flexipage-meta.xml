@@ -29,8 +29,8 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryGanttChart</componentName>
-                <identifier>c_deliveryGanttChart</identifier>
+                <componentName>deliveryNimbusGantt</componentName>
+                <identifier>c_deliveryNimbusGantt</identifier>
             </componentInstance>
         </itemInstances>
         <name>bottomLeft</name>

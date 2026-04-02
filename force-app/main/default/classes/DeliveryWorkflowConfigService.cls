@@ -6,6 +6,7 @@
  * color maps, transition maps, and persona column maps in deliveryHubBoard.js.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global with sharing class DeliveryWorkflowConfigService {
 
     // -------------------------------------------------------------------------

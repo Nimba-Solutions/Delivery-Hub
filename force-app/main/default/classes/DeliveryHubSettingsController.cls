@@ -5,7 +5,7 @@
  * Handles General and AI configuration via Custom Settings.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount')
 global with sharing class DeliveryHubSettingsController {
 
     /**

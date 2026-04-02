@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryTransactionTriggerHandlerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         DeliveryTriggerControl.disableAfterLogic();
@@ -41,75 +43,81 @@ private class DeliveryTransactionTriggerHandlerTest {
 
     @IsTest
     static void testCreateTracking() {
-        DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c LIMIT 1];
-        DeliveryFieldTrackingService.clearCache();
+        System.runAs(testUser) {
+            DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c LIMIT 1];
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        DeliveryTransaction__c txn = new DeliveryTransaction__c(
-            DocumentId__c = doc.Id,
-            TypePk__c = 'Payment',
-            AmountCurrency__c = 500.00,
-            TransactionDateDate__c = Date.today()
-        );
-        insert txn;
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTransaction__c txn = new DeliveryTransaction__c(
+                DocumentId__c = doc.Id,
+                TypePk__c = 'Payment',
+                AmountCurrency__c = 500.00,
+                TransactionDateDate__c = Date.today()
+            );
+            insert txn;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :txn.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        // Transactions may or may not have tracked fields — verify no exception was thrown
-        System.assertNotEquals(null, txn.Id, 'Transaction should be inserted successfully');
+            List<ActivityLog__c> logs = [
+                SELECT Id FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :txn.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            // Transactions may or may not have tracked fields — verify no exception was thrown
+            System.assertNotEquals(null, txn.Id, 'Transaction should be inserted successfully');
+        }
     }
 
     @IsTest
     static void testUpdateTracking() {
-        DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c LIMIT 1];
+        System.runAs(testUser) {
+            DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c LIMIT 1];
 
-        DeliveryTriggerControl.disableAfterLogic();
-        DeliveryTransaction__c txn = new DeliveryTransaction__c(
-            DocumentId__c = doc.Id,
-            TypePk__c = 'Payment',
-            AmountCurrency__c = 500.00,
-            TransactionDateDate__c = Date.today()
-        );
-        insert txn;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+            DeliveryTriggerControl.disableAfterLogic();
+            DeliveryTransaction__c txn = new DeliveryTransaction__c(
+                DocumentId__c = doc.Id,
+                TypePk__c = 'Payment',
+                AmountCurrency__c = 500.00,
+                TransactionDateDate__c = Date.today()
+            );
+            insert txn;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        txn.AmountCurrency__c = 750.00;
-        update txn;
-        Test.stopTest();
+            Test.startTest();
+            txn.AmountCurrency__c = 750.00;
+            update txn;
+            Test.stopTest();
 
-        System.assertNotEquals(null, txn.Id, 'Transaction should be updated successfully');
+            System.assertNotEquals(null, txn.Id, 'Transaction should be updated successfully');
+        }
     }
 
     @IsTest
     static void testDeleteTracking() {
-        DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c LIMIT 1];
+        System.runAs(testUser) {
+            DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c LIMIT 1];
 
-        DeliveryTriggerControl.disableAfterLogic();
-        DeliveryTransaction__c txn = new DeliveryTransaction__c(
-            DocumentId__c = doc.Id,
-            TypePk__c = 'Payment',
-            AmountCurrency__c = 500.00,
-            TransactionDateDate__c = Date.today()
-        );
-        insert txn;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+            DeliveryTriggerControl.disableAfterLogic();
+            DeliveryTransaction__c txn = new DeliveryTransaction__c(
+                DocumentId__c = doc.Id,
+                TypePk__c = 'Payment',
+                AmountCurrency__c = 500.00,
+                TransactionDateDate__c = Date.today()
+            );
+            insert txn;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Id txnId = txn.Id;
+            Id txnId = txn.Id;
 
-        Test.startTest();
-        delete txn;
-        Test.stopTest();
+            Test.startTest();
+            delete txn;
+            Test.stopTest();
 
-        // Verify the record was deleted
-        List<DeliveryTransaction__c> remaining = [
-            SELECT Id FROM DeliveryTransaction__c WHERE Id = :txnId
-        ];
-        System.assertEquals(0, remaining.size(), 'Transaction should be deleted');
+            // Verify the record was deleted
+            List<DeliveryTransaction__c> remaining = [
+                SELECT Id FROM DeliveryTransaction__c WHERE Id = :txnId
+            ];
+            System.assertEquals(0, remaining.size(), 'Transaction should be deleted');
+        }
     }
 }

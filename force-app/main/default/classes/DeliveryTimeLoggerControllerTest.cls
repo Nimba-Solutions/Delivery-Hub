@@ -7,6 +7,8 @@
 @isTest
 private class DeliveryTimeLoggerControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     /**
      * @description Creates a Work Item and an Accepted Request so the controller
      *              can auto-link WorkLog records.
@@ -36,21 +38,23 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursCreatesWorkLog() {
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
-        Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 2.5, 'Test work notes', null);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.logHours(t.Id, 2.5, 'Test work notes', null);
+            Test.stopTest();
 
-        List<WorkLog__c> logs = [
-            SELECT HoursLoggedNumber__c, WorkItemId__c, WorkDateDate__c, RequestId__c
-            FROM WorkLog__c
-            WHERE WorkItemId__c = :t.Id
-        ];
-        System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
-        System.assertEquals(2.5, logs[0].HoursLoggedNumber__c, 'Expected 2.5 hours');
-        System.assertEquals(Date.today(), logs[0].WorkDateDate__c, 'Expected today\'s date');
-        System.assertNotEquals(null, logs[0].RequestId__c, 'WorkLog should be linked to the accepted request');
+            List<WorkLog__c> logs = [
+                SELECT HoursLoggedNumber__c, WorkItemId__c, WorkDateDate__c, RequestId__c
+                FROM WorkLog__c
+                WHERE WorkItemId__c = :t.Id
+            ];
+            System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
+            System.assertEquals(2.5, logs[0].HoursLoggedNumber__c, 'Expected 2.5 hours');
+            System.assertEquals(Date.today(), logs[0].WorkDateDate__c, 'Expected today\'s date');
+            System.assertNotEquals(null, logs[0].RequestId__c, 'WorkLog should be linked to the accepted request');
+        }
     }
 
     /**
@@ -58,15 +62,17 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursFractional() {
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
-        Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 0.25, null, null);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.logHours(t.Id, 0.25, null, null);
+            Test.stopTest();
 
-        List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
-        System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
-        System.assertEquals(0.25, logs[0].HoursLoggedNumber__c, 'Expected 0.25 hours');
+            List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
+            System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
+            System.assertEquals(0.25, logs[0].HoursLoggedNumber__c, 'Expected 0.25 hours');
+        }
     }
 
     /**
@@ -74,15 +80,17 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursMultipleEntries() {
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
-        Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Morning session', null);
-        DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Afternoon session', null);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Morning session', null);
+            DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Afternoon session', null);
+            Test.stopTest();
 
-        List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
-        System.assertEquals(2, logs.size(), 'Expected two WorkLog records');
+            List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
+            System.assertEquals(2, logs.size(), 'Expected two WorkLog records');
+        }
     }
 
     /**
@@ -90,23 +98,25 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursNoRequestThrows() {
-        WorkItem__c noReqWorkItem = new WorkItem__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
-        insert noReqWorkItem;
+        System.runAs(testUser) {
+            WorkItem__c noReqWorkItem = new WorkItem__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
+            insert noReqWorkItem;
 
-        // Delete any auto-created WorkRequests (AutoCreateWorkRequest may fire in namespaced context)
-        List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :noReqWorkItem.Id];
-        if (!autoCreated.isEmpty()) {
-            delete autoCreated;
-        }
+            // Delete any auto-created WorkRequests (AutoCreateWorkRequest may fire in namespaced context)
+            List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :noReqWorkItem.Id];
+            if (!autoCreated.isEmpty()) {
+                delete autoCreated;
+            }
 
-        Test.startTest();
-        try {
-            DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Should fail', null);
-            System.assert(false, 'Should have thrown AuraHandledException');
-        } catch (AuraHandledException e) {
-            System.assert(true, 'Correctly threw when no accepted request exists');
+            Test.startTest();
+            try {
+                DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Should fail', null);
+                System.assert(false, 'Should have thrown AuraHandledException');
+            } catch (AuraHandledException e) {
+                System.assert(true, 'Correctly threw when no accepted request exists');
+            }
+            Test.stopTest();
         }
-        Test.stopTest();
     }
 
     /**
@@ -114,22 +124,24 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursWithExplicitWorkDate() {
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
-        Date pastDate = Date.newInstance(2026, 1, 15);
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            Date pastDate = Date.newInstance(2026, 1, 15);
 
-        Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Past work', pastDate);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Past work', pastDate);
+            Test.stopTest();
 
-        List<WorkLog__c> logs = [
-            SELECT HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
-            FROM WorkLog__c
-            WHERE WorkItemId__c = :t.Id
-        ];
-        System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
-        System.assertEquals(pastDate, logs[0].WorkDateDate__c, 'Work date should be the explicit date provided');
-        System.assertEquals(3.0, logs[0].HoursLoggedNumber__c, 'Hours should match');
-        System.assertEquals('Past work', logs[0].WorkDescriptionTxt__c, 'Notes should match');
+            List<WorkLog__c> logs = [
+                SELECT HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
+                FROM WorkLog__c
+                WHERE WorkItemId__c = :t.Id
+            ];
+            System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
+            System.assertEquals(pastDate, logs[0].WorkDateDate__c, 'Work date should be the explicit date provided');
+            System.assertEquals(3.0, logs[0].HoursLoggedNumber__c, 'Hours should match');
+            System.assertEquals('Past work', logs[0].WorkDescriptionTxt__c, 'Notes should match');
+        }
     }
 
     /**
@@ -137,19 +149,21 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursNullNotesSavedSuccessfully() {
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
-        Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 1.5, null, null);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.logHours(t.Id, 1.5, null, null);
+            Test.stopTest();
 
-        List<WorkLog__c> logs = [
-            SELECT WorkDescriptionTxt__c
-            FROM WorkLog__c
-            WHERE WorkItemId__c = :t.Id
-        ];
-        System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
-        System.assertEquals(null, logs[0].WorkDescriptionTxt__c, 'Notes should be null when none provided');
+            List<WorkLog__c> logs = [
+                SELECT WorkDescriptionTxt__c
+                FROM WorkLog__c
+                WHERE WorkItemId__c = :t.Id
+            ];
+            System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
+            System.assertEquals(null, logs[0].WorkDescriptionTxt__c, 'Notes should be null when none provided');
+        }
     }
 
     /**
@@ -157,11 +171,13 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testIsApprovalRequiredDefaultsFalse() {
-        Test.startTest();
-        Boolean result = DeliveryTimeLoggerController.isApprovalRequired();
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Boolean result = DeliveryTimeLoggerController.isApprovalRequired();
+            Test.stopTest();
 
-        System.assertEquals(false, result, 'Approval should not be required by default');
+            System.assertEquals(false, result, 'Approval should not be required by default');
+        }
     }
 
     /**
@@ -169,15 +185,17 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testIsApprovalRequiredTrueWhenSet() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.RequireWorkLogApprovalDate__c = Datetime.now();
-        upsert settings;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            upsert settings;
 
-        Test.startTest();
-        Boolean result = DeliveryTimeLoggerController.isApprovalRequired();
-        Test.stopTest();
+            Test.startTest();
+            Boolean result = DeliveryTimeLoggerController.isApprovalRequired();
+            Test.stopTest();
 
-        System.assertEquals(true, result, 'Approval should be required when setting is enabled');
+            System.assertEquals(true, result, 'Approval should be required when setting is enabled');
+        }
     }
 
     /**
@@ -185,23 +203,25 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testLogHoursDraftWhenApprovalRequired() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.RequireWorkLogApprovalDate__c = Datetime.now();
-        upsert settings;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            upsert settings;
 
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
 
-        Test.startTest();
-        DeliveryTimeLoggerController.logHours(t.Id, 2.0, 'Draft entry', null);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.logHours(t.Id, 2.0, 'Draft entry', null);
+            Test.stopTest();
 
-        List<WorkLog__c> logs = [
-            SELECT StatusPk__c
-            FROM WorkLog__c
-            WHERE WorkItemId__c = :t.Id
-        ];
-        System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
-        System.assertEquals('Draft', logs[0].StatusPk__c, 'WorkLog should be Draft when approval is required');
+            List<WorkLog__c> logs = [
+                SELECT StatusPk__c
+                FROM WorkLog__c
+                WHERE WorkItemId__c = :t.Id
+            ];
+            System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
+            System.assertEquals('Draft', logs[0].StatusPk__c, 'WorkLog should be Draft when approval is required');
+        }
     }
 
     /**
@@ -209,22 +229,24 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testApproveWorkLogsDraftToApproved() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.RequireWorkLogApprovalDate__c = Datetime.now();
-        upsert settings;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            upsert settings;
 
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
-        DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'To approve', null);
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'To approve', null);
 
-        WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
-        System.assertEquals('Draft', log.StatusPk__c, 'Precondition: should be Draft');
+            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
+            System.assertEquals('Draft', log.StatusPk__c, 'Precondition: should be Draft');
 
-        Test.startTest();
-        DeliveryTimeLoggerController.approveWorkLogs(new List<Id>{ log.Id });
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.approveWorkLogs(new List<Id>{ log.Id });
+            Test.stopTest();
 
-        WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :log.Id];
-        System.assertEquals('Approved', updated.StatusPk__c, 'WorkLog should be Approved after approval');
+            WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :log.Id];
+            System.assertEquals('Approved', updated.StatusPk__c, 'WorkLog should be Approved after approval');
+        }
     }
 
     /**
@@ -232,22 +254,24 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testRejectWorkLogsDraftToRejected() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.RequireWorkLogApprovalDate__c = Datetime.now();
-        upsert settings;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            upsert settings;
 
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
-        DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'To reject', null);
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'To reject', null);
 
-        WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
-        System.assertEquals('Draft', log.StatusPk__c, 'Precondition: should be Draft');
+            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
+            System.assertEquals('Draft', log.StatusPk__c, 'Precondition: should be Draft');
 
-        Test.startTest();
-        DeliveryTimeLoggerController.rejectWorkLogs(new List<Id>{ log.Id });
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTimeLoggerController.rejectWorkLogs(new List<Id>{ log.Id });
+            Test.stopTest();
 
-        WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :log.Id];
-        System.assertEquals('Rejected', updated.StatusPk__c, 'WorkLog should be Rejected after rejection');
+            WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :log.Id];
+            System.assertEquals('Rejected', updated.StatusPk__c, 'WorkLog should be Rejected after rejection');
+        }
     }
 
     /**
@@ -255,20 +279,22 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testApproveWorkLogsSkipsAlreadyApproved() {
-        WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
-        // Default (no approval required) creates Approved logs
-        DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Already approved', null);
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            // Default (no approval required) creates Approved logs
+            DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Already approved', null);
 
-        WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
-        System.assertEquals('Approved', log.StatusPk__c, 'Precondition: should already be Approved');
+            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
+            System.assertEquals('Approved', log.StatusPk__c, 'Precondition: should already be Approved');
 
-        Test.startTest();
-        // Should not throw — the query filters WHERE StatusPk__c = 'Draft', so 0 records to update
-        DeliveryTimeLoggerController.approveWorkLogs(new List<Id>{ log.Id });
-        Test.stopTest();
+            Test.startTest();
+            // Should not throw — the query filters WHERE StatusPk__c = 'Draft', so 0 records to update
+            DeliveryTimeLoggerController.approveWorkLogs(new List<Id>{ log.Id });
+            Test.stopTest();
 
-        WorkLog__c unchanged = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :log.Id];
-        System.assertEquals('Approved', unchanged.StatusPk__c, 'Status should remain Approved');
+            WorkLog__c unchanged = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :log.Id];
+            System.assertEquals('Approved', unchanged.StatusPk__c, 'Status should remain Approved');
+        }
     }
 
     /**
@@ -276,11 +302,13 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testApproveWorkLogsNullInput() {
-        Test.startTest();
-        DeliveryTimeLoggerController.approveWorkLogs(null);
-        Test.stopTest();
-        // No exception = pass
-        System.assert(true, 'Should handle null input without error');
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryTimeLoggerController.approveWorkLogs(null);
+            Test.stopTest();
+            // No exception = pass
+            System.assert(true, 'Should handle null input without error');
+        }
     }
 
     /**
@@ -288,11 +316,13 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testRejectWorkLogsEmptyList() {
-        Test.startTest();
-        DeliveryTimeLoggerController.rejectWorkLogs(new List<Id>());
-        Test.stopTest();
-        // No exception = pass
-        System.assert(true, 'Should handle empty list without error');
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryTimeLoggerController.rejectWorkLogs(new List<Id>());
+            Test.stopTest();
+            // No exception = pass
+            System.assert(true, 'Should handle empty list without error');
+        }
     }
 
     /**
@@ -300,10 +330,12 @@ private class DeliveryTimeLoggerControllerTest {
      */
     @isTest
     static void testRejectWorkLogsNullInput() {
-        Test.startTest();
-        DeliveryTimeLoggerController.rejectWorkLogs(null);
-        Test.stopTest();
-        // No exception = pass
-        System.assert(true, 'Should handle null input without error');
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryTimeLoggerController.rejectWorkLogs(null);
+            Test.stopTest();
+            // No exception = pass
+            System.assert(true, 'Should handle null input without error');
+        }
     }
 }

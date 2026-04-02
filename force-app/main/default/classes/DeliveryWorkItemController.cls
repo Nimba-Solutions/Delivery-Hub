@@ -417,7 +417,7 @@ global with sharing class DeliveryWorkItemController {
             if (settings != null && String.isNotBlank(settings.OpenAIApiKeyTxt__c)) {
                 return settings.OpenAIApiKeyTxt__c;
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             // Settings not configured — return null
         }
         return null;

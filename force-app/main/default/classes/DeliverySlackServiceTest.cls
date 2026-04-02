@@ -9,6 +9,8 @@
 @IsTest
 private class DeliverySlackServiceTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     // ── Mock ─────────────────────────────────────────────────────────────────
 
     /**
@@ -56,109 +58,123 @@ private class DeliverySlackServiceTest {
 
     @IsTest
     static void testWebhookSuccess() {
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
-        Test.startTest();
-        String result = DeliverySlackService.testWebhook('https://hooks.slack.com/services/test');
-        Test.stopTest();
-        System.assertEquals('Success', result, 'Expected Success on HTTP 200');
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+            Test.startTest();
+            String result = DeliverySlackService.testWebhook('https://hooks.slack.com/services/test');
+            Test.stopTest();
+            System.assertEquals('Success', result, 'Expected Success on HTTP 200');
+        }
     }
 
     @IsTest
     static void testWebhookFailure() {
-        Test.setMock(HttpCalloutMock.class, new SlackMock(400, 'no_team'));
-        Test.startTest();
-        String result = DeliverySlackService.testWebhook('https://hooks.slack.com/services/test');
-        Test.stopTest();
-        System.assert(result.startsWith('Failed'), 'Expected failure message on HTTP 400');
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new SlackMock(400, 'no_team'));
+            Test.startTest();
+            String result = DeliverySlackService.testWebhook('https://hooks.slack.com/services/test');
+            Test.stopTest();
+            System.assert(result.startsWith('Failed'), 'Expected failure message on HTTP 400');
+        }
     }
 
     @IsTest
     static void testWebhookBlankUrl() {
-        Test.startTest();
-        try {
-            DeliverySlackService.testWebhook('');
-            System.assert(false, 'Expected AuraHandledException for blank URL');
-        } catch (AuraHandledException e) {
-            System.assert(true, 'Correct exception thrown for blank URL');
+        System.runAs(testUser) {
+            Test.startTest();
+            try {
+                DeliverySlackService.testWebhook('');
+                System.assert(false, 'Expected AuraHandledException for blank URL');
+            } catch (AuraHandledException e) {
+                System.assert(true, 'Correct exception thrown for blank URL');
+            }
+            Test.stopTest();
         }
-        Test.stopTest();
     }
 
     // ── postStageChanges ──────────────────────────────────────────────────────
 
     @IsTest
     static void testPostStageChangesWithUrl() {
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
-        Map<String, String> changes = new Map<String, String>{
-            'TKT-001' => 'In Development',
-            'TKT-002' => 'Ready for QA'
-        };
-        Test.startTest();
-        DeliverySlackService.postStageChanges(changes);
-        Test.stopTest();
-        // Verify the @future callout was dispatched (counts as 1 callout)
-        System.assert(Limits.getCallouts() <= Limits.getLimitCallouts(), 'Callout should not exceed limits');
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+            Map<String, String> changes = new Map<String, String>{
+                'TKT-001' => 'In Development',
+                'TKT-002' => 'Ready for QA'
+            };
+            Test.startTest();
+            DeliverySlackService.postStageChanges(changes);
+            Test.stopTest();
+            // Verify the @future callout was dispatched (counts as 1 callout)
+            System.assert(Limits.getCallouts() <= Limits.getLimitCallouts(), 'Callout should not exceed limits');
+        }
     }
 
     @IsTest
     static void testPostStageChangesNoUrl() {
-        // Overwrite settings with no Slack URL — should no-op
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.SlackWebhookUrl__c = null;
-        update settings;
+        System.runAs(testUser) {
+            // Overwrite settings with no Slack URL — should no-op
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.SlackWebhookUrl__c = null;
+            update settings;
 
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
-        Map<String, String> changes = new Map<String, String>{ 'TKT-001' => 'Done' };
-        Test.startTest();
-        DeliverySlackService.postStageChanges(changes);
-        Test.stopTest();
-        // With no webhook URL, should no-op and make zero callouts
-        System.assertEquals(0, Limits.getCallouts(), 'No callouts should be made when webhook URL is null');
+            Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+            Map<String, String> changes = new Map<String, String>{ 'TKT-001' => 'Done' };
+            Test.startTest();
+            DeliverySlackService.postStageChanges(changes);
+            Test.stopTest();
+            // With no webhook URL, should no-op and make zero callouts
+            System.assertEquals(0, Limits.getCallouts(), 'No callouts should be made when webhook URL is null');
+        }
     }
 
     // ── postApprovalRequest ────────────────────────────────────────────────
 
     @IsTest
     static void testPostApprovalRequestSuccess() {
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
 
-        // Create a work item to get a valid Id
-        WorkItem__c wi = new WorkItem__c(
-            BriefDescriptionTxt__c = 'Test Approval Item',
-            StageNamePk__c = 'In Client Approval'
-        );
-        insert wi;
+            // Create a work item to get a valid Id
+            WorkItem__c wi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Test Approval Item',
+                StageNamePk__c = 'In Client Approval'
+            );
+            insert wi;
 
-        String ctxJson = JSON.serialize(new Map<String, String>{
-            'workItemId' => wi.Id,
-            'workItemName' => 'WI-001',
-            'workItemTitle' => 'Test Approval Item',
-            'newStage' => 'In Client Approval'
-        });
+            String ctxJson = JSON.serialize(new Map<String, String>{
+                'workItemId' => wi.Id,
+                'workItemName' => 'WI-001',
+                'workItemTitle' => 'Test Approval Item',
+                'newStage' => 'In Client Approval'
+            });
 
-        Test.startTest();
-        DeliverySlackService.postApprovalRequest(ctxJson);
-        Test.stopTest();
-        System.assert(Limits.getCallouts() <= Limits.getLimitCallouts(), 'Approval request callout should not exceed limits');
+            Test.startTest();
+            DeliverySlackService.postApprovalRequest(ctxJson);
+            Test.stopTest();
+            System.assert(Limits.getCallouts() <= Limits.getLimitCallouts(), 'Approval request callout should not exceed limits');
+        }
     }
 
     @IsTest
     static void testPostApprovalRequestNoUrl() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.SlackWebhookUrl__c = null;
-        update settings;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.SlackWebhookUrl__c = null;
+            update settings;
 
-        String ctxJson = JSON.serialize(new Map<String, String>{
-            'workItemId' => null,
-            'workItemName' => 'WI-001',
-            'workItemTitle' => 'Test',
-            'newStage' => 'In Client Approval'
-        });
+            String ctxJson = JSON.serialize(new Map<String, String>{
+                'workItemId' => null,
+                'workItemName' => 'WI-001',
+                'workItemTitle' => 'Test',
+                'newStage' => 'In Client Approval'
+            });
 
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
-        Test.startTest();
-        DeliverySlackService.postApprovalRequest(ctxJson);
-        Test.stopTest();
-        System.assertEquals(0, Limits.getCallouts(), 'No callouts should be made when webhook URL is null');
+            Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+            Test.startTest();
+            DeliverySlackService.postApprovalRequest(ctxJson);
+            Test.stopTest();
+            System.assertEquals(0, Limits.getCallouts(), 'No callouts should be made when webhook URL is null');
+        }
     }
 }

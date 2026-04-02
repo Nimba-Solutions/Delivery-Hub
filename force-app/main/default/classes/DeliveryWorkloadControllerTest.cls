@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryWorkloadControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     /**
      * @description Creates test work items: some assigned to the running user,
      * some unassigned, and one in a terminal stage that should be excluded.
@@ -61,21 +63,23 @@ private class DeliveryWorkloadControllerTest {
      */
     @IsTest
     static void testGetWorkloadDataReturnsCorrectStructure() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryWorkloadController.getWorkloadData('Software_Delivery');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryWorkloadController.getWorkloadData('Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(1, result.size(), 'Should return exactly one developer entry');
+            System.assertEquals(1, result.size(), 'Should return exactly one developer entry');
 
-        Map<String, Object> dev = result[0];
-        System.assertEquals(UserInfo.getUserId(), (Id) dev.get('developerId'), 'Developer ID should match running user');
-        System.assertNotEquals(null, dev.get('developerName'), 'Developer name should not be null');
-        System.assertEquals(3, (Integer) dev.get('totalItems'), 'Should count 3 active assigned items (excludes Done)');
-        System.assertEquals(12.00, (Decimal) dev.get('totalEstimatedHours'), 'Should sum 8 + 4 + 0 = 12 hours');
+            Map<String, Object> dev = result[0];
+            System.assertEquals(UserInfo.getUserId(), (Id) dev.get('developerId'), 'Developer ID should match running user');
+            System.assertNotEquals(null, dev.get('developerName'), 'Developer name should not be null');
+            System.assertEquals(3, (Integer) dev.get('totalItems'), 'Should count 3 active assigned items (excludes Done)');
+            System.assertEquals(12.00, (Decimal) dev.get('totalEstimatedHours'), 'Should sum 8 + 4 + 0 = 12 hours');
 
-        Map<String, Integer> breakdown = (Map<String, Integer>) dev.get('stageBreakdown');
-        System.assertEquals(2, breakdown.get('In Development'), 'Should have 2 items In Development');
-        System.assertEquals(1, breakdown.get('Ready for QA'), 'Should have 1 item Ready for QA');
+            Map<String, Integer> breakdown = (Map<String, Integer>) dev.get('stageBreakdown');
+            System.assertEquals(2, breakdown.get('In Development'), 'Should have 2 items In Development');
+            System.assertEquals(1, breakdown.get('Ready for QA'), 'Should have 1 item Ready for QA');
+        }
     }
 
     /**
@@ -84,11 +88,13 @@ private class DeliveryWorkloadControllerTest {
      */
     @IsTest
     static void testGetWorkloadDataDefaultsWorkflowType() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryWorkloadController.getWorkloadData(null);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryWorkloadController.getWorkloadData(null);
+            Test.stopTest();
 
-        System.assertEquals(1, result.size(), 'Should return data using default workflow type');
+            System.assertEquals(1, result.size(), 'Should return data using default workflow type');
+        }
     }
 
     /**
@@ -97,11 +103,13 @@ private class DeliveryWorkloadControllerTest {
      */
     @IsTest
     static void testGetUnassignedCountReturnsCorrectCount() {
-        Test.startTest();
-        Integer count = DeliveryWorkloadController.getUnassignedCount('Software_Delivery');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Integer count = DeliveryWorkloadController.getUnassignedCount('Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(2, count, 'Should count 2 unassigned active items');
+            System.assertEquals(2, count, 'Should count 2 unassigned active items');
+        }
     }
 
     /**
@@ -110,11 +118,13 @@ private class DeliveryWorkloadControllerTest {
      */
     @IsTest
     static void testGetUnassignedCountDefaultsWorkflowType() {
-        Test.startTest();
-        Integer count = DeliveryWorkloadController.getUnassignedCount('');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Integer count = DeliveryWorkloadController.getUnassignedCount('');
+            Test.stopTest();
 
-        System.assertEquals(2, count, 'Should return correct count with default workflow type');
+            System.assertEquals(2, count, 'Should return correct count with default workflow type');
+        }
     }
 
     /**
@@ -123,15 +133,17 @@ private class DeliveryWorkloadControllerTest {
      */
     @IsTest
     static void testWithNoActiveItemsReturnsEmptyResults() {
-        // Delete all work items created in setup
-        delete [SELECT Id FROM WorkItem__c];
+        System.runAs(testUser) {
+            // Delete all work items created in setup
+            delete [SELECT Id FROM WorkItem__c];
 
-        Test.startTest();
-        List<Map<String, Object>> workload = DeliveryWorkloadController.getWorkloadData('Software_Delivery');
-        Integer unassigned = DeliveryWorkloadController.getUnassignedCount('Software_Delivery');
-        Test.stopTest();
+            Test.startTest();
+            List<Map<String, Object>> workload = DeliveryWorkloadController.getWorkloadData('Software_Delivery');
+            Integer unassigned = DeliveryWorkloadController.getUnassignedCount('Software_Delivery');
+            Test.stopTest();
 
-        System.assertEquals(0, workload.size(), 'Should return empty list when no active items');
-        System.assertEquals(0, unassigned, 'Should return 0 unassigned when no items exist');
+            System.assertEquals(0, workload.size(), 'Should return empty list when no active items');
+            System.assertEquals(0, unassigned, 'Should return 0 unassigned when no items exist');
+        }
     }
 }

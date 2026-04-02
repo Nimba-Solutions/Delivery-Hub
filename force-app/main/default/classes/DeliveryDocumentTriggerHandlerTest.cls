@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryDocumentTriggerHandlerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         DeliveryTriggerControl.disableAfterLogic();
@@ -29,88 +31,94 @@ private class DeliveryDocumentTriggerHandlerTest {
 
     @IsTest
     static void testCreateTracking() {
-        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
-        DeliveryFieldTrackingService.clearCache();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
-            TemplatePk__c = 'Invoice',
-            StatusPk__c = 'Draft',
-            PeriodStartDate__c = Date.today().addDays(-30),
-            PeriodEndDate__c = Date.today(),
-            PublicTokenTxt__c = 'test-token-create',
-            SnapshotTxt__c = '{}',
-            VersionNumber__c = 1
-        );
-        insert doc;
-        Test.stopTest();
+            Test.startTest();
+            DeliveryDocument__c doc = new DeliveryDocument__c(
+                NetworkEntityId__c = entity.Id,
+                TemplatePk__c = 'Invoice',
+                StatusPk__c = 'Draft',
+                PeriodStartDate__c = Date.today().addDays(-30),
+                PeriodEndDate__c = Date.today(),
+                PublicTokenTxt__c = 'test-token-create',
+                SnapshotTxt__c = '{}',
+                VersionNumber__c = 1
+            );
+            insert doc;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :doc.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Create tracking should produce activity logs');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :doc.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Create tracking should produce activity logs');
+        }
     }
 
     @IsTest
     static void testUpdateTracking() {
-        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+            DeliveryTriggerControl.disableAfterLogic();
 
-        DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
-            TemplatePk__c = 'Invoice',
-            StatusPk__c = 'Draft',
-            PeriodStartDate__c = Date.today().addDays(-30),
-            PeriodEndDate__c = Date.today(),
-            PublicTokenTxt__c = 'test-token-update',
-            SnapshotTxt__c = '{}',
-            VersionNumber__c = 1
-        );
-        insert doc;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+            DeliveryDocument__c doc = new DeliveryDocument__c(
+                NetworkEntityId__c = entity.Id,
+                TemplatePk__c = 'Invoice',
+                StatusPk__c = 'Draft',
+                PeriodStartDate__c = Date.today().addDays(-30),
+                PeriodEndDate__c = Date.today(),
+                PublicTokenTxt__c = 'test-token-update',
+                SnapshotTxt__c = '{}',
+                VersionNumber__c = 1
+            );
+            insert doc;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        doc.StatusPk__c = 'Sent';
-        update doc;
-        Test.stopTest();
+            Test.startTest();
+            doc.StatusPk__c = 'Sent';
+            update doc;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :doc.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Update tracking should produce activity logs for status change');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :doc.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Update tracking should produce activity logs for status change');
+        }
     }
 
     @IsTest
     static void testDeleteTracking() {
-        NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
-        DeliveryTriggerControl.disableAfterLogic();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+            DeliveryTriggerControl.disableAfterLogic();
 
-        DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
-            TemplatePk__c = 'Invoice',
-            StatusPk__c = 'Draft',
-            PeriodStartDate__c = Date.today().addDays(-30),
-            PeriodEndDate__c = Date.today(),
-            PublicTokenTxt__c = 'test-token-delete',
-            SnapshotTxt__c = '{}',
-            VersionNumber__c = 1
-        );
-        insert doc;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+            DeliveryDocument__c doc = new DeliveryDocument__c(
+                NetworkEntityId__c = entity.Id,
+                TemplatePk__c = 'Invoice',
+                StatusPk__c = 'Draft',
+                PeriodStartDate__c = Date.today().addDays(-30),
+                PeriodEndDate__c = Date.today(),
+                PublicTokenTxt__c = 'test-token-delete',
+                SnapshotTxt__c = '{}',
+                VersionNumber__c = 1
+            );
+            insert doc;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        delete doc;
-        Test.stopTest();
+            Test.startTest();
+            delete doc;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :doc.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Delete tracking should produce activity logs');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :doc.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Delete tracking should produce activity logs');
+        }
     }
 }

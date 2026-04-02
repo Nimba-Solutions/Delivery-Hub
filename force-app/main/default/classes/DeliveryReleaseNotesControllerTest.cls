@@ -9,6 +9,8 @@
 @IsTest
 private class DeliveryReleaseNotesControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     /**
      * @description Creates test work items in various terminal and non-terminal stages
      * with different RequestTypePk__c values for release note generation tests.
@@ -54,25 +56,27 @@ private class DeliveryReleaseNotesControllerTest {
      */
     @IsTest
     static void testGenerateReleaseNotesReturnsGroupedData() {
-        Date startDate = Date.today().addDays(-1);
-        Date endDate = Date.today();
+        System.runAs(testUser) {
+            Date startDate = Date.today().addDays(-1);
+            Date endDate = Date.today();
 
-        Test.startTest();
-        Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
-            startDate, endDate, 'Software_Delivery'
-        );
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
+                startDate, endDate, 'Software_Delivery'
+            );
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null');
-        System.assert(result.containsKey('title'), 'Result should contain title key');
-        System.assert(result.containsKey('totalItems'), 'Result should contain totalItems key');
-        System.assert(result.containsKey('sections'), 'Result should contain sections key');
+            System.assertNotEquals(null, result, 'Result should not be null');
+            System.assert(result.containsKey('title'), 'Result should contain title key');
+            System.assert(result.containsKey('totalItems'), 'Result should contain totalItems key');
+            System.assert(result.containsKey('sections'), 'Result should contain sections key');
 
-        Integer totalItems = (Integer) result.get('totalItems');
-        System.assertEquals(3, totalItems, 'Should count 3 terminal items (2 Done + 1 Cancelled)');
+            Integer totalItems = (Integer) result.get('totalItems');
+            System.assertEquals(3, totalItems, 'Should count 3 terminal items (2 Done + 1 Cancelled)');
 
-        List<Object> sections = (List<Object>) result.get('sections');
-        System.assert(sections.size() >= 2, 'Should have at least 2 categories (Internal, Partner Request)');
+            List<Object> sections = (List<Object>) result.get('sections');
+            System.assert(sections.size() >= 2, 'Should have at least 2 categories (Internal, Partner Request)');
+        }
     }
 
     /**
@@ -81,21 +85,23 @@ private class DeliveryReleaseNotesControllerTest {
      */
     @IsTest
     static void testGenerateReleaseNotesEmptyRange() {
-        Date startDate = Date.today().addDays(-365);
-        Date endDate = Date.today().addDays(-364);
+        System.runAs(testUser) {
+            Date startDate = Date.today().addDays(-365);
+            Date endDate = Date.today().addDays(-364);
 
-        Test.startTest();
-        Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
-            startDate, endDate, 'Software_Delivery'
-        );
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
+                startDate, endDate, 'Software_Delivery'
+            );
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null even with no items');
-        Integer totalItems = (Integer) result.get('totalItems');
-        System.assertEquals(0, totalItems, 'Should return 0 items for a past date range');
+            System.assertNotEquals(null, result, 'Result should not be null even with no items');
+            Integer totalItems = (Integer) result.get('totalItems');
+            System.assertEquals(0, totalItems, 'Should return 0 items for a past date range');
 
-        List<Object> sections = (List<Object>) result.get('sections');
-        System.assertEquals(0, sections.size(), 'Sections should be empty when no items found');
+            List<Object> sections = (List<Object>) result.get('sections');
+            System.assertEquals(0, sections.size(), 'Sections should be empty when no items found');
+        }
     }
 
     /**
@@ -104,18 +110,20 @@ private class DeliveryReleaseNotesControllerTest {
      */
     @IsTest
     static void testBlankWorkflowTypeDefaultsToSoftwareDelivery() {
-        Date startDate = Date.today().addDays(-1);
-        Date endDate = Date.today();
+        System.runAs(testUser) {
+            Date startDate = Date.today().addDays(-1);
+            Date endDate = Date.today();
 
-        Test.startTest();
-        Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
-            startDate, endDate, ''
-        );
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
+                startDate, endDate, ''
+            );
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null with blank workflow type');
-        Integer totalItems = (Integer) result.get('totalItems');
-        System.assertEquals(3, totalItems, 'Blank workflow type should default to Software_Delivery');
+            System.assertNotEquals(null, result, 'Result should not be null with blank workflow type');
+            Integer totalItems = (Integer) result.get('totalItems');
+            System.assertEquals(3, totalItems, 'Blank workflow type should default to Software_Delivery');
+        }
     }
 
     /**
@@ -123,18 +131,20 @@ private class DeliveryReleaseNotesControllerTest {
      */
     @IsTest
     static void testNullWorkflowTypeDefaultsToSoftwareDelivery() {
-        Date startDate = Date.today().addDays(-1);
-        Date endDate = Date.today();
+        System.runAs(testUser) {
+            Date startDate = Date.today().addDays(-1);
+            Date endDate = Date.today();
 
-        Test.startTest();
-        Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
-            startDate, endDate, null
-        );
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
+                startDate, endDate, null
+            );
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null with null workflow type');
-        Integer totalItems = (Integer) result.get('totalItems');
-        System.assertEquals(3, totalItems, 'Null workflow type should default to Software_Delivery');
+            System.assertNotEquals(null, result, 'Result should not be null with null workflow type');
+            Integer totalItems = (Integer) result.get('totalItems');
+            System.assertEquals(3, totalItems, 'Null workflow type should default to Software_Delivery');
+        }
     }
 
     /**
@@ -142,16 +152,18 @@ private class DeliveryReleaseNotesControllerTest {
      */
     @IsTest
     static void testResultTitleContainsDateRange() {
-        Date startDate = Date.today().addDays(-7);
-        Date endDate = Date.today();
+        System.runAs(testUser) {
+            Date startDate = Date.today().addDays(-7);
+            Date endDate = Date.today();
 
-        Test.startTest();
-        Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
-            startDate, endDate, 'Software_Delivery'
-        );
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result = DeliveryReleaseNotesController.generateReleaseNotes(
+                startDate, endDate, 'Software_Delivery'
+            );
+            Test.stopTest();
 
-        String title = (String) result.get('title');
-        System.assert(title.contains('Release Notes'), 'Title should contain Release Notes');
+            String title = (String) result.get('title');
+            System.assert(title.contains('Release Notes'), 'Title should contain Release Notes');
+        }
     }
 }
