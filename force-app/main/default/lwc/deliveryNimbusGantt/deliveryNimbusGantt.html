@@ -9,6 +9,18 @@
             </div>
             <div class="toolbar-center">
                 <lightning-button-group>
+                    <lightning-button label="Gantt" variant={ganttViewVariant}
+                        onclick={handleViewGantt}></lightning-button>
+                    <lightning-button label="Treemap" variant={treemapViewVariant}
+                        onclick={handleViewTreemap}></lightning-button>
+                    <lightning-button label="Bubbles" variant={bubblesViewVariant}
+                        onclick={handleViewBubbles}></lightning-button>
+                    <lightning-button label="Calendar" variant={calendarViewVariant}
+                        onclick={handleViewCalendar}></lightning-button>
+                    <lightning-button label="Flow" variant={flowViewVariant}
+                        onclick={handleViewFlow}></lightning-button>
+                </lightning-button-group>
+                <lightning-button-group class="slds-m-left_xx-small">
                     <lightning-button label="Day" variant={dayVariant}
                         onclick={handleZoomDay}></lightning-button>
                     <lightning-button label="Week" variant={weekVariant}
@@ -80,7 +92,14 @@
 
         <!-- Nimbus Gantt canvas container -->
         <template lwc:if={hasData}>
-            <div class="gantt-container" lwc:ref="ganttContainer" lwc:dom="manual"></div>
+            <template lwc:if={isGanttView}>
+                <div class="gantt-container" lwc:ref="ganttContainer" lwc:dom="manual"></div>
+            </template>
+            <template lwc:if={isAltView}>
+                <div class="gantt-container alt-viz-container">
+                    <canvas lwc:ref="altCanvas" class="alt-canvas"></canvas>
+                </div>
+            </template>
         </template>
 
     </div>

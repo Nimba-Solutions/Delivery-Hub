@@ -59,6 +59,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
     showCompleted = false;
     myWorkOnly = false;
     editLocked = true;
+    currentView = 'gantt';
     showQuickEdit = false;
     selectedWorkItemId = null;
 
@@ -157,6 +158,14 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
         return tasks;
     }
+
+    get isGanttView()       { return this.currentView === 'gantt'; }
+    get isAltView()         { return this.currentView !== 'gantt'; }
+    get ganttViewVariant()  { return this.currentView === 'gantt' ? 'brand' : 'neutral'; }
+    get treemapViewVariant() { return this.currentView === 'treemap' ? 'brand' : 'neutral'; }
+    get bubblesViewVariant() { return this.currentView === 'bubbles' ? 'brand' : 'neutral'; }
+    get calendarViewVariant() { return this.currentView === 'calendar' ? 'brand' : 'neutral'; }
+    get flowViewVariant()   { return this.currentView === 'flow' ? 'brand' : 'neutral'; }
 
     get lockIcon()    { return this.editLocked ? 'utility:lock' : 'utility:unlock'; }
     get lockLabel()   { return this.editLocked ? 'Locked' : 'Editing'; }
@@ -452,6 +461,422 @@ export default class DeliveryNimbusGantt extends LightningElement {
         this._rebuildChart();
     }
 
+    // ── View Switching ──────────────────────────────────────────────
+    handleViewGantt()    { this.currentView = 'gantt'; this._rebuildChart(); }
+    handleViewTreemap()  { this.currentView = 'treemap'; this._renderAltViz(); }
+    handleViewBubbles()  { this.currentView = 'bubbles'; this._renderAltViz(); }
+    handleViewCalendar() { this.currentView = 'calendar'; this._renderAltViz(); }
+    handleViewFlow()     { this.currentView = 'flow'; this._renderAltViz(); }
+
+    _renderAltViz() {
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        requestAnimationFrame(() => {
+            var canvas = this.refs.altCanvas;
+            if (!canvas) { return; }
+            var container = canvas.parentElement;
+            var w = container.clientWidth || 900;
+            var h = container.clientHeight || 500;
+            var dpr = window.devicePixelRatio || 1;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            var ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, w, h);
+
+            var tasks = this.filteredTasks;
+            var colors = { Submitted: '#3b82f6', 'In Development': '#22c55e', 'Code Review': '#a855f7', 'UAT Ready': '#14b8a6', Deployment: '#f97316', Done: '#6b7280', Backlog: '#64748b' };
+
+            switch(this.currentView) {
+                case 'treemap': this._drawTreemap(ctx, w, h, tasks, colors); break;
+                case 'bubbles': this._drawBubbles(ctx, w, h, tasks, colors); break;
+                case 'calendar': this._drawCalendar(ctx, w, h, tasks, colors); break;
+                case 'flow': this._drawFlow(ctx, w, h, tasks, colors); break;
+            }
+        });
+    }
+
+    _drawTreemap(ctx, w, h, tasks, colors) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillText('Treemap — Size = Estimated Hours, Color = Stage', 20, 30);
+
+        var total = 0;
+        tasks.forEach(function(t) { total += (t.estimatedHours || 1); });
+        if (total === 0) { total = 1; }
+
+        var sorted = tasks.slice().sort(function(a, b) { return (b.estimatedHours || 1) - (a.estimatedHours || 1); });
+        var rects = [];
+        var x = 10; var y = 50; var areaW = w - 20; var areaH = h - 60;
+        var remaining = sorted.slice();
+        var rx = x; var ry = y; var rw = areaW; var rh = areaH;
+
+        // Simple slice-and-dice treemap
+        var horizontal = true;
+        remaining.forEach(function(t, i) {
+            var fraction = (t.estimatedHours || 1) / total;
+            var rect;
+            if (horizontal) {
+                var bw = Math.max(rw * fraction * (remaining.length / (remaining.length - i)), 30);
+                if (bw > rw) { bw = rw; }
+                rect = { x: rx, y: ry, w: bw - 2, h: rh - 2, task: t };
+                rx += bw;
+                rw -= bw;
+            } else {
+                var bh = Math.max(rh * fraction * (remaining.length / (remaining.length - i)), 20);
+                if (bh > rh) { bh = rh; }
+                rect = { x: rx, y: ry, w: rw - 2, h: bh - 2, task: t };
+                ry += bh;
+                rh -= bh;
+            }
+            if (i % 3 === 2) { horizontal = !horizontal; }
+            rects.push(rect);
+        });
+
+        rects.forEach(function(r) {
+            var color = colors[r.task.stage] || '#94a3b8';
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.roundRect(r.x, r.y, Math.max(r.w, 4), Math.max(r.h, 4), 4);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            if (r.w > 60 && r.h > 25) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px -apple-system, sans-serif';
+                var label = r.task.name + ' — ' + (r.task.description || '');
+                if (label.length > Math.floor(r.w / 6)) { label = label.substring(0, Math.floor(r.w / 6)) + '…'; }
+                ctx.fillText(label, r.x + 6, r.y + 16);
+                ctx.font = '10px -apple-system, sans-serif';
+                ctx.fillText((r.task.estimatedHours || 0) + 'h · ' + (r.task.stage || ''), r.x + 6, r.y + 30);
+            }
+        });
+    }
+
+    _drawBubbles(ctx, w, h, tasks, colors) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillText('Bubble Chart — Size = Hours, X = Timeline, Y = Entity, Color = Stage', 20, 30);
+
+        var today = new Date();
+        var entities = [];
+        tasks.forEach(function(t) {
+            var en = t.entityName || 'Unassigned';
+            if (entities.indexOf(en) === -1) { entities.push(en); }
+        });
+
+        // Axes
+        var padL = 140; var padR = 30; var padT = 60; var padB = 40;
+        var plotW = w - padL - padR;
+        var plotH = h - padT - padB;
+
+        // Y axis labels
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px -apple-system, sans-serif';
+        entities.forEach(function(e, i) {
+            var y = padT + (i + 0.5) * (plotH / entities.length);
+            ctx.fillText(e, 10, y + 4);
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(w - padR, y);
+            ctx.stroke();
+        });
+
+        // Find date range
+        var minDate = Infinity; var maxDate = -Infinity;
+        tasks.forEach(function(t) {
+            if (t.startDate) { var d = new Date(t.startDate).getTime(); if (d < minDate) { minDate = d; } }
+            if (t.endDate) { var d2 = new Date(t.endDate).getTime(); if (d2 > maxDate) { maxDate = d2; } }
+        });
+        if (minDate === Infinity) { minDate = today.getTime() - 30 * 86400000; maxDate = today.getTime() + 30 * 86400000; }
+        var dateSpan = maxDate - minDate || 1;
+
+        // Today line
+        var todayX = padL + ((today.getTime() - minDate) / dateSpan) * plotW;
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(todayX, padT);
+        ctx.lineTo(todayX, h - padB);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.fillText('Today', todayX - 14, h - padB + 14);
+
+        // Bubbles
+        tasks.forEach(function(t) {
+            if (!t.startDate) { return; }
+            var startMs = new Date(t.startDate).getTime();
+            var endMs = t.endDate ? new Date(t.endDate).getTime() : startMs + 14 * 86400000;
+            var midMs = (startMs + endMs) / 2;
+            var bx = padL + ((midMs - minDate) / dateSpan) * plotW;
+            var entityIdx = entities.indexOf(t.entityName || 'Unassigned');
+            var by = padT + (entityIdx + 0.5) * (plotH / entities.length);
+            var hours = t.estimatedHours || 5;
+            var radius = Math.max(Math.min(Math.sqrt(hours) * 4, 40), 8);
+            var color = colors[t.stage] || '#94a3b8';
+
+            // Is it overdue?
+            var overdue = endMs < today.getTime();
+
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(bx, by, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            if (overdue) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(bx, by, radius + 2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(bx, by, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (radius > 12) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 9px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(t.name, bx, by - 2);
+                ctx.font = '8px -apple-system, sans-serif';
+                ctx.fillText(hours + 'h', bx, by + 9);
+                ctx.textAlign = 'left';
+            }
+        });
+    }
+
+    _drawCalendar(ctx, w, h, tasks, colors) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillText('Calendar Heatmap — Task density per day', 20, 30);
+
+        var today = new Date();
+        var minDate = Infinity; var maxDate = -Infinity;
+        tasks.forEach(function(t) {
+            if (t.startDate) { var d = new Date(t.startDate).getTime(); if (d < minDate) { minDate = d; } }
+            if (t.endDate) { var d2 = new Date(t.endDate).getTime(); if (d2 > maxDate) { maxDate = d2; } }
+        });
+        if (minDate === Infinity) { return; }
+
+        // Build day counts
+        var dayCounts = {};
+        var MS_DAY = 86400000;
+        tasks.forEach(function(t) {
+            if (!t.startDate || !t.endDate) { return; }
+            var s = new Date(t.startDate).getTime();
+            var e = new Date(t.endDate).getTime();
+            for (var d = s; d <= e; d += MS_DAY) {
+                var key = new Date(d).toISOString().slice(0, 10);
+                dayCounts[key] = (dayCounts[key] || 0) + 1;
+            }
+        });
+
+        var maxCount = 0;
+        Object.keys(dayCounts).forEach(function(k) { if (dayCounts[k] > maxCount) { maxCount = dayCounts[k]; } });
+        if (maxCount === 0) { maxCount = 1; }
+
+        // Draw grid
+        var cellSize = 18;
+        var gap = 3;
+        var padL = 50;
+        var padT = 60;
+        var startDate = new Date(minDate);
+        startDate.setUTCDate(startDate.getUTCDate() - startDate.getUTCDay()); // align to Sunday
+
+        var dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        dayNames.forEach(function(d, i) {
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.fillText(d, padL - 20, padT + i * (cellSize + gap) + 13);
+        });
+
+        var col = 0;
+        var current = new Date(startDate);
+        var endDt = new Date(maxDate);
+        endDt.setUTCDate(endDt.getUTCDate() + 7);
+
+        while (current <= endDt) {
+            var key = current.toISOString().slice(0, 10);
+            var dow = current.getUTCDay();
+            var count = dayCounts[key] || 0;
+            var x = padL + col * (cellSize + gap);
+            var y = padT + dow * (cellSize + gap);
+
+            if (dow === 0 && col > 0) {
+                // Month label on first Sunday of month
+                if (current.getUTCDate() <= 7) {
+                    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    ctx.fillStyle = '#374151';
+                    ctx.font = '10px -apple-system, sans-serif';
+                    ctx.fillText(months[current.getUTCMonth()], x, padT - 8);
+                }
+            }
+
+            // Color intensity
+            var intensity = count / maxCount;
+            var r, gr, b;
+            if (count === 0) {
+                r = 235; gr = 238; b = 241; // gray
+            } else if (intensity < 0.33) {
+                r = 187; gr = 247; b = 208; // light green
+            } else if (intensity < 0.66) {
+                r = 74; gr = 222; b = 128; // medium green
+            } else {
+                r = 22; gr = 163; b = 74; // dark green
+            }
+
+            ctx.fillStyle = 'rgb(' + r + ',' + gr + ',' + b + ')';
+            ctx.beginPath();
+            ctx.roundRect(x, y, cellSize, cellSize, 2);
+            ctx.fill();
+
+            // Today highlight
+            if (key === today.toISOString().slice(0, 10)) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(x - 1, y - 1, cellSize + 2, cellSize + 2, 3);
+                ctx.stroke();
+            }
+
+            current.setUTCDate(current.getUTCDate() + 1);
+            if (dow === 6) { col++; }
+        }
+
+        // Legend
+        var lx = padL;
+        var ly = padT + 7 * (cellSize + gap) + 20;
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.fillText('Less', lx, ly + 12);
+        var legendColors = ['#ebedf1', '#bbf7d0', '#4ade80', '#16a34a'];
+        legendColors.forEach(function(c, i) {
+            ctx.fillStyle = c;
+            ctx.beginPath();
+            ctx.roundRect(lx + 32 + i * (cellSize + 2), ly, cellSize, cellSize, 2);
+            ctx.fill();
+        });
+        ctx.fillStyle = '#6b7280';
+        ctx.fillText('More', lx + 32 + 4 * (cellSize + 2) + 4, ly + 12);
+    }
+
+    _drawFlow(ctx, w, h, tasks, colors) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillText('Stage Flow — Tasks flowing through workflow stages', 20, 30);
+
+        // Count tasks per stage
+        var stages = ['Backlog', 'Submitted', 'In Development', 'Code Review', 'UAT Ready', 'Deployment', 'Done'];
+        var stageCounts = {};
+        stages.forEach(function(s) { stageCounts[s] = 0; });
+        var totalTasks = 0;
+        tasks.forEach(function(t) {
+            var s = t.stage || 'Backlog';
+            if (stageCounts[s] !== undefined) { stageCounts[s]++; }
+            else { stageCounts[s] = 1; stages.push(s); }
+            totalTasks++;
+        });
+        if (totalTasks === 0) { totalTasks = 1; }
+
+        var padL = 30; var padR = 30; var padT = 70; var padB = 60;
+        var plotW = w - padL - padR;
+        var plotH = h - padT - padB;
+        var colW = plotW / stages.length;
+        var maxCount = 0;
+        stages.forEach(function(s) { if (stageCounts[s] > maxCount) { maxCount = stageCounts[s]; } });
+        if (maxCount === 0) { maxCount = 1; }
+
+        // Draw columns
+        stages.forEach(function(s, i) {
+            var x = padL + i * colW;
+            var count = stageCounts[s];
+            var barH = (count / maxCount) * plotH;
+            var barY = padT + plotH - barH;
+            var color = colors[s] || '#94a3b8';
+
+            // Bar
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            ctx.roundRect(x + 8, barY, colW - 16, barH, 6);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Count label
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 20px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            if (barH > 30) {
+                ctx.fillText(count.toString(), x + colW / 2, barY + barH / 2 + 7);
+            }
+
+            // Stage label
+            ctx.fillStyle = '#374151';
+            ctx.font = '11px -apple-system, sans-serif';
+            var label = s;
+            if (label.length > 12) { label = label.substring(0, 11) + '…'; }
+            ctx.fillText(label, x + colW / 2, h - padB + 16);
+            ctx.textAlign = 'left';
+
+            // Flow arrows between columns
+            if (i < stages.length - 1) {
+                var nextCount = stageCounts[stages[i + 1]];
+                var arrowY = padT + plotH / 2;
+                var arrowX = x + colW;
+                ctx.strokeStyle = '#d1d5db';
+                ctx.lineWidth = Math.max(1, Math.min(count, 4));
+                ctx.beginPath();
+                ctx.moveTo(arrowX - 6, arrowY);
+                ctx.lineTo(arrowX + 6, arrowY);
+                ctx.stroke();
+                // Arrowhead
+                ctx.fillStyle = '#d1d5db';
+                ctx.beginPath();
+                ctx.moveTo(arrowX + 6, arrowY);
+                ctx.lineTo(arrowX, arrowY - 4);
+                ctx.lineTo(arrowX, arrowY + 4);
+                ctx.closePath();
+                ctx.fill();
+            }
+        });
+
+        // Percentage bar at bottom
+        var barY2 = h - 25;
+        var barX = padL;
+        stages.forEach(function(s, i) {
+            var pct = stageCounts[s] / totalTasks;
+            var segW = pct * plotW;
+            ctx.fillStyle = colors[s] || '#94a3b8';
+            ctx.fillRect(barX, barY2, segW, 12);
+            barX += segW;
+        });
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(padL, barY2, plotW, 12);
+    }
+
     handleToggleLock() {
         this.editLocked = !this.editLocked;
         this._savePrefs();
@@ -607,40 +1032,62 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     log('Filter cleared', true);
                     break;
 
-                // ── SCROLL ANIMATION ─────────────────────────────
+                // ── ALTERNATIVE VISUALIZATIONS ────────────────────
                 case 15:
-                    toast('15/16 — Scroll to Start', 'Scrolling to project start...', 'info');
-                    try {
-                        var range = g.getVisibleDateRange();
-                        g.scrollToDate(range.start);
-                        log('Scroll to start: ' + range.start, true);
-                    } catch(e) {
-                        log('Scroll start error: ' + e.message, false);
-                    }
+                    toast('15/20 — Treemap View', 'Size = estimated hours, color = stage', 'info');
+                    self.currentView = 'treemap';
+                    self._renderAltViz();
+                    log('Treemap rendered', true);
+                    break;
+                case 16:
+                    toast('16/20 — Bubble Chart', 'X = timeline, Y = entity, size = hours', 'info');
+                    self.currentView = 'bubbles';
+                    self._renderAltViz();
+                    log('Bubble chart rendered', true);
+                    break;
+                case 17:
+                    toast('17/20 — Calendar Heatmap', 'Task density per day — green = busy', 'info');
+                    self.currentView = 'calendar';
+                    self._renderAltViz();
+                    log('Calendar heatmap rendered', true);
+                    break;
+                case 18:
+                    toast('18/20 — Stage Flow', 'Tasks flowing through workflow stages', 'info');
+                    self.currentView = 'flow';
+                    self._renderAltViz();
+                    log('Stage flow rendered', true);
+                    break;
+
+                // ── BACK TO GANTT ────────────────────────────────
+                case 19:
+                    toast('19/20 — Back to Gantt', 'Returning to timeline view...', 'info');
+                    self.currentView = 'gantt';
+                    self._rebuildChart();
+                    log('Gantt restored', true);
                     break;
 
                 // ── SUMMARY ──────────────────────────────────────
-                case 16:
-                    g.scrollToDate(new Date());
+                case 20:
+                    if (self._gantt) { self._gantt.scrollToDate(new Date()); }
                     var passed = results.filter(function(r) { return r.indexOf('[PASS]') === 0; }).length;
                     var failed = results.filter(function(r) { return r.indexOf('[FAIL]') === 0; }).length;
                     console.log('[NimbusGantt:demo] ═══════════════════════════════════');
                     console.log('[NimbusGantt:demo] PRESENTATION COMPLETE: ' + passed + ' passed, ' + failed + ' failed');
                     console.log('[NimbusGantt:demo] ═══════════════════════════════════');
                     results.forEach(function(r) { console.log('[NimbusGantt:demo]   ' + r); });
-                    toast('Presentation Complete', passed + '/' + (passed + failed) + ' features verified. Check console for full report.', failed > 0 ? 'warning' : 'success');
+                    toast('Presentation Complete', passed + '/' + (passed + failed) + ' features demonstrated. Console has full report.', failed > 0 ? 'warning' : 'success');
                     return;
                 }
             } catch(err) {
                 log('Step ' + step + ' ERROR: ' + err.message, false);
                 console.error('[NimbusGantt:demo] Error at step ' + step, err);
             }
-            if (step < 16) {
+            if (step < 20) {
                 setTimeout(runStep, DELAY);
             }
         }
 
-        toast('Presentation Mode', '16 steps over ~60 seconds. Watch the Gantt transform...', 'info');
+        toast('Presentation Mode', '20 steps over ~80 seconds. Watch 5 different visualizations...', 'info');
         setTimeout(runStep, 2000);
     }
 
