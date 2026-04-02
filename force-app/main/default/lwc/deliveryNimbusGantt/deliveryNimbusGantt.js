@@ -50,7 +50,7 @@ const ZOOM_REVERSE = {
 const ZOOM_LEVELS = ['day', 'week', 'month', 'quarter'];
 
 // Platform Event channel for phone remote control
-const REMOTE_EVENT_CHANNEL = '/event/%%%NAMESPACE_PREFIX%%%GanttRemoteEvent__e';
+const REMOTE_EVENT_CHANNEL = '/event/%%%NAMESPACE_DOT%%%GanttRemoteEvent__e';
 
 export default class DeliveryNimbusGantt extends LightningElement {
 
@@ -1707,6 +1707,142 @@ export default class DeliveryNimbusGantt extends LightningElement {
             message: event.detail.message || 'An error occurred.',
             variant: 'error'
         }));
+    }
+
+    // ── Phone Remote Control ──────────────────────────────────────────
+
+    get remoteUrl() {
+        return window.location.origin + '/apex/GanttRemote?session=' + this._remoteSessionId;
+    }
+
+    get remoteSessionDisplay() {
+        return this._remoteSessionId || '--';
+    }
+
+    get remoteCopyLabel() {
+        return this._remoteLinkCopied ? 'Copied!' : 'Copy Link';
+    }
+
+    get remoteCopyVariant() {
+        return this._remoteLinkCopied ? 'success' : 'brand';
+    }
+
+    _generateRemoteSessionId() {
+        var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        var id = 'gr-';
+        for (var i = 0; i < 8; i++) {
+            id += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        this._remoteSessionId = id;
+    }
+
+    _subscribeRemoteEvents() {
+        var self = this;
+        onError(function(error) {
+            console.error('[DeliveryNimbusGantt] empApi error:', JSON.stringify(error));
+        });
+        subscribe(REMOTE_EVENT_CHANNEL, -1, function(message) {
+            self._handleRemoteEvent(message);
+        }).then(function(sub) {
+            self._remoteSubscription = sub;
+        });
+    }
+
+    _unsubscribeRemoteEvents() {
+        if (this._remoteSubscription) {
+            unsubscribe(this._remoteSubscription, function() {
+                /* unsubscribed */
+            });
+            this._remoteSubscription = null;
+        }
+    }
+
+    _handleRemoteEvent(message) {
+        var payload = message.data.payload;
+        /* Support both namespaced (managed pkg) and non-namespaced (scratch org) field names */
+        var sessionId = payload.SessionIdTxt__c || payload.delivery__SessionIdTxt__c;
+        if (sessionId !== this._remoteSessionId) { return; }
+
+        var action = payload.ActionTxt__c || payload.delivery__ActionTxt__c;
+        var value = payload.ValueTxt__c || payload.delivery__ValueTxt__c;
+
+        switch (action) {
+            case 'scroll':
+                this._handleRemoteScroll(value);
+                break;
+            case 'zoom':
+                this._handleRemoteZoom(value);
+                break;
+            case 'tap':
+                this.handleScrollToday();
+                break;
+            case 'swipe-left':
+                this._handleRemoteZoomStep(-1);
+                break;
+            case 'swipe-right':
+                this._handleRemoteZoomStep(1);
+                break;
+        }
+    }
+
+    _handleRemoteScroll(valueJson) {
+        if (!this._gantt) { return; }
+        try {
+            var data = JSON.parse(valueJson);
+            var container = this.refs.ganttContainer;
+            if (container) {
+                container.scrollLeft += (data.x || 0);
+                container.scrollTop += (data.y || 0);
+            }
+        } catch (e) {
+            /* ignore parse errors */
+        }
+    }
+
+    _handleRemoteZoom(level) {
+        if (ZOOM_MAP[level] || ZOOM_LEVELS.indexOf(level) >= 0) {
+            var zoomKey = ZOOM_MAP[level] || level;
+            this._setZoom(zoomKey);
+        }
+    }
+
+    _handleRemoteZoomStep(direction) {
+        var idx = ZOOM_LEVELS.indexOf(this.currentZoom);
+        if (idx < 0) { idx = 1; }
+        var newIdx = idx + direction;
+        if (newIdx >= 0 && newIdx < ZOOM_LEVELS.length) {
+            this._setZoom(ZOOM_LEVELS[newIdx]);
+        }
+    }
+
+    handleConnectPhone() {
+        this.showRemoteModal = true;
+        this._remoteLinkCopied = false;
+    }
+
+    handleRemoteModalClose() {
+        this.showRemoteModal = false;
+    }
+
+    handleCopyRemoteLink() {
+        var self = this;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(this.remoteUrl).then(function() {
+                self._remoteLinkCopied = true;
+                self.dispatchEvent(new ShowToastEvent({
+                    title: 'Link Copied',
+                    message: 'Open this link on your phone to control the Gantt chart.',
+                    variant: 'success'
+                }));
+            });
+        } else {
+            /* Fallback: select text for manual copy */
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Copy Manually',
+                message: 'Select and copy the URL shown in the modal.',
+                variant: 'info'
+            }));
+        }
     }
 
     // ── Private: localStorage persistence ──────────────────────────────

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApexPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <availableInTouch>true</availableInTouch>
+    <confirmationTokenRequired>false</confirmationTokenRequired>
+    <label>Gantt Remote Control</label>
+    <description>Mobile companion page for the Gantt phone-as-remote-control feature. Captures device orientation and gestures, sends them via REST API to publish GanttRemoteEvent__e platform events.</description>
+</ApexPage>

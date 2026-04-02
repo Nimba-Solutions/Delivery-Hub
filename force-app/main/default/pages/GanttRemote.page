@@ -1,0 +1,465 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="false"
+           applyHtmlTag="false" applyBodyTag="false" docType="html-5.0"
+           lightningStylesheets="false" controller="DeliveryGanttRemoteController">
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Gantt Remote Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .header {
+            text-align: center;
+            padding: 16px 16px 8px;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #60a5fa;
+            letter-spacing: -0.3px;
+        }
+        .header .subtitle {
+            font-size: 12px;
+            color: #94a3af;
+            margin-top: 4px;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+            transition: background 0.3s;
+        }
+        .status-dot.connected { background: #22c55e; }
+        .status-dot.sending { background: #f59e0b; animation: pulse 0.5s infinite; }
+        .status-text {
+            font-size: 13px;
+            color: #94a3af;
+        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .tilt-display {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 12px 16px;
+        }
+        .tilt-axis {
+            text-align: center;
+        }
+        .tilt-axis .label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .tilt-axis .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e2e8f0;
+            font-variant-numeric: tabular-nums;
+        }
+        .gesture-area {
+            position: relative;
+            margin: 16px;
+            height: calc(100vh - 340px);
+            min-height: 200px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px dashed #334155;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .gesture-area.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.08);
+        }
+        .gesture-area .icon {
+            font-size: 48px;
+            opacity: 0.4;
+        }
+        .gesture-area .hint {
+            font-size: 14px;
+            color: #64748b;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .gesture-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            font-weight: 700;
+            color: #60a5fa;
+            opacity: 0;
+            transition: opacity 0.15s;
+            pointer-events: none;
+        }
+        .gesture-feedback.show { opacity: 1; }
+        .controls {
+            display: flex;
+            gap: 12px;
+            padding: 8px 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-start {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            flex: 1;
+            max-width: 200px;
+        }
+        .btn-stop {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            flex: 1;
+            max-width: 200px;
+        }
+        .btn-today {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            flex: 1;
+            max-width: 140px;
+        }
+        .session-info {
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 11px;
+            color: #475569;
+        }
+        .session-info code {
+            background: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #94a3af;
+            font-size: 10px;
+        }
+        .permission-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 100;
+            padding: 32px;
+        }
+        .permission-overlay h2 {
+            font-size: 22px;
+            color: #f1f5f9;
+            text-align: center;
+        }
+        .permission-overlay p {
+            font-size: 14px;
+            color: #94a3af;
+            text-align: center;
+            max-width: 300px;
+        }
+        .btn-permission {
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .event-count {
+            font-size: 11px;
+            color: #475569;
+            text-align: center;
+            padding: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Permission overlay (iOS 13+ requires explicit user gesture) -->
+    <div id="permOverlay" class="permission-overlay" style="display:none;">
+        <h2>Enable Motion Sensors</h2>
+        <p>This remote control uses your phone's accelerometer to scroll and zoom the Gantt chart. Tap below to grant access.</p>
+        <button class="btn-permission" id="btnPermission" onclick="requestPermission()">Enable Motion</button>
+        <p style="font-size:11px; color:#64748b;">iOS 13+ requires this permission step.</p>
+    </div>
+
+    <div class="header">
+        <h1>Gantt Remote Control</h1>
+        <div class="subtitle">Tilt to scroll &middot; Swipe to zoom &middot; Tap for today</div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">Disconnected</span>
+    </div>
+
+    <div class="tilt-display">
+        <div class="tilt-axis">
+            <div class="label">Beta (L/R)</div>
+            <div class="value" id="valBeta">0</div>
+        </div>
+        <div class="tilt-axis">
+            <div class="label">Gamma (F/B)</div>
+            <div class="value" id="valGamma">0</div>
+        </div>
+    </div>
+
+    <div class="gesture-area" id="gestureArea">
+        <div class="icon">&#128241;</div>
+        <div class="hint">Tilt phone to scroll the Gantt chart<br/>Swipe left/right to zoom<br/>Tap to scroll to today</div>
+        <div class="gesture-feedback" id="gestureFeedback"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-start" id="btnStart" onclick="startStreaming()">Start</button>
+        <button class="btn btn-stop" id="btnStop" onclick="stopStreaming()" style="display:none;">Stop</button>
+        <button class="btn btn-today" onclick="sendAction('tap','')">Today</button>
+    </div>
+
+    <div class="event-count" id="eventCount">Events sent: 0</div>
+
+    <div class="session-info">
+        Session: <code id="sessionDisplay">--</code>
+    </div>
+
+    <script>
+        /* ── Config from URL parameters ── */
+        var params = new URLSearchParams(window.location.search);
+        var sessionId = params.get('session') || '';
+        var orgBaseUrl = '';
+
+        document.getElementById('sessionDisplay').textContent = sessionId || 'No session';
+
+        /* ── State ── */
+        var streaming = false;
+        var eventsSent = 0;
+        var lastSendTime = 0;
+        var THROTTLE_MS = 100; /* 10 fps max */
+        var DEAD_ZONE = 3; /* ignore tilt < 3 degrees */
+        var statusDot = document.getElementById('statusDot');
+        var statusText = document.getElementById('statusText');
+        var valBeta = document.getElementById('valBeta');
+        var valGamma = document.getElementById('valGamma');
+        var gestureArea = document.getElementById('gestureArea');
+        var gestureFeedback = document.getElementById('gestureFeedback');
+        var eventCountEl = document.getElementById('eventCount');
+
+        /* ── Detect API endpoint ── */
+        /* When running as a VF page, we POST to the same org's REST API */
+        orgBaseUrl = window.location.origin;
+
+        /* ── iOS 13+ permission ── */
+        function checkMotionPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                document.getElementById('permOverlay').style.display = 'flex';
+            }
+        }
+
+        function requestPermission() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(function(state) {
+                        if (state === 'granted') {
+                            document.getElementById('permOverlay').style.display = 'none';
+                            bindOrientation();
+                        } else {
+                            alert('Motion permission denied. The remote control needs accelerometer access.');
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error('Permission error:', err);
+                        document.getElementById('permOverlay').style.display = 'none';
+                        bindOrientation();
+                    });
+            }
+        }
+
+        /* ── Orientation handler ── */
+        var currentBeta = 0;
+        var currentGamma = 0;
+
+        function bindOrientation() {
+            window.addEventListener('deviceorientation', function(e) {
+                currentBeta = Math.round(e.beta || 0);
+                currentGamma = Math.round(e.gamma || 0);
+                valBeta.textContent = currentBeta;
+                valGamma.textContent = currentGamma;
+
+                if (!streaming) { return; }
+
+                var now = Date.now();
+                if (now - lastSendTime < THROTTLE_MS) { return; }
+                lastSendTime = now;
+
+                /* Only send if tilt exceeds dead zone */
+                if (Math.abs(currentBeta) > DEAD_ZONE || Math.abs(currentGamma) > DEAD_ZONE) {
+                    var scrollX = 0;
+                    var scrollY = 0;
+                    /* Map beta (left/right tilt) to horizontal scroll */
+                    if (Math.abs(currentBeta) > DEAD_ZONE) {
+                        scrollX = Math.round(currentBeta * 2);
+                    }
+                    /* Map gamma (forward/back tilt) to vertical scroll */
+                    if (Math.abs(currentGamma) > DEAD_ZONE) {
+                        scrollY = Math.round(currentGamma * 2);
+                    }
+                    sendAction('scroll', JSON.stringify({x: scrollX, y: scrollY}));
+                }
+            }, true);
+        }
+
+        /* ── Gesture detection (tap + swipe) ── */
+        var touchStartX = 0;
+        var touchStartY = 0;
+        var touchStartTime = 0;
+
+        gestureArea.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+            gestureArea.classList.add('active');
+        }, { passive: false });
+
+        gestureArea.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            gestureArea.classList.remove('active');
+
+            var touchEndX = e.changedTouches[0].clientX;
+            var touchEndY = e.changedTouches[0].clientY;
+            var deltaX = touchEndX - touchStartX;
+            var deltaY = touchEndY - touchStartY;
+            var elapsed = Date.now() - touchStartTime;
+            var distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            if (distance < 20 && elapsed < 300) {
+                /* Tap detected */
+                showFeedback('TAP');
+                sendAction('tap', '');
+            } else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                if (deltaX < 0) {
+                    /* Swipe left = zoom out */
+                    showFeedback('ZOOM OUT');
+                    sendAction('swipe-left', '');
+                } else {
+                    /* Swipe right = zoom in */
+                    showFeedback('ZOOM IN');
+                    sendAction('swipe-right', '');
+                }
+            }
+        }, { passive: false });
+
+        gestureArea.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        /* ── Visual feedback ── */
+        var feedbackTimer = null;
+        function showFeedback(text) {
+            gestureFeedback.textContent = text;
+            gestureFeedback.classList.add('show');
+            if (feedbackTimer) { clearTimeout(feedbackTimer); }
+            feedbackTimer = setTimeout(function() {
+                gestureFeedback.classList.remove('show');
+            }, 400);
+        }
+
+        /* ── Send action via REST API ── */
+        function sendAction(action, value) {
+            if (!sessionId) { return; }
+
+            var payload = {
+                action: action,
+                value: value,
+                sessionId: sessionId
+            };
+
+            statusDot.className = 'status-dot sending';
+
+            fetch(orgBaseUrl + '/services/apexrest/gantt-remote/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + '{!$Api.Session_ID}'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(function(resp) {
+                if (resp.ok) {
+                    statusDot.className = 'status-dot connected';
+                    statusText.textContent = 'Connected';
+                    eventsSent++;
+                    eventCountEl.textContent = 'Events sent: ' + eventsSent;
+                } else {
+                    statusDot.className = 'status-dot';
+                    statusText.textContent = 'Error: ' + resp.status;
+                }
+            })
+            .catch(function(err) {
+                statusDot.className = 'status-dot';
+                statusText.textContent = 'Error: ' + err.message;
+            });
+        }
+
+        /* ── Start/Stop streaming ── */
+        function startStreaming() {
+            streaming = true;
+            document.getElementById('btnStart').style.display = 'none';
+            document.getElementById('btnStop').style.display = '';
+            statusText.textContent = 'Streaming...';
+            statusDot.className = 'status-dot connected';
+        }
+
+        function stopStreaming() {
+            streaming = false;
+            document.getElementById('btnStart').style.display = '';
+            document.getElementById('btnStop').style.display = 'none';
+            statusText.textContent = 'Paused';
+            statusDot.className = 'status-dot';
+        }
+
+        /* ── Init ── */
+        checkMotionPermission();
+        if (typeof DeviceOrientationEvent === 'undefined' ||
+            typeof DeviceOrientationEvent.requestPermission !== 'function') {
+            /* Non-iOS or older iOS — bind directly */
+            bindOrientation();
+        }
+    </script>
+</body>
+</html>
+</apex:page>
