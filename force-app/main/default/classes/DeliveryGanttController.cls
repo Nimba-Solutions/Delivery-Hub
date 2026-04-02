@@ -14,13 +14,21 @@ public with sharing class DeliveryGanttController {
      * @description Legacy DTO for the CSS-based Gantt chart.
      */
     public class GanttRow {
+        /** @description Salesforce record Id */
         @AuraEnabled public String workItemId { get; set; }
+        /** @description Auto-number work item name */
         @AuraEnabled public String name { get; set; }
+        /** @description Brief description of the work item */
         @AuraEnabled public String description { get; set; }
+        /** @description Current workflow stage */
         @AuraEnabled public String stage { get; set; }
+        /** @description Priority level (High, Medium, Low) */
         @AuraEnabled public String priority { get; set; }
+        /** @description Projected UAT-ready date as ISO string */
         @AuraEnabled public String uatDate { get; set; }
+        /** @description Calculated ETA date as ISO string */
         @AuraEnabled public String etaDate { get; set; }
+        /** @description Record created date as ISO string */
         @AuraEnabled public String createdDate { get; set; }
     }
 
@@ -29,25 +37,41 @@ public with sharing class DeliveryGanttController {
      *              client entity, progress, and resolved start/end dates.
      */
     public class GanttTask {
+        /** @description Salesforce record Id */
         @AuraEnabled public String workItemId { get; set; }
+        /** @description Auto-number work item name */
         @AuraEnabled public String name { get; set; }
+        /** @description Brief description of the work item */
         @AuraEnabled public String description { get; set; }
+        /** @description Current workflow stage */
         @AuraEnabled public String stage { get; set; }
+        /** @description Priority level (High, Medium, Low) */
         @AuraEnabled public String priority { get; set; }
+        /** @description Resolved start date as ISO string */
         @AuraEnabled public String startDate { get; set; }
+        /** @description Resolved end date as ISO string */
         @AuraEnabled public String endDate { get; set; }
+        /** @description Estimated hours for this work item */
         @AuraEnabled public Decimal estimatedHours { get; set; }
+        /** @description Total logged hours against this work item */
         @AuraEnabled public Decimal loggedHours { get; set; }
+        /** @description Progress ratio (0-1) based on logged vs estimated hours */
         @AuraEnabled public Decimal progress { get; set; }
+        /** @description Name of the assigned developer */
         @AuraEnabled public String developerName { get; set; }
+        /** @description Client entity record Id */
         @AuraEnabled public String entityId { get; set; }
+        /** @description Client entity name for grouping */
         @AuraEnabled public String entityName { get; set; }
+        /** @description Parent work item Id for hierarchy */
         @AuraEnabled public String parentWorkItemId { get; set; }
+        /** @description True when the work item is no longer active */
         @AuraEnabled public Boolean isCompleted { get; set; }
     }
 
     /**
      * @description Legacy: returns active work items with a ProjectedUATReadyDate__c.
+     * @return List of GanttRow ordered by UAT date.
      */
     @AuraEnabled(cacheable=true)
     public static List<GanttRow> getWorkItemsForGantt() {
@@ -142,7 +166,7 @@ public with sharing class DeliveryGanttController {
             if (String.isNotBlank(endDate)) {
                 item.EstimatedEndDevDate__c = Date.valueOf(endDate);
             }
-            update item;
+            update as user item;
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
@@ -189,13 +213,25 @@ public with sharing class DeliveryGanttController {
         return task;
     }
 
+    /**
+     * @description DTO representing a dependency between two work items on the Gantt chart.
+     */
     public class GanttDependency {
+        /** @description Dependency record Id */
         @AuraEnabled public String id { get; set; }
+        /** @description Blocking (predecessor) work item Id */
         @AuraEnabled public String source { get; set; }
+        /** @description Blocked (successor) work item Id */
         @AuraEnabled public String target { get; set; }
+        /** @description Type of dependency relationship */
         @AuraEnabled public String dependencyType { get; set; }
     }
 
+    /**
+     * @description Returns active work item dependencies for rendering arrows
+     *              between tasks on the Gantt chart.
+     * @return List of GanttDependency for active blocked/blocking pairs.
+     */
     @AuraEnabled(cacheable=true)
     public static List<GanttDependency> getGanttDependencies() {
         try {
@@ -223,11 +259,17 @@ public with sharing class DeliveryGanttController {
         }
     }
 
+    /**
+     * @description Updates the sort order of a work item after a drag-to-reorder
+     *              action in the Gantt chart.
+     * @param workItemId The Salesforce record Id.
+     * @param sortOrder  New sort position value.
+     */
     @AuraEnabled
     public static void updateWorkItemSortOrder(String workItemId, Decimal sortOrder) {
         try {
             WorkItem__c item = new WorkItem__c(Id = workItemId, SortOrderNumber__c = sortOrder);
-            update item;
+            update as user item;
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());

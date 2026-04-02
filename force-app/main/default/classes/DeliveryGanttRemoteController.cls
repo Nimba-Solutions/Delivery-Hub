@@ -10,6 +10,10 @@
 @RestResource(urlMapping='/gantt-remote/*')
 global with sharing class DeliveryGanttRemoteController {
 
+    /**
+     * @description Publishes a GanttRemoteEvent platform event from phone remote data.
+     * @return 'ok' on success or 'error' on failure.
+     */
     @HttpPost
     global static String publishEvent() {
         RestRequest req = RestContext.request;

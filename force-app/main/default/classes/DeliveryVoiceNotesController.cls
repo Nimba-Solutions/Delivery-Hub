@@ -16,7 +16,9 @@ global with sharing class DeliveryVoiceNotesController {
      * @description Wrapper returned after voice note work item creation.
      */
     global class VoiceNoteResult {
+        /** @description The Id of the created WorkItem record */
         @AuraEnabled public Id recordId { get; set; }
+        /** @description The auto-number Name of the created WorkItem record */
         @AuraEnabled public String recordName { get; set; }
     }
 
