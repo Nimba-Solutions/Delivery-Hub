@@ -7,6 +7,8 @@
 @IsTest
 private class DeliveryActivityFeedControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         NetworkEntity__c client = new NetworkEntity__c(
@@ -103,222 +105,252 @@ private class DeliveryActivityFeedControllerTest {
 
     @IsTest
     static void testGetActivityFeedAll() {
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'all', 0, null, null, null, null
-        );
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'all', 0, null, null, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        System.assert(events.size() > 0, 'Should return events across all types');
-        System.assertNotEquals(null, result.get('totalCount'));
+            List<Object> events = (List<Object>) result.get('events');
+            System.assert(events.size() > 0, 'Should return events across all types');
+            System.assertNotEquals(null, result.get('totalCount'));
+        }
     }
 
     @IsTest
     static void testGetActivityFeedCommentsOnly() {
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'comments', 0, null, null, null, null
-        );
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'comments', 0, null, null, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        System.assertEquals(2, events.size(), 'Should return 2 comments');
-        for (Object ev : events) {
-            Map<String, Object> event = (Map<String, Object>) ev;
-            System.assertEquals('comment', event.get('type'));
+            List<Object> events = (List<Object>) result.get('events');
+            System.assertEquals(2, events.size(), 'Should return 2 comments');
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                System.assertEquals('comment', event.get('type'));
+            }
         }
     }
 
     @IsTest
     static void testGetActivityFeedHoursOnly() {
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'hours', 0, null, null, null, null
-        );
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'hours', 0, null, null, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        System.assertEquals(2, events.size(), 'Should return 2 work logs');
+            List<Object> events = (List<Object>) result.get('events');
+            System.assertEquals(2, events.size(), 'Should return 2 work logs');
+        }
     }
 
     @IsTest
     static void testGetActivityFeedChangesOnly() {
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'changes', 0, null, null, null, null
-        );
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'changes', 0, null, null, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        System.assert(events.size() >= 1, 'Should return at least 1 stage change');
+            List<Object> events = (List<Object>) result.get('events');
+            System.assert(events.size() >= 1, 'Should return at least 1 stage change');
+        }
     }
 
     @IsTest
     static void testGetActivityFeedByNetworkEntity() {
-        NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Feed Test Client' LIMIT 1];
+        System.runAs(testUser) {
+            NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Feed Test Client' LIMIT 1];
 
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'all', 0, client.Id, null, null, null
-        );
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'all', 0, client.Id, null, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        System.assert(events.size() > 0, 'Should return events for client-linked items');
+            List<Object> events = (List<Object>) result.get('events');
+            System.assert(events.size() > 0, 'Should return events for client-linked items');
+        }
     }
 
     @IsTest
     static void testGetActivityFeedByWorkItem() {
-        WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Feed Test Item 1' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Feed Test Item 1' LIMIT 1];
 
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'all', 0, null, wi.Id, null, null
-        );
-        Test.stopTest();
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'all', 0, null, wi.Id, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        System.assert(events.size() > 0, 'Should return events for specific work item');
-        // All events should reference this work item
-        for (Object ev : events) {
-            Map<String, Object> event = (Map<String, Object>) ev;
-            System.assertEquals(wi.Id, event.get('workItemId'),
-                'All events should be for the filtered work item');
+            List<Object> events = (List<Object>) result.get('events');
+            System.assert(events.size() > 0, 'Should return events for specific work item');
+            // All events should reference this work item
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                System.assertEquals(wi.Id, event.get('workItemId'),
+                    'All events should be for the filtered work item');
+            }
         }
     }
 
     @IsTest
     static void testGetActivityFeedPagination() {
-        Test.startTest();
-        // Request page 100 (way beyond data) — should get empty
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'all', 100, null, null, null, null
-        );
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            // Request page 100 (way beyond data) — should get empty
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'all', 100, null, null, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        System.assertEquals(0, events.size(), 'Out-of-range page should return empty');
+            List<Object> events = (List<Object>) result.get('events');
+            System.assertEquals(0, events.size(), 'Out-of-range page should return empty');
+        }
     }
 
     // ── getConversations tests ─────────────────────────────────────────
 
     @IsTest
     static void testGetConversations() {
-        Test.startTest();
-        List<Map<String, Object>> threads = DeliveryActivityFeedController.getConversations(0, null);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> threads = DeliveryActivityFeedController.getConversations(0, null);
+            Test.stopTest();
 
-        System.assertEquals(2, threads.size(), 'Should return 2 conversation threads');
-        for (Map<String, Object> thread : threads) {
-            System.assertNotEquals(null, thread.get('workItemId'));
-            System.assertNotEquals(null, thread.get('workItemName'));
-            System.assert((Integer) thread.get('commentCount') > 0);
+            System.assertEquals(2, threads.size(), 'Should return 2 conversation threads');
+            for (Map<String, Object> thread : threads) {
+                System.assertNotEquals(null, thread.get('workItemId'));
+                System.assertNotEquals(null, thread.get('workItemName'));
+                System.assert((Integer) thread.get('commentCount') > 0);
+            }
         }
     }
 
     @IsTest
     static void testGetConversationsByEntity() {
-        NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Feed Test Client' LIMIT 1];
+        System.runAs(testUser) {
+            NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Feed Test Client' LIMIT 1];
 
-        Test.startTest();
-        List<Map<String, Object>> threads = DeliveryActivityFeedController.getConversations(0, client.Id);
-        Test.stopTest();
+            Test.startTest();
+            List<Map<String, Object>> threads = DeliveryActivityFeedController.getConversations(0, client.Id);
+            Test.stopTest();
 
-        System.assertEquals(2, threads.size(), 'Should return 2 threads for client entity');
+            System.assertEquals(2, threads.size(), 'Should return 2 threads for client entity');
+        }
     }
 
     // ── getPendingApprovals tests ──────────────────────────────────────
 
     @IsTest
     static void testGetPendingApprovals() {
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getPendingApprovals(0, null);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getPendingApprovals(0, null);
+            Test.stopTest();
 
-        List<Object> approvals = (List<Object>) result.get('approvals');
-        System.assertEquals(1, approvals.size(), 'Should return 1 draft work log');
-        Map<String, Object> approval = (Map<String, Object>) approvals[0];
-        System.assertEquals('Draft', approval.get('status'));
+            List<Object> approvals = (List<Object>) result.get('approvals');
+            System.assertEquals(1, approvals.size(), 'Should return 1 draft work log');
+            Map<String, Object> approval = (Map<String, Object>) approvals[0];
+            System.assertEquals('Draft', approval.get('status'));
+        }
     }
 
     // ── Approval lifecycle tests ───────────────────────────────────────
 
     @IsTest
     static void testApproveWorkLogs() {
-        WorkLog__c draftLog = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
+        System.runAs(testUser) {
+            WorkLog__c draftLog = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
 
-        Test.startTest();
-        DeliveryActivityFeedController.approveWorkLogs(new List<Id>{ draftLog.Id });
-        Test.stopTest();
+            Test.startTest();
+            DeliveryActivityFeedController.approveWorkLogs(new List<Id>{ draftLog.Id });
+            Test.stopTest();
 
-        WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :draftLog.Id];
-        System.assertEquals('Approved', updated.StatusPk__c, 'Log should be approved');
+            WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :draftLog.Id];
+            System.assertEquals('Approved', updated.StatusPk__c, 'Log should be approved');
+        }
     }
 
     @IsTest
     static void testRejectWorkLogs() {
-        WorkLog__c draftLog = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
+        System.runAs(testUser) {
+            WorkLog__c draftLog = [SELECT Id FROM WorkLog__c WHERE StatusPk__c = 'Draft' LIMIT 1];
 
-        Test.startTest();
-        DeliveryActivityFeedController.rejectWorkLogs(new List<Id>{ draftLog.Id });
-        Test.stopTest();
+            Test.startTest();
+            DeliveryActivityFeedController.rejectWorkLogs(new List<Id>{ draftLog.Id });
+            Test.stopTest();
 
-        WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :draftLog.Id];
-        System.assertEquals('Rejected', updated.StatusPk__c, 'Log should be rejected');
+            WorkLog__c updated = [SELECT StatusPk__c FROM WorkLog__c WHERE Id = :draftLog.Id];
+            System.assertEquals('Rejected', updated.StatusPk__c, 'Log should be rejected');
+        }
     }
 
     // ── postCommentFromFeed tests ──────────────────────────────────────
 
     @IsTest
     static void testPostCommentFromFeed() {
-        WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Feed Test Item 1' LIMIT 1];
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Feed Test Item 1' LIMIT 1];
 
-        Test.startTest();
-        DeliveryActivityFeedController.postCommentFromFeed(wi.Id, 'Test reply from feed');
-        Test.stopTest();
+            Test.startTest();
+            DeliveryActivityFeedController.postCommentFromFeed(wi.Id, 'Test reply from feed');
+            Test.stopTest();
 
-        List<WorkItemComment__c> comments = [
-            SELECT BodyTxt__c, WorkItemId__c, SourcePk__c
-            FROM WorkItemComment__c
-            WHERE WorkItemId__c = :wi.Id AND SourcePk__c = 'Client'
-        ];
-        // Filter in Apex since BodyTxt__c is LongTextArea (not filterable in SOQL)
-        WorkItemComment__c found = null;
-        for (WorkItemComment__c c : comments) {
-            if (c.BodyTxt__c == 'Test reply from feed') {
-                found = c;
-                break;
+            List<WorkItemComment__c> comments = [
+                SELECT BodyTxt__c, WorkItemId__c, SourcePk__c
+                FROM WorkItemComment__c
+                WHERE WorkItemId__c = :wi.Id AND SourcePk__c = 'Client'
+            ];
+            // Filter in Apex since BodyTxt__c is LongTextArea (not filterable in SOQL)
+            WorkItemComment__c found = null;
+            for (WorkItemComment__c c : comments) {
+                if (c.BodyTxt__c == 'Test reply from feed') {
+                    found = c;
+                    break;
+                }
             }
+            System.assertNotEquals(null, found, 'Should create comment with expected body');
         }
-        System.assertNotEquals(null, found, 'Should create comment with expected body');
     }
 
     @IsTest
     static void testPostCommentFromFeedValidation() {
-        Boolean caughtException = false;
-        Test.startTest();
-        try {
-            DeliveryActivityFeedController.postCommentFromFeed(null, 'body');
-        } catch (AuraHandledException e) {
-            caughtException = true;
+        System.runAs(testUser) {
+            Boolean caughtException = false;
+            Test.startTest();
+            try {
+                DeliveryActivityFeedController.postCommentFromFeed(null, 'body');
+            } catch (AuraHandledException e) {
+                caughtException = true;
+            }
+            Test.stopTest();
+            System.assert(caughtException, 'Should throw exception for null workItemId');
         }
-        Test.stopTest();
-        System.assert(caughtException, 'Should throw exception for null workItemId');
     }
 
     // ── Backward compat: no entity filter returns all ──────────────────
 
     @IsTest
     static void testNoEntityFilterReturnsAll() {
-        Test.startTest();
-        Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
-            'comments', 0, null, null, null, null
-        );
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'comments', 0, null, null, null, null
+            );
+            Test.stopTest();
 
-        List<Object> events = (List<Object>) result.get('events');
-        // Should include comments from both linked and unlinked items
-        System.assert(events.size() >= 2, 'No filter should return all comments');
+            List<Object> events = (List<Object>) result.get('events');
+            // Should include comments from both linked and unlinked items
+            System.assert(events.size() >= 2, 'No filter should return all comments');
+        }
     }
 }

@@ -7,27 +7,33 @@
 @IsTest
 private class DeliveryHubInstallHandlerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @IsTest
     static void testInstallCreatesDefaultSettings() {
-        Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+        System.runAs(testUser) {
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
 
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertNotEquals(null, settings.Id, 'Settings should be created on first install');
-        System.assertNotEquals(null, settings.EnableNotificationsDateTime__c, 'Notifications should be enabled by default');
-        System.assertNotEquals(null, settings.EnableAISuggestionsDateTime__c, 'AI suggestions should be enabled by default');
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertNotEquals(null, settings.Id, 'Settings should be created on first install');
+            System.assertNotEquals(null, settings.EnableNotificationsDateTime__c, 'Notifications should be enabled by default');
+            System.assertNotEquals(null, settings.EnableAISuggestionsDateTime__c, 'AI suggestions should be enabled by default');
+        }
     }
 
     @IsTest
     static void testInstallDoesNotOverwriteExistingSettings() {
-        DeliveryHubSettings__c existing = new DeliveryHubSettings__c(
-            SetupOwnerId                   = UserInfo.getOrganizationId(),
-            EnableNotificationsDateTime__c = null
-        );
-        insert existing;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c existing = new DeliveryHubSettings__c(
+                SetupOwnerId                   = UserInfo.getOrganizationId(),
+                EnableNotificationsDateTime__c = null
+            );
+            insert existing;
 
-        Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
 
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertEquals(null, settings.EnableNotificationsDateTime__c, 'Existing settings should not be overwritten');
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals(null, settings.EnableNotificationsDateTime__c, 'Existing settings should not be overwritten');
+        }
     }
 }

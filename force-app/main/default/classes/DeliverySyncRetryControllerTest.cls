@@ -7,6 +7,8 @@
 @IsTest
 private class DeliverySyncRetryControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         WorkItem__c workItem = new WorkItem__c(BriefDescriptionTxt__c = 'Test Work Item', StageNamePk__c = 'Backlog');
@@ -43,45 +45,51 @@ private class DeliverySyncRetryControllerTest {
 
     @IsTest
     static void testGetSyncHealth() {
-        Map<String, Object> health = DeliverySyncRetryController.getSyncHealth();
+        System.runAs(testUser) {
+            Map<String, Object> health = DeliverySyncRetryController.getSyncHealth();
 
-        Integer failedCount = (Integer) health.get('failedCount');
-        System.assertEquals(2, failedCount, 'Should report 2 failed sync items');
+            Integer failedCount = (Integer) health.get('failedCount');
+            System.assertEquals(2, failedCount, 'Should report 2 failed sync items');
 
-        List<Object> errors = (List<Object>) health.get('recentErrors');
-        System.assertEquals(2, errors.size(), 'Should return 2 error rows');
+            List<Object> errors = (List<Object>) health.get('recentErrors');
+            System.assertEquals(2, errors.size(), 'Should return 2 error rows');
+        }
     }
 
     @IsTest
     static void testRetryFailed() {
-        DeliverySyncRetryController.retryFailed();
+        System.runAs(testUser) {
+            DeliverySyncRetryController.retryFailed();
 
-        List<SyncItem__c> stillFailed = [
-            SELECT Id FROM SyncItem__c WHERE StatusPk__c = 'Failed'
-        ];
-        System.assertEquals(0, stillFailed.size(), 'No items should remain in Failed status');
+            List<SyncItem__c> stillFailed = [
+                SELECT Id FROM SyncItem__c WHERE StatusPk__c = 'Failed'
+            ];
+            System.assertEquals(0, stillFailed.size(), 'No items should remain in Failed status');
 
-        List<SyncItem__c> queued = [
-            SELECT Id, ErrorLogTxt__c FROM SyncItem__c WHERE StatusPk__c = 'Queued'
-        ];
-        System.assertEquals(2, queued.size(), 'Both failed items should be reset to Queued');
-        for (SyncItem__c si : queued) {
-            System.assertEquals(null, si.ErrorLogTxt__c, 'Error log should be cleared on retry');
+            List<SyncItem__c> queued = [
+                SELECT Id, ErrorLogTxt__c FROM SyncItem__c WHERE StatusPk__c = 'Queued'
+            ];
+            System.assertEquals(2, queued.size(), 'Both failed items should be reset to Queued');
+            for (SyncItem__c si : queued) {
+                System.assertEquals(null, si.ErrorLogTxt__c, 'Error log should be cleared on retry');
+            }
         }
     }
 
     @IsTest
     static void testGetSyncHealthNoFailures() {
-        // Reset all to Synced
-        List<SyncItem__c> all = [SELECT Id FROM SyncItem__c WHERE StatusPk__c = 'Failed'];
-        for (SyncItem__c si : all) { si.StatusPk__c = 'Synced'; }
-        update all;
+        System.runAs(testUser) {
+            // Reset all to Synced
+            List<SyncItem__c> all = [SELECT Id FROM SyncItem__c WHERE StatusPk__c = 'Failed'];
+            for (SyncItem__c si : all) { si.StatusPk__c = 'Synced'; }
+            update all;
 
-        Map<String, Object> health = DeliverySyncRetryController.getSyncHealth();
-        Integer failedCount = (Integer) health.get('failedCount');
-        System.assertEquals(0, failedCount, 'Should report 0 failed items');
+            Map<String, Object> health = DeliverySyncRetryController.getSyncHealth();
+            Integer failedCount = (Integer) health.get('failedCount');
+            System.assertEquals(0, failedCount, 'Should report 0 failed items');
 
-        List<Object> errors = (List<Object>) health.get('recentErrors');
-        System.assertEquals(0, errors.size(), 'Error list should be empty');
+            List<Object> errors = (List<Object>) health.get('recentErrors');
+            System.assertEquals(0, errors.size(), 'Error list should be empty');
+        }
     }
 }

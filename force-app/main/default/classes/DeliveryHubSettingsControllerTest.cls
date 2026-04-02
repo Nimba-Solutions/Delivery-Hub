@@ -7,6 +7,8 @@
  */
 @isTest
 private class DeliveryHubSettingsControllerTest {
+
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
     
     @testSetup
     static void setupTestData() {
@@ -28,290 +30,320 @@ private class DeliveryHubSettingsControllerTest {
 
     @isTest
     static void testGetSettings() {
-        Test.startTest();
-        DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
+            Test.stopTest();
 
-        System.assertNotEquals(null, dto, 'Settings DTO should not be null');
-        System.assertEquals(true, dto.enableNotifications, 'Notifications should be enabled');
+            System.assertNotEquals(null, dto, 'Settings DTO should not be null');
+            System.assertEquals(true, dto.enableNotifications, 'Notifications should be enabled');
 
-        // Check the new DTO field names
-        System.assertEquals(true, dto.autoCreateRequest, 'Auto Create Request should be true');
-        System.assertEquals(true, dto.autoSendRequest, 'Auto Send Request should be true');
+            // Check the new DTO field names
+            System.assertEquals(true, dto.autoCreateRequest, 'Auto Create Request should be true');
+            System.assertEquals(true, dto.autoSendRequest, 'Auto Send Request should be true');
 
-        System.assert(dto.aiSuggestionsEnabled, 'AI Suggestions should be true');
-        System.assertEquals('gpt-4o', dto.openaiModel, 'OpenAI model should be gpt-4o');
+            System.assert(dto.aiSuggestionsEnabled, 'AI Suggestions should be true');
+            System.assertEquals('gpt-4o', dto.openaiModel, 'OpenAI model should be gpt-4o');
 
-        // Activation-date strings should be populated (not null)
-        System.assertNotEquals(null, dto.notificationsActivatedAt, 'Notifications activated date should be set');
-        System.assertNotEquals(null, dto.autoSyncActivatedAt, 'Auto-Sync activated date should be set');
+            // Activation-date strings should be populated (not null)
+            System.assertNotEquals(null, dto.notificationsActivatedAt, 'Notifications activated date should be set');
+            System.assertNotEquals(null, dto.autoSyncActivatedAt, 'Auto-Sync activated date should be set');
 
-        // Configurable number settings should return defaults when not set
-        System.assertEquals(6, dto.reconciliationHour, 'Reconciliation hour should default to 6');
-        System.assertEquals(3, dto.syncRetryLimit, 'Sync retry limit should default to 3');
-        System.assertEquals(90, dto.activityLogRetentionDays, 'Activity log retention should default to 90');
-        System.assertEquals(24, dto.escalationCooldownHours, 'Escalation cooldown should default to 24');
+            // Configurable number settings should return defaults when not set
+            System.assertEquals(6, dto.reconciliationHour, 'Reconciliation hour should default to 6');
+            System.assertEquals(3, dto.syncRetryLimit, 'Sync retry limit should default to 3');
+            System.assertEquals(90, dto.activityLogRetentionDays, 'Activity log retention should default to 90');
+            System.assertEquals(24, dto.escalationCooldownHours, 'Escalation cooldown should default to 24');
+        }
     }
 
     @isTest
     static void testSaveGeneralSettings() {
-        Test.startTest();
-        // Pass 9 arguments: (Notifications, AutoCreate, AutoSend, EmailNotifications, ShowBoardMetrics,
-        //                     ReconciliationHour, SyncRetryLimit, ActivityLogRetentionDays, EscalationCooldownHours)
-        DeliveryHubSettingsController.saveGeneralSettings(false, false, false, true, false, 8, 5, 60, 48);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            // Pass 9 arguments: (Notifications, AutoCreate, AutoSend, EmailNotifications, ShowBoardMetrics,
+            //                     ReconciliationHour, SyncRetryLimit, ActivityLogRetentionDays, EscalationCooldownHours)
+            DeliveryHubSettingsController.saveGeneralSettings(false, false, false, true, false, 8, 5, 60, 48);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
 
-        System.assertEquals(null, s.EnableNotificationsDateTime__c, 'Notifications should be disabled');
-        System.assertEquals(null, s.EnableAutoCreateWorkRequestDateTime__c, 'Auto Create should be disabled');
-        System.assertEquals(null, s.EnableAutoSyncNetworkEntityDateTime__c, 'Auto Send should be disabled');
-        System.assertNotEquals(null, s.EnableEmailNotificationsDateTime__c, 'Email notifications should be enabled');
-        System.assertEquals(null, s.EnableBoardMetricsDateTime__c, 'Board metrics should be disabled');
-        System.assertEquals(8, s.ReconciliationHourNumber__c, 'Reconciliation hour should be 8');
-        System.assertEquals(5, s.SyncRetryLimitNumber__c, 'Sync retry limit should be 5');
-        System.assertEquals(60, s.ActivityLogRetentionDaysNumber__c, 'Activity log retention should be 60 days');
-        System.assertEquals(48, s.EscalationCooldownHoursNumber__c, 'Escalation cooldown should be 48 hours');
+            System.assertEquals(null, s.EnableNotificationsDateTime__c, 'Notifications should be disabled');
+            System.assertEquals(null, s.EnableAutoCreateWorkRequestDateTime__c, 'Auto Create should be disabled');
+            System.assertEquals(null, s.EnableAutoSyncNetworkEntityDateTime__c, 'Auto Send should be disabled');
+            System.assertNotEquals(null, s.EnableEmailNotificationsDateTime__c, 'Email notifications should be enabled');
+            System.assertEquals(null, s.EnableBoardMetricsDateTime__c, 'Board metrics should be disabled');
+            System.assertEquals(8, s.ReconciliationHourNumber__c, 'Reconciliation hour should be 8');
+            System.assertEquals(5, s.SyncRetryLimitNumber__c, 'Sync retry limit should be 5');
+            System.assertEquals(60, s.ActivityLogRetentionDaysNumber__c, 'Activity log retention should be 60 days');
+            System.assertEquals(48, s.EscalationCooldownHoursNumber__c, 'Escalation cooldown should be 48 hours');
+        }
     }
 
     @isTest
     static void testGetSettingsExtendedFields() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        Datetime now = Datetime.now();
-        settings.EnableActivityLoggingDateTime__c = now;
-        settings.EnableFieldTrackingDateTime__c = now;
-        settings.EnableBellNotificationsDateTime__c = now;
-        settings.EnableWeeklyDigestDateTime__c = now;
-        settings.EnableStatusPageDateTime__c = now;
-        settings.RequireWorkLogApprovalDate__c = now;
-        settings.FieldChangeRetentionDaysNumber__c = 60;
-        settings.WeeklyDigestDayTxt__c = 'Wednesday';
-        settings.WeeklyDigestRecipientsTxt__c = 'test@example.com';
-        settings.DocumentCcEmailTxt__c = 'cc@example.com';
-        settings.StatusPageTokenTxt__c = 'abc-123';
-        settings.DefaultBillingEntityIdTxt__c = 'a3VRu000002ZPtdMA';
-        settings.StagesToAutoShareWithDevTeamTxt__c = 'In Development,Code Review';
-        settings.WebhookUrlTxt__c = 'https://portal.example.com/api/webhooks/delivery';
-        update settings;
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            Datetime now = Datetime.now();
+            settings.EnableActivityLoggingDateTime__c = now;
+            settings.EnableFieldTrackingDateTime__c = now;
+            settings.EnableBellNotificationsDateTime__c = now;
+            settings.EnableWeeklyDigestDateTime__c = now;
+            settings.EnableStatusPageDateTime__c = now;
+            settings.RequireWorkLogApprovalDate__c = now;
+            settings.FieldChangeRetentionDaysNumber__c = 60;
+            settings.WeeklyDigestDayTxt__c = 'Wednesday';
+            settings.WeeklyDigestRecipientsTxt__c = 'test@example.com';
+            settings.DocumentCcEmailTxt__c = 'cc@example.com';
+            settings.StatusPageTokenTxt__c = 'abc-123';
+            settings.DefaultBillingEntityIdTxt__c = 'a3VRu000002ZPtdMA';
+            settings.StagesToAutoShareWithDevTeamTxt__c = 'In Development,Code Review';
+            settings.WebhookUrlTxt__c = 'https://portal.example.com/api/webhooks/delivery';
+            update settings;
 
-        Test.startTest();
-        DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
+            Test.stopTest();
 
-        System.assertEquals(true, dto.activityLoggingEnabled, 'Activity logging should be enabled');
-        System.assertEquals(true, dto.fieldTrackingEnabled, 'Field tracking should be enabled');
-        System.assertEquals(true, dto.bellNotificationsEnabled, 'Bell notifications should be enabled');
-        System.assertEquals(true, dto.weeklyDigestEnabled, 'Weekly digest should be enabled');
-        System.assertEquals(true, dto.statusPageEnabled, 'Status page should be enabled');
-        System.assertEquals(true, dto.requireWorkLogApproval, 'WorkLog approval should be required');
-        System.assertEquals(60, dto.fieldChangeRetentionDays, 'Field change retention should be 60');
-        System.assertEquals('Wednesday', dto.weeklyDigestDay, 'Digest day should be Wednesday');
-        System.assertEquals('test@example.com', dto.weeklyDigestRecipients, 'Digest recipients should be set');
-        System.assertEquals('cc@example.com', dto.documentCcEmail, 'Document CC email should be set');
-        System.assertEquals('abc-123', dto.statusPageToken, 'Status page token should be set');
-        System.assertEquals('a3VRu000002ZPtdMA', dto.defaultBillingEntityId, 'Default billing entity should be set');
-        System.assertEquals('In Development,Code Review', dto.stagesToAutoShare, 'Stages to auto share should be set');
-        System.assertEquals('https://portal.example.com/api/webhooks/delivery', dto.webhookUrl, 'Webhook URL should be set');
-        System.assertNotEquals(null, dto.fieldTrackingActivatedAt, 'Field tracking activation date should be set');
-        System.assertNotEquals(null, dto.bellNotificationsActivatedAt, 'Bell notifications activation date should be set');
-        System.assertNotEquals(null, dto.weeklyDigestActivatedAt, 'Weekly digest activation date should be set');
-        System.assertNotEquals(null, dto.statusPageActivatedAt, 'Status page activation date should be set');
-        System.assertNotEquals(null, dto.requireWorkLogApprovalActivatedAt, 'WorkLog approval activation date should be set');
+            System.assertEquals(true, dto.activityLoggingEnabled, 'Activity logging should be enabled');
+            System.assertEquals(true, dto.fieldTrackingEnabled, 'Field tracking should be enabled');
+            System.assertEquals(true, dto.bellNotificationsEnabled, 'Bell notifications should be enabled');
+            System.assertEquals(true, dto.weeklyDigestEnabled, 'Weekly digest should be enabled');
+            System.assertEquals(true, dto.statusPageEnabled, 'Status page should be enabled');
+            System.assertEquals(true, dto.requireWorkLogApproval, 'WorkLog approval should be required');
+            System.assertEquals(60, dto.fieldChangeRetentionDays, 'Field change retention should be 60');
+            System.assertEquals('Wednesday', dto.weeklyDigestDay, 'Digest day should be Wednesday');
+            System.assertEquals('test@example.com', dto.weeklyDigestRecipients, 'Digest recipients should be set');
+            System.assertEquals('cc@example.com', dto.documentCcEmail, 'Document CC email should be set');
+            System.assertEquals('abc-123', dto.statusPageToken, 'Status page token should be set');
+            System.assertEquals('a3VRu000002ZPtdMA', dto.defaultBillingEntityId, 'Default billing entity should be set');
+            System.assertEquals('In Development,Code Review', dto.stagesToAutoShare, 'Stages to auto share should be set');
+            System.assertEquals('https://portal.example.com/api/webhooks/delivery', dto.webhookUrl, 'Webhook URL should be set');
+            System.assertNotEquals(null, dto.fieldTrackingActivatedAt, 'Field tracking activation date should be set');
+            System.assertNotEquals(null, dto.bellNotificationsActivatedAt, 'Bell notifications activation date should be set');
+            System.assertNotEquals(null, dto.weeklyDigestActivatedAt, 'Weekly digest activation date should be set');
+            System.assertNotEquals(null, dto.statusPageActivatedAt, 'Status page activation date should be set');
+            System.assertNotEquals(null, dto.requireWorkLogApprovalActivatedAt, 'WorkLog approval activation date should be set');
+        }
     }
 
     @isTest
     static void testSaveExtendedSettings() {
-        String settingsJson = JSON.serialize(new Map<String, Object>{
-            'activityLoggingEnabled' => true,
-            'fieldTrackingEnabled' => true,
-            'bellNotificationsEnabled' => false,
-            'weeklyDigestEnabled' => true,
-            'statusPageEnabled' => false,
-            'autoCreateWorkRequest' => true,
-            'requireWorkLogApproval' => true,
-            'fieldChangeRetentionDays' => 45,
-            'weeklyDigestDay' => 'Friday',
-            'weeklyDigestRecipients' => 'a@b.com,c@d.com',
-            'documentCcEmail' => 'doc@test.com',
-            'statusPageToken' => 'xyz-789',
-            'defaultBillingEntityId' => 'a3VRu000002ZPtdMA',
-            'stagesToAutoShare' => 'Testing,Deployed',
-            'webhookUrl' => 'https://portal.example.com/api/webhooks/delivery'
-        });
+        System.runAs(testUser) {
+            String settingsJson = JSON.serialize(new Map<String, Object>{
+                'activityLoggingEnabled' => true,
+                'fieldTrackingEnabled' => true,
+                'bellNotificationsEnabled' => false,
+                'weeklyDigestEnabled' => true,
+                'statusPageEnabled' => false,
+                'autoCreateWorkRequest' => true,
+                'requireWorkLogApproval' => true,
+                'fieldChangeRetentionDays' => 45,
+                'weeklyDigestDay' => 'Friday',
+                'weeklyDigestRecipients' => 'a@b.com,c@d.com',
+                'documentCcEmail' => 'doc@test.com',
+                'statusPageToken' => 'xyz-789',
+                'defaultBillingEntityId' => 'a3VRu000002ZPtdMA',
+                'stagesToAutoShare' => 'Testing,Deployed',
+                'webhookUrl' => 'https://portal.example.com/api/webhooks/delivery'
+            });
 
-        Test.startTest();
-        DeliveryHubSettingsController.saveExtendedSettings(settingsJson);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryHubSettingsController.saveExtendedSettings(settingsJson);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertNotEquals(null, s.EnableActivityLoggingDateTime__c, 'Activity logging should be enabled');
-        System.assertNotEquals(null, s.EnableFieldTrackingDateTime__c, 'Field tracking should be enabled');
-        System.assertEquals(null, s.EnableBellNotificationsDateTime__c, 'Bell notifications should be disabled');
-        System.assertNotEquals(null, s.EnableWeeklyDigestDateTime__c, 'Weekly digest should be enabled');
-        System.assertEquals(null, s.EnableStatusPageDateTime__c, 'Status page should be disabled');
-        System.assertNotEquals(null, s.RequireWorkLogApprovalDate__c, 'WorkLog approval should be required');
-        System.assertEquals(true, s.EnableActivityLoggingBool__c, 'Activity logging bool should be true');
-        System.assertEquals(true, s.EnableFieldTrackingBool__c, 'Field tracking bool should be true');
-        System.assertEquals(false, s.EnableBellNotificationsBool__c, 'Bell notifications bool should be false');
-        System.assertEquals(true, s.WeeklyDigestEnabledBool__c, 'Weekly digest bool should be true');
-        System.assertEquals(false, s.StatusPageEnabledBool__c, 'Status page bool should be false');
-        System.assertEquals(45, s.FieldChangeRetentionDaysNumber__c, 'Field change retention should be 45');
-        System.assertEquals('Friday', s.WeeklyDigestDayTxt__c, 'Digest day should be Friday');
-        System.assertEquals('a@b.com,c@d.com', s.WeeklyDigestRecipientsTxt__c, 'Digest recipients should be set');
-        System.assertEquals('doc@test.com', s.DocumentCcEmailTxt__c, 'Document CC email should be set');
-        System.assertEquals('xyz-789', s.StatusPageTokenTxt__c, 'Status page token should be set');
-        System.assertEquals('a3VRu000002ZPtdMA', s.DefaultBillingEntityIdTxt__c, 'Default billing entity should be set');
-        System.assertEquals('Testing,Deployed', s.StagesToAutoShareWithDevTeamTxt__c, 'Stages to auto share should be set');
-        System.assertEquals('https://portal.example.com/api/webhooks/delivery', s.WebhookUrlTxt__c, 'Webhook URL should be saved');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertNotEquals(null, s.EnableActivityLoggingDateTime__c, 'Activity logging should be enabled');
+            System.assertNotEquals(null, s.EnableFieldTrackingDateTime__c, 'Field tracking should be enabled');
+            System.assertEquals(null, s.EnableBellNotificationsDateTime__c, 'Bell notifications should be disabled');
+            System.assertNotEquals(null, s.EnableWeeklyDigestDateTime__c, 'Weekly digest should be enabled');
+            System.assertEquals(null, s.EnableStatusPageDateTime__c, 'Status page should be disabled');
+            System.assertNotEquals(null, s.RequireWorkLogApprovalDate__c, 'WorkLog approval should be required');
+            System.assertEquals(true, s.EnableActivityLoggingBool__c, 'Activity logging bool should be true');
+            System.assertEquals(true, s.EnableFieldTrackingBool__c, 'Field tracking bool should be true');
+            System.assertEquals(false, s.EnableBellNotificationsBool__c, 'Bell notifications bool should be false');
+            System.assertEquals(true, s.WeeklyDigestEnabledBool__c, 'Weekly digest bool should be true');
+            System.assertEquals(false, s.StatusPageEnabledBool__c, 'Status page bool should be false');
+            System.assertEquals(45, s.FieldChangeRetentionDaysNumber__c, 'Field change retention should be 45');
+            System.assertEquals('Friday', s.WeeklyDigestDayTxt__c, 'Digest day should be Friday');
+            System.assertEquals('a@b.com,c@d.com', s.WeeklyDigestRecipientsTxt__c, 'Digest recipients should be set');
+            System.assertEquals('doc@test.com', s.DocumentCcEmailTxt__c, 'Document CC email should be set');
+            System.assertEquals('xyz-789', s.StatusPageTokenTxt__c, 'Status page token should be set');
+            System.assertEquals('a3VRu000002ZPtdMA', s.DefaultBillingEntityIdTxt__c, 'Default billing entity should be set');
+            System.assertEquals('Testing,Deployed', s.StagesToAutoShareWithDevTeamTxt__c, 'Stages to auto share should be set');
+            System.assertEquals('https://portal.example.com/api/webhooks/delivery', s.WebhookUrlTxt__c, 'Webhook URL should be saved');
+        }
     }
 
     @isTest
     static void testSaveAiSettings() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveAiSettings(false, true, false);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubSettingsController.saveAiSettings(false, true, false);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertEquals(null, s.EnableAISuggestionsDateTime__c, 'AI Suggestions should be disabled');
-        System.assertNotEquals(null, s.EnableAutoGenerateDescriptionsDateTime__c, 'Auto Generate Descriptions should be enabled');
-        System.assertEquals(null, s.EnableAIEstimationDateTime__c, 'AI Estimation should be disabled');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals(null, s.EnableAISuggestionsDateTime__c, 'AI Suggestions should be disabled');
+            System.assertNotEquals(null, s.EnableAutoGenerateDescriptionsDateTime__c, 'Auto Generate Descriptions should be enabled');
+            System.assertEquals(null, s.EnableAIEstimationDateTime__c, 'AI Estimation should be disabled');
+        }
     }
 
     @isTest
     static void testSaveOpenAISettings() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveOpenAISettings('new-key', 'gpt-4o-mini', true);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubSettingsController.saveOpenAISettings('new-key', 'gpt-4o-mini', true);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertEquals('new-key', s.OpenAIApiKeyTxt__c, 'OpenAI API Key should be updated');
-        System.assertEquals('gpt-4o-mini', s.OpenAIModelTxt__c, 'OpenAI Model should be updated');
-        System.assertEquals(true, s.OpenAiApiTestedBool__c, 'OpenAI API should be marked as tested');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals('new-key', s.OpenAIApiKeyTxt__c, 'OpenAI API Key should be updated');
+            System.assertEquals('gpt-4o-mini', s.OpenAIModelTxt__c, 'OpenAI Model should be updated');
+            System.assertEquals(true, s.OpenAiApiTestedBool__c, 'OpenAI API should be marked as tested');
+        }
     }
 
     @isTest
     static void testTestOpenAIConnectionMock() {
-        Test.setMock(HttpCalloutMock.class, new MockOpenAIResponse());
-        
-        Test.startTest();
-        String result = DeliveryHubSettingsController.testOpenAIConnection('test-api-key');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockOpenAIResponse());
 
-        System.assertNotEquals(null, result, 'Result should not be null');
+            Test.startTest();
+            String result = DeliveryHubSettingsController.testOpenAIConnection('test-api-key');
+            Test.stopTest();
+
+            System.assertNotEquals(null, result, 'Result should not be null');
+        }
     }
 
     @isTest
     static void testSaveSlackWebhookUrl() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveSlackWebhookUrl('https://hooks.slack.com/test');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubSettingsController.saveSlackWebhookUrl('https://hooks.slack.com/test');
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertEquals('https://hooks.slack.com/test', s.SlackWebhookUrl__c, 'Slack webhook URL should be saved');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals('https://hooks.slack.com/test', s.SlackWebhookUrl__c, 'Slack webhook URL should be saved');
+        }
     }
 
     @isTest
     static void testSaveSlackWebhookUrlClear() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveSlackWebhookUrl('');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubSettingsController.saveSlackWebhookUrl('');
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assert(String.isBlank(s.SlackWebhookUrl__c), 'Slack webhook URL should be cleared');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assert(String.isBlank(s.SlackWebhookUrl__c), 'Slack webhook URL should be cleared');
+        }
     }
 
     @isTest
     static void testSaveAllAiSettings() {
-        String settingsJson = JSON.serialize(new Map<String, Object>{
-            'aiSuggestionsEnabled' => true,
-            'autoGenerateDescriptions' => false,
-            'aiEstimationEnabled' => true,
-            'openaiApiKey' => 'sk-new-test-key',
-            'openaiModel' => 'gpt-4o-mini'
-        });
+        System.runAs(testUser) {
+            String settingsJson = JSON.serialize(new Map<String, Object>{
+                'aiSuggestionsEnabled' => true,
+                'autoGenerateDescriptions' => false,
+                'aiEstimationEnabled' => true,
+                'openaiApiKey' => 'sk-new-test-key',
+                'openaiModel' => 'gpt-4o-mini'
+            });
 
-        Test.startTest();
-        DeliveryHubSettingsController.saveAllAiSettings(settingsJson);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryHubSettingsController.saveAllAiSettings(settingsJson);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertNotEquals(null, s.EnableAISuggestionsDateTime__c, 'AI Suggestions should be enabled');
-        System.assertEquals(null, s.EnableAutoGenerateDescriptionsDateTime__c, 'Auto Generate should be disabled');
-        System.assertNotEquals(null, s.EnableAIEstimationDateTime__c, 'AI Estimation should be enabled');
-        System.assertEquals('sk-new-test-key', s.OpenAIApiKeyTxt__c, 'API key should be updated');
-        System.assertEquals('gpt-4o-mini', s.OpenAIModelTxt__c, 'Model should be updated');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertNotEquals(null, s.EnableAISuggestionsDateTime__c, 'AI Suggestions should be enabled');
+            System.assertEquals(null, s.EnableAutoGenerateDescriptionsDateTime__c, 'Auto Generate should be disabled');
+            System.assertNotEquals(null, s.EnableAIEstimationDateTime__c, 'AI Estimation should be enabled');
+            System.assertEquals('sk-new-test-key', s.OpenAIApiKeyTxt__c, 'API key should be updated');
+            System.assertEquals('gpt-4o-mini', s.OpenAIModelTxt__c, 'Model should be updated');
+        }
     }
 
     @isTest
     static void testSaveAllAiSettingsMaskedKey() {
-        String settingsJson = JSON.serialize(new Map<String, Object>{
-            'aiSuggestionsEnabled' => false,
-            'autoGenerateDescriptions' => false,
-            'aiEstimationEnabled' => false,
-            'openaiApiKey' => '****tkey',
-            'openaiModel' => 'gpt-4o'
-        });
+        System.runAs(testUser) {
+            String settingsJson = JSON.serialize(new Map<String, Object>{
+                'aiSuggestionsEnabled' => false,
+                'autoGenerateDescriptions' => false,
+                'aiEstimationEnabled' => false,
+                'openaiApiKey' => '****tkey',
+                'openaiModel' => 'gpt-4o'
+            });
 
-        Test.startTest();
-        DeliveryHubSettingsController.saveAllAiSettings(settingsJson);
-        Test.stopTest();
+            Test.startTest();
+            DeliveryHubSettingsController.saveAllAiSettings(settingsJson);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        // Key should NOT be overwritten with masked value
-        System.assertEquals('test-key', s.OpenAIApiKeyTxt__c, 'Masked key should not overwrite existing key');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            // Key should NOT be overwritten with masked value
+            System.assertEquals('test-key', s.OpenAIApiKeyTxt__c, 'Masked key should not overwrite existing key');
+        }
     }
 
     @isTest
     static void testSaveOpenAISettingsMaskedKey() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveOpenAISettings('****tkey', 'gpt-4o', false);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubSettingsController.saveOpenAISettings('****tkey', 'gpt-4o', false);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        // Key should NOT be overwritten with masked value
-        System.assertEquals('test-key', s.OpenAIApiKeyTxt__c, 'Masked key should not overwrite existing key');
-        System.assertEquals(false, s.OpenAiApiTestedBool__c, 'Tested flag should update');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            // Key should NOT be overwritten with masked value
+            System.assertEquals('test-key', s.OpenAIApiKeyTxt__c, 'Masked key should not overwrite existing key');
+            System.assertEquals(false, s.OpenAiApiTestedBool__c, 'Tested flag should update');
+        }
     }
 
     @isTest
     static void testGetSettingsNoSettingsRecord() {
-        // Delete the org defaults to simulate fresh install
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        if (s.Id != null) { delete s; }
+        System.runAs(testUser) {
+            // Delete the org defaults to simulate fresh install
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            if (s.Id != null) { delete s; }
 
-        Test.startTest();
-        DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
+            Test.stopTest();
 
-        // Fresh install defaults
-        System.assertEquals(true, dto.enableNotifications, 'Fresh install: notifications should default to true');
-        System.assertEquals(true, dto.autoCreateRequest, 'Fresh install: auto-create should default to true');
-        System.assertEquals(6, dto.reconciliationHour, 'Fresh install: recon hour should default to 6');
-        System.assertEquals('Monday', dto.weeklyDigestDay, 'Fresh install: digest day should default to Monday');
+            // Fresh install defaults
+            System.assertEquals(true, dto.enableNotifications, 'Fresh install: notifications should default to true');
+            System.assertEquals(true, dto.autoCreateRequest, 'Fresh install: auto-create should default to true');
+            System.assertEquals(6, dto.reconciliationHour, 'Fresh install: recon hour should default to 6');
+            System.assertEquals('Monday', dto.weeklyDigestDay, 'Fresh install: digest day should default to Monday');
+        }
     }
 
     @isTest
     static void testTestOpenAIConnectionMockFailure() {
-        Test.setMock(HttpCalloutMock.class, new MockOpenAIFailureResponse());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockOpenAIFailureResponse());
 
-        Test.startTest();
-        String result = DeliveryHubSettingsController.testOpenAIConnection('bad-key');
-        Test.stopTest();
+            Test.startTest();
+            String result = DeliveryHubSettingsController.testOpenAIConnection('bad-key');
+            Test.stopTest();
 
-        System.assert(result.startsWith('Failed:'), 'Should return failure message for non-200 response');
+            System.assert(result.startsWith('Failed:'), 'Should return failure message for non-200 response');
+        }
     }
 
     @isTest
     static void testSaveGeneralSettingsNullNumbers() {
-        Test.startTest();
-        DeliveryHubSettingsController.saveGeneralSettings(true, true, true, true, true, null, null, null, null);
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubSettingsController.saveGeneralSettings(true, true, true, true, true, null, null, null, null);
+            Test.stopTest();
 
-        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertEquals(6, s.ReconciliationHourNumber__c, 'Should default to 6 when null');
-        System.assertEquals(3, s.SyncRetryLimitNumber__c, 'Should default to 3 when null');
-        System.assertEquals(90, s.ActivityLogRetentionDaysNumber__c, 'Should default to 90 when null');
-        System.assertEquals(24, s.EscalationCooldownHoursNumber__c, 'Should default to 24 when null');
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals(6, s.ReconciliationHourNumber__c, 'Should default to 6 when null');
+            System.assertEquals(3, s.SyncRetryLimitNumber__c, 'Should default to 3 when null');
+            System.assertEquals(90, s.ActivityLogRetentionDaysNumber__c, 'Should default to 90 when null');
+            System.assertEquals(24, s.EscalationCooldownHoursNumber__c, 'Should default to 24 when null');
+        }
     }
 
     // ----------------- MOCK CLASSES -----------------

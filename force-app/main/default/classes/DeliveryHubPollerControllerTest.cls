@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryHubPollerControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     // --- MOCKS ---
 
     /**
@@ -62,39 +64,43 @@ private class DeliveryHubPollerControllerTest {
 
     @IsTest
     static void testTriggerPollSuccess() {
-        Test.setMock(HttpCalloutMock.class, new PollerSuccessMock());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new PollerSuccessMock());
 
-        Test.startTest();
-        Boolean exceptionThrown = false;
-        try {
-            DeliveryHubPollerController.triggerPoll();
-        } catch (Exception e) {
-            exceptionThrown = true;
+            Test.startTest();
+            Boolean exceptionThrown = false;
+            try {
+                DeliveryHubPollerController.triggerPoll();
+            } catch (Exception e) {
+                exceptionThrown = true;
+            }
+            Test.stopTest();
+
+            System.assertEquals(false, exceptionThrown, 'triggerPoll should complete successfully without throwing an exception.');
         }
-        Test.stopTest();
-
-        System.assertEquals(false, exceptionThrown, 'triggerPoll should complete successfully without throwing an exception.');
     }
 
     @IsTest
     static void testTriggerPollHandlesErrors() {
-        Test.setMock(HttpCalloutMock.class, new PollerErrorMock());
-        
-        // Tell the controller to simulate an error since the core poller catches its own
-        DeliveryHubPollerController.forceException = true;
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new PollerErrorMock());
 
-        Test.startTest();
-        Boolean exceptionThrown = false;
-        String exceptionType = '';
-        try {
-            DeliveryHubPollerController.triggerPoll();
-        } catch (Exception e) {
-            exceptionThrown = true;
-            exceptionType = e.getTypeName();
+            // Tell the controller to simulate an error since the core poller catches its own
+            DeliveryHubPollerController.forceException = true;
+
+            Test.startTest();
+            Boolean exceptionThrown = false;
+            String exceptionType = '';
+            try {
+                DeliveryHubPollerController.triggerPoll();
+            } catch (Exception e) {
+                exceptionThrown = true;
+                exceptionType = e.getTypeName();
+            }
+            Test.stopTest();
+
+            System.assert(exceptionThrown, 'An exception should have been thrown by the controller.');
+            System.assertEquals('System.AuraHandledException', exceptionType, 'The controller MUST wrap failures in an AuraHandledException so the LWC can read the error message gracefully.');
         }
-        Test.stopTest();
-
-        System.assert(exceptionThrown, 'An exception should have been thrown by the controller.');
-        System.assertEquals('System.AuraHandledException', exceptionType, 'The controller MUST wrap failures in an AuraHandledException so the LWC can read the error message gracefully.');
     }
 }

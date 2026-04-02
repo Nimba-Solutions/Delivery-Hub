@@ -9,6 +9,8 @@
 @isTest
 private class DeliveryDocumentPdfControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         DeliveryTriggerControl.runAfterLogic = false;
@@ -67,36 +69,38 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerLoadsInvoice() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(true, ctrl.getHasDocument(), 'Should have loaded document');
-        System.assertEquals('Invoice', ctrl.templateType, 'Template should be Invoice');
-        System.assertEquals(true, ctrl.getIsInvoice(), 'Should be invoice type');
-        System.assertEquals(false, ctrl.getIsAgreement(), 'Should not be agreement type');
-        System.assertEquals('PDF Test Corp', ctrl.entityName, 'Entity name should match');
-        System.assertEquals('123 Test St', ctrl.entityAddress, 'Address should match');
-        System.assertEquals('billing@pdftest.com', ctrl.entityEmail, 'Email should match');
-        System.assertEquals(90, ctrl.defaultRate, 'Default rate should be 90');
-        System.assertEquals(8.0, ctrl.totalHours, 'Total hours should be 8');
-        System.assertEquals(true, ctrl.getHasWorkItems(), 'Should have work items');
-        System.assertEquals(true, ctrl.getHasWorkLogs(), 'Should have work logs');
-        System.assertEquals(true, ctrl.getHasWorkRequests(), 'Should have work requests');
-        System.assertEquals(true, ctrl.getHasEntityContact(), 'Should have entity contact info');
-        System.assertNotEquals(null, ctrl.formattedTotalCost, 'Should have formatted cost');
-        System.assertNotEquals(null, ctrl.getFormattedDefaultRate(), 'Should have formatted rate');
-        System.assertNotEquals(null, ctrl.getFormattedTotalHours(), 'Should have formatted hours');
+            System.assertEquals(true, ctrl.getHasDocument(), 'Should have loaded document');
+            System.assertEquals('Invoice', ctrl.templateType, 'Template should be Invoice');
+            System.assertEquals(true, ctrl.getIsInvoice(), 'Should be invoice type');
+            System.assertEquals(false, ctrl.getIsAgreement(), 'Should not be agreement type');
+            System.assertEquals('PDF Test Corp', ctrl.entityName, 'Entity name should match');
+            System.assertEquals('123 Test St', ctrl.entityAddress, 'Address should match');
+            System.assertEquals('billing@pdftest.com', ctrl.entityEmail, 'Email should match');
+            System.assertEquals(90, ctrl.defaultRate, 'Default rate should be 90');
+            System.assertEquals(8.0, ctrl.totalHours, 'Total hours should be 8');
+            System.assertEquals(true, ctrl.getHasWorkItems(), 'Should have work items');
+            System.assertEquals(true, ctrl.getHasWorkLogs(), 'Should have work logs');
+            System.assertEquals(true, ctrl.getHasWorkRequests(), 'Should have work requests');
+            System.assertEquals(true, ctrl.getHasEntityContact(), 'Should have entity contact info');
+            System.assertNotEquals(null, ctrl.formattedTotalCost, 'Should have formatted cost');
+            System.assertNotEquals(null, ctrl.getFormattedDefaultRate(), 'Should have formatted rate');
+            System.assertNotEquals(null, ctrl.getFormattedTotalHours(), 'Should have formatted hours');
+        }
     }
 
     /**
@@ -104,13 +108,15 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerNoId() {
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        // No id parameter set
+        System.runAs(testUser) {
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            // No id parameter set
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
 
-        System.assertEquals(false, ctrl.getHasDocument(), 'Should not have document');
-        System.assertEquals(false, ctrl.getHasWorkItems(), 'Should not have work items');
+            System.assertEquals(false, ctrl.getHasDocument(), 'Should not have document');
+            System.assertEquals(false, ctrl.getHasWorkItems(), 'Should not have work items');
+        }
     }
 
     /**
@@ -118,23 +124,25 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerWithNarrative() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
-        DeliveryDocumentController.saveAiNarrative(docId, 'Test narrative for PDF.');
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
+            DeliveryDocumentController.saveAiNarrative(docId, 'Test narrative for PDF.');
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(true, ctrl.getHasAiNarrative(), 'Should have AI narrative');
-        System.assertEquals('Test narrative for PDF.', ctrl.aiNarrative, 'Narrative should match');
+            System.assertEquals(true, ctrl.getHasAiNarrative(), 'Should have AI narrative');
+            System.assertEquals('Test narrative for PDF.', ctrl.aiNarrative, 'Narrative should match');
+        }
     }
 
     /**
@@ -142,28 +150,30 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerClientAgreement() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Client_Agreement',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Client_Agreement',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(true, ctrl.getIsAgreement(), 'Should be agreement type');
-        System.assertEquals(false, ctrl.getIsInvoice(), 'Should not be invoice type');
-        System.assertEquals('Client Agreement', ctrl.templateDisplay, 'Template display should be formatted');
-        System.assertEquals(true, ctrl.getHasAgreementClauses(), 'Should have agreement clauses');
-        System.assertEquals(8, ctrl.agreementClauseRows.size(), 'Should have 8 default clauses');
-        System.assertEquals('Scope of Services', ctrl.agreementClauseRows[0].title, 'First clause should be Scope');
-        System.assertEquals(1, ctrl.agreementClauseRows[0].seq, 'First clause number should be 1');
-        System.assert(ctrl.agreementClauseRows[0].body.contains('PDF Test Corp'), 'Clause should contain client name');
+            System.assertEquals(true, ctrl.getIsAgreement(), 'Should be agreement type');
+            System.assertEquals(false, ctrl.getIsInvoice(), 'Should not be invoice type');
+            System.assertEquals('Client Agreement', ctrl.templateDisplay, 'Template display should be formatted');
+            System.assertEquals(true, ctrl.getHasAgreementClauses(), 'Should have agreement clauses');
+            System.assertEquals(8, ctrl.agreementClauseRows.size(), 'Should have 8 default clauses');
+            System.assertEquals('Scope of Services', ctrl.agreementClauseRows[0].title, 'First clause should be Scope');
+            System.assertEquals(1, ctrl.agreementClauseRows[0].seq, 'First clause number should be 1');
+            System.assert(ctrl.agreementClauseRows[0].body.contains('PDF Test Corp'), 'Clause should contain client name');
+        }
     }
 
     /**
@@ -171,29 +181,31 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerTermsAndDueDate() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c WHERE Id = :docId];
-        doc.TermsTxt__c = 'Net 30';
-        doc.DueDateDate__c = Date.newInstance(2026, 4, 30);
-        update doc;
+            DeliveryDocument__c doc = [SELECT Id FROM DeliveryDocument__c WHERE Id = :docId];
+            doc.TermsTxt__c = 'Net 30';
+            doc.DueDateDate__c = Date.newInstance(2026, 4, 30);
+            update doc;
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(true, ctrl.getHasTerms(), 'Should have terms');
-        System.assertEquals('Net 30', ctrl.terms, 'Terms should match');
-        System.assertEquals(true, ctrl.getHasDueDate(), 'Should have due date');
-        System.assertNotEquals(null, ctrl.getFormattedDueDate(), 'Should have formatted due date');
+            System.assertEquals(true, ctrl.getHasTerms(), 'Should have terms');
+            System.assertEquals('Net 30', ctrl.terms, 'Terms should match');
+            System.assertEquals(true, ctrl.getHasDueDate(), 'Should have due date');
+            System.assertNotEquals(null, ctrl.getFormattedDueDate(), 'Should have formatted due date');
+        }
     }
 
     /**
@@ -201,16 +213,18 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerInvalidDocumentId() {
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        // Use an ID that looks valid but does not exist
-        ApexPages.currentPage().getParameters().put('id', 'a0B000000000000AAA');
+        System.runAs(testUser) {
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            // Use an ID that looks valid but does not exist
+            ApexPages.currentPage().getParameters().put('id', 'a0B000000000000AAA');
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
 
-        System.assertEquals(false, ctrl.getHasDocument(), 'Should not have document for bogus ID');
-        System.assertEquals(false, ctrl.getHasWorkItems(), 'Should not have work items');
-        System.assertEquals(false, ctrl.getHasWorkLogs(), 'Should not have work logs');
-        System.assertEquals(false, ctrl.getHasAiNarrative(), 'Should not have AI narrative');
+            System.assertEquals(false, ctrl.getHasDocument(), 'Should not have document for bogus ID');
+            System.assertEquals(false, ctrl.getHasWorkItems(), 'Should not have work items');
+            System.assertEquals(false, ctrl.getHasWorkLogs(), 'Should not have work logs');
+            System.assertEquals(false, ctrl.getHasAiNarrative(), 'Should not have AI narrative');
+        }
     }
 
     /**
@@ -218,23 +232,25 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerContractorAgreement() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Contractor_Agreement',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Contractor_Agreement',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(true, ctrl.getIsAgreement(), 'Should be agreement type for Contractor_Agreement');
-        System.assertEquals(false, ctrl.getIsInvoice(), 'Should not be invoice type');
-        System.assertEquals('Contractor Agreement', ctrl.templateDisplay, 'Template display should format underscores as spaces');
+            System.assertEquals(true, ctrl.getIsAgreement(), 'Should be agreement type for Contractor_Agreement');
+            System.assertEquals(false, ctrl.getIsInvoice(), 'Should not be invoice type');
+            System.assertEquals('Contractor Agreement', ctrl.templateDisplay, 'Template display should format underscores as spaces');
+        }
     }
 
     /**
@@ -242,24 +258,26 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerStatusReport() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Status_Report',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Status_Report',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(false, ctrl.getIsInvoice(), 'Status Report should not be invoice type');
-        System.assertEquals(false, ctrl.getIsAgreement(), 'Status Report should not be agreement type');
-        System.assertEquals('Status Report', ctrl.templateDisplay, 'Template display should be Status Report');
-        System.assertEquals(true, ctrl.getHasDocument(), 'Should have loaded document');
+            System.assertEquals(false, ctrl.getIsInvoice(), 'Status Report should not be invoice type');
+            System.assertEquals(false, ctrl.getIsAgreement(), 'Status Report should not be agreement type');
+            System.assertEquals('Status Report', ctrl.templateDisplay, 'Template display should be Status Report');
+            System.assertEquals(true, ctrl.getHasDocument(), 'Should have loaded document');
+        }
     }
 
     /**
@@ -267,22 +285,24 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerPdfRenderMode() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
-        ApexPages.currentPage().getParameters().put('pdf', 'true');
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
+            ApexPages.currentPage().getParameters().put('pdf', 'true');
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(true, ctrl.renderAsPdf, 'renderAsPdf should be true when pdf=true parameter is set');
+            System.assertEquals(true, ctrl.renderAsPdf, 'renderAsPdf should be true when pdf=true parameter is set');
+        }
     }
 
     /**
@@ -290,24 +310,26 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerPriorBalanceInMetadata() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        // Generate with metadata containing priorBalance
-        String metadata = JSON.serialize(new Map<String, Object>{ 'priorBalance' => 500.00 });
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), metadata
-        );
+            // Generate with metadata containing priorBalance
+            String metadata = JSON.serialize(new Map<String, Object>{ 'priorBalance' => 500.00 });
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), metadata
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        // Verify controller initialized without errors — prior balance parsing depends on snapshot structure
-        System.assertNotEquals(null, ctrl.formattedAmountDue, 'Should have formatted amount due');
+            // Verify controller initialized without errors — prior balance parsing depends on snapshot structure
+            System.assertNotEquals(null, ctrl.formattedAmountDue, 'Should have formatted amount due');
+        }
     }
 
     /**
@@ -315,23 +337,25 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerVendorEntityInfo() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        // Vendor entity exists from TestSetup (PDF Test Vendor)
-        System.assertNotEquals(null, ctrl.vendorName, 'Vendor name should be populated');
-        System.assertEquals('PDF Test Vendor', ctrl.vendorName, 'Vendor name should match the test vendor');
+            // Vendor entity exists from TestSetup (PDF Test Vendor)
+            System.assertNotEquals(null, ctrl.vendorName, 'Vendor name should be populated');
+            System.assertEquals('PDF Test Vendor', ctrl.vendorName, 'Vendor name should match the test vendor');
+        }
     }
 
     /**
@@ -339,22 +363,24 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerNoAiNarrative() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(false, ctrl.getHasAiNarrative(), 'Should not have AI narrative when none saved');
-        System.assertEquals(true, ctrl.getHasDocument(), 'Should still have the document');
+            System.assertEquals(false, ctrl.getHasAiNarrative(), 'Should not have AI narrative when none saved');
+            System.assertEquals(true, ctrl.getHasDocument(), 'Should still have the document');
+        }
     }
 
     /**
@@ -362,22 +388,24 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerNoPriorBalance() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(false, ctrl.getHasPriorBalance(), 'Should not have prior balance when none in metadata');
-        System.assertEquals(0, ctrl.priorBalance, 'Prior balance should be 0');
+            System.assertEquals(false, ctrl.getHasPriorBalance(), 'Should not have prior balance when none in metadata');
+            System.assertEquals(0, ctrl.priorBalance, 'Prior balance should be 0');
+        }
     }
 
     /**
@@ -385,22 +413,24 @@ private class DeliveryDocumentPdfControllerTest {
      */
     @isTest
     static void testControllerNoDueDateFormatted() {
-        NetworkEntity__c entity = getEntity();
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
 
-        Id docId = DeliveryDocumentController.generateDocument(
-            entity.Id, 'Invoice',
-            Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-        );
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
 
-        Test.startTest();
-        Test.setCurrentPage(Page.DeliveryDocumentPdf);
-        ApexPages.currentPage().getParameters().put('id', docId);
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
 
-        DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-        Test.stopTest();
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
 
-        System.assertEquals(false, ctrl.getHasDueDate(), 'Should not have due date when not set');
-        System.assertEquals('', ctrl.getFormattedDueDate(), 'Formatted due date should be empty string');
-        System.assertEquals(false, ctrl.getHasUnpaidInvoices(), 'Should not have unpaid invoices by default');
+            System.assertEquals(false, ctrl.getHasDueDate(), 'Should not have due date when not set');
+            System.assertEquals('', ctrl.getFormattedDueDate(), 'Formatted due date should be empty string');
+            System.assertEquals(false, ctrl.getHasUnpaidInvoices(), 'Should not have unpaid invoices by default');
+        }
     }
 }

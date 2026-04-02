@@ -8,6 +8,8 @@
 @IsTest
 private class DeliverySyncItemProcessorTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void makeData() {
         // FIX: Prevent DeliverySyncEngine from firing during setup so it doesn't enqueue
@@ -83,14 +85,16 @@ private class DeliverySyncItemProcessorTest {
      */
     @IsTest
     static void testProcessSuccess() {
-        Test.setMock(HttpCalloutMock.class, new MockSuccess());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockSuccess());
 
-        Test.startTest();
-        System.enqueueJob(new DeliverySyncItemProcessor());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncItemProcessor());
+            Test.stopTest();
 
-        SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
-        System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
+            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
+            System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
+        }
     }
 
     /**
@@ -98,15 +102,17 @@ private class DeliverySyncItemProcessorTest {
      */
     @IsTest
     static void testProcessHttpFailure() {
-        Test.setMock(HttpCalloutMock.class, new MockFailure());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockFailure());
 
-        Test.startTest();
-        System.enqueueJob(new DeliverySyncItemProcessor());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncItemProcessor());
+            Test.stopTest();
 
-        SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
-        System.assertEquals('Failed', result.StatusPk__c, 'Status should update to Failed on 500 error');
-        System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
+            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
+            System.assertEquals('Failed', result.StatusPk__c, 'Status should update to Failed on 500 error');
+            System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
+        }
     }
 
     /**
@@ -114,14 +120,16 @@ private class DeliverySyncItemProcessorTest {
      */
     @IsTest
     static void testProcessHubModeSuccess() {
-        Test.setMock(HttpCalloutMock.class, new MockSuccess());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockSuccess());
 
-        Test.startTest();
-        System.enqueueJob(new DeliverySyncItemProcessor());
-        Test.stopTest();
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncItemProcessor());
+            Test.stopTest();
 
-        SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c = null LIMIT 1];
-        System.assertEquals('Synced', result.StatusPk__c, 'Hub Mode item should be Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
+            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c = null LIMIT 1];
+            System.assertEquals('Synced', result.StatusPk__c, 'Hub Mode item should be Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
+        }
     }
 
     /**

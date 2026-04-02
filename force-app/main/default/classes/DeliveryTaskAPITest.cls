@@ -9,6 +9,8 @@
 @IsTest
 private class DeliveryTaskAPITest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     private static final String TEST_API_KEY = 'test-api-key-12345';
 
     @TestSetup
@@ -60,20 +62,22 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetAllTasks() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        System.assertEquals(true, body.get('success'), 'Should be successful');
-        List<Object> data = (List<Object>) body.get('data');
-        System.assertEquals(3, data.size(), 'Should return all 3 work items');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            System.assertEquals(true, body.get('success'), 'Should be successful');
+            List<Object> data = (List<Object>) body.get('data');
+            System.assertEquals(3, data.size(), 'Should return all 3 work items');
+        }
     }
 
     // ==========================================
@@ -82,20 +86,22 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetTasksByAssignee() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
-        req.addParameter('assignee', 'ai');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
+            req.addParameter('assignee', 'ai');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        List<Object> data = (List<Object>) body.get('data');
-        System.assertEquals(1, data.size(), 'Should return only 1 item with Developer assigned');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            List<Object> data = (List<Object>) body.get('data');
+            System.assertEquals(1, data.size(), 'Should return only 1 item with Developer assigned');
+        }
     }
 
     // ==========================================
@@ -104,20 +110,22 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetTasksByStatus() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
-        req.addParameter('status', 'Backlog');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
+            req.addParameter('status', 'Backlog');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        List<Object> data = (List<Object>) body.get('data');
-        System.assertEquals(1, data.size(), 'Should return only Backlog items');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            List<Object> data = (List<Object>) body.get('data');
+            System.assertEquals(1, data.size(), 'Should return only Backlog items');
+        }
     }
 
     // ==========================================
@@ -126,20 +134,22 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetTasksByWorkflowType() {
-        RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
-        req.addParameter('workflowType', 'Loan_Approval');
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/tasks');
+            req.addParameter('workflowType', 'Loan_Approval');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> body = parseResponse(res);
-        List<Object> data = (List<Object>) body.get('data');
-        System.assertEquals(1, data.size(), 'Should return only Loan_Approval items');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            List<Object> data = (List<Object>) body.get('data');
+            System.assertEquals(1, data.size(), 'Should return only Loan_Approval items');
+        }
     }
 
     // ==========================================
@@ -148,39 +158,41 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPatchUpdateStage() {
-        WorkItem__c item = [
-            SELECT Id FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
-        ];
+        System.runAs(testUser) {
+            WorkItem__c item = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
+            ];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'stage' => 'Code Review'
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'stage' => 'Code Review'
+            };
 
-        RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
-            body
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPatchRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
+                body
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePatch();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePatch();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
-        Map<String, Object> responseBody = parseResponse(res);
-        System.assertEquals(true, responseBody.get('success'), 'Should be successful');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> responseBody = parseResponse(res);
+            System.assertEquals(true, responseBody.get('success'), 'Should be successful');
 
-        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
-        System.assertEquals('Code Review', data.get('stage'), 'Stage should be updated');
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertEquals('Code Review', data.get('stage'), 'Stage should be updated');
 
-        // Verify in database
-        WorkItem__c updated = [
-            SELECT StageNamePk__c FROM WorkItem__c WHERE Id = :item.Id
-        ];
-        System.assertEquals('Code Review', updated.StageNamePk__c, 'DB stage should match');
+            // Verify in database
+            WorkItem__c updated = [
+                SELECT StageNamePk__c FROM WorkItem__c WHERE Id = :item.Id
+            ];
+            System.assertEquals('Code Review', updated.StageNamePk__c, 'DB stage should match');
+        }
     }
 
     // ==========================================
@@ -189,33 +201,35 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPatchUpdatePriority() {
-        WorkItem__c item = [
-            SELECT Id FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = 'API Task Beta' LIMIT 1
-        ];
+        System.runAs(testUser) {
+            WorkItem__c item = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'API Task Beta' LIMIT 1
+            ];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'priority' => 'Critical'
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'priority' => 'Critical'
+            };
 
-        RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
-            body
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPatchRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
+                body
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePatch();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePatch();
+            Test.stopTest();
 
-        System.assertEquals(200, res.statusCode, 'Should return 200');
+            System.assertEquals(200, res.statusCode, 'Should return 200');
 
-        WorkItem__c updated = [
-            SELECT PriorityPk__c FROM WorkItem__c WHERE Id = :item.Id
-        ];
-        System.assertEquals('Critical', updated.PriorityPk__c, 'Priority should be updated');
+            WorkItem__c updated = [
+                SELECT PriorityPk__c FROM WorkItem__c WHERE Id = :item.Id
+            ];
+            System.assertEquals('Critical', updated.PriorityPk__c, 'Priority should be updated');
+        }
     }
 
     // ==========================================
@@ -224,19 +238,21 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPatchMissingId() {
-        RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/',
-            new Map<String, Object>{ 'stage' => 'Done' }
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildPatchRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/',
+                new Map<String, Object>{ 'stage' => 'Done' }
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePatch();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePatch();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 for missing ID');
+            System.assertEquals(400, res.statusCode, 'Should return 400 for missing ID');
+        }
     }
 
     // ==========================================
@@ -245,24 +261,26 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPatchEmptyBody() {
-        WorkItem__c item = [
-            SELECT Id FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
-        ];
+        System.runAs(testUser) {
+            WorkItem__c item = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
+            ];
 
-        RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id;
-        req.httpMethod = 'PATCH';
-        req.headers.put('X-Api-Key', TEST_API_KEY);
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id;
+            req.httpMethod = 'PATCH';
+            req.headers.put('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePatch();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePatch();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 for empty body');
+            System.assertEquals(400, res.statusCode, 'Should return 400 for empty body');
+        }
     }
 
     // ==========================================
@@ -271,45 +289,47 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPostComment() {
-        WorkItem__c item = [
-            SELECT Id FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
-        ];
+        System.runAs(testUser) {
+            WorkItem__c item = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
+            ];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'body'   => 'This is a comment from the API',
-            'author' => 'CI Pipeline'
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'body'   => 'This is a comment from the API',
+                'author' => 'CI Pipeline'
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
-            body
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
+                body
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(201, res.statusCode, 'Should return 201 Created');
-        Map<String, Object> responseBody = parseResponse(res);
-        System.assertEquals(true, responseBody.get('success'), 'Should be successful');
+            System.assertEquals(201, res.statusCode, 'Should return 201 Created');
+            Map<String, Object> responseBody = parseResponse(res);
+            System.assertEquals(true, responseBody.get('success'), 'Should be successful');
 
-        Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
-        System.assertNotEquals(null, data.get('id'), 'Should return comment Id');
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertNotEquals(null, data.get('id'), 'Should return comment Id');
 
-        // Verify in database
-        WorkItemComment__c comment = [
-            SELECT BodyTxt__c, AuthorTxt__c, SourcePk__c
-            FROM WorkItemComment__c
-            WHERE WorkItemId__c = :item.Id
-            LIMIT 1
-        ];
-        System.assertEquals('This is a comment from the API', comment.BodyTxt__c, 'Comment body should match');
-        System.assertEquals('CI Pipeline', comment.AuthorTxt__c, 'Author should match');
-        System.assertEquals('API', comment.SourcePk__c, 'Source should be API');
+            // Verify in database
+            WorkItemComment__c comment = [
+                SELECT BodyTxt__c, AuthorTxt__c, SourcePk__c
+                FROM WorkItemComment__c
+                WHERE WorkItemId__c = :item.Id
+                LIMIT 1
+            ];
+            System.assertEquals('This is a comment from the API', comment.BodyTxt__c, 'Comment body should match');
+            System.assertEquals('CI Pipeline', comment.AuthorTxt__c, 'Author should match');
+            System.assertEquals('API', comment.SourcePk__c, 'Source should be API');
+        }
     }
 
     // ==========================================
@@ -318,34 +338,36 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPostCommentDefaultAuthor() {
-        WorkItem__c item = [
-            SELECT Id FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = 'API Task Beta' LIMIT 1
-        ];
+        System.runAs(testUser) {
+            WorkItem__c item = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'API Task Beta' LIMIT 1
+            ];
 
-        Map<String, Object> body = new Map<String, Object>{
-            'body' => 'Auto-generated comment'
-        };
+            Map<String, Object> body = new Map<String, Object>{
+                'body' => 'Auto-generated comment'
+            };
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
-            body
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
+                body
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(201, res.statusCode, 'Should return 201');
+            System.assertEquals(201, res.statusCode, 'Should return 201');
 
-        WorkItemComment__c comment = [
-            SELECT AuthorTxt__c FROM WorkItemComment__c
-            WHERE WorkItemId__c = :item.Id LIMIT 1
-        ];
-        System.assertEquals('API', comment.AuthorTxt__c, 'Default author should be API');
+            WorkItemComment__c comment = [
+                SELECT AuthorTxt__c FROM WorkItemComment__c
+                WHERE WorkItemId__c = :item.Id LIMIT 1
+            ];
+            System.assertEquals('API', comment.AuthorTxt__c, 'Default author should be API');
+        }
     }
 
     // ==========================================
@@ -354,19 +376,21 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPostCommentMissingId() {
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/',
-            new Map<String, Object>{ 'body' => 'orphan comment' }
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/',
+                new Map<String, Object>{ 'body' => 'orphan comment' }
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 for missing work item ID');
+            System.assertEquals(400, res.statusCode, 'Should return 400 for missing work item ID');
+        }
     }
 
     // ==========================================
@@ -375,24 +399,26 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPostCommentEmptyBody() {
-        WorkItem__c item = [
-            SELECT Id FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
-        ];
+        System.runAs(testUser) {
+            WorkItem__c item = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
+            ];
 
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
-            new Map<String, Object>{ 'body' => '' }
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id + '/comments',
+                new Map<String, Object>{ 'body' => '' }
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 for empty comment body');
+            System.assertEquals(400, res.statusCode, 'Should return 400 for empty comment body');
+        }
     }
 
     // ==========================================
@@ -405,19 +431,21 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testGetMissingApiKey() {
-        RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/tasks';
-        req.httpMethod = 'GET';
-        // No X-Api-Key header
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/delivery/deliveryhub/v1/tasks';
+            req.httpMethod = 'GET';
+            // No X-Api-Key header
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handleGet();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handleGet();
+            Test.stopTest();
 
-        System.assertEquals(401, res.statusCode, 'Should return 401 for missing API key');
+            System.assertEquals(401, res.statusCode, 'Should return 401 for missing API key');
+        }
     }
 
     // ==========================================
@@ -426,21 +454,23 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPatchNonExistentWorkItem() {
-        // Use a valid ID format that doesn't exist in DB
-        String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
-        RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + fakeId,
-            new Map<String, Object>{ 'stage' => 'Done' }
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            // Use a valid ID format that doesn't exist in DB
+            String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
+            RestRequest req = buildPatchRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + fakeId,
+                new Map<String, Object>{ 'stage' => 'Done' }
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePatch();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePatch();
+            Test.stopTest();
 
-        System.assertEquals(404, res.statusCode, 'Should return 404 for non-existent work item');
+            System.assertEquals(404, res.statusCode, 'Should return 404 for non-existent work item');
+        }
     }
 
     // ==========================================
@@ -449,24 +479,26 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPatchNoValidFields() {
-        WorkItem__c item = [
-            SELECT Id FROM WorkItem__c
-            WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
-        ];
+        System.runAs(testUser) {
+            WorkItem__c item = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'API Task Alpha' LIMIT 1
+            ];
 
-        RestRequest req = buildPatchRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
-            new Map<String, Object>{ 'someUnknownField' => 'value' }
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+            RestRequest req = buildPatchRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + item.Id,
+                new Map<String, Object>{ 'someUnknownField' => 'value' }
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePatch();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePatch();
+            Test.stopTest();
 
-        System.assertEquals(400, res.statusCode, 'Should return 400 when no valid fields provided');
+            System.assertEquals(400, res.statusCode, 'Should return 400 when no valid fields provided');
+        }
     }
 
     // ==========================================
@@ -475,20 +507,22 @@ private class DeliveryTaskAPITest {
 
     @IsTest
     static void testPostCommentNonExistentWorkItem() {
-        String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
-        RestRequest req = buildPostRequest(
-            '/services/apexrest/delivery/deliveryhub/v1/tasks/' + fakeId + '/comments',
-            new Map<String, Object>{ 'body' => 'orphan comment' }
-        );
-        RestResponse res = new RestResponse();
-        RestContext.request = req;
-        RestContext.response = res;
+        System.runAs(testUser) {
+            String fakeId = WorkItem__c.SObjectType.getDescribe().getKeyPrefix() + '000000000099';
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/tasks/' + fakeId + '/comments',
+                new Map<String, Object>{ 'body' => 'orphan comment' }
+            );
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
 
-        Test.startTest();
-        DeliveryTaskAPI.handlePost();
-        Test.stopTest();
+            Test.startTest();
+            DeliveryTaskAPI.handlePost();
+            Test.stopTest();
 
-        System.assertEquals(404, res.statusCode, 'Should return 404 for non-existent work item');
+            System.assertEquals(404, res.statusCode, 'Should return 404 for non-existent work item');
+        }
     }
 
     // ==========================================

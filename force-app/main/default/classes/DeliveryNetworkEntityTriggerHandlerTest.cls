@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryNetworkEntityTriggerHandlerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void setup() {
         DeliveryTriggerControl.disableAfterLogic();
@@ -22,68 +24,74 @@ private class DeliveryNetworkEntityTriggerHandlerTest {
 
     @IsTest
     static void testCreateTracking() {
-        DeliveryFieldTrackingService.clearCache();
+        System.runAs(testUser) {
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        NetworkEntity__c entity = new NetworkEntity__c(
-            Name = 'Track Create Client',
-            EntityTypePk__c = 'Client',
-            StatusPk__c = 'Active'
-        );
-        insert entity;
-        Test.stopTest();
+            Test.startTest();
+            NetworkEntity__c entity = new NetworkEntity__c(
+                Name = 'Track Create Client',
+                EntityTypePk__c = 'Client',
+                StatusPk__c = 'Active'
+            );
+            insert entity;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :entity.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Create tracking should produce activity logs for entity');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :entity.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Create tracking should produce activity logs for entity');
+        }
     }
 
     @IsTest
     static void testUpdateTracking() {
-        DeliveryTriggerControl.disableAfterLogic();
-        NetworkEntity__c entity = new NetworkEntity__c(
-            Name = 'Track Update Client',
-            EntityTypePk__c = 'Client',
-            StatusPk__c = 'Active'
-        );
-        insert entity;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
+            NetworkEntity__c entity = new NetworkEntity__c(
+                Name = 'Track Update Client',
+                EntityTypePk__c = 'Client',
+                StatusPk__c = 'Active'
+            );
+            insert entity;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        entity.StatusPk__c = 'Inactive';
-        update entity;
-        Test.stopTest();
+            Test.startTest();
+            entity.StatusPk__c = 'Inactive';
+            update entity;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :entity.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Update tracking should produce activity logs for status change');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :entity.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Update tracking should produce activity logs for status change');
+        }
     }
 
     @IsTest
     static void testDeleteTracking() {
-        DeliveryTriggerControl.disableAfterLogic();
-        NetworkEntity__c entity = new NetworkEntity__c(
-            Name = 'Track Delete Client',
-            EntityTypePk__c = 'Client',
-            StatusPk__c = 'Active'
-        );
-        insert entity;
-        DeliveryTriggerControl.enableAfterLogic();
-        DeliveryFieldTrackingService.clearCache();
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
+            NetworkEntity__c entity = new NetworkEntity__c(
+                Name = 'Track Delete Client',
+                EntityTypePk__c = 'Client',
+                StatusPk__c = 'Active'
+            );
+            insert entity;
+            DeliveryTriggerControl.enableAfterLogic();
+            DeliveryFieldTrackingService.clearCache();
 
-        Test.startTest();
-        delete entity;
-        Test.stopTest();
+            Test.startTest();
+            delete entity;
+            Test.stopTest();
 
-        List<ActivityLog__c> logs = [
-            SELECT Id, ContextDataTxt__c FROM ActivityLog__c
-            WHERE RecordIdTxt__c = :entity.Id AND ActionTypePk__c = 'Field_Change'
-        ];
-        System.assert(!logs.isEmpty(), 'Delete tracking should produce activity logs');
+            List<ActivityLog__c> logs = [
+                SELECT Id, ContextDataTxt__c FROM ActivityLog__c
+                WHERE RecordIdTxt__c = :entity.Id AND ActionTypePk__c = 'Field_Change'
+            ];
+            System.assert(!logs.isEmpty(), 'Delete tracking should produce activity logs');
+        }
     }
 }

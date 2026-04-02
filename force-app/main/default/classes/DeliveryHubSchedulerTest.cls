@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryHubSchedulerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     @TestSetup
     static void makeData() {
         // Setup required settings for the Poller logic
@@ -31,16 +33,18 @@ private class DeliveryHubSchedulerTest {
      */
     @IsTest
     static void testSchedulerExecution() {
-        Test.setMock(HttpCalloutMock.class, new MockResponse());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
 
-        Test.startTest();
-        // Trigger the future logic directly to bypass the chained async limitation
-        DeliveryHubScheduler.runSyncAsync();
-        Test.stopTest();
+            Test.startTest();
+            // Trigger the future logic directly to bypass the chained async limitation
+            DeliveryHubScheduler.runSyncAsync();
+            Test.stopTest();
 
-        // Verify the Vendor timestamp was updated by the Poller logic
-        NetworkEntity__c vendor = [SELECT LastInboundSyncDateTime__c FROM NetworkEntity__c LIMIT 1];
-        System.assertNotEquals(null, vendor.LastInboundSyncDateTime__c, 'Poller should have updated the sync timestamp.');
+            // Verify the Vendor timestamp was updated by the Poller logic
+            NetworkEntity__c vendor = [SELECT LastInboundSyncDateTime__c FROM NetworkEntity__c LIMIT 1];
+            System.assertNotEquals(null, vendor.LastInboundSyncDateTime__c, 'Poller should have updated the sync timestamp.');
+        }
     }
     
     /**
@@ -48,15 +52,17 @@ private class DeliveryHubSchedulerTest {
      */
     @IsTest
     static void testSchedulableExecution() {
-        Test.setMock(HttpCalloutMock.class, new MockResponse());
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
 
-        Test.startTest();
-        String cronExp = '0 0 0 15 3 ? 2040';
-        String jobId = System.schedule('TestDeliveryHubScheduler', cronExp, new DeliveryHubScheduler());
-        Test.stopTest();
+            Test.startTest();
+            String cronExp = '0 0 0 15 3 ? 2040';
+            String jobId = System.schedule('TestDeliveryHubScheduler', cronExp, new DeliveryHubScheduler());
+            Test.stopTest();
 
-        CronTrigger ct = [SELECT Id, State FROM CronTrigger WHERE Id = :jobId];
-        System.assertNotEquals(null, ct, 'Scheduled job should exist');
+            CronTrigger ct = [SELECT Id, State FROM CronTrigger WHERE Id = :jobId];
+            System.assertNotEquals(null, ct, 'Scheduled job should exist');
+        }
     }
 
     /**
@@ -64,16 +70,18 @@ private class DeliveryHubSchedulerTest {
      */
     @IsTest
     static void testScheduleAll() {
-        Test.startTest();
-        DeliveryHubScheduler.scheduleAll();
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryHubScheduler.scheduleAll();
+            Test.stopTest();
 
-        List<CronTrigger> jobs = [
-            SELECT Id, CronJobDetail.Name
-            FROM CronTrigger
-            WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync -%'
-        ];
-        System.assertEquals(4, jobs.size(), 'scheduleAll should create 4 cron jobs');
+            List<CronTrigger> jobs = [
+                SELECT Id, CronJobDetail.Name
+                FROM CronTrigger
+                WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync -%'
+            ];
+            System.assertEquals(4, jobs.size(), 'scheduleAll should create 4 cron jobs');
+        }
     }
 
     /**
@@ -83,61 +91,63 @@ private class DeliveryHubSchedulerTest {
      */
     @IsTest
     static void testCustomSyncRetryLimitSetting() {
-        // Set retry limit to 1 instead of the default 3
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.SyncRetryLimitNumber__c = 1;
-        update settings;
+        System.runAs(testUser) {
+            // Set retry limit to 1 instead of the default 3
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.SyncRetryLimitNumber__c = 1;
+            update settings;
 
-        // Create a failed item with 0 retries — should be requeued (0 < 1)
-        SyncItem__c eligibleItem = new SyncItem__c(
-            ObjectTypePk__c = 'WorkItem__c',
-            DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Failed',
-            RetryCountNumber__c = 0,
-            PayloadTxt__c = '{"test":"eligible"}'
-        );
-        // Create a failed item with 1 retry — should NOT be requeued (1 >= 1)
-        SyncItem__c exhaustedItem = new SyncItem__c(
-            ObjectTypePk__c = 'WorkItem__c',
-            DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Failed',
-            RetryCountNumber__c = 1,
-            PayloadTxt__c = '{"test":"exhausted"}'
-        );
-        // Create a failed item with 2 retries — should NOT be requeued (2 >= 1)
-        SyncItem__c overLimitItem = new SyncItem__c(
-            ObjectTypePk__c = 'WorkItem__c',
-            DirectionPk__c = 'Outbound',
-            StatusPk__c = 'Failed',
-            RetryCountNumber__c = 2,
-            PayloadTxt__c = '{"test":"over_limit"}'
-        );
-        insert new List<SyncItem__c>{ eligibleItem, exhaustedItem, overLimitItem };
+            // Create a failed item with 0 retries — should be requeued (0 < 1)
+            SyncItem__c eligibleItem = new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c = 'Outbound',
+                StatusPk__c = 'Failed',
+                RetryCountNumber__c = 0,
+                PayloadTxt__c = '{"test":"eligible"}'
+            );
+            // Create a failed item with 1 retry — should NOT be requeued (1 >= 1)
+            SyncItem__c exhaustedItem = new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c = 'Outbound',
+                StatusPk__c = 'Failed',
+                RetryCountNumber__c = 1,
+                PayloadTxt__c = '{"test":"exhausted"}'
+            );
+            // Create a failed item with 2 retries — should NOT be requeued (2 >= 1)
+            SyncItem__c overLimitItem = new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c = 'Outbound',
+                StatusPk__c = 'Failed',
+                RetryCountNumber__c = 2,
+                PayloadTxt__c = '{"test":"over_limit"}'
+            );
+            insert new List<SyncItem__c>{ eligibleItem, exhaustedItem, overLimitItem };
 
-        Test.startTest();
-        Test.setMock(HttpCalloutMock.class, new MockResponse());
-        DeliveryHubScheduler scheduler = new DeliveryHubScheduler();
-        scheduler.execute(null);
-        Test.stopTest();
+            Test.startTest();
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
+            DeliveryHubScheduler scheduler = new DeliveryHubScheduler();
+            scheduler.execute(null);
+            Test.stopTest();
 
-        // Verify only the eligible item was requeued
-        SyncItem__c updatedEligible = [
-            SELECT StatusPk__c FROM SyncItem__c WHERE Id = :eligibleItem.Id
-        ];
-        System.assertEquals('Queued', updatedEligible.StatusPk__c,
-            'Item with 0 retries should be requeued when limit is 1');
+            // Verify only the eligible item was requeued
+            SyncItem__c updatedEligible = [
+                SELECT StatusPk__c FROM SyncItem__c WHERE Id = :eligibleItem.Id
+            ];
+            System.assertEquals('Queued', updatedEligible.StatusPk__c,
+                'Item with 0 retries should be requeued when limit is 1');
 
-        SyncItem__c updatedExhausted = [
-            SELECT StatusPk__c FROM SyncItem__c WHERE Id = :exhaustedItem.Id
-        ];
-        System.assertEquals('Failed', updatedExhausted.StatusPk__c,
-            'Item with 1 retry should remain Failed when limit is 1');
+            SyncItem__c updatedExhausted = [
+                SELECT StatusPk__c FROM SyncItem__c WHERE Id = :exhaustedItem.Id
+            ];
+            System.assertEquals('Failed', updatedExhausted.StatusPk__c,
+                'Item with 1 retry should remain Failed when limit is 1');
 
-        SyncItem__c updatedOverLimit = [
-            SELECT StatusPk__c FROM SyncItem__c WHERE Id = :overLimitItem.Id
-        ];
-        System.assertEquals('Failed', updatedOverLimit.StatusPk__c,
-            'Item with 2 retries should remain Failed when limit is 1');
+            SyncItem__c updatedOverLimit = [
+                SELECT StatusPk__c FROM SyncItem__c WHERE Id = :overLimitItem.Id
+            ];
+            System.assertEquals('Failed', updatedOverLimit.StatusPk__c,
+                'Item with 2 retries should remain Failed when limit is 1');
+        }
     }
 
     /**
@@ -147,29 +157,31 @@ private class DeliveryHubSchedulerTest {
      */
     @IsTest
     static void testReconciliationHourSetting() {
-        // Set reconciliation hour to one that does NOT match the current hour
-        Integer currentHour = DateTime.now().hourGmt();
-        Integer nonMatchingHour = Math.mod(currentHour + 12, 24);
+        System.runAs(testUser) {
+            // Set reconciliation hour to one that does NOT match the current hour
+            Integer currentHour = DateTime.now().hourGmt();
+            Integer nonMatchingHour = Math.mod(currentHour + 12, 24);
 
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        settings.ReconciliationHourNumber__c = nonMatchingHour;
-        update settings;
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.ReconciliationHourNumber__c = nonMatchingHour;
+            update settings;
 
-        Test.startTest();
-        Test.setMock(HttpCalloutMock.class, new MockResponse());
-        DeliveryHubScheduler scheduler = new DeliveryHubScheduler();
-        scheduler.execute(null);
-        Test.stopTest();
+            Test.startTest();
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
+            DeliveryHubScheduler scheduler = new DeliveryHubScheduler();
+            scheduler.execute(null);
+            Test.stopTest();
 
-        // Verify no reconciler was enqueued by checking AsyncApexJob
-        // (the reconciler would appear as a Queueable job if it ran)
-        List<AsyncApexJob> reconcilerJobs = [
-            SELECT Id, ApexClass.Name FROM AsyncApexJob
-            WHERE ApexClass.Name = 'DeliverySyncReconciler'
-            AND Status IN ('Queued', 'Holding', 'Preparing', 'Processing', 'Completed')
-        ];
-        System.assertEquals(0, reconcilerJobs.size(),
-            'Reconciler should NOT be enqueued when current hour does not match configured hour');
+            // Verify no reconciler was enqueued by checking AsyncApexJob
+            // (the reconciler would appear as a Queueable job if it ran)
+            List<AsyncApexJob> reconcilerJobs = [
+                SELECT Id, ApexClass.Name FROM AsyncApexJob
+                WHERE ApexClass.Name = 'DeliverySyncReconciler'
+                AND Status IN ('Queued', 'Holding', 'Preparing', 'Processing', 'Completed')
+            ];
+            System.assertEquals(0, reconcilerJobs.size(),
+                'Reconciler should NOT be enqueued when current hour does not match configured hour');
+        }
     }
 
     /**

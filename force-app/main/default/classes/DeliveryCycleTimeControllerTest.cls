@@ -8,6 +8,8 @@
 @IsTest
 private class DeliveryCycleTimeControllerTest {
 
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
     // ── Setup ─────────────────────────────────────────────────────────────────
 
     /**
@@ -69,17 +71,19 @@ private class DeliveryCycleTimeControllerTest {
      */
     @IsTest
     static void testGetCycleTimeDataReturnsWeeklyData() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryCycleTimeController.getCycleTimeData('Software_Delivery');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryCycleTimeController.getCycleTimeData('Software_Delivery');
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null.');
-        System.assert(!result.isEmpty(), 'Should return at least one week of data.');
+            System.assertNotEquals(null, result, 'Result should not be null.');
+            System.assert(!result.isEmpty(), 'Should return at least one week of data.');
 
-        Map<String, Object> firstWeek = result[0];
-        System.assert(firstWeek.containsKey('weekLabel'), 'Each entry should have a weekLabel.');
-        System.assert(firstWeek.containsKey('avgCycleDays'), 'Each entry should have avgCycleDays.');
-        System.assert(firstWeek.containsKey('itemCount'), 'Each entry should have itemCount.');
+            Map<String, Object> firstWeek = result[0];
+            System.assert(firstWeek.containsKey('weekLabel'), 'Each entry should have a weekLabel.');
+            System.assert(firstWeek.containsKey('avgCycleDays'), 'Each entry should have avgCycleDays.');
+            System.assert(firstWeek.containsKey('itemCount'), 'Each entry should have itemCount.');
+        }
     }
 
     /**
@@ -87,12 +91,14 @@ private class DeliveryCycleTimeControllerTest {
      */
     @IsTest
     static void testGetCycleTimeDataDefaultsWorkflowType() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryCycleTimeController.getCycleTimeData('');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryCycleTimeController.getCycleTimeData('');
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null with blank type.');
-        System.assert(!result.isEmpty(), 'Should return data using default workflow type.');
+            System.assertNotEquals(null, result, 'Result should not be null with blank type.');
+            System.assert(!result.isEmpty(), 'Should return data using default workflow type.');
+        }
     }
 
     /**
@@ -100,12 +106,14 @@ private class DeliveryCycleTimeControllerTest {
      */
     @IsTest
     static void testGetCycleTimeDataNoItemsReturnsEmpty() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryCycleTimeController.getCycleTimeData('NonExistent_Type');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryCycleTimeController.getCycleTimeData('NonExistent_Type');
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null.');
-        System.assert(result.isEmpty(), 'Should return empty list for unknown workflow type.');
+            System.assertNotEquals(null, result, 'Result should not be null.');
+            System.assert(result.isEmpty(), 'Should return empty list for unknown workflow type.');
+        }
     }
 
     // ── getCurrentStageAges Tests ─────────────────────────────────────────────
@@ -115,17 +123,19 @@ private class DeliveryCycleTimeControllerTest {
      */
     @IsTest
     static void testGetCurrentStageAgesReturnsStageData() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryCycleTimeController.getCurrentStageAges('Software_Delivery');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryCycleTimeController.getCurrentStageAges('Software_Delivery');
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null.');
-        System.assert(!result.isEmpty(), 'Should return at least one stage.');
+            System.assertNotEquals(null, result, 'Result should not be null.');
+            System.assert(!result.isEmpty(), 'Should return at least one stage.');
 
-        Map<String, Object> firstStage = result[0];
-        System.assert(firstStage.containsKey('stageName'), 'Each entry should have a stageName.');
-        System.assert(firstStage.containsKey('avgDays'), 'Each entry should have avgDays.');
-        System.assert(firstStage.containsKey('itemCount'), 'Each entry should have itemCount.');
+            Map<String, Object> firstStage = result[0];
+            System.assert(firstStage.containsKey('stageName'), 'Each entry should have a stageName.');
+            System.assert(firstStage.containsKey('avgDays'), 'Each entry should have avgDays.');
+            System.assert(firstStage.containsKey('itemCount'), 'Each entry should have itemCount.');
+        }
     }
 
     /**
@@ -133,14 +143,16 @@ private class DeliveryCycleTimeControllerTest {
      */
     @IsTest
     static void testGetCurrentStageAgesSortedDescending() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryCycleTimeController.getCurrentStageAges('Software_Delivery');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryCycleTimeController.getCurrentStageAges('Software_Delivery');
+            Test.stopTest();
 
-        if (result.size() >= 2) {
-            Decimal firstAvg = (Decimal) result[0].get('avgDays');
-            Decimal secondAvg = (Decimal) result[1].get('avgDays');
-            System.assert(firstAvg >= secondAvg, 'First stage should have >= avgDays than second (desc sort).');
+            if (result.size() >= 2) {
+                Decimal firstAvg = (Decimal) result[0].get('avgDays');
+                Decimal secondAvg = (Decimal) result[1].get('avgDays');
+                System.assert(firstAvg >= secondAvg, 'First stage should have >= avgDays than second (desc sort).');
+            }
         }
     }
 
@@ -149,11 +161,13 @@ private class DeliveryCycleTimeControllerTest {
      */
     @IsTest
     static void testGetCurrentStageAgesNoItemsReturnsEmpty() {
-        Test.startTest();
-        List<Map<String, Object>> result = DeliveryCycleTimeController.getCurrentStageAges('NonExistent_Type');
-        Test.stopTest();
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, Object>> result = DeliveryCycleTimeController.getCurrentStageAges('NonExistent_Type');
+            Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null.');
-        System.assert(result.isEmpty(), 'Should return empty list for unknown workflow type.');
+            System.assertNotEquals(null, result, 'Result should not be null.');
+            System.assert(result.isEmpty(), 'Should return empty list for unknown workflow type.');
+        }
     }
 }
