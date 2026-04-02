@@ -265,6 +265,7 @@ global with sharing class DeliveryEscalationService {
         // Send batched email notifications
         if (!emailTargets.isEmpty()) {
             sendEscalationEmails(emailTargets);
+            DeliveryExternalNotificationService.sendExternalSLABreachEmails(emailTargets.keySet());
         }
 
         // Post Chatter messages
