@@ -12,7 +12,8 @@ private class DeliveryWorkLogTriggerHandlerTest {
     @TestSetup
     static void setup() {
         NetworkEntity__c client = new NetworkEntity__c(
-            Name = 'Test Client', EntityTypePk__c = 'Client', StatusPk__c = 'Active'
+            Name = 'Test Client', EntityTypePk__c = 'Client', StatusPk__c = 'Active',
+            IntegrationEndpointUrlTxt__c = 'https://test-client.example.com'
         );
         NetworkEntity__c vendor = new NetworkEntity__c(
             Name = 'Test Vendor', EntityTypePk__c = 'Vendor', StatusPk__c = 'Active'

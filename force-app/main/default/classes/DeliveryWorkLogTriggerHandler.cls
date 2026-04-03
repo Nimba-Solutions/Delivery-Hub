@@ -187,6 +187,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             FROM WorkItem__c
             WHERE Id IN :workItemIds
             AND ClientNetworkEntityId__c != null
+            AND ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c != null
             WITH SYSTEM_MODE
         ]);
 
