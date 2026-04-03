@@ -55,6 +55,7 @@ const REMOTE_EVENT_CHANNEL = '/event/%%%NAMESPACE_DOT%%%GanttRemoteEvent__e';
 export default class DeliveryNimbusGantt extends LightningElement {
 
     // ── Public API ─────────────────────────────────────────────────────
+    @api recordId;
     @api initialViewMode = 'Week';
 
     // ── State ──────────────────────────────────────────────────────────
@@ -71,6 +72,12 @@ export default class DeliveryNimbusGantt extends LightningElement {
     showQuickEdit = false;
     selectedWorkItemId = null;
     _selectedTaskIndex = -1;
+
+    // ── Demo state ───────────────────────────────────────────────────
+    isDemoRunning = false;
+    demoStepLabel = '';
+    demoStepDescription = '';
+    _demoTimer = null;
 
     // ── Remote control state ──────────────────────────────────────────
     showRemoteModal = false;
@@ -92,8 +99,10 @@ export default class DeliveryNimbusGantt extends LightningElement {
     connectedCallback() {
         this._restorePrefs();
         this.currentZoom = this.currentZoom || ZOOM_MAP[this.initialViewMode] || 'week';
-        this._generateRemoteSessionId();
-        this._subscribeRemoteEvents();
+        if (!this.recordId) {
+            this._generateRemoteSessionId();
+            this._subscribeRemoteEvents();
+        }
     }
 
     renderedCallback() {
@@ -124,6 +133,13 @@ export default class DeliveryNimbusGantt extends LightningElement {
         this.isLoading = false;
         if (result.data) {
             this._rawTasks = result.data;
+            // In compact/record page mode, auto-filter to the current record's entity
+            if (this.recordId && !this.selectedEntity) {
+                const match = result.data.find(t => t.workItemId === this.recordId);
+                if (match && match.entityName) {
+                    this.selectedEntity = match.entityName;
+                }
+            }
             this._tryRender();
         } else if (result.error) {
             this.errorMessage = result.error.body
@@ -145,12 +161,22 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
     // ── Computed: UI state ─────────────────────────────────────────────
 
+    get isCompactMode() { return !!this.recordId; }
+    get isFullMode()    { return !this.recordId; }
     get hasError()  { return !this.isLoading && !!this.errorMessage; }
     get isEmpty()   { return !this.isLoading && !this.errorMessage && this.filteredTasks.length === 0; }
     get hasData()   { return !this.isLoading && !this.errorMessage && this.filteredTasks.length > 0; }
 
     get currentZoomLabel() {
         return ZOOM_REVERSE[this.currentZoom] || 'Week';
+    }
+
+    get toolbarClass() {
+        return this.isCompactMode ? 'gantt-toolbar gantt-toolbar--compact' : 'gantt-toolbar';
+    }
+
+    get toolbarTitle() {
+        return this.isCompactMode ? 'Related Timeline' : 'Project Timeline';
     }
 
     get subtitleText() {
@@ -206,6 +232,20 @@ export default class DeliveryNimbusGantt extends LightningElement {
     get completedVariant() { return this.showCompleted ? 'brand' : 'border'; }
     get overdueVariant() { return this.showOverdue ? 'brand' : 'border'; }
     get dependenciesVariant() { return this.showDependencies ? 'brand' : 'border'; }
+
+    get hasActiveFilters() {
+        return !!this.selectedEntity || this.myWorkOnly || this.showOverdue || this.showCompleted;
+    }
+
+    get activeFilterText() {
+        var parts = [];
+        if (this.selectedEntity) { parts.push(this.selectedEntity); }
+        if (this.myWorkOnly) { parts.push('My Work'); }
+        if (this.showOverdue) { parts.push('Overdue Only'); }
+        if (this.showCompleted) { parts.push('Incl. Completed'); }
+        return parts.join(' \u00b7 ');
+    }
+
     get hasMultipleEntities() { return this.entityOptions.length > 2; }
 
     get entityOptions() {
@@ -494,6 +534,25 @@ export default class DeliveryNimbusGantt extends LightningElement {
         this.showOverdue = !this.showOverdue;
         this._savePrefs();
         this._rebuildChart();
+    }
+
+    handleClearFilters() {
+        this.selectedEntity = '';
+        this.myWorkOnly = false;
+        this.showOverdue = false;
+        this.showCompleted = false;
+        this._savePrefs();
+        this._rebuildChart();
+    }
+
+    handleStopDemo() {
+        this.isDemoRunning = false;
+        this.demoStepLabel = '';
+        this.demoStepDescription = '';
+        if (this._demoTimer) {
+            clearTimeout(this._demoTimer);
+            this._demoTimer = null;
+        }
     }
 
     // ── View Switching ──────────────────────────────────────────────
@@ -1400,11 +1459,15 @@ export default class DeliveryNimbusGantt extends LightningElement {
         var TOTAL = 40;
         var DELAY = 4000;
 
-        function toast(title, msg, variant) {
-            self.dispatchEvent(new ShowToastEvent({ title: title, message: msg, variant: variant || 'info', mode: 'dismissible' }));
+        this.isDemoRunning = true;
+
+        function banner(title, msg) {
+            self.demoStepLabel = title;
+            self.demoStepDescription = msg;
         }
 
         function runStep() {
+            if (!self.isDemoRunning) { return; }
             step++;
             console.log('[NimbusGantt:demo] Step ' + step + '/' + TOTAL);
             try {
@@ -1412,63 +1475,63 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── INTRODUCTION ─────────────────────────────────
                 case 1:
-                    toast(step + '/' + TOTAL + ' — Welcome', 'This is the Delivery Hub Gantt — a full-featured project timeline built on Salesforce.', 'info');
+                    banner(step + '/' + TOTAL + ' — Welcome', 'This is the Delivery Hub Gantt — a full-featured project timeline built on Salesforce.');
                     g.expandAll();
                     g.scrollToDate(new Date());
                     break;
 
                 // ── ZOOM LEVELS ──────────────────────────────────
                 case 2:
-                    toast(step + '/' + TOTAL + ' — Day View', 'Zoom into daily granularity to see individual task details and progress bars.', 'info');
+                    banner(step + '/' + TOTAL + ' — Day View', 'Zoom into daily granularity to see individual task details and progress bars.');
                     g.setZoom('day'); g.scrollToDate(new Date());
                     break;
                 case 3:
-                    toast(step + '/' + TOTAL + ' — Week View', 'The default working view shows a balanced level of detail for sprint planning.', 'info');
+                    banner(step + '/' + TOTAL + ' — Week View', 'The default working view shows a balanced level of detail for sprint planning.');
                     g.setZoom('week'); g.scrollToDate(new Date());
                     break;
                 case 4:
-                    toast(step + '/' + TOTAL + ' — Month View', 'Pull back to monthly for release planning and milestone tracking.', 'info');
+                    banner(step + '/' + TOTAL + ' — Month View', 'Pull back to monthly for release planning and milestone tracking.');
                     g.setZoom('month'); g.scrollToDate(new Date());
                     break;
                 case 5:
-                    toast(step + '/' + TOTAL + ' — Quarter View', 'The widest view shows the full project arc across multiple months.', 'info');
+                    banner(step + '/' + TOTAL + ' — Quarter View', 'The widest view shows the full project arc across multiple months.');
                     g.setZoom('quarter');
                     break;
                 case 6:
-                    toast(step + '/' + TOTAL + ' — Back to Week', 'Returning to the standard week view for the rest of the demo.', 'info');
+                    banner(step + '/' + TOTAL + ' — Back to Week', 'Returning to the standard week view for the rest of the demo.');
                     g.setZoom('week'); g.scrollToDate(new Date());
                     break;
 
                 // ── TREE OPERATIONS ──────────────────────────────
                 case 7:
-                    toast(step + '/' + TOTAL + ' — Collapse Hierarchy', 'Collapsing all tasks to show only top-level work items and groups.', 'info');
+                    banner(step + '/' + TOTAL + ' — Collapse Hierarchy', 'Collapsing all tasks to show only top-level work items and groups.');
                     g.collapseAll();
                     break;
                 case 8:
-                    toast(step + '/' + TOTAL + ' — Expand Hierarchy', 'Expanding to reveal every child task, sub-task, and dependency.', 'info');
+                    banner(step + '/' + TOTAL + ' — Expand Hierarchy', 'Expanding to reveal every child task, sub-task, and dependency.');
                     g.expandAll(); g.scrollToDate(new Date());
                     break;
 
                 // ── DARK MODE ────────────────────────────────────
                 case 9:
-                    toast(step + '/' + TOTAL + ' — Dark Mode', 'Switching to dark theme for low-light environments and presentations.', 'info');
+                    banner(step + '/' + TOTAL + ' — Dark Mode', 'Switching to dark theme for low-light environments and presentations.');
                     if (container) {
                         container.style.filter = 'invert(1) hue-rotate(180deg)';
                         container.style.backgroundColor = '#1a1a2e';
                     }
                     break;
                 case 10:
-                    toast(step + '/' + TOTAL + ' — Light Mode', 'Restoring the standard light theme.', 'info');
+                    banner(step + '/' + TOTAL + ' — Light Mode', 'Restoring the standard light theme.');
                     if (container) { container.style.filter = ''; container.style.backgroundColor = ''; }
                     break;
 
                 // ── EDITING ──────────────────────────────────────
                 case 11:
-                    toast(step + '/' + TOTAL + ' — Unlock Editing', 'When unlocked, you can drag task bars to reschedule or resize edges to change duration.', 'warning');
+                    banner(step + '/' + TOTAL + ' — Unlock Editing', 'When unlocked, you can drag task bars to reschedule or resize edges to change duration.');
                     self.editLocked = false; self._rebuildChart();
                     break;
                 case 12:
-                    toast(step + '/' + TOTAL + ' — Re-Lock', 'Locking the chart prevents accidental changes during presentations.', 'info');
+                    banner(step + '/' + TOTAL + ' — Re-Lock', 'Locking the chart prevents accidental changes during presentations.');
                     self.editLocked = true; self._rebuildChart();
                     break;
 
@@ -1479,73 +1542,73 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     if (entities13.length > 0) {
                         self.selectedEntity = entities13[0];
                         self._rebuildChart();
-                        toast(step + '/' + TOTAL + ' — Filter: ' + entities13[0], 'Isolating one client to focus on their workstream.', 'info');
+                        banner(step + '/' + TOTAL + ' — Filter: ' + entities13[0], 'Isolating one client to focus on their workstream.');
                     } else {
-                        toast(step + '/' + TOTAL + ' — Filter', 'No entities available to filter.', 'info');
+                        banner(step + '/' + TOTAL + ' — Filter', 'No entities available to filter.');
                     }
                     break;
                 }
                 case 14:
-                    toast(step + '/' + TOTAL + ' — All Clients', 'Clearing the filter to show all client workstreams together.', 'info');
+                    banner(step + '/' + TOTAL + ' — All Clients', 'Clearing the filter to show all client workstreams together.');
                     self.selectedEntity = ''; self._rebuildChart();
                     break;
 
                 // ── OVERDUE FILTER ────────────────────────────────
                 case 15:
-                    toast(step + '/' + TOTAL + ' — Overdue Filter', 'Filtering to show only tasks that are past their due date and not yet complete.', 'warning');
+                    banner(step + '/' + TOTAL + ' — Overdue Filter', 'Filtering to show only tasks that are past their due date and not yet complete.');
                     self.showOverdue = true; self._rebuildChart();
                     break;
                 case 16:
-                    toast(step + '/' + TOTAL + ' — Clear Overdue', 'Removing the overdue filter to see the full timeline again.', 'info');
+                    banner(step + '/' + TOTAL + ' — Clear Overdue', 'Removing the overdue filter to see the full timeline again.');
                     self.showOverdue = false; self._rebuildChart();
                     break;
 
                 // ── DEPENDENCY TOGGLE ─────────────────────────────
                 case 17:
-                    toast(step + '/' + TOTAL + ' — Hide Dependencies', 'Turning off dependency arrows for a cleaner view of task bars.', 'info');
+                    banner(step + '/' + TOTAL + ' — Hide Dependencies', 'Turning off dependency arrows for a cleaner view of task bars.');
                     self.showDependencies = false; self._updateGantt();
                     break;
                 case 18:
-                    toast(step + '/' + TOTAL + ' — Show Dependencies', 'Dependency arrows show which tasks block others.', 'info');
+                    banner(step + '/' + TOTAL + ' — Show Dependencies', 'Dependency arrows show which tasks block others.');
                     self.showDependencies = true; self._updateGantt();
                     break;
 
                 // ── TASK NAVIGATION ──────────────────────────────
                 case 19:
-                    toast(step + '/' + TOTAL + ' — Navigate to First Task', 'Using task navigation to walk through each work item in sequence.', 'info');
+                    banner(step + '/' + TOTAL + ' — Navigate to First Task', 'Using task navigation to walk through each work item in sequence.');
                     self._selectedTaskIndex = -1;
                     self._handleRemoteNextTask();
                     break;
                 case 20:
-                    toast(step + '/' + TOTAL + ' — Next Task', 'Stepping forward through the task list with auto-scroll.', 'info');
+                    banner(step + '/' + TOTAL + ' — Next Task', 'Stepping forward through the task list with auto-scroll.');
                     self._handleRemoteNextTask();
                     break;
                 case 21:
-                    toast(step + '/' + TOTAL + ' — Next Task', 'Each task is highlighted and scrolled into view automatically.', 'info');
+                    banner(step + '/' + TOTAL + ' — Next Task', 'Each task is highlighted and scrolled into view automatically.');
                     self._handleRemoteNextTask();
                     break;
 
                 // ── ALTERNATIVE VISUALIZATIONS ────────────────────
                 case 22:
-                    toast(step + '/' + TOTAL + ' — Treemap View', 'Treemap shows effort concentration at a glance. Larger rectangles mean more estimated hours.', 'info');
+                    banner(step + '/' + TOTAL + ' — Treemap View', 'Treemap shows effort concentration at a glance. Larger rectangles mean more estimated hours.');
                     self.currentView = 'treemap'; self._renderAltViz();
                     break;
                 case 23:
-                    toast(step + '/' + TOTAL + ' — Bubble Chart', 'Each bubble represents a task. Size shows effort, position shows timeline, color shows stage.', 'info');
+                    banner(step + '/' + TOTAL + ' — Bubble Chart', 'Each bubble represents a task. Size shows effort, position shows timeline, color shows stage.');
                     self.currentView = 'bubbles'; self._renderAltViz();
                     break;
                 case 24:
-                    toast(step + '/' + TOTAL + ' — Calendar Heatmap', 'Daily workload density across the project. Darker cells mean more tasks active that day.', 'info');
+                    banner(step + '/' + TOTAL + ' — Calendar Heatmap', 'Daily workload density across the project. Darker cells mean more tasks active that day.');
                     self.currentView = 'calendar'; self._renderAltViz();
                     break;
                 case 25:
-                    toast(step + '/' + TOTAL + ' — Stage Flow', 'See how tasks flow through workflow stages. Lines show volume and bottlenecks are flagged in red.', 'info');
+                    banner(step + '/' + TOTAL + ' — Stage Flow', 'See how tasks flow through workflow stages. Lines show volume and bottlenecks are flagged in red.');
                     self.currentView = 'flow'; self._renderAltViz();
                     break;
 
                 // ── DARK MODE + ALT VIEW ─────────────────────────
                 case 26:
-                    toast(step + '/' + TOTAL + ' — Dark Treemap', 'Alternative visualizations look stunning in dark mode with glowing gradient fills.', 'info');
+                    banner(step + '/' + TOTAL + ' — Dark Treemap', 'Alternative visualizations look stunning in dark mode with glowing gradient fills.');
                     self.currentView = 'treemap'; self._renderAltViz();
                     requestAnimationFrame(function() {
                         var c = self.refs.altCanvas;
@@ -1553,11 +1616,11 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     });
                     break;
                 case 27:
-                    toast(step + '/' + TOTAL + ' — Dark Bubbles', 'Radial gradients and progress rings shine against the dark background.', 'info');
+                    banner(step + '/' + TOTAL + ' — Dark Bubbles', 'Radial gradients and progress rings shine against the dark background.');
                     self.currentView = 'bubbles'; self._renderAltViz();
                     break;
                 case 28:
-                    toast(step + '/' + TOTAL + ' — Restore Light', 'Clearing dark mode and returning to the main Gantt timeline.', 'info');
+                    banner(step + '/' + TOTAL + ' — Restore Light', 'Clearing dark mode and returning to the main Gantt timeline.');
                     var altC28 = self.refs.altCanvas;
                     if (altC28 && altC28.parentElement) { altC28.parentElement.style.filter = ''; }
                     self.currentView = 'gantt'; self._rebuildChart();
@@ -1570,7 +1633,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     self._rawTasks.forEach(function(t) { if (t.entityName && ents29.indexOf(t.entityName) === -1) { ents29.push(t.entityName); } });
                     if (ents29.length > 0) {
                         self.selectedEntity = ents29[0]; self._rebuildChart();
-                        toast(step + '/' + TOTAL + ' — Cycle Client: ' + ents29[0], 'Cycling through clients one by one, just like the phone remote does.', 'info');
+                        banner(step + '/' + TOTAL + ' — Cycle Client: ' + ents29[0], 'Cycling through clients one by one, just like the phone remote does.');
                     }
                     break;
                 }
@@ -1579,35 +1642,35 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     self._rawTasks.forEach(function(t) { if (t.entityName && ents30.indexOf(t.entityName) === -1) { ents30.push(t.entityName); } });
                     if (ents30.length > 1) {
                         self.selectedEntity = ents30[1]; self._rebuildChart();
-                        toast(step + '/' + TOTAL + ' — Cycle Client: ' + ents30[1], 'Each client workstream can be reviewed independently.', 'info');
+                        banner(step + '/' + TOTAL + ' — Cycle Client: ' + ents30[1], 'Each client workstream can be reviewed independently.');
                     } else {
-                        toast(step + '/' + TOTAL + ' — All Clients', 'Showing all clients.', 'info');
+                        banner(step + '/' + TOTAL + ' — All Clients', 'Showing all clients.');
                         self.selectedEntity = ''; self._rebuildChart();
                     }
                     break;
                 }
                 case 31:
-                    toast(step + '/' + TOTAL + ' — All Clients', 'Clearing filters to show the unified project view.', 'info');
+                    banner(step + '/' + TOTAL + ' — All Clients', 'Clearing filters to show the unified project view.');
                     self.selectedEntity = ''; self._rebuildChart();
                     break;
 
                 // ── SCROLL NAVIGATION ────────────────────────────
                 case 32:
-                    toast(step + '/' + TOTAL + ' — Scroll to Start', 'Scrolling to the beginning of the project timeline.', 'info');
+                    banner(step + '/' + TOTAL + ' — Scroll to Start', 'Scrolling to the beginning of the project timeline.');
                     try { var r32 = g.getVisibleDateRange(); g.scrollToDate(r32.start); } catch(e) { /* ignore */ }
                     break;
                 case 33:
-                    toast(step + '/' + TOTAL + ' — Scroll to End', 'Scrolling to the end of the project timeline.', 'info');
+                    banner(step + '/' + TOTAL + ' — Scroll to End', 'Scrolling to the end of the project timeline.');
                     try { var r33 = g.getVisibleDateRange(); g.scrollToDate(r33.end); } catch(e) { /* ignore */ }
                     break;
                 case 34:
-                    toast(step + '/' + TOTAL + ' — Back to Today', 'Centering the timeline on today for the current status view.', 'info');
+                    banner(step + '/' + TOTAL + ' — Back to Today', 'Centering the timeline on today for the current status view.');
                     g.scrollToDate(new Date());
                     break;
 
                 // ── SONIFICATION ─────────────────────────────────
                 case 35:
-                    toast(step + '/' + TOTAL + ' — Sonification', 'Hearing your project as music. On-track tasks play major notes, overdue tasks sound dissonant.', 'warning');
+                    banner(step + '/' + TOTAL + ' — Sonification', 'Hearing your project as music. On-track tasks play major notes, overdue tasks sound dissonant.');
                     try {
                         var ac = new (window.AudioContext || window.webkitAudioContext)();
                         var today35 = new Date();
@@ -1690,7 +1753,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── RAPID ZOOM CYCLE ─────────────────────────────
                 case 36:
-                    toast(step + '/' + TOTAL + ' — Rapid Zoom', 'Cycling through all zoom levels rapidly: Day, Week, Month, Quarter, Week.', 'info');
+                    banner(step + '/' + TOTAL + ' — Rapid Zoom', 'Cycling through all zoom levels rapidly: Day, Week, Month, Quarter, Week.');
                     g.setZoom('day');
                     setTimeout(function() { g.setZoom('week'); }, 700);
                     setTimeout(function() { g.setZoom('month'); }, 1400);
@@ -1700,7 +1763,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── COLLAPSE + EXPAND ONE ─────────────────────────
                 case 37:
-                    toast(step + '/' + TOTAL + ' — Focus One Group', 'Collapsing everything, then expanding just one group to drill into.', 'info');
+                    banner(step + '/' + TOTAL + ' — Focus One Group', 'Collapsing everything, then expanding just one group to drill into.');
                     g.collapseAll();
                     var first37 = self.filteredTasks[0];
                     if (first37 && first37.workItemId) {
@@ -1708,13 +1771,13 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     }
                     break;
                 case 38:
-                    toast(step + '/' + TOTAL + ' — Full Expand', 'Expanding all tasks back to the complete view.', 'info');
+                    banner(step + '/' + TOTAL + ' — Full Expand', 'Expanding all tasks back to the complete view.');
                     g.expandAll(); g.scrollToDate(new Date());
                     break;
 
                 // ── FINAL STATE ──────────────────────────────────
                 case 39:
-                    toast(step + '/' + TOTAL + ' — Final View', 'Week view, all clients, dependencies shown, centered on today. Ready to work.', 'info');
+                    banner(step + '/' + TOTAL + ' — Final View', 'Week view, all clients, dependencies shown, centered on today. Ready to work.');
                     self.selectedEntity = '';
                     self.showOverdue = false;
                     self.showDependencies = true;
@@ -1724,19 +1787,21 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
                 // ── SUMMARY ──────────────────────────────────────
                 case 40:
-                    toast('Demo Complete', TOTAL + ' features demonstrated: 4 zoom levels, 5 views, dark mode, sonification, task navigation, overdue filter, dependency toggle, client cycling, and drag-to-reschedule.', 'success');
+                    banner('Demo Complete', TOTAL + ' features demonstrated: 4 zoom levels, 5 views, dark mode, sonification, task navigation, overdue filter, dependency toggle, client cycling, and drag-to-reschedule.');
+                    self.isDemoRunning = false;
+                    self._demoTimer = null;
                     return;
                 }
             } catch(err) {
                 console.error('[NimbusGantt:demo] Error at step ' + step, err);
             }
             if (step < TOTAL) {
-                setTimeout(runStep, DELAY);
+                self._demoTimer = setTimeout(runStep, DELAY);
             }
         }
 
-        toast('Full Demo', TOTAL + ' steps, ~3 minutes. Zoom levels, 5 visualizations, sonification, filters, task navigation, dark mode...', 'info');
-        setTimeout(runStep, 2000);
+        banner('Full Demo', TOTAL + ' steps, ~3 minutes. Zoom levels, 5 visualizations, sonification, filters, task navigation, dark mode...');
+        this._demoTimer = setTimeout(runStep, 2000);
     }
 
     handleScrollToday() {
@@ -1863,7 +1928,32 @@ export default class DeliveryNimbusGantt extends LightningElement {
             case 'toggle-overdue':
                 this.handleToggleOverdue();
                 break;
+            case 'doubletap':
+                this._handleRemoteFullReset();
+                break;
         }
+    }
+
+    _handleRemoteFullReset() {
+        this.currentView = 'gantt';
+        this.currentZoom = 'week';
+        this.selectedEntity = '';
+        this.myWorkOnly = false;
+        this.showOverdue = false;
+        this.showCompleted = false;
+        this.showDependencies = true;
+        this.editLocked = true;
+        /* Clear dark mode if active */
+        var container = this.refs.ganttContainer;
+        if (container) {
+            container.style.filter = '';
+            container.style.backgroundColor = '';
+        }
+        this._savePrefs();
+        this._rebuildChart();
+        requestAnimationFrame(() => {
+            if (this._gantt) { this._gantt.scrollToDate(new Date()); }
+        });
     }
 
     _handleRemoteScroll(valueJson) {

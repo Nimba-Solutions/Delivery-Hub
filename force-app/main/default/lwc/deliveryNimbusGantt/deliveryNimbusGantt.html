@@ -1,84 +1,126 @@
 <template>
     <div class="gantt-root">
 
+        <!-- Persistent demo banner -->
+        <template lwc:if={isDemoRunning}>
+            <div class="demo-banner">
+                <span class="demo-step">{demoStepLabel}</span>
+                <span class="demo-description">{demoStepDescription}</span>
+                <lightning-button label="Stop" variant="destructive" onclick={handleStopDemo} class="demo-stop"></lightning-button>
+            </div>
+        </template>
+
         <!-- Inline toolbar -->
-        <div class="gantt-toolbar">
+        <div class={toolbarClass}>
             <div class="toolbar-left">
-                <span class="toolbar-title">Project Timeline</span>
+                <span class="toolbar-title">{toolbarTitle}</span>
                 <span class="toolbar-subtitle">{subtitleText}</span>
             </div>
-            <div class="toolbar-center">
-                <lightning-button-group>
-                    <lightning-button label="Gantt" variant={ganttViewVariant}
-                        onclick={handleViewGantt}></lightning-button>
-                    <lightning-button label="Treemap" variant={treemapViewVariant}
-                        onclick={handleViewTreemap}></lightning-button>
-                    <lightning-button label="Bubbles" variant={bubblesViewVariant}
-                        onclick={handleViewBubbles}></lightning-button>
-                    <lightning-button label="Calendar" variant={calendarViewVariant}
-                        onclick={handleViewCalendar}></lightning-button>
-                    <lightning-button label="Flow" variant={flowViewVariant}
-                        onclick={handleViewFlow}></lightning-button>
-                </lightning-button-group>
-                <lightning-button-group class="slds-m-left_xx-small">
-                    <lightning-button label="Day" variant={dayVariant}
-                        onclick={handleZoomDay}></lightning-button>
-                    <lightning-button label="Week" variant={weekVariant}
-                        onclick={handleZoomWeek}></lightning-button>
-                    <lightning-button label="Month" variant={monthVariant}
-                        onclick={handleZoomMonth}></lightning-button>
-                    <lightning-button label="Quarter" variant={quarterVariant}
-                        onclick={handleZoomQuarter}></lightning-button>
-                </lightning-button-group>
-                <lightning-button label="Today" icon-name="utility:date_input"
-                    onclick={handleScrollToday} class="slds-m-left_x-small"></lightning-button>
-            </div>
+            <template lwc:if={isFullMode}>
+                <div class="toolbar-center">
+                    <lightning-button-group>
+                        <lightning-button label="Gantt" variant={ganttViewVariant}
+                            onclick={handleViewGantt}></lightning-button>
+                        <lightning-button label="Treemap" variant={treemapViewVariant}
+                            onclick={handleViewTreemap}></lightning-button>
+                        <lightning-button label="Bubbles" variant={bubblesViewVariant}
+                            onclick={handleViewBubbles}></lightning-button>
+                        <lightning-button label="Calendar" variant={calendarViewVariant}
+                            onclick={handleViewCalendar}></lightning-button>
+                        <lightning-button label="Flow" variant={flowViewVariant}
+                            onclick={handleViewFlow}></lightning-button>
+                    </lightning-button-group>
+                    <lightning-button-group class="slds-m-left_xx-small">
+                        <lightning-button label="Day" variant={dayVariant}
+                            onclick={handleZoomDay}></lightning-button>
+                        <lightning-button label="Week" variant={weekVariant}
+                            onclick={handleZoomWeek}></lightning-button>
+                        <lightning-button label="Month" variant={monthVariant}
+                            onclick={handleZoomMonth}></lightning-button>
+                        <lightning-button label="Quarter" variant={quarterVariant}
+                            onclick={handleZoomQuarter}></lightning-button>
+                    </lightning-button-group>
+                    <lightning-button label="Today" icon-name="utility:date_input"
+                        onclick={handleScrollToday} class="slds-m-left_x-small"></lightning-button>
+                </div>
+            </template>
+            <template lwc:if={isCompactMode}>
+                <div class="toolbar-center">
+                    <lightning-button-group>
+                        <lightning-button label="Day" variant={dayVariant}
+                            onclick={handleZoomDay}></lightning-button>
+                        <lightning-button label="Week" variant={weekVariant}
+                            onclick={handleZoomWeek}></lightning-button>
+                        <lightning-button label="Month" variant={monthVariant}
+                            onclick={handleZoomMonth}></lightning-button>
+                    </lightning-button-group>
+                    <lightning-button label="Today" icon-name="utility:date_input"
+                        onclick={handleScrollToday} class="slds-m-left_x-small"></lightning-button>
+                </div>
+            </template>
             <div class="toolbar-right">
-                <template lwc:if={hasMultipleEntities}>
-                    <lightning-combobox value={selectedEntity}
-                        options={entityOptions} variant="label-hidden"
-                        placeholder="All Entities"
-                        onchange={handleEntityChange}
-                        class="entity-picker"></lightning-combobox>
+                <template lwc:if={isFullMode}>
+                    <template lwc:if={hasMultipleEntities}>
+                        <lightning-combobox value={selectedEntity}
+                            options={entityOptions} variant="label-hidden"
+                            placeholder="All Entities"
+                            onchange={handleEntityChange}
+                            class="entity-picker"></lightning-combobox>
+                    </template>
                 </template>
                 <lightning-button icon-name={lockIcon}
                     label={lockLabel} variant={lockVariant}
                     onclick={handleToggleLock}
                     class="slds-m-left_x-small lock-btn"></lightning-button>
-                <lightning-button-icon icon-name="utility:filterList"
-                    alternative-text="My Work" variant={myWorkVariant}
-                    onclick={handleToggleMyWork}
-                    class="slds-m-left_x-small"></lightning-button-icon>
-                <lightning-button-icon icon-name="utility:check"
-                    alternative-text="Show Completed" variant={completedVariant}
-                    onclick={handleToggleCompleted}
-                    class="slds-m-left_xx-small"></lightning-button-icon>
-                <lightning-button-icon icon-name="utility:warning"
-                    alternative-text="Overdue Only" variant={overdueVariant}
-                    onclick={handleToggleOverdue}
-                    class="slds-m-left_xx-small"
-                    title="Show only overdue items"></lightning-button-icon>
+                <template lwc:if={isFullMode}>
+                    <lightning-button-icon icon-name="utility:filterList"
+                        alternative-text="My Work" variant={myWorkVariant}
+                        onclick={handleToggleMyWork}
+                        class="slds-m-left_x-small"></lightning-button-icon>
+                    <lightning-button-icon icon-name="utility:check"
+                        alternative-text="Show Completed" variant={completedVariant}
+                        onclick={handleToggleCompleted}
+                        class="slds-m-left_xx-small"></lightning-button-icon>
+                    <lightning-button-icon icon-name="utility:warning"
+                        alternative-text="Overdue Only" variant={overdueVariant}
+                        onclick={handleToggleOverdue}
+                        class="slds-m-left_xx-small"
+                        title="Show only overdue items"></lightning-button-icon>
+                </template>
                 <lightning-button-icon icon-name="utility:linked"
                     alternative-text="Dependencies" variant={dependenciesVariant}
                     onclick={handleToggleDependencies}
                     class="slds-m-left_xx-small"
                     title="Toggle dependency arrows"></lightning-button-icon>
-                <lightning-button icon-name="utility:phone_portrait" label="Remote"
-                    variant="neutral"
-                    onclick={handleConnectPhone}
-                    class="slds-m-left_xx-small"
-                    title="Control this Gantt chart from your phone"></lightning-button>
-                <lightning-button icon-name="utility:play" label="Demo"
-                    variant="neutral"
-                    onclick={handleRunDiagnostics}
-                    class="slds-m-left_xx-small"></lightning-button>
+                <template lwc:if={isFullMode}>
+                    <lightning-button icon-name="utility:phone_portrait" label="Remote"
+                        variant="neutral"
+                        onclick={handleConnectPhone}
+                        class="slds-m-left_xx-small"
+                        title="Control this Gantt chart from your phone"></lightning-button>
+                    <lightning-button icon-name="utility:play" label="Demo"
+                        variant="neutral"
+                        onclick={handleRunDiagnostics}
+                        class="slds-m-left_xx-small"></lightning-button>
+                </template>
                 <lightning-button-icon icon-name="utility:refresh"
                     alternative-text="Refresh"
                     onclick={handleRefresh}
                     class="slds-m-left_xx-small"></lightning-button-icon>
-                <c-delivery-info-popover component-name="deliveryNimbusGantt"></c-delivery-info-popover>
+                <template lwc:if={isFullMode}>
+                    <c-delivery-info-popover component-name="deliveryNimbusGantt"></c-delivery-info-popover>
+                </template>
             </div>
         </div>
+
+        <!-- Filter indicator bar -->
+        <template lwc:if={hasActiveFilters}>
+            <div class="filter-bar">
+                <lightning-icon icon-name="utility:filterList" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                <span>{activeFilterText}</span>
+                <lightning-button label="Clear All" variant="base" onclick={handleClearFilters} class="slds-m-left_small"></lightning-button>
+            </div>
+        </template>
 
         <!-- Loading -->
         <template lwc:if={isLoading}>

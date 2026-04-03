@@ -92,15 +92,6 @@ const INFO_REGISTRY = {
         keyFields:
             'Document__c.StatusPk__c, Document__c.SnapshotJson__c, Document__c.TemplatePk__c, Document__c.TotalHoursNumber__c, Document__c.TotalCostNumber__c, NetworkEntity__c.Id, DocumentTemplate__mdt'
     },
-    deliveryGanttChart: {
-        dataSource:
-            'Calls getTimelineItems which returns active Work Items with creation dates and projected UAT-ready dates. Items are grouped by Network Entity and rendered as horizontal bars across a calendar axis. Bar colors come from WorkflowStage__mdt card color definitions.',
-        description:
-            'A Gantt-style timeline chart showing active work items as horizontal bars plotted against a date axis. Supports 30-day, 60-day, and 90-day windows. Items are color-coded by stage and grouped by Network Entity.',
-        friendlyName: 'Delivery Timeline',
-        keyFields:
-            'WorkItem__c.CreatedDate, WorkItem__c.ProjectedUATReadyDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.NetworkEntityId__c, WorkflowStage__mdt.CardColor'
-    },
     deliveryGeneralSettingsCard: {
         dataSource:
             'Loads all Delivery Hub settings via getSettings which reads the DeliveryHubSettings__c custom setting. Each toggle calls saveGeneralSettings or saveExtendedSettings to persist changes immediately. Slack webhook is saved separately via saveSlackWebhookUrl and tested via testWebhook.',
@@ -172,15 +163,6 @@ const INFO_REGISTRY = {
         friendlyName: 'Sync Retry Panel',
         keyFields:
             'Sync_Item__c.StatusPk__c, Sync_Item__c.ErrorMessageTxt__c, Sync_Item__c.RetryCountNumber__c'
-    },
-    deliveryTimelineView: {
-        dataSource:
-            'Calls getTimelineData which returns active Work Items with their start/end dates, grouped by Network Entity. Stage colors come from WorkflowStage__mdt.CardColor. The timeline range is computed from the earliest start date to the latest end date of all visible items. A red dashed line marks today.',
-        description:
-            'A horizontal Gantt-style timeline showing active work items as bars across a calendar. Items are grouped by Network Entity and color-coded by their workflow stage. Supports week, month, and quarter zoom levels with scroll controls.',
-        friendlyName: 'Timeline View',
-        keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.CreatedDate, WorkItem__c.CalculatedETADate__c, WorkItem__c.NetworkEntityId__c, WorkflowStage__mdt.CardColor'
     },
     deliveryWorkItemActionCenter: {
         dataSource:
