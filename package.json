@@ -1,0 +1,19 @@
+{
+  "name": "delivery-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Delivery Hub - Salesforce-native work tracking and delivery management",
+  "scripts": {
+    "test:lwc": "sfdx-lwc-jest",
+    "test:lwc:watch": "sfdx-lwc-jest --watch",
+    "test:lwc:coverage": "sfdx-lwc-jest --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nimba-Solutions/Delivery-Hub.git"
+  },
+  "license": "BSL-1.1",
+  "devDependencies": {
+    "@salesforce/sfdx-lwc-jest": "^7.1.2"
+  }
+}
