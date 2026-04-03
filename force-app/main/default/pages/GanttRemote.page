@@ -217,6 +217,12 @@
             flex: 1;
             max-width: 140px;
         }
+        .btn-reset {
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+            flex: 1;
+            max-width: 200px;
+        }
         .event-count {
             font-size: 11px;
             color: #475569;
@@ -272,6 +278,10 @@
         <button class="btn btn-nav" onclick="sendAction('next-task','')">Next Task</button>
         <button class="btn btn-entity" onclick="sendAction('next-entity','')">Next Client</button>
         <button class="btn btn-overdue" onclick="sendAction('toggle-overdue','')">Overdue</button>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-reset" onclick="sendAction('doubletap','')">Reset All</button>
     </div>
 
     <div class="event-count" id="eventCount">Events sent: 0</div>
