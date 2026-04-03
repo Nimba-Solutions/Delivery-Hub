@@ -1,6 +1,15 @@
 <template>
     <div class="gantt-root">
 
+        <!-- Persistent demo banner -->
+        <template lwc:if={isDemoRunning}>
+            <div class="demo-banner">
+                <span class="demo-step">{demoStepLabel}</span>
+                <span class="demo-description">{demoStepDescription}</span>
+                <lightning-button label="Stop" variant="destructive" onclick={handleStopDemo} class="demo-stop"></lightning-button>
+            </div>
+        </template>
+
         <!-- Inline toolbar -->
         <div class={toolbarClass}>
             <div class="toolbar-left">
@@ -103,6 +112,15 @@
                 </template>
             </div>
         </div>
+
+        <!-- Filter indicator bar -->
+        <template lwc:if={hasActiveFilters}>
+            <div class="filter-bar">
+                <lightning-icon icon-name="utility:filterList" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                <span>{activeFilterText}</span>
+                <lightning-button label="Clear All" variant="base" onclick={handleClearFilters} class="slds-m-left_small"></lightning-button>
+            </div>
+        </template>
 
         <!-- Loading -->
         <template lwc:if={isLoading}>
