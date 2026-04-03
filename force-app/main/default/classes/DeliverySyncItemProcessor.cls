@@ -89,11 +89,11 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                     ? item.RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c
                     : item.WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c;
                 
-                // Validate Endpoint Configuration
+                // Validate Endpoint Configuration — no endpoint means entity isn't set up
+                // for push sync. Park as Staged (available for polling) instead of failing.
                 if (String.isBlank(endpointUrl)) {
-                    item.StatusPk__c = 'Failed';
-                    item.ErrorLogTxt__c = 'Configuration Error: Linked Network Entity is missing Integration Endpoint URL.';
-                    item.RetryCountNumber__c = (item.RetryCountNumber__c == null ? 0 : item.RetryCountNumber__c) + 1;
+                    item.StatusPk__c = 'Staged';
+                    item.ErrorLogTxt__c = null;
                 } else {
                     // --- NATIVE HTTP CALLOUT ---
                     String baseUrl = endpointUrl.removeEnd('/');
