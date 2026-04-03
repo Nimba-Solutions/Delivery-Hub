@@ -3,11 +3,12 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, track } from 'lwc';
+import { LightningElement, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import createWorkItemFromVoice from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryVoiceNotesController.createWorkItemFromVoice';
 import createBatchWorkItems from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryVoiceNotesController.createBatchWorkItems';
+import getEntityNames from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryVoiceNotesController.getEntityNames';
 
 const BRIEF_MAX = 100;
 const DATE_PATTERN = /\b(\d{4}-\d{2}-\d{2})\b/u;
@@ -18,8 +19,57 @@ const NATURAL_DATE_PATTERNS = [
     { regex: /\b(?:next\s+)?thursday\b/iu, offset: day => nextWeekday(day, 4) },
     { regex: /\b(?:next\s+)?friday\b/iu, offset: day => nextWeekday(day, 5) },
     { regex: /\btomorrow\b/iu, offset: () => 1 },
-    { regex: /\bnext\s+week\b/iu, offset: () => 7 }
+    { regex: /\bnext\s+week\b/iu, offset: () => 7 },
+    { regex: /\bend\s+of\s+(?:the\s+)?week\b/iu, offset: day => nextWeekday(day, 5) },
+    { regex: /\bend\s+of\s+(?:the\s+)?month\b/iu, offset: day => {
+        const d = new Date(day);
+        const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        return Math.ceil((lastDay - d) / 86400000);
+    }},
+    { regex: /\bin\s+(\d+)\s+days?\b/iu, offset: (day, match) => parseInt(match[1], 10) },
+    { regex: /\bin\s+(\d+)\s+weeks?\b/iu, offset: (day, match) => parseInt(match[1], 10) * 7 }
 ];
+
+const PRIORITY_HIGH = /\b(?:urgent|critical|asap|high\s+priority|emergency|immediately|right\s+away)\b/iu;
+const PRIORITY_LOW = /\b(?:low\s+priority|not\s+urgent|whenever|no\s+rush|backlog)\b/iu;
+
+const ACTION_TYPE_MAP = [
+    { regex: /\b(?:bug|fix|broken|issue|error|defect|crash)\b/iu, type: 'Bug Fix' },
+    { regex: /\b(?:meeting|call|sync|standup|check[- ]?in|discuss)\b/iu, type: 'Meeting' },
+    { regex: /\b(?:deploy|release|push|ship|launch|go[- ]?live)\b/iu, type: 'Deployment' },
+    { regex: /\b(?:test|qa|verify|validate|regression)\b/iu, type: 'Testing' },
+    { regex: /\b(?:doc|document|write[- ]?up|readme|wiki)\b/iu, type: 'Documentation' }
+];
+
+function extractPriority(text) {
+    if (PRIORITY_HIGH.test(text)) { return 'High'; }
+    if (PRIORITY_LOW.test(text)) { return 'Low'; }
+    return 'Medium';
+}
+
+function extractActionType(text) {
+    for (const entry of ACTION_TYPE_MAP) {
+        if (entry.regex.test(text)) {
+            return entry.type;
+        }
+    }
+    return null;
+}
+
+function extractEntityName(text, entities) {
+    if (!entities || entities.length === 0) { return null; }
+    const lower = text.toLowerCase();
+    let bestMatch = null;
+    let bestLen = 0;
+    for (const entity of entities) {
+        const name = entity.name.toLowerCase();
+        if (lower.includes(name) && name.length > bestLen) {
+            bestMatch = entity;
+            bestLen = name.length;
+        }
+    }
+    return bestMatch;
+}
 
 function nextWeekday(today, targetDay) {
     const currentDay = today.getDay();
@@ -40,8 +90,9 @@ function parseDateFromText(text) {
     // Try natural language dates
     const today = new Date();
     for (const pattern of NATURAL_DATE_PATTERNS) {
-        if (pattern.regex.test(text)) {
-            const offsetDays = pattern.offset(today);
+        const match = text.match(pattern.regex);
+        if (match) {
+            const offsetDays = pattern.offset(today, match);
             const target = new Date(today);
             target.setDate(target.getDate() + offsetDays);
             return target.toISOString().split('T')[0];
@@ -75,12 +126,25 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
     @track voiceInterim = '';
     _recognition = null;
 
+    // Entity data
+    _entities = [];
+
+    @wire(getEntityNames)
+    wiredEntities({ data }) {
+        if (data) {
+            this._entities = data;
+        }
+    }
+
     // Form state
     @track showReview = false;
     @track editableTitle = '';
     @track editableTranscript = '';
     @track priority = 'Medium';
     @track startDate = '';
+    @track detectedEntityId = '';
+    @track detectedEntityName = '';
+    @track detectedActionType = '';
     @track isSaving = false;
     @track createMode = 'single'; // 'single' or 'batch'
     @track segments = [];
@@ -181,6 +245,14 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
     get titlePreview() {
         const src = this.editableTitle || this.editableTranscript || '';
         return src.length > BRIEF_MAX ? src.substring(0, BRIEF_MAX) + '...' : src;
+    }
+
+    get hasDetectedEntity() {
+        return Boolean(this.detectedEntityId);
+    }
+
+    get hasDetectedActionType() {
+        return Boolean(this.detectedActionType);
     }
 
     get canCreate() {
@@ -311,10 +383,23 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
             this.editableTranscript = transcript;
             this.editableTitle = '';
 
-            // Try to auto-detect a date
+            // Smart parsing — extract structured data from transcript
             const detectedDate = parseDateFromText(transcript);
             if (detectedDate) {
                 this.startDate = detectedDate;
+            }
+            this.priority = extractPriority(transcript);
+
+            const actionType = extractActionType(transcript);
+            this.detectedActionType = actionType || '';
+
+            const matchedEntity = extractEntityName(transcript, this._entities);
+            if (matchedEntity) {
+                this.detectedEntityId = matchedEntity.id;
+                this.detectedEntityName = matchedEntity.name;
+            } else {
+                this.detectedEntityId = '';
+                this.detectedEntityName = '';
             }
 
             // Auto-split into segments for batch mode preview
@@ -363,6 +448,15 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
         this.segments = this.segments.filter(s => s.id !== segId);
     }
 
+    handleClearEntity() {
+        this.detectedEntityId = '';
+        this.detectedEntityName = '';
+    }
+
+    handleClearActionType() {
+        this.detectedActionType = '';
+    }
+
     handleBackToRecording() {
         this.showReview = false;
         this.showSuccess = false;
@@ -376,6 +470,9 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
         this.editableTranscript = '';
         this.startDate = '';
         this.priority = 'Medium';
+        this.detectedEntityId = '';
+        this.detectedEntityName = '';
+        this.detectedActionType = '';
         this.segments = [];
         this.createdItems = [];
         this.showReview = false;
@@ -413,7 +510,9 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
             transcript: this.editableTranscript,
             briefTitle: this.editableTitle || null,
             priority: this.priority,
-            startDateStr: this.startDate || null
+            startDateStr: this.startDate || null,
+            entityId: this.detectedEntityId || null,
+            actionType: this.detectedActionType || null
         })
         .then(result => {
             this.createdItems = [{

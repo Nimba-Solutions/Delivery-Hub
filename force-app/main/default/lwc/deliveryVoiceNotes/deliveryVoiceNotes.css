@@ -223,6 +223,37 @@
     --lwc-colorTextIconDefault: #059669;
 }
 
+/* Smart parsing detection badges */
+.vn-detection-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.75rem;
+    background-color: #eaf5fe;
+    border: 1px solid #bdd8f2;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    color: #0176d3;
+    margin-right: 0.5rem;
+}
+.vn-detection-badge strong {
+    font-weight: 700;
+}
+.vn-clear-detection {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.125rem;
+    margin-left: 0.25rem;
+    border-radius: 50%;
+    --lwc-colorTextIconDefault: #9ca3af;
+    transition: background-color 0.15s;
+}
+.vn-clear-detection:hover {
+    background-color: #fee2e2;
+    --lwc-colorTextIconDefault: #ef4444;
+}
+
 /* Review actions */
 .vn-review-actions {
     display: flex;

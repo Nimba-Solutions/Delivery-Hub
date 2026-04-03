@@ -23,16 +23,41 @@ global with sharing class DeliveryVoiceNotesController {
     }
 
     /**
+     * @description Returns Id/Name pairs for all active Network Entities.
+     *              Used by Voice Notes LWC for entity name matching in transcripts.
+     * @return List of maps with 'id' and 'name' keys.
+     */
+    @AuraEnabled(cacheable=true)
+    global static List<Map<String, String>> getEntityNames() {
+        List<Map<String, String>> entities = new List<Map<String, String>>();
+        for (NetworkEntity__c ne : [
+            SELECT Id, Name FROM NetworkEntity__c
+            WHERE StatusPk__c != 'Inactive'
+            WITH SYSTEM_MODE
+            ORDER BY Name ASC
+        ]) {
+            Map<String, String> entry = new Map<String, String>();
+            entry.put('id', ne.Id);
+            entry.put('name', ne.Name);
+            entities.add(entry);
+        }
+        return entities;
+    }
+
+    /**
      * @description Creates a single WorkItem__c from a voice transcript.
      * @param transcript     The full voice transcript text.
      * @param briefTitle     Optional short title. If blank, first 100 chars of transcript are used.
      * @param priority       Priority level (High, Medium, Low). Defaults to Medium.
      * @param startDateStr   Optional ISO date string (YYYY-MM-DD) for EstimatedStartDevDate__c.
+     * @param entityId       Optional Network Entity Id for client association.
+     * @param actionType     Optional action type to set initial stage (e.g., Bug Fix, Meeting).
      * @return VoiceNoteResult containing the created record Id and Name.
      */
     @AuraEnabled
     global static VoiceNoteResult createWorkItemFromVoice(
-        String transcript, String briefTitle, String priority, String startDateStr
+        String transcript, String briefTitle, String priority, String startDateStr,
+        String entityId, String actionType
     ) {
         if (String.isBlank(transcript)) {
             throw new AuraHandledException('Voice transcript is required.');
@@ -45,6 +70,12 @@ global with sharing class DeliveryVoiceNotesController {
                 String.isNotBlank(priority) ? priority : 'Medium',
                 parseDateSafe(startDateStr)
             );
+            if (String.isNotBlank(entityId)) {
+                wi.ClientNetworkEntityId__c = entityId;
+            }
+            if (String.isNotBlank(actionType)) {
+                wi.RequestTypePk__c = actionType;
+            }
 
             insert as system wi;
 

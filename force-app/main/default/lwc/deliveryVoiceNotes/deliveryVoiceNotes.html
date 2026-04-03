@@ -71,6 +71,26 @@
                     </lightning-combobox>
                 </div>
 
+                <!-- Smart parsing detections -->
+                <template lwc:if={hasDetectedEntity}>
+                    <div class="vn-detection-badge slds-m-bottom_small">
+                        <lightning-icon icon-name="standard:account" size="xx-small"></lightning-icon>
+                        <span class="slds-m-left_xx-small">Client: <strong>{detectedEntityName}</strong></span>
+                        <button class="vn-clear-detection" onclick={handleClearEntity} title="Clear" type="button">
+                            <lightning-icon icon-name="utility:close" size="xx-small"></lightning-icon>
+                        </button>
+                    </div>
+                </template>
+                <template lwc:if={hasDetectedActionType}>
+                    <div class="vn-detection-badge slds-m-bottom_small">
+                        <lightning-icon icon-name="utility:record" size="xx-small"></lightning-icon>
+                        <span class="slds-m-left_xx-small">Type: <strong>{detectedActionType}</strong></span>
+                        <button class="vn-clear-detection" onclick={handleClearActionType} title="Clear" type="button">
+                            <lightning-icon icon-name="utility:close" size="xx-small"></lightning-icon>
+                        </button>
+                    </div>
+                </template>
+
                 <!-- SINGLE MODE -->
                 <template lwc:if={isSingleMode}>
                     <div class="slds-m-bottom_small">

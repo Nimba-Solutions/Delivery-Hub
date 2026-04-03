@@ -20,6 +20,8 @@ private class DeliveryVoiceNotesControllerTest {
                     'Customer needs safety helmets and gloves by next week',
                     'Safety equipment order',
                     'High',
+                    null,
+                    null,
                     null
                 );
             Test.stopTest();
@@ -55,7 +57,9 @@ private class DeliveryVoiceNotesControllerTest {
                     'Follow up with client about fluid solutions order',
                     null,
                     'Medium',
-                    '2026-04-15'
+                    '2026-04-15',
+                    null,
+                    null
                 );
             Test.stopTest();
 
@@ -82,7 +86,9 @@ private class DeliveryVoiceNotesControllerTest {
                     'Need to call vendor tomorrow',
                     null,
                     'Low',
-                    'not-a-date'
+                    'not-a-date',
+                    null,
+                    null
                 );
             Test.stopTest();
 
@@ -106,7 +112,7 @@ private class DeliveryVoiceNotesControllerTest {
             Test.startTest();
             DeliveryVoiceNotesController.VoiceNoteResult result =
                 DeliveryVoiceNotesController.createWorkItemFromVoice(
-                    longText, null, 'Medium', null
+                    longText, null, 'Medium', null, null, null
                 );
             Test.stopTest();
 
@@ -130,7 +136,7 @@ private class DeliveryVoiceNotesControllerTest {
             Boolean threw = false;
             Test.startTest();
             try {
-                DeliveryVoiceNotesController.createWorkItemFromVoice('', null, 'Medium', null);
+                DeliveryVoiceNotesController.createWorkItemFromVoice('', null, 'Medium', null, null, null);
             } catch (AuraHandledException e) {
                 threw = true;
             }
@@ -146,7 +152,7 @@ private class DeliveryVoiceNotesControllerTest {
             Boolean threw = false;
             Test.startTest();
             try {
-                DeliveryVoiceNotesController.createWorkItemFromVoice(null, null, 'Medium', null);
+                DeliveryVoiceNotesController.createWorkItemFromVoice(null, null, 'Medium', null, null, null);
             } catch (AuraHandledException e) {
                 threw = true;
             }
@@ -163,6 +169,8 @@ private class DeliveryVoiceNotesControllerTest {
             DeliveryVoiceNotesController.VoiceNoteResult result =
                 DeliveryVoiceNotesController.createWorkItemFromVoice(
                     'Quick note about warehouse inventory',
+                    null,
+                    null,
                     null,
                     null,
                     null
@@ -273,6 +281,44 @@ private class DeliveryVoiceNotesControllerTest {
             Test.stopTest();
 
             System.assert(threw, 'Should throw when all segments are blank');
+        }
+    }
+
+    @IsTest
+    static void testGetEntityNames() {
+        System.runAs(testUser) {
+            Test.startTest();
+            List<Map<String, String>> entities = DeliveryVoiceNotesController.getEntityNames();
+            Test.stopTest();
+
+            System.assertNotEquals(null, entities, 'Should return a list');
+        }
+    }
+
+    @IsTest
+    static void testCreateWorkItemWithEntityAndActionType() {
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryVoiceNotesController.VoiceNoteResult result =
+                DeliveryVoiceNotesController.createWorkItemFromVoice(
+                    'Urgent bug fix for the login page',
+                    'Login page broken',
+                    'High',
+                    null,
+                    null,
+                    'Bug Fix'
+                );
+            Test.stopTest();
+
+            WorkItem__c wi = [
+                SELECT RequestTypePk__c
+                FROM WorkItem__c
+                WHERE Id = :result.recordId
+                LIMIT 1
+            ];
+
+            System.assertEquals('Bug Fix', wi.RequestTypePk__c,
+                'Action type should be set as request type');
         }
     }
 
