@@ -55,6 +55,14 @@
     max-width: 220px;
 }
 
+/* ─── Compact mode (record page) ──────────────────────────────── */
+.gantt-toolbar--compact {
+    padding: 0.375rem 0.5rem;
+}
+.gantt-toolbar--compact .toolbar-title {
+    font-size: 0.875rem;
+}
+
 /* ─── Gantt Container ──────────────────────────────────────────── */
 .gantt-container {
     flex: 1;

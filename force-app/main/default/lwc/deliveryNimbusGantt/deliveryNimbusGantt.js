@@ -55,6 +55,7 @@ const REMOTE_EVENT_CHANNEL = '/event/%%%NAMESPACE_DOT%%%GanttRemoteEvent__e';
 export default class DeliveryNimbusGantt extends LightningElement {
 
     // ── Public API ─────────────────────────────────────────────────────
+    @api recordId;
     @api initialViewMode = 'Week';
 
     // ── State ──────────────────────────────────────────────────────────
@@ -92,8 +93,10 @@ export default class DeliveryNimbusGantt extends LightningElement {
     connectedCallback() {
         this._restorePrefs();
         this.currentZoom = this.currentZoom || ZOOM_MAP[this.initialViewMode] || 'week';
-        this._generateRemoteSessionId();
-        this._subscribeRemoteEvents();
+        if (!this.recordId) {
+            this._generateRemoteSessionId();
+            this._subscribeRemoteEvents();
+        }
     }
 
     renderedCallback() {
@@ -124,6 +127,13 @@ export default class DeliveryNimbusGantt extends LightningElement {
         this.isLoading = false;
         if (result.data) {
             this._rawTasks = result.data;
+            // In compact/record page mode, auto-filter to the current record's entity
+            if (this.recordId && !this.selectedEntity) {
+                const match = result.data.find(t => t.workItemId === this.recordId);
+                if (match && match.entityName) {
+                    this.selectedEntity = match.entityName;
+                }
+            }
             this._tryRender();
         } else if (result.error) {
             this.errorMessage = result.error.body
@@ -145,12 +155,22 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
     // ── Computed: UI state ─────────────────────────────────────────────
 
+    get isCompactMode() { return !!this.recordId; }
+    get isFullMode()    { return !this.recordId; }
     get hasError()  { return !this.isLoading && !!this.errorMessage; }
     get isEmpty()   { return !this.isLoading && !this.errorMessage && this.filteredTasks.length === 0; }
     get hasData()   { return !this.isLoading && !this.errorMessage && this.filteredTasks.length > 0; }
 
     get currentZoomLabel() {
         return ZOOM_REVERSE[this.currentZoom] || 'Week';
+    }
+
+    get toolbarClass() {
+        return this.isCompactMode ? 'gantt-toolbar gantt-toolbar--compact' : 'gantt-toolbar';
+    }
+
+    get toolbarTitle() {
+        return this.isCompactMode ? 'Related Timeline' : 'Project Timeline';
     }
 
     get subtitleText() {
