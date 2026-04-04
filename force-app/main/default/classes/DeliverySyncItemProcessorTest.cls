@@ -133,6 +133,33 @@ private class DeliverySyncItemProcessorTest {
     }
 
     /**
+     * @description Verifies UsageAnalytics items are resolved locally without a callout.
+     */
+    @IsTest
+    static void testProcessUsageAnalyticsLocalOnly() {
+        System.runAs(testUser) {
+            DeliverySyncEngine.setSyncContext();
+            SyncItem__c analytics = new SyncItem__c(
+                StatusPk__c = 'Queued',
+                DirectionPk__c = 'Outbound',
+                ObjectTypePk__c = 'UsageAnalytics',
+                PayloadTxt__c = '{"totalActions":42}'
+            );
+            insert analytics;
+
+            Test.setMock(HttpCalloutMock.class, new MockSuccess());
+
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncItemProcessor());
+            Test.stopTest();
+
+            SyncItem__c result = [SELECT StatusPk__c FROM SyncItem__c WHERE Id = :analytics.Id];
+            System.assertEquals('Synced', result.StatusPk__c,
+                'UsageAnalytics items should be marked Synced without a callout');
+        }
+    }
+
+    /**
      * @description Mock for successful response.
      */
     private class MockSuccess implements HttpCalloutMock {

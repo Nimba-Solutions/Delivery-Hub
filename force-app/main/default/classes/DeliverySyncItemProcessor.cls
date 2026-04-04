@@ -53,9 +53,23 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
             LIMIT 50
         ];
 
+        // 1c. Query Queued local-only items (e.g. UsageAnalytics) that need no callout
+        // These have no Request or WorkItem linkage and are resolved locally.
+        List<SyncItem__c> localItems = [
+            SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
+                   RetryCountNumber__c, RequestId__c
+            FROM SyncItem__c
+            WHERE StatusPk__c = 'Queued'
+            AND DirectionPk__c = 'Outbound'
+            AND ObjectTypePk__c = 'UsageAnalytics'
+            WITH SYSTEM_MODE
+            LIMIT 50
+        ];
+
         List<SyncItem__c> items = new List<SyncItem__c>();
         items.addAll(pushItems);
         items.addAll(hubItems);
+        items.addAll(localItems);
 
         if (items.isEmpty()) {
             return;
