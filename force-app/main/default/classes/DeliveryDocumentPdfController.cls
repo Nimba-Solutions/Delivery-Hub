@@ -284,11 +284,11 @@ public without sharing class DeliveryDocumentPdfController {
     }
 
     private void loadVendorEntity() {
-        // Default fallback
-        vendorName = 'Cloud Nimbus LLC';
-        vendorAddress = '2301 Collins Ave Apt 1420<br/>Miami Beach, FL 33139';
-        vendorEmail = 'glen.bradford@nimbasolutions.com';
-        vendorPhone = '(305) 204-0580';
+        // Default fallback — overridden when a Vendor entity exists
+        vendorName = 'Your Organization';
+        vendorAddress = '';
+        vendorEmail = '';
+        vendorPhone = '';
 
         List<NetworkEntity__c> vendors = [
             SELECT Name, AddressTxt__c, ContactEmailTxt__c, ContactPhoneTxt__c
