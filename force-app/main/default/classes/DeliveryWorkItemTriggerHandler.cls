@@ -61,6 +61,15 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'ProjectedUATReadyDate__c',
             'AcceptanceCriteriaTxt__c',
             'StepsToReproduceTxt__c',
+            // SLA & scheduling fields — must sync to preserve explicit dates
+            'SLATargetDate__c',
+            'SLAStatusTxt__c',
+            'EstimatedStartDevDate__c',
+            'EstimatedEndDevDate__c',
+            'RequestTypePk__c',
+            'WorkflowTypeTxt__c',
+            'SortOrderNumber__c',
+            // Bounty fields
             'BountyEnabledDateTime__c',
             'BountyAmountCurrency__c',
             'BountyDeadlineDate__c',
