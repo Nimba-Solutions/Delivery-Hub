@@ -219,6 +219,8 @@ export default class DeliveryNimbusGantt extends LightningElement {
     get bubblesViewVariant() { return this.currentView === 'bubbles' ? 'brand' : 'neutral'; }
     get calendarViewVariant() { return this.currentView === 'calendar' ? 'brand' : 'neutral'; }
     get flowViewVariant()   { return this.currentView === 'flow' ? 'brand' : 'neutral'; }
+    get networkViewVariant() { return this.currentView === 'network' ? 'brand' : 'neutral'; }
+    get sankeyViewVariant() { return this.currentView === 'sankey' ? 'brand' : 'neutral'; }
 
     get lockIcon()    { return this.editLocked ? 'utility:lock' : 'utility:unlock'; }
     get lockLabel()   { return this.editLocked ? 'Locked' : 'Editing'; }
@@ -561,11 +563,14 @@ export default class DeliveryNimbusGantt extends LightningElement {
     handleViewBubbles()  { this.currentView = 'bubbles'; this._renderAltViz(); }
     handleViewCalendar() { this.currentView = 'calendar'; this._renderAltViz(); }
     handleViewFlow()     { this.currentView = 'flow'; this._renderAltViz(); }
+    handleViewNetwork()  { this.currentView = 'network'; this._renderAltViz(); }
+    handleViewSankey()   { this.currentView = 'sankey'; this._renderAltViz(); }
 
     _renderAltViz() {
+        var self = this;
         // eslint-disable-next-line @lwc/lwc/no-async-operation
-        requestAnimationFrame(() => {
-            var canvas = this.refs.altCanvas;
+        requestAnimationFrame(function() {
+            var canvas = self.refs.altCanvas;
             if (!canvas) { return; }
             var container = canvas.parentElement;
             var w = container.clientWidth || 900;
@@ -579,16 +584,108 @@ export default class DeliveryNimbusGantt extends LightningElement {
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, w, h);
 
-            var tasks = this.filteredTasks;
+            var tasks = self.filteredTasks;
             var colors = { Submitted: '#3b82f6', 'In Development': '#22c55e', 'Code Review': '#a855f7', 'UAT Ready': '#14b8a6', Deployment: '#f97316', Done: '#6b7280', Backlog: '#64748b' };
 
-            switch(this.currentView) {
-                case 'treemap': this._drawTreemap(ctx, w, h, tasks, colors); break;
-                case 'bubbles': this._drawBubbles(ctx, w, h, tasks, colors); break;
-                case 'calendar': this._drawCalendar(ctx, w, h, tasks, colors); break;
-                case 'flow': this._drawFlow(ctx, w, h, tasks, colors); break;
+            // Capture previous positions for animation
+            var prevPositions = self._vizPositions || null;
+            var prevView = self._vizPrevView || null;
+            self._vizPrevView = self.currentView;
+
+            // Draw the new view (this populates self._vizPositions)
+            switch(self.currentView) {
+                case 'treemap': self._drawTreemap(ctx, w, h, tasks, colors); break;
+                case 'bubbles': self._drawBubbles(ctx, w, h, tasks, colors); break;
+                case 'calendar': self._drawCalendar(ctx, w, h, tasks, colors); break;
+                case 'flow': self._drawFlow(ctx, w, h, tasks, colors); break;
+                case 'network': self._drawNetwork(ctx, w, h, tasks, colors); break;
+                case 'sankey': self._drawSankey(ctx, w, h, tasks, colors); break;
+            }
+
+            // Animate transition if we have previous positions from a different view
+            if (prevPositions && prevView && prevView !== self.currentView && self._vizPositions) {
+                self._animateTransition(ctx, w, h, dpr, prevPositions, self._vizPositions, canvas);
             }
         });
+    }
+
+    _animateTransition(ctx, w, h, dpr, fromPos, toPos, canvas) {
+        var duration = 450;
+        var startTime = performance.now();
+        var self = this;
+
+        function ease(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function drawFrame(now) {
+            var elapsed = now - startTime;
+            var progress = Math.min(elapsed / duration, 1);
+            var t = ease(progress);
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, w, h);
+
+            // Interpolate each task's position
+            var allIds = new Set();
+            Object.keys(fromPos).forEach(function(id) { allIds.add(id); });
+            Object.keys(toPos).forEach(function(id) { allIds.add(id); });
+
+            allIds.forEach(function(id) {
+                var a = fromPos[id];
+                var b = toPos[id];
+                if (!a && !b) { return; }
+                if (!a) { a = b; }
+                if (!b) { b = a; }
+
+                var cx = a.x + (b.x - a.x) * t;
+                var cy = a.y + (b.y - a.y) * t;
+                var cw = (a.w || 20) + ((b.w || 20) - (a.w || 20)) * t;
+                var ch = (a.h || 20) + ((b.h || 20) - (a.h || 20)) * t;
+                var cr = (a.r || 0) + ((b.r || 0) - (a.r || 0)) * t;
+                var color = b.color || a.color || '#94a3b8';
+                var alpha = 0.5 + 0.5 * t;
+
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = color;
+
+                if (cr > cw * 0.4) {
+                    // Draw as circle
+                    ctx.beginPath();
+                    ctx.arc(cx + cw / 2, cy + ch / 2, cr, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Draw as rounded rect
+                    var radius = Math.min(cw, ch) * 0.15 * (1 - t) + Math.min(cw, ch) * 0.15 * t;
+                    ctx.beginPath();
+                    ctx.roundRect(cx, cy, Math.max(cw, 4), Math.max(ch, 4), Math.max(radius, 2));
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            });
+
+            if (progress < 1) {
+                // eslint-disable-next-line @lwc/lwc/no-async-operation
+                requestAnimationFrame(drawFrame);
+            } else {
+                // Final frame: redraw the actual view cleanly
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, w, h);
+                var tasks = self.filteredTasks;
+                var colors2 = { Submitted: '#3b82f6', 'In Development': '#22c55e', 'Code Review': '#a855f7', 'UAT Ready': '#14b8a6', Deployment: '#f97316', Done: '#6b7280', Backlog: '#64748b' };
+                switch(self.currentView) {
+                    case 'treemap': self._drawTreemap(ctx, w, h, tasks, colors2); break;
+                    case 'bubbles': self._drawBubbles(ctx, w, h, tasks, colors2); break;
+                    case 'calendar': self._drawCalendar(ctx, w, h, tasks, colors2); break;
+                    case 'flow': self._drawFlow(ctx, w, h, tasks, colors2); break;
+                    case 'network': self._drawNetwork(ctx, w, h, tasks, colors2); break;
+                    case 'sankey': self._drawSankey(ctx, w, h, tasks, colors2); break;
+                }
+            }
+        }
+
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        requestAnimationFrame(drawFrame);
     }
 
     _drawTreemap(ctx, w, h, tasks, colors) {
@@ -807,6 +904,13 @@ export default class DeliveryNimbusGantt extends LightningElement {
             ctx.fillText(s, lx + 16, ly + 10);
             lx += ctx.measureText(s).width + 30;
         });
+
+        // Cache positions for animated transitions
+        var positions = {};
+        rects.forEach(function(r) {
+            positions[r.task.workItemId] = { x: r.x, y: r.y, w: r.w, h: r.h, r: 0, color: colors[r.task.stage] || '#94a3b8' };
+        });
+        this._vizPositions = positions;
     }
 
     _drawBubbles(ctx, w, h, tasks, colors) {
@@ -1042,6 +1146,16 @@ export default class DeliveryNimbusGantt extends LightningElement {
                 ctx.textAlign = 'left';
             }
         });
+
+        // Cache positions for animated transitions
+        var bPositions = {};
+        tasks.forEach(function(t2) {
+            var bp2 = bubblePos[t2.workItemId];
+            if (bp2) {
+                bPositions[t2.workItemId] = { x: bp2.x - bp2.radius, y: bp2.y - bp2.radius, w: bp2.radius * 2, h: bp2.radius * 2, r: bp2.radius, color: colors[t2.stage] || '#94a3b8' };
+            }
+        });
+        this._vizPositions = bPositions;
     }
 
     _drawCalendar(ctx, w, h, tasks, colors) {
@@ -1434,6 +1548,454 @@ export default class DeliveryNimbusGantt extends LightningElement {
         ctx.stroke();
     }
 
+    // ── Network Graph — Force-directed dependency visualization ──────
+
+    _drawNetwork(ctx, w, h, tasks, colors) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillText('Dependency Network \u2014 Force-directed layout, drag to rearrange', 20, 30);
+
+        if (tasks.length === 0) {
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '14px -apple-system, sans-serif';
+            ctx.fillText('No tasks to display', w / 2 - 60, h / 2);
+            return;
+        }
+
+        var padL = 40; var padR = 40; var padT = 50; var padB = 40;
+        var plotW = w - padL - padR;
+        var plotH = h - padT - padB;
+        var centerX = padL + plotW / 2;
+        var centerY = padT + plotH / 2;
+
+        // Build node map
+        var nodes = [];
+        var nodeMap = {};
+        tasks.forEach(function(t, i) {
+            var angle = (2 * Math.PI * i) / tasks.length;
+            var radius = Math.min(plotW, plotH) * 0.35;
+            var node = {
+                id: t.workItemId,
+                x: centerX + radius * Math.cos(angle),
+                y: centerY + radius * Math.sin(angle),
+                vx: 0, vy: 0,
+                name: t.name || '',
+                stage: t.stage || 'Backlog',
+                hours: t.estimatedHours || 0,
+                assignee: t.developerName || '',
+                color: colors[t.stage] || '#94a3b8'
+            };
+            nodes.push(node);
+            nodeMap[t.workItemId] = node;
+        });
+
+        // Build edges from dependencies
+        var edges = [];
+        if (this._rawDependencies) {
+            this._rawDependencies.forEach(function(dep) {
+                if (nodeMap[dep.source] && nodeMap[dep.target]) {
+                    edges.push({ source: nodeMap[dep.source], target: nodeMap[dep.target] });
+                }
+            });
+        }
+
+        // Fruchterman-Reingold force simulation
+        var k = Math.sqrt((plotW * plotH) / Math.max(nodes.length, 1)) * 0.8;
+        var temperature = Math.min(plotW, plotH) * 0.1;
+        var iterations = 150;
+
+        for (var iter = 0; iter < iterations; iter++) {
+            // Repulsive forces between all pairs
+            for (var i = 0; i < nodes.length; i++) {
+                nodes[i].vx = 0;
+                nodes[i].vy = 0;
+                for (var j = 0; j < nodes.length; j++) {
+                    if (i === j) { continue; }
+                    var dx = nodes[i].x - nodes[j].x;
+                    var dy = nodes[i].y - nodes[j].y;
+                    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    var repForce = (k * k) / dist;
+                    nodes[i].vx += (dx / dist) * repForce;
+                    nodes[i].vy += (dy / dist) * repForce;
+                }
+            }
+
+            // Attractive forces along edges
+            edges.forEach(function(e) {
+                var dx = e.target.x - e.source.x;
+                var dy = e.target.y - e.source.y;
+                var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                var attForce = (dist * dist) / k;
+                var fx = (dx / dist) * attForce;
+                var fy = (dy / dist) * attForce;
+                e.source.vx += fx;
+                e.source.vy += fy;
+                e.target.vx -= fx;
+                e.target.vy -= fy;
+            });
+
+            // Center gravity
+            nodes.forEach(function(n) {
+                var dx = centerX - n.x;
+                var dy = centerY - n.y;
+                n.vx += dx * 0.01;
+                n.vy += dy * 0.01;
+            });
+
+            // Apply with temperature damping
+            var t2 = temperature * (1 - iter / iterations);
+            nodes.forEach(function(n) {
+                var mag = Math.sqrt(n.vx * n.vx + n.vy * n.vy) || 1;
+                n.x += (n.vx / mag) * Math.min(mag, t2);
+                n.y += (n.vy / mag) * Math.min(mag, t2);
+                // Constrain to bounds
+                n.x = Math.max(padL + 40, Math.min(w - padR - 40, n.x));
+                n.y = Math.max(padT + 20, Math.min(h - padB - 20, n.y));
+            });
+        }
+
+        // Draw edges
+        edges.forEach(function(e) {
+            var dx = e.target.x - e.source.x;
+            var dy = e.target.y - e.source.y;
+            var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+            // Curved edge
+            var midX = (e.source.x + e.target.x) / 2;
+            var midY = (e.source.y + e.target.y) / 2;
+            var perpX = -dy / dist * 15;
+            var perpY = dx / dist * 15;
+
+            var edgeGrad = ctx.createLinearGradient(e.source.x, e.source.y, e.target.x, e.target.y);
+            edgeGrad.addColorStop(0, e.source.color + '60');
+            edgeGrad.addColorStop(1, e.target.color + '90');
+
+            ctx.strokeStyle = edgeGrad;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(e.source.x, e.source.y);
+            ctx.quadraticCurveTo(midX + perpX, midY + perpY, e.target.x, e.target.y);
+            ctx.stroke();
+
+            // Arrowhead
+            var arrowLen = 8;
+            var angle = Math.atan2(e.target.y - (midY + perpY), e.target.x - (midX + perpX));
+            ctx.fillStyle = e.target.color + 'b0';
+            ctx.beginPath();
+            ctx.moveTo(e.target.x, e.target.y);
+            ctx.lineTo(e.target.x - arrowLen * Math.cos(angle - 0.35), e.target.y - arrowLen * Math.sin(angle - 0.35));
+            ctx.lineTo(e.target.x - arrowLen * Math.cos(angle + 0.35), e.target.y - arrowLen * Math.sin(angle + 0.35));
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        // Draw nodes
+        var nodeW = 120; var nodeH = 52;
+        nodes.forEach(function(n) {
+            var nx = n.x - nodeW / 2;
+            var ny = n.y - nodeH / 2;
+
+            // Shadow
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.15)';
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetY = 2;
+            var grad = ctx.createLinearGradient(nx, ny, nx, ny + nodeH);
+            grad.addColorStop(0, n.color);
+            grad.addColorStop(1, n.color + 'b0');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(nx, ny, nodeW, nodeH, 8);
+            ctx.fill();
+            ctx.restore();
+
+            // Light top edge
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath();
+            ctx.roundRect(nx + 1, ny + 1, nodeW - 2, nodeH * 0.35, [7, 7, 0, 0]);
+            ctx.fill();
+
+            // Border
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(nx, ny, nodeW, nodeH, 8);
+            ctx.stroke();
+
+            // Name
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            var label = n.name;
+            if (label.length > 16) { label = label.substring(0, 15) + '\u2026'; }
+            ctx.fillText(label, n.x, n.y - 4);
+
+            // Assignee + hours
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            var detail = (n.assignee ? n.assignee.split(' ')[0] : '') + (n.hours ? ' \u00b7 ' + n.hours + 'h' : '');
+            if (detail.length > 20) { detail = detail.substring(0, 19) + '\u2026'; }
+            ctx.fillText(detail, n.x, n.y + 10);
+
+            // Stage pill
+            ctx.font = '8px -apple-system, sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            var stageLabel = n.stage;
+            if (stageLabel.length > 14) { stageLabel = stageLabel.substring(0, 13) + '\u2026'; }
+            ctx.fillText(stageLabel, n.x, n.y + 21);
+            ctx.textAlign = 'left';
+        });
+
+        // Legend
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.fillText(nodes.length + ' tasks, ' + edges.length + ' dependencies', 20, h - 15);
+
+        // Cache positions for animated transitions
+        var nPositions = {};
+        nodes.forEach(function(n2) {
+            nPositions[n2.id] = { x: n2.x - nodeW / 2, y: n2.y - nodeH / 2, w: nodeW, h: nodeH, r: 0, color: n2.color };
+        });
+        this._vizPositions = nPositions;
+    }
+
+    // ── Sankey — Stage flow with entity breakdown ──────────────────
+
+    _drawSankey(ctx, w, h, tasks, colors) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.fillText('Sankey Flow \u2014 Work distribution across stages and entities', 20, 30);
+
+        if (tasks.length === 0) {
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '14px -apple-system, sans-serif';
+            ctx.fillText('No tasks to display', w / 2 - 60, h / 2);
+            return;
+        }
+
+        var padL = 30; var padR = 30; var padT = 60; var padB = 50;
+        var plotW = w - padL - padR;
+        var plotH = h - padT - padB;
+
+        // Group tasks by stage, then by entity within stage
+        var stageOrder = [];
+        var stageEntityMap = {}; // stage -> [{entity, count, tasks}]
+        var entityColors = {};
+        var entityPalette = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#6366f1', '#ec4899', '#14b8a6'];
+        var entityIdx = 0;
+
+        tasks.forEach(function(t) {
+            var stage = t.stage || 'Backlog';
+            var entity = t.entityName || 'Unassigned';
+            if (!stageEntityMap[stage]) {
+                stageEntityMap[stage] = {};
+                stageOrder.push(stage);
+            }
+            if (!stageEntityMap[stage][entity]) {
+                stageEntityMap[stage][entity] = 0;
+            }
+            stageEntityMap[stage][entity]++;
+            if (!entityColors[entity]) {
+                entityColors[entity] = entityPalette[entityIdx % entityPalette.length];
+                entityIdx++;
+            }
+        });
+
+        var numStages = stageOrder.length;
+        if (numStages === 0) { return; }
+        var colW = plotW / numStages;
+        var nodeW = Math.min(colW * 0.3, 50);
+        var nodeGap = 6;
+
+        // Build sankey nodes: [{stage, entity, count, x, y, h}]
+        var sankeyNodes = [];
+        var stageNodes = {}; // stage -> [nodes]
+
+        stageOrder.forEach(function(stage, si) {
+            var entities = stageEntityMap[stage];
+            var entityList = Object.keys(entities).sort(function(a, b) {
+                return entities[b] - entities[a];
+            });
+            var totalInStage = 0;
+            entityList.forEach(function(e) { totalInStage += entities[e]; });
+
+            var nodeX = padL + si * colW + (colW - nodeW) / 2;
+            var availH = plotH - (entityList.length - 1) * nodeGap;
+            var currentY = padT;
+            var nodesInStage = [];
+
+            entityList.forEach(function(entity) {
+                var count = entities[entity];
+                var nodeH = Math.max((count / Math.max(totalInStage, 1)) * availH, 14);
+                var node = {
+                    stage: stage,
+                    entity: entity,
+                    count: count,
+                    x: nodeX,
+                    y: currentY,
+                    w: nodeW,
+                    h: nodeH,
+                    color: entityColors[entity],
+                    stageColor: colors[stage] || '#94a3b8'
+                };
+                sankeyNodes.push(node);
+                nodesInStage.push(node);
+                currentY += nodeH + nodeGap;
+            });
+            stageNodes[stage] = nodesInStage;
+        });
+
+        // Draw flow ribbons between adjacent stages
+        for (var si = 0; si < stageOrder.length - 1; si++) {
+            var fromStage = stageOrder[si];
+            var toStage = stageOrder[si + 1];
+            var fromNodes = stageNodes[fromStage] || [];
+            var toNodes = stageNodes[toStage] || [];
+
+            fromNodes.forEach(function(fn) {
+                // Find matching entity in next stage, or distribute proportionally
+                var matchNode = null;
+                toNodes.forEach(function(tn) {
+                    if (tn.entity === fn.entity) { matchNode = tn; }
+                });
+
+                if (matchNode) {
+                    // Direct entity flow
+                    var ribbonH = Math.min(fn.h, matchNode.h) * 0.8;
+                    var x1 = fn.x + fn.w;
+                    var y1 = fn.y + fn.h / 2;
+                    var x2 = matchNode.x;
+                    var y2 = matchNode.y + matchNode.h / 2;
+                    var cpX = (x1 + x2) / 2;
+
+                    var ribbonGrad = ctx.createLinearGradient(x1, 0, x2, 0);
+                    ribbonGrad.addColorStop(0, fn.color + '40');
+                    ribbonGrad.addColorStop(0.5, fn.color + '25');
+                    ribbonGrad.addColorStop(1, matchNode.color + '40');
+
+                    ctx.fillStyle = ribbonGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1 - ribbonH / 2);
+                    ctx.bezierCurveTo(cpX, y1 - ribbonH / 2, cpX, y2 - ribbonH / 2, x2, y2 - ribbonH / 2);
+                    ctx.lineTo(x2, y2 + ribbonH / 2);
+                    ctx.bezierCurveTo(cpX, y2 + ribbonH / 2, cpX, y1 + ribbonH / 2, x1, y1 + ribbonH / 2);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (toNodes.length > 0) {
+                    // No matching entity — draw thin ribbon to largest node
+                    var largest = toNodes[0];
+                    var ribbonH2 = Math.min(fn.h * 0.4, 8);
+                    var x1b = fn.x + fn.w;
+                    var y1b = fn.y + fn.h / 2;
+                    var x2b = largest.x;
+                    var y2b = largest.y + largest.h / 2;
+                    var cpXb = (x1b + x2b) / 2;
+
+                    ctx.fillStyle = fn.color + '15';
+                    ctx.beginPath();
+                    ctx.moveTo(x1b, y1b - ribbonH2 / 2);
+                    ctx.bezierCurveTo(cpXb, y1b - ribbonH2 / 2, cpXb, y2b - ribbonH2 / 2, x2b, y2b - ribbonH2 / 2);
+                    ctx.lineTo(x2b, y2b + ribbonH2 / 2);
+                    ctx.bezierCurveTo(cpXb, y2b + ribbonH2 / 2, cpXb, y1b + ribbonH2 / 2, x1b, y1b + ribbonH2 / 2);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Draw nodes
+        sankeyNodes.forEach(function(n) {
+            // Node fill with gradient
+            var grad = ctx.createLinearGradient(n.x, n.y, n.x + n.w, n.y);
+            grad.addColorStop(0, n.color);
+            grad.addColorStop(1, n.color + 'c0');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(n.x, n.y, n.w, n.h, 4);
+            ctx.fill();
+
+            // Border
+            ctx.strokeStyle = n.color + '80';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(n.x, n.y, n.w, n.h, 4);
+            ctx.stroke();
+
+            // Count label (inside if tall enough)
+            if (n.h > 20) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(n.count.toString(), n.x + n.w / 2, n.y + n.h / 2 + 4);
+                ctx.textAlign = 'left';
+            }
+
+            // Entity label (right side)
+            ctx.fillStyle = '#374151';
+            ctx.font = '9px -apple-system, sans-serif';
+            var entityLabel = n.entity;
+            if (entityLabel.length > 14) { entityLabel = entityLabel.substring(0, 13) + '\u2026'; }
+            ctx.fillText(entityLabel, n.x + n.w + 5, n.y + n.h / 2 + 3);
+        });
+
+        // Stage labels at top
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 11px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        stageOrder.forEach(function(stage, si) {
+            var sx = padL + si * colW + colW / 2;
+            var label = stage;
+            if (label.length > 14) { label = label.substring(0, 13) + '\u2026'; }
+            ctx.fillText(label, sx, padT - 10);
+        });
+        ctx.textAlign = 'left';
+
+        // Entity legend at bottom
+        var lx = padL;
+        var ly = h - 20;
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '10px -apple-system, sans-serif';
+        Object.keys(entityColors).forEach(function(entity) {
+            ctx.fillStyle = entityColors[entity];
+            ctx.beginPath();
+            ctx.roundRect(lx, ly - 8, 10, 10, 2);
+            ctx.fill();
+            ctx.fillStyle = '#374151';
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.fillText(entity, lx + 14, ly);
+            lx += ctx.measureText(entity).width + 28;
+        });
+
+        // Summary
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(tasks.length + ' tasks across ' + numStages + ' stages', w - padR, h - 10);
+        ctx.textAlign = 'left';
+
+        // Cache positions for animated transitions (approximate: assign each task to its stage node)
+        var sPositions = {};
+        var tasksByStageEntity = {};
+        tasks.forEach(function(t) {
+            var key = (t.stage || 'Backlog') + '|' + (t.entityName || 'Unassigned');
+            if (!tasksByStageEntity[key]) { tasksByStageEntity[key] = []; }
+            tasksByStageEntity[key].push(t);
+        });
+        sankeyNodes.forEach(function(sn) {
+            var key = sn.stage + '|' + sn.entity;
+            var snTasks = tasksByStageEntity[key] || [];
+            snTasks.forEach(function(t, ti) {
+                var slotH = sn.h / Math.max(snTasks.length, 1);
+                sPositions[t.workItemId] = { x: sn.x, y: sn.y + ti * slotH, w: sn.w, h: Math.max(slotH - 1, 4), r: 0, color: sn.color };
+            });
+        });
+        this._vizPositions = sPositions;
+    }
+
     handleToggleLock() {
         this.editLocked = !this.editLocked;
         this._savePrefs();
@@ -1456,7 +2018,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
         var container = this.refs.ganttContainer;
         var self = this;
         var step = 0;
-        var TOTAL = 40;
+        var TOTAL = 42;
         var DELAY = 4000;
 
         this.isDemoRunning = true;
@@ -1605,9 +2167,17 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     banner(step + '/' + TOTAL + ' — Stage Flow', 'See how tasks flow through workflow stages. Lines show volume and bottlenecks are flagged in red.');
                     self.currentView = 'flow'; self._renderAltViz();
                     break;
+                case 26:
+                    banner(step + '/' + TOTAL + ' — Network Graph', 'Force-directed dependency network. Tasks cluster by connections. Drag nodes to rearrange.');
+                    self.currentView = 'network'; self._renderAltViz();
+                    break;
+                case 27:
+                    banner(step + '/' + TOTAL + ' — Sankey Flow', 'Sankey diagram shows work distribution across stages and entities. Ribbon width shows volume.');
+                    self.currentView = 'sankey'; self._renderAltViz();
+                    break;
 
                 // ── DARK MODE + ALT VIEW ─────────────────────────
-                case 26:
+                case 28:
                     banner(step + '/' + TOTAL + ' — Dark Treemap', 'Alternative visualizations look stunning in dark mode with glowing gradient fills.');
                     self.currentView = 'treemap'; self._renderAltViz();
                     requestAnimationFrame(function() {
@@ -1615,106 +2185,106 @@ export default class DeliveryNimbusGantt extends LightningElement {
                         if (c && c.parentElement) { c.parentElement.style.filter = 'invert(1) hue-rotate(180deg)'; }
                     });
                     break;
-                case 27:
+                case 29:
                     banner(step + '/' + TOTAL + ' — Dark Bubbles', 'Radial gradients and progress rings shine against the dark background.');
                     self.currentView = 'bubbles'; self._renderAltViz();
                     break;
-                case 28:
+                case 30:
                     banner(step + '/' + TOTAL + ' — Restore Light', 'Clearing dark mode and returning to the main Gantt timeline.');
-                    var altC28 = self.refs.altCanvas;
-                    if (altC28 && altC28.parentElement) { altC28.parentElement.style.filter = ''; }
+                    var altC30 = self.refs.altCanvas;
+                    if (altC30 && altC30.parentElement) { altC30.parentElement.style.filter = ''; }
                     self.currentView = 'gantt'; self._rebuildChart();
                     if (container) { container.style.filter = ''; container.style.backgroundColor = ''; }
                     break;
 
                 // ── ENTITY CYCLING ────────────────────────────────
-                case 29: {
-                    var ents29 = [];
-                    self._rawTasks.forEach(function(t) { if (t.entityName && ents29.indexOf(t.entityName) === -1) { ents29.push(t.entityName); } });
-                    if (ents29.length > 0) {
-                        self.selectedEntity = ents29[0]; self._rebuildChart();
-                        banner(step + '/' + TOTAL + ' — Cycle Client: ' + ents29[0], 'Cycling through clients one by one, just like the phone remote does.');
+                case 31: {
+                    var ents31 = [];
+                    self._rawTasks.forEach(function(t) { if (t.entityName && ents31.indexOf(t.entityName) === -1) { ents31.push(t.entityName); } });
+                    if (ents31.length > 0) {
+                        self.selectedEntity = ents31[0]; self._rebuildChart();
+                        banner(step + '/' + TOTAL + ' — Cycle Client: ' + ents31[0], 'Cycling through clients one by one, just like the phone remote does.');
                     }
                     break;
                 }
-                case 30: {
-                    var ents30 = [];
-                    self._rawTasks.forEach(function(t) { if (t.entityName && ents30.indexOf(t.entityName) === -1) { ents30.push(t.entityName); } });
-                    if (ents30.length > 1) {
-                        self.selectedEntity = ents30[1]; self._rebuildChart();
-                        banner(step + '/' + TOTAL + ' — Cycle Client: ' + ents30[1], 'Each client workstream can be reviewed independently.');
+                case 32: {
+                    var ents32 = [];
+                    self._rawTasks.forEach(function(t) { if (t.entityName && ents32.indexOf(t.entityName) === -1) { ents32.push(t.entityName); } });
+                    if (ents32.length > 1) {
+                        self.selectedEntity = ents32[1]; self._rebuildChart();
+                        banner(step + '/' + TOTAL + ' — Cycle Client: ' + ents32[1], 'Each client workstream can be reviewed independently.');
                     } else {
                         banner(step + '/' + TOTAL + ' — All Clients', 'Showing all clients.');
                         self.selectedEntity = ''; self._rebuildChart();
                     }
                     break;
                 }
-                case 31:
+                case 33:
                     banner(step + '/' + TOTAL + ' — All Clients', 'Clearing filters to show the unified project view.');
                     self.selectedEntity = ''; self._rebuildChart();
                     break;
 
                 // ── SCROLL NAVIGATION ────────────────────────────
-                case 32:
-                    banner(step + '/' + TOTAL + ' — Scroll to Start', 'Scrolling to the beginning of the project timeline.');
-                    try { var r32 = g.getVisibleDateRange(); g.scrollToDate(r32.start); } catch(e) { /* ignore */ }
-                    break;
-                case 33:
-                    banner(step + '/' + TOTAL + ' — Scroll to End', 'Scrolling to the end of the project timeline.');
-                    try { var r33 = g.getVisibleDateRange(); g.scrollToDate(r33.end); } catch(e) { /* ignore */ }
-                    break;
                 case 34:
+                    banner(step + '/' + TOTAL + ' — Scroll to Start', 'Scrolling to the beginning of the project timeline.');
+                    try { var r34 = g.getVisibleDateRange(); g.scrollToDate(r34.start); } catch(e) { /* ignore */ }
+                    break;
+                case 35:
+                    banner(step + '/' + TOTAL + ' — Scroll to End', 'Scrolling to the end of the project timeline.');
+                    try { var r35 = g.getVisibleDateRange(); g.scrollToDate(r35.end); } catch(e) { /* ignore */ }
+                    break;
+                case 36:
                     banner(step + '/' + TOTAL + ' — Back to Today', 'Centering the timeline on today for the current status view.');
                     g.scrollToDate(new Date());
                     break;
 
                 // ── SONIFICATION ─────────────────────────────────
-                case 35:
+                case 37:
                     banner(step + '/' + TOTAL + ' — Sonification', 'Hearing your project as music. On-track tasks play major notes, overdue tasks sound dissonant.');
                     try {
                         var ac = new (window.AudioContext || window.webkitAudioContext)();
-                        var today35 = new Date();
+                        var today37 = new Date();
                         var PLAY_DUR = 6;
-                        var sorted35 = self.filteredTasks.slice().filter(function(t) { return t.startDate; }).sort(function(a, b) {
+                        var sorted37 = self.filteredTasks.slice().filter(function(t) { return t.startDate; }).sort(function(a, b) {
                             return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
                         });
-                        if (sorted35.length === 0) { break; }
-                        var minStart35 = new Date(sorted35[0].startDate).getTime();
-                        var maxStart35 = minStart35;
-                        sorted35.forEach(function(t) { var ms = new Date(t.startDate).getTime(); if (ms > maxStart35) { maxStart35 = ms; } });
-                        var timeSpan35 = maxStart35 - minStart35 || 1;
-                        var entities35 = [];
-                        sorted35.forEach(function(t) { var en = t.entityName || 'Unassigned'; if (entities35.indexOf(en) === -1) { entities35.push(en); } });
-                        var oscTypes35 = ['sine', 'triangle', 'sawtooth', 'square'];
+                        if (sorted37.length === 0) { break; }
+                        var minStart37 = new Date(sorted37[0].startDate).getTime();
+                        var maxStart37 = minStart37;
+                        sorted37.forEach(function(t) { var ms = new Date(t.startDate).getTime(); if (ms > maxStart37) { maxStart37 = ms; } });
+                        var timeSpan37 = maxStart37 - minStart37 || 1;
+                        var entities37 = [];
+                        sorted37.forEach(function(t) { var en = t.entityName || 'Unassigned'; if (entities37.indexOf(en) === -1) { entities37.push(en); } });
+                        var oscTypes37 = ['sine', 'triangle', 'sawtooth', 'square'];
                         var onTrackNotes = [261.6, 329.6, 392.0, 440.0, 523.3];
                         var overdueNotes = [311.1, 370.0, 466.2];
-                        var minHrs35 = Infinity; var maxHrs35 = 0;
-                        sorted35.forEach(function(t) { var h = t.estimatedHours || 1; if (h < minHrs35) { minHrs35 = h; } if (h > maxHrs35) { maxHrs35 = h; } });
-                        var hrsRange35 = maxHrs35 - minHrs35 || 1;
-                        var minTaskDur35 = Infinity; var maxTaskDur35 = 0;
-                        sorted35.forEach(function(t) {
+                        var minHrs37 = Infinity; var maxHrs37 = 0;
+                        sorted37.forEach(function(t) { var h = t.estimatedHours || 1; if (h < minHrs37) { minHrs37 = h; } if (h > maxHrs37) { maxHrs37 = h; } });
+                        var hrsRange37 = maxHrs37 - minHrs37 || 1;
+                        var minTaskDur37 = Infinity; var maxTaskDur37 = 0;
+                        sorted37.forEach(function(t) {
                             var s = new Date(t.startDate).getTime();
                             var e = t.endDate ? new Date(t.endDate).getTime() : s + 7 * 86400000;
                             var dur = e - s || 1;
-                            if (dur < minTaskDur35) { minTaskDur35 = dur; } if (dur > maxTaskDur35) { maxTaskDur35 = dur; }
+                            if (dur < minTaskDur37) { minTaskDur37 = dur; } if (dur > maxTaskDur37) { maxTaskDur37 = dur; }
                         });
-                        var taskDurRange35 = maxTaskDur35 - minTaskDur35 || 1;
-                        var onTrackCount35 = 0; var overdueCount35 = 0;
-                        sorted35.forEach(function(t) {
+                        var taskDurRange37 = maxTaskDur37 - minTaskDur37 || 1;
+                        var onTrackCount37 = 0; var overdueCount37 = 0;
+                        sorted37.forEach(function(t) {
                             var startMs = new Date(t.startDate).getTime();
                             var endMs = t.endDate ? new Date(t.endDate).getTime() : startMs + 7 * 86400000;
                             var prog = t.progress || 0; var hrs = t.estimatedHours || 1;
-                            var entityIdx = entities35.indexOf(t.entityName || 'Unassigned');
-                            var isOverdue = endMs < today35.getTime() && !t.isCompleted;
-                            if (isOverdue) { overdueCount35++; } else { onTrackCount35++; }
-                            var noteStart = ac.currentTime + ((startMs - minStart35) / timeSpan35) * (PLAY_DUR - 0.8);
+                            var entityIdx = entities37.indexOf(t.entityName || 'Unassigned');
+                            var isOverdue = endMs < today37.getTime() && !t.isCompleted;
+                            if (isOverdue) { overdueCount37++; } else { onTrackCount37++; }
+                            var noteStart = ac.currentTime + ((startMs - minStart37) / timeSpan37) * (PLAY_DUR - 0.8);
                             var palette = isOverdue ? overdueNotes : onTrackNotes;
                             var freq = palette[Math.floor(Math.random() * palette.length)];
-                            var vol = 0.1 + 0.15 * ((hrs - minHrs35) / hrsRange35);
+                            var vol = 0.1 + 0.15 * ((hrs - minHrs37) / hrsRange37);
                             var taskDur = endMs - startMs || 1;
-                            var noteDur = 0.2 + 0.6 * ((taskDur - minTaskDur35) / taskDurRange35);
+                            var noteDur = 0.2 + 0.6 * ((taskDur - minTaskDur37) / taskDurRange37);
                             var attack = 0.1 - 0.08 * (prog / 100);
-                            var oscType = oscTypes35[Math.min(entityIdx, oscTypes35.length - 1)];
+                            var oscType = oscTypes37[Math.min(entityIdx, oscTypes37.length - 1)];
                             var osc = ac.createOscillator(); var gain = ac.createGain();
                             osc.frequency.value = freq; osc.type = oscType;
                             gain.gain.setValueAtTime(0, noteStart);
@@ -1723,7 +2293,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                             gain.gain.linearRampToValueAtTime(0, noteStart + noteDur);
                             osc.connect(gain); gain.connect(ac.destination);
                             osc.start(noteStart); osc.stop(noteStart + noteDur + 0.01);
-                            if (prog === 0 && startMs < today35.getTime()) {
+                            if (prog === 0 && startMs < today37.getTime()) {
                                 var bo = ac.createOscillator(); var bg = ac.createGain();
                                 bo.frequency.value = freq / 2; bo.type = 'sine';
                                 var bv = vol * 0.4; var bd = noteDur * 1.5;
@@ -1736,7 +2306,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                             }
                         });
                         var chordStart = ac.currentTime + PLAY_DUR; var chordDur = 1.5;
-                        var isMajor = onTrackCount35 >= overdueCount35;
+                        var isMajor = onTrackCount37 >= overdueCount37;
                         var chordFreqs = isMajor ? [261.6, 329.6, 392.0] : [261.6, 311.1, 392.0];
                         chordFreqs.forEach(function(cf) {
                             var co = ac.createOscillator(); var cg = ac.createGain();
@@ -1752,7 +2322,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     break;
 
                 // ── RAPID ZOOM CYCLE ─────────────────────────────
-                case 36:
+                case 38:
                     banner(step + '/' + TOTAL + ' — Rapid Zoom', 'Cycling through all zoom levels rapidly: Day, Week, Month, Quarter, Week.');
                     g.setZoom('day');
                     setTimeout(function() { g.setZoom('week'); }, 700);
@@ -1762,21 +2332,21 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     break;
 
                 // ── COLLAPSE + EXPAND ONE ─────────────────────────
-                case 37:
+                case 39:
                     banner(step + '/' + TOTAL + ' — Focus One Group', 'Collapsing everything, then expanding just one group to drill into.');
                     g.collapseAll();
-                    var first37 = self.filteredTasks[0];
-                    if (first37 && first37.workItemId) {
-                        try { g.expandTask(first37.workItemId); } catch(ex) { /* may not be parent */ }
+                    var first39 = self.filteredTasks[0];
+                    if (first39 && first39.workItemId) {
+                        try { g.expandTask(first39.workItemId); } catch(ex) { /* may not be parent */ }
                     }
                     break;
-                case 38:
+                case 40:
                     banner(step + '/' + TOTAL + ' — Full Expand', 'Expanding all tasks back to the complete view.');
                     g.expandAll(); g.scrollToDate(new Date());
                     break;
 
                 // ── FINAL STATE ──────────────────────────────────
-                case 39:
+                case 41:
                     banner(step + '/' + TOTAL + ' — Final View', 'Week view, all clients, dependencies shown, centered on today. Ready to work.');
                     self.selectedEntity = '';
                     self.showOverdue = false;
@@ -1786,8 +2356,8 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     break;
 
                 // ── SUMMARY ──────────────────────────────────────
-                case 40:
-                    banner('Demo Complete', TOTAL + ' features demonstrated: 4 zoom levels, 5 views, dark mode, sonification, task navigation, overdue filter, dependency toggle, client cycling, and drag-to-reschedule.');
+                case 42:
+                    banner('Demo Complete', TOTAL + ' features demonstrated: 4 zoom levels, 7 views, dark mode, sonification, task navigation, overdue filter, dependency toggle, client cycling, and drag-to-reschedule.');
                     self.isDemoRunning = false;
                     self._demoTimer = null;
                     return;
@@ -1800,7 +2370,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
             }
         }
 
-        banner('Full Demo', TOTAL + ' steps, ~3 minutes. Zoom levels, 5 visualizations, sonification, filters, task navigation, dark mode...');
+        banner('Full Demo', TOTAL + ' steps, ~3 minutes. Zoom levels, 7 visualizations, sonification, filters, task navigation, dark mode...');
         this._demoTimer = setTimeout(runStep, 2000);
     }
 
