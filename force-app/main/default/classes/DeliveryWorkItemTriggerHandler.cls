@@ -40,10 +40,12 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
         //    + Activity Log history for time-study analytics
         //    + Configurable field change tracking via TrackedField__mdt
+        //    + SLA pause/resume when stage enters/exits configured stages
         if (isUpdate) {
             publishStageChangeEvents(newRows, oldMap);
             logStageChanges(newRows, oldMap);
             DeliveryFieldTrackingService.trackChanges(newRows, oldMap);
+            handleSLAPauseResume(newRows, oldMap);
         }
 
         // 3. UNIFIED SYNC ENGINE (High-Water Mark)
@@ -292,6 +294,82 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                 workItem.BountyTokenTxt__c = DeliveryBountyService.generateBountyToken();
             }
         }
+    }
+
+    /**
+     * @description Pauses or resumes SLA clocks when a stage change matches the
+     *              PauseOnStagesTxt__c / ResumeOnStagesTxt__c configuration on
+     *              the matching SLARule__mdt record. Updates are performed via
+     *              separate DML since this runs in after-update context.
+     * @param newRows List of updated WorkItem__c records
+     * @param oldMap  Map of pre-update WorkItem__c records
+     */
+    private static void handleSLAPauseResume(
+        List<WorkItem__c> newRows,
+        Map<Id, WorkItem__c> oldMap
+    ) {
+        List<WorkItem__c> slaUpdates = new List<WorkItem__c>();
+        Datetime now = Datetime.now();
+
+        for (WorkItem__c wi : newRows) {
+            WorkItem__c old = oldMap.get(wi.Id);
+            if (old == null || wi.StageNamePk__c == old.StageNamePk__c) {
+                continue;
+            }
+
+            SLARule__mdt rule = DeliverySLAService.getRuleForContext(
+                wi.WorkflowTypeTxt__c, wi.PriorityPk__c
+            );
+            if (rule == null) {
+                continue;
+            }
+
+            String newStage = wi.StageNamePk__c;
+            Set<String> pauseStages = parseStageSet(rule.PauseOnStagesTxt__c);
+            Set<String> resumeStages = parseStageSet(rule.ResumeOnStagesTxt__c);
+
+            // Pause: new stage is in the pause list and SLA is not already paused
+            if (!pauseStages.isEmpty() && pauseStages.contains(newStage) && wi.SLAPausedDateTime__c == null) {
+                slaUpdates.add(new WorkItem__c(
+                    Id = wi.Id,
+                    SLAPausedDateTime__c = now
+                ));
+            }
+            // Resume: new stage is in the resume list and SLA is currently paused
+            else if (!resumeStages.isEmpty() && resumeStages.contains(newStage) && wi.SLAPausedDateTime__c != null) {
+                Decimal pausedDays = (Decimal)(now.getTime() - wi.SLAPausedDateTime__c.getTime()) / (1000.0 * 60 * 60 * 24);
+                pausedDays = pausedDays.setScale(2, RoundingMode.HALF_UP);
+                Decimal accrued = wi.SLAAccruedPauseDaysNumber__c != null ? wi.SLAAccruedPauseDaysNumber__c : 0;
+                slaUpdates.add(new WorkItem__c(
+                    Id = wi.Id,
+                    SLAPausedDateTime__c = null,
+                    SLAAccruedPauseDaysNumber__c = accrued + pausedDays
+                ));
+            }
+        }
+
+        if (!slaUpdates.isEmpty()) {
+            Database.update(slaUpdates, AccessLevel.SYSTEM_MODE);
+        }
+    }
+
+    /**
+     * @description Parses a comma-separated string of stage names into a Set.
+     * @param stages Comma-separated stage names (may be null or blank)
+     * @return Set of trimmed stage name strings
+     */
+    private static Set<String> parseStageSet(String stages) {
+        Set<String> result = new Set<String>();
+        if (String.isBlank(stages)) {
+            return result;
+        }
+        for (String s : stages.split(',')) {
+            String trimmed = s.trim();
+            if (String.isNotBlank(trimmed)) {
+                result.add(trimmed);
+            }
+        }
+        return result;
     }
 
     /**
