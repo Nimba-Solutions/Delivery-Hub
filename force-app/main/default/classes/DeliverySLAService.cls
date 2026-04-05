@@ -58,8 +58,20 @@ global with sharing class DeliverySLAService {
                 continue;
             }
             String wfType = workflowType != null ? workflowType : wi.WorkflowTypeTxt__c;
-            Integer daysToAdd = getDaysForPriority(wfType, wi.PriorityPk__c);
-            wi.SLATargetDate__c = today.addDays(daysToAdd);
+            SLARule__mdt rule = findRule(wfType, wi.PriorityPk__c);
+            Integer daysToAdd = rule != null ? rule.TargetDaysNum__c.intValue() : getHardcodedFallback(wi.PriorityPk__c);
+
+            if (rule != null && rule.UseBusinessHoursDateTime__c != null) {
+                Id bhId = getDefaultBusinessHoursId();
+                if (bhId != null) {
+                    Long millisToAdd = (Long) daysToAdd * 8 * 60 * 60 * 1000;
+                    wi.SLATargetDate__c = BusinessHours.add(bhId, DateTime.now(), millisToAdd).date();
+                } else {
+                    wi.SLATargetDate__c = today.addDays(daysToAdd);
+                }
+            } else {
+                wi.SLATargetDate__c = today.addDays(daysToAdd);
+            }
         }
         return workItems;
     }
@@ -144,6 +156,17 @@ global with sharing class DeliverySLAService {
         return counts;
     }
 
+    /**
+     * @description Returns the best-match SLARule__mdt for the given workflow type and priority.
+     *              Public accessor so trigger handlers can retrieve pause/resume stage config.
+     * @param workflowType The workflow type (null or blank = default)
+     * @param priority The priority level (Critical, High, Medium, Low)
+     * @return The matching SLARule__mdt record, or null if none found
+     */
+    public static SLARule__mdt getRuleForContext(String workflowType, String priority) {
+        return findRule(workflowType, priority);
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers — CMT lookup with caching
     // -------------------------------------------------------------------------
@@ -189,7 +212,8 @@ global with sharing class DeliverySLAService {
 
         List<SLARule__mdt> rules = [
             SELECT DeveloperName, WorkflowTypeTxt__c, PriorityTxt__c,
-                   TargetDaysNum__c, WarningDaysNum__c, UseBusinessHoursDateTime__c, ActiveDateTime__c
+                   TargetDaysNum__c, WarningDaysNum__c, UseBusinessHoursDateTime__c,
+                   PauseOnStagesTxt__c, ResumeOnStagesTxt__c, ActiveDateTime__c
             FROM SLARule__mdt
             WHERE ActiveDateTime__c != null
             WITH SYSTEM_MODE
@@ -202,6 +226,22 @@ global with sharing class DeliverySLAService {
             }
             cachedRules.get(key).put(rule.PriorityTxt__c, rule);
         }
+    }
+
+    /** @description Cached default BusinessHours record Id */
+    private static Id defaultBusinessHoursId;
+
+    /**
+     * @description Returns the Id of the org's default BusinessHours record.
+     *              Cached for the transaction to avoid repeated SOQL.
+     * @return The default BusinessHours Id, or null if none found
+     */
+    private static Id getDefaultBusinessHoursId() {
+        if (defaultBusinessHoursId == null) {
+            List<BusinessHours> bh = [SELECT Id FROM BusinessHours WHERE IsDefault = true WITH SYSTEM_MODE LIMIT 1];
+            defaultBusinessHoursId = bh.isEmpty() ? null : bh[0].Id;
+        }
+        return defaultBusinessHoursId;
     }
 
     /**
