@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>TimeoutDaysNum__c</fullName>
+    <fullName>TimeoutDaysNumber__c</fullName>
     <description>Number of days before a pending approval at this step times out. Zero or null means no timeout.</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
