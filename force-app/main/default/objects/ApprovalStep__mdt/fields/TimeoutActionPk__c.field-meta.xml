@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TimeoutActionPk__c</fullName>
+    <description>Action to take when this step times out. Escalate leaves the record pending for manual intervention; Auto_Approve and Auto_Reject resolve the step automatically.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Timeout Action</label>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Escalate</fullName>
+                <default>true</default>
+                <label>Escalate</label>
+            </value>
+            <value>
+                <fullName>Auto_Approve</fullName>
+                <default>false</default>
+                <label>Auto Approve</label>
+            </value>
+            <value>
+                <fullName>Auto_Reject</fullName>
+                <default>false</default>
+                <label>Auto Reject</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
