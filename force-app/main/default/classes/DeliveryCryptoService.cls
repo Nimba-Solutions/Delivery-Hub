@@ -63,6 +63,7 @@ public with sharing class DeliveryCryptoService {
      * @param contextData Additional context data
      * @return Lowercase hex-encoded SHA-256 chain hash
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static String computeChainHash(String previousHash, String recordId, String actionType, DateTime createdDate, String contextData) {
         String payload = (previousHash != null ? previousHash : '')
             + (recordId != null ? recordId : '')

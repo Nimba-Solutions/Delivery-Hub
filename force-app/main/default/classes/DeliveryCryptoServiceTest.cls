@@ -108,7 +108,7 @@ private class DeliveryCryptoServiceTest {
         Test.startTest();
         String hash = DeliveryCryptoService.computeChainHash(
             'prev-hash-abc',
-            '001000000000001',
+            'rec-001',
             'Stage_Change',
             DateTime.newInstance(2026, 1, 1, 0, 0, 0),
             '{"old":"New","new":"In Progress"}'
@@ -122,7 +122,7 @@ private class DeliveryCryptoServiceTest {
     @IsTest
     static void testComputeChainHashWithNullPrevious() {
         String hash = DeliveryCryptoService.computeChainHash(
-            null, '001000000000001', 'Navigation', DateTime.now(), null
+            null, 'rec-001', 'Navigation', DateTime.now(), null
         );
         System.assertNotEquals(null, hash, 'First record in chain (null previous) should still produce hash');
     }
