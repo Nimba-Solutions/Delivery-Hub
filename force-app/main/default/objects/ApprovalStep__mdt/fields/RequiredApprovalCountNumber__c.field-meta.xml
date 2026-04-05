@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>StepOrderNum__c</fullName>
-    <description>Sequence number for this approval step within the workflow type. Step 1 executes first, then 2, etc.</description>
+    <fullName>RequiredApprovalCountNumber__c</fullName>
+    <description>Number of approvals required to complete this step in Parallel mode. Ignored for Sequential and Any modes.</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
-    <label>Step Order</label>
+    <label>Required Approval Count</label>
     <precision>3</precision>
-    <required>true</required>
+    <required>false</required>
     <scale>0</scale>
     <type>Number</type>
     <unique>false</unique>

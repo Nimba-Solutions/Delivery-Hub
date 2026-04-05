@@ -507,7 +507,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkLog__c.ApprovalStepNum__c</field>
+        <field>WorkLog__c.ApprovalStepNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

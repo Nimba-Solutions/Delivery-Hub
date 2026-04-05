@@ -33,7 +33,7 @@ private class DeliveryApprovalChainSvcTest {
 
     private static WorkLog__c getTestLog() {
         return [
-            SELECT Id, StatusPk__c, ApprovalStepNum__c, ApprovedByTxt__c,
+            SELECT Id, StatusPk__c, ApprovalStepNumber__c, ApprovedByTxt__c,
                    ApprovalRequestedDateTime__c, WorkItemId__c,
                    WorkItemId__r.WorkflowTypeTxt__c
             FROM WorkLog__c
@@ -47,20 +47,20 @@ private class DeliveryApprovalChainSvcTest {
         steps.add(new ApprovalStep__mdt(
             DeveloperName = 'Step1',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StepOrderNum__c = 1,
+            StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Sequential',
             ApproverFieldTxt__c = 'Developer__c',
-            TimeoutDaysNum__c = 3,
+            TimeoutDaysNumber__c = 3,
             TimeoutActionPk__c = 'Auto_Approve',
             ActiveDateTime__c = Datetime.now()
         ));
         steps.add(new ApprovalStep__mdt(
             DeveloperName = 'Step2',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StepOrderNum__c = 2,
+            StepOrderNumber__c = 2,
             ApprovalModePk__c = 'Sequential',
             ApproverFieldTxt__c = 'OwnerId',
-            TimeoutDaysNum__c = 5,
+            TimeoutDaysNumber__c = 5,
             TimeoutActionPk__c = 'Auto_Reject',
             ActiveDateTime__c = Datetime.now()
         ));
@@ -87,7 +87,7 @@ private class DeliveryApprovalChainSvcTest {
             'Status should be Pending_Approval after initiation'
         );
         System.assertEquals(
-            1, updated.ApprovalStepNum__c,
+            1, updated.ApprovalStepNumber__c,
             'Should start at step 1'
         );
         System.assertNotEquals(
@@ -146,7 +146,7 @@ private class DeliveryApprovalChainSvcTest {
             'Should advance to step 2');
 
         WorkLog__c updated = getTestLog();
-        System.assertEquals(2, updated.ApprovalStepNum__c,
+        System.assertEquals(2, updated.ApprovalStepNumber__c,
             'DB should reflect step 2');
     }
 
@@ -210,10 +210,10 @@ private class DeliveryApprovalChainSvcTest {
         steps.add(new ApprovalStep__mdt(
             DeveloperName = 'ParallelStep',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StepOrderNum__c = 1,
+            StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Parallel',
-            RequiredApprovalCountNum__c = 2,
-            TimeoutDaysNum__c = 0,
+            RequiredApprovalCountNumber__c = 2,
+            TimeoutDaysNumber__c = 0,
             TimeoutActionPk__c = 'Escalate',
             ActiveDateTime__c = Datetime.now()
         ));
@@ -253,9 +253,9 @@ private class DeliveryApprovalChainSvcTest {
         steps.add(new ApprovalStep__mdt(
             DeveloperName = 'TimeoutStep',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StepOrderNum__c = 1,
+            StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Sequential',
-            TimeoutDaysNum__c = 1,
+            TimeoutDaysNumber__c = 1,
             TimeoutActionPk__c = 'Auto_Approve',
             ActiveDateTime__c = Datetime.now()
         ));
@@ -264,7 +264,7 @@ private class DeliveryApprovalChainSvcTest {
         WorkLog__c wl = getTestLog();
         // Set up as pending approval with a past request date
         wl.StatusPk__c = 'Pending_Approval';
-        wl.ApprovalStepNum__c = 1;
+        wl.ApprovalStepNumber__c = 1;
         wl.ApprovalRequestedDateTime__c = Datetime.now().addDays(-3);
         wl.ApprovedByTxt__c = '[]';
         update wl;
@@ -287,9 +287,9 @@ private class DeliveryApprovalChainSvcTest {
         steps.add(new ApprovalStep__mdt(
             DeveloperName = 'RejectStep',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StepOrderNum__c = 1,
+            StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Sequential',
-            TimeoutDaysNum__c = 1,
+            TimeoutDaysNumber__c = 1,
             TimeoutActionPk__c = 'Auto_Reject',
             ActiveDateTime__c = Datetime.now()
         ));
@@ -297,7 +297,7 @@ private class DeliveryApprovalChainSvcTest {
 
         WorkLog__c wl = getTestLog();
         wl.StatusPk__c = 'Pending_Approval';
-        wl.ApprovalStepNum__c = 1;
+        wl.ApprovalStepNumber__c = 1;
         wl.ApprovalRequestedDateTime__c = Datetime.now().addDays(-5);
         wl.ApprovedByTxt__c = '[]';
         update wl;
@@ -320,9 +320,9 @@ private class DeliveryApprovalChainSvcTest {
         steps.add(new ApprovalStep__mdt(
             DeveloperName = 'EscStep',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StepOrderNum__c = 1,
+            StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Sequential',
-            TimeoutDaysNum__c = 1,
+            TimeoutDaysNumber__c = 1,
             TimeoutActionPk__c = 'Escalate',
             ActiveDateTime__c = Datetime.now()
         ));
@@ -330,7 +330,7 @@ private class DeliveryApprovalChainSvcTest {
 
         WorkLog__c wl = getTestLog();
         wl.StatusPk__c = 'Pending_Approval';
-        wl.ApprovalStepNum__c = 1;
+        wl.ApprovalStepNumber__c = 1;
         wl.ApprovalRequestedDateTime__c = Datetime.now().addDays(-5);
         wl.ApprovedByTxt__c = '[]';
         update wl;
@@ -353,9 +353,9 @@ private class DeliveryApprovalChainSvcTest {
         steps.add(new ApprovalStep__mdt(
             DeveloperName = 'FreshStep',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            StepOrderNum__c = 1,
+            StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Sequential',
-            TimeoutDaysNum__c = 30,
+            TimeoutDaysNumber__c = 30,
             TimeoutActionPk__c = 'Auto_Reject',
             ActiveDateTime__c = Datetime.now()
         ));
@@ -363,7 +363,7 @@ private class DeliveryApprovalChainSvcTest {
 
         WorkLog__c wl = getTestLog();
         wl.StatusPk__c = 'Pending_Approval';
-        wl.ApprovalStepNum__c = 1;
+        wl.ApprovalStepNumber__c = 1;
         wl.ApprovalRequestedDateTime__c = Datetime.now();
         wl.ApprovedByTxt__c = '[]';
         update wl;

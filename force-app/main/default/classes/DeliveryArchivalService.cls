@@ -5,6 +5,7 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class DeliveryArchivalService {
 
+    /** @description Archives the given work items by setting status, timestamp, and retention date. */
     public static void archiveRecords(Set<Id> workItemIds) {
         if (workItemIds == null || workItemIds.isEmpty()) {
             return;
@@ -25,6 +26,7 @@ public without sharing class DeliveryArchivalService {
         Database.update(items, AccessLevel.SYSTEM_MODE);
     }
 
+    /** @description Places work items on legal hold, preventing automatic purge. */
     public static void setLegalHold(Set<Id> workItemIds) {
         if (workItemIds == null || workItemIds.isEmpty()) {
             return;
@@ -39,6 +41,7 @@ public without sharing class DeliveryArchivalService {
         Database.update(items, AccessLevel.SYSTEM_MODE);
     }
 
+    /** @description Releases legal hold and restores normal retention schedule. */
     public static void releaseLegalHold(Set<Id> workItemIds) {
         if (workItemIds == null || workItemIds.isEmpty()) {
             return;
@@ -58,6 +61,7 @@ public without sharing class DeliveryArchivalService {
         Database.update(items, AccessLevel.SYSTEM_MODE);
     }
 
+    /** @description Exports archived work items within a date range as serialized JSON. */
     public static String exportArchivedData(Date fromDate, Date toDate) {
         List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
@@ -72,6 +76,7 @@ public without sharing class DeliveryArchivalService {
         return JSON.serialize(items);
     }
 
+    /** @description Permanently deletes archived work items whose retention period has expired. */
     public static void purgeExpiredArchives() {
         List<WorkItem__c> expired = [
             SELECT Id FROM WorkItem__c

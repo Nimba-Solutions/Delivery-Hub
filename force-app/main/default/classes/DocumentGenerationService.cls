@@ -112,6 +112,7 @@ public with sharing class DocumentGenerationService {
     //  SNAPSHOT BUILDER
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Builds a frozen JSON snapshot of entity, work item, and work log data for the given period. */
     @TestVisible
     public static Map<String, Object> buildSnapshot(Id entityId, String templateType, Date periodStart, Date periodEnd) {
         Map<String, Object> snapshot = new Map<String, Object>();
@@ -280,6 +281,7 @@ public with sharing class DocumentGenerationService {
     //  CALCULATIONS
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Calculates total hours from work log entries in the snapshot. */
     public static Decimal calculateTotalHours(Map<String, Object> snapshot) {
         Decimal total = 0;
         List<Object> logs = (List<Object>) snapshot.get('workLogs');
@@ -296,6 +298,7 @@ public with sharing class DocumentGenerationService {
         return total;
     }
 
+    /** @description Calculates total cost by multiplying hours by applicable rates from the snapshot. */
     public static Decimal calculateTotalCost(Map<String, Object> snapshot) {
         // Build a rate map: workItemId -> rate (from request, then item, then entity default)
         Map<String, Decimal> rateMap = new Map<String, Decimal>();
@@ -344,11 +347,13 @@ public with sharing class DocumentGenerationService {
     //  UTILITIES
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Generates a cryptographically random hex token for public document access. */
     public static String generateToken() {
         Blob randomBytes = Crypto.generateAesKey(256);
         return EncodingUtil.convertToHex(randomBytes);
     }
 
+    /** @description Builds default legal clauses for agreement-type documents based on entity and template. */
     @TestVisible
     public static List<Map<String, String>> buildDefaultAgreementClauses(String templateType, Map<String, Object> snapshot) {
         Map<String, Object> entity = (Map<String, Object>) snapshot.get('entity');

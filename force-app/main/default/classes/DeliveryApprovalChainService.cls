@@ -30,7 +30,7 @@ public with sharing class DeliveryApprovalChainService {
             LIMIT 1
         ];
         wl.StatusPk__c = 'Pending_Approval';
-        wl.ApprovalStepNum__c = 1;
+        wl.ApprovalStepNumber__c = 1;
         wl.ApprovalRequestedDateTime__c = Datetime.now();
         wl.ApprovedByTxt__c = '[]';
         Database.update(wl, AccessLevel.SYSTEM_MODE);
@@ -41,6 +41,7 @@ public with sharing class DeliveryApprovalChainService {
      *              For Sequential mode, advances to next step on approve.
      *              For Parallel/Any mode, counts approvals against required count.
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public static Map<String, Object> processApproval(
         Id workLogId,
         Id approverId,
@@ -48,7 +49,7 @@ public with sharing class DeliveryApprovalChainService {
         String comments
     ) {
         WorkLog__c wl = [
-            SELECT Id, StatusPk__c, ApprovalStepNum__c, ApprovedByTxt__c,
+            SELECT Id, StatusPk__c, ApprovalStepNumber__c, ApprovedByTxt__c,
                    WorkItemId__r.WorkflowTypeTxt__c
             FROM WorkLog__c
             WHERE Id = :workLogId
@@ -58,8 +59,8 @@ public with sharing class DeliveryApprovalChainService {
 
         String wfType = wl.WorkItemId__r.WorkflowTypeTxt__c;
         List<ApprovalStep__mdt> steps = getActiveSteps(wfType);
-        Integer currentStep = wl.ApprovalStepNum__c != null
-            ? wl.ApprovalStepNum__c.intValue() : 1;
+        Integer currentStep = wl.ApprovalStepNumber__c != null
+            ? wl.ApprovalStepNumber__c.intValue() : 1;
 
         if (!approved) {
             wl.StatusPk__c = 'Rejected';
@@ -82,14 +83,14 @@ public with sharing class DeliveryApprovalChainService {
             ? steps[currentStep - 1] : null;
         Boolean stepComplete = true;
         if (step != null && step.ApprovalModePk__c == 'Parallel') {
-            Integer required = step.RequiredApprovalCountNum__c != null
-                ? step.RequiredApprovalCountNum__c.intValue() : 1;
+            Integer required = step.RequiredApprovalCountNumber__c != null
+                ? step.RequiredApprovalCountNumber__c.intValue() : 1;
             stepComplete = approvers.size() >= required;
         }
 
         if (stepComplete && currentStep < steps.size()) {
             // Advance to next step
-            wl.ApprovalStepNum__c = currentStep + 1;
+            wl.ApprovalStepNumber__c = currentStep + 1;
             wl.StatusPk__c = 'Pending_Approval';
             Database.update(wl, AccessLevel.SYSTEM_MODE);
             return new Map<String, Object>{
@@ -119,9 +120,10 @@ public with sharing class DeliveryApprovalChainService {
      * @description Checks for timed-out approval requests and executes timeout actions.
      *              Called by DeliveryHubScheduler.
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public static void checkTimeouts() {
         List<WorkLog__c> pending = [
-            SELECT Id, StatusPk__c, ApprovalStepNum__c,
+            SELECT Id, StatusPk__c, ApprovalStepNumber__c,
                    ApprovalRequestedDateTime__c,
                    WorkItemId__r.WorkflowTypeTxt__c
             FROM WorkLog__c
@@ -138,16 +140,16 @@ public with sharing class DeliveryApprovalChainService {
         for (WorkLog__c wl : pending) {
             String wfType = wl.WorkItemId__r.WorkflowTypeTxt__c;
             List<ApprovalStep__mdt> steps = getActiveSteps(wfType);
-            Integer currentStep = wl.ApprovalStepNum__c != null
-                ? wl.ApprovalStepNum__c.intValue() : 1;
+            Integer currentStep = wl.ApprovalStepNumber__c != null
+                ? wl.ApprovalStepNumber__c.intValue() : 1;
 
             if (currentStep > steps.size()) {
                 continue;
             }
             ApprovalStep__mdt step = steps[currentStep - 1];
 
-            Integer timeoutDays = step.TimeoutDaysNum__c != null
-                ? step.TimeoutDaysNum__c.intValue() : 0;
+            Integer timeoutDays = step.TimeoutDaysNumber__c != null
+                ? step.TimeoutDaysNumber__c.intValue() : 0;
             if (timeoutDays <= 0) {
                 continue;
             }
@@ -179,7 +181,7 @@ public with sharing class DeliveryApprovalChainService {
      */
     public static Map<String, Object> getApprovalStatus(Id workLogId) {
         WorkLog__c wl = [
-            SELECT Id, StatusPk__c, ApprovalStepNum__c, ApprovedByTxt__c,
+            SELECT Id, StatusPk__c, ApprovalStepNumber__c, ApprovedByTxt__c,
                    ApprovalRequestedDateTime__c,
                    WorkItemId__r.WorkflowTypeTxt__c
             FROM WorkLog__c
@@ -190,7 +192,7 @@ public with sharing class DeliveryApprovalChainService {
 
         return new Map<String, Object>{
             'status' => wl.StatusPk__c,
-            'currentStep' => wl.ApprovalStepNum__c,
+            'currentStep' => wl.ApprovalStepNumber__c,
             'approvedBy' => wl.ApprovedByTxt__c,
             'requestedAt' => wl.ApprovalRequestedDateTime__c
         };
@@ -199,6 +201,7 @@ public with sharing class DeliveryApprovalChainService {
     private static Map<String, List<ApprovalStep__mdt>> stepCache =
         new Map<String, List<ApprovalStep__mdt>>();
 
+    /** @description Returns active approval steps for the given workflow type, with caching. */
     @TestVisible
     private static List<ApprovalStep__mdt> getActiveSteps(String workflowType) {
         if (mockSteps != null) {
@@ -216,15 +219,15 @@ public with sharing class DeliveryApprovalChainService {
             return stepCache.get(workflowType);
         }
         List<ApprovalStep__mdt> steps = [
-            SELECT DeveloperName, WorkflowTypeTxt__c, StepOrderNum__c,
+            SELECT DeveloperName, WorkflowTypeTxt__c, StepOrderNumber__c,
                    ApproverFieldTxt__c, ApprovalModePk__c,
-                   RequiredApprovalCountNum__c,
-                   TimeoutDaysNum__c, TimeoutActionPk__c
+                   RequiredApprovalCountNumber__c,
+                   TimeoutDaysNumber__c, TimeoutActionPk__c
             FROM ApprovalStep__mdt
             WHERE WorkflowTypeTxt__c = :workflowType
             AND ActiveDateTime__c != null
             WITH SYSTEM_MODE
-            ORDER BY StepOrderNum__c ASC
+            ORDER BY StepOrderNumber__c ASC
         ];
         stepCache.put(workflowType, steps);
         return steps;
