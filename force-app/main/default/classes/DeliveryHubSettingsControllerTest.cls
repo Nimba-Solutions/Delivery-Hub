@@ -23,7 +23,7 @@ private class DeliveryHubSettingsControllerTest {
             EnableAIEstimationDateTime__c = now,
             OpenAIApiKeyTxt__c = 'test-key',
             OpenAIModelTxt__c = 'gpt-4o',
-            OpenAiApiTestedBool__c = true
+            OpenAiApiTestedDateTime__c = now
         );
         insert settings;
     }
@@ -159,11 +159,11 @@ private class DeliveryHubSettingsControllerTest {
             System.assertNotEquals(null, s.EnableWeeklyDigestDateTime__c, 'Weekly digest should be enabled');
             System.assertEquals(null, s.EnableStatusPageDateTime__c, 'Status page should be disabled');
             System.assertNotEquals(null, s.RequireWorkLogApprovalDate__c, 'WorkLog approval should be required');
-            System.assertEquals(true, s.EnableActivityLoggingBool__c, 'Activity logging bool should be true');
-            System.assertEquals(true, s.EnableFieldTrackingBool__c, 'Field tracking bool should be true');
-            System.assertEquals(false, s.EnableBellNotificationsBool__c, 'Bell notifications bool should be false');
-            System.assertEquals(true, s.WeeklyDigestEnabledBool__c, 'Weekly digest bool should be true');
-            System.assertEquals(false, s.StatusPageEnabledBool__c, 'Status page bool should be false');
+            System.assertNotEquals(null, s.EnableActivityLoggingDateTime__c, 'Activity logging datetime should be set');
+            System.assertNotEquals(null, s.EnableFieldTrackingDateTime__c, 'Field tracking datetime should be set');
+            System.assertEquals(null, s.EnableBellNotificationsDateTime__c, 'Bell notifications datetime should be null');
+            System.assertNotEquals(null, s.EnableWeeklyDigestDateTime__c, 'Weekly digest datetime should be set');
+            System.assertEquals(null, s.EnableStatusPageDateTime__c, 'Status page datetime should be null');
             System.assertEquals(45, s.FieldChangeRetentionDaysNumber__c, 'Field change retention should be 45');
             System.assertEquals('Friday', s.WeeklyDigestDayTxt__c, 'Digest day should be Friday');
             System.assertEquals('a@b.com,c@d.com', s.WeeklyDigestRecipientsTxt__c, 'Digest recipients should be set');
@@ -199,7 +199,7 @@ private class DeliveryHubSettingsControllerTest {
             DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
             System.assertEquals('new-key', s.OpenAIApiKeyTxt__c, 'OpenAI API Key should be updated');
             System.assertEquals('gpt-4o-mini', s.OpenAIModelTxt__c, 'OpenAI Model should be updated');
-            System.assertEquals(true, s.OpenAiApiTestedBool__c, 'OpenAI API should be marked as tested');
+            System.assertNotEquals(null, s.OpenAiApiTestedDateTime__c, 'OpenAI API should be marked as tested');
         }
     }
 
@@ -295,7 +295,7 @@ private class DeliveryHubSettingsControllerTest {
             DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
             // Key should NOT be overwritten with masked value
             System.assertEquals('test-key', s.OpenAIApiKeyTxt__c, 'Masked key should not overwrite existing key');
-            System.assertEquals(false, s.OpenAiApiTestedBool__c, 'Tested flag should update');
+            System.assertEquals(null, s.OpenAiApiTestedDateTime__c, 'Tested flag should be cleared');
         }
     }
 

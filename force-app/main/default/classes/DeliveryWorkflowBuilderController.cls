@@ -18,7 +18,7 @@ global with sharing class DeliveryWorkflowBuilderController {
     global static List<Map<String, Object>> getWorkflowTypes() {
         List<WorkflowType__mdt> types = [
             SELECT DeveloperName, Label, DescriptionTxt__c, IconName__c,
-                   SortOrderNumber__c, IsDefaultBool__c
+                   SortOrderNumber__c, DefaultDateTime__c
             FROM WorkflowType__mdt
             ORDER BY SortOrderNumber__c ASC
         ];
@@ -45,7 +45,7 @@ global with sharing class DeliveryWorkflowBuilderController {
             m.put('icon', wt.IconName__c);
             m.put('stageCount', stageCounts.containsKey(wt.DeveloperName)
                 ? stageCounts.get(wt.DeveloperName) : 0);
-            m.put('isDefault', wt.IsDefaultBool__c);
+            m.put('isDefault', wt.DefaultDateTime__c != null);
             result.add(m);
         }
         return result;
@@ -62,8 +62,8 @@ global with sharing class DeliveryWorkflowBuilderController {
             SELECT DeveloperName, Label, ApiValueTxt__c, DisplayNameTxt__c,
                    SortOrderNumber__c, PhaseTxt__c, CardColorTxt__c,
                    HeaderBgColorTxt__c, HeaderTextColorTxt__c, OwnerPersonaTxt__c,
-                   IsTerminalBool__c, IsBlockedStateBool__c, IsAttentionStateBool__c,
-                   IsVisibleByDefaultBool__c, AllowedForwardTransitionsTxt__c,
+                   TerminalDateTime__c, BlockedStateDateTime__c, AttentionStateDateTime__c,
+                   VisibleByDefaultDateTime__c, AllowedForwardTransitionsTxt__c,
                    AllowedBacktrackTransitionsTxt__c, EtaWeightNumber__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
@@ -83,10 +83,10 @@ global with sharing class DeliveryWorkflowBuilderController {
             m.put('headerBgColor', s.HeaderBgColorTxt__c);
             m.put('headerTextColor', s.HeaderTextColorTxt__c);
             m.put('ownerPersona', s.OwnerPersonaTxt__c);
-            m.put('isTerminal', s.IsTerminalBool__c);
-            m.put('isBlocked', s.IsBlockedStateBool__c);
-            m.put('isAttention', s.IsAttentionStateBool__c);
-            m.put('isVisibleByDefault', s.IsVisibleByDefaultBool__c);
+            m.put('isTerminal', s.TerminalDateTime__c != null);
+            m.put('isBlocked', s.BlockedStateDateTime__c != null);
+            m.put('isAttention', s.AttentionStateDateTime__c != null);
+            m.put('isVisibleByDefault', s.VisibleByDefaultDateTime__c != null);
             m.put('forwardTransitions', s.AllowedForwardTransitionsTxt__c);
             m.put('backtrackTransitions', s.AllowedBacktrackTransitionsTxt__c);
             m.put('etaWeight', s.EtaWeightNumber__c);
@@ -143,10 +143,10 @@ global with sharing class DeliveryWorkflowBuilderController {
             addMetadataValue(stageRecord, 'PhaseTxt__c', stage.get('phase'));
             addMetadataValue(stageRecord, 'CardColorTxt__c',
                 stage.containsKey('color') ? stage.get('color') : '#e2e8f0');
-            addMetadataValue(stageRecord, 'IsTerminalBool__c', stage.get('isTerminal'));
-            addMetadataValue(stageRecord, 'IsBlockedStateBool__c', stage.get('isBlocked'));
-            addMetadataValue(stageRecord, 'IsAttentionStateBool__c', stage.get('isAttention'));
-            addMetadataValue(stageRecord, 'IsVisibleByDefaultBool__c', true);
+            addMetadataValue(stageRecord, 'TerminalDateTime__c', stage.get('isTerminal') == true ? Datetime.now() : null);
+            addMetadataValue(stageRecord, 'BlockedStateDateTime__c', stage.get('isBlocked') == true ? Datetime.now() : null);
+            addMetadataValue(stageRecord, 'AttentionStateDateTime__c', stage.get('isAttention') == true ? Datetime.now() : null);
+            addMetadataValue(stageRecord, 'VisibleByDefaultDateTime__c', Datetime.now());
             addMetadataValue(stageRecord, 'OwnerPersonaTxt__c', 'Admin');
             addMetadataValue(stageRecord, 'WorkflowType__c', typeName);
 
@@ -177,7 +177,7 @@ global with sharing class DeliveryWorkflowBuilderController {
             addMetadataValue(viewRecord, 'ColumnNameTxt__c', stage.get('label'));
             addMetadataValue(viewRecord, 'StageApiValuesTxt__c', stage.get('label'));
             addMetadataValue(viewRecord, 'SortOrderNumber__c', viewSort);
-            addMetadataValue(viewRecord, 'IsExtendedColumnBool__c', false);
+            addMetadataValue(viewRecord, 'ExtendedColumnDateTime__c', null);
 
             container.addMetadata(viewRecord);
             viewSort++;

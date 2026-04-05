@@ -46,7 +46,7 @@ Supported object types: `WorkItem__c`, `WorkItemComment__c`, `ContentVersion`
     "DetailsTxt__c": "Create a responsive login page with OAuth support.",
     "StageNamePk__c": "In Development",
     "PriorityPk__c": "High",
-    "IsActiveBool__c": true,
+    "ActivatedDateTime__c": "2026-01-01T00:00:00.000Z",
     "StatusPk__c": "New",
     "SourceId": "a00xx0000000001AAA",
     "TargetId": "a00xx0000000099AAA",
@@ -252,7 +252,7 @@ Client org polls the vendor org for staged changes:
 
 ### Vendor Push (Real-Time Upstream)
 
-When `EnableVendorPushBool__c = true` on the client NetworkEntity and an endpoint URL is configured, the vendor org pushes changes upstream to the client in real time (instead of staging for polling):
+When `EnableVendorPushDateTime__c` is set (non-null) on the client NetworkEntity and an endpoint URL is configured, the vendor org pushes changes upstream to the client in real time (instead of staging for polling):
 
 ```
 1. Change made on vendor's WorkItem
@@ -487,7 +487,7 @@ To secure the connection with API keys:
 
 To have the vendor push changes to the client in real time (instead of polling):
 
-1. On the vendor org's client NetworkEntity, set `EnableVendorPushBool__c = true`
+1. On the vendor org's client NetworkEntity, set `EnableVendorPushDateTime__c = Datetime.now()`
 2. Set `IntegrationEndpointUrlTxt__c` to the client's sync endpoint URL
 3. Changes will be pushed immediately instead of staged for polling
 

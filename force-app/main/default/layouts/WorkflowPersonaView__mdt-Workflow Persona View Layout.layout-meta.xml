@@ -55,7 +55,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsExtendedColumnBool__c</field>
+                <field>ExtendedColumnDateTime__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns/>
