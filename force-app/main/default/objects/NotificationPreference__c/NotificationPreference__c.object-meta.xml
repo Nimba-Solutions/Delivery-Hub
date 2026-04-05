@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Notification Preference</label>
+    <description>Per-user notification channel and event type preferences. Supports opt-out model where absence of a record means notifications are enabled by default.</description>
+    <pluralLabel>Notification Preferences</pluralLabel>
+    <nameField>
+        <displayFormat>DNP-{00000}</displayFormat>
+        <label>Notification Preference Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableReports>true</enableReports>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>

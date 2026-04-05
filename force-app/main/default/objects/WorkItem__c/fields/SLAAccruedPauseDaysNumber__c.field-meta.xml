@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SLAAccruedPauseDaysNumber__c</fullName>
+    <description>Total days the SLA clock has been paused across all pause/resume cycles.</description>
+    <externalId>false</externalId>
+    <label>SLA Accrued Pause Days</label>
+    <precision>5</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
