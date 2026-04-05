@@ -19,6 +19,7 @@
             <value><fullName>Field_Change</fullName><default>false</default><label>Field Change</label></value>
             <value><fullName>Document_Action</fullName><default>false</default><label>Document Action</label></value>
             <value><fullName>Portal_Hours_Logged</fullName><default>false</default><label>Portal Hours Logged</label></value>
+            <value><fullName>API_Request</fullName><default>false</default><label>API Request</label></value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
