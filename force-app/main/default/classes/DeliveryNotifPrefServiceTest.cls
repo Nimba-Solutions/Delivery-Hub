@@ -6,8 +6,8 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
-@SuppressWarnings('PMD.ApexCRUDViolation')
-private class DeliveryNotificationPreferenceServiceTest {
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.MethodNamingConventions')
+private class DeliveryNotifPrefServiceTest {
 
     @IsTest
     static void shouldNotify_returnsTrue_whenNoPreferenceExists() {
