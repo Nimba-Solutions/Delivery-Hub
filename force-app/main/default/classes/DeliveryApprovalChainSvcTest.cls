@@ -12,6 +12,12 @@ private class DeliveryApprovalChainSvcTest {
 
     @TestSetup
     static void makeData() {
+        NetworkEntity__c entity = new NetworkEntity__c(
+            Name = 'Test Vendor',
+            EntityTypePk__c = 'Vendor'
+        );
+        insert entity;
+
         WorkItem__c item = new WorkItem__c(
             BriefDescriptionTxt__c = 'Approval test item',
             StageNamePk__c = 'In Development',
@@ -21,7 +27,15 @@ private class DeliveryApprovalChainSvcTest {
         );
         insert item;
 
+        WorkRequest__c request = new WorkRequest__c(
+            WorkItemId__c = item.Id,
+            DeliveryEntityId__c = entity.Id,
+            StatusPk__c = 'Accepted'
+        );
+        insert request;
+
         WorkLog__c log = new WorkLog__c(
+            RequestId__c = request.Id,
             WorkItemId__c = item.Id,
             HoursLoggedNumber__c = 2,
             WorkDateDate__c = Date.today(),
