@@ -31,7 +31,6 @@
 ## Field Naming Conventions
 | Rule Name | Required Pattern |
 |-----------|-----------------|
-| CheckboxFieldNamingConvention | PascalCaseBool__c |
 | TextAreaFieldNamingConvention | PascalCaseTxt__c |
 | RichTextFieldNamingConvention | PascalCaseTxt__c |
 | LongTextAreaFieldNamingConvention | PascalCaseTxt__c |

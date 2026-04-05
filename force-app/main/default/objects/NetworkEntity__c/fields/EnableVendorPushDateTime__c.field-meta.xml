@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>EnableVendorPushDateTime__c</fullName>
-    <description>When non-null, the vendor org will push sync items directly to this client entity. The timestamp records when vendor push was enabled. Replaces EnableVendorPushBool__c.</description>
+    <description>When non-null, the vendor org will push sync items directly to this client entity. The timestamp records when vendor push was enabled.</description>
     <externalId>false</externalId>
     <label>Enable Vendor Push</label>
     <required>false</required>

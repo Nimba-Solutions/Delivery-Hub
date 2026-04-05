@@ -16,25 +16,25 @@ FIELD_META = {
     "CloudNimbusGlobalSettings__mdt/EndpointUrlTxt__c": {
         "inlineHelpText": "Base URL for the Cloud Nimbus LLC integration endpoint.",
     },
-    "CloudNimbusGlobalSettings__mdt/EnabledBool__c": {
-        "inlineHelpText": "Enable or disable this Cloud Nimbus LLC marketing integration.",
+    "CloudNimbusGlobalSettings__mdt/EnabledDateTime__c": {
+        "inlineHelpText": "Set to a DateTime value to enable this Cloud Nimbus LLC marketing integration; clear to disable.",
     },
 
     # ── DeliveryHubSettings__c ─────────────────────────────────────────────
-    "DeliveryHubSettings__c/AutoCreateWorkRequestBool__c": {
-        "inlineHelpText": "When enabled, a delivery Request is automatically created whenever a new Work Item is saved.",
+    "DeliveryHubSettings__c/AutoCreateWorkRequestDateTime__c": {
+        "inlineHelpText": "When set, a delivery Request is automatically created whenever a new Work Item is saved.",
     },
-    "DeliveryHubSettings__c/AutoSyncNetworkEntityBool__c": {
-        "inlineHelpText": "When enabled, Network Entity records are kept in sync with their remote counterparts automatically.",
+    "DeliveryHubSettings__c/AutoSyncNetworkEntityDateTime__c": {
+        "inlineHelpText": "When set, Network Entity records are kept in sync with their remote counterparts automatically.",
     },
-    "DeliveryHubSettings__c/EnableNotificationsBool__c": {
-        "inlineHelpText": "Enable in-app and email notifications for work item status changes and comments.",
+    "DeliveryHubSettings__c/EnableNotificationsDateTime__c": {
+        "inlineHelpText": "Set to enable in-app and email notifications for work item status changes and comments.",
     },
     "DeliveryHubSettings__c/OpenAIApiKeyTxt__c": {
         "inlineHelpText": "Your OpenAI secret API key. Required for AI estimation and description generation features.",
     },
-    "DeliveryHubSettings__c/OpenAiApiTestedBool__c": {
-        "inlineHelpText": "Read-only flag set to true once the OpenAI API key has been successfully validated.",
+    "DeliveryHubSettings__c/OpenAiApiTestedDateTime__c": {
+        "inlineHelpText": "Read-only timestamp set when the OpenAI API key was last successfully validated.",
     },
     "DeliveryHubSettings__c/StagesToAutoShareWithDevTeamTxt__c": {
         "inlineHelpText": "Comma-separated list of stage names. Work items entering these stages are automatically shared with the development team.",
@@ -44,8 +44,8 @@ FIELD_META = {
     "Kanban_Stage_Field_Requirement__mdt/DescriptionTxt__c": {
         "inlineHelpText": "Human-readable description of why these fields are required at this stage.",
     },
-    "Kanban_Stage_Field_Requirement__mdt/IsActiveBool__c": {
-        "inlineHelpText": "Uncheck to disable this requirement without deleting the record.",
+    "Kanban_Stage_Field_Requirement__mdt/ActivatedDateTime__c": {
+        "inlineHelpText": "Set to a DateTime value to activate this requirement; clear to disable without deleting the record.",
     },
     "Kanban_Stage_Field_Requirement__mdt/RequiredFieldsTxt__c": {
         "inlineHelpText": "Comma-separated API field names that must be populated before a work item can enter the target stage.",
@@ -173,8 +173,8 @@ FIELD_META = {
     "WorkItem__c/HoursVarianceNumber__c": {
         "inlineHelpText": "Estimated Hours minus Total Logged Hours. Positive means under estimate; negative means over.",
     },
-    "WorkItem__c/IsActiveBool__c": {
-        "inlineHelpText": "Uncheck to soft-delete this work item from board views without permanently removing the record.",
+    "WorkItem__c/ActivatedDateTime__c": {
+        "inlineHelpText": "Set to a DateTime value to make this work item active on board views; clear to soft-delete without removing the record.",
     },
     "WorkItem__c/PriorityPk__c": {
         "inlineHelpText": "Select the priority level. Higher priority work items are scheduled earlier in ETA calculations.",

@@ -35,15 +35,11 @@
         <value xsi:type="xsd:string">Warning</value>
     </values>
     <values>
-        <field>IsActiveBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
-    <values>
         <field>SortOrderNum__c</field>
         <value xsi:type="xsd:double">10.0</value>
     </values>
     <values>
-        <field>RequireNoResponseBool__c</field>
-        <value xsi:type="xsd:boolean">true</value>
+        <field>RequireNoResponseDateTime__c</field>
+        <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
     </values>
 </CustomMetadata>
