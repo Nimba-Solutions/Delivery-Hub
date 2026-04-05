@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ApprovalStepNumber__c</fullName>
+    <description>Current step index in the approval chain. Set by DeliveryApprovalChainService when an approval workflow is initiated or advanced.</description>
+    <inlineHelpText>Which approval step this work log is currently at (1-based).</inlineHelpText>
+    <label>Approval Step</label>
+    <precision>3</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

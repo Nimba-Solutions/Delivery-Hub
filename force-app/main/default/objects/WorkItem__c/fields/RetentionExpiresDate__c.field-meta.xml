@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RetentionExpiresDate__c</fullName>
+    <description>Date after which an archived work item becomes eligible for permanent deletion by the purge job. Null on Legal_Hold items (they are never auto-purged).</description>
+    <inlineHelpText>After this date, the archived item can be permanently deleted. Cleared when placed on Legal Hold.</inlineHelpText>
+    <label>Retention Expires</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

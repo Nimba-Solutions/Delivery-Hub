@@ -22,6 +22,11 @@
                 <label>Approved</label>
             </value>
             <value>
+                <fullName>Pending_Approval</fullName>
+                <default>false</default>
+                <label>Pending Approval</label>
+            </value>
+            <value>
                 <fullName>Rejected</fullName>
                 <default>false</default>
                 <label>Rejected</label>
