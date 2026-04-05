@@ -239,6 +239,7 @@ public with sharing class DocumentEmailService {
     //  HELPERS
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Resolves the vendor display name from the first Vendor/Both NetworkEntity. */
     public static String resolveVendorName() {
         List<NetworkEntity__c> vendors = [
             SELECT Name FROM NetworkEntity__c
@@ -249,11 +250,13 @@ public with sharing class DocumentEmailService {
         return vendors.isEmpty() ? 'Delivery Hub' : vendors[0].Name;
     }
 
+    /** @description Builds the HTML email body for a document using the resolved vendor name. */
     @TestVisible
     public static String buildDocumentEmailBody(DeliveryDocument__c doc, String templateDisplay) {
         return buildDocumentEmailBody(doc, templateDisplay, resolveVendorName());
     }
 
+    /** @description Builds the HTML email body for a document with explicit vendor name. */
     @TestVisible
     public static String buildDocumentEmailBody(DeliveryDocument__c doc, String templateDisplay, String vendorName) {
         String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
@@ -334,6 +337,7 @@ public with sharing class DocumentEmailService {
         return body;
     }
 
+    /** @description Parses payment terms (e.g. 'Net 30') into a due date relative to fromDate. */
     @TestVisible
     public static Date parseDueDate(String terms, Date fromDate) {
         if (String.isBlank(terms)) {

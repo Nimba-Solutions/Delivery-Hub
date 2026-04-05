@@ -25,6 +25,7 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                    RetryCountNumber__c, RequestId__c,
                    RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c,
                    RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c,
+                   RequestId__r.DeliveryEntityId__r.HmacSecretTxt__c,
                    RequestId__r.DeliveryEntityId__r.ConnectionStatusPk__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
@@ -42,6 +43,7 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                    RetryCountNumber__c, RequestId__c,
                    WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c,
                    WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c,
+                   WorkItemId__r.ClientNetworkEntityId__r.HmacSecretTxt__c,
                    WorkItemId__r.ClientNetworkEntityId__r.ConnectionStatusPk__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
@@ -102,7 +104,10 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                 String apiKey = item.RequestId__c != null
                     ? item.RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c
                     : item.WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c;
-                
+                String hmacSecret = item.RequestId__c != null
+                    ? item.RequestId__r.DeliveryEntityId__r.HmacSecretTxt__c
+                    : item.WorkItemId__r.ClientNetworkEntityId__r.HmacSecretTxt__c;
+
                 // Validate Endpoint Configuration — no endpoint means entity isn't set up
                 // for push sync. Park as Staged (available for polling) instead of failing.
                 if (String.isBlank(endpointUrl)) {
@@ -141,7 +146,13 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                     if (String.isNotBlank(apiKey)) {
                         req.setHeader('X-Api-Key', apiKey);
                     }
-                    
+
+                    // HMAC request signing — attach signature when entity has a shared secret
+                    if (String.isNotBlank(hmacSecret)) {
+                        String hmac = DeliveryCryptoService.computeHMAC(hmacSecret, item.PayloadTxt__c);
+                        req.setHeader('X-Signature', hmac);
+                    }
+
                     req.setBody(item.PayloadTxt__c);
                     req.setTimeout(60000); 
 

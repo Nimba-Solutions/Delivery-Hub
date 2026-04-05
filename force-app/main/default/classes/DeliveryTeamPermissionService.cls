@@ -22,11 +22,11 @@ public with sharing class DeliveryTeamPermissionService {
     public static List<Map<String, Object>> getActiveTeams() {
         List<Map<String, Object>> teams = new List<Map<String, Object>>();
         for (DeliveryTeam__mdt t : [
-            SELECT DeveloperName, Label, TeamNameTxt__c, SortOrderNum__c
+            SELECT DeveloperName, Label, TeamNameTxt__c, SortOrderNumber__c
             FROM DeliveryTeam__mdt
             WHERE ActiveDateTime__c != null
             WITH SYSTEM_MODE
-            ORDER BY SortOrderNum__c ASC
+            ORDER BY SortOrderNumber__c ASC
         ]) {
             teams.add(new Map<String, Object>{
                 'name' => t.TeamNameTxt__c,

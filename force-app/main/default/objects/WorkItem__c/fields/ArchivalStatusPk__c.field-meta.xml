@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ArchivalStatusPk__c</fullName>
+    <description>Archival lifecycle state of the work item. Active items appear on boards; Archived items are excluded from views and sync; Legal_Hold items are preserved indefinitely.</description>
+    <inlineHelpText>Active = normal. Archived = hidden from boards, eligible for purge after retention expires. Legal_Hold = preserved indefinitely.</inlineHelpText>
+    <label>Archival Status</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Active</fullName>
+                <default>true</default>
+                <label>Active</label>
+            </value>
+            <value>
+                <fullName>Archived</fullName>
+                <default>false</default>
+                <label>Archived</label>
+            </value>
+            <value>
+                <fullName>Legal_Hold</fullName>
+                <default>false</default>
+                <label>Legal Hold</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
