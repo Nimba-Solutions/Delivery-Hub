@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PermissionsTxt__c</fullName>
+    <description>JSON array of granular permission strings. When populated, these override the role-based defaults. Example: ["view_work_items","submit_requests","approve_work_logs"]</description>
+    <inlineHelpText>Optional JSON array of permission strings that override role-based defaults.</inlineHelpText>
+    <label>Permissions</label>
+    <length>1000</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
