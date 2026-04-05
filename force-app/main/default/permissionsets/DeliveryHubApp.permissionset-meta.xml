@@ -490,6 +490,16 @@
         <field>PortalAccess__c.RolePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>PortalAccess__c.PermissionsTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>WorkItem__c.TeamTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub App</label>
     <objectPermissions>

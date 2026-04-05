@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TeamTxt__c</fullName>
+    <description>Team assignment for this work item (e.g., Backend, Frontend, Infrastructure). Used for team-based board filtering.</description>
+    <externalId>false</externalId>
+    <label>Team</label>
+    <length>80</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -228,6 +228,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
+        <field>WorkItem__c.TeamTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>WorkItemComment__c.AuthorTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
