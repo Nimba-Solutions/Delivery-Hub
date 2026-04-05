@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>IsEnabledBool__c</fullName>
-    <description>Toggle tracking on or off for this field without deleting the record.</description>
-    <defaultValue>true</defaultValue>
+    <fullName>EnabledDateTime__c</fullName>
+    <description>When non-null, field tracking is enabled for this field. Null = tracking disabled.</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Enabled</label>
-    <type>Checkbox</type>
+    <required>false</required>
+    <type>DateTime</type>
 </CustomField>

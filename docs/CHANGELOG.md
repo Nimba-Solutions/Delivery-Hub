@@ -32,7 +32,7 @@ All notable changes to the Delivery Hub package are documented here.
 
 ### PR #440 — Saved board filters
 
-- New `DeliverySavedFilter__c` custom object with Private sharing model (LabelTxt__c, FilterJsonTxt__c, IsDefaultBool__c, WorkflowTypeTxt__c)
+- New `DeliverySavedFilter__c` custom object with Private sharing model (LabelTxt__c, FilterJsonTxt__c, DefaultSetDateTime__c, WorkflowTypeTxt__c)
 - New `DeliverySavedFilterController` with getSavedFilters, saveBoardFilter, deleteSavedFilter methods
 - Dropdown menu in board filter toolbar for loading saved filters
 - Save modal for naming and setting default filters

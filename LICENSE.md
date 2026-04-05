@@ -19,7 +19,7 @@ including commercial use, subject to the following conditions:
 
 2. **Metadata Integrity** — The `CloudNimbusGlobalSettings__mdt` Custom Metadata
    Type record must not be removed from the package. Users may set the
-   `EnabledBool__c` field to `false` to disable marketing features.
+   `EnabledDateTime__c` field to `null` to disable marketing features.
 
 ## Notice
 

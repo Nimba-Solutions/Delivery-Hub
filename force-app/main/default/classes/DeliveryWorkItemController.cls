@@ -162,12 +162,12 @@ global with sharing class DeliveryWorkItemController {
     global static Boolean isMarketingEnabled() {
         try {
             CloudNimbusGlobalSettings__mdt m = [
-                SELECT EnabledBool__c
+                SELECT EnabledDateTime__c
                 FROM CloudNimbusGlobalSettings__mdt
                 WHERE DeveloperName = 'Default'
                 LIMIT 1
             ];
-            return m != null && m.EnabledBool__c;
+            return m != null && m.EnabledDateTime__c != null;
         } catch (Exception e) {
             return false;
         }
@@ -227,7 +227,7 @@ global with sharing class DeliveryWorkItemController {
         List<WorkflowStageRequirement__mdt> requirements = [
             SELECT RequiredFieldsTxt__c
             FROM WorkflowStageRequirement__mdt
-            WHERE IsActiveBool__c = true AND TargetStageTxt__c = :targetStage
+            WHERE ActiveDateTime__c != null AND TargetStageTxt__c = :targetStage
             LIMIT 1
         ];
 

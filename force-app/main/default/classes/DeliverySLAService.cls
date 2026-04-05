@@ -189,9 +189,9 @@ global with sharing class DeliverySLAService {
 
         List<SLARule__mdt> rules = [
             SELECT DeveloperName, WorkflowTypeTxt__c, PriorityTxt__c,
-                   TargetDaysNum__c, WarningDaysNum__c, UseBusinessHoursBool__c, IsActiveBool__c
+                   TargetDaysNum__c, WarningDaysNum__c, UseBusinessHoursDateTime__c, ActiveDateTime__c
             FROM SLARule__mdt
-            WHERE IsActiveBool__c = true
+            WHERE ActiveDateTime__c != null
             WITH SYSTEM_MODE
         ];
 

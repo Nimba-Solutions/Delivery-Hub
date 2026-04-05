@@ -22,7 +22,7 @@ global with sharing class DeliveryWorkflowConfigService {
     global static List<Map<String,Object>> getWorkflowTypes() {
         List<Map<String,Object>> result = new List<Map<String,Object>>();
         for (WorkflowType__mdt wt : [
-            SELECT DeveloperName, Label, SortOrderNumber__c, IconName__c, IsDefaultBool__c, UseSimplifiedViewBool__c
+            SELECT DeveloperName, Label, SortOrderNumber__c, IconName__c, DefaultDateTime__c, UseSimplifiedViewDateTime__c
             FROM WorkflowType__mdt
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST, Label ASC
@@ -32,8 +32,8 @@ global with sharing class DeliveryWorkflowConfigService {
             m.put('label',         wt.Label);
             m.put('sortOrder',     wt.SortOrderNumber__c);
             m.put('iconName',      wt.IconName__c);
-            m.put('isDefault',     wt.IsDefaultBool__c);
-            m.put('useSimplifiedView', wt.UseSimplifiedViewBool__c);
+            m.put('isDefault',     wt.DefaultDateTime__c != null);
+            m.put('useSimplifiedView', wt.UseSimplifiedViewDateTime__c != null);
             result.add(m);
         }
         return result;
@@ -67,7 +67,7 @@ global with sharing class DeliveryWorkflowConfigService {
         // --- Load type record ---
         WorkflowType__mdt typeRec;
         List<WorkflowType__mdt> types = [
-            SELECT DeveloperName, Label, UseSimplifiedViewBool__c
+            SELECT DeveloperName, Label, UseSimplifiedViewDateTime__c
             FROM WorkflowType__mdt
             WHERE DeveloperName = :workflowTypeName
             WITH SYSTEM_MODE
@@ -84,7 +84,7 @@ global with sharing class DeliveryWorkflowConfigService {
             SELECT DeveloperName, ApiValueTxt__c, DisplayNameTxt__c, SortOrderNumber__c,
                    CardColorTxt__c, HeaderBgColorTxt__c, HeaderTextColorTxt__c,
                    OwnerPersonaTxt__c, PhaseTxt__c,
-                   IsTerminalBool__c, IsBlockedStateBool__c, IsAttentionStateBool__c, IsVisibleByDefaultBool__c,
+                   TerminalDateTime__c, BlockedStateDateTime__c, AttentionStateDateTime__c, VisibleByDefaultDateTime__c,
                    AllowedForwardTransitionsTxt__c, AllowedBacktrackTransitionsTxt__c,
                    WorkflowType__r.DeveloperName
             FROM WorkflowStage__mdt
@@ -100,10 +100,10 @@ global with sharing class DeliveryWorkflowConfigService {
             sm.put('headerTextColor',     s.HeaderTextColorTxt__c);
             sm.put('ownerPersona',        s.OwnerPersonaTxt__c);
             sm.put('phase',               s.PhaseTxt__c);
-            sm.put('isTerminal',          s.IsTerminalBool__c);
-            sm.put('isBlockedState',      s.IsBlockedStateBool__c);
-            sm.put('isAttentionState',    s.IsAttentionStateBool__c);
-            sm.put('isVisibleByDefault',  s.IsVisibleByDefaultBool__c);
+            sm.put('isTerminal',          s.TerminalDateTime__c != null);
+            sm.put('isBlockedState',      s.BlockedStateDateTime__c != null);
+            sm.put('isAttentionState',    s.AttentionStateDateTime__c != null);
+            sm.put('isVisibleByDefault',  s.VisibleByDefaultDateTime__c != null);
             sm.put('forwardTransitions',  parseCommaSep(s.AllowedForwardTransitionsTxt__c));
             sm.put('backtrackTransitions',parseCommaSep(s.AllowedBacktrackTransitionsTxt__c));
             stages.add(sm);
@@ -112,7 +112,7 @@ global with sharing class DeliveryWorkflowConfigService {
         // --- Load persona views ---
         Map<String,List<Map<String,Object>>> personaViews = new Map<String,List<Map<String,Object>>>();
         for (WorkflowPersonaView__mdt pv : [
-            SELECT PersonaNameTxt__c, ColumnNameTxt__c, StageApiValuesTxt__c, SortOrderNumber__c, IsExtendedColumnBool__c
+            SELECT PersonaNameTxt__c, ColumnNameTxt__c, StageApiValuesTxt__c, SortOrderNumber__c, ExtendedColumnDateTime__c
             FROM WorkflowPersonaView__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
             WITH SYSTEM_MODE
@@ -125,7 +125,7 @@ global with sharing class DeliveryWorkflowConfigService {
             Map<String,Object> col = new Map<String,Object>();
             col.put('columnName',  pv.ColumnNameTxt__c);
             col.put('stages',      parseCommaSep(pv.StageApiValuesTxt__c));
-            col.put('isExtended',  pv.IsExtendedColumnBool__c);
+            col.put('isExtended',  pv.ExtendedColumnDateTime__c != null);
             col.put('sortOrder',   pv.SortOrderNumber__c);
             personaViews.get(persona).add(col);
         }
@@ -134,7 +134,7 @@ global with sharing class DeliveryWorkflowConfigService {
         Map<String,Object> typeMap = new Map<String,Object>{
             'developerName'      => typeRec.DeveloperName,
             'label'              => typeRec.Label,
-            'useSimplifiedView'  => typeRec.UseSimplifiedViewBool__c
+            'useSimplifiedView'  => typeRec.UseSimplifiedViewDateTime__c != null
         };
 
         Map<String,Object> result = new Map<String,Object>();
@@ -155,7 +155,7 @@ global with sharing class DeliveryWorkflowConfigService {
         // Load all types
         List<WorkflowType__mdt> types = [
             SELECT DeveloperName, Label, DescriptionTxt__c, IconName__c,
-                   SortOrderNumber__c, IsDefaultBool__c, UseSimplifiedViewBool__c
+                   SortOrderNumber__c, DefaultDateTime__c, UseSimplifiedViewDateTime__c
             FROM WorkflowType__mdt
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST, Label ASC
@@ -198,7 +198,7 @@ global with sharing class DeliveryWorkflowConfigService {
         for (WorkflowStage__mdt s : [
             SELECT WorkflowType__r.DeveloperName, PhaseTxt__c
             FROM WorkflowStage__mdt
-            WHERE PhaseTxt__c != null AND IsTerminalBool__c = false
+            WHERE PhaseTxt__c != null AND TerminalDateTime__c = null
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST
         ]) {
@@ -221,8 +221,8 @@ global with sharing class DeliveryWorkflowConfigService {
             m.put('description',       wt.DescriptionTxt__c);
             m.put('iconName',          wt.IconName__c);
             m.put('sortOrder',         wt.SortOrderNumber__c);
-            m.put('isDefault',         wt.IsDefaultBool__c);
-            m.put('useSimplifiedView', wt.UseSimplifiedViewBool__c);
+            m.put('isDefault',         wt.DefaultDateTime__c != null);
+            m.put('useSimplifiedView', wt.UseSimplifiedViewDateTime__c != null);
             m.put('stageCount',        stageCountByType.containsKey(wt.DeveloperName)
                                         ? stageCountByType.get(wt.DeveloperName) : 0);
             m.put('stageColors',       stageColorsByType.containsKey(wt.DeveloperName)
@@ -253,7 +253,7 @@ global with sharing class DeliveryWorkflowConfigService {
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
-            AND IsTerminalBool__c = TRUE
+            AND TerminalDateTime__c != null
             WITH SYSTEM_MODE
         ]) {
             result.add(s.ApiValueTxt__c);
@@ -279,7 +279,7 @@ global with sharing class DeliveryWorkflowConfigService {
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
-            AND IsAttentionStateBool__c = TRUE
+            AND AttentionStateDateTime__c != null
             WITH SYSTEM_MODE
         ]) {
             result.add(s.ApiValueTxt__c);
@@ -307,7 +307,7 @@ global with sharing class DeliveryWorkflowConfigService {
             SELECT ApiValueTxt__c, PhaseTxt__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :workflowTypeName
-            AND IsTerminalBool__c = FALSE
+            AND TerminalDateTime__c = null
             AND PhaseTxt__c != null
             WITH SYSTEM_MODE
         ]) {
