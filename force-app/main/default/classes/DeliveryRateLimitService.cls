@@ -10,7 +10,7 @@ public without sharing class DeliveryRateLimitService {
      * @description Checks whether the given identifier has exceeded the request limit
      *              within the specified time window.
      * @param identifier Unique key to rate-limit on (API key, entity ID, email, etc.)
-     * @param actionSubtype Further categorisation stored in ContextDataTxt__c (e.g. 'SyncAPI', 'PublicAPI')
+     * @param actionSubtype Further categorisation stored in PageUrlTxt__c (e.g. 'SyncAPI', 'PublicAPI')
      * @param maxRequests Maximum number of requests allowed in the window
      * @param windowHours Size of the sliding window in hours
      * @return true if the identifier is rate-limited (i.e. has met or exceeded the max)
@@ -25,7 +25,7 @@ public without sharing class DeliveryRateLimitService {
             FROM ActivityLog__c
             WHERE ActionTypePk__c = 'API_Request'
               AND ComponentNameTxt__c = :identifier
-              AND ContextDataTxt__c = :actionSubtype
+              AND PageUrlTxt__c = :actionSubtype
               AND CreatedDate >= :windowStart
             WITH SYSTEM_MODE
         ];
@@ -45,7 +45,7 @@ public without sharing class DeliveryRateLimitService {
         ActivityLog__c log = new ActivityLog__c(
             ActionTypePk__c = 'API_Request',
             ComponentNameTxt__c = identifier,
-            ContextDataTxt__c = actionSubtype
+            PageUrlTxt__c = actionSubtype
         );
         insert log;
     }

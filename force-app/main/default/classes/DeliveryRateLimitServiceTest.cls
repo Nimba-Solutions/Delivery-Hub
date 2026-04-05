@@ -5,8 +5,8 @@ private class DeliveryRateLimitServiceTest {
     static void testNotRateLimitedWhenUnderThreshold() {
         // Insert 2 request logs
         insert new List<ActivityLog__c>{
-            new ActivityLog__c(ActionTypePk__c = 'API_Request', ComponentNameTxt__c = 'test-key-1', ContextDataTxt__c = 'SyncAPI'),
-            new ActivityLog__c(ActionTypePk__c = 'API_Request', ComponentNameTxt__c = 'test-key-1', ContextDataTxt__c = 'SyncAPI')
+            new ActivityLog__c(ActionTypePk__c = 'API_Request', ComponentNameTxt__c = 'test-key-1', PageUrlTxt__c = 'SyncAPI'),
+            new ActivityLog__c(ActionTypePk__c = 'API_Request', ComponentNameTxt__c = 'test-key-1', PageUrlTxt__c = 'SyncAPI')
         };
 
         Test.startTest();
@@ -23,7 +23,7 @@ private class DeliveryRateLimitServiceTest {
             logs.add(new ActivityLog__c(
                 ActionTypePk__c = 'API_Request',
                 ComponentNameTxt__c = 'test-key-2',
-                ContextDataTxt__c = 'PublicAPI'
+                PageUrlTxt__c = 'PublicAPI'
             ));
         }
         insert logs;
@@ -42,7 +42,7 @@ private class DeliveryRateLimitServiceTest {
             logs.add(new ActivityLog__c(
                 ActionTypePk__c = 'API_Request',
                 ComponentNameTxt__c = 'key-A',
-                ContextDataTxt__c = 'SyncAPI'
+                PageUrlTxt__c = 'SyncAPI'
             ));
         }
         insert logs;
@@ -63,7 +63,7 @@ private class DeliveryRateLimitServiceTest {
             logs.add(new ActivityLog__c(
                 ActionTypePk__c = 'API_Request',
                 ComponentNameTxt__c = 'shared-key',
-                ContextDataTxt__c = 'SyncAPI'
+                PageUrlTxt__c = 'SyncAPI'
             ));
         }
         insert logs;
@@ -84,13 +84,13 @@ private class DeliveryRateLimitServiceTest {
         Test.stopTest();
 
         List<ActivityLog__c> logs = [
-            SELECT ComponentNameTxt__c, ContextDataTxt__c, ActionTypePk__c
+            SELECT ComponentNameTxt__c, PageUrlTxt__c, ActionTypePk__c
             FROM ActivityLog__c
             WHERE ActionTypePk__c = 'API_Request'
         ];
         System.assertEquals(1, logs.size(), 'Should have inserted 1 activity log');
         System.assertEquals('rec-key', logs[0].ComponentNameTxt__c, 'Identifier should match');
-        System.assertEquals('SyncAPI', logs[0].ContextDataTxt__c, 'Subtype should match');
+        System.assertEquals('SyncAPI', logs[0].PageUrlTxt__c, 'Subtype should match');
     }
 
     @IsTest
