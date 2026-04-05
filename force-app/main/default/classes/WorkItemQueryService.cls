@@ -135,7 +135,9 @@ public with sharing class WorkItemQueryService {
             query += ' WHERE ' + additionalWhere;
         }
 
-        query += ' WITH SYSTEM_MODE';
+        // AccessLevel.SYSTEM_MODE is passed to Database.queryWithBinds below —
+        // do NOT also include WITH SYSTEM_MODE in the SOQL string (SF throws
+        // SecurityException if both are present).
 
         if (String.isNotBlank(orderBy)) {
             query += ' ORDER BY ' + orderBy;
