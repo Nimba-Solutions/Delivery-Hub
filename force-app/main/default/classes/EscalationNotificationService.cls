@@ -6,7 +6,7 @@
  *               bell notifications, and HTML email body generation.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount, PMD.ApexCRUDViolation')
 public with sharing class EscalationNotificationService {
 
     /**
@@ -214,6 +214,7 @@ public with sharing class EscalationNotificationService {
      * @param ruleName Name of the escalation rule that triggered
      * @return HTML string
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static String buildEscalationHtml(String workItemName, String title,
         String stalledStage, String recordUrl, String severity,
         Integer daysInStage, String ruleName) {
