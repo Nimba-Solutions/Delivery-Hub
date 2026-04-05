@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PublicApiRateLimitNumber__c</fullName>
+    <description>Maximum number of public API requests allowed per hour per entity. Defaults to 100 when null.</description>
+    <inlineHelpText>Max public API requests per hour per entity (default 100 if blank).</inlineHelpText>
+    <label>Public API Rate Limit</label>
+    <precision>5</precision>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+    <required>false</required>
+</CustomField>
