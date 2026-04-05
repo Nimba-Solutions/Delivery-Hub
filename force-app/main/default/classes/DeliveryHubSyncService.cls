@@ -44,6 +44,28 @@ global without sharing class DeliveryHubSyncService {
             }
             DeliveryRateLimitService.recordRequest(apiKeyOrEntityId, 'SyncAPI');
 
+            // 0c. HMAC signature verification (optional — only when entity has a secret)
+            String hmacApiKey = req.headers.get('X-Api-Key');
+            if (String.isNotBlank(hmacApiKey)) {
+                List<NetworkEntity__c> hmacEntities = [
+                    SELECT Id, HmacSecretTxt__c
+                    FROM NetworkEntity__c
+                    WHERE ApiKeyTxt__c = :hmacApiKey
+                    AND ConnectionStatusPk__c = 'Connected'
+                    WITH SYSTEM_MODE
+                    LIMIT 1
+                ];
+                if (!hmacEntities.isEmpty() && String.isNotBlank(hmacEntities[0].HmacSecretTxt__c)) {
+                    String signature = req.headers.get('X-Signature');
+                    String body = req.requestBody != null ? req.requestBody.toString() : '';
+                    if (!DeliveryCryptoService.verifyHMAC(hmacEntities[0].HmacSecretTxt__c, body, signature)) {
+                        res.statusCode = 401;
+                        res.responseBody = Blob.valueOf('{"error":"Invalid signature"}');
+                        return;
+                    }
+                }
+            }
+
             // 1. Identify Object Type from URL
             String objectType = req.requestURI.substring(req.requestURI.lastIndexOf('/') + 1);
 

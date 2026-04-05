@@ -258,6 +258,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
+        <field>WorkItem__c.ArchivalStatusPk__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>WorkItemComment__c.AuthorTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
