@@ -93,7 +93,7 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>EnableVendorPushBool__c</field>
+                <field>EnableVendorPushDateTime__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
@@ -168,7 +168,7 @@
         <fields>SortOrderNumber__c</fields>
         <fields>StatusPk__c</fields>
         <fields>StageNamePk__c</fields>
-        <fields>IsActiveBool__c</fields>
+        <fields>ActivatedDateTime__c</fields>
         <relatedList>WorkItem__c.ClientNetworkEntityId__c</relatedList>
         <sortField>NAME</sortField>
         <sortOrder>Desc</sortOrder>

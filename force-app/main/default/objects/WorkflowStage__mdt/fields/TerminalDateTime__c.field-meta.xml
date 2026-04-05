@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TerminalDateTime__c</fullName>
+    <description>When non-null, this is a terminal stage (Done, Cancelled, Paid, Denied). Terminal stages are excluded from blocker searches and active counts.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Terminal</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

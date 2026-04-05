@@ -135,7 +135,7 @@ const INFO_REGISTRY = {
             'Connection status card showing whether this org is linked to the Delivery Hub network. On the admin home, displays vendor details, sync schedule, entity status, and a queue of pending connection approval requests from client orgs.',
         friendlyName: 'Hub Setup',
         keyFields:
-            'NetworkEntity__c.StatusPk__c, NetworkEntity__c.OrgTypePk__c, NetworkEntity__c.Name, DeliveryHubSettings__c.AutoSyncBool__c'
+            'NetworkEntity__c.StatusPk__c, NetworkEntity__c.OrgTypePk__c, NetworkEntity__c.Name, DeliveryHubSettings__c.EnableAutoSyncNetworkEntityDateTime__c'
     },
     deliveryReleaseNotes: {
         dataSource:

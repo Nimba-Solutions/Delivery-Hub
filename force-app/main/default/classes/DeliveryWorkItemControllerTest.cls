@@ -54,7 +54,7 @@ private class DeliveryWorkItemControllerTest {
         DeliveryHubSettings__c settings = new DeliveryHubSettings__c(
             Name = 'Default',
             OpenAIApiKeyTxt__c = 'test-api-key',
-            OpenAiApiTestedBool__c = true
+            OpenAiApiTestedDateTime__c = Datetime.now()
         );
         insert settings;
 
