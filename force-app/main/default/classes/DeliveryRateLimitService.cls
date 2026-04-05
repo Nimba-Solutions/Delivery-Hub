@@ -15,6 +15,7 @@ public without sharing class DeliveryRateLimitService {
      * @param windowHours Size of the sliding window in hours
      * @return true if the identifier is rate-limited (i.e. has met or exceeded the max)
      */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static Boolean isRateLimited(String identifier, String actionSubtype, Integer maxRequests, Integer windowHours) {
         if (String.isBlank(identifier) || maxRequests == null || windowHours == null) {
             return false;
