@@ -60,8 +60,9 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
             return Database.getQueryLocator([
                 SELECT Id
                 FROM ActivityLog__c
-                WHERE (CreatedDate < :cutoff AND ActionTypePk__c != 'Field_Change')
-                   OR (CreatedDate < :fieldChangeCutoff AND ActionTypePk__c = 'Field_Change')
+                WHERE ((CreatedDate < :cutoff AND ActionTypePk__c != 'Field_Change')
+                   OR (CreatedDate < :fieldChangeCutoff AND ActionTypePk__c = 'Field_Change'))
+                AND LegalHoldDateTime__c = null
                 WITH SYSTEM_MODE
             ]);
         }
@@ -71,6 +72,7 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
             FROM ActivityLog__c
             WHERE CreatedDate < :cutoff
             AND ActionTypePk__c != 'Field_Change'
+            AND LegalHoldDateTime__c = null
             WITH SYSTEM_MODE
         ]);
     }

@@ -28,6 +28,22 @@ global without sharing class DeliveryHubSyncService {
                 return; // Response already set
             }
 
+            // 0b. Rate limiting
+            String apiKeyOrEntityId = req.headers.get('X-Api-Key');
+            if (String.isBlank(apiKeyOrEntityId)) {
+                apiKeyOrEntityId = 'anonymous';
+            }
+            DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
+            Integer syncRateLimit = (rlSettings != null && rlSettings.SyncApiRateLimitNumber__c != null)
+                ? (Integer) rlSettings.SyncApiRateLimitNumber__c : 60;
+            if (DeliveryRateLimitService.isRateLimited(apiKeyOrEntityId, 'SyncAPI', syncRateLimit, 1)) {
+                res.statusCode = 429;
+                res.addHeader('Retry-After', '3600');
+                res.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+                return;
+            }
+            DeliveryRateLimitService.recordRequest(apiKeyOrEntityId, 'SyncAPI');
+
             // 1. Identify Object Type from URL
             String objectType = req.requestURI.substring(req.requestURI.lastIndexOf('/') + 1);
 
@@ -101,6 +117,22 @@ global without sharing class DeliveryHubSyncService {
             if (!validateSyncApiKey(req, res)) {
                 return;
             }
+
+            // Rate limiting
+            String apiKeyOrEntityId = req.headers.get('X-Api-Key');
+            if (String.isBlank(apiKeyOrEntityId)) {
+                apiKeyOrEntityId = 'anonymous';
+            }
+            DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
+            Integer syncRateLimit = (rlSettings != null && rlSettings.SyncApiRateLimitNumber__c != null)
+                ? (Integer) rlSettings.SyncApiRateLimitNumber__c : 60;
+            if (DeliveryRateLimitService.isRateLimited(apiKeyOrEntityId, 'SyncAPI', syncRateLimit, 1)) {
+                res.statusCode = 429;
+                res.addHeader('Retry-After', '3600');
+                res.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+                return;
+            }
+            DeliveryRateLimitService.recordRequest(apiKeyOrEntityId, 'SyncAPI');
 
             String path = req.requestURI.substring(req.requestURI.lastIndexOf('/') + 1);
 

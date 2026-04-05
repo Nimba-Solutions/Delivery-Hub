@@ -17,6 +17,19 @@ global without sharing class DeliveryPublicApiService {
         try {
             NetworkEntity__c entity = authenticateRequest();
             if (entity == null) { return; }
+
+            // Rate limiting
+            DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
+            Integer publicApiLimit = (rlSettings != null && rlSettings.PublicApiRateLimitNumber__c != null)
+                ? (Integer) rlSettings.PublicApiRateLimitNumber__c : 100;
+            if (DeliveryRateLimitService.isRateLimited(entity.Id, 'PublicAPI', publicApiLimit, 1)) {
+                RestContext.response.statusCode = 429;
+                RestContext.response.addHeader('Retry-After', '3600');
+                RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+                return;
+            }
+            DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
+
             String resource = extractResource(RestContext.request.requestURI);
             if (handlePreEntityRoutes(resource)) { return; }
             Id entityId = resolveEffectiveEntity(entity.Id);
@@ -35,6 +48,19 @@ global without sharing class DeliveryPublicApiService {
         try {
             NetworkEntity__c entity = authenticateRequest();
             if (entity == null) { return; }
+
+            // Rate limiting
+            DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
+            Integer publicApiLimit = (rlSettings != null && rlSettings.PublicApiRateLimitNumber__c != null)
+                ? (Integer) rlSettings.PublicApiRateLimitNumber__c : 100;
+            if (DeliveryRateLimitService.isRateLimited(entity.Id, 'PublicAPI', publicApiLimit, 1)) {
+                RestContext.response.statusCode = 429;
+                RestContext.response.addHeader('Retry-After', '3600');
+                RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+                return;
+            }
+            DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
+
             Id entityId = resolveEffectiveEntity(entity.Id);
             if (entityId == null) { return; }
             String resource = extractResource(RestContext.request.requestURI);

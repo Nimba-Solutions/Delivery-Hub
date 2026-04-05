@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LegalHoldDateTime__c</fullName>
+    <description>When non-null, this record is under legal hold and cannot be deleted by the cleanup job.</description>
+    <externalId>false</externalId>
+    <label>Legal Hold</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>
