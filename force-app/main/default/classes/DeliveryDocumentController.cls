@@ -13,6 +13,8 @@ global with sharing class DeliveryDocumentController {
     //  GENERATION
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Generates a document (invoice, agreement, status report, etc.) for the given entity and period. */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
     global static Id generateDocument(Id entityId, String templateType, Date periodStart, Date periodEnd, String metadata) {
         return DocumentGenerationService.generateDocument(entityId, templateType, periodStart, periodEnd, metadata);
@@ -22,36 +24,43 @@ global with sharing class DeliveryDocumentController {
     //  QUERIES
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Returns a summary of all pending draft invoices and daily hour summaries. */
     @AuraEnabled(cacheable=true)
     global static Map<String, Object> getPendingInvoices() {
         return DocumentQueryService.getPendingInvoices();
     }
 
+    /** @description Retrieves a document by its public access token for portal rendering. */
     @AuraEnabled(cacheable=true)
     global static Map<String, Object> getDocumentByToken(String publicToken) {
         return DocumentQueryService.getDocumentByToken(publicToken);
     }
 
+    /** @description Retrieves a document by its Salesforce record Id for the embedded viewer. */
     @AuraEnabled(cacheable=true)
     global static Map<String, Object> getDocumentById(Id documentId) {
         return DocumentQueryService.getDocumentById(documentId);
     }
 
+    /** @description Lists all documents for a given entity, ordered by creation date descending. */
     @AuraEnabled(cacheable=true)
     global static List<Map<String, Object>> getDocumentsForEntity(Id entityId) {
         return DocumentQueryService.getDocumentsForEntity(entityId);
     }
 
+    /** @description Returns available document templates from DocumentTemplate__mdt custom metadata. */
     @AuraEnabled(cacheable=true)
     global static List<Map<String, String>> getDocumentTemplates() {
         return DocumentQueryService.getDocumentTemplates();
     }
 
+    /** @description Queries all transaction records (payments, approvals) for a given document. */
     @AuraEnabled
     global static List<Map<String, Object>> getDocumentTransactions(Id documentId) {
         return DocumentQueryService.getTransactionsForDocument(documentId);
     }
 
+    /** @description Returns the default billing entity Id from org-level custom settings. */
     @AuraEnabled(cacheable=true)
     global static String getDefaultBillingEntityId() {
         return DocumentQueryService.getDefaultBillingEntityId();
@@ -61,6 +70,7 @@ global with sharing class DeliveryDocumentController {
     //  STATUS UPDATES
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Updates a document's status and publishes a platform event for external subscribers. */
     @AuraEnabled
     global static void updateDocumentStatus(Id documentId, String newStatus) {
         DeliveryDocument__c doc = [
@@ -92,6 +102,7 @@ global with sharing class DeliveryDocumentController {
         ));
     }
 
+    /** @description Saves an AI-generated narrative summary to the document record. */
     @AuraEnabled
     global static void saveAiNarrative(Id documentId, String narrative) {
         DeliveryDocument__c doc = new DeliveryDocument__c(
@@ -105,6 +116,8 @@ global with sharing class DeliveryDocumentController {
     //  PAYMENTS
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Records a payment against a document and auto-marks it Paid when fully covered. */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
     global static void recordPayment(Id documentId, Decimal amount, Date paymentDate, String note) {
         DocumentPaymentService.recordPayment(documentId, amount, paymentDate, note);
@@ -114,26 +127,31 @@ global with sharing class DeliveryDocumentController {
     //  EMAIL
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Sends a document as a PDF email attachment and marks it as Sent. */
     @AuraEnabled
     global static Map<String, Object> sendDocumentEmail(Id documentId, String recipientEmail) {
         return DocumentEmailService.sendDocumentEmail(documentId, recipientEmail);
     }
 
+    /** @description Returns a preview of the email that would be sent for this document. */
     @AuraEnabled
     global static Map<String, Object> previewDocumentEmail(Id documentId, String recipientEmail) {
         return DocumentEmailService.previewDocumentEmail(documentId, recipientEmail);
     }
 
+    /** @description Schedules a document to be automatically emailed at a future date/time. */
     @AuraEnabled
     global static Map<String, Object> scheduleDocumentSend(Id documentId, String recipientEmail, Datetime sendAt) {
         return DocumentEmailService.scheduleDocumentSend(documentId, recipientEmail, sendAt);
     }
 
+    /** @description Cancels a previously scheduled document send. */
     @AuraEnabled
     global static Map<String, Object> cancelScheduledSend(Id documentId) {
         return DocumentEmailService.cancelScheduledSend(documentId);
     }
 
+    /** @description Processes all documents whose scheduled send time has passed (called by scheduler). */
     public static void processScheduledDocumentSends() {
         DocumentEmailService.processScheduledDocumentSends();
     }
@@ -142,10 +160,12 @@ global with sharing class DeliveryDocumentController {
     //  APPROVAL (token-authenticated, called from API service)
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Approves a document identified by its public token and logs the action. */
     public static Map<String, Object> approveDocumentByToken(String publicToken) {
         return DocumentApprovalService.approveDocumentByToken(publicToken);
     }
 
+    /** @description Disputes a document identified by its public token with a reason. */
     public static Map<String, Object> disputeDocumentByToken(String publicToken, String reason) {
         return DocumentApprovalService.disputeDocumentByToken(publicToken, reason);
     }
@@ -154,31 +174,38 @@ global with sharing class DeliveryDocumentController {
     //  DELEGATES FOR @TestVisible METHODS (preserve test API)
     // ═══════════════════════════════════════════════════════════
 
+    /** @description Calculates the outstanding balance from prior unpaid invoices for an entity. */
     @TestVisible
     private static Decimal calculatePriorBalance(Id entityId, Date currentPeriodStart) {
         return DocumentPaymentService.calculatePriorBalance(entityId, currentPeriodStart);
     }
 
+    /** @description Queries a document record by its public access token. */
     @TestVisible
     private static DeliveryDocument__c queryDocumentByToken(String publicToken) {
         return DocumentApprovalService.queryDocumentByToken(publicToken);
     }
 
+    /** @description Parses payment terms (e.g., 'Net 30') into a due date. */
     @TestVisible
     private static Date parseDueDate(String terms, Date fromDate) {
         return DocumentEmailService.parseDueDate(terms, fromDate);
     }
 
+    /** @description Builds the HTML email body for a document email. */
     @TestVisible
     private static String buildDocumentEmailBody(DeliveryDocument__c doc, String templateDisplay) {
         return DocumentEmailService.buildDocumentEmailBody(doc, templateDisplay);
     }
 
+    /** @description Builds default legal clauses for agreement-type documents. */
     @TestVisible
     private static List<Map<String, String>> buildDefaultAgreementClauses(String templateType, Map<String, Object> snapshot) {
         return DocumentGenerationService.buildDefaultAgreementClauses(templateType, snapshot);
     }
 
+    /** @description Builds a frozen JSON snapshot of entity, work item, and work log data. */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
     @TestVisible
     private static Map<String, Object> buildSnapshot(Id entityId, String templateType, Date periodStart, Date periodEnd) {
         return DocumentGenerationService.buildSnapshot(entityId, templateType, periodStart, periodEnd);
