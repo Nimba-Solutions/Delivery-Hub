@@ -5,7 +5,7 @@
  *               Extracted from DeliveryDocumentController to reduce class size.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ApexDoc')
 public with sharing class DocumentEmailService {
 
     /**
