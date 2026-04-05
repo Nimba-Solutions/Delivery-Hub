@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DefaultRetentionDaysNumber__c</fullName>
+    <description>Default number of days archived work items are retained before becoming eligible for permanent deletion. Defaults to 365 when null.</description>
+    <inlineHelpText>Days to retain archived items before they can be purged (default 365 if blank).</inlineHelpText>
+    <label>Default Retention Days</label>
+    <precision>5</precision>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+    <required>false</required>
+</CustomField>

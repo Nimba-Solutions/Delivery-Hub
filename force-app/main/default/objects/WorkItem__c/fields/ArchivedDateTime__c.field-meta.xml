@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ArchivedDateTime__c</fullName>
+    <description>Timestamp recording when this work item was archived. Null means the item has never been archived.</description>
+    <inlineHelpText>When this item was moved to Archived status. Used for retention calculations.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Archived</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ApprovedByTxt__c</fullName>
+    <description>JSON array of User IDs who have approved this work log through the approval chain. Populated by DeliveryApprovalChainService.processApproval.</description>
+    <inlineHelpText>JSON list of approver IDs (e.g. ["005xx...","005yy..."]).</inlineHelpText>
+    <label>Approved By</label>
+    <length>1000</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
