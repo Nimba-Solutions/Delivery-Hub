@@ -43,6 +43,11 @@ private class DeliveryGanttControllerTest {
             )
         };
         insert workItems;
+
+        // Deactivate the completed item (trigger auto-sets ActivatedDateTime on insert)
+        WorkItem__c completed = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Completed item' LIMIT 1];
+        completed.ActivatedDateTime__c = null;
+        update completed;
     }
 
     // ── Legacy getWorkItemsForGantt ──────────────────────────────────
