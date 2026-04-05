@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>UseSimplifiedViewDateTime__c</fullName>
+    <description>When non-null, this workflow type uses a simplified board view. Null = standard view.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Use Simplified View</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

@@ -11,15 +11,11 @@
         <value xsi:type="xsd:string">utility:code</value>
     </values>
     <values>
-        <field>IsDefaultBool__c</field>
-        <value xsi:type="xsd:boolean">true</value>
+        <field>DefaultDateTime__c</field>
+        <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
     </values>
     <values>
         <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">1</value>
-    </values>
-    <values>
-        <field>UseSimplifiedViewBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
     </values>
 </CustomMetadata>

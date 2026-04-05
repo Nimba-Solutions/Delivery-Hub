@@ -35,20 +35,8 @@
         <value xsi:type="xsd:string">Completion</value>
     </values>
     <values>
-        <field>IsTerminalBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
-    <values>
-        <field>IsBlockedStateBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
-    <values>
-        <field>IsAttentionStateBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
-    <values>
-        <field>IsVisibleByDefaultBool__c</field>
-        <value xsi:type="xsd:boolean">true</value>
+        <field>VisibleByDefaultDateTime__c</field>
+        <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
     </values>
     <values>
         <field>AllowedForwardTransitionsTxt__c</field>

@@ -149,7 +149,7 @@ global with sharing class DeliveryHubSettingsController {
                 ? '****' + settings.OpenAIApiKeyTxt__c.right(4)
                 : null;
             dto.openaiModel = settings.OpenAIModelTxt__c;
-            dto.openAiApiTested = settings.OpenAiApiTestedBool__c;
+            dto.openAiApiTested = settings.OpenAiApiTestedDateTime__c != null;
             dto.slackWebhookUrl = settings.SlackWebhookUrl__c;
             dto.emailNotificationsEnabled = settings.EnableEmailNotificationsDateTime__c != null;
             dto.showBoardMetrics = settings.EnableBoardMetricsDateTime__c != null;
@@ -320,14 +320,6 @@ global with sharing class DeliveryHubSettingsController {
             settings.RequireWorkLogApprovalDate__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDate__c != null ? settings.RequireWorkLogApprovalDate__c : Datetime.now()) : null;
             settings.EnableInvoiceGenerationDateTime__c = dto.invoiceGenerationEnabled == true ? (settings.EnableInvoiceGenerationDateTime__c != null ? settings.EnableInvoiceGenerationDateTime__c : Datetime.now()) : null;
 
-            // Keep legacy booleans in sync
-            settings.EnableActivityLoggingBool__c = dto.activityLoggingEnabled == true;
-            settings.EnableFieldTrackingBool__c = dto.fieldTrackingEnabled == true;
-            settings.EnableBellNotificationsBool__c = dto.bellNotificationsEnabled == true;
-            settings.WeeklyDigestEnabledBool__c = dto.weeklyDigestEnabled == true;
-            settings.StatusPageEnabledBool__c = dto.statusPageEnabled == true;
-            settings.AutoCreateWorkRequestBool__c = dto.autoCreateWorkRequest == true;
-
             // Number settings
             settings.FieldChangeRetentionDaysNumber__c = dto.fieldChangeRetentionDays != null ? dto.fieldChangeRetentionDays : 0;
 
@@ -390,7 +382,7 @@ global with sharing class DeliveryHubSettingsController {
                 settings.OpenAIApiKeyTxt__c = apiKey;
             }
             settings.OpenAIModelTxt__c = model;
-            settings.OpenAiApiTestedBool__c = tested;
+            settings.OpenAiApiTestedDateTime__c = tested ? Datetime.now() : null;
 
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});

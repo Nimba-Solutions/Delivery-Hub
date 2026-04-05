@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequireNoResponseDateTime__c</fullName>
+    <description>When non-null, this rule requires no response (no comments) to fire. Null = fires regardless of response status.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Require No Response</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>
