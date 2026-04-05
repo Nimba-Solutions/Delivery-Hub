@@ -6,12 +6,12 @@
 
 // --- Org Defaults (DeliveryHubSettings__c) ---
 DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-settings.EnableActivityLoggingBool__c = true;
-settings.EnableFieldTrackingBool__c = true;
-settings.EnableBellNotificationsBool__c = true;
-settings.AutoCreateWorkRequestBool__c = true;
-settings.AutoSyncNetworkEntityBool__c = false;
-settings.ShowBoardMetricsBool__c = true;
+settings.EnableActivityLoggingDateTime__c = Datetime.now();
+settings.EnableFieldTrackingDateTime__c = Datetime.now();
+settings.EnableBellNotificationsDateTime__c = Datetime.now();
+settings.AutoCreateWorkRequestDateTime__c = Datetime.now();
+settings.AutoSyncNetworkEntityDateTime__c = null;
+settings.ShowBoardMetricsDateTime__c = Datetime.now();
 settings.ActivityLogRetentionDaysNumber__c = 90;
 settings.FieldChangeRetentionDaysNumber__c = 90;
 settings.EscalationCooldownHoursNumber__c = 24;

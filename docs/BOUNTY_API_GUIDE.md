@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Bounty Marketplace lets organizations publish work items as fixed-price bounties that external developers can browse, claim, and complete. Bounties are just WorkItems with `IsBountyBool__c = true` -- they inherit all existing workflow stages, SLAs, and reporting.
+The Bounty Marketplace lets organizations publish work items as fixed-price bounties that external developers can browse, claim, and complete. Bounties are just WorkItems with `BountyEnabledDateTime__c` set (non-null) -- they inherit all existing workflow stages, SLAs, and reporting.
 
 **Endpoint base**: `/services/apexrest/delivery/deliveryhub/v1/bounties/`
 
@@ -23,7 +23,7 @@ The Bounty Marketplace lets organizations publish work items as fixed-price boun
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `IsBountyBool__c` | Checkbox | Publishes this work item to the marketplace |
+| `BountyEnabledDateTime__c` | DateTime | Publishes this work item to the marketplace (non-null = enabled) |
 | `BountyAmountCurrency__c` | Currency | Fixed payout amount |
 | `BountyDeadlineDate__c` | Date | Completion deadline |
 | `BountyStatusPk__c` | Picklist | Open, Claimed, In Review, Completed, Expired, Cancelled |
@@ -185,7 +185,7 @@ Withdraw an active claim. Requires `X-Api-Key` header.
 
 ```
 Organization creates WorkItem
-  └─ Sets IsBountyBool__c = true
+  └─ Sets BountyEnabledDateTime__c = Datetime.now()
   └─ Sets amount, deadline, difficulty, skills
   └─ Token auto-generated on save
        │
@@ -223,13 +223,13 @@ Organization creates WorkItem
 
 When a bounty is created or updated in one org, the sync engine automatically pushes the bounty fields to connected orgs. The following fields are included in the sync payload:
 
-- `IsBountyBool__c`, `BountyAmountCurrency__c`, `BountyDeadlineDate__c`
+- `BountyEnabledDateTime__c`, `BountyAmountCurrency__c`, `BountyDeadlineDate__c`
 - `BountyStatusPk__c`, `BountyTokenTxt__c`, `BountyDifficultyPk__c`
 - `BountySkillsTxt__c`, `BountyMaxClaimsNumber__c`
 
 When a `BountyClaim__c` is created or updated, the `DeliveryBountyClaimTrigger` creates outbound `SyncItem__c` records that route the claim data back to the origin org (the org that posted the bounty). This uses the same push/staged pattern as the core sync engine:
 
-- If the origin org has `EnableVendorPushBool__c = true` and an integration endpoint, claims push in real-time
+- If the origin org has `EnableVendorPushDateTime__c` set and an integration endpoint, claims push in real-time
 - Otherwise, claims are staged for the origin org to poll via `GET /sync/changes`
 
 ---
@@ -239,7 +239,7 @@ When a `BountyClaim__c` is created or updated, the `DeliveryBountyClaimTrigger` 
 ### Via Salesforce UI
 
 1. Create or open a WorkItem
-2. Check **Is Bounty**
+2. Set **Bounty Enabled** (DateTime toggle)
 3. Fill in **Bounty Amount**, **Bounty Deadline**, **Bounty Difficulty**, and **Bounty Skills**
 4. Save -- the token is auto-generated
 
@@ -250,7 +250,7 @@ WorkItem__c bounty = new WorkItem__c(
     BriefDescriptionTxt__c = 'Build Custom Report Generator',
     DetailsTxt__c = 'Create an Apex service that generates...',
     AcceptanceCriteriaTxt__c = '1. Supports 3 output formats\n2. Handles 10k+ rows',
-    IsBountyBool__c = true,
+    BountyEnabledDateTime__c = Datetime.now(),
     BountyAmountCurrency__c = 750.00,
     BountyDeadlineDate__c = Date.today().addDays(30),
     BountyDifficultyPk__c = 'Advanced',
@@ -273,7 +273,7 @@ NetworkEntity__c website = new NetworkEntity__c(
     EntityTypePk__c = 'Client',
     StatusPk__c = 'Active',
     ConnectionStatusPk__c = 'Connected',
-    EnableVendorPushBool__c = true,
+    EnableVendorPushDateTime__c = Datetime.now(),
     IntegrationEndpointUrlTxt__c = 'https://cloudnimbusllc.com/api/bounties/sync'
 );
 insert website;

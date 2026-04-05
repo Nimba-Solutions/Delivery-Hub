@@ -34,11 +34,11 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsDefaultBool__c</field>
+                <field>DefaultDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>UseSimplifiedViewBool__c</field>
+                <field>UseSimplifiedViewDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

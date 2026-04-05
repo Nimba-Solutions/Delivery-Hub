@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>UseBusinessHoursDateTime__c</fullName>
+    <description>When non-null, SLA calculation uses business hours instead of calendar days. Null = calendar days.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Use Business Hours</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

@@ -16,7 +16,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>EnabledBool__c</field>
+                <field>EnabledDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

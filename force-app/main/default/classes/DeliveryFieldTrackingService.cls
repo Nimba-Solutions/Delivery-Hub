@@ -193,7 +193,7 @@ public with sharing class DeliveryFieldTrackingService {
             cachedTrackedFields = [
                 SELECT ObjectApiName__c, FieldApiName__c, FieldLabel__c, SortOrderNumber__c
                 FROM TrackedField__mdt
-                WHERE IsEnabledBool__c = true
+                WHERE EnabledDateTime__c != null
                 WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c ASC
             ];
