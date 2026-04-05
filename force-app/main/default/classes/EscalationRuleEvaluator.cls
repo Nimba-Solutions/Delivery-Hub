@@ -19,9 +19,9 @@ public with sharing class EscalationRuleEvaluator {
             SELECT MasterLabel, WorkflowTypeTxt__c, TriggerStageTxt__c,
                    DaysThresholdNum__c, ActionTypePk__c, TargetValueTxt__c,
                    PriorityFilterTxt__c, NotifyFieldTxt__c, SeverityLevelPk__c,
-                   IsActiveBool__c, SortOrderNum__c, RequireNoResponseBool__c
+                   ActiveDateTime__c, SortOrderNum__c, RequireNoResponseDateTime__c
             FROM WorkflowEscalationRule__mdt
-            WHERE IsActiveBool__c = true
+            WHERE ActiveDateTime__c != null
             WITH SYSTEM_MODE
             ORDER BY SortOrderNum__c ASC
         ];
@@ -84,7 +84,7 @@ public with sharing class EscalationRuleEvaluator {
         // someone OTHER than the creator has commented
         Boolean anyNoResponseRules = false;
         for (WorkflowEscalationRule__mdt rule : rules) {
-            if (rule.RequireNoResponseBool__c == true) {
+            if (rule.RequireNoResponseDateTime__c != null) {
                 anyNoResponseRules = true;
                 break;
             }
@@ -174,7 +174,7 @@ public with sharing class EscalationRuleEvaluator {
                 }
 
                 // No-response check — skip if rule requires no response but someone responded
-                if (rule.RequireNoResponseBool__c == true
+                if (rule.RequireNoResponseDateTime__c != null
                     && workItemsWithResponse.contains(wi.Id)) {
                     continue;
                 }
