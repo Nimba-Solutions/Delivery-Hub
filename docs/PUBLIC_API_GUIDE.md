@@ -354,7 +354,7 @@ curl -s -X POST \
 }
 ```
 
-The created work item starts in stage `Backlog` with `StatusPk__c = 'New'` and `IsActiveBool__c = true`.
+The created work item starts in stage `Backlog` with `StatusPk__c = 'New'` and `ActivatedDateTime__c` set to the current timestamp.
 
 **Errors**:
 

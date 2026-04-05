@@ -4,7 +4,7 @@
     <columns>NAME</columns>
     <columns>BriefDescriptionTxt__c</columns>
     <columns>DeveloperDaysSizeNumber__c</columns>
-    <columns>IsActiveBool__c</columns>
+    <columns>ActivatedDateTime__c</columns>
     <columns>PriorityPk__c</columns>
     <columns>StageNamePk__c</columns>
     <columns>StatusPk__c</columns>

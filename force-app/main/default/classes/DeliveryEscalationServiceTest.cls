@@ -931,7 +931,7 @@ private class DeliveryEscalationServiceTest {
             ns + 'TargetValueTxt__c' => targetValue,
             ns + 'PriorityFilterTxt__c' => priorityFilter,
             ns + 'SeverityLevelPk__c' => severity,
-            ns + 'IsActiveBool__c' => true,
+            ns + 'ActiveDateTime__c' => Datetime.now(),
             ns + 'SortOrderNum__c' => 1
         };
         return (WorkflowEscalationRule__mdt) JSON.deserialize(
@@ -1350,7 +1350,7 @@ private class DeliveryEscalationServiceTest {
     }
 
     /**
-     * @description Verifies RequireNoResponseBool__c rule fires when work item
+     * @description Verifies RequireNoResponseDateTime__c rule fires when work item
      *              has no comments from a different user than the creator.
      */
     @IsTest
@@ -1372,9 +1372,9 @@ private class DeliveryEscalationServiceTest {
                 ns + 'TargetValueTxt__c' => null,
                 ns + 'PriorityFilterTxt__c' => null,
                 ns + 'SeverityLevelPk__c' => 'Warning',
-                ns + 'IsActiveBool__c' => true,
+                ns + 'ActiveDateTime__c' => Datetime.now(),
                 ns + 'SortOrderNum__c' => 1,
-                ns + 'RequireNoResponseBool__c' => true
+                ns + 'RequireNoResponseDateTime__c' => Datetime.now()
             };
             WorkflowEscalationRule__mdt rule = (WorkflowEscalationRule__mdt) JSON.deserialize(
                 JSON.serialize(fieldMap), WorkflowEscalationRule__mdt.class
@@ -1395,7 +1395,7 @@ private class DeliveryEscalationServiceTest {
     }
 
     /**
-     * @description Verifies RequireNoResponseBool__c rule is skipped when a comment
+     * @description Verifies RequireNoResponseDateTime__c rule is skipped when a comment
      *              exists from a different user than the creator. Since tests run as
      *              a single user, we verify the inverse: a self-comment does NOT count
      *              as a response and the rule still fires.
@@ -1425,9 +1425,9 @@ private class DeliveryEscalationServiceTest {
                 ns + 'TargetValueTxt__c' => null,
                 ns + 'PriorityFilterTxt__c' => null,
                 ns + 'SeverityLevelPk__c' => 'Warning',
-                ns + 'IsActiveBool__c' => true,
+                ns + 'ActiveDateTime__c' => Datetime.now(),
                 ns + 'SortOrderNum__c' => 1,
-                ns + 'RequireNoResponseBool__c' => true
+                ns + 'RequireNoResponseDateTime__c' => Datetime.now()
             };
             WorkflowEscalationRule__mdt rule = (WorkflowEscalationRule__mdt) JSON.deserialize(
                 JSON.serialize(fieldMap), WorkflowEscalationRule__mdt.class

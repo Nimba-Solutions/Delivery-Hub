@@ -186,7 +186,7 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsRecurringBool__c</field>
+                <field>RecurringEnabledDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
@@ -204,7 +204,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsTemplateBool__c</field>
+                <field>TemplateMarkedDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
@@ -256,7 +256,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsActiveBool__c</field>
+                <field>ActivatedDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
