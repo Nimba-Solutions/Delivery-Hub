@@ -23,7 +23,7 @@
         <value xsi:type="xsd:double">28</value>
     </values>
     <values>
-        <field>IsExtendedColumnBool__c</field>
-        <value xsi:type="xsd:boolean">true</value>
+        <field>ExtendedColumnDateTime__c</field>
+        <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
     </values>
 </CustomMetadata>

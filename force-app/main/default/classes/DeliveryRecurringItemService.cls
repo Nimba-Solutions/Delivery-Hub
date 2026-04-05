@@ -270,7 +270,7 @@ global with sharing class DeliveryRecurringItemService {
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
             WHERE WorkflowType__r.DeveloperName = :resolvedType
-            AND IsTerminalBool__c = false
+            AND TerminalDateTime__c = null
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST
             LIMIT 1

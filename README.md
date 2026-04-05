@@ -75,7 +75,7 @@ OpenAI integration that estimates hours, generates descriptions, and drafts acce
 
 ### Escalation Engine
 
-Rule-based automated escalations defined through Custom Metadata. Configure conditions like "stuck in QA for 3+ days" or "high priority with no assignee" &mdash; the engine evaluates on every scheduler run and fires email notifications automatically. No-response detection flags work items where the submitter hasn't received a reply: enable `RequireNoResponseBool__c` on any escalation rule and the engine checks whether anyone other than the creator has commented before firing. No manual follow-up needed.
+Rule-based automated escalations defined through Custom Metadata. Configure conditions like "stuck in QA for 3+ days" or "high priority with no assignee" &mdash; the engine evaluates on every scheduler run and fires email notifications automatically. No-response detection flags work items where the submitter hasn't received a reply: set `RequireNoResponseDateTime__c` on any escalation rule and the engine checks whether anyone other than the creator has commented before firing. No manual follow-up needed.
 
 ### Board Metrics and Analytics
 
@@ -166,7 +166,7 @@ Central settings page with DateTime activation toggles that record who enabled e
 
 All four settings are wired into the Apex runtime &mdash; the DeliveryHubScheduler, DeliveryActivityLogCleanup, and DeliveryEscalationService read from `DeliveryHubSettings__c` on every execution. The admin page uses dynamic forms for field-level layout control.
 
-**Bool &rarr; DateTime migration:** As of PR #477, boolean toggle fields across the schema are being replaced with DateTime stamps. Instead of `IsActiveBool__c = true`, the field becomes `ActivatedDateTime__c = 2026-03-27T14:30:00Z`. This tells you both **if** and **when** the flag was set. Six fields were converted in this batch: `IsActiveBool__c` &rarr; `ActivatedDateTime__c`, `IsBountyBool__c` &rarr; `BountyEnabledDateTime__c`, `IsRecurringBool__c` &rarr; `RecurringEnabledDateTime__c`, `IsTemplateBool__c` &rarr; `TemplateMarkedDateTime__c` (all on WorkItem\_\_c), `EnableVendorPushBool__c` &rarr; `EnableVendorPushDateTime__c` (NetworkEntity\_\_c), and `IsDefaultBool__c` &rarr; `DefaultSetDateTime__c` (DeliverySavedFilter\_\_c). The philosophy: booleans have no value in 2026 &mdash; DateTime stamps provide richer audit data at zero extra cost.
+**DateTime toggles:** All boolean toggle fields have been replaced with DateTime stamps. Instead of a checkbox, the field records **when** the flag was set (e.g., `ActivatedDateTime__c = 2026-03-27T14:30:00Z`). This tells you both **if** and **when**. Examples: `ActivatedDateTime__c`, `BountyEnabledDateTime__c`, `RecurringEnabledDateTime__c`, `TemplateMarkedDateTime__c` (all on WorkItem\_\_c), `EnableVendorPushDateTime__c` (NetworkEntity\_\_c), and `DefaultSetDateTime__c` (DeliverySavedFilter\_\_c). DateTime stamps provide richer audit data at zero extra cost.
 
 ---
 

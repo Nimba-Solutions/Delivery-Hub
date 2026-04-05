@@ -81,8 +81,8 @@ public with sharing class DeliveryGanttController {
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                        ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate
                 FROM WorkItem__c
-                WHERE IsActiveBool__c = true
-                AND IsTemplateBool__c = false
+                WHERE ActivatedDateTime__c != null
+                AND TemplateMarkedDateTime__c = null
                 AND ProjectedUATReadyDate__c != null
                 WITH SYSTEM_MODE
                 ORDER BY ProjectedUATReadyDate__c ASC
@@ -123,14 +123,14 @@ public with sharing class DeliveryGanttController {
                 + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
                 + 'EstimatedHoursNumber__c, TotalLoggedHoursNumber__c, '
-                + 'IsActiveBool__c, ParentWorkItemId__c, '
+                + 'ActivatedDateTime__c, ParentWorkItemId__c, '
                 + 'Developer__r.Name, '
                 + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
                 + 'FROM WorkItem__c '
-                + 'WHERE IsTemplateBool__c = false ';
+                + 'WHERE TemplateMarkedDateTime__c = null ';
 
             if (showCompleted != true) {
-                query += 'AND IsActiveBool__c = true ';
+                query += 'AND ActivatedDateTime__c != null ';
             }
 
             query += 'WITH SYSTEM_MODE '
@@ -184,7 +184,7 @@ public with sharing class DeliveryGanttController {
         task.priority = item.PriorityPk__c;
         task.estimatedHours = item.EstimatedHoursNumber__c;
         task.loggedHours = item.TotalLoggedHoursNumber__c;
-        task.isCompleted = item.IsActiveBool__c != true;
+        task.isCompleted = item.ActivatedDateTime__c == null;
         task.parentWorkItemId = item.ParentWorkItemId__c;
 
         if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
@@ -240,8 +240,8 @@ public with sharing class DeliveryGanttController {
             for (WorkItemDependency__c d : [
                 SELECT Id, BlockedWorkItemId__c, BlockingWorkItemId__c, TypePk__c
                 FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__r.IsActiveBool__c = true
-                  AND BlockingWorkItemId__r.IsActiveBool__c = true
+                WHERE BlockedWorkItemId__r.ActivatedDateTime__c != null
+                  AND BlockingWorkItemId__r.ActivatedDateTime__c != null
                 WITH SYSTEM_MODE
                 LIMIT 500
             ]) {
