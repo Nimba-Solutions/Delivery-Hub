@@ -19,8 +19,8 @@ public without sharing class DeliveryAuditChainService {
         List<ActivityLog__c> chain = [
             SELECT HashChainTxt__c FROM ActivityLog__c
             WHERE HashChainTxt__c != null
-            ORDER BY CreatedDate DESC LIMIT 1
             WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC LIMIT 1
         ];
         String previousHash = chain.isEmpty() ? null : chain[0].HashChainTxt__c;
 
@@ -62,9 +62,9 @@ public without sharing class DeliveryAuditChainService {
             SELECT Id, HashChainTxt__c, ActionTypePk__c, CreatedDate, ContextDataTxt__c
             FROM ActivityLog__c
             WHERE HashChainTxt__c != null
+            WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
             LIMIT :batchSize
-            WITH SYSTEM_MODE
         ];
 
         Integer valid = 0;
@@ -107,8 +107,8 @@ public without sharing class DeliveryAuditChainService {
                    CreatedDate, CreatedById
             FROM ActivityLog__c
             WHERE CreatedDate >= :fromDt AND CreatedDate < :toDt
-            ORDER BY CreatedDate ASC
             WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC
         ];
     }
 }
