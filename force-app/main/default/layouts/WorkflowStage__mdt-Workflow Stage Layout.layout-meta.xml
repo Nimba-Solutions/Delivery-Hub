@@ -81,21 +81,21 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsTerminalBool__c</field>
+                <field>TerminalDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsBlockedStateBool__c</field>
+                <field>BlockedStateDateTime__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsAttentionStateBool__c</field>
+                <field>AttentionStateDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsVisibleByDefaultBool__c</field>
+                <field>VisibleByDefaultDateTime__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>

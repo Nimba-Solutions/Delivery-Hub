@@ -3,7 +3,7 @@
     <fullName>All_WorkItems_By_Created_Date_Descending</fullName>
     <columns>NAME</columns>
     <columns>BriefDescriptionTxt__c</columns>
-    <columns>IsActiveBool__c</columns>
+    <columns>ActivatedDateTime__c</columns>
     <columns>RequestTypePk__c</columns>
     <columns>StageNamePk__c</columns>
     <columns>TotalLoggedHoursNumber__c</columns>

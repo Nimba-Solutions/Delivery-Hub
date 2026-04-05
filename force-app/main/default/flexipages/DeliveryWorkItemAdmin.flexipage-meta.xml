@@ -684,7 +684,7 @@
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- System: Left column (CreatedById, IsActiveBool) -->
+    <!-- System: Left column (CreatedById, ActivatedDateTime) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -702,8 +702,8 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.IsActiveBool__c</fieldItem>
-                <identifier>RecordIsActiveBool_cField</identifier>
+                <fieldItem>Record.ActivatedDateTime__c</fieldItem>
+                <identifier>RecordActivatedDateTime_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <name>Facet-admin-sys-left</name>

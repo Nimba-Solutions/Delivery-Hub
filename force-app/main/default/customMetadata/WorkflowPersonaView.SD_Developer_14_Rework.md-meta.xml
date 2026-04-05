@@ -22,8 +22,4 @@
         <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">14</value>
     </values>
-    <values>
-        <field>IsExtendedColumnBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
 </CustomMetadata>

@@ -16,7 +16,7 @@ private class DeliveryGanttControllerTest {
                 BriefDescriptionTxt__c   = 'Build login page',
                 StageNamePk__c           = 'In Development',
                 PriorityPk__c            = 'High',
-                IsActiveBool__c          = true,
+                ActivatedDateTime__c     = Datetime.now(),
                 ProjectedUATReadyDate__c = Date.today().addDays(14),
                 EstimatedStartDevDate__c = Date.today(),
                 EstimatedEndDevDate__c   = Date.today().addDays(10),
@@ -26,18 +26,17 @@ private class DeliveryGanttControllerTest {
                 BriefDescriptionTxt__c   = 'Fix export bug',
                 StageNamePk__c           = 'Ready for QA',
                 PriorityPk__c            = 'Medium',
-                IsActiveBool__c          = true,
+                ActivatedDateTime__c     = Datetime.now(),
                 ProjectedUATReadyDate__c = Date.today().addDays(7)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c   = 'No UAT date work item',
                 StageNamePk__c           = 'Backlog',
-                IsActiveBool__c          = true
+                ActivatedDateTime__c     = Datetime.now()
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c   = 'Completed item',
                 StageNamePk__c           = 'Done',
-                IsActiveBool__c          = false,
                 ProjectedUATReadyDate__c = Date.today().addDays(-5),
                 EstimatedStartDevDate__c = Date.today().addDays(-20),
                 EstimatedEndDevDate__c   = Date.today().addDays(-7)

@@ -11,15 +11,7 @@
         <value xsi:type="xsd:string">utility:builder</value>
     </values>
     <values>
-        <field>IsDefaultBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
-    <values>
         <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">3</value>
-    </values>
-    <values>
-        <field>UseSimplifiedViewBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
     </values>
 </CustomMetadata>

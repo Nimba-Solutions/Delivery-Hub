@@ -24,7 +24,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IsActiveBool__c</field>
+                <field>ActiveDateTime__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

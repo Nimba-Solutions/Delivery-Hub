@@ -12,9 +12,9 @@
     <columns>CREATED_DATE</columns>
     <filterScope>Everything</filterScope>
     <filters>
-        <field>IsActiveBool__c</field>
-        <operation>equals</operation>
-        <value>1</value>
+        <field>ActivatedDateTime__c</field>
+        <operation>notEqual</operation>
+        <value></value>
     </filters>
     <filters>
         <field>StatusPk__c</field>

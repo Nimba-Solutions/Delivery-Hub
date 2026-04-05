@@ -111,20 +111,6 @@
     </rule>
 
     <!-- FIELD NAMING CONVENTIONS -->
-    <rule name="CheckboxFieldNamingConvention" language="xml" message="Checkbox fields must follow pattern: PascalCaseBool__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
-        <priority>2</priority>
-        <properties>
-            <property name="xpath">
-                <value><![CDATA[
-                    //*[local-name()='CustomField'][
-                        *[local-name()='type'][text()='Checkbox'] and
-                        not(ends-with(*[local-name()='fullName']/text(), 'Bool__c'))
-                    ]
-                ]]>                </value>
-            </property>
-        </properties>
-    </rule>
-
     <rule name="TextAreaFieldNamingConvention" language="xml" message="TextArea fields must follow pattern: PascalCaseTxt__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
         <priority>2</priority>
         <properties>

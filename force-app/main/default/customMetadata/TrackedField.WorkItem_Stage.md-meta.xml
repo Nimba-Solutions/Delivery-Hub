@@ -15,10 +15,6 @@
         <value xsi:type="xsd:string">Stage</value>
     </values>
     <values>
-        <field>IsEnabledBool__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
-    <values>
         <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">1</value>
     </values>

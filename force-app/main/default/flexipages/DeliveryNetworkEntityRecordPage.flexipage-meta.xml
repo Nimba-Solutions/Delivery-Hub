@@ -184,7 +184,7 @@
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- Integration: Right column (EnableVendorPushBool, GithubUsernameTxt, RemoteExternalIdTxt, LastInboundSyncDateTime) -->
+    <!-- Integration: Right column (EnableVendorPushDateTime, GithubUsernameTxt, RemoteExternalIdTxt, LastInboundSyncDateTime) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -192,8 +192,8 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.EnableVendorPushBool__c</fieldItem>
-                <identifier>RecordEnableVendorPushBool_cField</identifier>
+                <fieldItem>Record.EnableVendorPushDateTime__c</fieldItem>
+                <identifier>RecordEnableVendorPushDateTime_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <itemInstances>
@@ -615,7 +615,7 @@
                             <value>CalculatedETADate__c</value>
                         </valueListItems>
                         <valueListItems>
-                            <value>IsActiveBool__c</value>
+                            <value>ActivatedDateTime__c</value>
                         </valueListItems>
                         <valueListItems>
                             <value>EstimatedHoursNumber__c</value>

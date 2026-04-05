@@ -378,11 +378,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItem__c.IsActiveBool__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>WorkItem__c.ActivatedDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
