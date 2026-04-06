@@ -4,6 +4,101 @@ All notable changes to the Delivery Hub package are documented here.
 
 ---
 
+## 2026-04-05 / 2026-04-06
+
+### Architecture
+
+#### PR #549 — Bool field elimination
+- Replaced all remaining Boolean/Checkbox custom fields with DateTime stamps across the entire schema (357 files touched)
+- Zero Boolean custom fields remain in the codebase
+- All Apex, LWC, metadata, and test references updated to use the `DateTime__c` pattern (null = off, non-null = on + when)
+- Custom Metadata records updated from `true`/`false` to DateTime values
+
+#### PR #551 — Document controller decomposition
+- Decomposed monolithic `DeliveryDocumentController` into five focused services: `DocumentApprovalService`, `DocumentEmailService`, `DocumentGenerationService`, `DocumentPaymentService`, `DocumentQueryService`
+- Controller now delegates to services; no behavioral change
+
+#### PR #552 — Escalation service decomposition
+- Split `DeliveryEscalationService` into `EscalationRuleEvaluator`, `EscalationActionExecutor`, `EscalationNotificationService`, and `EscalationContext`
+- Each class has a single responsibility; no behavioral change
+
+#### PR #554 — WorkItemQueryService extraction
+- Extracted shared work item query logic into `WorkItemQueryService`
+- Eliminates duplicated SOQL patterns across controllers
+
+### Enterprise Security
+
+#### PR #555 — Rate limiting + audit chain
+- New `DeliveryRateLimitService`: opt-in per-entity request throttle for Public API and Sync API
+- `PublicApiRateLimitNumber__c` (default 100 req/hr) and `SyncApiRateLimitNumber__c` (default 60 req/hr) on `DeliveryHubSettings__c`
+- HTTP 429 response with `Retry-After: 3600` header when limit exceeded
+- Disabled by default (null = unlimited)
+- New `DeliveryAuditChainService`: SHA-256 hash chain on `ActivityLog__c` records
+- Each record stores its hash and parent hash for tamper-evident audit trail
+- `LegalHoldEnabledDateTime__c` on settings prevents deletion of chain records
+
+#### PR #564 — Rate limit refinements
+- Hardened rate limit enforcement edge cases and added test coverage
+
+#### PR #560 — HMAC signing + data archival
+- New `DeliveryCryptoService`: HMAC-SHA256 request signing for outbound sync payloads
+- `HmacSecretTxt__c` on `NetworkEntity__c` holds the shared secret
+- `X-Signature` header added to outbound callouts when secret is configured
+- Receiving org validates signature against request body; backward compatible (no secret = no validation)
+- New `DeliveryArchivalService`: automated archival of completed work items and related records
+- `ArchivalRetentionDaysNumber__c` (default 365 days) controls retention period
+- Archived records excluded from board queries and API responses
+
+#### PR #559 — Approval workflows
+- New `DeliveryApprovalChainService`: multi-step approval workflows for stage transitions
+- Configurable approvers and approval order via Custom Metadata
+- Approval events tracked with timestamps, approver identity, and comments
+- Integrates with existing stage gate enforcement
+
+### Enterprise Features
+
+#### PR #557 — SLA business hours + notification preferences
+- `DeliverySLAService` now supports business-hours calculations via `BusinessHoursId` on `SLARule__mdt`
+- SLA clocks pause outside configured business hours, weekends, and holidays
+- New `DeliveryNotificationPreferenceService`: per-event notification channel configuration
+- Users configure email, platform event, both, or none per event type
+- Preferences respected by escalation engine, digest service, and stage-change alerts
+
+#### PR #556 — Team visibility
+- New `DeliveryTeamPermissionService`: record-level board scoping by team membership
+- Work items visible only to members of the assigned team (defined on `NetworkEntity__c`)
+- Admins retain full visibility
+- Opt-in via `TeamVisibilityEnabledDateTime__c` on `DeliveryHubSettings__c`
+
+### Settings UI
+
+#### PR #565 — Enterprise settings surface
+- Admin settings page updated with new enterprise feature cards
+- Rate limiting, audit chain, HMAC signing, team visibility, archival, and notification preferences all configurable from the Settings tab
+- DateTime toggle pattern used consistently for all new feature flags
+
+### Fixes
+
+#### PR #553 — PMD cleanup (document classes)
+- PMD compliance for decomposed document service classes
+
+#### PR #558 — PMD cleanup (enterprise services)
+- PMD compliance for enterprise security and feature classes
+
+#### PR #561 — PMD cleanup (escalation classes)
+- PMD compliance for decomposed escalation service classes
+
+#### PR #562 — PMD cleanup (query service)
+- PMD compliance for WorkItemQueryService
+
+#### PR #563 — PMD cleanup (rate limit + crypto)
+- PMD compliance for rate limit and crypto service classes
+
+#### PR #566 — Gantt permissions fix
+- Fixed Gantt chart permission checks for non-admin users
+
+---
+
 ## 2026-03-24
 
 ### PR #443 — Package upload fixes

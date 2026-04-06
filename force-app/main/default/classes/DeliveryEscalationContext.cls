@@ -7,7 +7,7 @@
  *               escalation pipeline.
  * @author Cloud Nimbus LLC
  */
-public with sharing class EscalationContext {
+public with sharing class DeliveryEscalationContext {
 
     /** @description The escalation rule currently being evaluated */
     public WorkflowEscalationRule__mdt rule;
@@ -49,7 +49,7 @@ public with sharing class EscalationContext {
      * @param logEntries Activity log accumulator
      */
     @SuppressWarnings('PMD.ExcessiveParameterList')
-    public EscalationContext(
+    public DeliveryEscalationContext(
         WorkflowEscalationRule__mdt rule,
         WorkItem__c workItem,
         Integer daysInStage,
