@@ -3,8 +3,8 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description  CMT-driven escalation engine that detects stalled work items and
  *               takes automated action. This class is a thin orchestrator that delegates
- *               rule evaluation to EscalationRuleEvaluator, action execution to
- *               EscalationActionExecutor, and notifications to EscalationNotificationService.
+ *               rule evaluation to DeliveryEscalationRuleEvaluator, action execution to
+ *               DeliveryEscalationActionExecutor, and notifications to DeliveryEscalationNotifService.
  *               Called nightly by DeliveryEscalationJob or DeliveryHubScheduler.
  * @author Cloud Nimbus LLC
  */
@@ -27,8 +27,8 @@ global with sharing class DeliveryEscalationService {
      */
     @AuraEnabled(cacheable=true)
     global static List<EscalationSummary> getEscalationSummary() {
-        List<WorkflowEscalationRule__mdt> rules = EscalationRuleEvaluator.queryActiveRules();
-        return EscalationRuleEvaluator.buildSummary(rules);
+        List<WorkflowEscalationRule__mdt> rules = DeliveryEscalationRuleEvaluator.queryActiveRules();
+        return DeliveryEscalationRuleEvaluator.buildSummary(rules);
     }
 
     // -------------------------------------------------------------------------
@@ -40,8 +40,8 @@ global with sharing class DeliveryEscalationService {
      *              Designed to be called from DeliveryEscalationJob or DeliveryHubScheduler.
      */
     public static void evaluateRules() {
-        List<WorkflowEscalationRule__mdt> rules = EscalationRuleEvaluator.queryActiveRules();
-        EscalationRuleEvaluator.processRules(rules);
+        List<WorkflowEscalationRule__mdt> rules = DeliveryEscalationRuleEvaluator.queryActiveRules();
+        DeliveryEscalationRuleEvaluator.processRules(rules);
     }
 
     /**
@@ -59,7 +59,7 @@ global with sharing class DeliveryEscalationService {
      */
     @TestVisible
     static void processEscalations(List<WorkflowEscalationRule__mdt> rules) {
-        EscalationRuleEvaluator.processRules(rules);
+        DeliveryEscalationRuleEvaluator.processRules(rules);
     }
 
     // -------------------------------------------------------------------------
@@ -67,18 +67,18 @@ global with sharing class DeliveryEscalationService {
     // -------------------------------------------------------------------------
 
     /**
-     * @description Delegates to EscalationRuleEvaluator.buildSummary().
+     * @description Delegates to DeliveryEscalationRuleEvaluator.buildSummary().
      *              Retained so existing tests and callers continue to work.
      * @param rules Active escalation rules
      * @return List of EscalationSummary wrappers
      */
     @TestVisible
     static List<EscalationSummary> buildSummary(List<WorkflowEscalationRule__mdt> rules) {
-        return EscalationRuleEvaluator.buildSummary(rules);
+        return DeliveryEscalationRuleEvaluator.buildSummary(rules);
     }
 
     /**
-     * @description Delegates to EscalationNotificationService.buildEscalationHtml().
+     * @description Delegates to DeliveryEscalationNotifService.buildEscalationHtml().
      *              Retained so existing tests continue to work.
      * @param workItemName The work item name
      * @param title The work item description
@@ -89,12 +89,12 @@ global with sharing class DeliveryEscalationService {
     @TestVisible
     static String buildEscalationHtml(String workItemName, String title,
         String stalledStage, String recordUrl) {
-        return EscalationNotificationService.buildEscalationHtml(
+        return DeliveryEscalationNotifService.buildEscalationHtml(
             workItemName, title, stalledStage, recordUrl);
     }
 
     /**
-     * @description Delegates to EscalationNotificationService.buildEscalationHtml().
+     * @description Delegates to DeliveryEscalationNotifService.buildEscalationHtml().
      *              Retained so existing tests continue to work.
      * @param workItemName The work item auto-number name
      * @param title The work item brief description
@@ -110,7 +110,7 @@ global with sharing class DeliveryEscalationService {
     static String buildEscalationHtml(String workItemName, String title,
         String stalledStage, String recordUrl, String severity,
         Integer daysInStage, String ruleName) {
-        return EscalationNotificationService.buildEscalationHtml(
+        return DeliveryEscalationNotifService.buildEscalationHtml(
             workItemName, title, stalledStage, recordUrl, severity,
             daysInStage, ruleName);
     }
@@ -156,7 +156,7 @@ global with sharing class DeliveryEscalationService {
 
     /**
      * @description Detail object for batching email notifications with context.
-     *              Public so that EscalationActionExecutor and EscalationNotificationService
+     *              Public so that DeliveryEscalationActionExecutor and DeliveryEscalationNotifService
      *              can construct and consume instances.
      */
     public class EscalationDetail {

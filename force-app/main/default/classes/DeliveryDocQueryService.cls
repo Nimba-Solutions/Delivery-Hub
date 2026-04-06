@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DocumentQueryService {
+public with sharing class DeliveryDocQueryService {
 
     /**
      * @description Retrieves a document's full data by its public token.
