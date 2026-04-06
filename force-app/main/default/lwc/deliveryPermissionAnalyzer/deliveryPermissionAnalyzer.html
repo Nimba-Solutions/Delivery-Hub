@@ -2,6 +2,7 @@
     <lightning-card title="Permission Analyzer" icon-name="utility:shield">
         <!-- Header with refresh button and analysis range badge -->
         <div slot="actions">
+            <lightning-button label="Generate Security Report" icon-name="utility:file" onclick={handleGenerateReport} variant="brand" disabled={isGeneratingReport} class="slds-m-right_small"></lightning-button>
             <lightning-button label="Refresh" icon-name="utility:refresh" onclick={handleRefresh} variant="neutral"></lightning-button>
         </div>
 
