@@ -58,7 +58,7 @@ global with sharing class DeliverySLAService {
             }
             String wfType = workflowType != null ? workflowType : wi.WorkflowTypeTxt__c;
             SLARule__mdt rule = findRule(wfType, wi.PriorityPk__c);
-            Integer daysToAdd = rule != null ? rule.TargetDaysNum__c.intValue() : getHardcodedFallback(wi.PriorityPk__c);
+            Integer daysToAdd = rule != null ? rule.TargetDaysNumber__c.intValue() : getHardcodedFallback(wi.PriorityPk__c);
 
             if (rule != null && rule.UseBusinessHoursDateTime__c != null) {
                 Id bhId = getDefaultBusinessHoursId();
@@ -96,7 +96,7 @@ global with sharing class DeliverySLAService {
     public static Integer getDaysForPriority(String workflowType, String priority) {
         SLARule__mdt rule = findRule(workflowType, priority);
         if (rule != null) {
-            return rule.TargetDaysNum__c.intValue();
+            return rule.TargetDaysNumber__c.intValue();
         }
         return getHardcodedFallback(priority);
     }
@@ -111,7 +111,7 @@ global with sharing class DeliverySLAService {
     public static Integer getWarningDays(String workflowType, String priority) {
         SLARule__mdt rule = findRule(workflowType, priority);
         if (rule != null) {
-            return rule.WarningDaysNum__c.intValue();
+            return rule.WarningDaysNumber__c.intValue();
         }
         return null;
     }
@@ -211,7 +211,7 @@ global with sharing class DeliverySLAService {
 
         List<SLARule__mdt> rules = [
             SELECT DeveloperName, WorkflowTypeTxt__c, PriorityTxt__c,
-                   TargetDaysNum__c, WarningDaysNum__c, UseBusinessHoursDateTime__c,
+                   TargetDaysNumber__c, WarningDaysNumber__c, UseBusinessHoursDateTime__c,
                    PauseOnStagesTxt__c, ResumeOnStagesTxt__c, ActiveDateTime__c
             FROM SLARule__mdt
             WHERE ActiveDateTime__c != null

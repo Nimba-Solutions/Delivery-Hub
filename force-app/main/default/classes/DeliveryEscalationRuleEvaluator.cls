@@ -17,13 +17,13 @@ public with sharing class DeliveryEscalationRuleEvaluator {
     public static List<WorkflowEscalationRule__mdt> queryActiveRules() {
         return [
             SELECT MasterLabel, WorkflowTypeTxt__c, TriggerStageTxt__c,
-                   DaysThresholdNum__c, ActionTypePk__c, TargetValueTxt__c,
+                   DaysThresholdNumber__c, ActionTypePk__c, TargetValueTxt__c,
                    PriorityFilterTxt__c, NotifyFieldTxt__c, SeverityLevelPk__c,
-                   ActiveDateTime__c, SortOrderNum__c, RequireNoResponseDateTime__c
+                   ActiveDateTime__c, SortOrderNumber__c, RequireNoResponseDateTime__c
             FROM WorkflowEscalationRule__mdt
             WHERE ActiveDateTime__c != null
             WITH SYSTEM_MODE
-            ORDER BY SortOrderNum__c ASC
+            ORDER BY SortOrderNumber__c ASC
         ];
     }
 
@@ -129,8 +129,8 @@ public with sharing class DeliveryEscalationRuleEvaluator {
                 continue;
             }
 
-            Integer threshold = rule.DaysThresholdNum__c != null
-                ? rule.DaysThresholdNum__c.intValue() : 0;
+            Integer threshold = rule.DaysThresholdNumber__c != null
+                ? rule.DaysThresholdNumber__c.intValue() : 0;
 
             // Severity: Critical rules fire at 2x threshold, Warning at 1x
             String severity = String.isNotBlank(rule.SeverityLevelPk__c)
@@ -282,8 +282,8 @@ public with sharing class DeliveryEscalationRuleEvaluator {
                 continue;
             }
 
-            Integer threshold = rule.DaysThresholdNum__c != null
-                ? rule.DaysThresholdNum__c.intValue() : 0;
+            Integer threshold = rule.DaysThresholdNumber__c != null
+                ? rule.DaysThresholdNumber__c.intValue() : 0;
             String severity = String.isNotBlank(rule.SeverityLevelPk__c)
                 ? rule.SeverityLevelPk__c : 'Warning';
 

@@ -11,11 +11,11 @@
         <value xsi:type="xsd:string">High</value>
     </values>
     <values>
-        <field>TargetDaysNum__c</field>
+        <field>TargetDaysNumber__c</field>
         <value xsi:type="xsd:double">5.0</value>
     </values>
     <values>
-        <field>WarningDaysNum__c</field>
+        <field>WarningDaysNumber__c</field>
         <value xsi:type="xsd:double">3.0</value>
     </values>
     <values>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>SortOrderNum__c</fullName>
-    <description>Execution order when multiple rules match the same work item. Lower numbers execute first.</description>
+    <fullName>DaysThresholdNumber__c</fullName>
+    <description>Number of days a work item must be stalled in the trigger stage before this escalation fires.</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
-    <label>Sort Order</label>
+    <label>Days Threshold</label>
     <precision>4</precision>
     <scale>0</scale>
     <type>Number</type>

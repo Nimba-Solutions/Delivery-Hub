@@ -90,7 +90,7 @@ private class DeliveryHubSettingsControllerTest {
             settings.EnableBellNotificationsDateTime__c = now;
             settings.EnableWeeklyDigestDateTime__c = now;
             settings.EnableStatusPageDateTime__c = now;
-            settings.RequireWorkLogApprovalDate__c = now;
+            settings.RequireWorkLogApprovalDateTime__c = now;
             settings.FieldChangeRetentionDaysNumber__c = 60;
             settings.WeeklyDigestDayTxt__c = 'Wednesday';
             settings.WeeklyDigestRecipientsTxt__c = 'test@example.com';
@@ -158,7 +158,7 @@ private class DeliveryHubSettingsControllerTest {
             System.assertEquals(null, s.EnableBellNotificationsDateTime__c, 'Bell notifications should be disabled');
             System.assertNotEquals(null, s.EnableWeeklyDigestDateTime__c, 'Weekly digest should be enabled');
             System.assertEquals(null, s.EnableStatusPageDateTime__c, 'Status page should be disabled');
-            System.assertNotEquals(null, s.RequireWorkLogApprovalDate__c, 'WorkLog approval should be required');
+            System.assertNotEquals(null, s.RequireWorkLogApprovalDateTime__c, 'WorkLog approval should be required');
             System.assertNotEquals(null, s.EnableActivityLoggingDateTime__c, 'Activity logging datetime should be set');
             System.assertNotEquals(null, s.EnableFieldTrackingDateTime__c, 'Field tracking datetime should be set');
             System.assertEquals(null, s.EnableBellNotificationsDateTime__c, 'Bell notifications datetime should be null');

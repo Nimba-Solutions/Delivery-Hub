@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>DaysInStageNum__c</fullName>
+    <fullName>DaysInStageNumber__c</fullName>
     <description>Number of days the work item has been in the triggering stage.</description>
     <inlineHelpText>Days the item was stalled in its stage when escalation fired.</inlineHelpText>
     <label>Days In Stage</label>
