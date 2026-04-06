@@ -4,11 +4,11 @@
  * @description  Rule matching and evaluation logic extracted from DeliveryEscalationService.
  *               Queries candidate work items, builds stage-to-item lookups, evaluates each
  *               rule's filters and thresholds, checks cooldowns, and delegates action
- *               execution to EscalationActionExecutor.
+ *               execution to DeliveryEscalationActionExecutor.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
-public with sharing class EscalationRuleEvaluator {
+public with sharing class DeliveryEscalationRuleEvaluator {
 
     /**
      * @description Queries all active escalation rules from CMT, ordered by SortOrder.
@@ -186,12 +186,12 @@ public with sharing class EscalationRuleEvaluator {
                 itemsToUpdate.put(wi.Id, toUpdate);
 
                 // Execute the action
-                EscalationContext ctx = new EscalationContext(
+                DeliveryEscalationContext ctx = new DeliveryEscalationContext(
                     rule, wi, daysInStage, severity,
                     itemsToUpdate, emailTargets, chatterTargets,
                     slackNotifications, logEntries
                 );
-                EscalationActionExecutor.executeAction(ctx);
+                DeliveryEscalationActionExecutor.executeAction(ctx);
             }
         }
 
@@ -202,18 +202,18 @@ public with sharing class EscalationRuleEvaluator {
 
         // Send batched email notifications
         if (!emailTargets.isEmpty()) {
-            EscalationNotificationService.sendEscalationEmails(emailTargets);
+            DeliveryEscalationNotifService.sendEscalationEmails(emailTargets);
             DeliveryExternalNotificationService.sendExternalSLABreachEmails(emailTargets.keySet());
         }
 
         // Post Chatter messages
         if (!chatterTargets.isEmpty()) {
-            EscalationNotificationService.postChatterEscalations(chatterTargets);
+            DeliveryEscalationNotifService.postChatterEscalations(chatterTargets);
         }
 
         // Send batched Slack notifications
         if (!slackNotifications.isEmpty()) {
-            EscalationNotificationService.sendEscalationSlack(slackNotifications);
+            DeliveryEscalationNotifService.sendEscalationSlack(slackNotifications);
         }
 
         // Log escalation activity

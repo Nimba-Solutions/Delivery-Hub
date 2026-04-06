@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DocumentPaymentService {
+public with sharing class DeliveryDocPaymentService {
 
     /**
      * @description Records a payment against a document by creating a DeliveryTransaction__c
@@ -41,7 +41,7 @@ public with sharing class DocumentPaymentService {
         ];
 
         Decimal docTotal = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
-        Decimal totalPaid = DocumentQueryService.getTotalPaid(documentId);
+        Decimal totalPaid = DeliveryDocQueryService.getTotalPaid(documentId);
         if (totalPaid >= docTotal) {
             doc.StatusPk__c = 'Paid';
             Database.update(doc, AccessLevel.SYSTEM_MODE);

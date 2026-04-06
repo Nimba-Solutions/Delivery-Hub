@@ -1,11 +1,11 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Unit tests for WorkItemQueryService — centralized WorkItem__c query service.
+ * @description  Unit tests for DeliveryWorkItemQueryService — centralized WorkItem__c query service.
  * @author Cloud Nimbus LLC
  */
 @IsTest
-private class WorkItemQueryServiceTest {
+private class DeliveryWorkItemQueryServiceTest {
 
     private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
 
@@ -75,7 +75,7 @@ private class WorkItemQueryServiceTest {
             }
 
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getByIds(allIds);
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getByIds(allIds);
             Test.stopTest();
 
             System.assertEquals(all.size(), results.size(),
@@ -87,7 +87,7 @@ private class WorkItemQueryServiceTest {
     static void testGetByIdsEmptySet() {
         System.runAs(testUser) {
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getByIds(new Set<Id>());
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getByIds(new Set<Id>());
             Test.stopTest();
 
             System.assertEquals(0, results.size(),
@@ -99,7 +99,7 @@ private class WorkItemQueryServiceTest {
     static void testGetByIdsNull() {
         System.runAs(testUser) {
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getByIds(null);
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getByIds(null);
             Test.stopTest();
 
             System.assertEquals(0, results.size(),
@@ -118,7 +118,7 @@ private class WorkItemQueryServiceTest {
             ];
 
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getActiveByEntity(entity.Id);
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getActiveByEntity(entity.Id);
             Test.stopTest();
 
             // Should return the 2 active items linked to this entity (not template, not inactive)
@@ -135,7 +135,7 @@ private class WorkItemQueryServiceTest {
     static void testGetActiveByEntityNullId() {
         System.runAs(testUser) {
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getActiveByEntity(null);
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getActiveByEntity(null);
             Test.stopTest();
 
             System.assertEquals(0, results.size(),
@@ -151,7 +151,7 @@ private class WorkItemQueryServiceTest {
             Set<String> stages = new Set<String>{ 'In Development', 'Ready for QA' };
 
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getActiveInStages(stages);
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getActiveInStages(stages);
             Test.stopTest();
 
             System.assertEquals(2, results.size(),
@@ -167,7 +167,7 @@ private class WorkItemQueryServiceTest {
     static void testGetActiveInStagesEmptySet() {
         System.runAs(testUser) {
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getActiveInStages(new Set<String>());
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getActiveInStages(new Set<String>());
             Test.stopTest();
 
             System.assertEquals(0, results.size(),
@@ -181,7 +181,7 @@ private class WorkItemQueryServiceTest {
     static void testGetActiveReturnsOnlyActiveNonTemplateItems() {
         System.runAs(testUser) {
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getActive();
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getActive();
             Test.stopTest();
 
             // 3 active items (excludes template and inactive)
@@ -202,7 +202,7 @@ private class WorkItemQueryServiceTest {
     static void testGetActiveWithBoardFieldsPopulatesExtendedFields() {
         System.runAs(testUser) {
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getActiveWithBoardFields();
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getActiveWithBoardFields();
             Test.stopTest();
 
             System.assertEquals(3, results.size(),
@@ -236,7 +236,7 @@ private class WorkItemQueryServiceTest {
             ];
 
             Test.startTest();
-            List<WorkItem__c> results = WorkItemQueryService.getActiveWithBoardFieldsByEntity(entity.Id);
+            List<WorkItem__c> results = DeliveryWorkItemQueryService.getActiveWithBoardFieldsByEntity(entity.Id);
             Test.stopTest();
 
             System.assertEquals(2, results.size(),
@@ -249,11 +249,11 @@ private class WorkItemQueryServiceTest {
     @IsTest
     static void testFieldSetConstantsAreNonEmpty() {
         System.runAs(testUser) {
-            System.assert(String.isNotBlank(WorkItemQueryService.STANDARD_FIELDS),
+            System.assert(String.isNotBlank(DeliveryWorkItemQueryService.STANDARD_FIELDS),
                 'STANDARD_FIELDS should be a non-empty string.');
-            System.assert(String.isNotBlank(WorkItemQueryService.BOARD_FIELDS),
+            System.assert(String.isNotBlank(DeliveryWorkItemQueryService.BOARD_FIELDS),
                 'BOARD_FIELDS should be a non-empty string.');
-            System.assert(WorkItemQueryService.BOARD_FIELDS.contains(WorkItemQueryService.STANDARD_FIELDS),
+            System.assert(DeliveryWorkItemQueryService.BOARD_FIELDS.contains(DeliveryWorkItemQueryService.STANDARD_FIELDS),
                 'BOARD_FIELDS should contain all STANDARD_FIELDS.');
         }
     }
