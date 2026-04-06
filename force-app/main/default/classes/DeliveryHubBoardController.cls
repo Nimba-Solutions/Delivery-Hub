@@ -156,7 +156,6 @@ global with sharing class DeliveryHubBoardController {
      * @param workflowType The workflow type DeveloperName used to determine terminal stages.
      * @return List of matching non-terminal WorkItem__c records (max 10).
      */
-    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled(cacheable=true)
     global static List<WorkItem__c> searchForPotentialBlockers(String searchTerm, Id currentWorkItemId, List<Id> existingDependencyIds, String workflowType) {
         String queryTerm = '%' + String.escapeSingleQuotes(searchTerm) + '%';

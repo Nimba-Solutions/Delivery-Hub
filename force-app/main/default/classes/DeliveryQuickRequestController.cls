@@ -5,7 +5,7 @@
  *              Creates work items with optional AI enhancement via OpenAI.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ExcessiveParameterList, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global with sharing class DeliveryQuickRequestController {
 
     /**

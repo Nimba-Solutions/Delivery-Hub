@@ -5,7 +5,6 @@
  *              Provides tamper detection via SHA-256 chain hashing and legal hold enforcement.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class DeliveryAuditChainService {
 
     /**

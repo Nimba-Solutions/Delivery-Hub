@@ -9,7 +9,7 @@
  *               DeliveryHubSettings__c hierarchy settings.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryInboundEmailHandler implements Messaging.InboundEmailHandler {
 
     @TestVisible
@@ -17,6 +17,12 @@ public with sharing class DeliveryInboundEmailHandler implements Messaging.Inbou
         '(?i)(?:workitem-)?T-?(\\d{1,6})'
     );
 
+    /**
+     * @description Processes inbound emails and creates WorkItemComment__c records from them.
+     * @param email The inbound email message
+     * @param envelope The inbound email envelope with sender/recipient info
+     * @return InboundEmailResult indicating success or failure
+     */
     public Messaging.InboundEmailResult handleInboundEmail(
         Messaging.InboundEmail email,
         Messaging.InboundEnvelope envelope
