@@ -28,21 +28,22 @@ global without sharing class DeliveryHubSyncService {
                 return; // Response already set
             }
 
-            // 0b. Rate limiting
-            String apiKeyOrEntityId = req.headers.get('X-Api-Key');
-            if (String.isBlank(apiKeyOrEntityId)) {
-                apiKeyOrEntityId = 'anonymous';
-            }
+            // 0b. Rate limiting (opt-in — only active when SyncApiRateLimitNumber__c is set)
             DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
-            Integer syncRateLimit = (rlSettings != null && rlSettings.SyncApiRateLimitNumber__c != null)
-                ? (Integer) rlSettings.SyncApiRateLimitNumber__c : 60;
-            if (DeliveryRateLimitService.isRateLimited(apiKeyOrEntityId, 'SyncAPI', syncRateLimit, 1)) {
-                res.statusCode = 429;
-                res.addHeader('Retry-After', '3600');
-                res.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
-                return;
+            if (rlSettings != null && rlSettings.SyncApiRateLimitNumber__c != null) {
+                String apiKeyOrEntityId = req.headers.get('X-Api-Key');
+                if (String.isBlank(apiKeyOrEntityId)) {
+                    apiKeyOrEntityId = 'anonymous';
+                }
+                Integer syncRateLimit = (Integer) rlSettings.SyncApiRateLimitNumber__c;
+                if (DeliveryRateLimitService.isRateLimited(apiKeyOrEntityId, 'SyncAPI', syncRateLimit, 1)) {
+                    res.statusCode = 429;
+                    res.addHeader('Retry-After', '3600');
+                    res.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+                    return;
+                }
+                DeliveryRateLimitService.recordRequest(apiKeyOrEntityId, 'SyncAPI');
             }
-            DeliveryRateLimitService.recordRequest(apiKeyOrEntityId, 'SyncAPI');
 
             // 0c. HMAC signature verification (optional — only when entity has a secret)
             String hmacApiKey = req.headers.get('X-Api-Key');
@@ -140,21 +141,22 @@ global without sharing class DeliveryHubSyncService {
                 return;
             }
 
-            // Rate limiting
-            String apiKeyOrEntityId = req.headers.get('X-Api-Key');
-            if (String.isBlank(apiKeyOrEntityId)) {
-                apiKeyOrEntityId = 'anonymous';
+            // Rate limiting (opt-in — only active when SyncApiRateLimitNumber__c is set)
+            DeliveryHubSettings__c rlSettings2 = DeliveryHubSettings__c.getOrgDefaults();
+            if (rlSettings2 != null && rlSettings2.SyncApiRateLimitNumber__c != null) {
+                String apiKeyOrEntityId = req.headers.get('X-Api-Key');
+                if (String.isBlank(apiKeyOrEntityId)) {
+                    apiKeyOrEntityId = 'anonymous';
+                }
+                Integer syncRateLimit = (Integer) rlSettings2.SyncApiRateLimitNumber__c;
+                if (DeliveryRateLimitService.isRateLimited(apiKeyOrEntityId, 'SyncAPI', syncRateLimit, 1)) {
+                    res.statusCode = 429;
+                    res.addHeader('Retry-After', '3600');
+                    res.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+                    return;
+                }
+                DeliveryRateLimitService.recordRequest(apiKeyOrEntityId, 'SyncAPI');
             }
-            DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
-            Integer syncRateLimit = (rlSettings != null && rlSettings.SyncApiRateLimitNumber__c != null)
-                ? (Integer) rlSettings.SyncApiRateLimitNumber__c : 60;
-            if (DeliveryRateLimitService.isRateLimited(apiKeyOrEntityId, 'SyncAPI', syncRateLimit, 1)) {
-                res.statusCode = 429;
-                res.addHeader('Retry-After', '3600');
-                res.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
-                return;
-            }
-            DeliveryRateLimitService.recordRequest(apiKeyOrEntityId, 'SyncAPI');
 
             String path = req.requestURI.substring(req.requestURI.lastIndexOf('/') + 1);
 
