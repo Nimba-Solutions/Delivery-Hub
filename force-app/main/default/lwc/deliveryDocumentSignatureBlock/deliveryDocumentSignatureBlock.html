@@ -1,0 +1,93 @@
+<template>
+    <template lwc:if={hasActions}>
+        <div class="signature-block">
+            <h3 class="signature-block-title">{title}</h3>
+            <div class="signature-block-grid">
+                <template for:each={sortedActions} for:item="action">
+                    <div key={action.id} class={action.slotClass}>
+                        <p class="signature-slot-label">{action.label}</p>
+                        <template lwc:if={action.isCompleted}>
+                            <p class="signature-slot-stamp">{action.signatureData}</p>
+                            <template lwc:if={action.signerName}>
+                                <p class="signature-slot-meta">{action.signerName}</p>
+                            </template>
+                        </template>
+                        <template lwc:else>
+                            <p class="signature-slot-empty">— Awaiting signature —</p>
+                            <template lwc:if={action.showSignButton}>
+                                <lightning-button
+                                    label={action.label}
+                                    variant="brand"
+                                    data-action-id={action.id}
+                                    onclick={handleSignClick}
+                                    class="slds-m-top_small"
+                                ></lightning-button>
+                            </template>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <!-- Sign Modal -->
+    <template lwc:if={showSignModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning-button-icon
+                        icon-name="utility:close"
+                        alternative-text="Close"
+                        variant="bare-inverse"
+                        class="slds-modal__close"
+                        onclick={handleCancelModal}
+                    ></lightning-button-icon>
+                    <h2 class="slds-text-heading_medium">{modalHeading}</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <lightning-input
+                        type="text"
+                        label="Your Full Name"
+                        value={formName}
+                        onchange={handleNameChange}
+                        required
+                        max-length="255"
+                    ></lightning-input>
+                    <lightning-input
+                        type="email"
+                        label="Your Email"
+                        value={formEmail}
+                        onchange={handleEmailChange}
+                        class="slds-m-top_small"
+                    ></lightning-input>
+                    <div class="consent-disclosure slds-m-top_medium">
+                        <p class="slds-text-body_small consent-text">{consentDisclosure}</p>
+                        <lightning-input
+                            type="checkbox"
+                            label="I agree to sign this document electronically."
+                            checked={formConsent}
+                            onchange={handleConsentChange}
+                            class="slds-m-top_x-small"
+                            required
+                        ></lightning-input>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button
+                        label="Cancel"
+                        variant="neutral"
+                        onclick={handleCancelModal}
+                    ></lightning-button>
+                    <lightning-button
+                        label="Sign Document"
+                        variant="brand"
+                        onclick={handleSubmitSign}
+                        disabled={isSubmitDisabled}
+                        class="slds-m-left_x-small"
+                    ></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>
