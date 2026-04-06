@@ -7,7 +7,7 @@
  *               Designed to be called from trigger handlers (after update context).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryFieldTrackingService {
 
     /** @description Cached list of enabled tracked field configurations, queried once per transaction. */

@@ -25,7 +25,6 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
      * @param isInsert True if trigger context is insert.
      * @param isUpdate True if trigger context is update.
      */
-    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static void handleAfter(List<BountyClaim__c> newClaims, Map<Id, BountyClaim__c> oldMap, Boolean isInsert, Boolean isUpdate) {
         if (isInsert) {
             DeliveryFieldTrackingService.trackCreates(newClaims);

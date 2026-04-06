@@ -6,7 +6,6 @@
  *               chronological stage transition timeline for a Work Item.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 global with sharing class DeliveryStageHistoryController {
 
     /**

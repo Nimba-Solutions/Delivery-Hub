@@ -117,7 +117,6 @@ global with sharing class DeliveryDocumentController {
     // ═══════════════════════════════════════════════════════════
 
     /** @description Records a payment against a document and auto-marks it Paid when fully covered. */
-    @SuppressWarnings('PMD.ExcessiveParameterList')
     @AuraEnabled
     global static void recordPayment(Id documentId, Decimal amount, Date paymentDate, String note) {
         DocumentPaymentService.recordPayment(documentId, amount, paymentDate, note);
@@ -205,7 +204,6 @@ global with sharing class DeliveryDocumentController {
     }
 
     /** @description Builds a frozen JSON snapshot of entity, work item, and work log data. */
-    @SuppressWarnings('PMD.ExcessiveParameterList')
     @TestVisible
     private static Map<String, Object> buildSnapshot(Id entityId, String templateType, Date periodStart, Date periodEnd) {
         return DocumentGenerationService.buildSnapshot(entityId, templateType, periodStart, periodEnd);
