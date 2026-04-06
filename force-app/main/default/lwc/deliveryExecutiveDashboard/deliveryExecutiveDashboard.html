@@ -22,37 +22,32 @@
             <div class="slds-grid slds-wrap slds-p-around_small">
                 <template for:each={cards} for:item="card">
                     <div key={card.key} class={card.sizeClass}>
-                        <div class="slds-box slds-box_small">
-                            <!-- Card Header -->
-                            <div class="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
-                                <div class="slds-grid slds-grid_vertical-align-center">
-                                    <template lwc:if={card.iconName}>
-                                        <lightning-icon icon-name={card.iconName} size="small" class="slds-m-right_x-small"></lightning-icon>
-                                    </template>
-                                    <span class="slds-text-heading_small">{card.title}</span>
-                                </div>
-                            </div>
+                        <article class="dh-hero-card">
+                            <header class="dh-card-header">
+                                <template lwc:if={card.iconName}>
+                                    <lightning-icon icon-name={card.iconName} size="x-small"></lightning-icon>
+                                </template>
+                                <h3 class="dh-card-title">{card.title}</h3>
+                            </header>
 
                             <!-- Metric Card -->
                             <template lwc:if={card.isMetric}>
-                                <div class="slds-text-align_center slds-p-around_small">
-                                    <div class="slds-text-heading_large">{card.displayValue}</div>
-                                    <template lwc:if={card.description}>
-                                        <div class="slds-text-color_weak slds-text-body_small slds-m-top_xx-small">{card.description}</div>
-                                    </template>
-                                </div>
+                                <div class={card.metricClass}>{card.displayValue}</div>
+                                <template lwc:if={card.description}>
+                                    <p class="dh-metric-description">{card.description}</p>
+                                </template>
                             </template>
 
                             <!-- Bar Chart Card -->
                             <template lwc:if={card.isChart}>
-                                <div class="slds-p-around_x-small">
+                                <div>
                                     <template for:each={card.chartBars} for:item="bar">
-                                        <div key={bar.key} class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
-                                            <span class="slds-truncate" style="width: 120px; font-size: 0.75rem;">{bar.label}</span>
-                                            <div class="slds-col slds-m-left_x-small" style="flex: 1; background: #f3f3f3; height: 16px; border-radius: 4px;">
-                                                <div style={bar.barStyle} class="slds-theme_shade" data-bar="true"></div>
+                                        <div key={bar.key} class="dh-bar-row">
+                                            <span class="dh-bar-label">{bar.label}</span>
+                                            <div class="dh-bar-track">
+                                                <div class="dh-bar-fill" style={bar.barStyle}></div>
                                             </div>
-                                            <span class="slds-m-left_x-small" style="width: 30px; text-align: right; font-size: 0.75rem;">{bar.value}</span>
+                                            <span class="dh-bar-value">{bar.value}</span>
                                         </div>
                                     </template>
                                 </div>
@@ -60,17 +55,18 @@
 
                             <!-- List Card -->
                             <template lwc:if={card.isList}>
-                                <div class="slds-p-around_x-small">
+                                <div>
                                     <template lwc:if={card.data}>
                                         <template for:each={card.data} for:item="item">
-                                            <div key={item.label} class="slds-border_bottom slds-p-vertical_xx-small slds-text-body_small">
-                                                <span>{item.label}</span> — <span class="slds-text-color_weak">{item.value}</span>
+                                            <div key={item.label} class="dh-list-item">
+                                                <span class="dh-list-item-label">{item.label}</span>
+                                                <span class="dh-list-item-meta"> — {item.value}</span>
                                             </div>
                                         </template>
                                     </template>
                                 </div>
                             </template>
-                        </div>
+                        </article>
                     </div>
                 </template>
             </div>
@@ -84,7 +80,7 @@
             <template lwc:elseif={hasCards}>
             </template>
             <template lwc:else>
-                <div class="slds-p-around_medium slds-text-align_center slds-text-color_weak">
+                <div class="dh-empty">
                     <p>{noCardsMessage}</p>
                 </div>
             </template>

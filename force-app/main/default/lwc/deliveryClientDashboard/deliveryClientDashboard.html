@@ -136,26 +136,26 @@
                         <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
                                 <button class="tw-metric tw-metric--clickable" onclick={handleCompletedClick} title="View recently completed work items">
-                                    <div class="tw-metric-value tw-metric--success">{thisWeek.completed}</div>
-                                    <div class="tw-metric-label">Completed</div>
+                                    <div class="tw-metric-value tw-metric--success dh-metric">{thisWeek.completed}</div>
+                                    <div class="tw-metric-label dh-metric-label">Completed</div>
                                 </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
                                 <button class="tw-metric tw-metric--clickable" onclick={handleInProgressClick} title="View in-flight work items">
-                                    <div class="tw-metric-value tw-metric--info">{thisWeek.moved}</div>
-                                    <div class="tw-metric-label">In Progress</div>
+                                    <div class="tw-metric-value tw-metric--info dh-metric">{thisWeek.moved}</div>
+                                    <div class="tw-metric-label dh-metric-label">In Progress</div>
                                 </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
                                 <button class="tw-metric tw-metric--clickable" onclick={handleHoursClick} title="View work logs">
-                                    <div class="tw-metric-value">{thisWeek.hoursLogged}</div>
-                                    <div class="tw-metric-label">Hours Logged</div>
+                                    <div class="tw-metric-value dh-metric">{thisWeek.hoursLogged}</div>
+                                    <div class="tw-metric-label dh-metric-label">Hours Logged</div>
                                 </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
                                 <button class="tw-metric tw-metric--clickable" onclick={handleBlockedClick} title="View blocked work items">
-                                    <div class="tw-metric-value tw-metric--warning">{thisWeek.blocked}</div>
-                                    <div class="tw-metric-label">Blocked</div>
+                                    <div class="tw-metric-value tw-metric--warning dh-metric">{thisWeek.blocked}</div>
+                                    <div class="tw-metric-label dh-metric-label">Blocked</div>
                                 </button>
                             </div>
                         </div>

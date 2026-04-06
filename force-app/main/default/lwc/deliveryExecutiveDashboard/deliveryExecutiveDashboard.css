@@ -1,6 +1,135 @@
-[data-bar="true"] {
+/* ── Delivery Hub Hero Design Tokens ── */
+:host {
+    --dh-accent: #4f46e5;
+    --dh-accent-soft: #eef2ff;
+    --dh-accent-strong: #3730a3;
+    --dh-success: #059669;
+    --dh-warning: #d97706;
+    --dh-danger: #dc2626;
+    --dh-surface: #ffffff;
+    --dh-surface-raised: #ffffff;
+    --dh-surface-sunken: #f9fafb;
+    --dh-surface-hover: #f3f4f6;
+    --dh-border: #e5e7eb;
+    --dh-text: #0f172a;
+    --dh-text-muted: #475569;
+    --dh-text-subtle: #94a3b8;
+    --dh-font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+    --dh-radius: 0.625rem;
+    --dh-radius-lg: 0.875rem;
+    --dh-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+    --dh-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+    --dh-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    display: block;
+}
+
+/* ── Hero card — premium surface ── */
+.dh-hero-card {
+    background: var(--dh-surface-raised);
+    border: 1px solid var(--dh-border);
+    border-radius: var(--dh-radius-lg);
+    box-shadow: var(--dh-shadow);
+    padding: 1.25rem;
+    transition: box-shadow 200ms var(--dh-ease), transform 200ms var(--dh-ease);
     height: 100%;
-    border-radius: 4px;
-    background-color: #0176d3;
-    transition: width 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+.dh-hero-card:hover {
+    box-shadow: var(--dh-shadow-md);
+    transform: translateY(-1px);
+}
+
+/* ── Card header ── */
+.dh-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--dh-text-muted);
+}
+.dh-card-title {
+    font-family: var(--dh-font-display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--dh-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0;
+}
+
+/* ── Hero metric — display number ── */
+.dh-metric {
+    font-family: var(--dh-font-display);
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--dh-text);
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+    margin: 0.25rem 0;
+}
+.dh-metric--success { color: var(--dh-success); }
+.dh-metric--warning { color: var(--dh-warning); }
+.dh-metric--danger  { color: var(--dh-danger);  }
+
+.dh-metric-description {
+    font-size: 0.75rem;
+    color: var(--dh-text-subtle);
+    margin-top: 0.25rem;
+}
+
+/* ── Bar chart ── */
+.dh-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+}
+.dh-bar-label {
+    width: 110px;
+    color: var(--dh-text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dh-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--dh-surface-sunken);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+.dh-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--dh-accent) 0%, var(--dh-accent-strong) 100%);
+    border-radius: 9999px;
+    transition: width 400ms var(--dh-ease);
+    min-width: 2px;
+}
+.dh-bar-value {
+    width: 32px;
+    text-align: right;
+    color: var(--dh-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── List items ── */
+.dh-list-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--dh-border);
+    font-size: 0.8125rem;
+}
+.dh-list-item:last-child { border-bottom: none; }
+.dh-list-item-label { color: var(--dh-text); font-weight: 500; }
+.dh-list-item-meta  { color: var(--dh-text-muted); font-size: 0.75rem; }
+
+/* ── Empty state ── */
+.dh-empty {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--dh-text-muted);
 }

@@ -1,7 +1,123 @@
-.slds-hint-parent:hover {
-    background-color: #f3f3f5;
+/* ═══════════════════════════════════════════════════════════
+ * Delivery Hub Design System Tokens
+ * Mirrors staticresources/DeliveryHubDesignSystem.css
+ * ═══════════════════════════════════════════════════════════ */
+:host {
+    /* Brand & accents */
+    --dh-accent: #4f46e5;
+    --dh-accent-soft: #eef2ff;
+    --dh-accent-strong: #3730a3;
+    --dh-success: #059669;
+    --dh-warning: #d97706;
+    --dh-danger: #dc2626;
+    /* Surfaces */
+    --dh-surface: #ffffff;
+    --dh-surface-raised: #ffffff;
+    --dh-surface-sunken: #f9fafb;
+    --dh-surface-hover: #f3f4f6;
+    --dh-canvas: #f8fafc;
+    /* Borders */
+    --dh-border: #e5e7eb;
+    --dh-border-strong: #d1d5db;
+    /* Text */
+    --dh-text: #0f172a;
+    --dh-text-muted: #475569;
+    --dh-text-subtle: #94a3b8;
+    /* Typography */
+    --dh-font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+    --dh-text-display: 2rem;
+    --dh-text-title: 1.25rem;
+    --dh-text-heading: 1rem;
+    --dh-text-body: 0.875rem;
+    --dh-text-caption: 0.75rem;
+    /* Radius */
+    --dh-radius: 0.625rem;
+    --dh-radius-lg: 0.875rem;
+    --dh-radius-pill: 9999px;
+    /* Shadows */
+    --dh-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+    --dh-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+    --dh-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+    --dh-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+    /* Motion */
+    --dh-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ═══════════════════════════════════════════════════════════
+ * Hero utilities
+ * ═══════════════════════════════════════════════════════════ */
+.dh-hero-card {
+    background: var(--dh-surface-raised);
+    border: 1px solid var(--dh-border);
+    border-radius: var(--dh-radius-lg);
+    box-shadow: var(--dh-shadow);
+    padding: 1.25rem;
+    transition: box-shadow 200ms var(--dh-ease), transform 200ms var(--dh-ease);
+}
+.dh-hero-card:hover {
+    box-shadow: var(--dh-shadow-md);
+    transform: translateY(-1px);
+}
+.dh-metric {
+    font-family: var(--dh-font-display);
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--dh-text);
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+}
+.dh-metric-label {
+    font-size: var(--dh-text-caption);
+    color: var(--dh-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+.dh-hero-title {
+    font-family: var(--dh-font-display);
+    font-size: var(--dh-text-title);
+    font-weight: 600;
+    color: var(--dh-text);
+    letter-spacing: -0.01em;
+    margin: 0 0 0.5rem 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * Component-specific styling
+ * ═══════════════════════════════════════════════════════════ */
+
+/* User activity table — premium row hover */
+.pa-table {
+    font-family: var(--dh-font-display);
+    font-size: var(--dh-text-body);
+    color: var(--dh-text);
+}
+.pa-table thead th {
+    font-size: var(--dh-text-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dh-text-muted);
+    background: var(--dh-surface-sunken);
+    border-bottom: 1px solid var(--dh-border);
+}
+.pa-table tbody tr {
+    transition: background-color 150ms var(--dh-ease);
+}
+.pa-table tbody tr:hover,
+.pa-table .slds-hint-parent:hover {
+    background-color: var(--dh-accent-soft);
+}
+.pa-table tbody td {
+    border-top: 1px solid var(--dh-border);
+}
+
+.slds-hint-parent:hover {
+    background-color: var(--dh-accent-soft);
+}
+
+/* Activity chart */
 .activity-chart-container {
     overflow-x: auto;
 }
@@ -26,18 +142,18 @@
 .activity-bar {
     width: 100%;
     min-width: 8px;
-    background-color: #0176d3;
+    background-color: var(--dh-accent);
     border-radius: 2px 2px 0 0;
-    transition: background-color 0.2s;
+    transition: background-color 200ms var(--dh-ease);
 }
 
 .activity-bar:hover {
-    background-color: #014486;
+    background-color: var(--dh-accent-strong);
 }
 
 .activity-bar-label {
     font-size: 0.55rem;
-    color: #706e6b;
+    color: var(--dh-text-muted);
     margin-top: 2px;
     white-space: nowrap;
     transform: rotate(-45deg);
