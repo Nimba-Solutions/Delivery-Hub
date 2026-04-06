@@ -149,7 +149,7 @@ FIELD_META = {
     "WorkItem__c/DeveloperDaysSizeNumber__c": {
         "inlineHelpText": "T-shirt size expressed in developer-days. Used as input for ETA calculations.",
     },
-    "WorkItem__c/Epic__c": {
+    "WorkItem__c/EpicTxt__c": {
         "inlineHelpText": "The parent Epic this work item belongs to. Leave blank for standalone work items.",
     },
     "WorkItem__c/EstimatedEndDevDate__c": {
@@ -197,7 +197,7 @@ FIELD_META = {
     "WorkItem__c/StatusPk__c": {
         "inlineHelpText": "High-level status (Open, In Progress, Resolved, Closed). Distinct from the detailed Stage Name.",
     },
-    "WorkItem__c/Tags__c": {
+    "WorkItem__c/TagsTxt__c": {
         "inlineHelpText": "Comma-separated tags for filtering and grouping work items on the board (e.g., frontend, api, urgent).",
     },
     "WorkItem__c/TotalLoggedHoursNumber__c": {
