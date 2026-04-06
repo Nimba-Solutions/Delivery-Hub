@@ -28,7 +28,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'Clarification Requested (Pre-Dev)',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         ));
 
         // Item in Dev Blocked — Software_Delivery, Low priority
@@ -37,7 +37,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'Dev Blocked',
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         ));
 
         // Item in In Client Approval — Software_Delivery
@@ -46,7 +46,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'In Client Approval',
             PriorityPk__c = 'High',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         ));
 
         // Item in Backlog — should NOT be matched by any default rules
@@ -63,7 +63,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         ));
 
         insert items;

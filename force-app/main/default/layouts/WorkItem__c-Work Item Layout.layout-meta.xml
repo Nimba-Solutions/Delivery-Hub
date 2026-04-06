@@ -32,7 +32,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Tags__c</field>
+                <field>TagsTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
@@ -40,7 +40,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Developer__c</field>
+                <field>DeveloperLookupId__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
@@ -169,7 +169,7 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Epic__c</field>
+                <field>EpicTxt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

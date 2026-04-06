@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Tags__c</fullName>
+    <fullName>TagsTxt__c</fullName>
     <description>Comma-separated tags for filtering and grouping work items on the board (e.g., frontend, api, urgent).</description>
     <inlineHelpText>Comma-separated tags for filtering and grouping work items on the board (e.g., frontend, api, urgent).</inlineHelpText>
     <externalId>false</externalId>

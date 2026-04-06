@@ -6,7 +6,7 @@
     <masterLabel>Work Item Stage Path</masterLabel>
     <pathAssistantSteps>
         <fieldNames>PriorityPk__c</fieldNames>
-        <fieldNames>Developer__c</fieldNames>
+        <fieldNames>DeveloperLookupId__c</fieldNames>
         <info>New work item in the backlog. Set priority and assign a developer to get started.</info>
         <picklistValueName>Backlog</picklistValueName>
     </pathAssistantSteps>
@@ -17,7 +17,7 @@
         <picklistValueName>Ready for Development</picklistValueName>
     </pathAssistantSteps>
     <pathAssistantSteps>
-        <fieldNames>Developer__c</fieldNames>
+        <fieldNames>DeveloperLookupId__c</fieldNames>
         <fieldNames>TotalLoggedHoursNumber__c</fieldNames>
         <info>Development in progress. Log hours as you work.</info>
         <picklistValueName>In Development</picklistValueName>

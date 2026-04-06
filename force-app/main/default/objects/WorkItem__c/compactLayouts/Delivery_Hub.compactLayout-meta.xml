@@ -5,6 +5,6 @@
     <fields>BriefDescriptionTxt__c</fields>
     <fields>StageNamePk__c</fields>
     <fields>PriorityPk__c</fields>
-    <fields>Developer__c</fields>
+    <fields>DeveloperLookupId__c</fields>
     <label>Delivery Hub</label>
 </CompactLayout>

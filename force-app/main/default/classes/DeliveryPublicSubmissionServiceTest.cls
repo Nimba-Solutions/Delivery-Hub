@@ -92,7 +92,7 @@ private class DeliveryPublicSubmissionServiceTest {
 
             WorkItem__c created = [
                 SELECT BriefDescriptionTxt__c, DetailsTxt__c, ExternalRequesterEmailTxt__c,
-                       StageNamePk__c, PriorityPk__c, RequestTypePk__c, Tags__c,
+                       StageNamePk__c, PriorityPk__c, RequestTypePk__c, TagsTxt__c,
                        ActivatedDateTime__c, StatusPk__c, ClientNetworkEntityId__c
                 FROM WorkItem__c
                 WHERE Id = :(String) result.get('workItemId')
@@ -104,7 +104,7 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertEquals('Backlog', created.StageNamePk__c, 'Should start in Backlog');
             System.assertEquals('High', created.PriorityPk__c, 'Priority should match');
             System.assertEquals('Feature', created.RequestTypePk__c, 'Request type should match');
-            System.assertEquals('portal,urgent', created.Tags__c, 'Tags should match');
+            System.assertEquals('portal,urgent', created.TagsTxt__c, 'Tags should match');
             System.assertNotEquals(null, created.ActivatedDateTime__c, 'Should be active');
             System.assertEquals('New', created.StatusPk__c, 'Status should be New');
             System.assertEquals(entity.Id, created.ClientNetworkEntityId__c, 'Should be linked to the entity');

@@ -134,7 +134,7 @@ public with sharing class DeliveryDocGenerationService {
                    EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
                    BillableRateCurrency__c, BudgetVarianceNumber__c,
                    ClientNetworkEntityId__c, WorkflowTypeTxt__c,
-                   Developer__c, Developer__r.Name, Developer__r.Title
+                   DeveloperLookupId__c, DeveloperLookupId__r.Name, DeveloperLookupId__r.Title
             FROM WorkItem__c
             WHERE ClientNetworkEntityId__c = :entityId
             WITH SYSTEM_MODE
@@ -234,8 +234,8 @@ public with sharing class DeliveryDocGenerationService {
             m.put('billableRate', wi.BillableRateCurrency__c);
             m.put('budgetVariance', wi.BudgetVarianceNumber__c);
             m.put('workflowType', wi.WorkflowTypeTxt__c);
-            m.put('developerName', wi.Developer__r != null ? wi.Developer__r.Name : null);
-            m.put('developerTitle', wi.Developer__r != null ? wi.Developer__r.Title : null);
+            m.put('developerName', wi.DeveloperLookupId__r != null ? wi.DeveloperLookupId__r.Name : null);
+            m.put('developerTitle', wi.DeveloperLookupId__r != null ? wi.DeveloperLookupId__r.Title : null);
             result.add(m);
         }
         return result;
