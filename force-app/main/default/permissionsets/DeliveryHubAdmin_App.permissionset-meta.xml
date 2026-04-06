@@ -691,22 +691,6 @@
         <object>PortalAccess__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
-    <platformEventSubscribePermissions>
-        <platformEvent>DeliveryEscalation__e</platformEvent>
-        <read>true</read>
-    </platformEventSubscribePermissions>
-    <platformEventSubscribePermissions>
-        <platformEvent>DeliverySync__e</platformEvent>
-        <read>true</read>
-    </platformEventSubscribePermissions>
-    <platformEventSubscribePermissions>
-        <platformEvent>DeliveryWorkItemChange__e</platformEvent>
-        <read>true</read>
-    </platformEventSubscribePermissions>
-    <platformEventSubscribePermissions>
-        <platformEvent>GanttRemoteEvent__e</platformEvent>
-        <read>true</read>
-    </platformEventSubscribePermissions>
     <tabSettings>
         <tab>Delivery_Board</tab>
         <visibility>Visible</visibility>
