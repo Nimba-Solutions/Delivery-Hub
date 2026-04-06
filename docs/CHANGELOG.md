@@ -4,6 +4,56 @@ All notable changes to the Delivery Hub package are documented here.
 
 ---
 
+## 2026-04-06
+
+### Refactoring
+
+#### PR #574 — Enforce naming conventions on 11 custom fields
+- Renamed 11 fields across 6 objects to include type suffix (e.g., `Developer__c` → `DeveloperLookupId__c`, `Epic__c` → `EpicTxt__c`, `Tags__c` → `TagsTxt__c`, `WorkflowType__c` → `WorkflowTypeMdtId__c`, `IconName__c` → `IconNameTxt__c`)
+- Platform event fields and `TrackedField__mdt` fields also renamed
+- Added 8 enterprise guide sections; fixed demo data script (339 files)
+
+#### PR #572 — Rename Num__c fields to Number__c and fix RequireWorkLogApprovalDate to DateTime
+- Renamed 5 `Num__c` fields to `Number__c` suffix per PMD naming convention
+- Converted `RequireWorkLogApprovalDate__c` from Date to DateTime (43 files)
+
+#### PR #565 — Rename 10 unprefixed Apex classes with Delivery prefix
+- Enforced `Delivery` prefix naming convention on 10 Apex classes
+
+#### PR #564 — Eliminate 40 PMD suppressions
+- Final PMD cleanup pass (Phase 8)
+
+### Features
+
+#### PR #566 — Gantt ResizeObserver + enterprise settings UI
+- Added responsive ResizeObserver to Gantt chart
+- Rate limiting opt-in and enterprise settings exposed in admin UI
+
+### Fixes
+
+#### PR #573 — Guard ResizeObserver for Lightning Locker
+- Wrapped ResizeObserver in try/catch for Lightning Locker compatibility
+- Gantt initializes without auto-resize on incompatible environments
+
+#### PR #571 — Use window.NimbusGantt in static resource for Lightning Locker compatibility
+- Changed IIFE from `var` to `window` assignment for Locker-safe global access
+
+#### PR #570 — Add Gantt info popover registry entry
+- Added `deliveryNimbusGantt` to info popover registry
+
+#### PR #568 — Remove platformEventSubscribePermissions from permission sets
+- Element not supported in API v52.0; supersedes #567
+
+#### PR #567 — Correct permission set element ordering for platformEventSubscribePermissions
+- Attempted ordering fix (superseded by #568)
+
+### Docs
+
+#### PR #569 — Update README, CHANGELOG, and API guides for enterprise readiness
+- Updated README, CHANGELOG, PUBLIC_API_GUIDE, SYNC_API_GUIDE, and BOUNTY_API_GUIDE for PRs #549–#566
+
+---
+
 ## 2026-04-05 / 2026-04-06
 
 ### Architecture
