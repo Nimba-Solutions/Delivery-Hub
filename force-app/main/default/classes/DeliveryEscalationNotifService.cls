@@ -7,7 +7,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount, PMD.ApexCRUDViolation')
-public with sharing class EscalationNotificationService {
+public with sharing class DeliveryEscalationNotifService {
 
     /**
      * @description Sends escalation email notifications for stalled work items.
@@ -92,7 +92,7 @@ public with sharing class EscalationNotificationService {
                 Messaging.sendEmail(emails);
             } catch (Exception e) {
                 System.debug(LoggingLevel.WARN,
-                    '[EscalationNotificationService] email send failed: ' + e.getMessage());
+                    '[DeliveryEscalationNotifService] email send failed: ' + e.getMessage());
             }
         }
     }
@@ -114,7 +114,7 @@ public with sharing class EscalationNotificationService {
                 Database.insert(posts, AccessLevel.SYSTEM_MODE);
             } catch (Exception e) {
                 System.debug(LoggingLevel.WARN,
-                    '[EscalationNotificationService] Chatter post failed: ' + e.getMessage());
+                    '[DeliveryEscalationNotifService] Chatter post failed: ' + e.getMessage());
             }
         }
     }
@@ -157,7 +157,7 @@ public with sharing class EscalationNotificationService {
             new Http().send(req);
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
-                '[EscalationNotificationService] Slack callout failed: ' + e.getMessage());
+                '[DeliveryEscalationNotifService] Slack callout failed: ' + e.getMessage());
         }
     }
 

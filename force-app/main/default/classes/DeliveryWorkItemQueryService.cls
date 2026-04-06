@@ -5,11 +5,11 @@
  *               field set and reusable query methods to reduce scattered SOQL across the codebase.
  *               Field sets derived from the top 5 consumers: DeliveryHubBoardController (19 queries),
  *               DeliveryPortalController (12), DeliveryHubDashboardController (11),
- *               EscalationRuleEvaluator (2), and DeliveryGanttController (2).
+ *               DeliveryEscalationRuleEvaluator (2), and DeliveryGanttController (2).
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ExcessiveParameterList')
-public with sharing class WorkItemQueryService {
+public with sharing class DeliveryWorkItemQueryService {
 
     // -------------------------------------------------------------------------
     // Standard field set — covers the most commonly needed fields across all consumers.

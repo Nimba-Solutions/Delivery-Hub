@@ -1147,7 +1147,53 @@ All data is scoped to the authenticated NetworkEntity. The API key determines wh
 | 401 | Unauthorized | Missing `X-Api-Key` header, invalid key, or entity not Connected |
 | 403 | Forbidden | Work item belongs to a different NetworkEntity |
 | 404 | Not Found | Unknown endpoint or work item ID not found |
+| 429 | Too Many Requests | Rate limit exceeded for this entity. Retry after the interval specified in the `Retry-After` header. |
 | 500 | Server Error | Unexpected exception in Apex |
+
+---
+
+## Rate Limiting
+
+The Public API supports opt-in rate limiting to protect org resources. When enabled, each NetworkEntity is limited to a configurable number of requests per hour.
+
+### Configuration
+
+Set `PublicApiRateLimitNumber__c` on the `DeliveryHubSettings__c` custom setting to activate rate limiting:
+
+```apex
+DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+s.PublicApiRateLimitNumber__c = 100; // 100 requests per hour per entity
+upsert s;
+```
+
+**Default behavior**: When `PublicApiRateLimitNumber__c` is `null` (the default), rate limiting is **disabled** and all requests are allowed through without throttling.
+
+### How It Works
+
+- Each API request is counted per NetworkEntity (identified by the `X-Api-Key` header)
+- The counter resets every hour
+- When the limit is exceeded, the API returns HTTP **429 Too Many Requests**
+
+### 429 Response
+
+```json
+{
+    "success": false,
+    "error": "Rate limit exceeded. Try again later."
+}
+```
+
+**Headers on 429 response**:
+
+| Header | Value | Description |
+|--------|-------|-------------|
+| `Retry-After` | `3600` | Number of seconds until the rate limit window resets |
+
+### Recommendations
+
+- Start with the default (off) and enable only if you observe abuse or need contractual throttling
+- A limit of **100 requests per hour** is a reasonable starting point for most portal integrations
+- Monitor usage via `ActivityLog__c` records before setting a limit
 
 ---
 
