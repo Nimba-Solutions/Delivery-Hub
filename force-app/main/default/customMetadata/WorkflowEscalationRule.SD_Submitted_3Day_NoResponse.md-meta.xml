@@ -11,7 +11,7 @@
         <value xsi:type="xsd:string">Submitted</value>
     </values>
     <values>
-        <field>DaysThresholdNum__c</field>
+        <field>DaysThresholdNumber__c</field>
         <value xsi:type="xsd:double">3.0</value>
     </values>
     <values>
@@ -35,7 +35,7 @@
         <value xsi:type="xsd:string">Warning</value>
     </values>
     <values>
-        <field>SortOrderNum__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">10.0</value>
     </values>
     <values>

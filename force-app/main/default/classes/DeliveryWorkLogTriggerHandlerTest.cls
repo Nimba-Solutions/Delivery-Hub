@@ -132,7 +132,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         System.runAs(testUser) {
             // Enable approval
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            settings.RequireWorkLogApprovalDateTime__c = Datetime.now();
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
@@ -159,7 +159,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         System.runAs(testUser) {
             // Enable approval
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            settings.RequireWorkLogApprovalDateTime__c = Datetime.now();
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
@@ -201,7 +201,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         System.runAs(testUser) {
             // Explicitly ensure setting is NOT set (default behavior)
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = null;
+            settings.RequireWorkLogApprovalDateTime__c = null;
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
@@ -250,7 +250,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         System.runAs(testUser) {
             // Enable approval
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            settings.RequireWorkLogApprovalDateTime__c = Datetime.now();
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];

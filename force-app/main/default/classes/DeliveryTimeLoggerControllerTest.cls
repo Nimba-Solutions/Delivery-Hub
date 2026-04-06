@@ -187,7 +187,7 @@ private class DeliveryTimeLoggerControllerTest {
     static void testIsApprovalRequiredTrueWhenSet() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            settings.RequireWorkLogApprovalDateTime__c = Datetime.now();
             upsert settings;
 
             Test.startTest();
@@ -205,7 +205,7 @@ private class DeliveryTimeLoggerControllerTest {
     static void testLogHoursDraftWhenApprovalRequired() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            settings.RequireWorkLogApprovalDateTime__c = Datetime.now();
             upsert settings;
 
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
@@ -231,7 +231,7 @@ private class DeliveryTimeLoggerControllerTest {
     static void testApproveWorkLogsDraftToApproved() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            settings.RequireWorkLogApprovalDateTime__c = Datetime.now();
             upsert settings;
 
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
@@ -256,7 +256,7 @@ private class DeliveryTimeLoggerControllerTest {
     static void testRejectWorkLogsDraftToRejected() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.RequireWorkLogApprovalDate__c = Datetime.now();
+            settings.RequireWorkLogApprovalDateTime__c = Datetime.now();
             upsert settings;
 
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];

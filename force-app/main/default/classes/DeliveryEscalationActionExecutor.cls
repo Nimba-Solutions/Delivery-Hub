@@ -84,7 +84,7 @@ public with sharing class DeliveryEscalationActionExecutor {
             RuleNameTxt__c = rule.MasterLabel,
             ActionTypePk__c = action,
             SeverityPk__c = ctx.severity,
-            DaysInStageNum__c = ctx.daysInStage
+            DaysInStageNumber__c = ctx.daysInStage
         ));
     }
 
