@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Hours This Month</label>
+    <protected>false</protected>
+    <values><field>TitleTxt__c</field><value xsi:type="xsd:string">Hours This Month</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Total hours logged this calendar month</value></values>
+    <values><field>CardTypePk__c</field><value xsi:type="xsd:string">Metric</value></values>
+    <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">utility:clock</value></values>
+    <values><field>DataSourceTxt__c</field><value xsi:type="xsd:string">hoursThisMonth</value></values>
+    <values><field>FilterJsonTxt__c</field><value xsi:nil="true"/></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">3</value></values>
+    <values><field>PageKeyTxt__c</field><value xsi:type="xsd:string">home</value></values>
+    <values><field>VisibleToProfilesTxt__c</field><value xsi:nil="true"/></values>
+    <values><field>EnabledDateTime__c</field><value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value></values>
+    <values><field>CardSizeTxt__c</field><value xsi:type="xsd:string">small</value></values>
+    <values><field>ThresholdWarningNumber__c</field><value xsi:nil="true"/></values>
+    <values><field>ThresholdCriticalNumber__c</field><value xsi:nil="true"/></values>
+</CustomMetadata>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DescriptionTxt__c</fullName>
+    <description>Subtitle or description displayed beneath the card title or metric value.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Description</label>
+    <length>255</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
