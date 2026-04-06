@@ -25,7 +25,8 @@ public with sharing class DeliveryDocQueryService {
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
                    DueDateDate__c, TermsTxt__c, MetadataTxt__c,
-                   VersionNumber__c, PreviousVersionId__c
+                   VersionNumber__c, PreviousVersionId__c,
+                   RequiresSigningCheckbox__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = :publicToken
             WITH SYSTEM_MODE
@@ -64,7 +65,8 @@ public with sharing class DeliveryDocQueryService {
                    TotalHoursNumber__c, TotalCurrency__c,
                    SentDateTime__c, ViewedDateTime__c,
                    DueDateDate__c, TermsTxt__c, MetadataTxt__c,
-                   VersionNumber__c, PreviousVersionId__c
+                   VersionNumber__c, PreviousVersionId__c,
+                   RequiresSigningCheckbox__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -268,6 +270,8 @@ public with sharing class DeliveryDocQueryService {
         result.put('snapshot', doc.SnapshotTxt__c);
         result.put('version', doc.VersionNumber__c);
         result.put('previousVersionId', doc.PreviousVersionId__c);
+        result.put('requiresSigning', doc.RequiresSigningCheckbox__c);
+        result.put('actions', DeliveryDocActionController.getActionsForDocument(doc.Id));
         if (includePublicToken) {
             result.put('publicToken', doc.PublicTokenTxt__c);
         }

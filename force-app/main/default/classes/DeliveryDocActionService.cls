@@ -188,4 +188,179 @@ public with sharing class DeliveryDocActionService {
             return null;
         }
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 2: SIGNING FLOW
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Internal sign-action handler used by both admin and public sign flows.
+     *              Validates consent, updates the action record with signature details,
+     *              records an ActivityLog__c audit entry (the existing trigger writes the
+     *              chain hash), materializes that hash on the action, and conditionally
+     *              advances the parent document status.
+     * @param actionId The DocumentAction__c Id to sign.
+     * @param signerName The signer's typed name.
+     * @param signerEmail The signer's email address.
+     * @param signatureType 'Text' or 'Image'.
+     * @param signatureData For Text: the rendered stamp string. For Image: the ContentVersion Id.
+     * @param consentGiven Must be true (signer affirmatively consented to electronic signature).
+     * @param ipAddress Captured at sign time. Null in admin context.
+     * @param userAgent Captured at sign time. Null in admin context.
+     * @return Map with actionId, status, documentStatus.
+     */
+    public static Map<String, Object> signActionInternal(
+        Id actionId,
+        String signerName,
+        String signerEmail,
+        String signatureType,
+        String signatureData,
+        Boolean consentGiven,
+        String ipAddress,
+        String userAgent
+    ) {
+        if (consentGiven != true) {
+            throw new AuraHandledException('Electronic signature consent is required.');
+        }
+        if (String.isBlank(signerName)) {
+            throw new AuraHandledException('Signer name is required.');
+        }
+        if (actionId == null) {
+            throw new AuraHandledException('Action Id is required.');
+        }
+
+        List<DocumentAction__c> actions = [
+            SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SortOrder__c
+            FROM DocumentAction__c
+            WHERE Id = :actionId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (actions.isEmpty()) {
+            throw new AuraHandledException('Signature slot not found.');
+        }
+        DocumentAction__c action = actions[0];
+        if (action.StatusPk__c != 'Pending') {
+            throw new AuraHandledException('This signature slot has already been actioned.');
+        }
+
+        Datetime now = Datetime.now();
+        action.StatusPk__c = 'Completed';
+        action.CompletedDateTime__c = now;
+        action.ElectronicConsentDateTime__c = now;
+        action.SignatureTypePk__c = String.isNotBlank(signatureType) ? signatureType : 'Text';
+        action.SignatureDataTxt__c = signatureData;
+        action.SignerNameTxt__c = signerName;
+        action.SignerEmailTxt__c = signerEmail;
+        action.IpAddressTxt__c = ipAddress;
+        action.UserAgentTxt__c = userAgent;
+        Database.update(action, AccessLevel.SYSTEM_MODE);
+
+        // Audit trail entry — chain hash populated automatically by the
+        // ActivityLog before-insert trigger via DeliveryAuditChainService.
+        ActivityLog__c log = new ActivityLog__c(
+            ActionTypePk__c = 'Document_Action',
+            RecordIdTxt__c = action.DocumentId__c,
+            ContextDataTxt__c = JSON.serialize(new Map<String, Object>{
+                'action'        => 'sign',
+                'actionId'      => action.Id,
+                'documentId'    => action.DocumentId__c,
+                'signerName'    => signerName,
+                'signatureType' => action.SignatureTypePk__c,
+                'slotLabel'     => action.ActionLabelTxt__c
+            })
+        );
+        Database.insert(log, AccessLevel.SYSTEM_MODE);
+
+        // Materialize the activity log id on the action for fast hash chain lookup.
+        action.ActivityLogId__c = log.Id;
+        Database.update(action, AccessLevel.SYSTEM_MODE);
+
+        String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentId__c);
+
+        return new Map<String, Object>{
+            'actionId'       => action.Id,
+            'status'         => 'Completed',
+            'documentStatus' => newDocStatus
+        };
+    }
+
+    /**
+     * @description Checks whether all signature slots for a document are completed,
+     *              and if so, advances the parent document to Approved (only when its
+     *              current status is in {Sent, Viewed, Awaiting_Signatures}). Also creates
+     *              a DeliveryTransaction__c approval row mirroring the legacy approval flow.
+     *              Returns the new document status, or null if no advance happened.
+     *              Documents in Draft status are NOT advanced — admin pre-signing is allowed
+     *              but does not finalize the document.
+     * @param documentId The DeliveryDocument__c Id.
+     * @return The new status string, or null.
+     */
+    public static String maybeAdvanceDocumentStatus(Id documentId) {
+        if (documentId == null) {
+            return null;
+        }
+        Integer pendingCount = [
+            SELECT COUNT()
+            FROM DocumentAction__c
+            WHERE DocumentId__c = :documentId AND StatusPk__c = 'Pending'
+            WITH SYSTEM_MODE
+        ];
+        if (pendingCount > 0) {
+            return null;
+        }
+
+        List<DeliveryDocument__c> docs = [
+            SELECT Id, StatusPk__c, TotalCurrency__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (docs.isEmpty()) {
+            return null;
+        }
+        DeliveryDocument__c doc = docs[0];
+
+        Set<String> advanceableStatuses = new Set<String>{ 'Sent', 'Viewed', 'Awaiting_Signatures' };
+        if (!advanceableStatuses.contains(doc.StatusPk__c)) {
+            return null;
+        }
+
+        doc.StatusPk__c = 'Approved';
+        Database.update(doc, AccessLevel.SYSTEM_MODE);
+
+        DeliveryTransaction__c txn = new DeliveryTransaction__c(
+            DocumentId__c          = doc.Id,
+            TypePk__c              = 'Approval',
+            AmountCurrency__c      = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0,
+            TransactionDateDate__c = Date.today(),
+            NoteTxt__c             = 'Approved via signature completion'
+        );
+        Database.insert(txn, AccessLevel.SYSTEM_MODE);
+
+        return 'Approved';
+    }
+
+    /**
+     * @description Returns true when admin-side signing is enabled in org settings.
+     *              Reads the EnableAdminSigningDateTime__c feature flag on
+     *              DeliveryHubSettings__c using the standard non-null = enabled pattern.
+     */
+    public static Boolean isAdminSigningEnabled() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        return settings != null && settings.EnableAdminSigningDateTime__c != null;
+    }
+
+    /**
+     * @description Builds the standard text-stamp signature string in the GSU
+     *              AutomatedDocuments format: "<Name> (digitally signed Apr 6, 2026)".
+     * @param signerName The printed name to embed.
+     * @param when The signing timestamp.
+     * @return The formatted stamp string.
+     */
+    public static String formatTextSignatureStamp(String signerName, Datetime when) {
+        String dateStr = when.format('MMM d, yyyy');
+        return signerName + ' (digitally signed ' + dateStr + ')';
+    }
 }
