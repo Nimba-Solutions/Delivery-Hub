@@ -23,6 +23,16 @@
                 <identifier>c_deliveryClientDashboard_main</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>pageKey</name>
+                    <value>home</value>
+                </componentInstanceProperties>
+                <componentName>deliveryExecutiveDashboard</componentName>
+                <identifier>c_deliveryExecutiveDashboard</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>
