@@ -117,6 +117,10 @@ export default class DeliveryNimbusGantt extends LightningElement {
     }
 
     disconnectedCallback() {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
         if (this._gantt) {
             this._gantt.destroy();
             this._gantt = null;
@@ -321,7 +325,8 @@ export default class DeliveryNimbusGantt extends LightningElement {
         const container = this.refs.ganttContainer;
         if (!container || this._ganttInitialized) { return; }
 
-        const NimbusGanttLib = window.NimbusGantt;
+        // eslint-disable-next-line no-undef
+        const NimbusGanttLib = typeof NimbusGantt !== 'undefined' ? NimbusGantt : window.NimbusGantt;
         if (!NimbusGanttLib || typeof NimbusGanttLib.NimbusGantt !== 'function') {
             this.errorMessage = 'Nimbus Gantt library did not load correctly.';
             return;
@@ -420,6 +425,24 @@ export default class DeliveryNimbusGantt extends LightningElement {
                     this._gantt.scrollToDate(new Date());
                 }
             });
+
+            // Observe container resize to reinit Gantt at new dimensions
+            if (typeof ResizeObserver !== 'undefined' && !this._resizeObserver) {
+                let resizeTimeout;
+                this._resizeObserver = new ResizeObserver(() => {
+                    clearTimeout(resizeTimeout);
+                    // eslint-disable-next-line @lwc/lwc/no-async-operation
+                    resizeTimeout = setTimeout(() => {
+                        if (this._gantt) {
+                            this._gantt.destroy();
+                            this._gantt = null;
+                            this._ganttInitialized = false;
+                            this._initGantt();
+                        }
+                    }, 300);
+                });
+                this._resizeObserver.observe(container);
+            }
 
         } catch (err) {
             this.errorMessage = 'Failed to initialize Nimbus Gantt: '
