@@ -461,8 +461,7 @@ private class DeliveryEscalationRuleEvaluatorTest {
     static void testCalculateDaysInStage() {
         System.runAs(testUser) {
             WorkItem__c wi = new WorkItem__c(
-                StageEnteredDateTime__c = Datetime.now().addDays(-7),
-                LastModifiedDate = Datetime.now().addDays(-3)
+                StageEnteredDateTime__c = Datetime.now().addDays(-7)
             );
 
             Test.startTest();

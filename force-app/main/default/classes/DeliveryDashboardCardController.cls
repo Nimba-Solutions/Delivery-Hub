@@ -60,13 +60,13 @@ global with sharing class DeliveryDashboardCardController {
             }
             when 'avgDaysToComplete' {
                 AggregateResult[] results = [
-                    SELECT AVG(EstimatedEffortNumber__c) avg
+                    SELECT AVG(EstimatedHoursNumber__c) avgHrs
                     FROM WorkItem__c
                     WHERE StageNamePk__c = 'Done'
                     AND CreatedDate = LAST_N_DAYS:90
                     WITH SYSTEM_MODE
                 ];
-                return results.isEmpty() || results[0].get('avg') == null ? 0 : results[0].get('avg');
+                return results.isEmpty() || results[0].get('avgHrs') == null ? 0 : results[0].get('avgHrs');
             }
             when 'workItemsByPriority' {
                 List<Map<String, Object>> data = new List<Map<String, Object>>();
