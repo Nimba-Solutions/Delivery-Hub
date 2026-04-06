@@ -325,8 +325,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
         const container = this.refs.ganttContainer;
         if (!container || this._ganttInitialized) { return; }
 
-        // eslint-disable-next-line no-undef
-        const NimbusGanttLib = typeof NimbusGantt !== 'undefined' ? NimbusGantt : window.NimbusGantt;
+        const NimbusGanttLib = window.NimbusGantt;
         if (!NimbusGanttLib || typeof NimbusGanttLib.NimbusGantt !== 'function') {
             this.errorMessage = 'Nimbus Gantt library did not load correctly.';
             return;
