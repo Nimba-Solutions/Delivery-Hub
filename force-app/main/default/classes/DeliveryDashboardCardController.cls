@@ -10,6 +10,7 @@ public with sharing class DeliveryDashboardCardController {
 
     @AuraEnabled(cacheable=true)
     public static List<CardConfig> getCardsForPage(String pageKey) {
+        String currentProfile = [SELECT Profile.Name FROM User WHERE Id = :UserInfo.getUserId() WITH SYSTEM_MODE].Profile.Name;
         List<CardConfig> cards = new List<CardConfig>();
         for (DashboardCard__mdt card : [
             SELECT DeveloperName, TitleTxt__c, DescriptionTxt__c, CardTypePk__c,
@@ -22,12 +23,9 @@ public with sharing class DeliveryDashboardCardController {
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC
         ]) {
-            // Check profile visibility
-            if (String.isNotBlank(card.VisibleToProfilesTxt__c)) {
-                String currentProfile = [SELECT Profile.Name FROM User WHERE Id = :UserInfo.getUserId() WITH SYSTEM_MODE].Profile.Name;
-                if (!card.VisibleToProfilesTxt__c.containsIgnoreCase(currentProfile)) {
-                    continue;
-                }
+            if (String.isNotBlank(card.VisibleToProfilesTxt__c)
+                && !card.VisibleToProfilesTxt__c.containsIgnoreCase(currentProfile)) {
+                continue;
             }
             cards.add(mapConfig(card));
         }
