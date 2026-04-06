@@ -53,8 +53,8 @@ const FIELDS = {
     SORT_ORDER: `%%%NAMESPACED_ORG%%%SortOrderNumber__c`,
     IS_ACTIVE:  `%%%NAMESPACED_ORG%%%ActivatedDateTime__c`,
     STATUS_PK:  `%%%NAMESPACED_ORG%%%StatusPk__c`,
-    TAGS: `%%%NAMESPACED_ORG%%%Tags__c`,
-    EPIC: `%%%NAMESPACED_ORG%%%Epic__c`,
+    TAGS: `%%%NAMESPACED_ORG%%%TagsTxt__c`,
+    EPIC: `%%%NAMESPACED_ORG%%%EpicTxt__c`,
     INTENTION: `%%%NAMESPACED_ORG%%%ClientIntentionPk__c`,
     DEV_DAYS_SIZE: `%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c`,
     CALCULATED_ETA: `%%%NAMESPACED_ORG%%%CalculatedETADate__c`,
@@ -65,7 +65,7 @@ const FIELDS = {
     PROJECTED_UAT_READY: `%%%NAMESPACED_ORG%%%ProjectedUATReadyDate__c`,
     
     CREATED_DATE: 'CreatedDate',
-    DEVELOPER: `%%%NAMESPACED_ORG%%%Developer__c`,
+    DEVELOPER: `%%%NAMESPACED_ORG%%%DeveloperLookupId__c`,
     // Relationships
     DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%BlockedByDeps__r`,
     DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%BlockingDeps__r`,
@@ -1609,7 +1609,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         return `priority-badge priority-${p}`;
     }
     get detailEpicName() { return this.detailWorkItem?.Epic__r?.Name || this.detailWorkItem?.delivery__Epic__r?.Name || ''; }
-    get detailDeveloperName() { return this.detailWorkItem?.Developer__r?.Name || this.detailWorkItem?.delivery__Developer__r?.Name || ''; }
+    get detailDeveloperName() { return this.detailWorkItem?.DeveloperLookupId__r?.Name || this.detailWorkItem?.delivery__DeveloperLookupId__r?.Name || ''; }
     get detailCreatedBy() { return this.detailWorkItem?.CreatedBy?.Name || this.detailWorkItem?.delivery__CreatedBy?.Name || ''; }
     get hasDetailEpic() { return !!this.detailEpicName; }
     get hasDetailDeveloper() { return !!this.detailDeveloperName; }

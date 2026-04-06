@@ -3,7 +3,7 @@
     <label>IP - Go-Live</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowType__c</field>
+        <field>WorkflowTypeMdtId__c</field>
         <value xsi:type="xsd:string">Implementation_Project</value>
     </values>
     <values>

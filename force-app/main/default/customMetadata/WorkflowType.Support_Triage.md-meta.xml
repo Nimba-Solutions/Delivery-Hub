@@ -7,7 +7,7 @@
         <value xsi:type="xsd:string">Support ticket lifecycle from intake through resolution. Three persona views for Support Agent, Engineering, and Customer with fast linear flow.</value>
     </values>
     <values>
-        <field>IconName__c</field>
+        <field>IconNameTxt__c</field>
         <value xsi:type="xsd:string">utility:help</value>
     </values>
     <values>

@@ -3,7 +3,7 @@
     <label>LA Admin - Approved</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowType__c</field>
+        <field>WorkflowTypeMdtId__c</field>
         <value xsi:type="xsd:string">Loan_Approval</value>
     </values>
     <values>

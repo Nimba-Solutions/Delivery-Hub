@@ -5,7 +5,7 @@
     <columns>BriefDescriptionTxt__c</columns>
     <columns>StageNamePk__c</columns>
     <columns>TotalLoggedHoursNumber__c</columns>
-    <columns>Developer__c</columns>
+    <columns>DeveloperLookupId__c</columns>
     <columns>LAST_UPDATE</columns>
     <filterScope>Everything</filterScope>
     <filters>

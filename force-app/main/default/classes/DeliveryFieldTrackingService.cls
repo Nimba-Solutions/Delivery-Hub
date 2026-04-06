@@ -45,12 +45,12 @@ public with sharing class DeliveryFieldTrackingService {
 
         for (SObject newRecord : newRecords) {
             for (TrackedField__mdt tf : trackedFields) {
-                Object newValue = newRecord.get(tf.FieldApiName__c);
+                Object newValue = newRecord.get(tf.FieldApiNameTxt__c);
                 DeliveryFieldChangeService.FieldChangeRequest req =
                     new DeliveryFieldChangeService.FieldChangeRequest();
                 req.recordId   = newRecord.Id;
-                req.fieldName  = tf.FieldApiName__c;
-                req.fieldLabel = tf.FieldLabel__c;
+                req.fieldName  = tf.FieldApiNameTxt__c;
+                req.fieldLabel = tf.FieldLabelTxt__c;
                 req.objectName = objectApiName;
                 req.oldValue   = null;
                 req.newValue   = newValue != null ? String.valueOf(newValue) : null;
@@ -93,12 +93,12 @@ public with sharing class DeliveryFieldTrackingService {
 
         for (SObject oldRecord : oldRecords) {
             for (TrackedField__mdt tf : trackedFields) {
-                Object oldValue = oldRecord.get(tf.FieldApiName__c);
+                Object oldValue = oldRecord.get(tf.FieldApiNameTxt__c);
                 DeliveryFieldChangeService.FieldChangeRequest req =
                     new DeliveryFieldChangeService.FieldChangeRequest();
                 req.recordId   = oldRecord.Id;
-                req.fieldName  = tf.FieldApiName__c;
-                req.fieldLabel = tf.FieldLabel__c;
+                req.fieldName  = tf.FieldApiNameTxt__c;
+                req.fieldLabel = tf.FieldLabelTxt__c;
                 req.objectName = objectApiName;
                 req.oldValue   = oldValue != null ? String.valueOf(oldValue) : null;
                 req.newValue   = null;
@@ -156,15 +156,15 @@ public with sharing class DeliveryFieldTrackingService {
             }
 
             for (TrackedField__mdt tf : trackedFields) {
-                Object oldValue = oldRecord.get(tf.FieldApiName__c);
-                Object newValue = newRecord.get(tf.FieldApiName__c);
+                Object oldValue = oldRecord.get(tf.FieldApiNameTxt__c);
+                Object newValue = newRecord.get(tf.FieldApiNameTxt__c);
 
                 if (oldValue != newValue) {
                     DeliveryFieldChangeService.FieldChangeRequest req =
                         new DeliveryFieldChangeService.FieldChangeRequest();
                     req.recordId   = newRecord.Id;
-                    req.fieldName  = tf.FieldApiName__c;
-                    req.fieldLabel = tf.FieldLabel__c;
+                    req.fieldName  = tf.FieldApiNameTxt__c;
+                    req.fieldLabel = tf.FieldLabelTxt__c;
                     req.objectName = objectApiName;
                     req.oldValue   = oldValue != null ? String.valueOf(oldValue) : null;
                     req.newValue   = newValue != null ? String.valueOf(newValue) : null;
@@ -191,7 +191,7 @@ public with sharing class DeliveryFieldTrackingService {
     private static List<TrackedField__mdt> getTrackedFieldsForObject(String objectApiName) {
         if (cachedTrackedFields == null) {
             cachedTrackedFields = [
-                SELECT ObjectApiName__c, FieldApiName__c, FieldLabel__c, SortOrderNumber__c
+                SELECT ObjectApiNameTxt__c, FieldApiNameTxt__c, FieldLabelTxt__c, SortOrderNumber__c
                 FROM TrackedField__mdt
                 WHERE EnabledDateTime__c != null
                 WITH SYSTEM_MODE
@@ -201,7 +201,7 @@ public with sharing class DeliveryFieldTrackingService {
 
         List<TrackedField__mdt> result = new List<TrackedField__mdt>();
         for (TrackedField__mdt tf : cachedTrackedFields) {
-            if (tf.ObjectApiName__c == objectApiName) {
+            if (tf.ObjectApiNameTxt__c == objectApiName) {
                 result.add(tf);
             }
         }

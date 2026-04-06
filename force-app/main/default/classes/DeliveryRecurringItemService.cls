@@ -16,12 +16,12 @@ global with sharing class DeliveryRecurringItemService {
         'WorkflowTypeTxt__c',
         'EstimatedHoursNumber__c',
         'DeveloperDaysSizeNumber__c',
-        'Tags__c',
+        'TagsTxt__c',
         'AcceptanceCriteriaTxt__c',
         'StepsToReproduceTxt__c',
-        'Epic__c',
+        'EpicTxt__c',
         'ClientIntentionPk__c',
-        'Developer__c'
+        'DeveloperLookupId__c'
     };
 
     // Pre-built CSV of clone fields for dynamic SOQL
@@ -122,8 +122,8 @@ global with sharing class DeliveryRecurringItemService {
     global static List<WorkItem__c> getTemplates() {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c,
-                   Tags__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
-                   DeveloperDaysSizeNumber__c, Epic__c
+                   TagsTxt__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
+                   DeveloperDaysSizeNumber__c, EpicTxt__c
             FROM WorkItem__c
             WHERE TemplateMarkedDateTime__c != null
             AND ActivatedDateTime__c != null
@@ -269,7 +269,7 @@ global with sharing class DeliveryRecurringItemService {
         List<WorkflowStage__mdt> stages = [
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowType__r.DeveloperName = :resolvedType
+            WHERE WorkflowTypeMdtId__r.DeveloperName = :resolvedType
             AND TerminalDateTime__c = null
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST

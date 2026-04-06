@@ -124,7 +124,7 @@ public with sharing class DeliveryGanttController {
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
                 + 'EstimatedHoursNumber__c, TotalLoggedHoursNumber__c, '
                 + 'ActivatedDateTime__c, ParentWorkItemId__c, '
-                + 'Developer__r.Name, '
+                + 'DeveloperLookupId__r.Name, '
                 + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
                 + 'FROM WorkItem__c '
                 + 'WHERE TemplateMarkedDateTime__c = null ';
@@ -194,7 +194,7 @@ public with sharing class DeliveryGanttController {
             task.progress = 0;
         }
 
-        task.developerName = item.Developer__r != null ? item.Developer__r.Name : null;
+        task.developerName = item.DeveloperLookupId__r != null ? item.DeveloperLookupId__r.Name : null;
 
         task.entityName = item.ClientNetworkEntityId__r != null
             ? item.ClientNetworkEntityId__r.Name : null;

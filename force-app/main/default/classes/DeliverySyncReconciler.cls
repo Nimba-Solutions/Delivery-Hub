@@ -22,10 +22,10 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
     private static final Set<String> WORK_ITEM_SYNC_FIELDS = new Set<String>{
         'BriefDescriptionTxt__c', 'DetailsTxt__c', 'StageNamePk__c', 'StatusPk__c',
         'PriorityPk__c', 'DeveloperDaysSizeNumber__c', 'EstimatedHoursNumber__c',
-        'ClientPreApprovedHoursNumber__c', 'Developer__c', 'CalculatedETADate__c',
+        'ClientPreApprovedHoursNumber__c', 'DeveloperLookupId__c', 'CalculatedETADate__c',
         'ProjectedUATReadyDate__c', 'AcceptanceCriteriaTxt__c', 'StepsToReproduceTxt__c',
-        'ClientIntentionPk__c', 'RequestTypePk__c', 'Tags__c', 'WorkflowTypeTxt__c',
-        'Epic__c', 'SLATargetDate__c', 'ActivatedDateTime__c', 'SortOrderNumber__c'
+        'ClientIntentionPk__c', 'RequestTypePk__c', 'TagsTxt__c', 'WorkflowTypeTxt__c',
+        'EpicTxt__c', 'SLATargetDate__c', 'ActivatedDateTime__c', 'SortOrderNumber__c'
     };
 
     /**
@@ -169,10 +169,10 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         Map<Id, WorkItem__c> gapWorkItems = new Map<Id, WorkItem__c>([
             SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c, StatusPk__c,
                    PriorityPk__c, DeveloperDaysSizeNumber__c, EstimatedHoursNumber__c,
-                   ClientPreApprovedHoursNumber__c, Developer__c, CalculatedETADate__c,
+                   ClientPreApprovedHoursNumber__c, DeveloperLookupId__c, CalculatedETADate__c,
                    ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c, StepsToReproduceTxt__c,
-                   ClientIntentionPk__c, RequestTypePk__c, Tags__c, WorkflowTypeTxt__c,
-                   Epic__c, SLATargetDate__c, ActivatedDateTime__c, SortOrderNumber__c
+                   ClientIntentionPk__c, RequestTypePk__c, TagsTxt__c, WorkflowTypeTxt__c,
+                   EpicTxt__c, SLATargetDate__c, ActivatedDateTime__c, SortOrderNumber__c
             FROM WorkItem__c WHERE Id IN :gapWorkItemIds
             WITH SYSTEM_MODE
         ]);

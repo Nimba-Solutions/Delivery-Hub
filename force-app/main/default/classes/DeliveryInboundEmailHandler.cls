@@ -111,7 +111,7 @@ public with sharing class DeliveryInboundEmailHandler implements Messaging.Inbou
 
     @TestVisible
     private static WorkItem__c resolveWorkItem(String workItemName) {
-        List<WorkItem__c> items = [SELECT Id, Name, BriefDescriptionTxt__c, Developer__c, OwnerId FROM WorkItem__c WHERE Name = :workItemName WITH SYSTEM_MODE LIMIT 1];
+        List<WorkItem__c> items = [SELECT Id, Name, BriefDescriptionTxt__c, DeveloperLookupId__c, OwnerId FROM WorkItem__c WHERE Name = :workItemName WITH SYSTEM_MODE LIMIT 1];
         return items.isEmpty() ? null : items[0];
     }
 

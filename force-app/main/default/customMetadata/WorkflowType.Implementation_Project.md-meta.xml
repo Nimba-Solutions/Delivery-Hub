@@ -7,7 +7,7 @@
         <value xsi:type="xsd:string">Consulting and SI project delivery: discovery through hypercare. Three persona views for Project Manager, Consultant, and Client Stakeholder with waterfall-style progression.</value>
     </values>
     <values>
-        <field>IconName__c</field>
+        <field>IconNameTxt__c</field>
         <value xsi:type="xsd:string">utility:builder</value>
     </values>
     <values>
