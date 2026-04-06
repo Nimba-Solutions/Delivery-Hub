@@ -153,6 +153,26 @@ Getting Started wizard handles full org setup in 4 steps &mdash; configures sche
 
 Velocity tracking service calculates team and developer completion rates over configurable time windows. Projected completion dates extrapolate from current velocity and remaining backlog. Capacity utilization reads from `DeveloperCapacity__mdt` configuration to show allocated vs. available hours per developer. What-if analysis lets admins model the impact of adding items to the backlog.
 
+### Enterprise Security & Compliance
+
+A suite of opt-in enterprise features for organizations that need formal governance, compliance controls, and audit-grade data integrity.
+
+**API Rate Limiting:** Configurable per-entity request throttles for both the Public API and the Sync API. Set `PublicApiRateLimitNumber__c` (default: 100 requests/hour) or `SyncApiRateLimitNumber__c` (default: 60 requests/hour) on `DeliveryHubSettings__c` to activate. Excess requests receive HTTP 429 with a `Retry-After: 3600` header. Disabled by default &mdash; leave the fields null to allow unlimited throughput.
+
+**Immutable Audit Chain:** Every auditable event (stage changes, approvals, document lifecycle actions, sync completions) is hashed into a SHA-256 chain via `DeliveryAuditChainService`. Each `ActivityLog__c` record stores its hash and its parent hash, creating a tamper-evident ledger. Legal hold mode (`LegalHoldEnabledDateTime__c` on `DeliveryHubSettings__c`) prevents deletion of any audit chain records. The chain can be verified programmatically at any time.
+
+**HMAC Request Signing:** Outbound sync payloads are signed with an HMAC-SHA256 signature when `HmacSecretTxt__c` is configured on the target `NetworkEntity__c`. The receiving org validates the `X-Signature` header against the request body and shared secret. Backward compatible &mdash; if no secret is set, signature validation is skipped.
+
+**Formal Approval Chains:** Multi-step approval workflows for work item stage transitions via `DeliveryApprovalChainService`. Define required approvers and approval order through Custom Metadata. Approvals are tracked with timestamps, approver identity, and comments. Integrates with the existing stage gate framework.
+
+**Team-Based Visibility:** `DeliveryTeamPermissionService` enforces record-level visibility rules based on team membership. Work items can be scoped so that only members of the assigned team (defined on `NetworkEntity__c`) see them on the board. Admins retain full visibility. Opt-in via `TeamVisibilityEnabledDateTime__c`.
+
+**Data Archival:** `DeliveryArchivalService` moves completed work items and their related records (comments, work logs, sync items) to an archived state after a configurable retention period (`ArchivalRetentionDaysNumber__c`, default 365 days). Archived records are excluded from board queries and API responses but remain queryable for compliance. Restore on demand.
+
+**Business-Hours SLAs:** `DeliverySLAService` now supports business-hours calculations via `BusinessHoursId` on `SLARule__mdt`. SLA clocks pause outside configured business hours, weekends, and holidays. Response and resolution targets are evaluated against business time, not wall-clock time.
+
+**Notification Preferences:** `DeliveryNotificationPreferenceService` lets users configure per-event notification channels (email, platform event, both, or none) through `DeliveryHubSettings__c`. Preferences are respected by the escalation engine, digest service, and stage-change alerts.
+
 ### Admin Settings
 
 Central settings page with DateTime activation toggles that record who enabled each feature and when. Four operational settings control runtime behavior across the platform:
@@ -166,7 +186,7 @@ Central settings page with DateTime activation toggles that record who enabled e
 
 All four settings are wired into the Apex runtime &mdash; the DeliveryHubScheduler, DeliveryActivityLogCleanup, and DeliveryEscalationService read from `DeliveryHubSettings__c` on every execution. The admin page uses dynamic forms for field-level layout control.
 
-**DateTime toggles:** All boolean toggle fields have been replaced with DateTime stamps. Instead of a checkbox, the field records **when** the flag was set (e.g., `ActivatedDateTime__c = 2026-03-27T14:30:00Z`). This tells you both **if** and **when**. Examples: `ActivatedDateTime__c`, `BountyEnabledDateTime__c`, `RecurringEnabledDateTime__c`, `TemplateMarkedDateTime__c` (all on WorkItem\_\_c), `EnableVendorPushDateTime__c` (NetworkEntity\_\_c), and `DefaultSetDateTime__c` (DeliverySavedFilter\_\_c). DateTime stamps provide richer audit data at zero extra cost.
+**DateTime toggles (zero Boolean fields):** The codebase contains **zero Checkbox/Boolean custom fields**. Every toggle uses a DateTime stamp that records **when** the flag was set (e.g., `ActivatedDateTime__c = 2026-03-27T14:30:00Z`). This tells you both **if** and **when**. Examples: `ActivatedDateTime__c`, `BountyEnabledDateTime__c`, `RecurringEnabledDateTime__c`, `TemplateMarkedDateTime__c` (all on WorkItem\_\_c), `EnableVendorPushDateTime__c` (NetworkEntity\_\_c), `DefaultSetDateTime__c` (DeliverySavedFilter\_\_c), and all enterprise feature flags (`LegalHoldEnabledDateTime__c`, `TeamVisibilityEnabledDateTime__c`, etc.). DateTime stamps provide richer audit data at zero extra cost.
 
 ---
 
@@ -195,8 +215,8 @@ The engine is retry-aware (configurable limit, default 3 attempts), handles name
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 183 (91 production + 92 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService, InvoiceGenerationService, PermissionAnalyzerController, FieldTrackingService, FieldChangeService, GhostController, GanttController, GanttRemoteController, VoiceNotesController, ExternalNotificationService |
-| **LWC Components** | 65 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryNimbusGantt, deliveryVoiceNotes, deliveryPermissionAnalyzer, deliveryHubWorkspace, deliveryWorkflowBuilder |
+| **Apex Classes** | 208 (109 production + 99 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService, InvoiceGenerationService, PermissionAnalyzerController, FieldTrackingService, FieldChangeService, GhostController, GanttController, GanttRemoteController, VoiceNotesController, ExternalNotificationService, RateLimitService, AuditChainService, CryptoService, ApprovalChainService, TeamPermissionService, ArchivalService, NotificationPreferenceService, WorkItemQueryService, DocumentQueryService, DocumentApprovalService, DocumentEmailService, DocumentGenerationService, DocumentPaymentService, EscalationRuleEvaluator, EscalationActionExecutor, EscalationNotificationService, EscalationContext |
+| **LWC Components** | 63 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryNimbusGantt, deliveryVoiceNotes, deliveryPermissionAnalyzer, deliveryHubWorkspace, deliveryWorkflowBuilder |
 | **Custom Objects** | 14 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c |
 | **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, DeveloperCapacity\_\_mdt |
 | **Platform Events** | 5 | DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e, GanttRemoteEvent\_\_e |
@@ -233,7 +253,7 @@ cci task run retrieve_changes --org dev
 git push origin feature/your-feature
 ```
 
-Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 860+ Apex tests (90%+ coverage), and runs PMD static analysis (zero violations enforced).
+Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 900+ Apex tests (90%+ coverage), and runs PMD static analysis (zero violations enforced).
 
 ### Reconciliation
 
@@ -289,7 +309,7 @@ Delivery Hub exposes a REST API for non-Salesforce clients (websites, mobile app
 | POST | `/api/document-dispute` | Dispute a document with reason by public token |
 | GET | `/sync/health` | Org-level sync health &mdash; record counts, hours, status breakdown (no auth required) |
 
-All requests require an `X-Api-Key` header matched against a NetworkEntity record. See the [Public API Guide](docs/PUBLIC_API_GUIDE.md) for complete documentation.
+All requests require an `X-Api-Key` header matched against a NetworkEntity record. **Rate limiting** is available: set `PublicApiRateLimitNumber__c` on `DeliveryHubSettings__c` to cap requests per entity per hour (default off; returns HTTP 429 when exceeded). See the [Public API Guide](docs/PUBLIC_API_GUIDE.md) for complete documentation.
 
 ### Bounty Marketplace API
 
@@ -305,7 +325,7 @@ All requests require an `X-Api-Key` header matched against a NetworkEntity recor
 
 Any WorkItem with `BountyEnabledDateTime__c` set (non-null) is published to the marketplace. Claims are tracked via `BountyClaim__c` and synced to origin orgs automatically. See the [Bounty API Guide](docs/BOUNTY_API_GUIDE.md) for details.
 
-For org-to-org synchronization, see the [Sync API Guide](docs/SYNC_API_GUIDE.md).
+For org-to-org synchronization (with opt-in HMAC request signing and rate limiting), see the [Sync API Guide](docs/SYNC_API_GUIDE.md).
 
 ---
 
@@ -370,7 +390,7 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Public Status Page** | Shareable delivery status view &mdash; no Salesforce login required |
 | **System Pulse** | Live work items, hours, sync health |
 | **Dependency Graph** | Visual blocking relationships between work items |
-| **SLA Tracking** | Response and resolution time targets with visual indicators |
+| **SLA Tracking** | Response and resolution time targets with visual indicators, business-hours support via BusinessHoursId on SLARule__mdt |
 | **Recurring Items** | Auto-create work items on configurable schedules |
 | **Email Notifications** | Stage-change alerts to keep stakeholders informed |
 | **CSV Import** | Bulk import work items from spreadsheets |
@@ -390,6 +410,14 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **Task API (Versioned)** | CI/CD and AI agent endpoints moved to `/deliveryhub/v1/tasks/*` to match the URL convention used by all other REST endpoints. |
 | **Field Change Tracking** | Automatic audit trail of field changes on all DH objects via triggers. Configured declaratively through TrackedField\_\_mdt &mdash; add a metadata record to track any field. Captures old/new values, delta for numeric fields, and stores as ActivityLog entries. Enabled by default on new installs. |
 | **Native Reports** | Full Salesforce reporting on all delivery data &mdash; 25 pre-built reports ship with the package |
+| **API Rate Limiting** | Opt-in per-entity throttle for both Public API (default 100 req/hr) and Sync API (default 60 req/hr). HTTP 429 with Retry-After header when exceeded. Disabled by default. |
+| **Immutable Audit Chain** | SHA-256 hash chain on ActivityLog records creates a tamper-evident audit trail. Legal hold mode prevents deletion. Chain verifiable programmatically. |
+| **HMAC Request Signing** | Outbound sync payloads signed with HMAC-SHA256 via shared secret on NetworkEntity. Receiving org validates X-Signature header. Backward compatible &mdash; no secret means no signature required. |
+| **Formal Approval Chains** | Multi-step approval workflows for stage transitions with configurable approvers, approval order, timestamps, and comments. Integrates with stage gates. |
+| **Team-Based Visibility** | Record-level board scoping by team membership on NetworkEntity. Admins retain full visibility. Opt-in via TeamVisibilityEnabledDateTime__c. |
+| **Data Archival** | Automated archival of completed work items and related records after configurable retention period (default 365 days). Archived records excluded from board/API but queryable for compliance. |
+| **Business-Hours SLAs** | SLA clocks pause outside configured business hours, weekends, and holidays. BusinessHoursId on SLARule__mdt controls the calendar. |
+| **Notification Preferences** | Per-event notification channel configuration (email, platform event, both, or none). Respected by escalation engine, digest service, and stage-change alerts. |
 
 ---
 

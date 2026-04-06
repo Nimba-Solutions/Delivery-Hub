@@ -37,6 +37,7 @@ Supported object types: `WorkItem__c`, `WorkItemComment__c`, `ContentVersion`
 | `Content-Type` | Yes | Must be `application/json` |
 | `X-Api-Key` | No | API key for opt-in authentication. If sent, must match a Connected NetworkEntity. If omitted, request is allowed through (backward compatible). |
 | `X-Global-Source-Id` | No | Global traceability ID for loop prevention. If this ID matches an existing outbound SyncItem in the receiving org, the payload is suppressed as an echo. |
+| `X-Signature` | No | HMAC-SHA256 hex digest for payload integrity verification. Validated when `HmacSecretTxt__c` is configured on the matched NetworkEntity. See [HMAC Request Signing](#hmac-request-signing). |
 
 **Request body**:
 
@@ -90,7 +91,8 @@ Supported object types: `WorkItem__c`, `WorkItemComment__c`, `ContentVersion`
 | Code | Body | Condition |
 |------|------|-----------|
 | 400 | `{"error": "Empty Payload"}` | Request body is empty |
-| 401 | `{"error": "Invalid API key or entity not connected."}` | X-Api-Key header sent but key not found or entity not Connected |
+| 401 | `{"error": "Invalid API key or entity not connected."}` | X-Api-Key header sent but key not found or entity not Connected; or HMAC signature validation failed |
+| 429 | `{"error": "Rate limit exceeded. Try again later."}` | Sync API rate limit exceeded for this API key (opt-in via `SyncApiRateLimitNumber__c`) |
 | 500 | `{"error": "..."}` | Unexpected server error |
 
 ---
@@ -162,8 +164,9 @@ curl -s \
 | Code | Body | Condition |
 |------|------|-----------|
 | 400 | `{"error": "Missing required parameter: clientId..."}` | clientId query parameter is missing |
-| 401 | `{"error": "Invalid API key or entity not connected."}` | X-Api-Key header sent but invalid |
+| 401 | `{"error": "Invalid API key or entity not connected."}` | X-Api-Key header sent but invalid; or HMAC signature validation failed |
 | 404 | `{"error": "Endpoint not found. Please use /sync/changes"}` | URL path does not end with `/changes` |
+| 429 | `{"error": "Rate limit exceeded. Try again later."}` | Sync API rate limit exceeded for this API key |
 | 500 | `{"error": "..."}` | Unexpected server error |
 
 ---
@@ -505,6 +508,97 @@ Failed sync items are retried up to a configurable limit (default: 3):
 
 ---
 
+## Rate Limiting
+
+The Sync API supports opt-in rate limiting to protect org resources from excessive inbound sync traffic.
+
+### Configuration
+
+Set `SyncApiRateLimitNumber__c` on the `DeliveryHubSettings__c` custom setting to activate rate limiting:
+
+```apex
+DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+s.SyncApiRateLimitNumber__c = 60; // 60 requests per hour per API key
+upsert s;
+```
+
+**Default behavior**: When `SyncApiRateLimitNumber__c` is `null` (the default), rate limiting is **disabled** and all sync requests are allowed through without throttling.
+
+### How It Works
+
+- Each inbound sync request is counted per API key (from the `X-Api-Key` header)
+- The counter resets every hour
+- When the limit is exceeded, the endpoint returns HTTP **429 Too Many Requests**
+
+### 429 Response
+
+```json
+{
+    "error": "Rate limit exceeded. Try again later."
+}
+```
+
+**Headers on 429 response**:
+
+| Header | Value | Description |
+|--------|-------|-------------|
+| `Retry-After` | `3600` | Number of seconds until the rate limit window resets |
+
+### Recommendations
+
+- Start with the default (off) and enable only if you need to throttle specific partner orgs
+- A limit of **60 requests per hour** is a reasonable starting point for bidirectional sync
+- Requests without an `X-Api-Key` header are not rate-limited (consistent with opt-in auth behavior)
+
+---
+
+## HMAC Request Signing
+
+For organizations that require payload integrity verification, the Sync API supports HMAC-SHA256 request signing. When configured, outbound sync payloads are signed with a shared secret and the receiving org validates the signature before processing.
+
+### Configuration
+
+Set `HmacSecretTxt__c` on the target `NetworkEntity__c` record to enable signing:
+
+```apex
+NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Vendor Org' LIMIT 1];
+entity.HmacSecretTxt__c = 'your-shared-secret-here';
+update entity;
+```
+
+Both orgs must share the same secret value. The secret should be a strong, random string (32+ characters recommended).
+
+### How It Works
+
+**Outbound (sending org)**:
+
+1. `DeliverySyncItemProcessor` reads `HmacSecretTxt__c` from the target NetworkEntity
+2. If a secret is configured, `DeliveryCryptoService` computes an HMAC-SHA256 signature of the request body
+3. The signature is sent in the `X-Signature` HTTP header
+
+**Inbound (receiving org)**:
+
+1. `DeliverySyncItemIngestor` checks for the `X-Signature` header
+2. If present, it recomputes the HMAC-SHA256 of the request body using the local NetworkEntity's `HmacSecretTxt__c`
+3. If the signatures match, processing continues normally
+4. If the signatures do not match, the request is rejected with a 401 response
+
+### Backward Compatibility
+
+HMAC signing is **fully backward compatible**:
+
+- **No secret on NetworkEntity**: No `X-Signature` header is sent, and the receiving org does not validate signatures. Existing connections work without any changes.
+- **Secret on one side only**: The sending org signs the request, but the receiving org without a secret skips validation. This allows gradual rollout.
+- **Secret on both sides**: Full integrity verification is active. Both orgs sign outbound requests and validate inbound signatures.
+
+### Headers
+
+| Header | Description |
+|--------|-------------|
+| `X-Signature` | HMAC-SHA256 hex digest of the request body, computed with the shared secret from `HmacSecretTxt__c` |
+
+---
+
 ## Troubleshooting
 
 ### Common Issues
@@ -516,6 +610,8 @@ Failed sync items are retried up to a configurable limit (default: 3):
 | Echo loop detected | Missing Global Source ID | Ensure both orgs are on the same package version with echo suppression |
 | "Configuration Error: Missing Endpoint URL" | NetworkEntity missing URL | Set `IntegrationEndpointUrlTxt__c` on the target NetworkEntity |
 | Items stuck in "Staged" | Polling not configured | Set up `DeliveryHubPoller` scheduled job or enable vendor push |
+| 429 Too Many Requests | Rate limit exceeded | Increase `SyncApiRateLimitNumber__c` or set to `null` to disable throttling |
+| 401 with valid API key | HMAC signature mismatch | Verify both orgs share the same `HmacSecretTxt__c` value on their NetworkEntity records |
 
 ### Viewing Sync Logs
 
