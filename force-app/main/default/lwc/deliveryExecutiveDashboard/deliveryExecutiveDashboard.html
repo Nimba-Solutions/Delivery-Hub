@@ -1,0 +1,93 @@
+<template>
+    <lightning-card title="Executive Dashboard" icon-name="utility:metrics">
+        <div slot="actions">
+            <lightning-button label="Refresh" icon-name="utility:refresh" onclick={handleRefresh} variant="neutral"></lightning-button>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="slds-align_absolute-center slds-p-around_large">
+                <lightning-spinner alternative-text="Loading dashboard" size="medium"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={error}>
+            <div class="slds-p-around_medium">
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <span>{error}</span>
+                </div>
+            </div>
+        </template>
+
+        <template lwc:if={hasCards}>
+            <div class="slds-grid slds-wrap slds-p-around_small">
+                <template for:each={cards} for:item="card">
+                    <div key={card.key} class={card.sizeClass}>
+                        <div class="slds-box slds-box_small">
+                            <!-- Card Header -->
+                            <div class="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
+                                <div class="slds-grid slds-grid_vertical-align-center">
+                                    <template lwc:if={card.iconName}>
+                                        <lightning-icon icon-name={card.iconName} size="small" class="slds-m-right_x-small"></lightning-icon>
+                                    </template>
+                                    <span class="slds-text-heading_small">{card.title}</span>
+                                </div>
+                            </div>
+
+                            <!-- Metric Card -->
+                            <template lwc:if={card.isMetric}>
+                                <div class="slds-text-align_center slds-p-around_small">
+                                    <div class="slds-text-heading_large">{card.displayValue}</div>
+                                    <template lwc:if={card.description}>
+                                        <div class="slds-text-color_weak slds-text-body_small slds-m-top_xx-small">{card.description}</div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Bar Chart Card -->
+                            <template lwc:if={card.isChart}>
+                                <div class="slds-p-around_x-small">
+                                    <template for:each={card.chartBars} for:item="bar">
+                                        <div key={bar.key} class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
+                                            <span class="slds-truncate" style="width: 120px; font-size: 0.75rem;">{bar.label}</span>
+                                            <div class="slds-col slds-m-left_x-small" style="flex: 1; background: #f3f3f3; height: 16px; border-radius: 4px;">
+                                                <div style={bar.barStyle} class="slds-theme_shade" data-bar="true"></div>
+                                            </div>
+                                            <span class="slds-m-left_x-small" style="width: 30px; text-align: right; font-size: 0.75rem;">{bar.value}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- List Card -->
+                            <template lwc:if={card.isList}>
+                                <div class="slds-p-around_x-small">
+                                    <template lwc:if={card.data}>
+                                        <template for:each={card.data} for:item="item">
+                                            <div key={item.label} class="slds-border_bottom slds-p-vertical_xx-small slds-text-body_small">
+                                                <span>{item.label}</span> — <span class="slds-text-color_weak">{item.value}</span>
+                                            </div>
+                                        </template>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <template lwc:if={noCardsMessage}>
+            <template lwc:if={isLoading}>
+            </template>
+            <template lwc:elseif={error}>
+            </template>
+            <template lwc:elseif={hasCards}>
+            </template>
+            <template lwc:else>
+                <div class="slds-p-around_medium slds-text-align_center slds-text-color_weak">
+                    <p>{noCardsMessage}</p>
+                </div>
+            </template>
+        </template>
+    </lightning-card>
+</template>
