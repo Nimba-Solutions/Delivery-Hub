@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexDoc')
-public with sharing class DeliveryDashboardCardController {
+global with sharing class DeliveryDashboardCardController {
 
     @AuraEnabled(cacheable=true)
     public static List<CardConfig> getCardsForPage(String pageKey) {
@@ -147,7 +147,7 @@ public with sharing class DeliveryDashboardCardController {
         return cfg;
     }
 
-    public class CardConfig {
+    global class CardConfig {
         @AuraEnabled public String key;
         @AuraEnabled public String title;
         @AuraEnabled public String description;
