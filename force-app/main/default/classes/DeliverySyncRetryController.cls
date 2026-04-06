@@ -5,7 +5,6 @@
  *              Surfaces failed sync items and allows bulk retry.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 global with sharing class DeliverySyncRetryController {
 
     /** @description Summary of a failed sync item for display. */

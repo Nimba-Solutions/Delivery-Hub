@@ -5,7 +5,7 @@
  *               Extracted from DeliveryDocumentController to reduce class size.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ExcessiveParameterList')
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DocumentPaymentService {
 
     /**

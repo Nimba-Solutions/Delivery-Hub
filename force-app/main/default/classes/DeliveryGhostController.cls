@@ -5,7 +5,6 @@
  * Logs user activity to ActivityLog__c and creates quick work items.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.CyclomaticComplexity')
 global with sharing class DeliveryGhostController {
 
     /**
@@ -32,57 +31,7 @@ global with sharing class DeliveryGhostController {
 
             // Extract structured fields from the context JSON when available
             if (String.isNotBlank(contextData)) {
-                try {
-                    Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextData);
-
-                    // Use pageLabel for component name (falls back to objectName)
-                    try {
-                        String pageLabel = (String) ctx.get('pageLabel');
-                        if (String.isNotBlank(pageLabel)) {
-                            log.ComponentNameTxt__c = pageLabel;
-                        } else {
-                            String objName = (String) ctx.get('objectName');
-                            if (String.isNotBlank(objName)) {
-                                log.ComponentNameTxt__c = objName;
-                            }
-                        }
-                    } catch (Exception labelEx) {
-                        System.debug(LoggingLevel.FINE, 'pageLabel parse skipped: ' + labelEx.getMessage());
-                    }
-
-                    // Extract recordId
-                    try {
-                        String recordId = (String) ctx.get('recordId');
-                        if (String.isNotBlank(recordId)) {
-                            log.RecordIdTxt__c = recordId;
-                        }
-                    } catch (Exception recEx) {
-                        System.debug(LoggingLevel.FINE, 'recordId parse skipped: ' + recEx.getMessage());
-                    }
-
-                    // Extract URL — truncate to 255 chars for Text field
-                    try {
-                        String url = (String) ctx.get('url');
-                        if (String.isNotBlank(url)) {
-                            log.PageUrlTxt__c = url.length() > 255 ? url.substring(0, 255) : url;
-                        }
-                    } catch (Exception urlEx) {
-                        System.debug(LoggingLevel.FINE, 'url parse skipped: ' + urlEx.getMessage());
-                    }
-
-                    // Extract sessionId
-                    try {
-                        String sessionId = (String) ctx.get('sessionId');
-                        if (String.isNotBlank(sessionId)) {
-                            log.SessionIdTxt__c = sessionId;
-                        }
-                    } catch (Exception sessEx) {
-                        System.debug(LoggingLevel.FINE, 'sessionId parse skipped: ' + sessEx.getMessage());
-                    }
-                } catch (Exception parseEx) {
-                    // Non-critical — context is best-effort
-                    System.debug(LoggingLevel.FINE, 'Context parse skipped: ' + parseEx.getMessage());
-                }
+                populateFromContext(log, contextData);
             }
 
             // Attempt to link to the first active Network Entity (client org identity)
@@ -153,6 +102,40 @@ global with sharing class DeliveryGhostController {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
             throw ahe;
+        }
+    }
+
+    // ── Private Helpers ──────────────────────────────────────────────────
+
+    private static void populateFromContext(ActivityLog__c log, String contextData) {
+        try {
+            Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextData);
+            String pageLabel = safeGetString(ctx, 'pageLabel');
+            if (String.isNotBlank(pageLabel)) {
+                log.ComponentNameTxt__c = pageLabel;
+            } else {
+                String objName = safeGetString(ctx, 'objectName');
+                if (String.isNotBlank(objName)) {
+                    log.ComponentNameTxt__c = objName;
+                }
+            }
+            log.RecordIdTxt__c = safeGetString(ctx, 'recordId');
+            String url = safeGetString(ctx, 'url');
+            if (String.isNotBlank(url)) {
+                log.PageUrlTxt__c = url.length() > 255 ? url.substring(0, 255) : url;
+            }
+            log.SessionIdTxt__c = safeGetString(ctx, 'sessionId');
+        } catch (Exception parseEx) {
+            // Non-critical — context is best-effort
+            System.debug(LoggingLevel.FINE, 'Context parse skipped: ' + parseEx.getMessage());
+        }
+    }
+
+    private static String safeGetString(Map<String, Object> ctx, String key) {
+        try {
+            return (String) ctx.get(key);
+        } catch (Exception e) {
+            return null;
         }
     }
 }

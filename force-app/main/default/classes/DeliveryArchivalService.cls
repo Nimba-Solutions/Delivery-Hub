@@ -2,7 +2,6 @@
  * @description Service for work item archival, legal hold, and data retention.
  *              Archived items are excluded from board views and sync operations.
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 public without sharing class DeliveryArchivalService {
 
     /** @description Archives the given work items by setting status, timestamp, and retention date. */

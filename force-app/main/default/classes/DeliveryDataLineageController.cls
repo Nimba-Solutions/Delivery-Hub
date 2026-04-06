@@ -6,7 +6,6 @@
  *               representation of the sync chain.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 global with sharing class DeliveryDataLineageController {
 
     /**
@@ -78,6 +77,7 @@ global with sharing class DeliveryDataLineageController {
         return result;
     }
 
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     private static Map<Id, Map<String, Integer>> getSyncHealthByEntity() {
         Map<Id, Map<String, Integer>> healthMap = new Map<Id, Map<String, Integer>>();
 
@@ -101,6 +101,7 @@ global with sharing class DeliveryDataLineageController {
         return healthMap;
     }
 
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     private static String buildOrgDisplayName() {
         List<Organization> orgs = [SELECT IsSandbox, Name FROM Organization LIMIT 1];
         if (orgs.isEmpty()) {
