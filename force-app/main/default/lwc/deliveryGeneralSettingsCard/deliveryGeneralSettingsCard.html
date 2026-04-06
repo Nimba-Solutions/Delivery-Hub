@@ -101,6 +101,32 @@
                 </div>
             </div>
 
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:broadcast" alternative-text="External" size="x-small"></lightning-icon>
+                            <label class="toggle-label">External Webhook Notifications</label>
+                        </div>
+                        <div class="toggle-help">
+                            Push real-time event notifications to an external webhook URL (stage changes, escalations, comments).
+                        </div>
+                        <template lwc:if={externalNotificationsActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {externalNotificationsActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={externalNotificationsEnabled}
+                                onchange={handleExternalNotificationsToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="section-divider"></div>
 
             <!-- ═══════════════════════════════════════════════════════════
@@ -198,6 +224,32 @@
                                 type="toggle"
                                 checked={autoSyncNetworkEntity}
                                 onchange={handleAutoSyncToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:text" alternative-text="Auto-Fill" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Auto-Fill Resource Title</label>
+                        </div>
+                        <div class="toggle-help">
+                            Automatically populate resource titles from work item context when creating new records.
+                        </div>
+                        <template lwc:if={resourceTitleAutoFillActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {resourceTitleAutoFillActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={resourceTitleAutoFillEnabled}
+                                onchange={handleResourceTitleAutoFillToggle}>
                             </lightning-input>
                         </div>
                     </div>
@@ -475,6 +527,83 @@
             </div>
 
             <div class="form-section">
+                <div class="toggle-group">
+                    <div class="toggle-content">
+                        <div class="toggle-label-wrapper">
+                            <lightning-icon icon-name="utility:reminder" alternative-text="Overdue Reminders" size="x-small"></lightning-icon>
+                            <label class="toggle-label">Overdue Reminders</label>
+                        </div>
+                        <div class="toggle-help">
+                            Send automated email reminders at configured intervals for overdue invoices and documents.
+                        </div>
+                        <template lwc:if={overdueRemindersActivatedAt}>
+                            <p class="slds-text-body_small slds-text-color_success slds-m-top_xx-small">Active since {overdueRemindersActivatedAt}</p>
+                        </template>
+                    </div>
+                    <div class="toggle-control">
+                        <div class="custom-toggle">
+                            <lightning-input
+                                type="toggle"
+                                checked={overdueRemindersEnabled}
+                                onchange={handleOverdueRemindersToggle}>
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template lwc:if={isOverdueRemindersConfigVisible}>
+                <div class="form-section nested-config">
+                    <lightning-input
+                        type="text"
+                        label="Reminder Schedule (days overdue)"
+                        placeholder="1,7,14,30"
+                        value={overdueReminderSchedule}
+                        onchange={handleOverdueReminderScheduleChange}
+                        onblur={handleOverdueReminderScheduleSave}>
+                    </lightning-input>
+                    <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                        Comma-separated day intervals. Reminders are sent when a document is overdue by this many days.
+                    </p>
+                </div>
+            </template>
+
+            <div class="form-section">
+                <div class="slds-grid slds-wrap slds-gutters_small" style="padding: 0.75rem;">
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Invoice Hour Lockout Day (1-28)"
+                            placeholder="Blank = disabled"
+                            value={invoiceHourLockoutDay}
+                            min="1"
+                            max="28"
+                            step="1"
+                            onchange={handleInvoiceHourLockoutDayChange}>
+                        </lightning-input>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            Day of month after which time logging is locked for invoiced periods
+                        </p>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Invoice Lockout Hour (0-23)"
+                            placeholder="Blank = disabled"
+                            value={invoiceHourLockoutTime}
+                            min="0"
+                            max="23"
+                            step="1"
+                            onchange={handleInvoiceHourLockoutTimeChange}>
+                        </lightning-input>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            Hour (24hr format) at which lockout takes effect on the lockout day
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
                 <div class="slds-grid slds-wrap slds-gutters_small" style="padding: 0.75rem;">
                     <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
                         <lightning-input
@@ -585,6 +714,30 @@
                             max="365"
                             step="1"
                             onchange={handleFieldChangeRetentionChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Sync API Rate Limit (req/hr)"
+                            placeholder="Blank = disabled"
+                            value={syncApiRateLimit}
+                            min="1"
+                            max="10000"
+                            step="1"
+                            onchange={handleSyncApiRateLimitChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="number"
+                            label="Public API Rate Limit (req/hr)"
+                            placeholder="Blank = disabled"
+                            value={publicApiRateLimit}
+                            min="1"
+                            max="10000"
+                            step="1"
+                            onchange={handlePublicApiRateLimitChange}>
                         </lightning-input>
                     </div>
                 </div>

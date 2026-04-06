@@ -118,6 +118,30 @@ global with sharing class DeliveryHubSettingsController {
         /** @description External webhook URL for real-time push notifications */
         @AuraEnabled public String webhookUrl { get; set; }
 
+        // ── Enterprise / API settings ──────────────────────────────────
+        /** @description Sync API rate limit (requests per hour). Null = disabled. */
+        @AuraEnabled public Integer syncApiRateLimit { get; set; }
+        /** @description Public API rate limit (requests per hour). Null = disabled. */
+        @AuraEnabled public Integer publicApiRateLimit { get; set; }
+        /** @description Enable external webhook push notifications */
+        @AuraEnabled public Boolean externalNotificationsEnabled { get; set; }
+        /** @description Formatted date when external notifications were activated */
+        @AuraEnabled public String externalNotificationsActivatedAt { get; set; }
+        /** @description Enable overdue reminder emails */
+        @AuraEnabled public Boolean overdueRemindersEnabled { get; set; }
+        /** @description Formatted date when overdue reminders were activated */
+        @AuraEnabled public String overdueRemindersActivatedAt { get; set; }
+        /** @description Comma-separated day intervals for overdue reminders (e.g. 1,7,14,30) */
+        @AuraEnabled public String overdueReminderSchedule { get; set; }
+        /** @description Enable auto-fill of resource title from work item context */
+        @AuraEnabled public Boolean resourceTitleAutoFillEnabled { get; set; }
+        /** @description Formatted date when resource title auto-fill was activated */
+        @AuraEnabled public String resourceTitleAutoFillActivatedAt { get; set; }
+        /** @description Day of month (1-28) after which time logging is locked for invoiced periods */
+        @AuraEnabled public Integer invoiceHourLockoutDay { get; set; }
+        /** @description Hour (0-23) at which invoice lockout takes effect */
+        @AuraEnabled public Integer invoiceHourLockoutTime { get; set; }
+
         /** @description Invoice generation enabled (computed from DateTime) */
         @AuraEnabled public Boolean invoiceGenerationEnabled { get; set; }
         /** @description Formatted date when invoice generation was activated */
@@ -200,6 +224,24 @@ global with sharing class DeliveryHubSettingsController {
             // Invoice generation
             dto.invoiceGenerationEnabled = settings.EnableInvoiceGenerationDateTime__c != null;
             dto.invoiceGenerationActivatedAt = formatActivationDate(settings.EnableInvoiceGenerationDateTime__c);
+
+            // Enterprise / API settings
+            dto.syncApiRateLimit = settings.SyncApiRateLimitNumber__c != null
+                ? Integer.valueOf(settings.SyncApiRateLimitNumber__c) : null;
+            dto.publicApiRateLimit = settings.PublicApiRateLimitNumber__c != null
+                ? Integer.valueOf(settings.PublicApiRateLimitNumber__c) : null;
+            dto.externalNotificationsEnabled = settings.EnableExternalNotificationsDateTime__c != null;
+            dto.externalNotificationsActivatedAt = formatActivationDate(settings.EnableExternalNotificationsDateTime__c);
+            dto.overdueRemindersEnabled = settings.EnableOverdueRemindersDateTime__c != null;
+            dto.overdueRemindersActivatedAt = formatActivationDate(settings.EnableOverdueRemindersDateTime__c);
+            dto.overdueReminderSchedule = settings.OverdueReminderScheduleTxt__c != null
+                ? settings.OverdueReminderScheduleTxt__c : '1,7,14,30';
+            dto.resourceTitleAutoFillEnabled = settings.EnableResourceTitleAutoFillDateTime__c != null;
+            dto.resourceTitleAutoFillActivatedAt = formatActivationDate(settings.EnableResourceTitleAutoFillDateTime__c);
+            dto.invoiceHourLockoutDay = settings.InvoiceHourLockoutDayNumber__c != null
+                ? Integer.valueOf(settings.InvoiceHourLockoutDayNumber__c) : null;
+            dto.invoiceHourLockoutTime = settings.InvoiceHourLockoutTimeNumber__c != null
+                ? Integer.valueOf(settings.InvoiceHourLockoutTimeNumber__c) : null;
         } else {
             // Fresh Install Defaults — match what DeliveryHubInstallHandler sets
             dto.enableNotifications = true;
@@ -224,6 +266,10 @@ global with sharing class DeliveryHubSettingsController {
             dto.fieldChangeRetentionDays = 0;
             dto.weeklyDigestDay = 'Monday';
             dto.invoiceGenerationEnabled = false;
+            dto.externalNotificationsEnabled = false;
+            dto.overdueRemindersEnabled = false;
+            dto.overdueReminderSchedule = '1,7,14,30';
+            dto.resourceTitleAutoFillEnabled = false;
         }
         return dto;
     }
@@ -320,8 +366,17 @@ global with sharing class DeliveryHubSettingsController {
             settings.RequireWorkLogApprovalDate__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDate__c != null ? settings.RequireWorkLogApprovalDate__c : Datetime.now()) : null;
             settings.EnableInvoiceGenerationDateTime__c = dto.invoiceGenerationEnabled == true ? (settings.EnableInvoiceGenerationDateTime__c != null ? settings.EnableInvoiceGenerationDateTime__c : Datetime.now()) : null;
 
+            // Enterprise feature toggles
+            settings.EnableExternalNotificationsDateTime__c = dto.externalNotificationsEnabled == true ? (settings.EnableExternalNotificationsDateTime__c != null ? settings.EnableExternalNotificationsDateTime__c : Datetime.now()) : null;
+            settings.EnableOverdueRemindersDateTime__c = dto.overdueRemindersEnabled == true ? (settings.EnableOverdueRemindersDateTime__c != null ? settings.EnableOverdueRemindersDateTime__c : Datetime.now()) : null;
+            settings.EnableResourceTitleAutoFillDateTime__c = dto.resourceTitleAutoFillEnabled == true ? (settings.EnableResourceTitleAutoFillDateTime__c != null ? settings.EnableResourceTitleAutoFillDateTime__c : Datetime.now()) : null;
+
             // Number settings
             settings.FieldChangeRetentionDaysNumber__c = dto.fieldChangeRetentionDays != null ? dto.fieldChangeRetentionDays : 0;
+            settings.SyncApiRateLimitNumber__c = dto.syncApiRateLimit;
+            settings.PublicApiRateLimitNumber__c = dto.publicApiRateLimit;
+            settings.InvoiceHourLockoutDayNumber__c = dto.invoiceHourLockoutDay;
+            settings.InvoiceHourLockoutTimeNumber__c = dto.invoiceHourLockoutTime;
 
             // Text settings
             settings.WeeklyDigestDayTxt__c = dto.weeklyDigestDay;
@@ -331,6 +386,7 @@ global with sharing class DeliveryHubSettingsController {
             settings.DefaultBillingEntityIdTxt__c = dto.defaultBillingEntityId;
             settings.StagesToAutoShareWithDevTeamTxt__c = dto.stagesToAutoShare;
             settings.WebhookUrlTxt__c = dto.webhookUrl;
+            settings.OverdueReminderScheduleTxt__c = dto.overdueReminderSchedule;
 
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});
