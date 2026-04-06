@@ -21,29 +21,29 @@ export default class DeliveryExecutiveDashboard extends LightningElement {
                 configs.map(async (cfg) => {
                     let data = null;
                     let displayValue = '';
-                    let statusClass = 'slds-theme_default';
+                    let metricClass = 'dh-metric';
                     try {
                         data = await getCardData({ dataSource: cfg.dataSource, filterJson: cfg.filterJson });
                         if (cfg.cardType === 'Metric') {
                             displayValue = data != null ? String(data) : '0';
                             const num = Number(data);
                             if (cfg.thresholdCritical != null && num >= cfg.thresholdCritical) {
-                                statusClass = 'slds-theme_error';
+                                metricClass = 'dh-metric dh-metric--danger';
                             } else if (cfg.thresholdWarning != null && num >= cfg.thresholdWarning) {
-                                statusClass = 'slds-theme_warning';
+                                metricClass = 'dh-metric dh-metric--warning';
                             } else {
-                                statusClass = 'slds-theme_success';
+                                metricClass = 'dh-metric dh-metric--success';
                             }
                         }
                     } catch (e) {
                         displayValue = 'Error';
-                        statusClass = 'slds-theme_error';
+                        metricClass = 'dh-metric dh-metric--danger';
                     }
                     return {
                         ...cfg,
                         data,
                         displayValue,
-                        statusClass,
+                        metricClass,
                         isMetric: cfg.cardType === 'Metric',
                         isList: cfg.cardType === 'List',
                         isPieChart: cfg.cardType === 'PieChart',
