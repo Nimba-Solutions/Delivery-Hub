@@ -426,21 +426,26 @@ export default class DeliveryNimbusGantt extends LightningElement {
             });
 
             // Observe container resize to reinit Gantt at new dimensions
-            if (typeof ResizeObserver !== 'undefined' && !this._resizeObserver) {
-                let resizeTimeout;
-                this._resizeObserver = new ResizeObserver(() => {
-                    clearTimeout(resizeTimeout);
-                    // eslint-disable-next-line @lwc/lwc/no-async-operation
-                    resizeTimeout = setTimeout(() => {
-                        if (this._gantt) {
-                            this._gantt.destroy();
-                            this._gantt = null;
-                            this._ganttInitialized = false;
-                            this._initGantt();
-                        }
-                    }, 300);
-                });
-                this._resizeObserver.observe(container);
+            // ResizeObserver may not exist in Lightning Locker — degrade gracefully
+            try {
+                if (!this._resizeObserver) {
+                    let resizeTimeout;
+                    this._resizeObserver = new ResizeObserver(() => {
+                        clearTimeout(resizeTimeout);
+                        // eslint-disable-next-line @lwc/lwc/no-async-operation
+                        resizeTimeout = setTimeout(() => {
+                            if (this._gantt) {
+                                this._gantt.destroy();
+                                this._gantt = null;
+                                this._ganttInitialized = false;
+                                this._initGantt();
+                            }
+                        }, 300);
+                    });
+                    this._resizeObserver.observe(container);
+                }
+            } catch (_ignored) {
+                // ResizeObserver unavailable — Gantt still works, just won't auto-resize
             }
 
         } catch (err) {
