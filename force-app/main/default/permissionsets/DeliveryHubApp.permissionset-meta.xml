@@ -721,4 +721,20 @@
         <tab>WorkRequest__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
+    <platformEventSubscribePermissions>
+        <platformEvent>DeliveryEscalation__e</platformEvent>
+        <read>true</read>
+    </platformEventSubscribePermissions>
+    <platformEventSubscribePermissions>
+        <platformEvent>DeliverySync__e</platformEvent>
+        <read>true</read>
+    </platformEventSubscribePermissions>
+    <platformEventSubscribePermissions>
+        <platformEvent>DeliveryWorkItemChange__e</platformEvent>
+        <read>true</read>
+    </platformEventSubscribePermissions>
+    <platformEventSubscribePermissions>
+        <platformEvent>GanttRemoteEvent__e</platformEvent>
+        <read>true</read>
+    </platformEventSubscribePermissions>
 </PermissionSet>
