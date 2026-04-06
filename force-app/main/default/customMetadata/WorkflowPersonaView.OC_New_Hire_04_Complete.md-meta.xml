@@ -3,7 +3,7 @@
     <label>OC New_Hire - Complete</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowType__c</field>
+        <field>WorkflowTypeMdtId__c</field>
         <value xsi:type="xsd:string">Onboarding_Checklist</value>
     </values>
     <values>

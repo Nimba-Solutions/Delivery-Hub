@@ -59,7 +59,7 @@ WorkItem__c wi1 = new WorkItem__c(
     EstimatedHoursNumber__c = 40,
     ClientPreApprovedHoursNumber__c = 40,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'SSO, Security, Azure',
+    TagsTxt__c = 'SSO, Security, Azure',
     EstimatedStartDevDate__c = today.addDays(-14),
     EstimatedEndDevDate__c = today.addDays(7)
 );
@@ -75,7 +75,7 @@ WorkItem__c wi2 = new WorkItem__c(
     EstimatedHoursNumber__c = 16,
     ClientPreApprovedHoursNumber__c = 20,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Bug, Payments, Performance',
+    TagsTxt__c = 'Bug, Payments, Performance',
     EstimatedStartDevDate__c = today.addDays(-10),
     EstimatedEndDevDate__c = today.addDays(-1)
 );
@@ -90,7 +90,7 @@ WorkItem__c wi3 = new WorkItem__c(
     WorkflowTypeTxt__c = 'Software_Delivery',
     EstimatedHoursNumber__c = 12,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Feature, Export, LWC',
+    TagsTxt__c = 'Feature, Export, LWC',
     EstimatedStartDevDate__c = today.addDays(7),
     EstimatedEndDevDate__c = today.addDays(21)
 );
@@ -106,7 +106,7 @@ WorkItem__c wi4 = new WorkItem__c(
     EstimatedHoursNumber__c = 24,
     ClientPreApprovedHoursNumber__c = 24,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Email, Automation, Flow',
+    TagsTxt__c = 'Email, Automation, Flow',
     EstimatedStartDevDate__c = today.addDays(-21),
     EstimatedEndDevDate__c = today.addDays(-3)
 );
@@ -121,7 +121,7 @@ WorkItem__c wi5 = new WorkItem__c(
     WorkflowTypeTxt__c = 'Software_Delivery',
     EstimatedHoursNumber__c = 30,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Mobile, UX, Lightning',
+    TagsTxt__c = 'Mobile, UX, Lightning',
     EstimatedStartDevDate__c = today.addDays(14),
     EstimatedEndDevDate__c = today.addDays(42)
 );
@@ -137,7 +137,7 @@ WorkItem__c wi6 = new WorkItem__c(
     EstimatedHoursNumber__c = 60,
     ClientPreApprovedHoursNumber__c = 65,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Integration, API, Migration',
+    TagsTxt__c = 'Integration, API, Migration',
     EstimatedStartDevDate__c = today.addDays(-7),
     EstimatedEndDevDate__c = today.addDays(28)
 );
@@ -153,7 +153,7 @@ WorkItem__c wi7 = new WorkItem__c(
     EstimatedHoursNumber__c = 20,
     ClientPreApprovedHoursNumber__c = 20,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Dashboard, Analytics, KPI',
+    TagsTxt__c = 'Dashboard, Analytics, KPI',
     EstimatedStartDevDate__c = today.addDays(-45),
     EstimatedEndDevDate__c = today.addDays(-25)
 );
@@ -168,7 +168,7 @@ WorkItem__c wi8 = new WorkItem__c(
     WorkflowTypeTxt__c = 'Software_Delivery',
     EstimatedHoursNumber__c = 35,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Security, Encryption, Compliance',
+    TagsTxt__c = 'Security, Encryption, Compliance',
     EstimatedStartDevDate__c = today.addDays(3),
     EstimatedEndDevDate__c = today.addDays(21)
 );
@@ -184,7 +184,7 @@ WorkItem__c wi9 = new WorkItem__c(
     EstimatedHoursNumber__c = 16,
     ClientPreApprovedHoursNumber__c = 16,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'DevOps, CI/CD, Internal',
+    TagsTxt__c = 'DevOps, CI/CD, Internal',
     EstimatedStartDevDate__c = today.addDays(-60),
     EstimatedEndDevDate__c = today.addDays(-50)
 );
@@ -200,7 +200,7 @@ WorkItem__c wi10 = new WorkItem__c(
     EstimatedHoursNumber__c = 10,
     ClientPreApprovedHoursNumber__c = 12,
     ClientNetworkEntityId__c = acme.Id,
-    Tags__c = 'Bug, Data Quality, Merge',
+    TagsTxt__c = 'Bug, Data Quality, Merge',
     EstimatedStartDevDate__c = today.addDays(-5),
     EstimatedEndDevDate__c = today.addDays(2)
 );

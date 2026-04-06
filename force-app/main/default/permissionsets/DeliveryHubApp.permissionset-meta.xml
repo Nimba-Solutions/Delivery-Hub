@@ -362,12 +362,12 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItem__c.Developer__c</field>
+        <field>WorkItem__c.DeveloperLookupId__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItem__c.Epic__c</field>
+        <field>WorkItem__c.EpicTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -487,7 +487,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItem__c.Tags__c</field>
+        <field>WorkItem__c.TagsTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

@@ -3,15 +3,15 @@
     <label>Entity Connection Status</label>
     <protected>false</protected>
     <values>
-        <field>ObjectApiName__c</field>
+        <field>ObjectApiNameTxt__c</field>
         <value xsi:type="xsd:string">NetworkEntity__c</value>
     </values>
     <values>
-        <field>FieldApiName__c</field>
+        <field>FieldApiNameTxt__c</field>
         <value xsi:type="xsd:string">ConnectionStatusPk__c</value>
     </values>
     <values>
-        <field>FieldLabel__c</field>
+        <field>FieldLabelTxt__c</field>
         <value xsi:type="xsd:string">Connection Status</value>
     </values>
     <values>

@@ -57,7 +57,7 @@ public with sharing class DeliveryEscalationRuleEvaluator {
         // Query all active work items in any of the trigger stages
         List<WorkItem__c> allCandidates = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   PriorityPk__c, OwnerId, Developer__c, CreatedById,
+                   PriorityPk__c, OwnerId, DeveloperLookupId__c, CreatedById,
                    WorkflowTypeTxt__c, StageEnteredDateTime__c,
                    LastModifiedDate, LastEscalatedDateTime__c
             FROM WorkItem__c

@@ -23,7 +23,7 @@ private class DeliveryApprovalChainServiceTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         );
         insert item;
 
@@ -63,7 +63,7 @@ private class DeliveryApprovalChainServiceTest {
             WorkflowTypeTxt__c = 'Software_Delivery',
             StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Sequential',
-            ApproverFieldTxt__c = 'Developer__c',
+            ApproverFieldTxt__c = 'DeveloperLookupId__c',
             TimeoutDaysNumber__c = 3,
             TimeoutActionPk__c = 'Auto_Approve',
             ActiveDateTime__c = Datetime.now()

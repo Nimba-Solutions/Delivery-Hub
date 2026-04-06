@@ -57,7 +57,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'DeveloperDaysSizeNumber__c',
             'EstimatedHoursNumber__c',
             'ClientPreApprovedHoursNumber__c',
-            'Developer__c',
+            'DeveloperLookupId__c',
             'CalculatedETADate__c',
             'ProjectedUATReadyDate__c',
             'AcceptanceCriteriaTxt__c',
@@ -165,9 +165,9 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             WorkItem__c old = oldMap.get(t.Id);
             if (old != null && t.StageNamePk__c != old.StageNamePk__c) {
                 events.add(new DeliveryWorkItemChange__e(
-                    WorkItemId__c   = t.Id,
-                    ChangeType__c = 'stage_change',
-                    NewStage__c   = t.StageNamePk__c
+                    WorkItemIdTxt__c   = t.Id,
+                    ChangeTypeTxt__c = 'stage_change',
+                    NewStageTxt__c   = t.StageNamePk__c
                 ));
                 slackChanges.put(t.Name, t.StageNamePk__c);
                 changedIds.add(t.Id);

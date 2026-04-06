@@ -41,8 +41,8 @@ export default class DeliveryWorkItemTemplates extends NavigationMixin(Lightning
                     ? t.DetailsTxt__c.replace(/<[^>]*>/g, "").substring(0, 120) +
                       (t.DetailsTxt__c.length > 120 ? "..." : "")
                     : "No description",
-                tagList: t.Tags__c
-                    ? t.Tags__c.split(",").map((tag) => tag.trim())
+                tagList: t.TagsTxt__c
+                    ? t.TagsTxt__c.split(",").map((tag) => tag.trim())
                     : [],
                 hasEstimate:
                     t.EstimatedHoursNumber__c != null ||
@@ -113,7 +113,7 @@ export default class DeliveryWorkItemTemplates extends NavigationMixin(Lightning
                 overrides.PriorityPk__c = this.overridePriority;
             }
             if (this.overrideTags) {
-                overrides.Tags__c = this.overrideTags;
+                overrides.TagsTxt__c = this.overrideTags;
             }
 
             const newId = await cloneFromTemplate({

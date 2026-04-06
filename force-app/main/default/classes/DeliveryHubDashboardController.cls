@@ -162,7 +162,7 @@ global with sharing class DeliveryHubDashboardController {
 
         List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   PriorityPk__c, LastModifiedDate, CalculatedETADate__c, Developer__c
+                   PriorityPk__c, LastModifiedDate, CalculatedETADate__c, DeveloperLookupId__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
             LIMIT 50
@@ -223,7 +223,7 @@ global with sharing class DeliveryHubDashboardController {
         }
 
         // Factor 3: No developer assigned (needs staffing)
-        if (t.Developer__c == null) {
+        if (t.DeveloperLookupId__c == null) {
             score += 8;
         }
 

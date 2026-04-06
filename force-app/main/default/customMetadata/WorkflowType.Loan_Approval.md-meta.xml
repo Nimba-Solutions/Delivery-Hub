@@ -7,7 +7,7 @@
         <value xsi:type="xsd:string">Loan disbursement tracking from request through approval, funding, and payment. Persona-based views for Borrower, Processor, and Admin.</value>
     </values>
     <values>
-        <field>IconName__c</field>
+        <field>IconNameTxt__c</field>
         <value xsi:type="xsd:string">utility:money</value>
     </values>
     <values>
