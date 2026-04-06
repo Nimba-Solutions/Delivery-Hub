@@ -181,6 +181,15 @@ const INFO_REGISTRY = {
         friendlyName: 'Stage Gate Warning',
         keyFields:
             'WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.Developer__c'
+    },
+    deliveryNimbusGantt: {
+        dataSource:
+            'Calls DeliveryGanttController.getGanttData to load active WorkItem__c records with start/end dates and dependencies. Dependency arrows are loaded via getGanttDependencies. Drag-to-move and drag-to-resize update dates via updateWorkItemDates. Supports entity filtering and completed-item toggling.',
+        description:
+            'Interactive Gantt timeline built on the Nimbus Gantt canvas library. Five visualization modes: Gantt (timeline bars with dependencies), Treemap (rectangles sized by hours), Bubbles (scatter by timeline/entity/effort), Calendar (GitHub-style heatmap), and Flow (stage distribution). Supports drag-to-reschedule, zoom levels (day/week/month/quarter), dark mode, critical path highlighting, and phone remote control via Platform Events.',
+        friendlyName: 'Project Timeline',
+        keyFields:
+            'WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.Developer__c, WorkItem__c.EstimatedHoursNumber__c, WorkItemDependency__c'
     }
 };
 
