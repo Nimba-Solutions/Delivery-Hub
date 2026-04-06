@@ -1,5 +1,6 @@
 /* General Setup & Variables */
 :host {
+    /* ── Legacy tokens (existing styles depend on these — do NOT remove) ── */
     --brand-primary: #4f46e5;
     --brand-primary-light: #eef2ff;
     --gray-100: #f3f4f6;
@@ -13,6 +14,51 @@
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --radius: 0.75rem;
+
+    /* ── Delivery Hub Design System tokens ──
+     * Mirrors staticresources/DeliveryHubDesignSystem.css.
+     * Added alongside legacy tokens to enable progressive polish
+     * without breaking existing styles.
+     */
+    /* Brand & accents */
+    --dh-accent: #4f46e5;
+    --dh-accent-soft: #eef2ff;
+    --dh-accent-strong: #3730a3;
+    --dh-success: #059669;
+    --dh-warning: #d97706;
+    --dh-danger: #dc2626;
+    /* Surfaces */
+    --dh-surface: #ffffff;
+    --dh-surface-raised: #ffffff;
+    --dh-surface-sunken: #f9fafb;
+    --dh-surface-hover: #f3f4f6;
+    --dh-canvas: #f8fafc;
+    /* Borders */
+    --dh-border: #e5e7eb;
+    --dh-border-strong: #d1d5db;
+    /* Text */
+    --dh-text: #0f172a;
+    --dh-text-muted: #475569;
+    --dh-text-subtle: #94a3b8;
+    /* Typography */
+    --dh-font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+    --dh-text-display: 2rem;
+    --dh-text-title: 1.25rem;
+    --dh-text-heading: 1rem;
+    --dh-text-body: 0.875rem;
+    --dh-text-caption: 0.75rem;
+    /* Radius */
+    --dh-radius: 0.625rem;
+    --dh-radius-lg: 0.875rem;
+    --dh-radius-pill: 9999px;
+    /* Shadows */
+    --dh-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+    --dh-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+    --dh-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+    --dh-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+    /* Motion */
+    --dh-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
     display: block;
 }
 
@@ -210,9 +256,11 @@
     flex-shrink: 0;
     background-color: var(--white);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--dh-border);
+    box-shadow: var(--dh-shadow-md);
     display: flex;
     flex-direction: column;
+    transition: box-shadow 200ms var(--dh-ease);
 }
 
 .kanban-column-header {
@@ -227,8 +275,11 @@
 }
 
 .column-title {
+    font-family: var(--dh-font-display);
     font-size: 0.875rem;
     font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--dh-text);
     margin: 0;
 }
 
@@ -267,14 +318,17 @@
     border-radius: var(--radius);
     border: 1px solid var(--gray-200);
     border-left-width: 4px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--dh-shadow-sm);
     padding: 0.5rem 0.625rem;
     cursor: grab;
-    transition: box-shadow 0.2s, transform 0.2s;
+    transition: box-shadow 200ms var(--dh-ease),
+                transform 200ms var(--dh-ease),
+                border-color 200ms var(--dh-ease);
     position: relative;
 }
 .work-item-card:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--dh-shadow-md);
+    border-color: var(--dh-border-strong);
     transform: translateY(-2px);
 }
 .work-item-card:active {
