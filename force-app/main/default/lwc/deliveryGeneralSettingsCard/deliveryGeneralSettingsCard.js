@@ -45,7 +45,20 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track requireWorkLogApprovalActivatedAt = null;
     @track invoiceGenerationActivatedAt = null;
 
+    // ── Enterprise feature toggles ────────────────────────────────────
+    @track externalNotificationsEnabled = false;
+    @track externalNotificationsActivatedAt = null;
+    @track overdueRemindersEnabled = false;
+    @track overdueRemindersActivatedAt = null;
+    @track overdueReminderSchedule = '1,7,14,30';
+    @track resourceTitleAutoFillEnabled = false;
+    @track resourceTitleAutoFillActivatedAt = null;
+
     // ── Advanced configurable number settings ───────────────────────────
+    @track syncApiRateLimit = null;
+    @track publicApiRateLimit = null;
+    @track invoiceHourLockoutDay = null;
+    @track invoiceHourLockoutTime = null;
     @track reconciliationHour = 6;
     @track syncRetryLimit = 3;
     @track activityLogRetentionDays = 90;
@@ -125,7 +138,20 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 this.requireWorkLogApprovalActivatedAt = data.requireWorkLogApprovalActivatedAt || null;
                 this.invoiceGenerationActivatedAt = data.invoiceGenerationActivatedAt || null;
 
+                // Enterprise settings
+                this.externalNotificationsEnabled = data.externalNotificationsEnabled || false;
+                this.externalNotificationsActivatedAt = data.externalNotificationsActivatedAt || null;
+                this.overdueRemindersEnabled = data.overdueRemindersEnabled || false;
+                this.overdueRemindersActivatedAt = data.overdueRemindersActivatedAt || null;
+                this.overdueReminderSchedule = data.overdueReminderSchedule || '1,7,14,30';
+                this.resourceTitleAutoFillEnabled = data.resourceTitleAutoFillEnabled || false;
+                this.resourceTitleAutoFillActivatedAt = data.resourceTitleAutoFillActivatedAt || null;
+
                 // Advanced configurable settings
+                this.syncApiRateLimit = data.syncApiRateLimit;
+                this.publicApiRateLimit = data.publicApiRateLimit;
+                this.invoiceHourLockoutDay = data.invoiceHourLockoutDay;
+                this.invoiceHourLockoutTime = data.invoiceHourLockoutTime;
                 this.reconciliationHour = data.reconciliationHour !== null ? data.reconciliationHour : 6;
                 this.syncRetryLimit = data.syncRetryLimit !== null ? data.syncRetryLimit : 3;
                 this.activityLogRetentionDays = data.activityLogRetentionDays !== null ? data.activityLogRetentionDays : 90;
@@ -208,6 +234,55 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
 
     handleInvoiceGenerationToggle(event) {
         this.invoiceGenerationEnabled = event.target.checked;
+        this.saveExtended();
+    }
+
+    // ── Enterprise toggle handlers ─────────────────────────────────────
+
+    handleExternalNotificationsToggle(event) {
+        this.externalNotificationsEnabled = event.target.checked;
+        this.saveExtended();
+    }
+
+    handleOverdueRemindersToggle(event) {
+        this.overdueRemindersEnabled = event.target.checked;
+        this.saveExtended();
+    }
+
+    handleOverdueReminderScheduleChange(event) {
+        this.overdueReminderSchedule = event.target.value;
+    }
+
+    handleOverdueReminderScheduleSave() {
+        this.saveExtended();
+    }
+
+    handleResourceTitleAutoFillToggle(event) {
+        this.resourceTitleAutoFillEnabled = event.target.checked;
+        this.saveExtended();
+    }
+
+    handleSyncApiRateLimitChange(event) {
+        const val = event.target.value;
+        this.syncApiRateLimit = val ? parseInt(val, 10) : null;
+        this.saveExtended();
+    }
+
+    handlePublicApiRateLimitChange(event) {
+        const val = event.target.value;
+        this.publicApiRateLimit = val ? parseInt(val, 10) : null;
+        this.saveExtended();
+    }
+
+    handleInvoiceHourLockoutDayChange(event) {
+        const val = event.target.value;
+        this.invoiceHourLockoutDay = val ? parseInt(val, 10) : null;
+        this.saveExtended();
+    }
+
+    handleInvoiceHourLockoutTimeChange(event) {
+        const val = event.target.value;
+        this.invoiceHourLockoutTime = val ? parseInt(val, 10) : null;
         this.saveExtended();
     }
 
@@ -328,7 +403,16 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                     documentCcEmail: this.documentCcEmail,
                     statusPageToken: this.statusPageToken,
                     defaultBillingEntityId: this.defaultBillingEntityId,
-                    stagesToAutoShare: this.stagesToAutoShare
+                    stagesToAutoShare: this.stagesToAutoShare,
+                    webhookUrl: this.webhookUrl,
+                    externalNotificationsEnabled: this.externalNotificationsEnabled,
+                    overdueRemindersEnabled: this.overdueRemindersEnabled,
+                    overdueReminderSchedule: this.overdueReminderSchedule,
+                    resourceTitleAutoFillEnabled: this.resourceTitleAutoFillEnabled,
+                    syncApiRateLimit: this.syncApiRateLimit,
+                    publicApiRateLimit: this.publicApiRateLimit,
+                    invoiceHourLockoutDay: this.invoiceHourLockoutDay,
+                    invoiceHourLockoutTime: this.invoiceHourLockoutTime
                 })
             });
 
@@ -392,6 +476,10 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
 
     get isStatusPageConfigVisible() {
         return this.statusPageEnabled;
+    }
+
+    get isOverdueRemindersConfigVisible() {
+        return this.overdueRemindersEnabled;
     }
 
     showToast(title, message, variant) {
