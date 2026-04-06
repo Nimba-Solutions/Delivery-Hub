@@ -13,7 +13,7 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%Developer__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%DeveloperLookupId__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>

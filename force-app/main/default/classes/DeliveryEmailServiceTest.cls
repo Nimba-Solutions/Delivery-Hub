@@ -14,7 +14,7 @@ private class DeliveryEmailServiceTest {
     @TestSetup
     static void makeData() {
         insert new DeliveryHubSettings__c(SetupOwnerId = UserInfo.getOrganizationId(), EnableEmailNotificationsDateTime__c = Datetime.now());
-        WorkItem__c wi = new WorkItem__c(BriefDescriptionTxt__c = 'Test Email Service Item', StageNamePk__c = 'Backlog', Developer__c = UserInfo.getUserId());
+        WorkItem__c wi = new WorkItem__c(BriefDescriptionTxt__c = 'Test Email Service Item', StageNamePk__c = 'Backlog', DeveloperLookupId__c = UserInfo.getUserId());
         insert wi;
         insert new WorkItemComment__c(WorkItemId__c = wi.Id, BodyTxt__c = 'Test comment body', AuthorTxt__c = 'Test Author', SourcePk__c = 'Email');
     }

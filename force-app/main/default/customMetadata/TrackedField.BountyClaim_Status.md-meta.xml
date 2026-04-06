@@ -3,15 +3,15 @@
     <label>BountyClaim Status</label>
     <protected>false</protected>
     <values>
-        <field>ObjectApiName__c</field>
+        <field>ObjectApiNameTxt__c</field>
         <value xsi:type="xsd:string">BountyClaim__c</value>
     </values>
     <values>
-        <field>FieldApiName__c</field>
+        <field>FieldApiNameTxt__c</field>
         <value xsi:type="xsd:string">StatusPk__c</value>
     </values>
     <values>
-        <field>FieldLabel__c</field>
+        <field>FieldLabelTxt__c</field>
         <value xsi:type="xsd:string">Status</value>
     </values>
     <values>

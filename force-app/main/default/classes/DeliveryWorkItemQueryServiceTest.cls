@@ -216,8 +216,8 @@ private class DeliveryWorkItemQueryServiceTest {
                 // (accessing an un-queried field would throw SObjectException)
                 Object dummy;
                 dummy = wi.SortOrderNumber__c;
-                dummy = wi.Epic__c;
-                dummy = wi.Tags__c;
+                dummy = wi.EpicTxt__c;
+                dummy = wi.TagsTxt__c;
                 dummy = wi.DetailsTxt__c;
                 dummy = wi.EstimatedStartDevDate__c;
                 dummy = wi.EstimatedEndDevDate__c;

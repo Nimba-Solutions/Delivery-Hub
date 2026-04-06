@@ -414,8 +414,8 @@ global with sharing class DeliveryHubBoardController {
                     StageNamePk__c,
                     ClientIntentionPk__c,
                     SortOrderNumber__c,
-                    Epic__c,
-                    Tags__c,
+                    EpicTxt__c,
+                    TagsTxt__c,
                     WorkflowTypeTxt__c,
                     TotalLoggedHoursNumber__c,
                     EstimatedHoursNumber__c,
@@ -441,8 +441,8 @@ global with sharing class DeliveryHubBoardController {
                 StageNamePk__c,
                 ClientIntentionPk__c,
                 SortOrderNumber__c,
-                Epic__c,
-                Tags__c,
+                EpicTxt__c,
+                TagsTxt__c,
                 WorkflowTypeTxt__c,
                 TotalLoggedHoursNumber__c,
                 EstimatedHoursNumber__c,
@@ -480,9 +480,9 @@ global with sharing class DeliveryHubBoardController {
                    StageNamePk__c, PriorityPk__c, Owner.Name, OwnerId,
                    DeveloperDaysSizeNumber__c, TotalLoggedHoursNumber__c,
                    EstimatedHoursNumber__c, CalculatedETADate__c,
-                   Tags__c, WorkflowTypeTxt__c, CreatedDate, LastModifiedDate,
+                   TagsTxt__c, WorkflowTypeTxt__c, CreatedDate, LastModifiedDate,
                    CreatedBy.Name,
-                   Developer__c, Developer__r.Name, Epic__c,
+                   DeveloperLookupId__c, DeveloperLookupId__r.Name, EpicTxt__c,
                    ProjectedUATReadyDate__c, ClientIntentionPk__c
             FROM WorkItem__c
             WHERE Id = :workItemId

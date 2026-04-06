@@ -29,7 +29,7 @@ public class DeliveryRecurringItemServiceTest {
                 RecurrenceScheduleTxt__c = 'Weekly',
                 RecurrenceDayTxt__c = 'Monday',
                 NextRecurrenceDate__c = Date.today(),
-                Tags__c = 'standup,recurring',
+                TagsTxt__c = 'standup,recurring',
                 EstimatedHoursNumber__c = 1
             ),
             // Recurring monthly item
@@ -45,7 +45,7 @@ public class DeliveryRecurringItemServiceTest {
                 RecurrenceScheduleTxt__c = 'Monthly',
                 RecurrenceDayTxt__c = '15',
                 NextRecurrenceDate__c = Date.today(),
-                Tags__c = 'report,monthly',
+                TagsTxt__c = 'report,monthly',
                 EstimatedHoursNumber__c = 4
             ),
             // Recurring quarterly item
@@ -71,7 +71,7 @@ public class DeliveryRecurringItemServiceTest {
                 ActivatedDateTime__c = Datetime.now(),
                 TemplateMarkedDateTime__c = Datetime.now(),
                 RecurringEnabledDateTime__c = null,
-                Tags__c = 'bug,template',
+                TagsTxt__c = 'bug,template',
                 EstimatedHoursNumber__c = 8,
                 DeveloperDaysSizeNumber__c = 2
             ),
@@ -122,7 +122,7 @@ public class DeliveryRecurringItemServiceTest {
 
             // Verify cloned fields on the weekly item clone
             WorkItem__c weeklyClone = [
-                SELECT BriefDescriptionTxt__c, PriorityPk__c, Tags__c, TemplateSourceId__c,
+                SELECT BriefDescriptionTxt__c, PriorityPk__c, TagsTxt__c, TemplateSourceId__c,
                        RecurringEnabledDateTime__c, TemplateMarkedDateTime__c, ActivatedDateTime__c
                 FROM WorkItem__c
                 WHERE TemplateSourceId__c != null
@@ -131,7 +131,7 @@ public class DeliveryRecurringItemServiceTest {
                 LIMIT 1
             ];
             System.assertEquals('Medium', weeklyClone.PriorityPk__c, 'Priority should be cloned');
-            System.assertEquals('standup,recurring', weeklyClone.Tags__c, 'Tags should be cloned');
+            System.assertEquals('standup,recurring', weeklyClone.TagsTxt__c, 'Tags should be cloned');
             System.assertEquals(null, weeklyClone.RecurringEnabledDateTime__c, 'Clone should not be recurring');
             System.assertEquals(null, weeklyClone.TemplateMarkedDateTime__c, 'Clone should not be a template');
             System.assertNotEquals(null, weeklyClone.ActivatedDateTime__c, 'Clone should be active');
@@ -222,7 +222,7 @@ public class DeliveryRecurringItemServiceTest {
             System.assertNotEquals(null, newId, 'Should return a new record Id');
 
             WorkItem__c clone = [
-                SELECT BriefDescriptionTxt__c, PriorityPk__c, Tags__c, EstimatedHoursNumber__c,
+                SELECT BriefDescriptionTxt__c, PriorityPk__c, TagsTxt__c, EstimatedHoursNumber__c,
                        DeveloperDaysSizeNumber__c, TemplateSourceId__c, TemplateMarkedDateTime__c,
                        ActivatedDateTime__c
                 FROM WorkItem__c
@@ -230,7 +230,7 @@ public class DeliveryRecurringItemServiceTest {
             ];
             System.assertEquals('Bug Fix Template', clone.BriefDescriptionTxt__c, 'Title should be cloned');
             System.assertEquals('High', clone.PriorityPk__c, 'Priority should be cloned');
-            System.assertEquals('bug,template', clone.Tags__c, 'Tags should be cloned');
+            System.assertEquals('bug,template', clone.TagsTxt__c, 'Tags should be cloned');
             System.assertEquals(8, clone.EstimatedHoursNumber__c, 'Estimated hours should be cloned');
             System.assertEquals(2, clone.DeveloperDaysSizeNumber__c, 'Developer days should be cloned');
             System.assertEquals(template.Id, clone.TemplateSourceId__c, 'Source Id should reference the template');
@@ -246,7 +246,7 @@ public class DeliveryRecurringItemServiceTest {
             Map<String, Object> overrides = new Map<String, Object>{
                 'BriefDescriptionTxt__c' => 'Login Page Bug',
                 'PriorityPk__c' => 'Low',
-                'Tags__c' => 'login,urgent'
+                'TagsTxt__c' => 'login,urgent'
             };
 
             Test.startTest();
@@ -254,13 +254,13 @@ public class DeliveryRecurringItemServiceTest {
             Test.stopTest();
 
             WorkItem__c clone = [
-                SELECT BriefDescriptionTxt__c, PriorityPk__c, Tags__c, EstimatedHoursNumber__c
+                SELECT BriefDescriptionTxt__c, PriorityPk__c, TagsTxt__c, EstimatedHoursNumber__c
                 FROM WorkItem__c
                 WHERE Id = :newId
             ];
             System.assertEquals('Login Page Bug', clone.BriefDescriptionTxt__c, 'Title should be overridden');
             System.assertEquals('Low', clone.PriorityPk__c, 'Priority should be overridden');
-            System.assertEquals('login,urgent', clone.Tags__c, 'Tags should be overridden');
+            System.assertEquals('login,urgent', clone.TagsTxt__c, 'Tags should be overridden');
             System.assertEquals(8, clone.EstimatedHoursNumber__c, 'Non-overridden fields should keep template values');
         }
     }

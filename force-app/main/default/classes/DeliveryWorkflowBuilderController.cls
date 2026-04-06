@@ -17,7 +17,7 @@ global with sharing class DeliveryWorkflowBuilderController {
     @AuraEnabled(cacheable=true)
     global static List<Map<String, Object>> getWorkflowTypes() {
         List<WorkflowType__mdt> types = [
-            SELECT DeveloperName, Label, DescriptionTxt__c, IconName__c,
+            SELECT DeveloperName, Label, DescriptionTxt__c, IconNameTxt__c,
                    SortOrderNumber__c, DefaultDateTime__c
             FROM WorkflowType__mdt
             ORDER BY SortOrderNumber__c ASC
@@ -26,10 +26,10 @@ global with sharing class DeliveryWorkflowBuilderController {
         // Count stages per workflow type
         Map<String, Integer> stageCounts = new Map<String, Integer>();
         for (WorkflowStage__mdt stage : [
-            SELECT WorkflowType__r.DeveloperName
+            SELECT WorkflowTypeMdtId__r.DeveloperName
             FROM WorkflowStage__mdt
         ]) {
-            String typeName = stage.WorkflowType__r.DeveloperName;
+            String typeName = stage.WorkflowTypeMdtId__r.DeveloperName;
             if (!stageCounts.containsKey(typeName)) {
                 stageCounts.put(typeName, 0);
             }
@@ -42,7 +42,7 @@ global with sharing class DeliveryWorkflowBuilderController {
             m.put('developerName', wt.DeveloperName);
             m.put('label', wt.Label);
             m.put('description', wt.DescriptionTxt__c);
-            m.put('icon', wt.IconName__c);
+            m.put('icon', wt.IconNameTxt__c);
             m.put('stageCount', stageCounts.containsKey(wt.DeveloperName)
                 ? stageCounts.get(wt.DeveloperName) : 0);
             m.put('isDefault', wt.DefaultDateTime__c != null);
@@ -66,7 +66,7 @@ global with sharing class DeliveryWorkflowBuilderController {
                    VisibleByDefaultDateTime__c, AllowedForwardTransitionsTxt__c,
                    AllowedBacktrackTransitionsTxt__c, EtaWeightNumber__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowType__r.DeveloperName = :workflowTypeName
+            WHERE WorkflowTypeMdtId__r.DeveloperName = :workflowTypeName
             ORDER BY SortOrderNumber__c ASC
         ];
 
@@ -121,7 +121,7 @@ global with sharing class DeliveryWorkflowBuilderController {
         typeRecord.label = typeLabel;
 
         addMetadataValue(typeRecord, 'DescriptionTxt__c', typeDescription);
-        addMetadataValue(typeRecord, 'IconName__c', typeIcon);
+        addMetadataValue(typeRecord, 'IconNameTxt__c', typeIcon);
         addMetadataValue(typeRecord, 'SortOrderNumber__c', 100);
 
         container.addMetadata(typeRecord);
@@ -148,7 +148,7 @@ global with sharing class DeliveryWorkflowBuilderController {
             addMetadataValue(stageRecord, 'AttentionStateDateTime__c', stage.get('isAttention') == true ? Datetime.now() : null);
             addMetadataValue(stageRecord, 'VisibleByDefaultDateTime__c', Datetime.now());
             addMetadataValue(stageRecord, 'OwnerPersonaTxt__c', 'Admin');
-            addMetadataValue(stageRecord, 'WorkflowType__c', typeName);
+            addMetadataValue(stageRecord, 'WorkflowTypeMdtId__c', typeName);
 
             if (stage.containsKey('nextStages')) {
                 addMetadataValue(stageRecord, 'AllowedForwardTransitionsTxt__c',
@@ -172,7 +172,7 @@ global with sharing class DeliveryWorkflowBuilderController {
             viewRecord.fullName = 'WorkflowPersonaView__mdt.' + viewApiName;
             viewRecord.label = typeName + ' - Admin - ' + stage.get('label');
 
-            addMetadataValue(viewRecord, 'WorkflowType__c', typeName);
+            addMetadataValue(viewRecord, 'WorkflowTypeMdtId__c', typeName);
             addMetadataValue(viewRecord, 'PersonaNameTxt__c', 'Admin');
             addMetadataValue(viewRecord, 'ColumnNameTxt__c', stage.get('label'));
             addMetadataValue(viewRecord, 'StageApiValuesTxt__c', stage.get('label'));

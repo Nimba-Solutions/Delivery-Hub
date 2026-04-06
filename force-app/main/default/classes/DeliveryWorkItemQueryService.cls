@@ -17,7 +17,7 @@ public with sharing class DeliveryWorkItemQueryService {
     // -------------------------------------------------------------------------
     public static final String STANDARD_FIELDS = 'Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
         + 'PriorityPk__c, StatusPk__c, WorkflowTypeTxt__c, ActivatedDateTime__c, '
-        + 'TemplateMarkedDateTime__c, Developer__c, Developer__r.Name, OwnerId, '
+        + 'TemplateMarkedDateTime__c, DeveloperLookupId__c, DeveloperLookupId__r.Name, OwnerId, '
         + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name, '
         + 'EstimatedHoursNumber__c, TotalLoggedHoursNumber__c, '
         + 'StageEnteredDateTime__c, CreatedDate, LastModifiedDate, CreatedBy.Name';
@@ -30,7 +30,7 @@ public with sharing class DeliveryWorkItemQueryService {
         + 'RequestTypePk__c, DeveloperDaysSizeNumber__c, CalculatedETADate__c, '
         + 'SLATargetDate__c, SLAStatusTxt__c, ParentWorkItemId__c, '
         + 'ProjectedUATReadyDate__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
-        + 'LastEscalatedDateTime__c, SortOrderNumber__c, Epic__c, Tags__c, '
+        + 'LastEscalatedDateTime__c, SortOrderNumber__c, EpicTxt__c, TagsTxt__c, '
         + 'ClientIntentionPk__c, DetailsTxt__c, CreatedById';
 
     // -------------------------------------------------------------------------

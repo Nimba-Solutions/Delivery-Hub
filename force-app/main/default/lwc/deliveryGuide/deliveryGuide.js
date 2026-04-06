@@ -162,6 +162,62 @@ const SECTION_CONFIG = [
         personas: ['Developer', 'Project Manager']
     },
     {
+        key: 'sla',
+        navLabel: 'Open Settings',
+        navTarget: 'DeliveryHubSettings',
+        navType: 'tab',
+        personas: ['Project Manager', 'Admin']
+    },
+    {
+        key: 'escalation',
+        navLabel: 'Open Settings',
+        navTarget: 'DeliveryHubSettings',
+        navType: 'tab',
+        personas: ['Project Manager', 'Admin']
+    },
+    {
+        key: 'approvals',
+        navLabel: null,
+        navTarget: null,
+        navType: null,
+        personas: ['Project Manager', 'Client', 'Admin']
+    },
+    {
+        key: 'rateLimiting',
+        navLabel: 'Open Settings',
+        navTarget: 'DeliveryHubSettings',
+        navType: 'tab',
+        personas: ['Admin']
+    },
+    {
+        key: 'auditChain',
+        navLabel: null,
+        navTarget: null,
+        navType: null,
+        personas: ['Admin']
+    },
+    {
+        key: 'archival',
+        navLabel: null,
+        navTarget: null,
+        navType: null,
+        personas: ['Admin']
+    },
+    {
+        key: 'bounty',
+        navLabel: 'View Bounties',
+        navTarget: 'BountyClaim__c',
+        navType: 'objectList',
+        personas: ['Developer', 'Admin']
+    },
+    {
+        key: 'velocityWorkload',
+        navLabel: null,
+        navTarget: null,
+        navType: null,
+        personas: ['Project Manager', 'Admin']
+    },
+    {
         key: 'appLogo',
         navLabel: null,
         navTarget: null,
@@ -488,6 +544,70 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
     get hideEmptyColumnsRecommended() { return this._isRecommended('hideEmptyColumns'); }
     get hideEmptyColumnsHasNav() { return this._hasNavLink('hideEmptyColumns'); }
     get hideEmptyColumnsNavLabel() { return this._getNavLabel('hideEmptyColumns'); }
+
+    /* SLA */
+    get slaExpanded() { return this._isOpen('sla'); }
+    get slaChevron() { return this._chevron('sla'); }
+    get slaVisible() { return this._isVisibleForPersona('sla'); }
+    get slaRecommended() { return this._isRecommended('sla'); }
+    get slaHasNav() { return this._hasNavLink('sla'); }
+    get slaNavLabel() { return this._getNavLabel('sla'); }
+
+    /* Escalation */
+    get escalationExpanded() { return this._isOpen('escalation'); }
+    get escalationChevron() { return this._chevron('escalation'); }
+    get escalationVisible() { return this._isVisibleForPersona('escalation'); }
+    get escalationRecommended() { return this._isRecommended('escalation'); }
+    get escalationHasNav() { return this._hasNavLink('escalation'); }
+    get escalationNavLabel() { return this._getNavLabel('escalation'); }
+
+    /* Approvals */
+    get approvalsExpanded() { return this._isOpen('approvals'); }
+    get approvalsChevron() { return this._chevron('approvals'); }
+    get approvalsVisible() { return this._isVisibleForPersona('approvals'); }
+    get approvalsRecommended() { return this._isRecommended('approvals'); }
+    get approvalsHasNav() { return this._hasNavLink('approvals'); }
+    get approvalsNavLabel() { return this._getNavLabel('approvals'); }
+
+    /* RateLimiting */
+    get rateLimitingExpanded() { return this._isOpen('rateLimiting'); }
+    get rateLimitingChevron() { return this._chevron('rateLimiting'); }
+    get rateLimitingVisible() { return this._isVisibleForPersona('rateLimiting'); }
+    get rateLimitingRecommended() { return this._isRecommended('rateLimiting'); }
+    get rateLimitingHasNav() { return this._hasNavLink('rateLimiting'); }
+    get rateLimitingNavLabel() { return this._getNavLabel('rateLimiting'); }
+
+    /* AuditChain */
+    get auditChainExpanded() { return this._isOpen('auditChain'); }
+    get auditChainChevron() { return this._chevron('auditChain'); }
+    get auditChainVisible() { return this._isVisibleForPersona('auditChain'); }
+    get auditChainRecommended() { return this._isRecommended('auditChain'); }
+    get auditChainHasNav() { return this._hasNavLink('auditChain'); }
+    get auditChainNavLabel() { return this._getNavLabel('auditChain'); }
+
+    /* Archival */
+    get archivalExpanded() { return this._isOpen('archival'); }
+    get archivalChevron() { return this._chevron('archival'); }
+    get archivalVisible() { return this._isVisibleForPersona('archival'); }
+    get archivalRecommended() { return this._isRecommended('archival'); }
+    get archivalHasNav() { return this._hasNavLink('archival'); }
+    get archivalNavLabel() { return this._getNavLabel('archival'); }
+
+    /* Bounty */
+    get bountyExpanded() { return this._isOpen('bounty'); }
+    get bountyChevron() { return this._chevron('bounty'); }
+    get bountyVisible() { return this._isVisibleForPersona('bounty'); }
+    get bountyRecommended() { return this._isRecommended('bounty'); }
+    get bountyHasNav() { return this._hasNavLink('bounty'); }
+    get bountyNavLabel() { return this._getNavLabel('bounty'); }
+
+    /* VelocityWorkload */
+    get velocityWorkloadExpanded() { return this._isOpen('velocityWorkload'); }
+    get velocityWorkloadChevron() { return this._chevron('velocityWorkload'); }
+    get velocityWorkloadVisible() { return this._isVisibleForPersona('velocityWorkload'); }
+    get velocityWorkloadRecommended() { return this._isRecommended('velocityWorkload'); }
+    get velocityWorkloadHasNav() { return this._hasNavLink('velocityWorkload'); }
+    get velocityWorkloadNavLabel() { return this._getNavLabel('velocityWorkload'); }
 
     /* AppLogo */
     get appLogoExpanded() { return this._isOpen('appLogo'); }

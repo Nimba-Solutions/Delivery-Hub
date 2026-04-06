@@ -7,7 +7,7 @@
         <value xsi:type="xsd:string">Full software delivery lifecycle: scoping, estimation, approval, development, QA, UAT, and deployment. Four persona views (Client, Consultant, Developer, QA) with grouped columns.</value>
     </values>
     <values>
-        <field>IconName__c</field>
+        <field>IconNameTxt__c</field>
         <value xsi:type="xsd:string">utility:code</value>
     </values>
     <values>

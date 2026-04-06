@@ -171,7 +171,7 @@ global without sharing class DeliveryPublicSubmissionService {
         newItem.StatusPk__c = 'New';
 
         if (String.isNotBlank(input.tags)) {
-            newItem.Tags__c = input.tags.length() > 255 ? input.tags.substring(0, 255) : input.tags;
+            newItem.TagsTxt__c = input.tags.length() > 255 ? input.tags.substring(0, 255) : input.tags;
         }
 
         if (resolvedEntityId != null) {

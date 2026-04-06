@@ -95,7 +95,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.Developer__c</fieldItem>
+                <fieldItem>Record.DeveloperLookupId__c</fieldItem>
                 <identifier>RecordDeveloper_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -121,8 +121,8 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.Tags__c</fieldItem>
-                <identifier>RecordTags_cField</identifier>
+                <fieldItem>Record.TagsTxt__c</fieldItem>
+                <identifier>RecordTagsTxt_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <itemInstances>
@@ -357,8 +357,8 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.Epic__c</fieldItem>
-                <identifier>RecordEpic_cField</identifier>
+                <fieldItem>Record.EpicTxt__c</fieldItem>
+                <identifier>RecordEpicTxt_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <itemInstances>

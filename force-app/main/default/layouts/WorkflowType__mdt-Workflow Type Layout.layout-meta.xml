@@ -20,7 +20,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>IconName__c</field>
+                <field>IconNameTxt__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
