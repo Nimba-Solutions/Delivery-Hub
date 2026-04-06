@@ -8,7 +8,7 @@
  */
 @IsTest
 @SuppressWarnings('PMD.CyclomaticComplexity')
-private class DeliveryApprovalChainSvcTest {
+private class DeliveryApprovalChainServiceTest {
 
     @TestSetup
     static void makeData() {

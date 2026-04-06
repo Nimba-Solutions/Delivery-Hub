@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ApexDoc')
-public with sharing class DocumentEmailService {
+public with sharing class DeliveryDocEmailService {
 
     /**
      * @description Sends a document as a PDF email attachment and marks it as Sent.
@@ -223,7 +223,7 @@ public with sharing class DocumentEmailService {
                 sendDocumentEmail(doc.Id, doc.ScheduledRecipientEmailTxt__c);
             } catch (Exception e) {
                 System.debug(LoggingLevel.ERROR,
-                    '[DocumentEmailService] Scheduled send failed for ' + doc.Id + ': ' + e.getMessage());
+                    '[DeliveryDocEmailService] Scheduled send failed for ' + doc.Id + ': ' + e.getMessage());
             }
             // Clear schedule fields regardless of success (sendDocumentEmail already sets Sent on success;
             // on failure we don't want infinite retries — the admin can reschedule manually)
@@ -287,7 +287,7 @@ public with sharing class DocumentEmailService {
                     amountDue = ((Decimal) meta.get('amountDue')).setScale(2);
                 }
             } catch (Exception e) {
-                System.debug(LoggingLevel.WARN, '[DocumentEmailService] Metadata parse error: ' + e.getMessage());
+                System.debug(LoggingLevel.WARN, '[DeliveryDocEmailService] Metadata parse error: ' + e.getMessage());
             }
         }
 

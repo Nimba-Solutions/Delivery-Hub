@@ -7,7 +7,7 @@
  *               Move_Stage, Reassign). Uses a strategy-like dispatch pattern.
  * @author Cloud Nimbus LLC
  */
-public with sharing class EscalationActionExecutor {
+public with sharing class DeliveryEscalationActionExecutor {
 
     /** @description Priority escalation ladder: Low -> Medium -> High -> Critical */
     private static final Map<String, String> PRIORITY_BUMP_MAP = new Map<String, String>{
@@ -23,7 +23,7 @@ public with sharing class EscalationActionExecutor {
      * @param ctx The escalation context containing rule, work item, and accumulators
      */
     @SuppressWarnings('PMD.CyclomaticComplexity')
-    public static void executeAction(EscalationContext ctx) {
+    public static void executeAction(DeliveryEscalationContext ctx) {
         WorkflowEscalationRule__mdt rule = ctx.rule;
         WorkItem__c wi = ctx.workItem;
         String action = rule.ActionTypePk__c;
@@ -65,7 +65,7 @@ public with sharing class EscalationActionExecutor {
         // Send bell notification to the work item owner (if opted in)
         String briefDesc = String.isNotBlank(wi.BriefDescriptionTxt__c)
             ? wi.BriefDescriptionTxt__c : wi.Name;
-        EscalationNotificationService.sendBellNotification(
+        DeliveryEscalationNotifService.sendBellNotification(
             wi.Id,
             wi.OwnerId,
             'Delivery Hub: Item Needs Attention',
@@ -148,7 +148,7 @@ public with sharing class EscalationActionExecutor {
             itemsToUpdate.put(wi.Id, toUpdate);
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
-                '[EscalationActionExecutor] Invalid Reassign targetOwnerId: ' + targetOwnerId);
+                '[DeliveryEscalationActionExecutor] Invalid Reassign targetOwnerId: ' + targetOwnerId);
         }
     }
 }

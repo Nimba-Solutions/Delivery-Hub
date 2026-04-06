@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessiveClassLength, PMD.ExcessiveParameterList, PMD.ApexDoc')
-public with sharing class DocumentGenerationService {
+public with sharing class DeliveryDocGenerationService {
 
     /**
      * @description Generates a new document by querying all relevant data for the given
@@ -31,7 +31,7 @@ public with sharing class DocumentGenerationService {
         // Auto-calculate prior balance for invoices: sum of all unpaid invoices for this entity
         Decimal priorBalance = 0;
         if (templateType == 'Invoice' && entityId != null) {
-            priorBalance = DocumentPaymentService.calculatePriorBalance(entityId, periodStart);
+            priorBalance = DeliveryDocPaymentService.calculatePriorBalance(entityId, periodStart);
         }
 
         // Merge A/R data into metadata
@@ -44,7 +44,7 @@ public with sharing class DocumentGenerationService {
 
         // Build unpaid invoices summary for the snapshot
         if (templateType == 'Invoice' && entityId != null) {
-            metaMap.put('unpaidInvoices', DocumentPaymentService.buildUnpaidInvoicesSummary(entityId));
+            metaMap.put('unpaidInvoices', DeliveryDocPaymentService.buildUnpaidInvoicesSummary(entityId));
         }
 
         // Inject default agreement clauses if none provided
@@ -359,7 +359,7 @@ public with sharing class DocumentGenerationService {
         Map<String, Object> entity = (Map<String, Object>) snapshot.get('entity');
         String clientName = entity != null && entity.get('name') != null ? (String) entity.get('name') : '[Client Name]';
         Decimal rate = entity != null && entity.get('defaultRate') != null ? (Decimal) entity.get('defaultRate') : 0;
-        String vendorName = DocumentEmailService.resolveVendorName();
+        String vendorName = DeliveryDocEmailService.resolveVendorName();
         String formattedRate = '$' + rate.setScale(2).format();
         Boolean isContractor = templateType == 'Contractor_Agreement';
         String partyA = isContractor ? vendorName : vendorName;

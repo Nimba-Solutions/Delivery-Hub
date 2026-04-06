@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
-public with sharing class DocumentApprovalService {
+public with sharing class DeliveryDocApprovalService {
 
     /**
      * @description Approves a document identified by its public token.
