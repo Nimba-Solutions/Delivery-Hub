@@ -926,13 +926,13 @@ private class DeliveryEscalationServiceTest {
             'MasterLabel' => label,
             ns + 'WorkflowTypeTxt__c' => workflowType,
             ns + 'TriggerStageTxt__c' => triggerStage,
-            ns + 'DaysThresholdNum__c' => daysThreshold,
+            ns + 'DaysThresholdNumber__c' => daysThreshold,
             ns + 'ActionTypePk__c' => actionType,
             ns + 'TargetValueTxt__c' => targetValue,
             ns + 'PriorityFilterTxt__c' => priorityFilter,
             ns + 'SeverityLevelPk__c' => severity,
             ns + 'ActiveDateTime__c' => Datetime.now(),
-            ns + 'SortOrderNum__c' => 1
+            ns + 'SortOrderNumber__c' => 1
         };
         return (WorkflowEscalationRule__mdt) JSON.deserialize(
             JSON.serialize(fieldMap), WorkflowEscalationRule__mdt.class
@@ -1367,13 +1367,13 @@ private class DeliveryEscalationServiceTest {
                 'MasterLabel' => 'No Response Rule',
                 ns + 'WorkflowTypeTxt__c' => 'Software_Delivery',
                 ns + 'TriggerStageTxt__c' => 'In Development',
-                ns + 'DaysThresholdNum__c' => 0,
+                ns + 'DaysThresholdNumber__c' => 0,
                 ns + 'ActionTypePk__c' => 'Email',
                 ns + 'TargetValueTxt__c' => null,
                 ns + 'PriorityFilterTxt__c' => null,
                 ns + 'SeverityLevelPk__c' => 'Warning',
                 ns + 'ActiveDateTime__c' => Datetime.now(),
-                ns + 'SortOrderNum__c' => 1,
+                ns + 'SortOrderNumber__c' => 1,
                 ns + 'RequireNoResponseDateTime__c' => Datetime.now()
             };
             WorkflowEscalationRule__mdt rule = (WorkflowEscalationRule__mdt) JSON.deserialize(
@@ -1420,13 +1420,13 @@ private class DeliveryEscalationServiceTest {
                 'MasterLabel' => 'No Response Self Comment',
                 ns + 'WorkflowTypeTxt__c' => 'Software_Delivery',
                 ns + 'TriggerStageTxt__c' => 'In Development',
-                ns + 'DaysThresholdNum__c' => 0,
+                ns + 'DaysThresholdNumber__c' => 0,
                 ns + 'ActionTypePk__c' => 'Email',
                 ns + 'TargetValueTxt__c' => null,
                 ns + 'PriorityFilterTxt__c' => null,
                 ns + 'SeverityLevelPk__c' => 'Warning',
                 ns + 'ActiveDateTime__c' => Datetime.now(),
-                ns + 'SortOrderNum__c' => 1,
+                ns + 'SortOrderNumber__c' => 1,
                 ns + 'RequireNoResponseDateTime__c' => Datetime.now()
             };
             WorkflowEscalationRule__mdt rule = (WorkflowEscalationRule__mdt) JSON.deserialize(

@@ -226,7 +226,7 @@ For teams that need oversight before hours are reported to clients, Delivery Hub
 ### Enabling Approval
 
 1. Go to **Setup > Custom Settings > DeliveryHubSettings__c**
-2. Set the **RequireWorkLogApprovalDate__c** field to a date value
+2. Set the **RequireWorkLogApprovalDateTime__c** field to a date value
 3. All WorkLogs created on or after that date require approval before syncing
 
 ### Status Flow
@@ -245,7 +245,7 @@ When approval is enabled, WorkLogs follow this lifecycle:
 
 ### Backward Compatibility
 
-When approval is not enabled (RequireWorkLogApprovalDate__c is blank or the WorkLog date is before the configured date), hours sync immediately upon creation -- no approval step required. Existing orgs continue to work without changes.
+When approval is not enabled (RequireWorkLogApprovalDateTime__c is blank or the WorkLog date is before the configured date), hours sync immediately upon creation -- no approval step required. Existing orgs continue to work without changes.
 
 ---
 

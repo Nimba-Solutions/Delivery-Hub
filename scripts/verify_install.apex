@@ -12,11 +12,11 @@ try {
     System.debug('FAIL | StatusPk__c: ' + e.getMessage());
 }
 
-// 2. Verify RequireWorkLogApprovalDate__c on DeliveryHubSettings__c
-System.debug('=== CHECK 2: RequireWorkLogApprovalDate__c field ===');
+// 2. Verify RequireWorkLogApprovalDateTime__c on DeliveryHubSettings__c
+System.debug('=== CHECK 2: RequireWorkLogApprovalDateTime__c field ===');
 try {
     delivery__DeliveryHubSettings__c settings = delivery__DeliveryHubSettings__c.getOrgDefaults();
-    System.debug('PASS | Settings exist: ' + (settings.Id != null) + ' | ApprovalDate: ' + settings.delivery__RequireWorkLogApprovalDate__c);
+    System.debug('PASS | Settings exist: ' + (settings.Id != null) + ' | ApprovalDate: ' + settings.delivery__RequireWorkLogApprovalDateTime__c);
 } catch (Exception e) {
     System.debug('FAIL | Settings: ' + e.getMessage());
 }
@@ -61,7 +61,7 @@ for (AggregateResult ar : [
 // 7. Check if approval is currently enabled
 System.debug('=== CHECK 7: Approval Setting State ===');
 delivery__DeliveryHubSettings__c s = delivery__DeliveryHubSettings__c.getOrgDefaults();
-Boolean approvalOn = s.delivery__RequireWorkLogApprovalDate__c != null;
-System.debug('PASS | Approval enabled: ' + approvalOn + (approvalOn ? ' (since ' + s.delivery__RequireWorkLogApprovalDate__c + ')' : ''));
+Boolean approvalOn = s.delivery__RequireWorkLogApprovalDateTime__c != null;
+System.debug('PASS | Approval enabled: ' + approvalOn + (approvalOn ? ' (since ' + s.delivery__RequireWorkLogApprovalDateTime__c + ')' : ''));
 
 System.debug('=== VERIFICATION COMPLETE ===');

@@ -3,7 +3,7 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description Trigger handler for WorkLog__c. On insert, queues an outbound SyncItem__c
  *              for each WorkLog whose parent Work Item has a client Network Entity linked.
- *              When approval is required (RequireWorkLogApprovalDate__c is set), only
+ *              When approval is required (RequireWorkLogApprovalDateTime__c is set), only
  *              Approved WorkLogs generate SyncItems. Draft logs sync on approval via
  *              onAfterUpdate.
  * @author Cloud Nimbus LLC
@@ -230,12 +230,12 @@ public with sharing class DeliveryWorkLogTriggerHandler {
 
     /**
      * @description Checks whether WorkLog approval is required based on the
-     *              org-level DeliveryHubSettings__c.RequireWorkLogApprovalDate__c.
+     *              org-level DeliveryHubSettings__c.RequireWorkLogApprovalDateTime__c.
      * @return true when the DateTime field is populated (approval policy is active).
      */
     public static Boolean isApprovalRequired() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        return settings.RequireWorkLogApprovalDate__c != null;
+        return settings.RequireWorkLogApprovalDateTime__c != null;
     }
 
     /**

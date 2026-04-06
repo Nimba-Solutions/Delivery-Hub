@@ -50,7 +50,7 @@ global with sharing class DeliveryTimeLoggerController {
 
     /**
      * @description Returns whether WorkLog approval is required in this org.
-     * @return true when RequireWorkLogApprovalDate__c is set.
+     * @return true when RequireWorkLogApprovalDateTime__c is set.
      */
     @AuraEnabled(cacheable=true)
     global static Boolean isApprovalRequired() {
