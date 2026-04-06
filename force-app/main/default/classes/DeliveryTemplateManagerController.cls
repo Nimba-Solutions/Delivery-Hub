@@ -17,8 +17,8 @@ global with sharing class DeliveryTemplateManagerController {
     global static List<WorkItem__c> getTemplates() {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c,
-                   Tags__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
-                   DeveloperDaysSizeNumber__c, StageNamePk__c, Epic__c, ActivatedDateTime__c,
+                   TagsTxt__c, WorkflowTypeTxt__c, RequestTypePk__c, EstimatedHoursNumber__c,
+                   DeveloperDaysSizeNumber__c, StageNamePk__c, EpicTxt__c, ActivatedDateTime__c,
                    CreatedDate, LastModifiedDate
             FROM WorkItem__c
             WHERE TemplateMarkedDateTime__c != null

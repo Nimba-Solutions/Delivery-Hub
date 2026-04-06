@@ -18,9 +18,9 @@ const JIRA_COLUMN_MAP = {
     'priority':    'PriorityPk__c',
     'status':      'StageNamePk__c',
     'issue type':  'RequestTypePk__c',
-    'labels':      'Tags__c',
-    'epic link':   'Epic__c',
-    'epic name':   'Epic__c',
+    'labels':      'TagsTxt__c',
+    'epic link':   'EpicTxt__c',
+    'epic name':   'EpicTxt__c',
     'story points':'DeveloperDaysSizeNumber__c'
 };
 

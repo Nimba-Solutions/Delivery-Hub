@@ -143,7 +143,7 @@ FIELD_META = {
     "WorkItem__c/DetailsTxt__c": {
         "inlineHelpText": "Full technical and functional details of this work item. Supports rich text formatting.",
     },
-    "WorkItem__c/Developer__c": {
+    "WorkItem__c/DeveloperLookupId__c": {
         "inlineHelpText": "The developer currently assigned to work on this work item.",
     },
     "WorkItem__c/DeveloperDaysSizeNumber__c": {

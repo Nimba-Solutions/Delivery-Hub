@@ -280,10 +280,10 @@ private class DeliveryActivityLogCleanupTest {
             // Insert an old Field_Change log — should NOT be purged
             ActivityLog__c oldFieldChange = new ActivityLog__c(
                 ActionTypePk__c = 'Field_Change',
-                ComponentNameTxt__c = 'Developer__c',
+                ComponentNameTxt__c = 'DeveloperLookupId__c',
                 UserIdTxt__c = UserInfo.getUserId(),
                 RecordIdTxt__c = testAcct.Id,
-                ContextDataTxt__c = '{"fieldName":"Developer__c","oldValue":"User A","newValue":"User B"}'
+                ContextDataTxt__c = '{"fieldName":"DeveloperLookupId__c","oldValue":"User A","newValue":"User B"}'
             );
             insert oldFieldChange;
             Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));

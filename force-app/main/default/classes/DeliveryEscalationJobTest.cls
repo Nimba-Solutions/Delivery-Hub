@@ -27,7 +27,7 @@ private class DeliveryEscalationJobTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         ));
 
         // Item in Dev Blocked
@@ -36,7 +36,7 @@ private class DeliveryEscalationJobTest {
             StageNamePk__c = 'Dev Blocked',
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         ));
 
         // Item in Backlog — should NOT be matched

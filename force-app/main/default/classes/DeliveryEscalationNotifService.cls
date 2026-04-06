@@ -20,7 +20,7 @@ public with sharing class DeliveryEscalationNotifService {
         // Query work items for email context
         List<WorkItem__c> workItems = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   Developer__c, OwnerId
+                   DeveloperLookupId__c, OwnerId
             FROM WorkItem__c
             WHERE Id IN :escalationDetails.keySet()
             WITH SYSTEM_MODE
@@ -33,8 +33,8 @@ public with sharing class DeliveryEscalationNotifService {
         // Collect recipient user Ids
         Set<Id> recipientIds = new Set<Id>();
         for (WorkItem__c wi : workItems) {
-            if (wi.Developer__c != null) {
-                recipientIds.add(wi.Developer__c);
+            if (wi.DeveloperLookupId__c != null) {
+                recipientIds.add(wi.DeveloperLookupId__c);
             }
             if (wi.OwnerId != null && String.valueOf(wi.OwnerId).startsWith('005')) {
                 recipientIds.add(wi.OwnerId);
@@ -56,8 +56,8 @@ public with sharing class DeliveryEscalationNotifService {
 
         for (WorkItem__c wi : workItems) {
             List<String> toAddresses = new List<String>();
-            if (wi.Developer__c != null && userMap.containsKey(wi.Developer__c)) {
-                toAddresses.add(userMap.get(wi.Developer__c).Email);
+            if (wi.DeveloperLookupId__c != null && userMap.containsKey(wi.DeveloperLookupId__c)) {
+                toAddresses.add(userMap.get(wi.DeveloperLookupId__c).Email);
             }
             if (wi.OwnerId != null && userMap.containsKey(wi.OwnerId)) {
                 String ownerEmail = userMap.get(wi.OwnerId).Email;

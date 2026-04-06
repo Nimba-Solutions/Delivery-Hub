@@ -59,15 +59,15 @@ global without sharing class DeliveryTaskAPI {
             String soql = 'SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, '
                 + 'AcceptanceCriteriaTxt__c, StageNamePk__c, PriorityPk__c, '
                 + 'WorkflowTypeTxt__c, EstimatedHoursNumber__c, ParentWorkItemId__c, '
-                + 'Developer__c '
+                + 'DeveloperLookupId__c '
                 + 'FROM WorkItem__c';
 
             List<String> conditions = new List<String>();
 
             if (assignee == 'ai') {
-                conditions.add('Developer__c != null');
+                conditions.add('DeveloperLookupId__c != null');
             } else if (assigneeId != null) {
-                conditions.add('Developer__c = :assigneeId');
+                conditions.add('DeveloperLookupId__c = :assigneeId');
             }
 
             if (String.isNotBlank(status)) {
@@ -175,7 +175,7 @@ global without sharing class DeliveryTaskAPI {
                 SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
                        AcceptanceCriteriaTxt__c, StageNamePk__c, PriorityPk__c,
                        WorkflowTypeTxt__c, EstimatedHoursNumber__c, ParentWorkItemId__c,
-                       Developer__c
+                       DeveloperLookupId__c
                 FROM WorkItem__c
                 WHERE Id = :workItemId
                 WITH SYSTEM_MODE
@@ -282,7 +282,7 @@ global without sharing class DeliveryTaskAPI {
             'workflowType'       => item.WorkflowTypeTxt__c,
             'estimatedHours'     => item.EstimatedHoursNumber__c,
             'parentWorkItemId'   => item.ParentWorkItemId__c,
-            'assignee'           => item.Developer__c
+            'assignee'           => item.DeveloperLookupId__c
         };
     }
 

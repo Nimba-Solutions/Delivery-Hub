@@ -34,7 +34,7 @@ private class DeliveryTaskAPITest {
                 StatusPk__c           = 'New',
                 DetailsTxt__c         = 'Details for alpha task',
                 WorkflowTypeTxt__c    = 'Software_Delivery',
-                Developer__c          = UserInfo.getUserId()
+                DeveloperLookupId__c          = UserInfo.getUserId()
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'API Task Beta',

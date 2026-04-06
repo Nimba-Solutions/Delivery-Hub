@@ -21,7 +21,7 @@ private class DeliveryEmailNotificationServiceTest {
         WorkItem__c wi = new WorkItem__c(
             BriefDescriptionTxt__c = 'Test Email Work Item',
             StageNamePk__c = 'Backlog',
-            Developer__c = UserInfo.getUserId()
+            DeveloperLookupId__c = UserInfo.getUserId()
         );
         insert wi;
     }
@@ -100,7 +100,7 @@ private class DeliveryEmailNotificationServiceTest {
             insert wi;
 
             // Clear developer
-            wi.Developer__c = null;
+            wi.DeveloperLookupId__c = null;
             update wi;
 
             Map<Id, String> stageMap = new Map<Id, String>{ wi.Id => 'Ready for QA' };

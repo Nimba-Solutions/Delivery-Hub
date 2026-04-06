@@ -28,7 +28,7 @@
     </values>
     <values>
         <field>NotifyFieldTxt__c</field>
-        <value xsi:type="xsd:string">Developer__c</value>
+        <value xsi:type="xsd:string">DeveloperLookupId__c</value>
     </values>
     <values>
         <field>SeverityLevelPk__c</field>

@@ -53,7 +53,7 @@ global with sharing class DeliveryWorkItemETAService {
             Set<Id> processedIds = calculator.getProcessedWorkItemIds();
 
             List<WorkItem__c> queriedWorkItems = [
-                SELECT Id, ProjectedUATReadyDate__c, Developer__c,
+                SELECT Id, ProjectedUATReadyDate__c, DeveloperLookupId__c,
                        DeveloperDaysSizeNumber__c, StageNamePk__c
                 FROM WorkItem__c
                 WHERE Id IN :processedIds
@@ -127,7 +127,7 @@ global with sharing class DeliveryWorkItemETAService {
     @TestVisible
     private static Integer calculateConfidence(WorkItem__c wi, Set<String> activeDevStages, Set<Id> blockedIds) {
         Integer score = 0;
-        if (wi.Developer__c != null) { score += 25; }
+        if (wi.DeveloperLookupId__c != null) { score += 25; }
         if (wi.DeveloperDaysSizeNumber__c != null && wi.DeveloperDaysSizeNumber__c > 0) { score += 25; }
         if (activeDevStages.contains(wi.StageNamePk__c)) { score += 25; }
         if (!blockedIds.contains(wi.Id)) { score += 25; }
@@ -249,7 +249,7 @@ global with sharing class DeliveryWorkItemETAService {
             List<WorkItem__c> workItemsToUpdate = new List<WorkItem__c>();
 
             for (WorkItemWrapper wrapper : masterQueue) {
-                Id assignedDevId = wrapper.workItem.Developer__c;
+                Id assignedDevId = wrapper.workItem.DeveloperLookupId__c;
 
                 if (assignedDevId == null || !developers.containsKey(assignedDevId)) {
                     assignedDevId = findNextAvailableDeveloper(devNextAvailableDate);
@@ -336,7 +336,7 @@ global with sharing class DeliveryWorkItemETAService {
         private List<WorkItem__c> loadWorkItems() {
             return [
                 SELECT Id, Name, StageNamePk__c, PriorityPk__c, DeveloperDaysSizeNumber__c,
-                       SortOrderNumber__c, Developer__c, CreatedDate
+                       SortOrderNumber__c, DeveloperLookupId__c, CreatedDate
                 FROM WorkItem__c
                 WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
                 WITH SYSTEM_MODE
