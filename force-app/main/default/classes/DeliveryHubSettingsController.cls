@@ -185,7 +185,7 @@ global with sharing class DeliveryHubSettingsController {
             dto.weeklyDigestEnabled = settings.EnableWeeklyDigestDateTime__c != null;
             dto.statusPageEnabled = settings.EnableStatusPageDateTime__c != null;
             dto.autoCreateWorkRequest = settings.EnableAutoCreateWorkRequestDateTime__c != null;
-            dto.requireWorkLogApproval = settings.RequireWorkLogApprovalDate__c != null;
+            dto.requireWorkLogApproval = settings.RequireWorkLogApprovalDateTime__c != null;
 
             // Activation-date strings
             dto.notificationsActivatedAt = formatActivationDate(settings.EnableNotificationsDateTime__c);
@@ -198,7 +198,7 @@ global with sharing class DeliveryHubSettingsController {
             dto.weeklyDigestActivatedAt = formatActivationDate(settings.EnableWeeklyDigestDateTime__c);
             dto.statusPageActivatedAt = formatActivationDate(settings.EnableStatusPageDateTime__c);
             dto.autoCreateWorkRequestActivatedAt = formatActivationDate(settings.EnableAutoCreateWorkRequestDateTime__c);
-            dto.requireWorkLogApprovalActivatedAt = formatActivationDate(settings.RequireWorkLogApprovalDate__c);
+            dto.requireWorkLogApprovalActivatedAt = formatActivationDate(settings.RequireWorkLogApprovalDateTime__c);
 
             // Configurable number settings (with defaults)
             dto.reconciliationHour = settings.ReconciliationHourNumber__c != null
@@ -363,7 +363,7 @@ global with sharing class DeliveryHubSettingsController {
             settings.EnableWeeklyDigestDateTime__c = dto.weeklyDigestEnabled ? (settings.EnableWeeklyDigestDateTime__c != null ? settings.EnableWeeklyDigestDateTime__c : Datetime.now()) : null;
             settings.EnableStatusPageDateTime__c = dto.statusPageEnabled ? (settings.EnableStatusPageDateTime__c != null ? settings.EnableStatusPageDateTime__c : Datetime.now()) : null;
             settings.EnableAutoCreateWorkRequestDateTime__c = dto.autoCreateWorkRequest ? (settings.EnableAutoCreateWorkRequestDateTime__c != null ? settings.EnableAutoCreateWorkRequestDateTime__c : Datetime.now()) : null;
-            settings.RequireWorkLogApprovalDate__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDate__c != null ? settings.RequireWorkLogApprovalDate__c : Datetime.now()) : null;
+            settings.RequireWorkLogApprovalDateTime__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDateTime__c != null ? settings.RequireWorkLogApprovalDateTime__c : Datetime.now()) : null;
             settings.EnableInvoiceGenerationDateTime__c = dto.invoiceGenerationEnabled == true ? (settings.EnableInvoiceGenerationDateTime__c != null ? settings.EnableInvoiceGenerationDateTime__c : Datetime.now()) : null;
 
             // Enterprise feature toggles

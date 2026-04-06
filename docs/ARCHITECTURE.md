@@ -409,7 +409,7 @@ Operational parameters that were previously hardcoded constants are now read at 
 | `ActivityLogRetentionDaysNumber__c` | 90 | `DeliveryActivityLogCleanup` | Days to retain activity/navigation logs before purging |
 | `EscalationCooldownHoursNumber__c` | 24 | `DeliveryEscalationService` | Minimum hours between repeated escalations of the same work item |
 
-DateTime activation toggles (e.g., `RequireWorkLogApprovalDate__c`) store the exact timestamp when a feature was enabled, providing an audit trail. The Settings UI in the admin app exposes all of these fields.
+DateTime activation toggles (e.g., `RequireWorkLogApprovalDateTime__c`) store the exact timestamp when a feature was enabled, providing an audit trail. The Settings UI in the admin app exposes all of these fields.
 
 ### WorkItem Admin Page
 

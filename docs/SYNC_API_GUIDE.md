@@ -274,7 +274,7 @@ WorkLog records (hours logged against a Work Item) participate in the sync pipel
 
 ### How Approval Works
 
-The approval gate is controlled by the org-level custom setting `DeliveryHubSettings__c.RequireWorkLogApprovalDate__c`. When this DateTime field is populated, the approval policy is active.
+The approval gate is controlled by the org-level custom setting `DeliveryHubSettings__c.RequireWorkLogApprovalDateTime__c`. When this DateTime field is populated, the approval policy is active.
 
 | Approval Setting | Insert Behavior | Update Behavior |
 |-------------------|-----------------|-----------------|

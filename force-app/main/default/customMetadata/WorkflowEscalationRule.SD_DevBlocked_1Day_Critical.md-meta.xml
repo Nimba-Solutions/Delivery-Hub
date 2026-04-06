@@ -11,7 +11,7 @@
         <value xsi:type="xsd:string">Dev Blocked</value>
     </values>
     <values>
-        <field>DaysThresholdNum__c</field>
+        <field>DaysThresholdNumber__c</field>
         <value xsi:type="xsd:double">1.0</value>
     </values>
     <values>
@@ -35,7 +35,7 @@
         <value xsi:type="xsd:string">Critical</value>
     </values>
     <values>
-        <field>SortOrderNum__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">13.0</value>
     </values>
 </CustomMetadata>

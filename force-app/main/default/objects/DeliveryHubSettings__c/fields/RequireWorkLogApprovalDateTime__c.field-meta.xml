@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>RequireWorkLogApprovalDate__c</fullName>
+    <fullName>RequireWorkLogApprovalDateTime__c</fullName>
     <description>When populated, WorkLogs created after this date require approval before syncing to client orgs. When null, approval is not required (current behavior preserved). Provides audit trail of when the policy was enabled.</description>
     <externalId>false</externalId>
     <inlineHelpText>Set this to enable WorkLog approval. Logs created after this date will be saved as Draft until approved. Leave blank to sync immediately (default).</inlineHelpText>

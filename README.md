@@ -107,7 +107,7 @@ CSV import wizard maps spreadsheet columns to work item fields and creates items
 
 ### Billing & Approval
 
-WorkLog approval workflow gates logged hours behind a Draft &rarr; Approved &rarr; Synced pipeline. Enable the `RequireWorkLogApprovalDate__c` setting and all new hours save as Draft until a manager approves them. Batch approve or reject directly from the Activity Feed. When the setting is null, existing behavior is unchanged &mdash; hours sync immediately. Invoices only include **Approved** work logs &mdash; Draft and unapproved hours are excluded from all generated documents.
+WorkLog approval workflow gates logged hours behind a Draft &rarr; Approved &rarr; Synced pipeline. Enable the `RequireWorkLogApprovalDateTime__c` setting and all new hours save as Draft until a manager approves them. Batch approve or reject directly from the Activity Feed. When the setting is null, existing behavior is unchanged &mdash; hours sync immediately. Invoices only include **Approved** work logs &mdash; Draft and unapproved hours are excluded from all generated documents.
 
 The Activity Feed provides a unified, cross-item timeline of comments, hours, and stage/field changes. Date-grouped entries, conversation threads with inline reply, batch WorkLog approval actions, and 30-second polling keep the entire team on the same page without switching between records.
 
