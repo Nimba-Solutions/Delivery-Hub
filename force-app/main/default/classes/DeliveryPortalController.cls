@@ -152,7 +152,11 @@ global without sharing class DeliveryPortalController {
         if (statusFilter == 'completed') {
             items = [
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c
+                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
+                       CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
+                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
+                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityId__c = :networkEntityId
                 AND StageNamePk__c IN :terminalStages
@@ -163,7 +167,11 @@ global without sharing class DeliveryPortalController {
         } else if (statusFilter == 'attention') {
             items = [
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c
+                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
+                       CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
+                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
+                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityId__c = :networkEntityId
                 AND StageNamePk__c IN :attentionStages
@@ -174,7 +182,11 @@ global without sharing class DeliveryPortalController {
         } else if (statusFilter == 'active') {
             items = [
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c
+                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
+                       CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
+                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
+                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityId__c = :networkEntityId
                 AND StageNamePk__c NOT IN :terminalStages
@@ -185,7 +197,11 @@ global without sharing class DeliveryPortalController {
         } else {
             items = [
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c
+                       LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
+                       CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
+                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
+                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityId__c = :networkEntityId
                 WITH SYSTEM_MODE
@@ -201,6 +217,18 @@ global without sharing class DeliveryPortalController {
             m.put('eta', wi.CalculatedETADate__c);
             m.put('descriptionPreview', truncateText(wi.DetailsTxt__c, 150));
             m.put('requestType', wi.RequestTypePk__c);
+            // Gantt/timeline fields
+            m.put('createdDate', wi.CreatedDate);
+            m.put('estimatedStartDate', wi.EstimatedStartDevDate__c);
+            m.put('estimatedEndDate', wi.EstimatedEndDevDate__c);
+            m.put('projectedUATDate', wi.ProjectedUATReadyDate__c);
+            m.put('slaTargetDate', wi.SLATargetDate__c);
+            m.put('estimatedHours', wi.EstimatedHoursNumber__c);
+            m.put('loggedHours', wi.TotalLoggedHoursNumber__c);
+            m.put('developerName', wi.DeveloperLookupId__c != null ? wi.DeveloperLookupId__r.Name : null);
+            m.put('parentWorkItemId', wi.ParentWorkItemId__c);
+            m.put('tags', wi.TagsTxt__c);
+            m.put('epic', wi.EpicTxt__c);
             result.add(m);
         }
         return result;
