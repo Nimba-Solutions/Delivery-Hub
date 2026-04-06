@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PageKeyTxt__c</fullName>
+    <description>Which page this card belongs to (e.g., home, admin). Matches the pageKey property on the LWC.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Page Key</label>
+    <length>40</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
