@@ -15,7 +15,6 @@ global with sharing class DeliveryWorkItemController {
      * @return List of active WorkItem__c records with related dependencies and comments.
      */
     @AuraEnabled(cacheable=true)
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     global static List<WorkItem__c> getWorkItems(String workflowType) {
         if (!Schema.sObjectType.WorkItem__c.isAccessible()
             || !Schema.sObjectType.WorkItem__c.fields.StageNamePk__c.isAccessible()) {
@@ -158,7 +157,6 @@ global with sharing class DeliveryWorkItemController {
      * @return True if marketing is enabled in CloudNimbusGlobalSettings__mdt, false otherwise.
      */
     @AuraEnabled(cacheable=true)
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     global static Boolean isMarketingEnabled() {
         try {
             CloudNimbusGlobalSettings__mdt m = [
@@ -222,7 +220,6 @@ global with sharing class DeliveryWorkItemController {
      * @return List of required field API names, or an empty list if none are configured.
      */
     @AuraEnabled(cacheable=true)
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     global static List<String> getRequiredFieldsForStage(String targetStage) {
         List<WorkflowStageRequirement__mdt> requirements = [
             SELECT RequiredFieldsTxt__c

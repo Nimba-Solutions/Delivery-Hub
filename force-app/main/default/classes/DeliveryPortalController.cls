@@ -16,7 +16,6 @@ global without sharing class DeliveryPortalController {
      * @param networkEntityId The client NetworkEntity__c record Id
      * @return Map containing dashboard sections
      */
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
     global static Map<String, Object> getPortalDashboard(Id networkEntityId) {
         validateEntityAccess(networkEntityId);
@@ -141,7 +140,6 @@ global without sharing class DeliveryPortalController {
      * @param statusFilter One of: 'active', 'completed', 'attention', or null/blank for all
      * @return List of work item maps with limited fields
      */
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled(cacheable=true)
     global static List<Map<String, Object>> getPortalWorkItems(Id networkEntityId, String statusFilter) {
         validateEntityAccess(networkEntityId);
@@ -214,7 +212,6 @@ global without sharing class DeliveryPortalController {
      * @param networkEntityId The NetworkEntity__c Id used to validate entity access
      * @return Map containing work item detail, comments list, and file info
      */
-    @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
     global static Map<String, Object> getPortalWorkItemDetail(Id workItemId, Id networkEntityId) {
         validateEntityAccess(networkEntityId);

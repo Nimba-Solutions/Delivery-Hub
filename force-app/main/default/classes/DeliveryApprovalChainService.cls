@@ -5,7 +5,6 @@
  *               to define multi-step sequential/parallel approval workflows for WorkLogs.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryApprovalChainService {
 
     @TestVisible
@@ -41,7 +40,7 @@ public with sharing class DeliveryApprovalChainService {
      *              For Sequential mode, advances to next step on approve.
      *              For Parallel/Any mode, counts approvals against required count.
      */
-    @SuppressWarnings('PMD.ExcessiveParameterList, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public static Map<String, Object> processApproval(
         Id workLogId,
         Id approverId,

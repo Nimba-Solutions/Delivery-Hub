@@ -6,7 +6,7 @@
  * unified, chronological event feed for a given Work Item.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity,PMD.AvoidDebugStatements')
+@SuppressWarnings('PMD.CyclomaticComplexity')
 global with sharing class DeliveryActivityTimelineController {
 
     private static final Integer PAGE_SIZE = 20;

@@ -8,7 +8,7 @@
  *               EscalationRuleEvaluator (2), and DeliveryGanttController (2).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ExcessiveParameterList')
+@SuppressWarnings('PMD.ExcessiveParameterList')
 public with sharing class WorkItemQueryService {
 
     // -------------------------------------------------------------------------

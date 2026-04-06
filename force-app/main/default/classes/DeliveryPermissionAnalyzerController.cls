@@ -6,7 +6,7 @@
  * usage summaries and plain-English permission recommendations.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier, PMD.AvoidDebugStatements, PMD.NcssMethodCount, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier, PMD.NcssMethodCount, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global with sharing class DeliveryPermissionAnalyzerController {
 
     private static final Integer ANALYSIS_DAYS = 30;

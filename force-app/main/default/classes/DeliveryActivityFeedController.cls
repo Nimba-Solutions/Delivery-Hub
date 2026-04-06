@@ -8,7 +8,7 @@
  *               WorkLog approval workflows.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidDebugStatements,PMD.ExcessiveParameterList,PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.ExcessiveParameterList,PMD.CyclomaticComplexity')
 global with sharing class DeliveryActivityFeedController {
 
     private static final Integer PAGE_SIZE = 25;

@@ -6,7 +6,6 @@
  * Uses standard DML so the DeliverySyncEngine Trigger picks it up automatically.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 global with sharing class DeliveryHubCommentController {
 
     /**
@@ -40,6 +39,7 @@ global with sharing class DeliveryHubCommentController {
      * @param requestId The ID of the record the LWC is sitting on.
      * @param body The comment text.
      */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     @AuraEnabled
     global static void postLiveComment(Id requestId, String body) {
         try {
