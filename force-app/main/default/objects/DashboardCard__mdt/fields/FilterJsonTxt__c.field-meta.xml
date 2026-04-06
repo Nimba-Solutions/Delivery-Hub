@@ -5,7 +5,7 @@
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Filter JSON</label>
-    <length>1000</length>
+    <length>255</length>
     <type>Text</type>
     <unique>false</unique>
 </CustomField>
