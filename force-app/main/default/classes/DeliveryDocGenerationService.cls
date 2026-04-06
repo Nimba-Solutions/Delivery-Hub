@@ -20,10 +20,19 @@ public with sharing class DeliveryDocGenerationService {
      * @return The Id of the created DeliveryDocument__c record.
      */
     public static Id generateDocument(Id entityId, String templateType, Date periodStart, Date periodEnd, String metadata) {
-        if (entityId == null) {
+        if (entityId == null && templateType != 'Security_Audit') {
             throw new AuraHandledException('Please select a client before generating a document.');
         }
-        Map<String, Object> snapshot = buildSnapshot(entityId, templateType, periodStart, periodEnd);
+
+        Map<String, Object> snapshot;
+        if (entityId == null) {
+            // Org-wide report — use metadata as the snapshot payload
+            snapshot = String.isNotBlank(metadata)
+                ? (Map<String, Object>) JSON.deserializeUntyped(metadata)
+                : new Map<String, Object>();
+        } else {
+            snapshot = buildSnapshot(entityId, templateType, periodStart, periodEnd);
+        }
 
         String publicToken = generateToken();
         Decimal currentCharges = calculateTotalCost(snapshot);
@@ -56,18 +65,18 @@ public with sharing class DeliveryDocGenerationService {
         // ── Versioning: supersede existing document for same entity+period+template ──
         Integer nextVersion = 1;
         Id previousVersionId = null;
-        List<DeliveryDocument__c> existing = [
-            SELECT Id, VersionNumber__c
-            FROM DeliveryDocument__c
-            WHERE NetworkEntityId__c = :entityId
-            AND TemplatePk__c = :templateType
-            AND PeriodStartDate__c = :periodStart
-            AND PeriodEndDate__c = :periodEnd
-            AND StatusPk__c != 'Superseded'
-            WITH SYSTEM_MODE
-            ORDER BY VersionNumber__c DESC
-            LIMIT 1
-        ];
+        String versionQuery = 'SELECT Id, VersionNumber__c FROM DeliveryDocument__c'
+            + ' WHERE TemplatePk__c = :templateType'
+            + ' AND PeriodStartDate__c = :periodStart'
+            + ' AND PeriodEndDate__c = :periodEnd'
+            + ' AND StatusPk__c != \'Superseded\''
+            + (entityId != null ? ' AND NetworkEntityId__c = :entityId' : ' AND NetworkEntityId__c = NULL')
+            + ' ORDER BY VersionNumber__c DESC LIMIT 1';
+        List<DeliveryDocument__c> existing = Database.queryWithBinds(
+            versionQuery,
+            new Map<String, Object>{ 'templateType' => templateType, 'periodStart' => periodStart, 'periodEnd' => periodEnd, 'entityId' => entityId },
+            AccessLevel.SYSTEM_MODE
+        );
         if (!existing.isEmpty()) {
             DeliveryDocument__c prev = existing[0];
             Decimal prevVer = prev.VersionNumber__c != null ? prev.VersionNumber__c : 1;

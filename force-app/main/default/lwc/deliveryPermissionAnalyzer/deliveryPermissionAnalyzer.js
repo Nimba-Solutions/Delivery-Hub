@@ -1,8 +1,11 @@
 import { LightningElement, track } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
 import getPermissionAnalysis from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPermissionAnalyzerController.getPermissionAnalysis';
 import getUserDetail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPermissionAnalyzerController.getUserDetail';
+import generateSecurityReport from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPermissionAnalyzerController.generateSecurityReport';
+import generateDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.generateDocument';
 
-export default class DeliveryPermissionAnalyzer extends LightningElement {
+export default class DeliveryPermissionAnalyzer extends NavigationMixin(LightningElement) {
     @track analysis = null;
     @track isLoading = true;
     @track error = null;
@@ -10,6 +13,7 @@ export default class DeliveryPermissionAnalyzer extends LightningElement {
     @track userDetail = null;
     @track isLoadingDetail = false;
     @track viewMode = 'summary';
+    @track isGeneratingReport = false;
 
     connectedCallback() {
         this.loadAnalysis();
@@ -132,5 +136,30 @@ export default class DeliveryPermissionAnalyzer extends LightningElement {
                 hasActivity: d.count > 0
             };
         });
+    }
+
+    async handleGenerateReport() {
+        this.isGeneratingReport = true;
+        this.error = null;
+        try {
+            const reportData = await generateSecurityReport();
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const docId = await generateDocument({
+                entityId: null,
+                templateType: 'Security_Audit',
+                periodStart: thirtyDaysAgo.toISOString().split('T')[0],
+                periodEnd: today.toISOString().split('T')[0],
+                metadata: JSON.stringify(reportData)
+            });
+            this[NavigationMixin.Navigate]({
+                type: 'standard__recordPage',
+                attributes: { recordId: docId, actionName: 'view' }
+            });
+        } catch (err) {
+            this.error = err.body ? err.body.message : err.message;
+        } finally {
+            this.isGeneratingReport = false;
+        }
     }
 }
