@@ -8,6 +8,7 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
+@SuppressWarnings('PMD.ApexDoc')
 private class DeliveryDocQueryServiceTest {
 
     private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
