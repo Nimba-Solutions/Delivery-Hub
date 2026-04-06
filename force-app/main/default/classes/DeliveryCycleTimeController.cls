@@ -5,7 +5,6 @@
  * time data for completed work items and current stage age breakdowns for active items.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 global with sharing class DeliveryCycleTimeController {
 
     /** @description Number of days to look back for completed work items */

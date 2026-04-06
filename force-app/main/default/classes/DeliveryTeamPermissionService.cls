@@ -2,7 +2,6 @@
  * @description Service for team-based visibility and granular portal permissions.
  *              Provides team lookup, permission checking, and default permission mapping.
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryTeamPermissionService {
 
     // Default permissions for each portal role

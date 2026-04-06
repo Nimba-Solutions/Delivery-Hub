@@ -8,7 +8,6 @@
  *               can access the data without record-level restrictions.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 global without sharing class DeliveryStatusPageController {
 
     /** @description Simple wrapper for a completed item shown on the VF page */

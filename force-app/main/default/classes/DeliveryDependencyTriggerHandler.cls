@@ -5,7 +5,7 @@
  *               tracking service for create, update, and delete DML events.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc, PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryDependencyTriggerHandler {
 
     /**

@@ -21,7 +21,6 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      * @param isInsert Boolean indicating insert context
      * @param isUpdate Boolean indicating update context
      */
-    @SuppressWarnings('PMD.ExcessiveParameterList')
     public static void handleAfter(
         List<WorkItem__c> newRows,
         Map<Id, WorkItem__c> oldMap,

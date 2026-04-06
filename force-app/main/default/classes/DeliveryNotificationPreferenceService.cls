@@ -6,7 +6,6 @@
  *               for a given event type. Falls back to enabled (send) when no preference exists.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryNotificationPreferenceService {
 
     /**

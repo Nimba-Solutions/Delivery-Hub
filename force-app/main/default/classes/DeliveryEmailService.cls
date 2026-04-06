@@ -9,7 +9,7 @@
  *               Feature is gated by EnableEmailNotificationsDateTime__c org-level setting.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryEmailService {
 
     @TestVisible
@@ -18,6 +18,12 @@ public with sharing class DeliveryEmailService {
     @TestVisible
     private static String emailServiceDomain = null;
 
+    /**
+     * @description Sends email notifications to work item subscribers when a new comment is posted.
+     * @param workItemId The work item that was commented on
+     * @param commentId The new comment record
+     * @param authorUserId The user who authored the comment (excluded from recipients)
+     */
     @future
     public static void notifyCommentSubscribers(Id workItemId, Id commentId, Id authorUserId) {
         if (!isEnabled()) { return; }
