@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IpAddressTxt__c</fullName>
+    <description>Source IP address captured at the moment of signing. Read from X-Salesforce-SIP header by the REST signing endpoint.</description>
+    <inlineHelpText>IP address of the signer's request, captured at sign time. IPv6 max length 45 chars.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>IP Address</label>
+    <length>45</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

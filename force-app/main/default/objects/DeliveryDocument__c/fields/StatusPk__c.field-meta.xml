@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StatusPk__c</fullName>
     <description>Lifecycle status of this document from creation through payment.</description>
-    <inlineHelpText>Tracks the document through its lifecycle: Draft → Ready → Sent → Viewed → Approved → Paid.</inlineHelpText>
+    <inlineHelpText>Tracks the document through its lifecycle: Draft → Ready → Sent → Viewed → Awaiting Signatures → Approved → Paid.</inlineHelpText>
     <label>Status</label>
     <required>true</required>
     <trackTrending>false</trackTrending>
@@ -15,6 +15,7 @@
             <value><fullName>Ready</fullName><default>false</default><label>Ready</label></value>
             <value><fullName>Sent</fullName><default>false</default><label>Sent</label></value>
             <value><fullName>Viewed</fullName><default>false</default><label>Viewed</label></value>
+            <value><fullName>Awaiting_Signatures</fullName><default>false</default><label>Awaiting Signatures</label></value>
             <value><fullName>Approved</fullName><default>false</default><label>Approved</label></value>
             <value><fullName>Paid</fullName><default>false</default><label>Paid</label></value>
             <value><fullName>Overdue</fullName><default>false</default><label>Overdue</label></value>

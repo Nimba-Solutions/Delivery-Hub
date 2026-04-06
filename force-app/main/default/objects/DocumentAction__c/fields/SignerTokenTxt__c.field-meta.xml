@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SignerTokenTxt__c</fullName>
+    <description>Per-signer access token used to authenticate the signing portal URL. Distinct from the document-level public token so each party gets their own URL.</description>
+    <inlineHelpText>The unique token used to construct this signer's portal URL.</inlineHelpText>
+    <externalId>true</externalId>
+    <label>Signer Token</label>
+    <length>64</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>true</unique>
+    <caseSensitive>true</caseSensitive>
+</CustomField>

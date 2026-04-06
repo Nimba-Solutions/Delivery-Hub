@@ -26,4 +26,12 @@
         <field>WorkflowTypeTxt__c</field>
         <value xsi:nil="true"/>
     </values>
+    <values>
+        <field>RequiresSigningCheckbox__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>ElectronicConsentTextTxt__c</field>
+        <value xsi:type="xsd:string">By checking the box below and clicking Sign, you agree that your electronic signature is the legal equivalent of your manual signature on this agreement. You consent to be legally bound by this agreement's terms and conditions, and you affirm that you have had a reasonable opportunity to review the document before signing. You may withdraw consent and request a paper copy by contacting the issuing party.</value>
+    </values>
 </CustomMetadata>

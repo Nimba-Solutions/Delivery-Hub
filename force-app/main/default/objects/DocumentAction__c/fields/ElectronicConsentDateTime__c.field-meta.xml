@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ElectronicConsentDateTime__c</fullName>
+    <description>The exact moment the signer affirmatively consented to electronic signature. Required for ESIGN Act / UETA compliance.</description>
+    <inlineHelpText>When the signer checked "I agree to sign electronically".</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Electronic Consent Date/Time</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

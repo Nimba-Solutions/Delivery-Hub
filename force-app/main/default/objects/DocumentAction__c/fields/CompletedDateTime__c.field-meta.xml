@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CompletedDateTime__c</fullName>
+    <description>The exact moment this signature slot was actioned.</description>
+    <inlineHelpText>When this slot was signed. Set automatically at sign time.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Completed Date/Time</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

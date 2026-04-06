@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RoleTxt__c</fullName>
+    <description>Role identifier for this slot (e.g., consultant, client, company, contractor). Lowercase, used as a stable key.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Stable role key for this slot. Lowercase identifier.</inlineHelpText>
+    <label>Role</label>
+    <length>80</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
