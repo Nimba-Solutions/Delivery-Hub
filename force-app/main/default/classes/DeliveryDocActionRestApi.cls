@@ -45,7 +45,14 @@ global with sharing class DeliveryDocActionRestApi {
             String signerToken = extractTokenFromUri();
             DeliveryDocActionService.SignContext ctx = parseSignContextFromBody();
             ctx.ipAddress = resolveClientIp();
+            // parseSignContextFromBody may have stuffed a `[portalSession=...]`
+            // marker into ctx.userAgent. Capture it before the header read
+            // overwrites it, then re-append after.
+            String portalSessionMarker = ctx.userAgent;
             ctx.userAgent = readHeader('User-Agent');
+            if (String.isNotBlank(portalSessionMarker)) {
+                ctx.userAgent = (ctx.userAgent != null ? ctx.userAgent : '') + portalSessionMarker;
+            }
             // Default to Text signatures (the legacy behavior) only when the body
             // did not specify otherwise. For Image signatures the bytes were
             // already routed into ctx.drawnSignature by parseSignContextFromBody
