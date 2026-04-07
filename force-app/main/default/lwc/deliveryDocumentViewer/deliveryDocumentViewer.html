@@ -519,23 +519,13 @@
                             </div>
                         </template>
 
-                        <!-- Signature Block (Agreements only) -->
-                        <template lwc:if={isAgreementTemplate}>
-                            <div class="agreement-signatures">
-                                <div class="agreement-signature-block">
-                                    <div class="agreement-signature-line"></div>
-                                    <p class="agreement-signature-label">Authorized Signature</p>
-                                    <div class="agreement-signature-line slds-m-top_large"></div>
-                                    <p class="agreement-signature-label">Date</p>
-                                </div>
-                                <div class="agreement-signature-block">
-                                    <div class="agreement-signature-line"></div>
-                                    <p class="agreement-signature-label">{entityName} - Authorized Signature</p>
-                                    <div class="agreement-signature-line slds-m-top_large"></div>
-                                    <p class="agreement-signature-label">Date</p>
-                                </div>
-                            </div>
-                        </template>
+                        <!-- Signature Block (dynamic, driven by DocumentAction__c slots) -->
+                        <c-delivery-document-signature-block
+                            actions={actions}
+                            requires-signing={requiresSigning}
+                            consent-text={consentText}
+                            onsignsubmit={handleSignSubmit}
+                        ></c-delivery-document-signature-block>
 
                         <!-- Document info footer -->
                         <div class="invoice-footer">

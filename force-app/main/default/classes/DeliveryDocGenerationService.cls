@@ -87,22 +87,27 @@ public with sharing class DeliveryDocGenerationService {
         }
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c     = entityId,
-            TemplatePk__c          = templateType,
-            PeriodStartDate__c     = periodStart,
-            PeriodEndDate__c       = periodEnd,
-            StatusPk__c            = 'Draft',
-            PublicTokenTxt__c      = publicToken,
-            SnapshotTxt__c         = JSON.serialize(snapshot),
-            TotalHoursNumber__c    = calculateTotalHours(snapshot),
-            TotalCurrency__c       = currentCharges,
-            TermsTxt__c            = 'Net 30',
-            MetadataTxt__c         = JSON.serialize(metaMap),
-            VersionNumber__c       = nextVersion,
-            PreviousVersionId__c   = previousVersionId
+            NetworkEntityId__c          = entityId,
+            TemplatePk__c               = templateType,
+            PeriodStartDate__c          = periodStart,
+            PeriodEndDate__c            = periodEnd,
+            StatusPk__c                 = 'Draft',
+            PublicTokenTxt__c           = publicToken,
+            SnapshotTxt__c              = JSON.serialize(snapshot),
+            TotalHoursNumber__c         = calculateTotalHours(snapshot),
+            TotalCurrency__c            = currentCharges,
+            TermsTxt__c                 = 'Net 30',
+            MetadataTxt__c              = JSON.serialize(metaMap),
+            VersionNumber__c            = nextVersion,
+            PreviousVersionId__c        = previousVersionId,
+            RequiresSigningCheckbox__c  = DeliveryDocActionService.templateRequiresSigning(templateType)
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
+
+        // Create signature slots for templates that require signing.
+        // No-op for templates without DocumentTemplateSlot__mdt records configured.
+        DeliveryDocActionService.createSlotsForTemplate(doc.Id, templateType, snapshot);
 
         // Publish platform event for external subscribers
         Map<String, Object> entityMap = (Map<String, Object>) snapshot.get('entity');

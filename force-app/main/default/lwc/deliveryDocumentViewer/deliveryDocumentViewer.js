@@ -21,10 +21,14 @@ import previewDocumentEmail from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDo
 import scheduleDocumentSend from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.scheduleDocumentSend';
 import getPendingInvoices from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getPendingInvoices';
 import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
+import signActionAdmin from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.signActionAdmin';
+import getActionsForDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.getActionsForDocument';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { currency: 'USD', style: 'currency' });
 
 const STATUS_CONFIG = {
+    Approved: { cssClass: 'status-badge status-badge--paid', label: 'Approved' },
+    Awaiting_Signatures: { cssClass: 'status-badge status-badge--sent', label: 'Awaiting Signatures' },
     Disputed: { cssClass: 'status-badge status-badge--disputed', label: 'Disputed' },
     Draft: { cssClass: 'status-badge status-badge--draft', label: 'Draft' },
     Overdue: { cssClass: 'status-badge status-badge--overdue', label: 'Overdue' },
@@ -91,6 +95,11 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track paymentDate = '';
     @track paymentNote = '';
     @track isRecordingPayment = false;
+
+    // Document actioning / signatures (Phase 2)
+    @track actions = [];
+    @track requiresSigning = false;
+    @track consentText = '';
 
     // Template options loaded from DocumentTemplate__mdt
     @track docTemplateOptions = DEFAULT_TEMPLATE_OPTIONS;
@@ -834,6 +843,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.metadata = null;
         this.transactions = [];
         this.totalPaid = 0;
+        this.actions = [];
+        this.requiresSigning = false;
 
         try {
             const result = await getDocumentById({ documentId: docId });
@@ -853,6 +864,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
             };
             this.transactions = result.transactions || [];
             this.totalPaid = result.totalPaid || 0;
+            this.actions = result.actions || [];
+            this.requiresSigning = result.requiresSigning === true;
             if (result.snapshot) {
                 this.snapshot = JSON.parse(result.snapshot);
             }
@@ -867,6 +880,48 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.showToast('Error', this.extractError(err), 'error');
         } finally {
             this.isLoadingPreview = false;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SIGNATURE BLOCK HANDLERS (Phase 2)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Handles the `signsubmit` event from the deliveryDocumentSignatureBlock child LWC.
+     * Calls the admin signing controller and refreshes the actions list. The child LWC
+     * stays in submitting state until we call its completeSubmission(success) API.
+     */
+    async handleSignSubmit(event) {
+        const { actionId, signerName, signerEmail, consentGiven } = event.detail;
+        const childLwc = this.template.querySelector('c-delivery-document-signature-block');
+        try {
+            const result = await signActionAdmin({
+                actionId,
+                signerName,
+                signerEmail,
+                consentGiven
+            });
+            this.showToast('Signed', `${signerName} signed the document.`, 'success');
+
+            // Refresh the actions list from the server so the slot now shows as completed
+            const refreshed = await getActionsForDocument({ documentId: this.previewDoc.id });
+            this.actions = refreshed || [];
+
+            // If the doc status flipped to Approved, update the preview
+            if (result && result.documentStatus) {
+                this.previewDoc = { ...this.previewDoc, status: result.documentStatus };
+                refreshApex(this.wiredDocsResult);
+            }
+
+            if (childLwc) {
+                childLwc.completeSubmission(true);
+            }
+        } catch (err) {
+            this.showToast('Error', this.extractError(err), 'error');
+            if (childLwc) {
+                childLwc.completeSubmission(false);
+            }
         }
     }
 

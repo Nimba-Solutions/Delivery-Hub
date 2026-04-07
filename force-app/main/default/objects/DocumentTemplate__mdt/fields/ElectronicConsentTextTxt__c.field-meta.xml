@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ElectronicConsentTextTxt__c</fullName>
+    <description>Per-template consent disclosure text shown to signers above the consent checkbox. Required for ESIGN Act / UETA compliance. Falls back to a hardcoded default in the LWC if blank.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Disclosure text shown to signers before they consent to electronic signing.</inlineHelpText>
+    <label>Electronic Consent Text</label>
+    <length>4000</length>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>
