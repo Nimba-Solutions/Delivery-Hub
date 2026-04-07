@@ -48,7 +48,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
         // Query parent WorkItem -> ClientNetworkEntity for routing
         Set<Id> workItemIds = new Set<Id>();
         for (BountyClaim__c c : newClaims) {
-            workItemIds.add(c.WorkItemLookup__c);
+            workItemIds.add(c.WorkItemId__c);
         }
 
         Map<Id, WorkItem__c> parentItems = new Map<Id, WorkItem__c>([
@@ -66,7 +66,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
         List<SyncItem__c> syncItems = new List<SyncItem__c>();
 
         for (BountyClaim__c claim : newClaims) {
-            WorkItem__c parent = parentItems.get(claim.WorkItemLookup__c);
+            WorkItem__c parent = parentItems.get(claim.WorkItemId__c);
             if (parent == null || parent.ClientNetworkEntityLookup__c == null) { continue; }
             if (parent.ClientNetworkEntityLookup__r.ConnectionStatusPk__c == 'Pending Approval') { continue; }
 
@@ -77,7 +77,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
             payload.put('SourceId', claim.Id);
             payload.put('SenderOrgId', UserInfo.getOrganizationId());
             payload.put('GlobalSourceId', (String) claim.Id);
-            payload.put('WorkItemLookup__c', claim.WorkItemLookup__c);
+            payload.put('WorkItemId__c', claim.WorkItemId__c);
             for (String field : SYNC_FIELDS) {
                 payload.put(field, claim.get(field));
             }
@@ -87,7 +87,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
                 DirectionPk__c = 'Outbound',
                 ObjectTypePk__c = 'BountyClaim__c',
                 LocalRecordIdTxt__c = (String) claim.Id,
-                WorkItemLookup__c = claim.WorkItemLookup__c,
+                WorkItemLookup__c = claim.WorkItemId__c,
                 GlobalSourceIdTxt__c = (String) claim.Id,
                 PayloadTxt__c = JSON.serialize(payload)
             );

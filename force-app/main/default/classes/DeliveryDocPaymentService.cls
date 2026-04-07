@@ -23,7 +23,7 @@ public with sharing class DeliveryDocPaymentService {
         }
 
         DeliveryTransaction__c txn = new DeliveryTransaction__c(
-            DocumentLookup__c = documentId,
+            DocumentId__c = documentId,
             TypePk__c = 'Payment',
             AmountCurrency__c = amount,
             TransactionDateDate__c = paymentDate,
@@ -61,7 +61,7 @@ public with sharing class DeliveryDocPaymentService {
         List<DeliveryDocument__c> unpaidDocs = [
             SELECT Id, TotalCurrency__c
             FROM DeliveryDocument__c
-            WHERE NetworkEntityLookup__c = :entityId
+            WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
             AND StatusPk__c != 'Superseded'
@@ -95,7 +95,7 @@ public with sharing class DeliveryDocPaymentService {
             SELECT Id, Name, PeriodStartDate__c, PeriodEndDate__c,
                    TotalCurrency__c, StatusPk__c, SentDateTime__c
             FROM DeliveryDocument__c
-            WHERE NetworkEntityLookup__c = :entityId
+            WHERE NetworkEntityId__c = :entityId
             AND TemplatePk__c = 'Invoice'
             AND StatusPk__c != 'Paid'
             AND StatusPk__c != 'Superseded'
@@ -139,11 +139,11 @@ public with sharing class DeliveryDocPaymentService {
     public static Map<Id, Decimal> aggregatePaidByDocument(Set<Id> docIds) {
         Map<Id, Decimal> paidByDoc = new Map<Id, Decimal>();
         for (AggregateResult ar : [
-            SELECT DocumentLookup__c docId, SUM(AmountCurrency__c) totalPaid
+            SELECT DocumentId__c docId, SUM(AmountCurrency__c) totalPaid
             FROM DeliveryTransaction__c
-            WHERE DocumentLookup__c IN :docIds
+            WHERE DocumentId__c IN :docIds
             WITH SYSTEM_MODE
-            GROUP BY DocumentLookup__c
+            GROUP BY DocumentId__c
         ]) {
             Id dId = (Id) ar.get('docId');
             Decimal paid = ar.get('totalPaid') != null ? (Decimal) ar.get('totalPaid') : 0;

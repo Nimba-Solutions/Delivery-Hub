@@ -42,7 +42,7 @@ private class DeliverySyncReconcilerTest {
 
         // 4. Work Request (The downstream bridge)
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemLookup__c = wi.Id,
+            WorkItemId__c = wi.Id,
             DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'Active',
             RemoteWorkItemIdTxt__c = 'REMOTE-RECON-001'
@@ -52,7 +52,7 @@ private class DeliverySyncReconcilerTest {
         // 5. Work Log (child of the Work Item)
         WorkLog__c wl = new WorkLog__c(
             WorkItemLookup__c = wi.Id,
-            RequestLookup__c = req.Id,
+            RequestId__c = req.Id,
             HoursLoggedNumber__c = 2.5,
             WorkDateDate__c = Date.today(),
             WorkDescriptionTxt__c = 'Reconcile test log entry'
@@ -82,7 +82,7 @@ private class DeliverySyncReconcilerTest {
             ];
             System.assertEquals(1, created.size(), 'Reconciler should create exactly one WorkItem SyncItem for the gap.');
             System.assertEquals('Queued', created[0].StatusPk__c, 'Gap SyncItem should be Queued for processing.');
-            System.assertNotEquals(null, created[0].RequestLookup__c, 'Gap SyncItem should be linked to the WorkRequest.');
+            System.assertNotEquals(null, created[0].RequestId__c, 'Gap SyncItem should be linked to the WorkRequest.');
         }
     }
 
@@ -97,7 +97,7 @@ private class DeliverySyncReconcilerTest {
             delete [SELECT Id FROM SyncItem__c];
 
             // Cover ALL WorkRequests (packaging org may auto-create extras)
-            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemLookup__c FROM WorkRequest__c];
+            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c];
             List<WorkLog__c> allWLs = [SELECT Id, WorkItemLookup__c FROM WorkLog__c];
 
             List<SyncItem__c> preCreated = new List<SyncItem__c>();

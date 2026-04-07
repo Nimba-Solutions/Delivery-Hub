@@ -323,7 +323,7 @@ private class DeliveryTaskAPITest {
             WorkItemComment__c comment = [
                 SELECT BodyTxt__c, AuthorTxt__c, SourcePk__c
                 FROM WorkItemComment__c
-                WHERE WorkItemLookup__c = :item.Id
+                WHERE WorkItemId__c = :item.Id
                 LIMIT 1
             ];
             System.assertEquals('This is a comment from the API', comment.BodyTxt__c, 'Comment body should match');
@@ -364,7 +364,7 @@ private class DeliveryTaskAPITest {
 
             WorkItemComment__c comment = [
                 SELECT AuthorTxt__c FROM WorkItemComment__c
-                WHERE WorkItemLookup__c = :item.Id LIMIT 1
+                WHERE WorkItemId__c = :item.Id LIMIT 1
             ];
             System.assertEquals('API', comment.AuthorTxt__c, 'Default author should be API');
         }

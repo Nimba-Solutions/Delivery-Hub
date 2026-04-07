@@ -46,7 +46,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
 
             Test.startTest();
             BountyClaim__c claim = new BountyClaim__c(
-                WorkItemLookup__c = bounty.Id,
+                WorkItemId__c = bounty.Id,
                 ClaimantEmail__c = 'dev@example.com',
                 ClaimantNameTxt__c = 'Test Dev',
                 StatusPk__c = 'Active',
@@ -75,7 +75,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
             WorkItem__c bounty = [SELECT Id FROM WorkItem__c WHERE BountyTokenTxt__c = 'sync-test-token-001'];
 
             BountyClaim__c claim = new BountyClaim__c(
-                WorkItemLookup__c = bounty.Id,
+                WorkItemId__c = bounty.Id,
                 ClaimantEmail__c = 'dev@example.com',
                 ClaimantNameTxt__c = 'Test Dev',
                 StatusPk__c = 'Active',
@@ -125,7 +125,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
 
             Test.startTest();
             BountyClaim__c claim = new BountyClaim__c(
-                WorkItemLookup__c = bounty.Id,
+                WorkItemId__c = bounty.Id,
                 ClaimantEmail__c = 'dev2@example.com',
                 ClaimantNameTxt__c = 'Dev Two',
                 StatusPk__c = 'Active',

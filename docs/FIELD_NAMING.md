@@ -15,7 +15,8 @@ The `*FieldNamingConvention` rules are XPath expressions over the field metadata
 | Date | `Date__c` | `DueDateDate__c` |
 | DateTime | `DateTime__c` | `ActivatedDateTime__c` |
 | Time | `Time__c` | (no instances yet) |
-| Lookup / MasterDetail / Hierarchy | `Lookup__c` | `WorkItemLookup__c` |
+| Lookup / Hierarchy | `Lookup__c` | `WorkItemLookup__c` |
+| MasterDetail | `Id__c` _(forever — see exception below)_ | `WorkItemId__c` |
 | MetadataRelationship | `Mdt__c` | `WorkflowTypeMdt__c` |
 | Percent | `Pct__c` | `BudgetUtilizationPct__c` |
 | Roll-Up Summary | `Sum__c` | `TotalLoggedHoursSum__c` |
@@ -50,6 +51,31 @@ Both use the `Lookup__c` suffix because both are foreign-key relationships. The 
 - You're OK with cascade-delete and record locking on save
 
 Otherwise use Lookup with `<deleteConstraint>SetNull</deleteConstraint>`. **Never use Cascade** unless you have explicit business approval — accidental cascade-deletes are catastrophic and irreversible.
+
+## Why Master-Detail fields use the legacy `*Id__c` suffix
+
+PR #590 (commit `5f0c6c43`) attempted to rename 44 fields — including 7 Master-Detail relationships — to enforce the type-suffix convention package-wide. The Lookup renames worked. **The Master-Detail renames did not.** They blocked production installs.
+
+**The Salesforce limitation:** Master-Detail relationship fields cannot be renamed via package upgrade. The platform refuses to delete the old MD field while child records still reference it, and refuses to create the new MD field while the old one still exists. There is no in-place rename operation for MD fields. The only "fix" is to delete every child record, then upgrade — which is not an option for production data.
+
+**The 8 Master-Detail fields all use the `*Id__c` legacy pattern for consistency:**
+
+| Object | Field |
+|---|---|
+| `BountyClaim__c` | `WorkItemId__c` |
+| `DeliveryDocument__c` | `NetworkEntityId__c` |
+| `DeliveryTransaction__c` | `DocumentId__c` |
+| `DocumentAction__c` | `DocumentId__c` |
+| `PortalAccess__c` | `NetworkEntityId__c` |
+| `WorkItemComment__c` | `WorkItemId__c` |
+| `WorkLog__c` | `RequestId__c` |
+| `WorkRequest__c` | `WorkItemId__c` |
+
+These field names are immutable. Do not attempt to rename them. The local PMD ruleset's `MasterDetailFieldNamingConvention` rule has been disabled (see `category/xml/default.xml`) so the build no longer flags them as violations.
+
+**New Master-Detail fields must use the `*Id__c` suffix from day one.** Since renames are forever forbidden, the only safe convention is the same one already in use. Do not introduce a new suffix variant — pick `*Id__c` and stick with it.
+
+Lookup fields (non-MD) still enforce the `*Lookup__c` suffix via `LookupFieldNamingConvention`, since Lookup fields **can** be renamed via package upgrade (Salesforce permits Lookup deletion + recreation in a single transaction).
 
 ## How references work after rename
 

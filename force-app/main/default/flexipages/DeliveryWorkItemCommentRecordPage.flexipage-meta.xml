@@ -42,7 +42,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.WorkItemLookup__c</fieldItem>
+                <fieldItem>Record.WorkItemId__c</fieldItem>
                 <identifier>RecordWorkItemId_cField</identifier>
             </fieldInstance>
         </itemInstances>

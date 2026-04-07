@@ -23,20 +23,20 @@ private class DeliveryTeamPermissionServiceTest {
         List<PortalAccess__c> accessRecords = new List<PortalAccess__c>{
             // Admin with no granular overrides — should use role defaults
             new PortalAccess__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 EmailTxt__c = 'admin@example.com',
                 RolePk__c = 'Admin'
             ),
             // Member with granular permissions override
             new PortalAccess__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 EmailTxt__c = 'member-custom@example.com',
                 RolePk__c = 'Member',
                 PermissionsTxt__c = '["view_work_items","approve_work_logs"]'
             ),
             // Member with no overrides — should use role defaults
             new PortalAccess__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 EmailTxt__c = 'member@example.com',
                 RolePk__c = 'Member'
             )

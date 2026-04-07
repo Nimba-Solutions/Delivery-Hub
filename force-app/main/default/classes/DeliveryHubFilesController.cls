@@ -31,7 +31,7 @@ global with sharing class DeliveryHubFilesController {
 
         List<WorkItemComment__c> comments = [
             SELECT Id FROM WorkItemComment__c
-            WHERE WorkItemLookup__c = :workItemId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
         ];
         for (WorkItemComment__c c : comments) {
@@ -40,7 +40,7 @@ global with sharing class DeliveryHubFilesController {
 
         List<WorkRequest__c> requests = [
             SELECT Id FROM WorkRequest__c
-            WHERE WorkItemLookup__c = :workItemId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
         ];
         for (WorkRequest__c r : requests) {

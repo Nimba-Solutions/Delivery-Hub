@@ -109,7 +109,7 @@ global with sharing class DeliveryClientOnboardingController {
     private static PortalAccess__c provisionPortalAccess(Id entityId, String email, String role) {
         String token = EncodingUtil.convertToHex(Crypto.generateAesKey(128));
         PortalAccess__c pa = new PortalAccess__c(
-            NetworkEntityLookup__c = entityId,
+            NetworkEntityId__c = entityId,
             EmailTxt__c = email,
             RolePk__c = String.isNotBlank(role) ? role : 'Member',
             AccessTokenTxt__c = token

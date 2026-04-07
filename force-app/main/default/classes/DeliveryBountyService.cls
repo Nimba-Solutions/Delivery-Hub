@@ -129,7 +129,7 @@ public without sharing class DeliveryBountyService {
         validateClaimEligibility(bounty, claimantEmail);
 
         BountyClaim__c claim = new BountyClaim__c(
-            WorkItemLookup__c = bounty.Id,
+            WorkItemId__c = bounty.Id,
             ClaimantEmail__c = claimantEmail,
             ClaimantNameTxt__c = claimantName,
             NoteTxt__c = note,
@@ -152,7 +152,7 @@ public without sharing class DeliveryBountyService {
         // Update bounty status if max claims reached
         Integer activeClaims = [
             SELECT COUNT() FROM BountyClaim__c
-            WHERE WorkItemLookup__c = :bounty.Id
+            WHERE WorkItemId__c = :bounty.Id
                 AND StatusPk__c IN ('Active', 'Submitted', 'Under Review')
             WITH SYSTEM_MODE
         ];
@@ -180,7 +180,7 @@ public without sharing class DeliveryBountyService {
 
         List<BountyClaim__c> claims = [
             SELECT Id, StatusPk__c FROM BountyClaim__c
-            WHERE WorkItemLookup__c = :bounty.Id
+            WHERE WorkItemId__c = :bounty.Id
                 AND ClaimantEmail__c = :claimantEmail
                 AND StatusPk__c = 'Active'
             WITH SYSTEM_MODE
@@ -213,7 +213,7 @@ public without sharing class DeliveryBountyService {
 
         List<BountyClaim__c> claims = [
             SELECT Id, StatusPk__c FROM BountyClaim__c
-            WHERE WorkItemLookup__c = :bounty.Id
+            WHERE WorkItemId__c = :bounty.Id
                 AND ClaimantEmail__c = :claimantEmail
                 AND StatusPk__c = 'Active'
             WITH SYSTEM_MODE
@@ -272,7 +272,7 @@ public without sharing class DeliveryBountyService {
         // Check for duplicate claim
         Integer existingClaims = [
             SELECT COUNT() FROM BountyClaim__c
-            WHERE WorkItemLookup__c = :bounty.Id
+            WHERE WorkItemId__c = :bounty.Id
                 AND ClaimantEmail__c = :claimantEmail
                 AND StatusPk__c IN ('Active', 'Submitted', 'Under Review')
             WITH SYSTEM_MODE
@@ -285,7 +285,7 @@ public without sharing class DeliveryBountyService {
         if (bounty.BountyMaxClaimsNumber__c != null) {
             Integer activeClaims = [
                 SELECT COUNT() FROM BountyClaim__c
-                WHERE WorkItemLookup__c = :bounty.Id
+                WHERE WorkItemId__c = :bounty.Id
                     AND StatusPk__c IN ('Active', 'Submitted', 'Under Review')
                 WITH SYSTEM_MODE
             ];

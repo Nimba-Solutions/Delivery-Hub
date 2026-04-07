@@ -36,7 +36,7 @@ global with sharing class DeliveryWorkItemQuotesController {
                    ProjectedCostCurrency__c, PreApprovedHoursNumber__c,
                    StatusPk__c, WorkProofUrl__c
             FROM WorkRequest__c
-            WHERE WorkItemLookup__c = :workItemId
+            WHERE WorkItemId__c = :workItemId
             AND QuotedHoursNumber__c != null
             WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
@@ -68,7 +68,7 @@ global with sharing class DeliveryWorkItemQuotesController {
         List<WorkRequest__c> allRequests = [
             SELECT Id, StatusPk__c
             FROM WorkRequest__c
-            WHERE WorkItemLookup__c = :workItemId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
         ];
         List<WorkRequest__c> toUpdate = new List<WorkRequest__c>();

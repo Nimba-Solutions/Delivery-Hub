@@ -195,6 +195,32 @@
         </properties>
     </rule>
 
+    <!--
+        MasterDetailFieldNamingConvention DISABLED.
+
+        Salesforce package upgrades cannot rename Master-Detail relationship fields
+        once they exist on subscriber orgs (the old field cannot be deleted while
+        child records exist, and the new field cannot be created in conflict).
+        All 8 MD fields use the legacy `*Id__c` pattern for cross-object consistency
+        and remain immutable forever:
+
+          - BountyClaim__c.WorkItemId__c
+          - DeliveryDocument__c.NetworkEntityId__c
+          - DeliveryTransaction__c.DocumentId__c
+          - DocumentAction__c.DocumentId__c
+          - PortalAccess__c.NetworkEntityId__c
+          - WorkItemComment__c.WorkItemId__c
+          - WorkLog__c.RequestId__c
+          - WorkRequest__c.WorkItemId__c
+
+        New MD fields must also use the `*Id__c` suffix from day one — since renames
+        are forever forbidden, the only safe convention is the one already in use.
+        See docs/FIELD_NAMING.md for the full rationale.
+
+        Lookup fields (non-MD) still enforce *Lookup__c via LookupFieldNamingConvention
+        above.
+    -->
+    <!--
     <rule name="MasterDetailFieldNamingConvention" language="xml" message="MasterDetail fields must follow pattern: PascalCaseLookup__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
         <priority>2</priority>
         <properties>
@@ -208,6 +234,8 @@
             </property>
         </properties>
     </rule>
+    -->
+
 
     <rule name="DateTimeFieldNamingConvention" language="xml" message="DateTime fields must follow pattern: PascalCaseDateTime__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
         <priority>2</priority>

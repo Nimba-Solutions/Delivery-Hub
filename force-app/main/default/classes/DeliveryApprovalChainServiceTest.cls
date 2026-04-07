@@ -28,14 +28,14 @@ private class DeliveryApprovalChainServiceTest {
         insert item;
 
         WorkRequest__c request = new WorkRequest__c(
-            WorkItemLookup__c = item.Id,
+            WorkItemId__c = item.Id,
             DeliveryEntityLookup__c = entity.Id,
             StatusPk__c = 'Accepted'
         );
         insert request;
 
         WorkLog__c log = new WorkLog__c(
-            RequestLookup__c = request.Id,
+            RequestId__c = request.Id,
             WorkItemLookup__c = item.Id,
             HoursLoggedNumber__c = 2,
             WorkDateDate__c = Date.today(),

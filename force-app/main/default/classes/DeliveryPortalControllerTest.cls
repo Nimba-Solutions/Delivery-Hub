@@ -69,13 +69,13 @@ private class DeliveryPortalControllerTest {
 
         // Add comments to the first item
         WorkItemComment__c c1 = new WorkItemComment__c(
-            WorkItemLookup__c = items[0].Id,
+            WorkItemId__c = items[0].Id,
             BodyTxt__c = 'First comment on active item 1',
             AuthorTxt__c = 'Developer',
             SourcePk__c = 'Salesforce'
         );
         WorkItemComment__c c2 = new WorkItemComment__c(
-            WorkItemLookup__c = items[0].Id,
+            WorkItemId__c = items[0].Id,
             BodyTxt__c = 'Second comment',
             AuthorTxt__c = 'Client User',
             SourcePk__c = 'Client'

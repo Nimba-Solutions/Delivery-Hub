@@ -26,7 +26,7 @@ private class DeliveryDocActionServiceTest {
         insert entity;
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityLookup__c = entity.Id,
+            NetworkEntityId__c = entity.Id,
             TemplatePk__c = 'Client_Agreement',
             PeriodStartDate__c = Date.newInstance(2026, 1, 1),
             PeriodEndDate__c = Date.newInstance(2026, 1, 31),
@@ -41,7 +41,7 @@ private class DeliveryDocActionServiceTest {
 
     private static DeliveryDocument__c getDoc() {
         return [
-            SELECT Id, NetworkEntityLookup__c, TemplatePk__c, RequireSigningDateTime__c
+            SELECT Id, NetworkEntityId__c, TemplatePk__c, RequireSigningDateTime__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = 'aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44'
             LIMIT 1
@@ -117,7 +117,7 @@ private class DeliveryDocActionServiceTest {
         System.runAs(testUser) {
             DeliveryDocument__c doc = getDoc();
             Map<String, Object> snapshot = new Map<String, Object>{
-                'entity' => new Map<String, Object>{ 'id' => doc.NetworkEntityLookup__c }
+                'entity' => new Map<String, Object>{ 'id' => doc.NetworkEntityId__c }
             };
 
             Test.startTest();

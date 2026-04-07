@@ -314,7 +314,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         const fields = {
-            '%%%NAMESPACED_ORG%%%WorkItemLookup__c': workItemId,
+            '%%%NAMESPACED_ORG%%%WorkItemId__c': workItemId,
             '%%%NAMESPACED_ORG%%%BodyTxt__c': this.moveComment,
             '%%%NAMESPACED_ORG%%%SourcePk__c': 'Salesforce',
             '%%%NAMESPACED_ORG%%%AuthorTxt__c': this.currentUserName 

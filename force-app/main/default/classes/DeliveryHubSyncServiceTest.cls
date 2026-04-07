@@ -42,7 +42,7 @@ private class DeliveryHubSyncServiceTest {
 
         // 4. Create Request (The Ledger bridge linking Work Item to Remote ID)
         insert new WorkRequest__c(
-            WorkItemLookup__c = t.Id,
+            WorkItemId__c = t.Id,
             DeliveryEntityLookup__c = vendor.Id,
             RemoteWorkItemIdTxt__c = 'REMOTE-WORKITEM-123',
             StatusPk__c = 'Active'

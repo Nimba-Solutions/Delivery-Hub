@@ -96,14 +96,14 @@ public with sharing class DeliveryEscalationRuleEvaluator {
                 candidateCreators.put(wi.Id, wi.CreatedById);
             }
             for (WorkItemComment__c c : [
-                SELECT WorkItemLookup__c, CreatedById
+                SELECT WorkItemId__c, CreatedById
                 FROM WorkItemComment__c
-                WHERE WorkItemLookup__c IN :candidateCreators.keySet()
+                WHERE WorkItemId__c IN :candidateCreators.keySet()
                 WITH SYSTEM_MODE
             ]) {
-                Id creator = candidateCreators.get(c.WorkItemLookup__c);
+                Id creator = candidateCreators.get(c.WorkItemId__c);
                 if (creator != null && c.CreatedById != creator) {
-                    workItemsWithResponse.add(c.WorkItemLookup__c);
+                    workItemsWithResponse.add(c.WorkItemId__c);
                 }
             }
         }

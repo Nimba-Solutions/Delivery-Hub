@@ -19,7 +19,7 @@ private class DeliveryHubCommentControllerTest {
         insert t;
 
         insert new WorkItemComment__c(
-            WorkItemLookup__c = t.Id,
+            WorkItemId__c = t.Id,
             BodyTxt__c = 'First Comment',
             AuthorTxt__c = 'Test User'
         );
@@ -43,7 +43,7 @@ private class DeliveryHubCommentControllerTest {
             Test.startTest();
             DeliveryHubCommentController.postLiveComment(t.Id, 'New Reply');
             Test.stopTest();
-            List<WorkItemComment__c> comments = [SELECT Id FROM WorkItemComment__c WHERE WorkItemLookup__c = :t.Id];
+            List<WorkItemComment__c> comments = [SELECT Id FROM WorkItemComment__c WHERE WorkItemId__c = :t.Id];
             System.assertEquals(2, comments.size());
         }
     }
@@ -52,7 +52,7 @@ private class DeliveryHubCommentControllerTest {
     static void testGetCommentFiles() {
         System.runAs(testUser) {
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
-            WorkItemComment__c comment = [SELECT Id FROM WorkItemComment__c WHERE WorkItemLookup__c = :t.Id LIMIT 1];
+            WorkItemComment__c comment = [SELECT Id FROM WorkItemComment__c WHERE WorkItemId__c = :t.Id LIMIT 1];
 
             ContentVersion cv = new ContentVersion(
                 Title = 'Chat Attachment',

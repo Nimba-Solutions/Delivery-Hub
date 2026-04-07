@@ -51,7 +51,7 @@ public without sharing class DeliverySyncItemIngestor {
         if (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             WorkRequest__c bridge = findWorkItemBridge(sourceId);
             if (bridge != null) {
-                localRecordId = bridge.WorkItemLookup__c;
+                localRecordId = bridge.WorkItemId__c;
                 localRequestId = bridge.Id;
             }
         }
@@ -83,8 +83,8 @@ public without sharing class DeliverySyncItemIngestor {
             // Always strip remote lookup IDs — they are invalid cross-org references
             payload.remove('WorkItemLookup__c');
             payload.remove('delivery__WorkItemLookup__c');
-            payload.remove('RequestLookup__c');
-            payload.remove('delivery__RequestLookup__c');
+            payload.remove('RequestId__c');
+            payload.remove('delivery__RequestId__c');
         }
 
         Id localParentId = null;
@@ -93,7 +93,7 @@ public without sharing class DeliverySyncItemIngestor {
             // 1. Try to find parent via Request Bridge (Downstream Origin)
             WorkRequest__c parentBridge = findWorkItemBridge(parentWorkItemRef);
             if (parentBridge != null) {
-                localParentId = parentBridge.WorkItemLookup__c;
+                localParentId = parentBridge.WorkItemId__c;
                 localRequestId = parentBridge.Id;
             }
 
@@ -118,7 +118,7 @@ public without sharing class DeliverySyncItemIngestor {
             }
 
             if (localParentId != null && objectType.containsIgnoreCase('WorkItemComment__c')) {
-                putSafe(recordToUpsert, 'WorkItemLookup__c', localParentId);
+                putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
             }
             if (objectType.endsWithIgnoreCase('WorkLog__c')) {
                 if (localParentId == null) {
@@ -128,11 +128,11 @@ public without sharing class DeliverySyncItemIngestor {
                 // Find a local WorkRequest for the Master-Detail parent
                 List<WorkRequest__c> localRequests = [
                     SELECT Id FROM WorkRequest__c
-                    WHERE WorkItemLookup__c = :localParentId
+                    WHERE WorkItemId__c = :localParentId
                     WITH SYSTEM_MODE LIMIT 1
                 ];
                 if (!localRequests.isEmpty()) {
-                    putSafe(recordToUpsert, 'RequestLookup__c', localRequests[0].Id);
+                    putSafe(recordToUpsert, 'RequestId__c', localRequests[0].Id);
                 }
             }
         }
@@ -259,7 +259,7 @@ public without sharing class DeliverySyncItemIngestor {
 
     // Helper to grab both the Work Item ID and the Request ID
     private static WorkRequest__c findWorkItemBridge(String remoteWorkItemId) {
-        List<WorkRequest__c> reqs = [SELECT Id, WorkItemLookup__c FROM WorkRequest__c WHERE RemoteWorkItemIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
+        List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteWorkItemIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
         return reqs.isEmpty() ? null : reqs[0];
     }
 

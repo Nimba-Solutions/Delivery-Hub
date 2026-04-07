@@ -29,7 +29,7 @@ private class DeliveryContentDocLinkTriggerHandlerTest {
             insert workItem;
 
             WorkRequest__c req = new WorkRequest__c(
-                WorkItemLookup__c = workItem.Id,
+                WorkItemId__c = workItem.Id,
                 DeliveryEntityLookup__c = vendor.Id,
                 RemoteWorkItemIdTxt__c = 'REMOTE-123',
                 StatusPk__c = 'Open'
