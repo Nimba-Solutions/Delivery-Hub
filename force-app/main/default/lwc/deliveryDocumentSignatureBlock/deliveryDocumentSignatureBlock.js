@@ -20,6 +20,10 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     // Inverted boolean per CLAUDE.md (LWC1503: @api booleans can't default to true)
     @api signingDisabled = false;
     @api title = 'Signatures';
+    // Admin context: when true, render a "Copy Signer Link" button next to each
+    // pending slot so admins can grab the per-signer URL without dropping into
+    // a SOQL console. Default off — guest portal contexts won't show it.
+    @api adminContext = false;
 
     // Modal state
     @track showSignModal = false;
@@ -45,7 +49,8 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
             slotClass: a.isCompleted
                 ? 'signature-slot signature-slot--completed'
                 : 'signature-slot signature-slot--pending',
-            showSignButton: !a.isCompleted && !this.signingDisabled
+            showSignButton: !a.isCompleted && !this.signingDisabled,
+            showCopyLink: !a.isCompleted && this.adminContext && !!a.signerToken
         }));
     }
 
@@ -69,6 +74,29 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         this.formConsent = false;
         this.isSubmitting = false;
         this.showSignModal = true;
+    }
+
+    /**
+     * @description Dispatches a `copylinkrequest` event with the action id, label,
+     *              and signer token. Parent component is responsible for building
+     *              the actual URL (which depends on the host's Site / Experience
+     *              Cloud setup) and copying it to the clipboard.
+     */
+    handleCopyLinkClick(event) {
+        const actionId = event.currentTarget.dataset.actionId;
+        const action = (this.actions || []).find((a) => a.id === actionId);
+        if (!action || !action.signerToken) {
+            return;
+        }
+        this.dispatchEvent(
+            new CustomEvent('copylinkrequest', {
+                detail: {
+                    actionId: action.id,
+                    actionLabel: action.label,
+                    signerToken: action.signerToken
+                }
+            })
+        );
     }
 
     handleNameChange(event) {
