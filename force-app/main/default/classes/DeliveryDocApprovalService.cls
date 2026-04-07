@@ -13,12 +13,21 @@ public with sharing class DeliveryDocApprovalService {
      *              Sets status to Approved, creates an Approval transaction,
      *              and logs a Document_Action activity entry.
      *              Only documents in Sent or Viewed status can be approved.
+     *              When the document requires signing, this method short-circuits:
+     *              instead of setting Approved, it transitions to Awaiting_Signatures
+     *              so the actual approval is driven by signature completion. This
+     *              prevents the legacy "Approve" button on the public viewer from
+     *              bypassing the signing flow.
      * @param publicToken The 64-char hex public access token.
      * @return Map with document id and new status.
      */
     public static Map<String, Object> approveDocumentByToken(String publicToken) {
         DeliveryDocument__c doc = queryDocumentByToken(publicToken);
         validateApprovableStatus(doc);
+
+        if (doc.RequiresSigningCheckbox__c == true) {
+            return shortCircuitToAwaitingSignatures(doc);
+        }
 
         doc.StatusPk__c = 'Approved';
         Database.update(doc, AccessLevel.SYSTEM_MODE);
@@ -37,6 +46,27 @@ public with sharing class DeliveryDocApprovalService {
         return new Map<String, Object>{
             'id'     => doc.Id,
             'status' => 'Approved'
+        };
+    }
+
+    /**
+     * @description When a sign-required document is "approved" via the legacy public
+     *              flow, transition it to Awaiting_Signatures instead so the actual
+     *              approval comes from signature completion. Logs the transition for
+     *              auditability.
+     * @param doc The document to short-circuit.
+     * @return Map with id, status, requiresSigning flag.
+     */
+    private static Map<String, Object> shortCircuitToAwaitingSignatures(DeliveryDocument__c doc) {
+        if (doc.StatusPk__c != 'Awaiting_Signatures') {
+            doc.StatusPk__c = 'Awaiting_Signatures';
+            Database.update(doc, AccessLevel.SYSTEM_MODE);
+            logDocumentAction(doc.Id, 'awaiting_signatures', null);
+        }
+        return new Map<String, Object>{
+            'id'              => doc.Id,
+            'status'          => 'Awaiting_Signatures',
+            'requiresSigning' => true
         };
     }
 
@@ -77,7 +107,7 @@ public with sharing class DeliveryDocApprovalService {
         }
         List<DeliveryDocument__c> docs = [
             SELECT Id, StatusPk__c, TotalCurrency__c, NetworkEntityId__c,
-                   TemplatePk__c, NetworkEntityId__r.Name
+                   TemplatePk__c, NetworkEntityId__r.Name, RequiresSigningCheckbox__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = :publicToken
             WITH SYSTEM_MODE
@@ -95,7 +125,7 @@ public with sharing class DeliveryDocApprovalService {
      */
     @TestVisible
     public static void validateApprovableStatus(DeliveryDocument__c doc) {
-        Set<String> approvable = new Set<String>{ 'Sent', 'Viewed' };
+        Set<String> approvable = new Set<String>{ 'Sent', 'Viewed', 'Awaiting_Signatures' };
         if (!approvable.contains(doc.StatusPk__c)) {
             throw new AuraHandledException(
                 'Document cannot be approved or disputed in its current status: ' + doc.StatusPk__c
