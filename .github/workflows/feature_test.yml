@@ -13,7 +13,11 @@ on:
 
 jobs:
   feature-test:
-    if: startsWith(github.head_ref, 'feature/')
+    # Run scratch-org Apex tests on every PR targeting main or feature/**.
+    # Previous head_ref filter (`startsWith(github.head_ref, 'feature/')`)
+    # silently skipped this job on any branch prefixed `fix/`, `feat/`,
+    # `refactor/`, `chore/`, `test/`, etc. — meaning Apex changes could merge
+    # without ever running real tests in a scratch org. Removed 2026-04-06.
     uses: nimba-actions/standard-workflows/.github/workflows/feature-namespaced.yml@main
     secrets:
       dev-hub-auth-url: ${{ secrets.DEV_HUB_AUTH_URL }}
