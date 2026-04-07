@@ -425,6 +425,14 @@ export default class DeliveryDocumentViewer extends LightningElement {
         return Boolean(this.previewDoc?.publicToken);
     }
 
+    // Hard-coded true so the child signature block renders the per-slot
+    // "Copy Signer Link" button. The viewer only ever runs in admin context;
+    // the public portal mounts its own LWC. Wrapped in a getter because
+    // @api booleans can't default to true (LWC1503).
+    get adminContextTrue() {
+        return true;
+    }
+
     get hasTransactions() {
         return this.transactions && this.transactions.length > 0;
     }
@@ -808,18 +816,45 @@ export default class DeliveryDocumentViewer extends LightningElement {
         }
         const baseUrl = window.location.origin;
         const publicUrl = `${baseUrl}/apex/${this.vfPrefix}DeliveryDocumentPdf?token=${this.previewDoc.publicToken}`;
-        // LockerService blocks navigator.clipboard — use hidden textarea fallback
+        this.copyTextWithFallback(publicUrl, 'Public document link copied to clipboard.');
+    }
+
+    /**
+     * Handles the `copylinkrequest` event from the deliveryDocumentSignatureBlock
+     * child LWC. Builds the per-signer URL from the host origin and copies it
+     * via the same textarea fallback used for the public document link
+     * (LockerService blocks navigator.clipboard).
+     */
+    handleCopySignerLink(event) {
+        const { signerToken, actionLabel } = event.detail || {};
+        if (!signerToken) {
+            return;
+        }
+        const baseUrl = window.location.origin;
+        const signerUrl = `${baseUrl}/apex/${this.vfPrefix}DeliveryDocumentPdf?signer=${signerToken}`;
+        const message = actionLabel
+            ? `Signer link for "${actionLabel}" copied to clipboard.`
+            : 'Signer link copied to clipboard.';
+        this.copyTextWithFallback(signerUrl, message);
+    }
+
+    /**
+     * Shared clipboard helper. LockerService blocks navigator.clipboard so we
+     * fall back to a hidden textarea + execCommand('copy'). On any failure
+     * we surface the URL via window.prompt so the user can still grab it.
+     */
+    copyTextWithFallback(text, successMessage) {
         const textarea = document.createElement('textarea');
-        textarea.value = publicUrl;
+        textarea.value = text;
         textarea.style.position = 'fixed';
         textarea.style.opacity = '0';
         document.body.appendChild(textarea);
         textarea.select();
         try {
             document.execCommand('copy');
-            this.showToast('Copied', 'Public document link copied to clipboard.', 'success');
-        } catch (err) {
-            window.prompt('Copy this link:', publicUrl); // eslint-disable-line no-alert
+            this.showToast('Copied', successMessage, 'success');
+        } catch (err) { // eslint-disable-line no-unused-vars
+            window.prompt('Copy this link:', text); // eslint-disable-line no-alert
         } finally {
             document.body.removeChild(textarea);
         }
