@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DocumentId__c</fullName>
+    <description>The parent document this signature slot belongs to. Master-detail with reparenting disabled for tamper evidence.</description>
+    <inlineHelpText>The document this signature slot is part of.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Document</label>
+    <referenceTo>DeliveryDocument__c</referenceTo>
+    <relationshipLabel>Document Actions</relationshipLabel>
+    <relationshipName>DocumentActions</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

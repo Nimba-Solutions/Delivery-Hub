@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DocumentHashTxt__c</fullName>
+    <description>SHA-256 hash of the snapshot at generation time. Used as the anchor of the tamper-evidence chain. Wired in Phase 4; field added in Phase 1 to allow backfill.</description>
+    <inlineHelpText>SHA-256 of the frozen snapshot. Establishes tamper evidence at generation time.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Document Hash</label>
+    <length>64</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

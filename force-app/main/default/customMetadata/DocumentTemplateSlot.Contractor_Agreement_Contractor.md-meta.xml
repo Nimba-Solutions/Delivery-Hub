@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Contractor Agreement — Contractor</label>
+    <protected>false</protected>
+    <values>
+        <field>TemplateTypeTxt__c</field>
+        <value xsi:type="xsd:string">Contractor_Agreement</value>
+    </values>
+    <values>
+        <field>ActionLabelTxt__c</field>
+        <value xsi:type="xsd:string">Sign as Contractor</value>
+    </values>
+    <values>
+        <field>RoleTxt__c</field>
+        <value xsi:type="xsd:string">contractor</value>
+    </values>
+    <values>
+        <field>SortOrderNumber__c</field>
+        <value xsi:type="xsd:double">2</value>
+    </values>
+    <values>
+        <field>AutoAssignTxt__c</field>
+        <value xsi:type="xsd:string">customer</value>
+    </values>
+</CustomMetadata>

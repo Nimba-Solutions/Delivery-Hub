@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StatusPk__c</fullName>
+    <description>Lifecycle status of this signature slot.</description>
+    <inlineHelpText>Pending until actioned. Completed when signed. Voided if cancelled.</inlineHelpText>
+    <label>Status</label>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>Pending</fullName><default>true</default><label>Pending</label></value>
+            <value><fullName>Completed</fullName><default>false</default><label>Completed</label></value>
+            <value><fullName>Voided</fullName><default>false</default><label>Voided</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
