@@ -17,8 +17,8 @@ public with sharing class DeliveryDocQueryService {
      */
     public static Map<String, Object> getDocumentByToken(String publicToken) {
         List<DeliveryDocument__c> docs = [
-            SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__c,
-                   NetworkEntityLookup__r.Name, NetworkEntityLookup__r.DefaultHourlyRateCurrency__c,
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__c,
+                   NetworkEntityId__r.Name, NetworkEntityId__r.DefaultHourlyRateCurrency__c,
                    PeriodStartDate__c, PeriodEndDate__c,
                    StatusPk__c, PublicTokenTxt__c,
                    AiNarrativeTxt__c, SnapshotTxt__c,
@@ -62,8 +62,8 @@ public with sharing class DeliveryDocQueryService {
      */
     public static Map<String, Object> getDocumentById(Id documentId) {
         List<DeliveryDocument__c> docs = [
-            SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__c,
-                   NetworkEntityLookup__r.Name, NetworkEntityLookup__r.DefaultHourlyRateCurrency__c,
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__c,
+                   NetworkEntityId__r.Name, NetworkEntityId__r.DefaultHourlyRateCurrency__c,
                    PeriodStartDate__c, PeriodEndDate__c,
                    StatusPk__c, PublicTokenTxt__c,
                    AiNarrativeTxt__c, SnapshotTxt__c,
@@ -96,10 +96,10 @@ public with sharing class DeliveryDocQueryService {
 
         String query = 'SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c, '
             + 'StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, CreatedDate, '
-            + 'NetworkEntityLookup__r.Name, VersionNumber__c, PreviousVersionLookup__c '
+            + 'NetworkEntityId__r.Name, VersionNumber__c, PreviousVersionLookup__c '
             + 'FROM DeliveryDocument__c ';
         if (entityId != null) {
-            query += 'WHERE NetworkEntityLookup__c = :entityId ';
+            query += 'WHERE NetworkEntityId__c = :entityId ';
         }
         query += 'ORDER BY CreatedDate DESC LIMIT 100';
 
@@ -108,7 +108,7 @@ public with sharing class DeliveryDocQueryService {
             item.put('id', doc.Id);
             item.put('name', doc.Name);
             item.put('template', doc.TemplatePk__c);
-            item.put('entityName', doc.NetworkEntityLookup__r.Name);
+            item.put('entityName', doc.NetworkEntityId__r.Name);
             item.put('periodStart', doc.PeriodStartDate__c);
             item.put('periodEnd', doc.PeriodEndDate__c);
             item.put('status', doc.StatusPk__c);
@@ -131,7 +131,7 @@ public with sharing class DeliveryDocQueryService {
     public static Map<String, Object> getPendingInvoices() {
         List<DeliveryDocument__c> drafts = [
             SELECT Id, Name, TemplatePk__c, PeriodStartDate__c, PeriodEndDate__c,
-                   TotalCurrency__c, NetworkEntityLookup__r.Name
+                   TotalCurrency__c, NetworkEntityId__r.Name
             FROM DeliveryDocument__c
             WHERE StatusPk__c = 'Draft'
             AND TemplatePk__c IN ('Invoice', 'Daily_Hours_Summary')
@@ -146,7 +146,7 @@ public with sharing class DeliveryDocQueryService {
             summary.put('id', doc.Id);
             summary.put('name', doc.Name);
             summary.put('templateType', doc.TemplatePk__c);
-            summary.put('entityName', doc.NetworkEntityLookup__r.Name);
+            summary.put('entityName', doc.NetworkEntityId__r.Name);
             summary.put('periodStart', String.valueOf(doc.PeriodStartDate__c));
             summary.put('periodEnd', String.valueOf(doc.PeriodEndDate__c));
             summary.put('total', doc.TotalCurrency__c);
@@ -192,7 +192,7 @@ public with sharing class DeliveryDocQueryService {
             SELECT Id, Name, TypePk__c, AmountCurrency__c,
                    TransactionDateDate__c, NoteTxt__c, MethodPk__c, CreatedDate
             FROM DeliveryTransaction__c
-            WHERE DocumentLookup__c = :docId
+            WHERE DocumentId__c = :docId
             WITH SYSTEM_MODE
             ORDER BY TransactionDateDate__c ASC, CreatedDate ASC
         ]) {
@@ -232,7 +232,7 @@ public with sharing class DeliveryDocQueryService {
         AggregateResult[] results = [
             SELECT SUM(AmountCurrency__c) totalPaid
             FROM DeliveryTransaction__c
-            WHERE DocumentLookup__c = :docId
+            WHERE DocumentId__c = :docId
             WITH SYSTEM_MODE
         ];
         Object val = results[0].get('totalPaid');
@@ -256,9 +256,9 @@ public with sharing class DeliveryDocQueryService {
         result.put('id', doc.Id);
         result.put('name', doc.Name);
         result.put('template', doc.TemplatePk__c);
-        result.put('entityName', doc.NetworkEntityLookup__r.Name);
-        result.put('entityId', doc.NetworkEntityLookup__c);
-        result.put('defaultRate', doc.NetworkEntityLookup__r.DefaultHourlyRateCurrency__c);
+        result.put('entityName', doc.NetworkEntityId__r.Name);
+        result.put('entityId', doc.NetworkEntityId__c);
+        result.put('defaultRate', doc.NetworkEntityId__r.DefaultHourlyRateCurrency__c);
         result.put('periodStart', doc.PeriodStartDate__c);
         result.put('periodEnd', doc.PeriodEndDate__c);
         result.put('status', doc.StatusPk__c);

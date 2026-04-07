@@ -13,7 +13,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>DocumentLookup__c</field>
+                <field>DocumentId__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

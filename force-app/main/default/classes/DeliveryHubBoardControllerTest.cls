@@ -180,7 +180,7 @@ public class DeliveryHubBoardControllerTest {
 
             // Add a comment for richer coverage
             insert new WorkItemComment__c(
-                WorkItemLookup__c = workItem.Id,
+                WorkItemId__c = workItem.Id,
                 BodyTxt__c = 'Test panel comment',
                 AuthorTxt__c = 'Test User'
             );

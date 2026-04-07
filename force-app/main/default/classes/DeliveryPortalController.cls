@@ -281,7 +281,7 @@ global without sharing class DeliveryPortalController {
         for (WorkItemComment__c c : [
             SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c
             FROM WorkItemComment__c
-            WHERE WorkItemLookup__c = :workItemId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
             LIMIT 200
@@ -368,7 +368,7 @@ global without sharing class DeliveryPortalController {
         }
 
         WorkItemComment__c comment = new WorkItemComment__c();
-        comment.WorkItemLookup__c = workItemId;
+        comment.WorkItemId__c = workItemId;
         comment.BodyTxt__c = commentBody;
         comment.AuthorTxt__c = 'Portal User';
         comment.SourcePk__c = 'Client';

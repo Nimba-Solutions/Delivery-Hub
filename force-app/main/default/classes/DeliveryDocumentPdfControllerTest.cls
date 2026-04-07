@@ -42,7 +42,7 @@ private class DeliveryDocumentPdfControllerTest {
         insert item;
 
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemLookup__c = item.Id,
+            WorkItemId__c = item.Id,
             DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'In Progress',
             HourlyRateCurrency__c = 90,
@@ -53,7 +53,7 @@ private class DeliveryDocumentPdfControllerTest {
 
         insert new WorkLog__c(
             WorkItemLookup__c = item.Id,
-            RequestLookup__c = req.Id,
+            RequestId__c = req.Id,
             HoursLoggedNumber__c = 8,
             WorkDateDate__c = Date.newInstance(2026, 3, 10),
             WorkDescriptionTxt__c = 'Test work entry'

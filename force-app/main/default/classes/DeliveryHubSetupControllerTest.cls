@@ -62,7 +62,7 @@ private class DeliveryHubSetupControllerTest {
             List<WorkItem__c> workItems = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Connection Established Successfully.'];
             System.assertEquals(1, workItems.size(), 'Initial workItem should be created');
 
-            List<WorkRequest__c> requests = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItems[0].Id];
+            List<WorkRequest__c> requests = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItems[0].Id];
             System.assertEquals(1, requests.size(), 'Bridge request should be created automatically by the trigger');
 
             // Assert settings were initialized

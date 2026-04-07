@@ -48,7 +48,7 @@ private class DeliverySyncEngineTest {
 
         // 4. Request Bridge (The Explicit Downstream Edge)
         insert new WorkRequest__c(
-            WorkItemLookup__c = t.Id, 
+            WorkItemId__c = t.Id, 
             DeliveryEntityLookup__c = vendor.Id, 
             StatusPk__c = 'Active', 
             RemoteWorkItemIdTxt__c = 'REMOTE-101'
@@ -96,7 +96,7 @@ private class DeliverySyncEngineTest {
     static void testSmartRoutingBlocksDownstreamEcho() {
         System.runAs(testUser) {
             WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
-            WorkRequest__c req = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :t.Id LIMIT 1];
+            WorkRequest__c req = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :t.Id LIMIT 1];
 
             delete [SELECT Id FROM SyncItem__c]; // Clear setup noise
 
@@ -122,7 +122,7 @@ private class DeliverySyncEngineTest {
             }
 
             System.assertEquals(1, items.size(), 'Engine should have blocked the downstream route and only staged the upstream one.');
-            System.assertEquals(null, items[0].RequestLookup__c, 'The created item should be the upstream Hub item (RequestId == null).');
+            System.assertEquals(null, items[0].RequestLookup__c, 'The created item should be the upstream Hub item (RequestLookup == null).');
         }
     }
 
@@ -217,7 +217,7 @@ private class DeliverySyncEngineTest {
             }
 
             System.assertEquals(1, items.size(), 'Engine should have blocked the upstream route and only created the downstream push.');
-            System.assertNotEquals(null, items[0].RequestLookup__c, 'The created item should be the downstream Push item (RequestId != null).');
+            System.assertNotEquals(null, items[0].RequestLookup__c, 'The created item should be the downstream Push item (RequestLookup != null).');
         }
     }
 

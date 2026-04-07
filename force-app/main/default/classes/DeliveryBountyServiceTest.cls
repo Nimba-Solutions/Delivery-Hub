@@ -249,7 +249,7 @@ private class DeliveryBountyServiceTest {
             BountyClaim__c claim = [
                 SELECT StatusPk__c, WorkProofUrl__c FROM BountyClaim__c
                 WHERE ClaimantEmail__c = 'dev@example.com'
-                AND WorkItemLookup__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
+                AND WorkItemId__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
             ];
             System.assertEquals('Submitted', claim.StatusPk__c);
             System.assertEquals('https://github.com/example/pr/1', claim.WorkProofUrl__c);
@@ -293,7 +293,7 @@ private class DeliveryBountyServiceTest {
             BountyClaim__c claim = [
                 SELECT StatusPk__c FROM BountyClaim__c
                 WHERE ClaimantEmail__c = 'dev@example.com'
-                AND WorkItemLookup__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
+                AND WorkItemId__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
             ];
             System.assertEquals('Withdrawn', claim.StatusPk__c);
         }

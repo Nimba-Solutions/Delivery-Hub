@@ -24,7 +24,7 @@ global with sharing class DeliveryTimeLoggerController {
     global static void logHours(Id workItemId, Decimal hours, String workNotes, Date workDate) {
         List<WorkRequest__c> activeReqs = [
             SELECT Id FROM WorkRequest__c
-            WHERE WorkItemLookup__c = :workItemId
+            WHERE WorkItemId__c = :workItemId
             AND StatusPk__c IN ('Draft', 'Accepted', 'In Progress')
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -38,7 +38,7 @@ global with sharing class DeliveryTimeLoggerController {
         String status = approvalRequired ? 'Draft' : 'Approved';
 
         WorkLog__c entry = new WorkLog__c(
-            RequestLookup__c          = activeReqs[0].Id,
+            RequestId__c          = activeReqs[0].Id,
             WorkItemLookup__c           = workItemId,
             HoursLoggedNumber__c  = hours,
             WorkDateDate__c       = workDate != null ? workDate : Date.today(),

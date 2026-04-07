@@ -56,7 +56,7 @@ private class DeliveryInvoiceGenerationServiceTest {
         insert item;
 
         WorkRequest__c request = new WorkRequest__c(
-            WorkItemLookup__c = item.Id,
+            WorkItemId__c = item.Id,
             DeliveryEntityLookup__c = entity.Id,
             StatusPk__c = 'Active',
             HourlyRateCurrency__c = 100
@@ -65,7 +65,7 @@ private class DeliveryInvoiceGenerationServiceTest {
 
         WorkLog__c log = new WorkLog__c(
             WorkItemLookup__c = item.Id,
-            RequestLookup__c = request.Id,
+            RequestId__c = request.Id,
             HoursLoggedNumber__c = 8,
             WorkDateDate__c = Date.today().addDays(-5),
             WorkDescriptionTxt__c = 'Test work',
@@ -249,7 +249,7 @@ private class DeliveryInvoiceGenerationServiceTest {
             NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Test Client' LIMIT 1];
 
             DeliveryDocument__c doc = new DeliveryDocument__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 TemplatePk__c = 'Invoice',
                 StatusPk__c = 'Sent',
                 DueDateDate__c = Date.today().addDays(-5),

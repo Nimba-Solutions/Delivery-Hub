@@ -44,12 +44,12 @@ private class DeliveryPublicApiServiceTest {
         // Portal access records for multi-tenant testing
         List<PortalAccess__c> portalAccessRecords = new List<PortalAccess__c>{
             new PortalAccess__c(
-                NetworkEntityLookup__c = entityA.Id,
+                NetworkEntityId__c = entityA.Id,
                 EmailTxt__c = 'portal@example.com',
                 RolePk__c = 'Admin'
             ),
             new PortalAccess__c(
-                NetworkEntityLookup__c = entityB.Id,
+                NetworkEntityId__c = entityB.Id,
                 EmailTxt__c = 'portal@example.com',
                 RolePk__c = 'Member'
             )
@@ -94,7 +94,7 @@ private class DeliveryPublicApiServiceTest {
         insert vendorForReq;
 
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemLookup__c = items[0].Id,
+            WorkItemId__c = items[0].Id,
             DeliveryEntityLookup__c = vendorForReq.Id,
             QuotedHoursNumber__c = 20,
             HourlyRateCurrency__c = 100,
@@ -104,7 +104,7 @@ private class DeliveryPublicApiServiceTest {
 
         // Comment on first item
         insert new WorkItemComment__c(
-            WorkItemLookup__c = items[0].Id,
+            WorkItemId__c = items[0].Id,
             BodyTxt__c = 'Existing API test comment',
             AuthorTxt__c = 'Developer',
             SourcePk__c = 'Salesforce'
@@ -112,7 +112,7 @@ private class DeliveryPublicApiServiceTest {
 
         // Draft work log on first item (for pending-approvals / approve / reject tests)
         insert new WorkLog__c(
-            RequestLookup__c = req.Id,
+            RequestId__c = req.Id,
             WorkItemLookup__c = items[0].Id,
             HoursLoggedNumber__c = 2.5,
             WorkDateDate__c = Date.today(),
