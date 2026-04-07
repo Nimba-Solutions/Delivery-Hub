@@ -105,6 +105,55 @@ public with sharing class DeliveryDocActionController {
         };
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 3: PUBLIC PORTAL SIGNING (TOKEN-BASED)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Returns the document bundle for an unauthenticated signer presenting
+     *              their per-signer access token. Used by the portal LWC to render the
+     *              sign page. Cacheable so guest users can hit Salesforce's edge cache.
+     * @param signerToken The 64-char hex token from the slot's SignerTokenTxt__c field.
+     * @return Map shaped for the portal LWC. See DeliveryDocActionService.getDocumentBundleForSignerToken.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getDocumentForSigner(String signerToken) {
+        return DeliveryDocActionService.getDocumentBundleForSignerToken(signerToken);
+    }
+
+    /**
+     * @description Public-facing sign action for unauthenticated signers. Resolves the
+     *              signer token to the slot, builds a SignContext from the payload map,
+     *              and delegates to the service layer. IP capture happens via the REST
+     *              endpoint (DeliveryDocActionRestApi) — when the LWC calls this Aura
+     *              method directly, IP is null. The payload map keeps the parameter
+     *              count low and matches the project rule of `primitives + Map<String, Object>`.
+     *
+     *              Expected payload keys:
+     *                signerName   (String, required)
+     *                signerEmail  (String, optional)
+     *                consentGiven (Boolean, must be true)
+     *                userAgent    (String, optional)
+     *
+     * @param signerToken The signer's per-slot token.
+     * @param payload     Map with signerName / signerEmail / consentGiven / userAgent.
+     * @return Map with actionId, status, documentStatus.
+     */
+    @AuraEnabled
+    public static Map<String, Object> signActionPublic(String signerToken, Map<String, Object> payload) {
+        DeliveryDocActionService.SignContext ctx = new DeliveryDocActionService.SignContext();
+        if (payload != null) {
+            ctx.signerName  = (String) payload.get('signerName');
+            ctx.signerEmail = (String) payload.get('signerEmail');
+            Object consent  = payload.get('consentGiven');
+            ctx.consentGiven = consent instanceof Boolean ? (Boolean) consent : false;
+            ctx.userAgent   = (String) payload.get('userAgent');
+        }
+        ctx.signatureType = 'Text';
+        ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(ctx.signerName, Datetime.now());
+        return DeliveryDocActionService.signActionByToken(signerToken, ctx);
+    }
+
     /**
      * @description Reshapes a DocumentAction__c into the LWC-friendly map format.
      */

@@ -1,8 +1,8 @@
 # Delivery Hub — Field Naming Convention
 
-Every custom field in this package has a **type-indicating suffix** so you can tell what a field holds without opening the metadata. This is enforced by `scripts/validate-field-naming.py` which runs on every PR via the `Feature - Test (Unlocked)` workflow.
+Every custom field in this package has a **type-indicating suffix** so you can tell what a field holds without opening the metadata. Enforced by the local PMD ruleset at `category/xml/default.xml`, which runs on every PR via the `apex-scan` job in `.github/workflows/feature_test.yml`.
 
-PMD does not cover SObject metadata naming — these are project conventions, not platform rules.
+The `*FieldNamingConvention` rules are XPath expressions over the field metadata XML — see `category/xml/default.xml` for the exact rules. All naming rules are priority 2 (blocking, fails CI when violated).
 
 ## The canonical table
 
@@ -32,15 +32,15 @@ Delivery Hub does not use Checkbox fields. Use a `*DateTime__c` field instead �
 
 If you need a checkbox in the UI, render it as `bound={!ISBLANK(SomeRequirementDateTime__c)}` (or the equivalent in LWC) — the underlying storage is still a DateTime.
 
-The only suffix in this convention reserved for Checkbox is `Bool__c`. It exists so the validator can recognize a violation if anyone ever adds one. **Don't.**
+The `CheckboxFieldsForbidden` rule in the PMD ruleset is priority 1 (blocking) and rejects any field with `<type>Checkbox</type>`. **Don't add any.**
 
-## Edge cases the validator handles
+## Edge cases
 
-- **Platform Events** cannot use Picklist fields — Salesforce stores them as Text. Use the `Txt` suffix even when the value is logically picklist-like (e.g., `DeliveryDocEvent__e.StatusTxt__c`). The validator knows about this and treats Text fields on `*__e` objects normally.
+- **Platform Events** cannot use Picklist fields — Salesforce stores them as Text. Use the `Txt` suffix even when the value is logically picklist-like (e.g., `DeliveryDocEvent__e.StatusTxt__c`). PMD's TextArea/Text rules treat these as normal Text fields.
 
-- **Email / Url / Phone** drop the suffix because the field name itself communicates the content type (`ClaimantEmail__c` is unambiguously an email). The validator allows these to end in the bare type word.
+- **Email / Url / Phone** drop the suffix because the field name itself communicates the content type (`ClaimantEmail__c` is unambiguously an email). PMD enforces these as `*Email__c`, `*Url__c`, `*Phone__c`.
 
-- **Formula fields** must use the suffix matching their return type, not a `Formula` suffix. The validator looks at `<formula>` and `<returnType>` to verify.
+- **Formula fields** are not yet covered by the PMD ruleset because the `<type>` element holds the return type, not the literal "Formula" — there is no straightforward XPath to distinguish a formula field returning Number from a real Number field. Treat formula naming as a manual review item: the suffix should match the return type (e.g., `HoursVarianceNumber__c` for a formula that returns Number).
 
 ## Lookup vs Master-Detail
 
@@ -62,16 +62,12 @@ The `<relationshipName>` element in the XML is **independent** of the field name
 
 ## Validator
 
-`scripts/validate-field-naming.py` runs as part of `feature_test.yml` on every PR. It exits non-zero on any violation, which fails the CI check. To run locally:
+PMD runs via the `apex-scan` job in `feature_test.yml`. The naming rules are at priority 2; the workflow's `severity-threshold: 4` blocks merges on any priority 1-4 violation.
+
+To run locally (requires `@salesforce/sfdx-scanner`):
 
 ```bash
-python scripts/validate-field-naming.py
+sf scanner run --target "force-app/main/default/objects/**/fields/*.field-meta.xml" --pmdconfig pmd-rules.xml --engine pmd
 ```
 
-The validator skips fields whose XML opts in via:
-
-```xml
-<!-- naming-validator: skip — reason here -->
-```
-
-…inside the `<CustomField>` element. Use this only when Salesforce metadata constraints make compliance impossible (e.g., a hardcoded standard field name on a managed package extension).
+To skip enforcement on a specific field (only for unfixable cases like hardcoded standard field extensions), add a PMD suppression comment inside the field XML — see PMD docs for the exact syntax. Don't use this without a real reason.

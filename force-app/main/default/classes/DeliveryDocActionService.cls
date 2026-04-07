@@ -432,4 +432,172 @@ public with sharing class DeliveryDocActionService {
         String dateStr = signedAt.format('MMM d, yyyy');
         return signerName + ' (digitally signed ' + dateStr + ')';
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 3: PUBLIC PORTAL SIGNING (TOKEN-BASED)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Resolves a per-signer access token to a single DocumentAction__c
+     *              record + its parent document + sibling actions, all in one call.
+     *              Used by the public portal LWC and the REST endpoint to render the
+     *              sign page for an unauthenticated signer.
+     * @param signerToken The 64-char hex token from the slot's SignerTokenTxt__c field.
+     * @return Map: { document: {...}, signerActionId, signerSlotLabel, actions: [...] }
+     *         or throws AuraHandledException if the token does not match a slot.
+     */
+    public static Map<String, Object> getDocumentBundleForSignerToken(String signerToken) {
+        DocumentAction__c signerAction = findActionBySignerToken(signerToken);
+        DeliveryDocument__c doc = loadDocumentForPortal(signerAction.DocumentLookup__c);
+        Map<String, Object> docMap = serializeDocumentForPortal(doc);
+        List<Map<String, Object>> actions = serializeActionsForPortal(signerAction.DocumentLookup__c);
+
+        return new Map<String, Object>{
+            'document'         => docMap,
+            'signerActionId'   => signerAction.Id,
+            'signerSlotLabel'  => signerAction.ActionLabelTxt__c,
+            'signerStatus'     => signerAction.StatusPk__c,
+            'actions'          => actions
+        };
+    }
+
+    /**
+     * @description Signs an action using a per-signer token instead of an action Id.
+     *              Verifies the token resolves to the slot identified in the context's
+     *              actionId field (defense in depth — REST endpoint passes both).
+     *              Delegates to signActionInternal once validated.
+     * @param signerToken The token presented by the signer.
+     * @param ctx The SignContext bundle (actionId may be null and will be filled in).
+     * @return Same shape as signActionInternal.
+     */
+    public static Map<String, Object> signActionByToken(String signerToken, SignContext ctx) {
+        DocumentAction__c slot = findActionBySignerToken(signerToken);
+        if (ctx == null) {
+            throw new AuraHandledException('Sign payload is required.');
+        }
+        if (ctx.actionId != null && ctx.actionId != slot.Id) {
+            throw new AuraHandledException('Token does not match the requested signature slot.');
+        }
+        ctx.actionId = slot.Id;
+        return signActionInternal(ctx);
+    }
+
+    /**
+     * @description Looks up a DocumentAction__c by its per-signer token.
+     *              Throws an AuraHandledException with a generic message on miss to
+     *              avoid token enumeration attacks.
+     */
+    private static DocumentAction__c findActionBySignerToken(String signerToken) {
+        if (String.isBlank(signerToken) || signerToken.length() != 64) {
+            throw new AuraHandledException('Invalid signer link.');
+        }
+        List<DocumentAction__c> actions = [
+            SELECT Id, DocumentLookup__c, ActionLabelTxt__c, StatusPk__c, SignerTokenTxt__c
+            FROM DocumentAction__c
+            WHERE SignerTokenTxt__c = :signerToken
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (actions.isEmpty()) {
+            throw new AuraHandledException('Invalid signer link.');
+        }
+        return actions[0];
+    }
+
+    /**
+     * @description Loads a DeliveryDocument__c with the fields needed for the portal.
+     */
+    private static DeliveryDocument__c loadDocumentForPortal(Id documentId) {
+        List<DeliveryDocument__c> docs = [
+            SELECT Id, Name, StatusPk__c, TemplatePk__c, SnapshotTxt__c,
+                   RequireSigningDateTime__c, TotalCurrency__c, NetworkEntityLookup__c,
+                   NetworkEntityLookup__r.Name, PublicTokenTxt__c
+            FROM DeliveryDocument__c
+            WHERE Id = :documentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (docs.isEmpty()) {
+            throw new AuraHandledException('Document not found.');
+        }
+        return docs[0];
+    }
+
+    /**
+     * @description Reshapes a document into a portal-friendly map. Keeps the surface
+     *              minimal — the LWC only needs identifying info, status, snapshot,
+     *              and the consent text.
+     */
+    private static Map<String, Object> serializeDocumentForPortal(DeliveryDocument__c doc) {
+        String consentText = resolveConsentText(doc.TemplatePk__c);
+        return new Map<String, Object>{
+            'id'              => doc.Id,
+            'name'            => doc.Name,
+            'status'          => doc.StatusPk__c,
+            'template'        => doc.TemplatePk__c,
+            'snapshot'        => doc.SnapshotTxt__c,
+            'requiresSigning' => doc.RequireSigningDateTime__c != null,
+            'requireSigningDateTime' => doc.RequireSigningDateTime__c,
+            'entityName'      => doc.NetworkEntityLookup__r != null ? doc.NetworkEntityLookup__r.Name : null,
+            'consentText'     => consentText
+        };
+    }
+
+    /**
+     * @description Reshapes the actions list into the LWC-friendly map format.
+     *              Same shape as DeliveryDocActionController.serializeAction so the
+     *              portal LWC and the embedded viewer share the same child component.
+     */
+    private static List<Map<String, Object>> serializeActionsForPortal(Id documentId) {
+        List<Map<String, Object>> result = new List<Map<String, Object>>();
+        for (DocumentAction__c a : getActionsForDocument(documentId)) {
+            result.add(new Map<String, Object>{
+                'id'                 => a.Id,
+                'label'              => a.ActionLabelTxt__c,
+                'status'             => a.StatusPk__c,
+                'sortOrder'          => a.SortOrderNumber__c,
+                'signatureType'      => a.SignatureTypePk__c,
+                'signatureData'      => a.SignatureDataTxt__c,
+                'signerName'         => a.SignerNameTxt__c,
+                'completedAt'        => a.CompletedDateTime__c,
+                'assignedEntityName' => a.AssignedEntityLookup__r != null ? a.AssignedEntityLookup__r.Name : null,
+                'isPending'          => a.StatusPk__c == 'Pending',
+                'isCompleted'        => a.StatusPk__c == 'Completed'
+            });
+        }
+        return result;
+    }
+
+    /**
+     * @description Returns the ESIGN consent disclosure text configured on the
+     *              DocumentTemplate__mdt for the given template type, or a hardcoded
+     *              fallback if blank.
+     */
+    private static String resolveConsentText(String templateType) {
+        if (String.isBlank(templateType)) {
+            return defaultConsentText();
+        }
+        List<DocumentTemplate__mdt> templates = [
+            SELECT DeveloperName, ElectronicConsentTextTxt__c
+            FROM DocumentTemplate__mdt
+            WHERE DeveloperName = :templateType
+            LIMIT 1
+        ];
+        if (templates.isEmpty() || String.isBlank(templates[0].ElectronicConsentTextTxt__c)) {
+            return defaultConsentText();
+        }
+        return templates[0].ElectronicConsentTextTxt__c;
+    }
+
+    /**
+     * @description Hardcoded ESIGN/UETA fallback consent disclosure used when the
+     *              template does not have one configured. Mirrors the disclosure on
+     *              the seeded agreement templates.
+     */
+    private static String defaultConsentText() {
+        return 'By checking the box below and clicking Sign, you agree that your electronic '
+            + 'signature is the legal equivalent of your manual signature on this document. '
+            + 'You consent to be legally bound by its terms and you affirm that you have had '
+            + 'a reasonable opportunity to review the document before signing.';
+    }
 }

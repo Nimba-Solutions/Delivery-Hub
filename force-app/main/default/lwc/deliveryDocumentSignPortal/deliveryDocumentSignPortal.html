@@ -1,0 +1,48 @@
+<template>
+    <div class="sign-portal">
+        <template lwc:if={loading}>
+            <div class="sign-portal__loading">
+                <lightning-spinner alternative-text="Loading document" size="medium"></lightning-spinner>
+                <p>Loading the document for signing&hellip;</p>
+            </div>
+        </template>
+
+        <template lwc:if={loadError}>
+            <div class="sign-portal__error">
+                <h2>We couldn&apos;t open this signer link.</h2>
+                <p>{loadError}</p>
+                <p class="sign-portal__error-help">
+                    If you believe this is a mistake, contact the person who sent you the link.
+                </p>
+            </div>
+        </template>
+
+        <template lwc:if={hasDocument}>
+            <header class="sign-portal__header">
+                <h1>{pageTitle}</h1>
+                <p class="sign-portal__sub">
+                    You have been asked to sign as <strong>{signerSlotLabel}</strong>.
+                </p>
+            </header>
+
+            <c-delivery-document-signature-block
+                actions={actions}
+                requires-signing={requiresSigningTrue}
+                consent-text={consentText}
+                onsignsubmit={handleSignSubmit}
+            ></c-delivery-document-signature-block>
+
+            <template lwc:if={signSuccess}>
+                <div class="sign-portal__success">
+                    <h2>Thanks — your signature has been recorded.</h2>
+                    <template lwc:if={isFullyApproved}>
+                        <p>All required parties have signed. The document is now fully approved.</p>
+                    </template>
+                    <template lwc:else>
+                        <p>We&apos;ll notify the other parties that it&apos;s their turn to sign.</p>
+                    </template>
+                </div>
+            </template>
+        </template>
+    </div>
+</template>

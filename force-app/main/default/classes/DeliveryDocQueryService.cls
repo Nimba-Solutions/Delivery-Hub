@@ -39,10 +39,15 @@ public with sharing class DeliveryDocQueryService {
 
         DeliveryDocument__c doc = docs[0];
 
-        // Mark as viewed on first access
+        // Mark as viewed on first access. When the document requires signing,
+        // jump straight to Awaiting_Signatures so the signing flow can take over
+        // — the legacy Approve button on the public viewer is short-circuited in
+        // DeliveryDocApprovalService when this flag is set.
         if (doc.ViewedDateTime__c == null && doc.StatusPk__c == 'Sent') {
             doc.ViewedDateTime__c = Datetime.now();
-            doc.StatusPk__c = 'Viewed';
+            doc.StatusPk__c = doc.RequireSigningDateTime__c != null
+                ? 'Awaiting_Signatures'
+                : 'Viewed';
             Database.update(doc, AccessLevel.SYSTEM_MODE);
         }
 

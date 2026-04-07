@@ -1609,7 +1609,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         return `priority-badge priority-${p}`;
     }
     get detailEpicName() { return this.detailWorkItem?.Epic__r?.Name || this.detailWorkItem?.delivery__Epic__r?.Name || ''; }
-    get detailDeveloperName() { return this.detailWorkItem?.DeveloperLookup__r?.Name || this.detailWorkItem?.delivery__DeveloperLookupId__r?.Name || ''; }
+    get detailDeveloperName() { return this.detailWorkItem?.DeveloperLookup__r?.Name || this.detailWorkItem?.delivery__DeveloperLookup__r?.Name || ''; }
     get detailCreatedBy() { return this.detailWorkItem?.CreatedBy?.Name || this.detailWorkItem?.delivery__CreatedBy?.Name || ''; }
     get hasDetailEpic() { return !!this.detailEpicName; }
     get hasDetailDeveloper() { return !!this.detailDeveloperName; }

@@ -269,7 +269,7 @@ global with sharing class DeliveryRecurringItemService {
         List<WorkflowStage__mdt> stages = [
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :resolvedType
+            WHERE WorkflowTypeMdt__r.DeveloperName = :resolvedType
             AND TerminalDateTime__c = null
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST

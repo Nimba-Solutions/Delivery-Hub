@@ -26,10 +26,10 @@ global with sharing class DeliveryWorkflowBuilderController {
         // Count stages per workflow type
         Map<String, Integer> stageCounts = new Map<String, Integer>();
         for (WorkflowStage__mdt stage : [
-            SELECT WorkflowTypeMdtId__r.DeveloperName
+            SELECT WorkflowTypeMdt__r.DeveloperName
             FROM WorkflowStage__mdt
         ]) {
-            String typeName = stage.WorkflowTypeMdtId__r.DeveloperName;
+            String typeName = stage.WorkflowTypeMdt__r.DeveloperName;
             if (!stageCounts.containsKey(typeName)) {
                 stageCounts.put(typeName, 0);
             }
@@ -66,7 +66,7 @@ global with sharing class DeliveryWorkflowBuilderController {
                    VisibleByDefaultDateTime__c, AllowedForwardTransitionsTxt__c,
                    AllowedBacktrackTransitionsTxt__c, EtaWeightNumber__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :workflowTypeName
+            WHERE WorkflowTypeMdt__r.DeveloperName = :workflowTypeName
             ORDER BY SortOrderNumber__c ASC
         ];
 

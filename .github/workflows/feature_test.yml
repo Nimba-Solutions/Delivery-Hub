@@ -26,21 +26,6 @@ jobs:
       cumulusci-version: "3.90.0"
       sfdx-version: "7.209.6"
 
-  field-naming-validator:
-    # Enforces docs/FIELD_NAMING.md — every custom field's API name suffix must
-    # match its SObject type. PMD does not cover this, so we bring our own.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Validate field naming conventions
-        run: python scripts/validate-field-naming.py
-
   apex-scan:
     runs-on: ubuntu-latest
     steps:
