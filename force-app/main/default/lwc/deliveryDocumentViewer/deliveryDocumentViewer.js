@@ -938,14 +938,18 @@ export default class DeliveryDocumentViewer extends LightningElement {
      * stays in submitting state until we call its completeSubmission(success) API.
      */
     async handleSignSubmit(event) {
-        const { actionId, signerName, signerEmail, consentGiven } = event.detail;
+        const { actionId, signerName, signerEmail, consentGiven, signatureType, drawnSignature } = event.detail;
         const childLwc = this.template.querySelector('c-delivery-document-signature-block');
         try {
             const result = await signActionAdmin({
                 actionId,
-                signerName,
-                signerEmail,
-                consentGiven
+                payload: {
+                    signerName,
+                    signerEmail,
+                    consentGiven,
+                    signatureType,
+                    drawnSignature
+                }
             });
             this.showToast('Signed', `${signerName} signed the document.`, 'success');
 

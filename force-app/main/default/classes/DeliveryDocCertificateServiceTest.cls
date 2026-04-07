@@ -76,6 +76,13 @@ private class DeliveryDocCertificateServiceTest {
         ];
     }
 
+    private static Map<String, Object> signPayload(String name) {
+        return new Map<String, Object>{
+            'signerName'   => name,
+            'consentGiven' => true
+        };
+    }
+
     @IsTest
     static void testBuildCertificateForUnsignedDocReturnsEmptySigners() {
         System.runAs(testUser) {
@@ -107,7 +114,7 @@ private class DeliveryDocCertificateServiceTest {
             Id firstActionId = getActions(doc.Id)[0].Id;
 
             Test.startTest();
-            DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen Bradford', null, true);
+            DeliveryDocActionController.signActionAdmin(firstActionId, signPayload('Glen Bradford'));
             Map<String, Object> cert = DeliveryDocCertificateService.buildCertificate(doc.Id);
             Test.stopTest();
 
@@ -136,8 +143,8 @@ private class DeliveryDocCertificateServiceTest {
             List<DocumentAction__c> actions = getActions(doc.Id);
 
             Test.startTest();
-            DeliveryDocActionController.signActionAdmin(actions[0].Id, 'Consultant Signer', null, true);
-            DeliveryDocActionController.signActionAdmin(actions[1].Id, 'Client Signer', null, true);
+            DeliveryDocActionController.signActionAdmin(actions[0].Id, signPayload('Consultant Signer'));
+            DeliveryDocActionController.signActionAdmin(actions[1].Id, signPayload('Client Signer'));
             Map<String, Object> cert = DeliveryDocCertificateService.buildCertificate(doc.Id);
             Test.stopTest();
 
@@ -186,7 +193,7 @@ private class DeliveryDocCertificateServiceTest {
         System.runAs(testUser) {
             DeliveryDocument__c doc = getDoc();
             Id firstActionId = getActions(doc.Id)[0].Id;
-            DeliveryDocActionController.signActionAdmin(firstActionId, 'Test Signer', null, true);
+            DeliveryDocActionController.signActionAdmin(firstActionId, signPayload('Test Signer'));
 
             Test.startTest();
             Map<String, Object> cert = DeliveryDocActionController.getCertificateOfCompletion(doc.Id);

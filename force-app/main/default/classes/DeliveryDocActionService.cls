@@ -247,6 +247,11 @@ public with sharing class DeliveryDocActionService {
         public Boolean consentGiven;
         public String ipAddress;
         public String userAgent;
+        // Phase 5: base64-encoded PNG bytes for drawn signatures. Caller leaves
+        // this null for text signatures. signActionInternal stores the bytes
+        // as a ContentVersion and writes the new ContentVersion Id into
+        // signatureData before delegating to applySignatureToAction.
+        public String drawnSignature;
     }
 
     /**
@@ -261,6 +266,15 @@ public with sharing class DeliveryDocActionService {
     public static Map<String, Object> signActionInternal(SignContext ctx) {
         validateSignContext(ctx);
         DocumentAction__c action = loadPendingAction(ctx.actionId);
+
+        // Phase 5: if the signer drew an image, materialize the bytes as a
+        // ContentVersion and store the resulting Id in ctx.signatureData so
+        // applySignatureToAction can persist it the same way it persists the
+        // text stamp string. Done before update so the slot has the FK on
+        // the same DML that flips it to Completed.
+        if (ctx.signatureType == 'Image' && String.isNotBlank(ctx.drawnSignature)) {
+            ctx.signatureData = persistDrawnSignatureContentVersion(action, ctx);
+        }
 
         applySignatureToAction(action, ctx);
         Database.update(action, AccessLevel.SYSTEM_MODE);
@@ -295,6 +309,41 @@ public with sharing class DeliveryDocActionService {
         if (ctx.actionId == null) {
             throw new AuraHandledException('Action Id is required.');
         }
+        // Phase 5: if the caller asked for an image signature, the bytes must
+        // actually be present. Catches a misconfigured client that toggled
+        // drawn mode but never captured the canvas.
+        if (ctx.signatureType == 'Image' && String.isBlank(ctx.drawnSignature)) {
+            throw new AuraHandledException('Drawn signature data is required for image signatures.');
+        }
+    }
+
+    /**
+     * @description Phase 5: stores a drawn signature PNG as a ContentVersion
+     *              linked to the document via ContentDocumentLink. Returns the
+     *              ContentVersion Id, which becomes the SignatureDataTxt__c
+     *              value for image-type slots.
+     *
+     *              Linking to the document (not the action) lets the existing
+     *              file-share permissions on the parent document govern who
+     *              can view the signature image, without us having to
+     *              configure new ones for DocumentAction__c.
+     */
+    private static String persistDrawnSignatureContentVersion(DocumentAction__c action, SignContext ctx) {
+        Blob pngBytes;
+        try {
+            pngBytes = EncodingUtil.base64Decode(ctx.drawnSignature);
+        } catch (Exception e) {
+            throw new AuraHandledException('Drawn signature is not valid base64.');
+        }
+        String fileName = 'signature_' + action.Id + '.png';
+        ContentVersion cv = new ContentVersion(
+            Title           = fileName,
+            PathOnClient    = fileName,
+            VersionData     = pngBytes,
+            FirstPublishLocationId = action.DocumentLookup__c
+        );
+        Database.insert(cv, AccessLevel.SYSTEM_MODE);
+        return cv.Id;
     }
 
     /**

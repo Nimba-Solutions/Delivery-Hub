@@ -7,7 +7,12 @@
                     <div key={action.id} class={action.slotClass}>
                         <p class="signature-slot-label">{action.label}</p>
                         <template lwc:if={action.isCompleted}>
-                            <p class="signature-slot-stamp">{action.signatureData}</p>
+                            <template lwc:if={action.isImageSignature}>
+                                <img class="signature-slot-image" src={action.signatureImageUrl} alt="Drawn signature"/>
+                            </template>
+                            <template lwc:if={action.isTextSignature}>
+                                <p class="signature-slot-stamp">{action.signatureData}</p>
+                            </template>
                             <template lwc:if={action.signerName}>
                                 <p class="signature-slot-meta">{action.signerName}</p>
                             </template>
@@ -117,6 +122,26 @@
                         onchange={handleEmailChange}
                         class="slds-m-top_small"
                     ></lightning-input>
+
+                    <!-- Phase 5: drawn-signature toggle + pad -->
+                    <lightning-input
+                        type="toggle"
+                        label="Draw my signature instead"
+                        message-toggle-active="Drawing"
+                        message-toggle-inactive="Type stamp"
+                        checked={useDrawnSignature}
+                        onchange={handleDrawToggle}
+                        class="slds-m-top_medium"
+                    ></lightning-input>
+                    <template lwc:if={useDrawnSignature}>
+                        <div class="slds-m-top_small">
+                            <c-delivery-signature-pad
+                                label="Sign in the box below"
+                                onsignaturechange={handleSignaturePadChange}
+                            ></c-delivery-signature-pad>
+                        </div>
+                    </template>
+
                     <div class="consent-disclosure slds-m-top_medium">
                         <p class="slds-text-body_small consent-text">{consentDisclosure}</p>
                         <lightning-input
