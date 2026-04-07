@@ -24,7 +24,7 @@ private class DeliveryDocApprovalServiceTest {
         insert entity;
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
+            NetworkEntityLookup__c = entity.Id,
             TemplatePk__c = 'Invoice',
             PeriodStartDate__c = Date.newInstance(2026, 1, 1),
             PeriodEndDate__c = Date.newInstance(2026, 1, 31),
@@ -66,7 +66,7 @@ private class DeliveryDocApprovalServiceTest {
             List<DeliveryTransaction__c> txns = [
                 SELECT TypePk__c, AmountCurrency__c
                 FROM DeliveryTransaction__c
-                WHERE DocumentId__c = :doc.Id AND TypePk__c = 'Approval'
+                WHERE DocumentLookup__c = :doc.Id AND TypePk__c = 'Approval'
             ];
             System.assertEquals(1, txns.size(), 'Should create one Approval transaction');
             System.assertEquals(5000, txns[0].AmountCurrency__c, 'Transaction amount should match doc total');
@@ -181,7 +181,7 @@ private class DeliveryDocApprovalServiceTest {
         System.runAs(testUser) {
             DeliveryTriggerControl.disableAfterLogic();
             DeliveryDocument__c doc = getDoc();
-            doc.RequiresSigningCheckbox__c = true;
+            doc.RequireSigningDateTime__c = Datetime.now();
             update doc;
             DeliveryTriggerControl.enableAfterLogic();
 
@@ -201,7 +201,7 @@ private class DeliveryDocApprovalServiceTest {
             // No Approval transaction should be created on short-circuit
             List<DeliveryTransaction__c> txns = [
                 SELECT Id FROM DeliveryTransaction__c
-                WHERE DocumentId__c = :doc.Id AND TypePk__c = 'Approval'
+                WHERE DocumentLookup__c = :doc.Id AND TypePk__c = 'Approval'
             ];
             System.assertEquals(0, txns.size(),
                 'No Approval transaction should be created when short-circuiting to Awaiting_Signatures');

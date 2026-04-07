@@ -23,20 +23,20 @@ private class DeliveryApprovalChainServiceTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         );
         insert item;
 
         WorkRequest__c request = new WorkRequest__c(
-            WorkItemId__c = item.Id,
-            DeliveryEntityId__c = entity.Id,
+            WorkItemLookup__c = item.Id,
+            DeliveryEntityLookup__c = entity.Id,
             StatusPk__c = 'Accepted'
         );
         insert request;
 
         WorkLog__c log = new WorkLog__c(
-            RequestId__c = request.Id,
-            WorkItemId__c = item.Id,
+            RequestLookup__c = request.Id,
+            WorkItemLookup__c = item.Id,
             HoursLoggedNumber__c = 2,
             WorkDateDate__c = Date.today(),
             WorkDescriptionTxt__c = 'Test work log for approvals',
@@ -48,8 +48,8 @@ private class DeliveryApprovalChainServiceTest {
     private static WorkLog__c getTestLog() {
         return [
             SELECT Id, StatusPk__c, ApprovalStepNumber__c, ApprovedByTxt__c,
-                   ApprovalRequestedDateTime__c, WorkItemId__c,
-                   WorkItemId__r.WorkflowTypeTxt__c
+                   ApprovalRequestedDateTime__c, WorkItemLookup__c,
+                   WorkItemLookup__r.WorkflowTypeTxt__c
             FROM WorkLog__c
             WITH SYSTEM_MODE
             LIMIT 1
@@ -63,7 +63,7 @@ private class DeliveryApprovalChainServiceTest {
             WorkflowTypeTxt__c = 'Software_Delivery',
             StepOrderNumber__c = 1,
             ApprovalModePk__c = 'Sequential',
-            ApproverFieldTxt__c = 'DeveloperLookupId__c',
+            ApproverFieldTxt__c = 'DeveloperLookup__c',
             TimeoutDaysNumber__c = 3,
             TimeoutActionPk__c = 'Auto_Approve',
             ActiveDateTime__c = Datetime.now()

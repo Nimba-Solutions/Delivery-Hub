@@ -32,12 +32,12 @@ global with sharing class DeliveryWorkItemController {
                     EpicTxt__c,
                     TagsTxt__c,
                     WorkflowTypeTxt__c,
-                    TotalLoggedHoursNumber__c,
+                    TotalLoggedHoursSum__c,
                     EstimatedHoursNumber__c,
                     LastModifiedDate,
                     PriorityPk__c,
-                    (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
-                    (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                    (SELECT Id, BlockingWorkItemLookup__c, BlockingWorkItemLookup__r.Name FROM BlockedByDeps__r),
+                    (SELECT Id, BlockedWorkItemLookup__c, BlockedWorkItemLookup__r.Name FROM BlockingDeps__r),
                     (SELECT Id FROM WorkItemComments__r LIMIT 100)
                 FROM WorkItem__c
                 WHERE ActivatedDateTime__c != null
@@ -58,12 +58,12 @@ global with sharing class DeliveryWorkItemController {
                 EpicTxt__c,
                 TagsTxt__c,
                 WorkflowTypeTxt__c,
-                TotalLoggedHoursNumber__c,
+                TotalLoggedHoursSum__c,
                 EstimatedHoursNumber__c,
                 LastModifiedDate,
                 PriorityPk__c,
-                (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
-                (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                (SELECT Id, BlockingWorkItemLookup__c, BlockingWorkItemLookup__r.Name FROM BlockedByDeps__r),
+                (SELECT Id, BlockedWorkItemLookup__c, BlockedWorkItemLookup__r.Name FROM BlockingDeps__r),
                 (SELECT Id FROM WorkItemComments__r LIMIT 100)
             FROM WorkItem__c
             WHERE ActivatedDateTime__c != null

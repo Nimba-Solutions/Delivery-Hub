@@ -25,7 +25,7 @@ private class DeliveryDocPaymentServiceTest {
 
         // Invoice 1 — older period, unpaid
         DeliveryDocument__c doc1 = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
+            NetworkEntityLookup__c = entity.Id,
             TemplatePk__c = 'Invoice',
             PeriodStartDate__c = Date.newInstance(2026, 1, 1),
             PeriodEndDate__c = Date.newInstance(2026, 1, 31),
@@ -36,7 +36,7 @@ private class DeliveryDocPaymentServiceTest {
 
         // Invoice 2 — current period
         DeliveryDocument__c doc2 = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
+            NetworkEntityLookup__c = entity.Id,
             TemplatePk__c = 'Invoice',
             PeriodStartDate__c = Date.newInstance(2026, 2, 1),
             PeriodEndDate__c = Date.newInstance(2026, 2, 28),
@@ -84,7 +84,7 @@ private class DeliveryDocPaymentServiceTest {
             List<DeliveryTransaction__c> txns = [
                 SELECT TypePk__c, AmountCurrency__c, NoteTxt__c
                 FROM DeliveryTransaction__c
-                WHERE DocumentId__c = :doc.Id AND TypePk__c = 'Payment'
+                WHERE DocumentLookup__c = :doc.Id AND TypePk__c = 'Payment'
             ];
             System.assertEquals(1, txns.size(), 'Should create one payment transaction');
             System.assertEquals(2500, txns[0].AmountCurrency__c, 'Amount should match');
@@ -133,7 +133,7 @@ private class DeliveryDocPaymentServiceTest {
 
             // Make a partial payment on doc1
             insert new DeliveryTransaction__c(
-                DocumentId__c = doc1.Id,
+                DocumentLookup__c = doc1.Id,
                 TypePk__c = 'Payment',
                 AmountCurrency__c = 1000,
                 TransactionDateDate__c = Date.today()
@@ -233,11 +233,11 @@ private class DeliveryDocPaymentServiceTest {
             // Insert payments on both docs
             insert new List<DeliveryTransaction__c>{
                 new DeliveryTransaction__c(
-                    DocumentId__c = doc1.Id, TypePk__c = 'Payment',
+                    DocumentLookup__c = doc1.Id, TypePk__c = 'Payment',
                     AmountCurrency__c = 500, TransactionDateDate__c = Date.today()
                 ),
                 new DeliveryTransaction__c(
-                    DocumentId__c = doc2.Id, TypePk__c = 'Payment',
+                    DocumentLookup__c = doc2.Id, TypePk__c = 'Payment',
                     AmountCurrency__c = 1500, TransactionDateDate__c = Date.today()
                 )
             };

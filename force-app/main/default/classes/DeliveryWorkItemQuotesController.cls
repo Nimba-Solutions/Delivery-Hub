@@ -31,20 +31,20 @@ global with sharing class DeliveryWorkItemQuotesController {
     global static List<QuoteRow> getQuotes(Id workItemId) {
         List<QuoteRow> rows = new List<QuoteRow>();
         for (WorkRequest__c req : [
-            SELECT Id, DeliveryEntityId__r.Name, DeliveryEntityId__c,
+            SELECT Id, DeliveryEntityLookup__r.Name, DeliveryEntityLookup__c,
                    QuotedHoursNumber__c, HourlyRateCurrency__c,
                    ProjectedCostCurrency__c, PreApprovedHoursNumber__c,
                    StatusPk__c, WorkProofUrl__c
             FROM WorkRequest__c
-            WHERE WorkItemId__c = :workItemId
+            WHERE WorkItemLookup__c = :workItemId
             AND QuotedHoursNumber__c != null
             WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
         ]) {
             QuoteRow row       = new QuoteRow();
             row.id             = req.Id;
-            row.vendorName     = req.DeliveryEntityId__r != null ? req.DeliveryEntityId__r.Name : 'Unknown Vendor';
-            row.vendorId       = req.DeliveryEntityId__c;
+            row.vendorName     = req.DeliveryEntityLookup__r != null ? req.DeliveryEntityLookup__r.Name : 'Unknown Vendor';
+            row.vendorId       = req.DeliveryEntityLookup__c;
             row.quotedHours    = req.QuotedHoursNumber__c;
             row.hourlyRate     = req.HourlyRateCurrency__c;
             row.projectedCost  = req.ProjectedCostCurrency__c;
@@ -68,7 +68,7 @@ global with sharing class DeliveryWorkItemQuotesController {
         List<WorkRequest__c> allRequests = [
             SELECT Id, StatusPk__c
             FROM WorkRequest__c
-            WHERE WorkItemId__c = :workItemId
+            WHERE WorkItemLookup__c = :workItemId
             WITH SYSTEM_MODE
         ];
         List<WorkRequest__c> toUpdate = new List<WorkRequest__c>();

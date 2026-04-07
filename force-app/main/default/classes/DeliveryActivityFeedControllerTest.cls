@@ -22,12 +22,12 @@ private class DeliveryActivityFeedControllerTest {
         WorkItem__c workItem1 = new WorkItem__c(
             BriefDescriptionTxt__c   = 'Feed Test Item 1',
             StageNamePk__c           = 'In Development',
-            ClientNetworkEntityId__c = client.Id
+            ClientNetworkEntityLookup__c = client.Id
         );
         WorkItem__c workItem2 = new WorkItem__c(
             BriefDescriptionTxt__c   = 'Feed Test Item 2',
             StageNamePk__c           = 'In Development',
-            ClientNetworkEntityId__c = client.Id
+            ClientNetworkEntityLookup__c = client.Id
         );
         WorkItem__c unlinkedItem = new WorkItem__c(
             BriefDescriptionTxt__c = 'Unlinked Feed Item',
@@ -38,15 +38,15 @@ private class DeliveryActivityFeedControllerTest {
         // Work Requests (needed for WorkLog master-detail)
         insert new List<WorkRequest__c>{
             new WorkRequest__c(
-                WorkItemId__c         = workItem1.Id,
-                DeliveryEntityId__c   = vendor.Id,
+                WorkItemLookup__c         = workItem1.Id,
+                DeliveryEntityLookup__c   = vendor.Id,
                 QuotedHoursNumber__c  = 20,
                 HourlyRateCurrency__c = 100,
                 StatusPk__c           = 'Accepted'
             ),
             new WorkRequest__c(
-                WorkItemId__c         = workItem2.Id,
-                DeliveryEntityId__c   = vendor.Id,
+                WorkItemLookup__c         = workItem2.Id,
+                DeliveryEntityLookup__c   = vendor.Id,
                 QuotedHoursNumber__c  = 10,
                 HourlyRateCurrency__c = 100,
                 StatusPk__c           = 'Accepted'
@@ -56,13 +56,13 @@ private class DeliveryActivityFeedControllerTest {
         // Comments
         insert new List<WorkItemComment__c>{
             new WorkItemComment__c(
-                WorkItemId__c = workItem1.Id,
+                WorkItemLookup__c = workItem1.Id,
                 BodyTxt__c    = 'First comment on item 1',
                 SourcePk__c   = 'Client',
                 AuthorTxt__c  = 'Test User'
             ),
             new WorkItemComment__c(
-                WorkItemId__c = workItem2.Id,
+                WorkItemLookup__c = workItem2.Id,
                 BodyTxt__c    = 'Comment on item 2',
                 SourcePk__c   = 'Mothership',
                 AuthorTxt__c  = 'Vendor User'
@@ -70,21 +70,21 @@ private class DeliveryActivityFeedControllerTest {
         };
 
         // Work Logs
-        WorkRequest__c req1 = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem1.Id LIMIT 1];
-        WorkRequest__c req2 = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem2.Id LIMIT 1];
+        WorkRequest__c req1 = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem1.Id LIMIT 1];
+        WorkRequest__c req2 = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem2.Id LIMIT 1];
 
         insert new List<WorkLog__c>{
             new WorkLog__c(
-                RequestId__c          = req1.Id,
-                WorkItemId__c           = workItem1.Id,
+                RequestLookup__c          = req1.Id,
+                WorkItemLookup__c           = workItem1.Id,
                 HoursLoggedNumber__c  = 3.5,
                 WorkDateDate__c       = Date.today(),
                 WorkDescriptionTxt__c = 'Development work',
                 StatusPk__c           = 'Approved'
             ),
             new WorkLog__c(
-                RequestId__c          = req2.Id,
-                WorkItemId__c           = workItem2.Id,
+                RequestLookup__c          = req2.Id,
+                WorkItemLookup__c           = workItem2.Id,
                 HoursLoggedNumber__c  = 1.0,
                 WorkDateDate__c       = Date.today(),
                 WorkDescriptionTxt__c = 'Draft hours',
@@ -306,9 +306,9 @@ private class DeliveryActivityFeedControllerTest {
             Test.stopTest();
 
             List<WorkItemComment__c> comments = [
-                SELECT BodyTxt__c, WorkItemId__c, SourcePk__c
+                SELECT BodyTxt__c, WorkItemLookup__c, SourcePk__c
                 FROM WorkItemComment__c
-                WHERE WorkItemId__c = :wi.Id AND SourcePk__c = 'Client'
+                WHERE WorkItemLookup__c = :wi.Id AND SourcePk__c = 'Client'
             ];
             // Filter in Apex since BodyTxt__c is LongTextArea (not filterable in SOQL)
             WorkItemComment__c found = null;

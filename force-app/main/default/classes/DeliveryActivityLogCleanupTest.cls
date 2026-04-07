@@ -32,7 +32,7 @@ private class DeliveryActivityLogCleanupTest {
                     ActionTypePk__c = 'Navigation',
                     ComponentNameTxt__c = 'deliveryHubBoard',
                     UserIdTxt__c = UserInfo.getUserId(),
-                    NetworkEntityId__c = entity.Id,
+                    NetworkEntityLookup__c = entity.Id,
                     ContextDataTxt__c = '{"url":"https://test.salesforce.com"}'
                 ));
             }
@@ -40,7 +40,7 @@ private class DeliveryActivityLogCleanupTest {
                 ActionTypePk__c = 'Button_Click',
                 ComponentNameTxt__c = 'deliveryGhostRecorder',
                 UserIdTxt__c = UserInfo.getUserId(),
-                NetworkEntityId__c = entity.Id,
+                NetworkEntityLookup__c = entity.Id,
                 ContextDataTxt__c = '{"url":"https://test.salesforce.com/ghost"}'
             ));
             insert logs;
@@ -280,10 +280,10 @@ private class DeliveryActivityLogCleanupTest {
             // Insert an old Field_Change log — should NOT be purged
             ActivityLog__c oldFieldChange = new ActivityLog__c(
                 ActionTypePk__c = 'Field_Change',
-                ComponentNameTxt__c = 'DeveloperLookupId__c',
+                ComponentNameTxt__c = 'DeveloperLookup__c',
                 UserIdTxt__c = UserInfo.getUserId(),
                 RecordIdTxt__c = testAcct.Id,
-                ContextDataTxt__c = '{"fieldName":"DeveloperLookupId__c","oldValue":"User A","newValue":"User B"}'
+                ContextDataTxt__c = '{"fieldName":"DeveloperLookup__c","oldValue":"User A","newValue":"User B"}'
             );
             insert oldFieldChange;
             Test.setCreatedDate(oldFieldChange.Id, DateTime.now().addDays(-(DeliveryActivityLogCleanup.retentionDays + 1)));

@@ -27,12 +27,12 @@ public class DeliveryDependencyGraphControllerTest {
 
         // Linear chain: Alpha blocks Bravo, Bravo blocks Charlie
         List<WorkItemDependency__c> deps = new List<WorkItemDependency__c>{
-            new WorkItemDependency__c(BlockingWorkItemId__c = workItems[0].Id, BlockedWorkItemId__c = workItems[1].Id, TypePk__c = 'Blocks'),
-            new WorkItemDependency__c(BlockingWorkItemId__c = workItems[1].Id, BlockedWorkItemId__c = workItems[2].Id, TypePk__c = 'Blocks'),
+            new WorkItemDependency__c(BlockingWorkItemLookup__c = workItems[0].Id, BlockedWorkItemLookup__c = workItems[1].Id, TypePk__c = 'Blocks'),
+            new WorkItemDependency__c(BlockingWorkItemLookup__c = workItems[1].Id, BlockedWorkItemLookup__c = workItems[2].Id, TypePk__c = 'Blocks'),
             // Branch: Alpha also blocks Delta
-            new WorkItemDependency__c(BlockingWorkItemId__c = workItems[0].Id, BlockedWorkItemId__c = workItems[3].Id, TypePk__c = 'Blocks'),
+            new WorkItemDependency__c(BlockingWorkItemLookup__c = workItems[0].Id, BlockedWorkItemLookup__c = workItems[3].Id, TypePk__c = 'Blocks'),
             // Circular: Charlie blocks Alpha (creates A->B->C->A cycle)
-            new WorkItemDependency__c(BlockingWorkItemId__c = workItems[2].Id, BlockedWorkItemId__c = workItems[0].Id, TypePk__c = 'Blocks')
+            new WorkItemDependency__c(BlockingWorkItemLookup__c = workItems[2].Id, BlockedWorkItemLookup__c = workItems[0].Id, TypePk__c = 'Blocks')
         };
         insert deps;
 

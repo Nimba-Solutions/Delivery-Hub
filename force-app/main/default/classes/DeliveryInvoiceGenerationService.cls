@@ -96,7 +96,7 @@ public with sharing class DeliveryInvoiceGenerationService {
         Integer logCount = [
             SELECT COUNT()
             FROM WorkLog__c
-            WHERE WorkItemId__r.ClientNetworkEntityId__c = :entityId
+            WHERE WorkItemLookup__r.ClientNetworkEntityLookup__c = :entityId
             AND WorkDateDate__c >= :periodStart
             AND WorkDateDate__c <= :periodEnd
             AND (StatusPk__c = 'Approved' OR StatusPk__c = null)

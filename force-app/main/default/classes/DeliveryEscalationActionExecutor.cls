@@ -82,8 +82,8 @@ public with sharing class DeliveryEscalationActionExecutor {
         EventBus.publish(new DeliveryEscalation__e(
             WorkItemIdTxt__c = wi.Id,
             RuleNameTxt__c = rule.MasterLabel,
-            ActionTypePk__c = action,
-            SeverityPk__c = ctx.severity,
+            ActionTypeTxt__c = action,
+            SeverityTxt__c = ctx.severity,
             DaysInStageNumber__c = ctx.daysInStage
         ));
     }

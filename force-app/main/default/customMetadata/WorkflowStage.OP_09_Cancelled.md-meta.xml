@@ -3,7 +3,7 @@
     <label>OP - Cancelled</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowTypeMdtId__c</field>
+        <field>WorkflowTypeMdt__c</field>
         <value xsi:type="xsd:string">Operations</value>
     </values>
     <values>

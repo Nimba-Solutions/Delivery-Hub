@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ApproverFieldTxt__c</fullName>
-    <description>API name of the field on WorkItem__c that holds the approver User ID for this step (e.g. DeveloperLookupId__c, OwnerId).</description>
+    <description>API name of the field on WorkItem__c that holds the approver User ID for this step (e.g. DeveloperLookup__c, OwnerId).</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Approver Field</label>

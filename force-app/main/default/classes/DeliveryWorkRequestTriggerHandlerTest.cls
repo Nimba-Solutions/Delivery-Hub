@@ -44,8 +44,8 @@ private class DeliveryWorkRequestTriggerHandlerTest {
 
             Test.startTest();
             WorkRequest__c request = new WorkRequest__c(
-                WorkItemId__c = workItem.Id,
-                DeliveryEntityId__c = vendor.Id,
+                WorkItemLookup__c = workItem.Id,
+                DeliveryEntityLookup__c = vendor.Id,
                 StatusPk__c = 'Draft'
             );
             insert request;
@@ -67,8 +67,8 @@ private class DeliveryWorkRequestTriggerHandlerTest {
 
             DeliveryTriggerControl.disableAfterLogic();
             WorkRequest__c request = new WorkRequest__c(
-                WorkItemId__c = workItem.Id,
-                DeliveryEntityId__c = vendor.Id,
+                WorkItemLookup__c = workItem.Id,
+                DeliveryEntityLookup__c = vendor.Id,
                 StatusPk__c = 'Draft'
             );
             insert request;
@@ -96,8 +96,8 @@ private class DeliveryWorkRequestTriggerHandlerTest {
 
             DeliveryTriggerControl.disableAfterLogic();
             WorkRequest__c request = new WorkRequest__c(
-                WorkItemId__c = workItem.Id,
-                DeliveryEntityId__c = vendor.Id,
+                WorkItemLookup__c = workItem.Id,
+                DeliveryEntityLookup__c = vendor.Id,
                 StatusPk__c = 'Draft'
             );
             insert request;

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TemplateSourceLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Self-lookup to the template or recurring work item from which this record was cloned. Used to track lineage back to the source template. SetNull on delete so deleting a template does not cascade-delete every recurring instance ever spawned from it.</description>
+    <inlineHelpText>The source template or recurring item this work item was created from.</inlineHelpText>
+    <label>Template Source</label>
+    <referenceTo>WorkItem__c</referenceTo>
+    <relationshipLabel>Cloned Work Items</relationshipLabel>
+    <relationshipName>ClonedWorkItems</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

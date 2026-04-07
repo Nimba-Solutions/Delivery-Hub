@@ -35,30 +35,30 @@ private class DeliveryDocumentControllerTest {
         WorkItem__c item1 = new WorkItem__c(
             BriefDescriptionTxt__c = 'MF-699 QuickBooks Integration',
             StageNamePk__c = 'In Development',
-            ClientNetworkEntityId__c = entity.Id,
+            ClientNetworkEntityLookup__c = entity.Id,
             BillableRateCurrency__c = 150,
             EstimatedHoursNumber__c = 100
         );
         WorkItem__c item2 = new WorkItem__c(
             BriefDescriptionTxt__c = 'MF-726 HubSpot Investigation',
             StageNamePk__c = 'Ready for Development',
-            ClientNetworkEntityId__c = entity.Id,
+            ClientNetworkEntityLookup__c = entity.Id,
             BillableRateCurrency__c = 150,
             EstimatedHoursNumber__c = 20
         );
         insert new List<WorkItem__c>{ item1, item2 };
 
         WorkRequest__c req1 = new WorkRequest__c(
-            WorkItemId__c = item1.Id,
-            DeliveryEntityId__c = vendor.Id,
+            WorkItemLookup__c = item1.Id,
+            DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'In Progress',
             HourlyRateCurrency__c = 175,
             QuotedHoursNumber__c = 100,
             PreApprovedHoursNumber__c = 100
         );
         WorkRequest__c req2 = new WorkRequest__c(
-            WorkItemId__c = item2.Id,
-            DeliveryEntityId__c = vendor.Id,
+            WorkItemLookup__c = item2.Id,
+            DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'Accepted',
             HourlyRateCurrency__c = 175,
             QuotedHoursNumber__c = 20,
@@ -68,22 +68,22 @@ private class DeliveryDocumentControllerTest {
 
         List<WorkLog__c> logs = new List<WorkLog__c>();
         logs.add(new WorkLog__c(
-            WorkItemId__c = item1.Id,
-            RequestId__c = req1.Id,
+            WorkItemLookup__c = item1.Id,
+            RequestLookup__c = req1.Id,
             HoursLoggedNumber__c = 8,
             WorkDateDate__c = Date.newInstance(2026, 3, 1),
             WorkDescriptionTxt__c = 'Integration setup'
         ));
         logs.add(new WorkLog__c(
-            WorkItemId__c = item1.Id,
-            RequestId__c = req1.Id,
+            WorkItemLookup__c = item1.Id,
+            RequestLookup__c = req1.Id,
             HoursLoggedNumber__c = 4.5,
             WorkDateDate__c = Date.newInstance(2026, 3, 2),
             WorkDescriptionTxt__c = 'Testing and deployment'
         ));
         logs.add(new WorkLog__c(
-            WorkItemId__c = item2.Id,
-            RequestId__c = req2.Id,
+            WorkItemLookup__c = item2.Id,
+            RequestLookup__c = req2.Id,
             HoursLoggedNumber__c = 5,
             WorkDateDate__c = Date.newInstance(2026, 3, 3),
             WorkDescriptionTxt__c = 'Investigation and analysis'
@@ -338,7 +338,7 @@ private class DeliveryDocumentControllerTest {
             WorkItem__c itemNoRate = new WorkItem__c(
                 BriefDescriptionTxt__c = 'MF-800 No Rate Item',
                 StageNamePk__c = 'In Development',
-                ClientNetworkEntityId__c = entity.Id,
+                ClientNetworkEntityLookup__c = entity.Id,
                 EstimatedHoursNumber__c = 10
                 // BillableRateCurrency__c intentionally omitted — null
             );
@@ -347,8 +347,8 @@ private class DeliveryDocumentControllerTest {
             // Create a WorkRequest with NO rate for the no-rate item (Master-Detail requires parent)
             NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Test Vendor LLC' LIMIT 1];
             WorkRequest__c reqNoRate = new WorkRequest__c(
-                WorkItemId__c = itemNoRate.Id,
-                DeliveryEntityId__c = vendor.Id,
+                WorkItemLookup__c = itemNoRate.Id,
+                DeliveryEntityLookup__c = vendor.Id,
                 StatusPk__c = 'In Progress'
                 // HourlyRateCurrency__c intentionally omitted — rate hierarchy falls through to entity default
             );
@@ -356,8 +356,8 @@ private class DeliveryDocumentControllerTest {
 
             // Log 2 hours on the no-rate item within the period
             insert new WorkLog__c(
-                WorkItemId__c = itemNoRate.Id,
-                RequestId__c = reqNoRate.Id,
+                WorkItemLookup__c = itemNoRate.Id,
+                RequestLookup__c = reqNoRate.Id,
                 HoursLoggedNumber__c = 2,
                 WorkDateDate__c = Date.newInstance(2026, 3, 5),
                 WorkDescriptionTxt__c = 'Work on unrated item'
@@ -528,8 +528,8 @@ private class DeliveryDocumentControllerTest {
             Id docId = generateTestDocument(entity.Id);
 
             DeliveryDocument__c doc = [
-                SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
-                       NetworkEntityId__r.ContactEmailTxt__c,
+                SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__r.Name,
+                       NetworkEntityLookup__r.ContactEmailTxt__c,
                        PeriodStartDate__c, PeriodEndDate__c,
                        StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
                        TermsTxt__c, DueDateDate__c, SentDateTime__c,
@@ -581,7 +581,7 @@ private class DeliveryDocumentControllerTest {
             List<DeliveryTransaction__c> txns = [
                 SELECT TypePk__c, AmountCurrency__c, TransactionDateDate__c, NoteTxt__c
                 FROM DeliveryTransaction__c
-                WHERE DocumentId__c = :docId
+                WHERE DocumentLookup__c = :docId
             ];
             System.assertEquals(1, txns.size(), 'Should create one transaction record');
             System.assertEquals('Payment', txns[0].TypePk__c, 'Type should be Payment');
@@ -633,7 +633,7 @@ private class DeliveryDocumentControllerTest {
 
             List<DeliveryTransaction__c> txns = [
                 SELECT AmountCurrency__c FROM DeliveryTransaction__c
-                WHERE DocumentId__c = :docId ORDER BY CreatedDate ASC
+                WHERE DocumentLookup__c = :docId ORDER BY CreatedDate ASC
             ];
             System.assertEquals(2, txns.size(), 'Should have two transaction records');
             System.assertEquals(2000.00, txns[0].AmountCurrency__c, 'First payment amount should match');
@@ -805,11 +805,11 @@ private class DeliveryDocumentControllerTest {
             Id docId = generateTestDocument(entity.Id);
             Test.stopTest();
             DeliveryDocument__c doc = [
-                SELECT VersionNumber__c, PreviousVersionId__c
+                SELECT VersionNumber__c, PreviousVersionLookup__c
                 FROM DeliveryDocument__c WHERE Id = :docId
             ];
             System.assertEquals(1, doc.VersionNumber__c, 'First document should be version 1');
-            System.assertEquals(null, doc.PreviousVersionId__c, 'First document should have no previous version');
+            System.assertEquals(null, doc.PreviousVersionLookup__c, 'First document should have no previous version');
         }
     }
 
@@ -827,10 +827,10 @@ private class DeliveryDocumentControllerTest {
             System.assertEquals('Superseded', oldDoc.StatusPk__c, 'Old document should be Superseded');
             System.assertEquals(1, oldDoc.VersionNumber__c, 'Old document should remain version 1');
             DeliveryDocument__c newDoc = [
-                SELECT VersionNumber__c, PreviousVersionId__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId2
+                SELECT VersionNumber__c, PreviousVersionLookup__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId2
             ];
             System.assertEquals(2, newDoc.VersionNumber__c, 'New document should be version 2');
-            System.assertEquals(docId1, newDoc.PreviousVersionId__c, 'New document should link to old');
+            System.assertEquals(docId1, newDoc.PreviousVersionLookup__c, 'New document should link to old');
             System.assertEquals('Draft', newDoc.StatusPk__c, 'New document should start as Draft');
         }
     }
@@ -845,10 +845,10 @@ private class DeliveryDocumentControllerTest {
             Id docId3 = generateTestDocument(entity.Id);
             Test.stopTest();
             DeliveryDocument__c v3 = [
-                SELECT VersionNumber__c, PreviousVersionId__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId3
+                SELECT VersionNumber__c, PreviousVersionLookup__c, StatusPk__c FROM DeliveryDocument__c WHERE Id = :docId3
             ];
             System.assertEquals(3, v3.VersionNumber__c, 'Third document should be version 3');
-            System.assertEquals(docId2, v3.PreviousVersionId__c, 'V3 should link to V2');
+            System.assertEquals(docId2, v3.PreviousVersionLookup__c, 'V3 should link to V2');
             System.assertEquals('Draft', v3.StatusPk__c, 'Latest version should be Draft');
             List<DeliveryDocument__c> superseded = [
                 SELECT Id FROM DeliveryDocument__c WHERE Id IN (:docId1, :docId2) AND StatusPk__c = 'Superseded'
@@ -924,7 +924,7 @@ private class DeliveryDocumentControllerTest {
             System.assertEquals('Approved', updated.StatusPk__c, 'Document status should be Approved');
 
             List<DeliveryTransaction__c> txns = [
-                SELECT TypePk__c, NoteTxt__c FROM DeliveryTransaction__c WHERE DocumentId__c = :docId
+                SELECT TypePk__c, NoteTxt__c FROM DeliveryTransaction__c WHERE DocumentLookup__c = :docId
             ];
             System.assertEquals(1, txns.size(), 'Should create an Approval transaction');
             System.assertEquals('Approval', txns[0].TypePk__c, 'Transaction type should be Approval');

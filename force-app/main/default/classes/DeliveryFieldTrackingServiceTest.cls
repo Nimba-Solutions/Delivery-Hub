@@ -37,7 +37,7 @@ private class DeliveryFieldTrackingServiceTest {
     static void testTrackingEnabledCreatesChangeRequest() {
         System.runAs(testUser) {
             WorkItem__c workItem = [
-                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookupId__c
+                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookup__c
                 FROM WorkItem__c LIMIT 1
             ];
 
@@ -81,7 +81,7 @@ private class DeliveryFieldTrackingServiceTest {
             upsert settings;
 
             WorkItem__c workItem = [
-                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookupId__c
+                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookup__c
                 FROM WorkItem__c LIMIT 1
             ];
 
@@ -107,7 +107,7 @@ private class DeliveryFieldTrackingServiceTest {
     static void testUntrackedFieldNoChangeRequest() {
         System.runAs(testUser) {
             WorkItem__c workItem = [
-                SELECT Id, BriefDescriptionTxt__c, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookupId__c
+                SELECT Id, BriefDescriptionTxt__c, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookup__c
                 FROM WorkItem__c LIMIT 1
             ];
 
@@ -135,7 +135,7 @@ private class DeliveryFieldTrackingServiceTest {
     static void testMultipleFieldChangesCreateMultipleRequests() {
         System.runAs(testUser) {
             WorkItem__c workItem = [
-                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookupId__c
+                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookup__c
                 FROM WorkItem__c LIMIT 1
             ];
 
@@ -181,7 +181,7 @@ private class DeliveryFieldTrackingServiceTest {
     static void testTrackCreatesProducesChangeRequests() {
         System.runAs(testUser) {
             WorkItem__c workItem = [
-                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookupId__c
+                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookup__c
                 FROM WorkItem__c LIMIT 1
             ];
 
@@ -214,7 +214,7 @@ private class DeliveryFieldTrackingServiceTest {
     static void testTrackDeletesProducesChangeRequests() {
         System.runAs(testUser) {
             WorkItem__c workItem = [
-                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookupId__c
+                SELECT Id, PriorityPk__c, StageNamePk__c, StatusPk__c, DeveloperLookup__c
                 FROM WorkItem__c LIMIT 1
             ];
 

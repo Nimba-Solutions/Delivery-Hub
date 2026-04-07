@@ -132,15 +132,15 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
 
     private static void collectLogMetrics(DateTime since, MetricsAccumulator acc) {
         for (ActivityLog__c log : [
-            SELECT NetworkEntityId__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
+            SELECT NetworkEntityLookup__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
             FROM ActivityLog__c
             WHERE CreatedDate >= :since
-            AND NetworkEntityId__c != null
+            AND NetworkEntityLookup__c != null
             WITH SYSTEM_MODE
-            ORDER BY NetworkEntityId__c
+            ORDER BY NetworkEntityLookup__c
             LIMIT 50000
         ]) {
-            Id entId = log.NetworkEntityId__c;
+            Id entId = log.NetworkEntityLookup__c;
 
             acc.totals.put(entId, (acc.totals.containsKey(entId) ? acc.totals.get(entId) : 0) + 1);
 

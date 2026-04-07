@@ -39,7 +39,7 @@ private class DeliveryBountyApiServiceTest {
             BountyDifficultyPk__c = 'Intermediate',
             BountySkillsTxt__c = 'Apex;LWC',
             BountyMaxClaimsNumber__c = 5,
-            ClientNetworkEntityId__c = entity.Id
+            ClientNetworkEntityLookup__c = entity.Id
         );
         insert bounty;
     }

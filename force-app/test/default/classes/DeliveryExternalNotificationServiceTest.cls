@@ -25,7 +25,7 @@ private class DeliveryExternalNotificationServiceTest {
             WorkItem__c wi = new WorkItem__c(
                 BriefDescriptionTxt__c = 'Test external notification',
                 StageNamePk__c = 'Submitted',
-                ExternalRequesterEmailTxt__c = 'client@example.com',
+                ExternalRequesterEmail__c = 'client@example.com',
                 PriorityPk__c = 'Medium'
             );
             insert wi;
@@ -72,7 +72,7 @@ private class DeliveryExternalNotificationServiceTest {
             WorkItem__c wi = new WorkItem__c(
                 BriefDescriptionTxt__c = 'SLA breach test',
                 StageNamePk__c = 'In Development',
-                ExternalRequesterEmailTxt__c = 'client@example.com',
+                ExternalRequesterEmail__c = 'client@example.com',
                 PriorityPk__c = 'High',
                 SLATargetDate__c = Date.today().addDays(-1)
             );
@@ -99,7 +99,7 @@ private class DeliveryExternalNotificationServiceTest {
             WorkItem__c wi = new WorkItem__c(
                 BriefDescriptionTxt__c = 'Should not send',
                 StageNamePk__c = 'Submitted',
-                ExternalRequesterEmailTxt__c = 'client@example.com',
+                ExternalRequesterEmail__c = 'client@example.com',
                 PriorityPk__c = 'Medium'
             );
             insert wi;

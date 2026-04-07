@@ -24,7 +24,7 @@ global with sharing class DeliveryAiController {
 
         List<WorkItem__c> workItems = [
             SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                   EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
+                   EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
                    ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c
             FROM WorkItem__c
             WHERE Id = :workItemId
@@ -217,8 +217,8 @@ global with sharing class DeliveryAiController {
         if (t.EstimatedHoursNumber__c != null) {
             p += 'Estimated Hours: ' + t.EstimatedHoursNumber__c + '\n';
         }
-        if (t.TotalLoggedHoursNumber__c != null) {
-            p += 'Hours Logged: ' + t.TotalLoggedHoursNumber__c + '\n';
+        if (t.TotalLoggedHoursSum__c != null) {
+            p += 'Hours Logged: ' + t.TotalLoggedHoursSum__c + '\n';
         }
         if (t.ProjectedUATReadyDate__c != null) {
             p += 'Target UAT Date: ' + t.ProjectedUATReadyDate__c.format() + '\n';

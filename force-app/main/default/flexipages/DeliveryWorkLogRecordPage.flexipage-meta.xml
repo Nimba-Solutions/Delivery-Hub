@@ -53,7 +53,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.WorkItemId__c</fieldItem>
+                <fieldItem>Record.WorkItemLookup__c</fieldItem>
                 <identifier>RecordWorkItemId_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -99,7 +99,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.RequestId__c</fieldItem>
+                <fieldItem>Record.RequestLookup__c</fieldItem>
                 <identifier>RecordRequestId_cField</identifier>
             </fieldInstance>
         </itemInstances>

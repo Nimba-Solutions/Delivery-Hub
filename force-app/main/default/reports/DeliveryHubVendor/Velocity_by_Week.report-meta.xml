@@ -7,7 +7,7 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityLookup__c</field>
     </columns>
     <description>Work items completed (Done stage) grouped by Calculated ETA date week. Shows delivery cadence and burn rate over time — adjust the date filter window as needed.</description>
     <filter>

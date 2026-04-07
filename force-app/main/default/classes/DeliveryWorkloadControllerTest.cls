@@ -20,37 +20,37 @@ private class DeliveryWorkloadControllerTest {
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Assigned Item 1',
                 StageNamePk__c = 'In Development',
-                DeveloperLookupId__c = UserInfo.getUserId(),
+                DeveloperLookup__c = UserInfo.getUserId(),
                 EstimatedHoursNumber__c = 8
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Assigned Item 2',
                 StageNamePk__c = 'Ready for QA',
-                DeveloperLookupId__c = UserInfo.getUserId(),
+                DeveloperLookup__c = UserInfo.getUserId(),
                 EstimatedHoursNumber__c = 4
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Assigned Item 3',
                 StageNamePk__c = 'In Development',
-                DeveloperLookupId__c = UserInfo.getUserId(),
+                DeveloperLookup__c = UserInfo.getUserId(),
                 EstimatedHoursNumber__c = null
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Unassigned Item 1',
                 StageNamePk__c = 'Backlog',
-                DeveloperLookupId__c = null,
+                DeveloperLookup__c = null,
                 EstimatedHoursNumber__c = 2
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Unassigned Item 2',
                 StageNamePk__c = 'Ready for Development',
-                DeveloperLookupId__c = null,
+                DeveloperLookup__c = null,
                 EstimatedHoursNumber__c = 6
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Terminal Item',
                 StageNamePk__c = 'Done',
-                DeveloperLookupId__c = UserInfo.getUserId(),
+                DeveloperLookup__c = UserInfo.getUserId(),
                 EstimatedHoursNumber__c = 10
             )
         };

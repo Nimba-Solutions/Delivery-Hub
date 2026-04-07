@@ -99,7 +99,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.DocumentId__c</fieldItem>
+                <fieldItem>Record.DocumentLookup__c</fieldItem>
                 <identifier>RecordDocumentId_cField</identifier>
             </fieldInstance>
         </itemInstances>

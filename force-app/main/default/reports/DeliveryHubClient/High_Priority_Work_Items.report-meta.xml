@@ -10,13 +10,13 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityLookup__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursSum__c</field>
     </columns>
     <description>All high priority work items regardless of stage. See what needs immediate attention.</description>
     <filter>

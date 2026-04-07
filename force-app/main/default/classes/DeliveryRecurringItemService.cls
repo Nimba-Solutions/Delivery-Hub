@@ -21,7 +21,7 @@ global with sharing class DeliveryRecurringItemService {
         'StepsToReproduceTxt__c',
         'EpicTxt__c',
         'ClientIntentionPk__c',
-        'DeveloperLookupId__c'
+        'DeveloperLookup__c'
     };
 
     // Pre-built CSV of clone fields for dynamic SOQL
@@ -217,7 +217,7 @@ global with sharing class DeliveryRecurringItemService {
         clone.TemplateMarkedDateTime__c = null;
         clone.RecurringEnabledDateTime__c = null;
         clone.StageNamePk__c = getFirstStageForWorkflow(workflowType);
-        clone.TemplateSourceId__c = sourceId;
+        clone.TemplateSourceLookup__c = sourceId;
         clone.OwnerId = ownerId;
         return clone;
     }
@@ -269,7 +269,7 @@ global with sharing class DeliveryRecurringItemService {
         List<WorkflowStage__mdt> stages = [
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :resolvedType
+            WHERE WorkflowTypeMdt__r.DeveloperName = :resolvedType
             AND TerminalDateTime__c = null
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST

@@ -8,7 +8,7 @@ import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 
 // Fields to monitor
 import STAGE_FIELD from '@salesforce/schema/WorkItem__c.StageNamePk__c';
-import DEV_FIELD from '@salesforce/schema/WorkItem__c.DeveloperLookupId__c';
+import DEV_FIELD from '@salesforce/schema/WorkItem__c.DeveloperLookup__c';
 import ESTIMATED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.EstimatedHoursNumber__c';
 import PRE_APPROVED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.ClientPreApprovedHoursNumber__c';
 

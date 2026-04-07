@@ -57,7 +57,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'DeveloperDaysSizeNumber__c',
             'EstimatedHoursNumber__c',
             'ClientPreApprovedHoursNumber__c',
-            'DeveloperLookupId__c',
+            'DeveloperLookup__c',
             'CalculatedETADate__c',
             'ProjectedUATReadyDate__c',
             'AcceptanceCriteriaTxt__c',
@@ -117,18 +117,18 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             NetworkEntity__c vendor = vendors[0];
             for (WorkItem__c t : newWorkItems) {
                 newRequests.add(new WorkRequest__c(
-                    WorkItemId__c = t.Id,
-                    DeliveryEntityId__c = vendor.Id,
+                    WorkItemLookup__c = t.Id,
+                    DeliveryEntityLookup__c = vendor.Id,
                     StatusPk__c = 'Draft',
                     PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
                 ));
             }
         } else {
             for (WorkItem__c t : newWorkItems) {
-                if (t.ClientNetworkEntityId__c != null) {
+                if (t.ClientNetworkEntityLookup__c != null) {
                     newRequests.add(new WorkRequest__c(
-                        WorkItemId__c = t.Id,
-                        DeliveryEntityId__c = t.ClientNetworkEntityId__c,
+                        WorkItemLookup__c = t.Id,
+                        DeliveryEntityLookup__c = t.ClientNetworkEntityLookup__c,
                         StatusPk__c = 'Draft',
                         PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
                     ));
@@ -259,16 +259,16 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         if (!workItemsToCheck.isEmpty()) {
             // FIX: Swapped USER_MODE for SYSTEM_MODE
             List<WorkItemDependency__c> unresolvedBlockers = [
-                SELECT BlockedWorkItemId__c, BlockingWorkItemId__r.BriefDescriptionTxt__c, BlockingWorkItemId__r.StageNamePk__c
+                SELECT BlockedWorkItemLookup__c, BlockingWorkItemLookup__r.BriefDescriptionTxt__c, BlockingWorkItemLookup__r.StageNamePk__c
                 FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__c IN :workItemsToCheck
-                AND BlockingWorkItemId__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                WHERE BlockedWorkItemLookup__c IN :workItemsToCheck
+                AND BlockingWorkItemLookup__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
                 WITH SYSTEM_MODE
             ];
             for (WorkItemDependency__c dependency : unresolvedBlockers) {
                 for (WorkItem__c workItem : newWorkItems) {
-                    if (workItem.Id == dependency.BlockedWorkItemId__c) {
-                        workItem.addError('This work item cannot be started. It is blocked by: ' + dependency.BlockingWorkItemId__r.BriefDescriptionTxt__c);
+                    if (workItem.Id == dependency.BlockedWorkItemLookup__c) {
+                        workItem.addError('This work item cannot be started. It is blocked by: ' + dependency.BlockingWorkItemLookup__r.BriefDescriptionTxt__c);
                     }
                 }
             }

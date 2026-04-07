@@ -50,12 +50,12 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DeliveryDocument__c.RequiresSigningCheckbox__c</field>
+        <field>DeliveryDocument__c.RequireSigningDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DocumentAction__c.AssignedEntityId__c</field>
+        <field>DocumentAction__c.AssignedEntityLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -70,7 +70,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DocumentAction__c.SignerEmailTxt__c</field>
+        <field>DocumentAction__c.SignerEmail__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -95,7 +95,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DeliveryDocument__c.PreviousVersionId__c</field>
+        <field>DeliveryDocument__c.PreviousVersionLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -240,7 +240,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>WorkItem__c.ClientNetworkEntityLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -295,7 +295,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
+        <field>WorkItem__c.TotalLoggedHoursSum__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

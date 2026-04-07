@@ -122,10 +122,10 @@ public with sharing class DeliveryGanttController {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
                 + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
-                + 'EstimatedHoursNumber__c, TotalLoggedHoursNumber__c, '
-                + 'ActivatedDateTime__c, ParentWorkItemId__c, '
-                + 'DeveloperLookupId__r.Name, '
-                + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
+                + 'EstimatedHoursNumber__c, TotalLoggedHoursSum__c, '
+                + 'ActivatedDateTime__c, ParentWorkItemLookup__c, '
+                + 'DeveloperLookup__r.Name, '
+                + 'ClientNetworkEntityLookup__c, ClientNetworkEntityLookup__r.Name '
                 + 'FROM WorkItem__c '
                 + 'WHERE TemplateMarkedDateTime__c = null ';
 
@@ -134,7 +134,7 @@ public with sharing class DeliveryGanttController {
             }
 
             query += 'WITH SYSTEM_MODE '
-                + 'ORDER BY ClientNetworkEntityId__r.Name ASC NULLS LAST, '
+                + 'ORDER BY ClientNetworkEntityLookup__r.Name ASC NULLS LAST, '
                 + 'EstimatedStartDevDate__c ASC NULLS LAST, CreatedDate ASC';
 
             List<WorkItem__c> items = Database.query(query); // NOPMD — dynamic for conditional WHERE
@@ -183,22 +183,22 @@ public with sharing class DeliveryGanttController {
         task.stage = item.StageNamePk__c;
         task.priority = item.PriorityPk__c;
         task.estimatedHours = item.EstimatedHoursNumber__c;
-        task.loggedHours = item.TotalLoggedHoursNumber__c;
+        task.loggedHours = item.TotalLoggedHoursSum__c;
         task.isCompleted = item.ActivatedDateTime__c == null;
-        task.parentWorkItemId = item.ParentWorkItemId__c;
+        task.parentWorkItemId = item.ParentWorkItemLookup__c;
 
         if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
-            Decimal logged = item.TotalLoggedHoursNumber__c != null ? item.TotalLoggedHoursNumber__c : 0;
+            Decimal logged = item.TotalLoggedHoursSum__c != null ? item.TotalLoggedHoursSum__c : 0;
             task.progress = Math.min(logged / item.EstimatedHoursNumber__c, 1.0);
         } else {
             task.progress = 0;
         }
 
-        task.developerName = item.DeveloperLookupId__r != null ? item.DeveloperLookupId__r.Name : null;
+        task.developerName = item.DeveloperLookup__r != null ? item.DeveloperLookup__r.Name : null;
 
-        task.entityName = item.ClientNetworkEntityId__r != null
-            ? item.ClientNetworkEntityId__r.Name : null;
-        task.entityId = item.ClientNetworkEntityId__c;
+        task.entityName = item.ClientNetworkEntityLookup__r != null
+            ? item.ClientNetworkEntityLookup__r.Name : null;
+        task.entityId = item.ClientNetworkEntityLookup__c;
 
         Date startDt = item.EstimatedStartDevDate__c != null
             ? item.EstimatedStartDevDate__c
@@ -238,17 +238,17 @@ public with sharing class DeliveryGanttController {
         try {
             List<GanttDependency> deps = new List<GanttDependency>();
             for (WorkItemDependency__c d : [
-                SELECT Id, BlockedWorkItemId__c, BlockingWorkItemId__c, TypePk__c
+                SELECT Id, BlockedWorkItemLookup__c, BlockingWorkItemLookup__c, TypePk__c
                 FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__r.ActivatedDateTime__c != null
-                  AND BlockingWorkItemId__r.ActivatedDateTime__c != null
+                WHERE BlockedWorkItemLookup__r.ActivatedDateTime__c != null
+                  AND BlockingWorkItemLookup__r.ActivatedDateTime__c != null
                 WITH SYSTEM_MODE
                 LIMIT 500
             ]) {
                 GanttDependency dep = new GanttDependency();
                 dep.id = d.Id;
-                dep.source = d.BlockingWorkItemId__c;
-                dep.target = d.BlockedWorkItemId__c;
+                dep.source = d.BlockingWorkItemLookup__c;
+                dep.target = d.BlockedWorkItemLookup__c;
                 dep.dependencyType = d.TypePk__c;
                 deps.add(dep);
             }

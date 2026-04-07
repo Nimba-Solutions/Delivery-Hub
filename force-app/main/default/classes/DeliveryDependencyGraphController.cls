@@ -48,7 +48,7 @@ global with sharing class DeliveryDependencyGraphController {
     private static List<WorkItemDependency__c> traverseDependencies(Set<Id> visited) {
         // Load all dependency records upfront — single SOQL, no loop
         List<WorkItemDependency__c> allRecords = [
-            SELECT Id, BlockedWorkItemId__c, BlockingWorkItemId__c, TypePk__c
+            SELECT Id, BlockedWorkItemLookup__c, BlockingWorkItemLookup__c, TypePk__c
             FROM WorkItemDependency__c
             WITH SYSTEM_MODE
             LIMIT 2000
@@ -75,13 +75,13 @@ global with sharing class DeliveryDependencyGraphController {
                     continue;
                 }
                 for (WorkItemDependency__c dep : neighbors) {
-                    String edgeKey = dep.BlockingWorkItemId__c + '->' + dep.BlockedWorkItemId__c;
+                    String edgeKey = dep.BlockingWorkItemLookup__c + '->' + dep.BlockedWorkItemLookup__c;
                     if (!edgeKeys.contains(edgeKey)) {
                         edgeKeys.add(edgeKey);
                         connectedDeps.add(dep);
                     }
-                    enqueueIfUnvisited(dep.BlockedWorkItemId__c, visited, queue);
-                    enqueueIfUnvisited(dep.BlockingWorkItemId__c, visited, queue);
+                    enqueueIfUnvisited(dep.BlockedWorkItemLookup__c, visited, queue);
+                    enqueueIfUnvisited(dep.BlockingWorkItemLookup__c, visited, queue);
                 }
             }
         }
@@ -99,8 +99,8 @@ global with sharing class DeliveryDependencyGraphController {
     ) {
         Map<Id, List<WorkItemDependency__c>> adjacency = new Map<Id, List<WorkItemDependency__c>>();
         for (WorkItemDependency__c dep : deps) {
-            addToAdjacency(adjacency, dep.BlockedWorkItemId__c, dep);
-            addToAdjacency(adjacency, dep.BlockingWorkItemId__c, dep);
+            addToAdjacency(adjacency, dep.BlockedWorkItemLookup__c, dep);
+            addToAdjacency(adjacency, dep.BlockingWorkItemLookup__c, dep);
         }
         return adjacency;
     }
@@ -183,8 +183,8 @@ global with sharing class DeliveryDependencyGraphController {
         List<Map<String, Object>> edges = new List<Map<String, Object>>();
         for (WorkItemDependency__c dep : deps) {
             Map<String, Object> edge = new Map<String, Object>();
-            edge.put('source', (String) dep.BlockingWorkItemId__c);
-            edge.put('target', (String) dep.BlockedWorkItemId__c);
+            edge.put('source', (String) dep.BlockingWorkItemLookup__c);
+            edge.put('target', (String) dep.BlockedWorkItemLookup__c);
             edge.put('type', dep.TypePk__c);
             edges.add(edge);
         }
@@ -247,10 +247,10 @@ global with sharing class DeliveryDependencyGraphController {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static List<WorkItemDependency__c> queryProjectDependencies(Set<Id> workItemIds) {
         return [
-            SELECT Id, BlockedWorkItemId__c, BlockingWorkItemId__c, TypePk__c
+            SELECT Id, BlockedWorkItemLookup__c, BlockingWorkItemLookup__c, TypePk__c
             FROM WorkItemDependency__c
-            WHERE BlockedWorkItemId__c IN :workItemIds
-               OR BlockingWorkItemId__c IN :workItemIds
+            WHERE BlockedWorkItemLookup__c IN :workItemIds
+               OR BlockingWorkItemLookup__c IN :workItemIds
             WITH SYSTEM_MODE
             LIMIT 500
         ];
@@ -266,11 +266,11 @@ global with sharing class DeliveryDependencyGraphController {
     private static Set<Id> findConnectedIds(List<WorkItemDependency__c> deps, Set<Id> scopeIds) {
         Set<Id> connectedIds = new Set<Id>();
         for (WorkItemDependency__c dep : deps) {
-            if (scopeIds.contains(dep.BlockedWorkItemId__c)) {
-                connectedIds.add(dep.BlockedWorkItemId__c);
+            if (scopeIds.contains(dep.BlockedWorkItemLookup__c)) {
+                connectedIds.add(dep.BlockedWorkItemLookup__c);
             }
-            if (scopeIds.contains(dep.BlockingWorkItemId__c)) {
-                connectedIds.add(dep.BlockingWorkItemId__c);
+            if (scopeIds.contains(dep.BlockingWorkItemLookup__c)) {
+                connectedIds.add(dep.BlockingWorkItemLookup__c);
             }
         }
         return connectedIds;
@@ -303,11 +303,11 @@ global with sharing class DeliveryDependencyGraphController {
     private static List<Map<String, Object>> buildFilteredEdges(List<WorkItemDependency__c> deps, Set<Id> connectedIds) {
         List<Map<String, Object>> edges = new List<Map<String, Object>>();
         for (WorkItemDependency__c dep : deps) {
-            if (connectedIds.contains(dep.BlockedWorkItemId__c)
-                && connectedIds.contains(dep.BlockingWorkItemId__c)) {
+            if (connectedIds.contains(dep.BlockedWorkItemLookup__c)
+                && connectedIds.contains(dep.BlockingWorkItemLookup__c)) {
                 Map<String, Object> edge = new Map<String, Object>();
-                edge.put('source', (String) dep.BlockingWorkItemId__c);
-                edge.put('target', (String) dep.BlockedWorkItemId__c);
+                edge.put('source', (String) dep.BlockingWorkItemLookup__c);
+                edge.put('target', (String) dep.BlockedWorkItemLookup__c);
                 edge.put('type', dep.TypePk__c);
                 edges.add(edge);
             }

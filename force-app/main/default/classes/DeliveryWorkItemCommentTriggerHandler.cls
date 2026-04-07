@@ -38,8 +38,8 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
         // Collect parent work item Ids
         Set<Id> workItemIds = new Set<Id>();
         for (WorkItemComment__c c : comments) {
-            if (c.WorkItemId__c != null) {
-                workItemIds.add(c.WorkItemId__c);
+            if (c.WorkItemLookup__c != null) {
+                workItemIds.add(c.WorkItemLookup__c);
             }
         }
         if (workItemIds.isEmpty()) {
@@ -66,7 +66,7 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
         Id notifTypeId = notifTypes.isEmpty() ? null : notifTypes[0].Id;
 
         for (WorkItemComment__c c : comments) {
-            WorkItem__c wi = workItemMap.get(c.WorkItemId__c);
+            WorkItem__c wi = workItemMap.get(c.WorkItemLookup__c);
             if (wi == null) {
                 continue;
             }

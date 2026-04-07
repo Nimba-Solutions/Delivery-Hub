@@ -49,8 +49,8 @@ private class DeliveryWorkItemETAServiceTest {
 
         // 3. Create a Dependency (Work Item 3 is blocked by Work Item 1)
         insert new WorkItemDependency__c(
-            BlockedWorkItemId__c = workItems[2].Id,
-            BlockingWorkItemId__c = workItems[0].Id
+            BlockedWorkItemLookup__c = workItems[2].Id,
+            BlockingWorkItemLookup__c = workItems[0].Id
         );
     }
 

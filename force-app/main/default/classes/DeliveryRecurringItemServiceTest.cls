@@ -122,10 +122,10 @@ public class DeliveryRecurringItemServiceTest {
 
             // Verify cloned fields on the weekly item clone
             WorkItem__c weeklyClone = [
-                SELECT BriefDescriptionTxt__c, PriorityPk__c, TagsTxt__c, TemplateSourceId__c,
+                SELECT BriefDescriptionTxt__c, PriorityPk__c, TagsTxt__c, TemplateSourceLookup__c,
                        RecurringEnabledDateTime__c, TemplateMarkedDateTime__c, ActivatedDateTime__c
                 FROM WorkItem__c
-                WHERE TemplateSourceId__c != null
+                WHERE TemplateSourceLookup__c != null
                 AND BriefDescriptionTxt__c = 'Weekly Standup Notes'
                 AND RecurringEnabledDateTime__c = null
                 LIMIT 1
@@ -135,7 +135,7 @@ public class DeliveryRecurringItemServiceTest {
             System.assertEquals(null, weeklyClone.RecurringEnabledDateTime__c, 'Clone should not be recurring');
             System.assertEquals(null, weeklyClone.TemplateMarkedDateTime__c, 'Clone should not be a template');
             System.assertNotEquals(null, weeklyClone.ActivatedDateTime__c, 'Clone should be active');
-            System.assertNotEquals(null, weeklyClone.TemplateSourceId__c, 'TemplateSourceId should be set');
+            System.assertNotEquals(null, weeklyClone.TemplateSourceLookup__c, 'TemplateSourceId should be set');
         }
     }
 
@@ -178,7 +178,7 @@ public class DeliveryRecurringItemServiceTest {
             Integer futureClones = [
                 SELECT COUNT()
                 FROM WorkItem__c
-                WHERE TemplateSourceId__c = :futureItem.Id
+                WHERE TemplateSourceLookup__c = :futureItem.Id
             ];
             System.assertEquals(0, futureClones, 'Future recurring items should not be processed');
         }
@@ -223,7 +223,7 @@ public class DeliveryRecurringItemServiceTest {
 
             WorkItem__c clone = [
                 SELECT BriefDescriptionTxt__c, PriorityPk__c, TagsTxt__c, EstimatedHoursNumber__c,
-                       DeveloperDaysSizeNumber__c, TemplateSourceId__c, TemplateMarkedDateTime__c,
+                       DeveloperDaysSizeNumber__c, TemplateSourceLookup__c, TemplateMarkedDateTime__c,
                        ActivatedDateTime__c
                 FROM WorkItem__c
                 WHERE Id = :newId
@@ -233,7 +233,7 @@ public class DeliveryRecurringItemServiceTest {
             System.assertEquals('bug,template', clone.TagsTxt__c, 'Tags should be cloned');
             System.assertEquals(8, clone.EstimatedHoursNumber__c, 'Estimated hours should be cloned');
             System.assertEquals(2, clone.DeveloperDaysSizeNumber__c, 'Developer days should be cloned');
-            System.assertEquals(template.Id, clone.TemplateSourceId__c, 'Source Id should reference the template');
+            System.assertEquals(template.Id, clone.TemplateSourceLookup__c, 'Source Id should reference the template');
             System.assertEquals(null, clone.TemplateMarkedDateTime__c, 'Clone should not be a template');
             System.assertNotEquals(null, clone.ActivatedDateTime__c, 'Clone should be active');
         }
@@ -427,7 +427,7 @@ public class DeliveryRecurringItemServiceTest {
         System.runAs(testUser) {
             Test.setMock(HttpCalloutMock.class, new SchedulerMockResponse());
 
-            Integer countBefore = [SELECT COUNT() FROM WorkItem__c WHERE TemplateSourceId__c != null];
+            Integer countBefore = [SELECT COUNT() FROM WorkItem__c WHERE TemplateSourceLookup__c != null];
 
             Test.startTest();
             String cronExp = '0 0 0 15 3 ? 2040';

@@ -24,7 +24,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
         System.runAs(testUser) {
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
             NetworkEntity__c v = [SELECT Id FROM NetworkEntity__c LIMIT 1];
-            insert new WorkRequest__c(WorkItemId__c = t.Id, DeliveryEntityId__c = v.Id, StatusPk__c = 'Active', RemoteWorkItemIdTxt__c = 'R-123');
+            insert new WorkRequest__c(WorkItemLookup__c = t.Id, DeliveryEntityLookup__c = v.Id, StatusPk__c = 'Active', RemoteWorkItemIdTxt__c = 'R-123');
 
             delete [SELECT Id FROM SyncItem__c];
 
@@ -33,7 +33,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
             update t;
             Test.stopTest();
 
-            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :t.Id];
+            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :t.Id];
             System.assert(items.size() >= 1, 'Sync Engine should trigger on update');
         }
     }
@@ -52,9 +52,9 @@ public class DeliveryWorkItemTriggerHandlerTest {
             Test.stopTest();
 
             List<WorkRequest__c> requests = [
-                SELECT Id, StatusPk__c, WorkItemId__c
+                SELECT Id, StatusPk__c, WorkItemLookup__c
                 FROM WorkRequest__c
-                WHERE WorkItemId__c = :newItem.Id
+                WHERE WorkItemLookup__c = :newItem.Id
             ];
             System.assert(!requests.isEmpty(), 'A WorkRequest should be auto-created on insert when AutoCreate is enabled');
             System.assertEquals('Draft', requests[0].StatusPk__c, 'Auto-created request should have Draft status');
@@ -115,8 +115,8 @@ public class DeliveryWorkItemTriggerHandlerTest {
             insert blocked;
 
             insert new WorkItemDependency__c(
-                BlockedWorkItemId__c = blocked.Id,
-                BlockingWorkItemId__c = blocker.Id
+                BlockedWorkItemLookup__c = blocked.Id,
+                BlockingWorkItemLookup__c = blocker.Id
             );
 
             Test.startTest();
@@ -206,19 +206,19 @@ public class DeliveryWorkItemTriggerHandlerTest {
             WorkItem__c newItem = new WorkItem__c(
                 BriefDescriptionTxt__c = 'Fallback Request Test',
                 StageNamePk__c = 'Backlog',
-                ClientNetworkEntityId__c = client.Id
+                ClientNetworkEntityLookup__c = client.Id
             );
             insert newItem;
             Test.stopTest();
 
             List<WorkRequest__c> requests = [
-                SELECT Id, DeliveryEntityId__c, StatusPk__c
+                SELECT Id, DeliveryEntityLookup__c, StatusPk__c
                 FROM WorkRequest__c
-                WHERE WorkItemId__c = :newItem.Id
+                WHERE WorkItemLookup__c = :newItem.Id
             ];
             System.assert(!requests.isEmpty(),
                 'A WorkRequest should be auto-created via the client fallback path');
-            System.assertEquals(client.Id, requests[0].DeliveryEntityId__c,
+            System.assertEquals(client.Id, requests[0].DeliveryEntityLookup__c,
                 'Request should use the ClientNetworkEntityId as the delivery entity');
             System.assertEquals('Draft', requests[0].StatusPk__c,
                 'Fallback request should have Draft status');

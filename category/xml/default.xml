@@ -126,6 +126,7 @@
     </rule>
 
     <rule name="RichTextFieldNamingConvention" language="xml" message="RichText fields must follow pattern: PascalCaseTxt__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -139,6 +140,7 @@
     </rule>
 
     <rule name="LongTextAreaFieldNamingConvention" language="xml" message="LongTextArea fields must follow pattern: PascalCaseTxt__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -152,6 +154,7 @@
     </rule>
 
     <rule name="NumberFieldNamingConvention" language="xml" message="Number fields must follow pattern: PascalCaseNumber__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -165,6 +168,7 @@
     </rule>
 
     <rule name="DateFieldNamingConvention" language="xml" message="Date fields must follow pattern: PascalCaseDate__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -177,26 +181,28 @@
         </properties>
     </rule>
 
-    <rule name="LookupFieldNamingConvention" language="xml" message="Lookup fields must follow pattern: PascalCaseId__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+    <rule name="LookupFieldNamingConvention" language="xml" message="Lookup fields must follow pattern: PascalCaseLookup__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
                     //*[local-name()='CustomField'][
                         *[local-name()='type'][text()='Lookup'] and
-                        not(ends-with(*[local-name()='fullName']/text(), 'Id__c'))
+                        not(ends-with(*[local-name()='fullName']/text(), 'Lookup__c'))
                     ]
                 ]]>                </value>
             </property>
         </properties>
     </rule>
 
-    <rule name="MasterDetailFieldNamingConvention" language="xml" message="MasterDetail fields must follow pattern: PascalCaseId__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+    <rule name="MasterDetailFieldNamingConvention" language="xml" message="MasterDetail fields must follow pattern: PascalCaseLookup__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
                     //*[local-name()='CustomField'][
                         *[local-name()='type'][text()='MasterDetail'] and
-                        not(ends-with(*[local-name()='fullName']/text(), 'Id__c'))
+                        not(ends-with(*[local-name()='fullName']/text(), 'Lookup__c'))
                     ]
                 ]]>                </value>
             </property>
@@ -204,6 +210,7 @@
     </rule>
 
     <rule name="DateTimeFieldNamingConvention" language="xml" message="DateTime fields must follow pattern: PascalCaseDateTime__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -217,6 +224,7 @@
     </rule>
 
     <rule name="UrlFieldNamingConvention" language="xml" message="URL fields must follow pattern: PascalCaseUrl__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -230,6 +238,7 @@
     </rule>
 
     <rule name="PicklistFieldNamingConvention" language="xml" message="Picklist fields must follow pattern: PascalCasePk__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -243,6 +252,7 @@
     </rule>
 
     <rule name="MultiSelectPicklistFieldNamingConvention" language="xml" message="Multiselect Picklist fields must follow pattern: PascalCasePk__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -256,6 +266,7 @@
     </rule>
 
     <rule name="CurrencyFieldNamingConvention" language="xml" message="Currency fields must follow pattern: PascalCaseCurrency__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
@@ -268,13 +279,127 @@
         </properties>
     </rule>
 
-    <rule name="PercentFieldNamingConvention" language="xml" message="Percent fields must follow pattern: PascalCasePercent__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+    <rule name="PercentFieldNamingConvention" language="xml" message="Percent fields must follow pattern: PascalCasePct__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[
                     //*[local-name()='CustomField'][
                         *[local-name()='type'][text()='Percent'] and
-                        not(ends-with(*[local-name()='fullName']/text(), 'Percent__c'))
+                        not(ends-with(*[local-name()='fullName']/text(), 'Pct__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- ADDITIONS for the new convention — see docs/FIELD_NAMING.md -->
+
+    <rule name="HierarchyFieldNamingConvention" language="xml" message="Hierarchy fields must follow pattern: PascalCaseLookup__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='Hierarchy'] and
+                        not(ends-with(*[local-name()='fullName']/text(), 'Lookup__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="MetadataRelationshipFieldNamingConvention" language="xml" message="MetadataRelationship fields must follow pattern: PascalCaseMdt__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='MetadataRelationship'] and
+                        not(ends-with(*[local-name()='fullName']/text(), 'Mdt__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="SummaryFieldNamingConvention" language="xml" message="Roll-Up Summary fields must follow pattern: PascalCaseSum__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='Summary'] and
+                        not(ends-with(*[local-name()='fullName']/text(), 'Sum__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="EmailFieldNamingConvention" language="xml" message="Email fields must follow pattern: PascalCaseEmail__c (no Txt suffix)" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='Email'] and
+                        not(ends-with(*[local-name()='fullName']/text(), 'Email__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="PhoneFieldNamingConvention" language="xml" message="Phone fields must follow pattern: PascalCasePhone__c (no Txt suffix)" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='Phone'] and
+                        not(ends-with(*[local-name()='fullName']/text(), 'Phone__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="TimeFieldNamingConvention" language="xml" message="Time fields must follow pattern: PascalCaseTime__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='Time'] and
+                        not(ends-with(*[local-name()='fullName']/text(), 'Time__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="LocationFieldNamingConvention" language="xml" message="Location fields must follow pattern: PascalCaseGeo__c" class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='Location'] and
+                        not(ends-with(*[local-name()='fullName']/text(), 'Geo__c'))
+                    ]
+                ]]>                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="CheckboxFieldsForbidden" language="xml" message="Checkbox fields are forbidden — convert to DateTime (null = off, populated = on since X). See docs/FIELD_NAMING.md." class="net.sourceforge.pmd.lang.xml.rule.DomXPathRule">
+        <priority>1</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+                    //*[local-name()='CustomField'][
+                        *[local-name()='type'][text()='Checkbox']
                     ]
                 ]]>                </value>
             </property>

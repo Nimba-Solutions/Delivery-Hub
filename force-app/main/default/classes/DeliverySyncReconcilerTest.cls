@@ -42,8 +42,8 @@ private class DeliverySyncReconcilerTest {
 
         // 4. Work Request (The downstream bridge)
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemId__c = wi.Id,
-            DeliveryEntityId__c = vendor.Id,
+            WorkItemLookup__c = wi.Id,
+            DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'Active',
             RemoteWorkItemIdTxt__c = 'REMOTE-RECON-001'
         );
@@ -51,8 +51,8 @@ private class DeliverySyncReconcilerTest {
 
         // 5. Work Log (child of the Work Item)
         WorkLog__c wl = new WorkLog__c(
-            WorkItemId__c = wi.Id,
-            RequestId__c = req.Id,
+            WorkItemLookup__c = wi.Id,
+            RequestLookup__c = req.Id,
             HoursLoggedNumber__c = 2.5,
             WorkDateDate__c = Date.today(),
             WorkDescriptionTxt__c = 'Reconcile test log entry'
@@ -75,14 +75,14 @@ private class DeliverySyncReconcilerTest {
             Test.stopTest();
 
             List<SyncItem__c> created = [
-                SELECT Id, ObjectTypePk__c, StatusPk__c, DirectionPk__c, RequestId__c
+                SELECT Id, ObjectTypePk__c, StatusPk__c, DirectionPk__c, RequestLookup__c
                 FROM SyncItem__c
                 WHERE ObjectTypePk__c = 'WorkItem__c'
                 AND DirectionPk__c = 'Outbound'
             ];
             System.assertEquals(1, created.size(), 'Reconciler should create exactly one WorkItem SyncItem for the gap.');
             System.assertEquals('Queued', created[0].StatusPk__c, 'Gap SyncItem should be Queued for processing.');
-            System.assertNotEquals(null, created[0].RequestId__c, 'Gap SyncItem should be linked to the WorkRequest.');
+            System.assertNotEquals(null, created[0].RequestLookup__c, 'Gap SyncItem should be linked to the WorkRequest.');
         }
     }
 
@@ -97,16 +97,16 @@ private class DeliverySyncReconcilerTest {
             delete [SELECT Id FROM SyncItem__c];
 
             // Cover ALL WorkRequests (packaging org may auto-create extras)
-            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c];
-            List<WorkLog__c> allWLs = [SELECT Id, WorkItemId__c FROM WorkLog__c];
+            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemLookup__c FROM WorkRequest__c];
+            List<WorkLog__c> allWLs = [SELECT Id, WorkItemLookup__c FROM WorkLog__c];
 
             List<SyncItem__c> preCreated = new List<SyncItem__c>();
             for (WorkRequest__c req : allReqs) {
                 preCreated.add(new SyncItem__c(
                     ObjectTypePk__c     = 'WorkItem__c',
-                    LocalRecordIdTxt__c = req.WorkItemId__c,
-                    WorkItemId__c       = req.WorkItemId__c,
-                    RequestId__c        = req.Id,
+                    LocalRecordIdTxt__c = req.WorkItemLookup__c,
+                    WorkItemLookup__c       = req.WorkItemLookup__c,
+                    RequestLookup__c        = req.Id,
                     DirectionPk__c      = 'Outbound',
                     StatusPk__c         = 'Synced',
                     PayloadTxt__c       = '{"test":"already synced"}'
@@ -116,7 +116,7 @@ private class DeliverySyncReconcilerTest {
                 preCreated.add(new SyncItem__c(
                     ObjectTypePk__c     = 'WorkLog__c',
                     LocalRecordIdTxt__c = (String) wl.Id,
-                    WorkItemId__c       = wl.WorkItemId__c,
+                    WorkItemLookup__c       = wl.WorkItemLookup__c,
                     DirectionPk__c      = 'Outbound',
                     StatusPk__c         = 'Synced',
                     PayloadTxt__c       = '{"test":"worklog already synced"}'

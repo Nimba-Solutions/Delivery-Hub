@@ -45,14 +45,14 @@ private class DeliverySyncItemProcessorTest {
         WorkItem__c hubItem = new WorkItem__c(
             BriefDescriptionTxt__c = 'Hub Mode Work Item',
             StageNamePk__c = 'Backlog',
-            ClientNetworkEntityId__c = client.Id
+            ClientNetworkEntityLookup__c = client.Id
         );
         insert hubItem;
 
         // 3. Setup Request (The Bridge)
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemId__c = t.Id,
-            DeliveryEntityId__c = vendor.Id,
+            WorkItemLookup__c = t.Id,
+            DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'Active',
             RemoteWorkItemIdTxt__c = 'REMOTE-123'
         );
@@ -62,8 +62,8 @@ private class DeliverySyncItemProcessorTest {
         SyncItem__c item = new SyncItem__c(
             StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
-            WorkItemId__c = t.Id,
-            RequestId__c = req.Id,
+            WorkItemLookup__c = t.Id,
+            RequestLookup__c = req.Id,
             ObjectTypePk__c = 'WorkItem__c',
             PayloadTxt__c = '{"StageNamePk__c":"In Development"}'
         );
@@ -73,7 +73,7 @@ private class DeliverySyncItemProcessorTest {
         SyncItem__c hubSyncItem = new SyncItem__c(
             StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
-            WorkItemId__c = hubItem.Id,
+            WorkItemLookup__c = hubItem.Id,
             ObjectTypePk__c = 'WorkItem__c',
             PayloadTxt__c = '{"StageNamePk__c":"In Development"}'
         );
@@ -92,7 +92,7 @@ private class DeliverySyncItemProcessorTest {
             System.enqueueJob(new DeliverySyncItemProcessor());
             Test.stopTest();
 
-            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
+            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestLookup__c != null LIMIT 1];
             System.assertEquals('Synced', result.StatusPk__c, 'Status should update to Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
         }
     }
@@ -109,7 +109,7 @@ private class DeliverySyncItemProcessorTest {
             System.enqueueJob(new DeliverySyncItemProcessor());
             Test.stopTest();
 
-            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c != null LIMIT 1];
+            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestLookup__c != null LIMIT 1];
             System.assertEquals('Failed', result.StatusPk__c, 'Status should update to Failed on 500 error');
             System.assert(result.ErrorLogTxt__c.contains('500'), 'Error log should contain status code');
         }
@@ -127,7 +127,7 @@ private class DeliverySyncItemProcessorTest {
             System.enqueueJob(new DeliverySyncItemProcessor());
             Test.stopTest();
 
-            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestId__c = null LIMIT 1];
+            SyncItem__c result = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE RequestLookup__c = null LIMIT 1];
             System.assertEquals('Synced', result.StatusPk__c, 'Hub Mode item should be Synced on 200 OK. Error: ' + result.ErrorLogTxt__c);
         }
     }

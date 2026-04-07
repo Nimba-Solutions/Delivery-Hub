@@ -16,7 +16,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>WorkflowTypeMdtId__c</field>
+                <field>WorkflowTypeMdt__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

@@ -91,23 +91,23 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertNotEquals(null, result.get('workItemNumber'), 'Should return the auto-number');
 
             WorkItem__c created = [
-                SELECT BriefDescriptionTxt__c, DetailsTxt__c, ExternalRequesterEmailTxt__c,
+                SELECT BriefDescriptionTxt__c, DetailsTxt__c, ExternalRequesterEmail__c,
                        StageNamePk__c, PriorityPk__c, RequestTypePk__c, TagsTxt__c,
-                       ActivatedDateTime__c, StatusPk__c, ClientNetworkEntityId__c
+                       ActivatedDateTime__c, StatusPk__c, ClientNetworkEntityLookup__c
                 FROM WorkItem__c
                 WHERE Id = :(String) result.get('workItemId')
                 LIMIT 1
             ];
 
             System.assertEquals('[Public] I need help with deployment', created.BriefDescriptionTxt__c, 'Title should have [Public] prefix');
-            System.assertEquals('john@example.com', created.ExternalRequesterEmailTxt__c, 'Email should be stored');
+            System.assertEquals('john@example.com', created.ExternalRequesterEmail__c, 'Email should be stored');
             System.assertEquals('Backlog', created.StageNamePk__c, 'Should start in Backlog');
             System.assertEquals('High', created.PriorityPk__c, 'Priority should match');
             System.assertEquals('Feature', created.RequestTypePk__c, 'Request type should match');
             System.assertEquals('portal,urgent', created.TagsTxt__c, 'Tags should match');
             System.assertNotEquals(null, created.ActivatedDateTime__c, 'Should be active');
             System.assertEquals('New', created.StatusPk__c, 'Status should be New');
-            System.assertEquals(entity.Id, created.ClientNetworkEntityId__c, 'Should be linked to the entity');
+            System.assertEquals(entity.Id, created.ClientNetworkEntityLookup__c, 'Should be linked to the entity');
             System.assert(created.DetailsTxt__c.contains('John Doe'), 'Description should contain submitter name');
             System.assert(created.DetailsTxt__c.contains('john@example.com'), 'Description should contain submitter email');
             System.assert(created.DetailsTxt__c.contains('deployment is failing'), 'Description should contain user description');
@@ -131,7 +131,7 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertEquals(true, result.get('success'), 'Should succeed with minimal fields');
 
             WorkItem__c created = [
-                SELECT PriorityPk__c, RequestTypePk__c, ClientNetworkEntityId__c
+                SELECT PriorityPk__c, RequestTypePk__c, ClientNetworkEntityLookup__c
                 FROM WorkItem__c
                 WHERE Id = :(String) result.get('workItemId')
                 LIMIT 1
@@ -140,7 +140,7 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertEquals('Medium', created.PriorityPk__c, 'Default priority should be Medium');
             System.assertEquals('Public Lead', created.RequestTypePk__c, 'Default request type should be Public Lead');
             NetworkEntity__c clientEntity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Public Submissions Client' LIMIT 1];
-            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should fall back to default Client entity');
+            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityLookup__c, 'Should fall back to default Client entity');
         }
     }
 
@@ -264,7 +264,7 @@ private class DeliveryPublicSubmissionServiceTest {
                 existingItems.add(new WorkItem__c(
                     BriefDescriptionTxt__c = '[Public] Existing ' + i,
                     StageNamePk__c = 'Backlog',
-                    ExternalRequesterEmailTxt__c = rateLimitEmail,
+                    ExternalRequesterEmail__c = rateLimitEmail,
                     ActivatedDateTime__c = Datetime.now(),
                     StatusPk__c = 'New'
                 ));
@@ -298,7 +298,7 @@ private class DeliveryPublicSubmissionServiceTest {
                 existingItems.add(new WorkItem__c(
                     BriefDescriptionTxt__c = '[Public] Existing ' + i,
                     StageNamePk__c = 'Backlog',
-                    ExternalRequesterEmailTxt__c = legitimateEmail,
+                    ExternalRequesterEmail__c = legitimateEmail,
                     ActivatedDateTime__c = Datetime.now(),
                     StatusPk__c = 'New'
                 ));
@@ -344,12 +344,12 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertEquals(true, result.get('success'), 'Should succeed');
 
             WorkItem__c created = [
-                SELECT ClientNetworkEntityId__c
+                SELECT ClientNetworkEntityLookup__c
                 FROM WorkItem__c
                 WHERE Id = :(String) result.get('workItemId')
                 LIMIT 1
             ];
-            System.assertEquals(entity.Id, created.ClientNetworkEntityId__c, 'Should be linked to the specified entity');
+            System.assertEquals(entity.Id, created.ClientNetworkEntityLookup__c, 'Should be linked to the specified entity');
         }
     }
 
@@ -374,12 +374,12 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertEquals(true, result.get('success'), 'Should succeed');
 
             WorkItem__c created = [
-                SELECT ClientNetworkEntityId__c
+                SELECT ClientNetworkEntityLookup__c
                 FROM WorkItem__c
                 WHERE Id = :(String) result.get('workItemId')
                 LIMIT 1
             ];
-            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should fall back to the Client entity');
+            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityLookup__c, 'Should fall back to the Client entity');
         }
     }
 
@@ -403,12 +403,12 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertEquals(true, result.get('success'), 'Should succeed with fallback entity');
 
             WorkItem__c created = [
-                SELECT ClientNetworkEntityId__c
+                SELECT ClientNetworkEntityLookup__c
                 FROM WorkItem__c
                 WHERE Id = :(String) result.get('workItemId')
                 LIMIT 1
             ];
-            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should fall back to default Client entity');
+            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityLookup__c, 'Should fall back to default Client entity');
         }
     }
 
@@ -431,12 +431,12 @@ private class DeliveryPublicSubmissionServiceTest {
             System.assertEquals(true, result.get('success'), 'Should succeed');
 
             WorkItem__c created = [
-                SELECT ClientNetworkEntityId__c
+                SELECT ClientNetworkEntityLookup__c
                 FROM WorkItem__c
                 WHERE Id = :(String) result.get('workItemId')
                 LIMIT 1
             ];
-            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityId__c, 'Should auto-resolve to the first active Client entity');
+            System.assertEquals(clientEntity.Id, created.ClientNetworkEntityLookup__c, 'Should auto-resolve to the first active Client entity');
         }
     }
 

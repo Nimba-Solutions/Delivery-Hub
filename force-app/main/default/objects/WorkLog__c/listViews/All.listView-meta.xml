@@ -2,7 +2,7 @@
 <ListView xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>All</fullName>
     <columns>NAME</columns>
-    <columns>WorkItemId__c</columns>
+    <columns>WorkItemLookup__c</columns>
     <columns>WorkDateDate__c</columns>
     <columns>HoursLoggedNumber__c</columns>
     <columns>StatusPk__c</columns>

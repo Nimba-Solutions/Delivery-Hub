@@ -86,9 +86,9 @@ global with sharing class DeliveryWorkflowConfigService {
                    OwnerPersonaTxt__c, PhaseTxt__c,
                    TerminalDateTime__c, BlockedStateDateTime__c, AttentionStateDateTime__c, VisibleByDefaultDateTime__c,
                    AllowedForwardTransitionsTxt__c, AllowedBacktrackTransitionsTxt__c,
-                   WorkflowTypeMdtId__r.DeveloperName
+                   WorkflowTypeMdt__r.DeveloperName
             FROM WorkflowStage__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :workflowTypeName
+            WHERE WorkflowTypeMdt__r.DeveloperName = :workflowTypeName
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST
         ]) {
@@ -114,7 +114,7 @@ global with sharing class DeliveryWorkflowConfigService {
         for (WorkflowPersonaView__mdt pv : [
             SELECT PersonaNameTxt__c, ColumnNameTxt__c, StageApiValuesTxt__c, SortOrderNumber__c, ExtendedColumnDateTime__c
             FROM WorkflowPersonaView__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :workflowTypeName
+            WHERE WorkflowTypeMdt__r.DeveloperName = :workflowTypeName
             WITH SYSTEM_MODE
             ORDER BY PersonaNameTxt__c ASC, SortOrderNumber__c ASC NULLS LAST
         ]) {
@@ -165,12 +165,12 @@ global with sharing class DeliveryWorkflowConfigService {
         Map<String,List<String>> stageColorsByType = new Map<String,List<String>>();
         Map<String,Integer> stageCountByType = new Map<String,Integer>();
         for (WorkflowStage__mdt s : [
-            SELECT WorkflowTypeMdtId__r.DeveloperName, CardColorTxt__c
+            SELECT WorkflowTypeMdt__r.DeveloperName, CardColorTxt__c
             FROM WorkflowStage__mdt
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST
         ]) {
-            String typeName = s.WorkflowTypeMdtId__r.DeveloperName;
+            String typeName = s.WorkflowTypeMdt__r.DeveloperName;
             if (!stageColorsByType.containsKey(typeName)) {
                 stageColorsByType.put(typeName, new List<String>());
                 stageCountByType.put(typeName, 0);
@@ -182,11 +182,11 @@ global with sharing class DeliveryWorkflowConfigService {
         // Collect unique persona names per type
         Map<String,Set<String>> personasByType = new Map<String,Set<String>>();
         for (WorkflowPersonaView__mdt pv : [
-            SELECT WorkflowTypeMdtId__r.DeveloperName, PersonaNameTxt__c
+            SELECT WorkflowTypeMdt__r.DeveloperName, PersonaNameTxt__c
             FROM WorkflowPersonaView__mdt
             WITH SYSTEM_MODE
         ]) {
-            String typeName = pv.WorkflowTypeMdtId__r.DeveloperName;
+            String typeName = pv.WorkflowTypeMdt__r.DeveloperName;
             if (!personasByType.containsKey(typeName)) {
                 personasByType.put(typeName, new Set<String>());
             }
@@ -196,13 +196,13 @@ global with sharing class DeliveryWorkflowConfigService {
         // Collect unique, ordered phases per type
         Map<String,List<String>> phasesByType = new Map<String,List<String>>();
         for (WorkflowStage__mdt s : [
-            SELECT WorkflowTypeMdtId__r.DeveloperName, PhaseTxt__c
+            SELECT WorkflowTypeMdt__r.DeveloperName, PhaseTxt__c
             FROM WorkflowStage__mdt
             WHERE PhaseTxt__c != null AND TerminalDateTime__c = null
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST
         ]) {
-            String typeName = s.WorkflowTypeMdtId__r.DeveloperName;
+            String typeName = s.WorkflowTypeMdt__r.DeveloperName;
             if (!phasesByType.containsKey(typeName)) {
                 phasesByType.put(typeName, new List<String>());
             }
@@ -252,7 +252,7 @@ global with sharing class DeliveryWorkflowConfigService {
         for (WorkflowStage__mdt s : [
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :workflowTypeName
+            WHERE WorkflowTypeMdt__r.DeveloperName = :workflowTypeName
             AND TerminalDateTime__c != null
             WITH SYSTEM_MODE
         ]) {
@@ -278,7 +278,7 @@ global with sharing class DeliveryWorkflowConfigService {
         for (WorkflowStage__mdt s : [
             SELECT ApiValueTxt__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :workflowTypeName
+            WHERE WorkflowTypeMdt__r.DeveloperName = :workflowTypeName
             AND AttentionStateDateTime__c != null
             WITH SYSTEM_MODE
         ]) {
@@ -306,7 +306,7 @@ global with sharing class DeliveryWorkflowConfigService {
         for (WorkflowStage__mdt s : [
             SELECT ApiValueTxt__c, PhaseTxt__c
             FROM WorkflowStage__mdt
-            WHERE WorkflowTypeMdtId__r.DeveloperName = :workflowTypeName
+            WHERE WorkflowTypeMdt__r.DeveloperName = :workflowTypeName
             AND TerminalDateTime__c = null
             AND PhaseTxt__c != null
             WITH SYSTEM_MODE

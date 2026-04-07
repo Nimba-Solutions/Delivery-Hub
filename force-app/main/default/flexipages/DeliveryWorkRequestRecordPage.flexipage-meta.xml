@@ -52,7 +52,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.WorkItemId__c</fieldItem>
+                <fieldItem>Record.WorkItemLookup__c</fieldItem>
                 <identifier>RecordWorkItemId_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -62,7 +62,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.DeliveryEntityId__c</fieldItem>
+                <fieldItem>Record.DeliveryEntityLookup__c</fieldItem>
                 <identifier>RecordDeliveryEntityId_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -150,7 +150,7 @@
                     <name>uiBehavior</name>
                     <value>readonly</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.TotalLoggedHoursNumber__c</fieldItem>
+                <fieldItem>Record.TotalLoggedHoursSum__c</fieldItem>
                 <identifier>RecordTotalLoggedHoursNumber_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -160,7 +160,7 @@
                     <name>uiBehavior</name>
                     <value>readonly</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.BudgetUtilizationPercent__c</fieldItem>
+                <fieldItem>Record.BudgetUtilizationPct__c</fieldItem>
                 <identifier>RecordBudgetUtilizationPercent_cField</identifier>
             </fieldInstance>
         </itemInstances>

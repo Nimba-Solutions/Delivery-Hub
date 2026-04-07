@@ -10,10 +10,10 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityLookup__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%DeveloperLookupId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%DeveloperLookup__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
