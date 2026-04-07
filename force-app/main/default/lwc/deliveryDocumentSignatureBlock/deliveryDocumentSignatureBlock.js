@@ -37,6 +37,11 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     @track formEmail = '';
     @track formConsent = false;
     @track isSubmitting = false;
+    // Phase 5: drawn-signature mode toggle. When true, the modal swaps the
+    // text-stamp explanation for an inline signature pad and the submit
+    // sends the captured PNG bytes instead of the typed name.
+    @track useDrawnSignature = false;
+    @track drawnHasInk = false;
 
     get hasActions() {
         return this.requiresSigning && Array.isArray(this.actions) && this.actions.length > 0;
@@ -49,18 +54,30 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     get sortedActions() {
         const list = Array.isArray(this.actions) ? [...this.actions] : [];
         list.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-        return list.map((a) => ({
-            ...a,
-            slotClass: a.isCompleted
-                ? 'signature-slot signature-slot--completed'
-                : 'signature-slot signature-slot--pending',
-            showSignButton: !a.isCompleted && !this.signingDisabled,
-            showCopyLink: !a.isCompleted && this.adminContext && !!a.signerToken
-        }));
+        return list.map((a) => {
+            const isImage = a.signatureType === 'Image';
+            return {
+                ...a,
+                slotClass: a.isCompleted
+                    ? 'signature-slot signature-slot--completed'
+                    : 'signature-slot signature-slot--pending',
+                showSignButton: !a.isCompleted && !this.signingDisabled,
+                showCopyLink: !a.isCompleted && this.adminContext && !!a.signerToken,
+                isImageSignature: a.isCompleted && isImage && !!a.signatureImageUrl,
+                isTextSignature: a.isCompleted && !isImage
+            };
+        });
     }
 
     get isSubmitDisabled() {
-        return this.isSubmitting || !this.formName || !this.formConsent;
+        if (this.isSubmitting || !this.formName || !this.formConsent) {
+            return true;
+        }
+        // Phase 5: drawn-mode requires the user to have actually drawn something
+        if (this.useDrawnSignature && !this.drawnHasInk) {
+            return true;
+        }
+        return false;
     }
 
     get modalHeading() {
@@ -133,7 +150,18 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         this.formEmail = '';
         this.formConsent = false;
         this.isSubmitting = false;
+        this.useDrawnSignature = false;
+        this.drawnHasInk = false;
         this.showSignModal = true;
+    }
+
+    handleDrawToggle(event) {
+        this.useDrawnSignature = event.target.checked;
+        this.drawnHasInk = false;
+    }
+
+    handleSignaturePadChange(event) {
+        this.drawnHasInk = !!(event.detail && event.detail.hasInk);
     }
 
     /**
@@ -175,6 +203,22 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         if (this.isSubmitDisabled) {
             return;
         }
+        // Phase 5: pull the PNG bytes off the drawn pad if the user toggled
+        // drawn mode. Drawn signatures send signatureType=Image; the parent
+        // routes them through the same signsubmit event.
+        let signatureType = 'Text';
+        let drawnSignature = null;
+        if (this.useDrawnSignature) {
+            const pad = this.template.querySelector('c-delivery-signature-pad');
+            if (pad) {
+                drawnSignature = pad.getSignatureData();
+            }
+            if (!drawnSignature) {
+                // Should be guarded by isSubmitDisabled, but defend anyway.
+                return;
+            }
+            signatureType = 'Image';
+        }
         this.isSubmitting = true;
         this.dispatchEvent(
             new CustomEvent('signsubmit', {
@@ -183,7 +227,9 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
                     actionLabel: this.activeAction.label,
                     signerName: this.formName,
                     signerEmail: this.formEmail,
-                    consentGiven: this.formConsent
+                    consentGiven: this.formConsent,
+                    signatureType: signatureType,
+                    drawnSignature: drawnSignature
                 }
             })
         );
@@ -194,6 +240,8 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         this.showSignModal = false;
         this.activeAction = null;
         this.isSubmitting = false;
+        this.useDrawnSignature = false;
+        this.drawnHasInk = false;
     }
 
     /**
@@ -210,6 +258,8 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
             this.formName = '';
             this.formEmail = '';
             this.formConsent = false;
+            this.useDrawnSignature = false;
+            this.drawnHasInk = false;
         }
     }
 }

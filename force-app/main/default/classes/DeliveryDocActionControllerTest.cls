@@ -76,6 +76,17 @@ private class DeliveryDocActionControllerTest {
         ];
     }
 
+    /**
+     * @description Helper for the Phase 5 payload-map signature of signActionAdmin.
+     */
+    private static Map<String, Object> signAdminPayload(String name, String email, Boolean consent) {
+        return new Map<String, Object>{
+            'signerName'   => name,
+            'signerEmail'  => email,
+            'consentGiven' => consent
+        };
+    }
+
     @IsTest
     static void testGetActionsForDocumentReturnsShapedList() {
         System.runAs(testUser) {
@@ -103,7 +114,7 @@ private class DeliveryDocActionControllerTest {
 
             Test.startTest();
             Map<String, Object> result = DeliveryDocActionController.signActionAdmin(
-                firstActionId, 'Glen Bradford', 'glen@cloudnimbusllc.com', true
+                firstActionId, signAdminPayload('Glen Bradford', 'glen@cloudnimbusllc.com', true)
             );
             Test.stopTest();
 
@@ -135,7 +146,7 @@ private class DeliveryDocActionControllerTest {
 
             Test.startTest();
             try {
-                DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen', null, false);
+                DeliveryDocActionController.signActionAdmin(firstActionId, signAdminPayload('Glen', null, false));
                 System.assert(false, 'Expected AuraHandledException for missing consent');
             } catch (AuraHandledException e) {
                 // Expected — do not assert on getMessage() per CLAUDE.md
@@ -158,7 +169,7 @@ private class DeliveryDocActionControllerTest {
 
             Test.startTest();
             try {
-                DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen', null, true);
+                DeliveryDocActionController.signActionAdmin(firstActionId, signAdminPayload('Glen', null, true));
                 System.assert(false, 'Expected AuraHandledException when feature flag is off');
             } catch (AuraHandledException e) {
                 // Expected — do not assert on getMessage() per CLAUDE.md
@@ -176,7 +187,7 @@ private class DeliveryDocActionControllerTest {
 
             Test.startTest();
             for (DocumentAction__c a : actions) {
-                DeliveryDocActionController.signActionAdmin(a.Id, 'Test Signer', 'test@example.com', true);
+                DeliveryDocActionController.signActionAdmin(a.Id, signAdminPayload('Test Signer', 'test@example.com', true));
             }
             Test.stopTest();
 
@@ -204,7 +215,7 @@ private class DeliveryDocActionControllerTest {
             Id firstActionId = getActions(doc.Id)[0].Id;
 
             Test.startTest();
-            DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen', null, true);
+            DeliveryDocActionController.signActionAdmin(firstActionId, signAdminPayload('Glen', null, true));
             Test.stopTest();
 
             List<ActivityLog__c> logs = [
@@ -227,11 +238,11 @@ private class DeliveryDocActionControllerTest {
             DeliveryDocument__c doc = getDoc();
             Id firstActionId = getActions(doc.Id)[0].Id;
 
-            DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen', null, true);
+            DeliveryDocActionController.signActionAdmin(firstActionId, signAdminPayload('Glen', null, true));
 
             Test.startTest();
             try {
-                DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen Again', null, true);
+                DeliveryDocActionController.signActionAdmin(firstActionId, signAdminPayload('Glen Again', null, true));
                 System.assert(false, 'Expected AuraHandledException for double-sign');
             } catch (AuraHandledException e) {
                 // Expected — do not assert on getMessage() per CLAUDE.md
@@ -271,7 +282,7 @@ private class DeliveryDocActionControllerTest {
             NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
             Id firstActionId = getActions(doc.Id)[0].Id;
 
-            DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen', null, true);
+            DeliveryDocActionController.signActionAdmin(firstActionId, signAdminPayload('Glen', null, true));
 
             Test.startTest();
             try {
@@ -292,6 +303,78 @@ private class DeliveryDocActionControllerTest {
         System.assert(stamp.contains('Coleman Cameron'), 'Stamp should include name');
         System.assert(stamp.contains('digitally signed'), 'Stamp should include phrase');
         System.assert(stamp.contains('Apr 6, 2026'), 'Stamp should include formatted date');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 5: DRAWN SIGNATURE TESTS
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Tiny 1x1 transparent PNG so the test doesn't carry around a real signature
+     * blob. Just enough to verify the ContentVersion path end to end.
+     */
+    private static final String TINY_PNG_BASE64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAUAAen63NgAAAAASUVORK5CYII=';
+
+    @IsTest
+    static void testSignActionAdminWithDrawnSignatureCreatesContentVersion() {
+        System.runAs(testUser) {
+            DeliveryDocument__c doc = getDoc();
+            Id firstActionId = getActions(doc.Id)[0].Id;
+
+            Test.startTest();
+            DeliveryDocActionController.signActionAdmin(
+                firstActionId,
+                new Map<String, Object>{
+                    'signerName'     => 'Coleman Cameron',
+                    'consentGiven'   => true,
+                    'signatureType'  => 'Image',
+                    'drawnSignature' => TINY_PNG_BASE64
+                }
+            );
+            Test.stopTest();
+
+            DocumentAction__c reloaded = [
+                SELECT StatusPk__c, SignatureTypePk__c, SignatureDataTxt__c
+                FROM DocumentAction__c
+                WHERE Id = :firstActionId
+            ];
+            System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
+            System.assertEquals('Image', reloaded.SignatureTypePk__c, 'Signature type should be Image');
+            // SignatureDataTxt__c holds the ContentVersion Id for image-type signatures
+            System.assertNotEquals(null, reloaded.SignatureDataTxt__c, 'Signature data should hold the ContentVersion Id');
+            // Verify the ContentVersion actually exists and contains our bytes
+            ContentVersion stored = [
+                SELECT Id, VersionData, Title FROM ContentVersion WHERE Id = :reloaded.SignatureDataTxt__c
+            ];
+            System.assert(stored.Title.startsWith('signature_'), 'File should be named signature_*.png');
+            System.assert(stored.VersionData.size() > 0, 'Stored bytes should be non-empty');
+        }
+    }
+
+    @IsTest
+    static void testSignActionAdminImageBlocksWithoutBytes() {
+        System.runAs(testUser) {
+            DeliveryDocument__c doc = getDoc();
+            Id firstActionId = getActions(doc.Id)[0].Id;
+
+            Test.startTest();
+            try {
+                DeliveryDocActionController.signActionAdmin(
+                    firstActionId,
+                    new Map<String, Object>{
+                        'signerName'     => 'Coleman Cameron',
+                        'consentGiven'   => true,
+                        'signatureType'  => 'Image'
+                        // intentionally omitted: drawnSignature
+                    }
+                );
+                System.assert(false, 'Expected AuraHandledException when image bytes are missing');
+            } catch (AuraHandledException e) {
+                System.assertNotEquals(null, e, 'Expected exception instance');
+            }
+            Test.stopTest();
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
