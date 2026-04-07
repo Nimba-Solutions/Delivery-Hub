@@ -117,7 +117,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             NetworkEntity__c vendor = vendors[0];
             for (WorkItem__c t : newWorkItems) {
                 newRequests.add(new WorkRequest__c(
-                    WorkItemLookup__c = t.Id,
+                    WorkItemId__c = t.Id,
                     DeliveryEntityLookup__c = vendor.Id,
                     StatusPk__c = 'Draft',
                     PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
@@ -127,7 +127,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             for (WorkItem__c t : newWorkItems) {
                 if (t.ClientNetworkEntityLookup__c != null) {
                     newRequests.add(new WorkRequest__c(
-                        WorkItemLookup__c = t.Id,
+                        WorkItemId__c = t.Id,
                         DeliveryEntityLookup__c = t.ClientNetworkEntityLookup__c,
                         StatusPk__c = 'Draft',
                         PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0

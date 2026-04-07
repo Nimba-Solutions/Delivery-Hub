@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>WorkItemLookup__c</fullName>
-    <description>The bounty work item that this claim is against.</description>
-    <externalId>false</externalId>
+    <fullName>WorkItemId__c</fullName>
+    <description>The parent Work Item.</description>
+    <inlineHelpText>The parent Work Item that originated this delivery request.</inlineHelpText>
     <label>Work Item</label>
     <referenceTo>WorkItem__c</referenceTo>
-    <relationshipLabel>Bounty Claims</relationshipLabel>
-    <relationshipName>BountyClaims</relationshipName>
+    <relationshipLabel>Requests</relationshipLabel>
+    <relationshipName>Requests</relationshipName>
     <relationshipOrder>0</relationshipOrder>
     <reparentableMasterDetail>false</reparentableMasterDetail>
-    <trackHistory>false</trackHistory>
     <trackTrending>false</trackTrending>
     <type>MasterDetail</type>
     <writeRequiresMasterRead>false</writeRequiresMasterRead>

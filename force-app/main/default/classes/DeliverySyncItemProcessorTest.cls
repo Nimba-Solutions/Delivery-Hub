@@ -51,7 +51,7 @@ private class DeliverySyncItemProcessorTest {
 
         // 3. Setup Request (The Bridge)
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemLookup__c = t.Id,
+            WorkItemId__c = t.Id,
             DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'Active',
             RemoteWorkItemIdTxt__c = 'REMOTE-123'

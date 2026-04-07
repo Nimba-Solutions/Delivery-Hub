@@ -49,7 +49,7 @@ private class DeliveryDocumentControllerTest {
         insert new List<WorkItem__c>{ item1, item2 };
 
         WorkRequest__c req1 = new WorkRequest__c(
-            WorkItemLookup__c = item1.Id,
+            WorkItemId__c = item1.Id,
             DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'In Progress',
             HourlyRateCurrency__c = 175,
@@ -57,7 +57,7 @@ private class DeliveryDocumentControllerTest {
             PreApprovedHoursNumber__c = 100
         );
         WorkRequest__c req2 = new WorkRequest__c(
-            WorkItemLookup__c = item2.Id,
+            WorkItemId__c = item2.Id,
             DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'Accepted',
             HourlyRateCurrency__c = 175,
@@ -69,21 +69,21 @@ private class DeliveryDocumentControllerTest {
         List<WorkLog__c> logs = new List<WorkLog__c>();
         logs.add(new WorkLog__c(
             WorkItemLookup__c = item1.Id,
-            RequestLookup__c = req1.Id,
+            RequestId__c = req1.Id,
             HoursLoggedNumber__c = 8,
             WorkDateDate__c = Date.newInstance(2026, 3, 1),
             WorkDescriptionTxt__c = 'Integration setup'
         ));
         logs.add(new WorkLog__c(
             WorkItemLookup__c = item1.Id,
-            RequestLookup__c = req1.Id,
+            RequestId__c = req1.Id,
             HoursLoggedNumber__c = 4.5,
             WorkDateDate__c = Date.newInstance(2026, 3, 2),
             WorkDescriptionTxt__c = 'Testing and deployment'
         ));
         logs.add(new WorkLog__c(
             WorkItemLookup__c = item2.Id,
-            RequestLookup__c = req2.Id,
+            RequestId__c = req2.Id,
             HoursLoggedNumber__c = 5,
             WorkDateDate__c = Date.newInstance(2026, 3, 3),
             WorkDescriptionTxt__c = 'Investigation and analysis'
@@ -353,7 +353,7 @@ private class DeliveryDocumentControllerTest {
             // Create a WorkRequest with NO rate for the no-rate item (Master-Detail requires parent)
             NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Test Vendor LLC' LIMIT 1];
             WorkRequest__c reqNoRate = new WorkRequest__c(
-                WorkItemLookup__c = itemNoRate.Id,
+                WorkItemId__c = itemNoRate.Id,
                 DeliveryEntityLookup__c = vendor.Id,
                 StatusPk__c = 'In Progress'
                 // HourlyRateCurrency__c intentionally omitted — rate hierarchy falls through to entity default
@@ -363,7 +363,7 @@ private class DeliveryDocumentControllerTest {
             // Log 2 hours on the no-rate item within the period
             insert new WorkLog__c(
                 WorkItemLookup__c = itemNoRate.Id,
-                RequestLookup__c = reqNoRate.Id,
+                RequestId__c = reqNoRate.Id,
                 HoursLoggedNumber__c = 2,
                 WorkDateDate__c = Date.newInstance(2026, 3, 5),
                 WorkDescriptionTxt__c = 'Work on unrated item'
@@ -534,8 +534,8 @@ private class DeliveryDocumentControllerTest {
             Id docId = generateTestDocument(entity.Id);
 
             DeliveryDocument__c doc = [
-                SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__r.Name,
-                       NetworkEntityLookup__r.ContactEmailTxt__c,
+                SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                       NetworkEntityId__r.ContactEmailTxt__c,
                        PeriodStartDate__c, PeriodEndDate__c,
                        StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
                        TermsTxt__c, DueDateDate__c, SentDateTime__c,
@@ -587,7 +587,7 @@ private class DeliveryDocumentControllerTest {
             List<DeliveryTransaction__c> txns = [
                 SELECT TypePk__c, AmountCurrency__c, TransactionDateDate__c, NoteTxt__c
                 FROM DeliveryTransaction__c
-                WHERE DocumentLookup__c = :docId
+                WHERE DocumentId__c = :docId
             ];
             System.assertEquals(1, txns.size(), 'Should create one transaction record');
             System.assertEquals('Payment', txns[0].TypePk__c, 'Type should be Payment');
@@ -639,7 +639,7 @@ private class DeliveryDocumentControllerTest {
 
             List<DeliveryTransaction__c> txns = [
                 SELECT AmountCurrency__c FROM DeliveryTransaction__c
-                WHERE DocumentLookup__c = :docId ORDER BY CreatedDate ASC
+                WHERE DocumentId__c = :docId ORDER BY CreatedDate ASC
             ];
             System.assertEquals(2, txns.size(), 'Should have two transaction records');
             System.assertEquals(2000.00, txns[0].AmountCurrency__c, 'First payment amount should match');
@@ -930,7 +930,7 @@ private class DeliveryDocumentControllerTest {
             System.assertEquals('Approved', updated.StatusPk__c, 'Document status should be Approved');
 
             List<DeliveryTransaction__c> txns = [
-                SELECT TypePk__c, NoteTxt__c FROM DeliveryTransaction__c WHERE DocumentLookup__c = :docId
+                SELECT TypePk__c, NoteTxt__c FROM DeliveryTransaction__c WHERE DocumentId__c = :docId
             ];
             System.assertEquals(1, txns.size(), 'Should create an Approval transaction');
             System.assertEquals('Approval', txns[0].TypePk__c, 'Transaction type should be Approval');

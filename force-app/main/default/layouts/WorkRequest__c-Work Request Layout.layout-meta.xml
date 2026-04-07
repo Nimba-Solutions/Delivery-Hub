@@ -13,7 +13,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>WorkItemLookup__c</field>
+                <field>WorkItemId__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
@@ -127,7 +127,7 @@
         <fields>WorkDateDate__c</fields>
         <fields>WorkDescriptionTxt__c</fields>
         <fields>HoursLoggedNumber__c</fields>
-        <relatedList>WorkLog__c.RequestLookup__c</relatedList>
+        <relatedList>WorkLog__c.RequestId__c</relatedList>
         <sortField>WorkDateDate__c</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>

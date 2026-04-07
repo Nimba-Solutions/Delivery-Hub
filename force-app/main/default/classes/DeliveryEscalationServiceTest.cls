@@ -1411,7 +1411,7 @@ private class DeliveryEscalationServiceTest {
 
             // Add a comment from the same user who created the work item (running user)
             insert new WorkItemComment__c(
-                WorkItemLookup__c = wi.Id,
+                WorkItemId__c = wi.Id,
                 BodyTxt__c = 'Self-comment should not count as a response'
             );
 

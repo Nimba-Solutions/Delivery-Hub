@@ -32,7 +32,7 @@ private class DeliveryDocEmailServiceTest {
         insert entity;
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityLookup__c = entity.Id,
+            NetworkEntityId__c = entity.Id,
             TemplatePk__c = 'Invoice',
             PeriodStartDate__c = Date.newInstance(2026, 2, 1),
             PeriodEndDate__c = Date.newInstance(2026, 2, 28),
@@ -200,7 +200,7 @@ private class DeliveryDocEmailServiceTest {
     static void testBuildDocumentEmailBody() {
         System.runAs(testUser) {
             DeliveryDocument__c doc = [
-                SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__r.Name,
+                SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
                        PeriodStartDate__c, PeriodEndDate__c,
                        TotalHoursNumber__c, TotalCurrency__c,
                        TermsTxt__c, DueDateDate__c, MetadataTxt__c

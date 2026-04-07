@@ -5,7 +5,7 @@
     <inlineHelpText>Sum of all WorkLog hours recorded against this work item. Auto-updated by roll-up.</inlineHelpText>
     <label>Total Logged Hours</label>
     <summarizedField>WorkRequest__c.TotalLoggedHoursSum__c</summarizedField>
-    <summaryForeignKey>WorkRequest__c.WorkItemLookup__c</summaryForeignKey>
+    <summaryForeignKey>WorkRequest__c.WorkItemId__c</summaryForeignKey>
     <summaryOperation>sum</summaryOperation>
     <trackTrending>false</trackTrending>
     <type>Summary</type>

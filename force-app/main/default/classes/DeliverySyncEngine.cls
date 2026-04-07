@@ -84,11 +84,11 @@ public without sharing class DeliverySyncEngine {
 
             // 3. Evaluate Downstream Routing Edges (Active, Typed Requests)
             List<WorkRequest__c> connections = [
-                SELECT Id, WorkItemLookup__c, RemoteWorkItemIdTxt__c, DeliveryEntityLookup__c, 
+                SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityLookup__c, 
                        DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c, 
                        DeliveryEntityLookup__r.EntityTypePk__c, StatusPk__c 
                 FROM WorkRequest__c 
-                WHERE WorkItemLookup__c IN :workItemIds 
+                WHERE WorkItemId__c IN :workItemIds 
                   AND StatusPk__c != 'Inactive' 
                   AND DeliveryEntityLookup__c != NULL 
                   AND DeliveryEntityLookup__r.EntityTypePk__c IN ('Vendor', 'Both')
@@ -97,10 +97,10 @@ public without sharing class DeliverySyncEngine {
 
             Map<Id, List<WorkRequest__c>> routes = new Map<Id, List<WorkRequest__c>>();
             for (WorkRequest__c r : connections) {
-                if (!routes.containsKey(r.WorkItemLookup__c)) {
-                    routes.put(r.WorkItemLookup__c, new List<WorkRequest__c>());
+                if (!routes.containsKey(r.WorkItemId__c)) {
+                    routes.put(r.WorkItemId__c, new List<WorkRequest__c>());
                 }
-                routes.get(r.WorkItemLookup__c).add(r);
+                routes.get(r.WorkItemId__c).add(r);
             }
 
             List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
@@ -180,7 +180,7 @@ public without sharing class DeliverySyncEngine {
         if (name.endsWithIgnoreCase('WorkItem__c') && !name.endsWithIgnoreCase('WorkItemComment__c')) {
             return rec.Id;
         }
-        return (Id) getSafeValue(rec, 'WorkItemLookup__c');
+        return (Id) getSafeValue(rec, 'WorkItemId__c');
     }
 
     private static Object getSafeValue(SObject rec, String field) {

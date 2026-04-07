@@ -47,7 +47,7 @@ private class DeliveryHubFilesControllerTest {
             insert workItem;
 
             WorkItemComment__c comment = new WorkItemComment__c(
-                WorkItemLookup__c = workItem.Id,
+                WorkItemId__c = workItem.Id,
                 BodyTxt__c = 'Test comment',
                 AuthorTxt__c = 'Test User'
             );
@@ -84,7 +84,7 @@ private class DeliveryHubFilesControllerTest {
             insert workItem;
 
             WorkItemComment__c comment = new WorkItemComment__c(
-                WorkItemLookup__c = workItem.Id,
+                WorkItemId__c = workItem.Id,
                 BodyTxt__c = 'comment',
                 AuthorTxt__c = 'User'
             );

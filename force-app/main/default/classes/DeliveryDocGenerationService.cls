@@ -70,7 +70,7 @@ public with sharing class DeliveryDocGenerationService {
             + ' AND PeriodStartDate__c = :periodStart'
             + ' AND PeriodEndDate__c = :periodEnd'
             + ' AND StatusPk__c != \'Superseded\''
-            + (entityId != null ? ' AND NetworkEntityLookup__c = :entityId' : ' AND NetworkEntityLookup__c = NULL')
+            + (entityId != null ? ' AND NetworkEntityId__c = :entityId' : ' AND NetworkEntityId__c = NULL')
             + ' ORDER BY VersionNumber__c DESC LIMIT 1';
         List<DeliveryDocument__c> existing = Database.queryWithBinds(
             versionQuery,
@@ -94,7 +94,7 @@ public with sharing class DeliveryDocGenerationService {
         String documentHash = DeliveryCryptoService.computeSHA256(snapshotJson);
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityLookup__c          = entityId,
+            NetworkEntityId__c          = entityId,
             TemplatePk__c               = templateType,
             PeriodStartDate__c          = periodStart,
             PeriodEndDate__c            = periodEnd,
@@ -197,16 +197,16 @@ public with sharing class DeliveryDocGenerationService {
 
         // Work requests (for rates and status)
         List<WorkRequest__c> requests = [
-            SELECT Id, WorkItemLookup__c, WorkItemLookup__r.Name, StatusPk__c,
+            SELECT Id, WorkItemId__c, WorkItemId__r.Name, StatusPk__c,
                    HourlyRateCurrency__c, QuotedHoursNumber__c,
                    PreApprovedHoursNumber__c, TotalLoggedHoursSum__c,
                    BudgetUtilizationPct__c, DeliveryEntityLookup__c,
                    DeliveryEntityLookup__r.Name
             FROM WorkRequest__c
-            WHERE WorkItemLookup__c IN :itemIds
+            WHERE WorkItemId__c IN :itemIds
             AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
-            ORDER BY WorkItemLookup__r.Name
+            ORDER BY WorkItemId__r.Name
         ];
         snapshot.put('workRequests', serializeWorkRequests(requests));
 
@@ -284,8 +284,8 @@ public with sharing class DeliveryDocGenerationService {
         for (WorkRequest__c wr : requests) {
             Map<String, Object> m = new Map<String, Object>();
             m.put('id', wr.Id);
-            m.put('workItemId', wr.WorkItemLookup__c);
-            m.put('workItemName', wr.WorkItemLookup__r.Name);
+            m.put('workItemId', wr.WorkItemId__c);
+            m.put('workItemName', wr.WorkItemId__r.Name);
             m.put('status', wr.StatusPk__c);
             m.put('hourlyRate', wr.HourlyRateCurrency__c);
             m.put('quotedHours', wr.QuotedHoursNumber__c);
