@@ -309,7 +309,6 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
     async createStatusComment(workItemId) {
         if (!this.moveComment || this.moveComment.trim() === "") {
-            console.log('[createStatusComment] → Skipping empty comment');
             return;
         }
 
@@ -328,9 +327,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         };
 
         try {
-            // Ensure createRecord is imported at the top!
-            const result = await createRecord(recordInput);
-            console.log('Comment created → ID:', result.id);
+            await createRecord(recordInput);
         } catch (error) {
             console.error('Failed to create WorkItemComment__c:', error);
             throw error;
@@ -935,18 +932,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         this.logBoardState();
     }
 
-    // FIX: Removed debugData which was causing lint error
-    logBoardState() {
-        setTimeout(() => {
-            try {
-                // Logic kept simple or removed to satisfy linter
-                // const columns = this.stageColumns;
-                // console.log('Board State Updated');
-            } catch (error) {
-                console.error('Error logging board state:', error);
-            }
-        }, 100);
-    }
+    // No-op placeholder retained for callers; previously logged board state
+    // for diagnostics. Safe to extend later if observability is needed.
+    logBoardState() {}
 
     handleSizeModeChange(e) { this.sizeMode = e.detail ? e.detail.value : e.target.value; }
     handleDisplayModeChange(e) { this.displayMode = e.detail ? e.detail.value : e.target.value; }
