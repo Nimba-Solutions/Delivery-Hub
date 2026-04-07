@@ -35,15 +35,15 @@ private class DeliveryDocumentPdfControllerTest {
         WorkItem__c item = new WorkItem__c(
             BriefDescriptionTxt__c = 'PDF Test Work Item',
             StageNamePk__c = 'In Development',
-            ClientNetworkEntityId__c = entity.Id,
+            ClientNetworkEntityLookup__c = entity.Id,
             BillableRateCurrency__c = 90,
             EstimatedHoursNumber__c = 40
         );
         insert item;
 
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemId__c = item.Id,
-            DeliveryEntityId__c = vendor.Id,
+            WorkItemLookup__c = item.Id,
+            DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'In Progress',
             HourlyRateCurrency__c = 90,
             QuotedHoursNumber__c = 40,
@@ -52,8 +52,8 @@ private class DeliveryDocumentPdfControllerTest {
         insert req;
 
         insert new WorkLog__c(
-            WorkItemId__c = item.Id,
-            RequestId__c = req.Id,
+            WorkItemLookup__c = item.Id,
+            RequestLookup__c = req.Id,
             HoursLoggedNumber__c = 8,
             WorkDateDate__c = Date.newInstance(2026, 3, 10),
             WorkDescriptionTxt__c = 'Test work entry'

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NetworkEntityLookup__c</fullName>
+    <description>The Network Entity this portal access record belongs to.</description>
+    <inlineHelpText>The Network Entity that this portal access grants entry to.</inlineHelpText>
+    <label>Network Entity</label>
+    <referenceTo>NetworkEntity__c</referenceTo>
+    <relationshipLabel>Portal Accesses</relationshipLabel>
+    <relationshipName>PortalAccesses</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

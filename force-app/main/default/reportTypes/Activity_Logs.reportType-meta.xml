@@ -48,7 +48,7 @@
         </columns>
         <columns>
             <checkedByDefault>false</checkedByDefault>
-            <field>NetworkEntityId__c</field>
+            <field>NetworkEntityLookup__c</field>
             <table>ActivityLog__c</table>
         </columns>
         <columns>

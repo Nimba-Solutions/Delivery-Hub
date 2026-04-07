@@ -15,7 +15,7 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>WorkItemId__c</field>
+                <field>WorkItemLookup__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

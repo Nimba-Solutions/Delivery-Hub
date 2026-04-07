@@ -22,7 +22,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>ActivityLog__c.NetworkEntityId__c</field>
+        <field>ActivityLog__c.NetworkEntityLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -37,7 +37,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DeliveryDocument__c.PreviousVersionId__c</field>
+        <field>DeliveryDocument__c.PreviousVersionLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -107,12 +107,12 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkRequest__c.BudgetUtilizationPercent__c</field>
+        <field>WorkRequest__c.BudgetUtilizationPct__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkRequest__c.DeliveryEntityId__c</field>
+        <field>WorkRequest__c.DeliveryEntityLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -157,7 +157,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkRequest__c.TotalLoggedHoursNumber__c</field>
+        <field>WorkRequest__c.TotalLoggedHoursSum__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -207,7 +207,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>SyncItem__c.RequestId__c</field>
+        <field>SyncItem__c.RequestLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -227,12 +227,12 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>SyncItem__c.WorkItemCommentId__c</field>
+        <field>SyncItem__c.WorkItemCommentLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>SyncItem__c.WorkItemId__c</field>
+        <field>SyncItem__c.WorkItemLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -342,7 +342,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>WorkItem__c.ClientNetworkEntityLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -362,7 +362,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItem__c.DeveloperLookupId__c</field>
+        <field>WorkItem__c.DeveloperLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -392,7 +392,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkItem__c.ExternalRequesterEmailTxt__c</field>
+        <field>WorkItem__c.ExternalRequesterEmail__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -492,7 +492,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
+        <field>WorkItem__c.TotalLoggedHoursSum__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -522,7 +522,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>WorkLog__c.WorkItemId__c</field>
+        <field>WorkLog__c.WorkItemLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

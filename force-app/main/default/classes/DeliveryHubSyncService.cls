@@ -205,9 +205,9 @@ global without sharing class DeliveryHubSyncService {
                 FROM SyncItem__c
                 WHERE DirectionPk__c = 'Outbound'
                 AND StatusPk__c = 'Staged'
-                AND RequestId__c = NULL
+                AND RequestLookup__c = NULL
                 AND CreatedDate > :sinceDate
-                AND WorkItemId__r.ClientNetworkEntityId__c = :clientId
+                AND WorkItemLookup__r.ClientNetworkEntityLookup__c = :clientId
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate ASC
                 LIMIT 200

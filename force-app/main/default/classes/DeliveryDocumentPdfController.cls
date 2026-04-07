@@ -204,7 +204,7 @@ public without sharing class DeliveryDocumentPdfController {
             return;
         }
 
-        String query = 'SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name, '
+        String query = 'SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__r.Name, '
             + 'PeriodStartDate__c, PeriodEndDate__c, '
             + 'StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, '
             + 'SnapshotTxt__c, AiNarrativeTxt__c, TermsTxt__c, '

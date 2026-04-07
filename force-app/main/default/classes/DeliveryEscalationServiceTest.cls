@@ -28,7 +28,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'Clarification Requested (Pre-Dev)',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Item in Dev Blocked — Software_Delivery, Low priority
@@ -37,7 +37,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'Dev Blocked',
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Item in In Client Approval — Software_Delivery
@@ -46,7 +46,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'In Client Approval',
             PriorityPk__c = 'High',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Item in Backlog — should NOT be matched by any default rules
@@ -63,7 +63,7 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         insert items;
@@ -286,7 +286,7 @@ private class DeliveryEscalationServiceTest {
         System.runAs(testUser) {
             // Configure Slack webhook so the service attempts a callout
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.SlackWebhookUrl__c = 'https://hooks.slack.com/test';
+            settings.SlackWebhookUrlTxt__c = 'https://hooks.slack.com/test';
             update settings;
 
             List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
@@ -949,7 +949,7 @@ private class DeliveryEscalationServiceTest {
     static void testMultipleActionTypesInSingleRun() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.SlackWebhookUrl__c = 'https://hooks.slack.com/test';
+            settings.SlackWebhookUrlTxt__c = 'https://hooks.slack.com/test';
             update settings;
 
             List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
@@ -1411,7 +1411,7 @@ private class DeliveryEscalationServiceTest {
 
             // Add a comment from the same user who created the work item (running user)
             insert new WorkItemComment__c(
-                WorkItemId__c = wi.Id,
+                WorkItemLookup__c = wi.Id,
                 BodyTxt__c = 'Self-comment should not count as a response'
             );
 

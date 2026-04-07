@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>AutoAssignTxt__c</fullName>
-    <description>Auto-assignment hint for AssignedEntityId__c at slot creation. Values: vendor (issuing entity), customer (document's NetworkEntityId), none (left blank for manual assignment).</description>
+    <description>Auto-assignment hint for AssignedEntityLookup__c at slot creation. Values: vendor (issuing entity), customer (document's NetworkEntityLookup), none (left blank for manual assignment).</description>
     <fieldManageability>DeveloperControlled</fieldManageability>
-    <inlineHelpText>vendor, customer, or none. Controls how AssignedEntityId__c is populated.</inlineHelpText>
+    <inlineHelpText>vendor, customer, or none. Controls how AssignedEntityLookup__c is populated.</inlineHelpText>
     <label>Auto Assign</label>
     <length>80</length>
     <required>false</required>

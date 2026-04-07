@@ -6,7 +6,7 @@
     <columns>ActivatedDateTime__c</columns>
     <columns>RequestTypePk__c</columns>
     <columns>StageNamePk__c</columns>
-    <columns>TotalLoggedHoursNumber__c</columns>
+    <columns>TotalLoggedHoursSum__c</columns>
     <columns>AcceptanceCriteriaTxt__c</columns>
     <columns>ClientIntentionPk__c</columns>
     <columns>ClientPreApprovedHoursNumber__c</columns>

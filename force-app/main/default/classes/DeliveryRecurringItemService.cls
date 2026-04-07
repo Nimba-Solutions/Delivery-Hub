@@ -21,7 +21,7 @@ global with sharing class DeliveryRecurringItemService {
         'StepsToReproduceTxt__c',
         'EpicTxt__c',
         'ClientIntentionPk__c',
-        'DeveloperLookupId__c'
+        'DeveloperLookup__c'
     };
 
     // Pre-built CSV of clone fields for dynamic SOQL
@@ -217,7 +217,7 @@ global with sharing class DeliveryRecurringItemService {
         clone.TemplateMarkedDateTime__c = null;
         clone.RecurringEnabledDateTime__c = null;
         clone.StageNamePk__c = getFirstStageForWorkflow(workflowType);
-        clone.TemplateSourceId__c = sourceId;
+        clone.TemplateSourceLookup__c = sourceId;
         clone.OwnerId = ownerId;
         return clone;
     }

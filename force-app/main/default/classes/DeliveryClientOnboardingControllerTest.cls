@@ -63,13 +63,13 @@ private class DeliveryClientOnboardingControllerTest {
 
             // Verify portal access was provisioned
             PortalAccess__c pa = [
-                SELECT EmailTxt__c, RolePk__c, AccessTokenTxt__c, NetworkEntityId__c
+                SELECT EmailTxt__c, RolePk__c, AccessTokenTxt__c, NetworkEntityLookup__c
                 FROM PortalAccess__c WHERE Id = :(Id)result.get('portalAccessId')
             ];
             System.assertEquals('ceo@acme.com', pa.EmailTxt__c, 'Portal email should match');
             System.assertEquals('Admin', pa.RolePk__c, 'Portal role should be Admin');
             System.assertNotEquals(null, pa.AccessTokenTxt__c, 'Access token should be generated');
-            System.assertEquals((Id)result.get('entityId'), pa.NetworkEntityId__c, 'Portal access should link to entity');
+            System.assertEquals((Id)result.get('entityId'), pa.NetworkEntityLookup__c, 'Portal access should link to entity');
         }
     }
 

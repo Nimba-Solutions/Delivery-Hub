@@ -89,7 +89,7 @@ global with sharing class DeliveryActivityTimelineController {
         List<WorkItemComment__c> comments = [
             SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, CreatedBy.Name
             FROM WorkItemComment__c
-            WHERE WorkItemId__c = :workItemId
+            WHERE WorkItemLookup__c = :workItemId
             WITH SYSTEM_MODE
             ORDER BY CreatedDate DESC
             LIMIT 200
@@ -136,7 +136,7 @@ global with sharing class DeliveryActivityTimelineController {
             SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
                    WorkDescriptionTxt__c, WorkDateDate__c
             FROM WorkLog__c
-            WHERE WorkItemId__c = :workItemId
+            WHERE WorkItemLookup__c = :workItemId
             WITH SYSTEM_MODE
             ORDER BY CreatedDate DESC
             LIMIT 200

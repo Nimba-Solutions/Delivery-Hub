@@ -38,7 +38,7 @@ private class DeliveryBountyServiceTest {
                 BountyDifficultyPk__c = 'Intermediate',
                 BountySkillsTxt__c = 'LWC;Apex;SOQL',
                 BountyMaxClaimsNumber__c = 3,
-                ClientNetworkEntityId__c = entity.Id
+                ClientNetworkEntityLookup__c = entity.Id
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Fix Apex Batch Job',
@@ -54,7 +54,7 @@ private class DeliveryBountyServiceTest {
                 BountyDifficultyPk__c = 'Advanced',
                 BountySkillsTxt__c = 'Apex;Apex Batch',
                 BountyMaxClaimsNumber__c = 1,
-                ClientNetworkEntityId__c = entity.Id
+                ClientNetworkEntityLookup__c = entity.Id
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Expired Bounty',
@@ -67,7 +67,7 @@ private class DeliveryBountyServiceTest {
                 BountyTokenTxt__c = 'tok-expired-003',
                 BountyDifficultyPk__c = 'Beginner',
                 BountyMaxClaimsNumber__c = 5,
-                ClientNetworkEntityId__c = entity.Id
+                ClientNetworkEntityLookup__c = entity.Id
             ),
             // Non-bounty work item (should not appear in listings)
             new WorkItem__c(
@@ -75,7 +75,7 @@ private class DeliveryBountyServiceTest {
                 StageNamePk__c = 'In Development',
                 ActivatedDateTime__c = Datetime.now(),
                 BountyEnabledDateTime__c = null,
-                ClientNetworkEntityId__c = entity.Id
+                ClientNetworkEntityLookup__c = entity.Id
             )
         };
         insert items;
@@ -162,10 +162,10 @@ private class DeliveryBountyServiceTest {
             System.assertNotEquals(null, claimId, 'Should return a claim Id');
 
             BountyClaim__c claim = [
-                SELECT ClaimantEmailTxt__c, ClaimantNameTxt__c, StatusPk__c, NoteTxt__c
+                SELECT ClaimantEmail__c, ClaimantNameTxt__c, StatusPk__c, NoteTxt__c
                 FROM BountyClaim__c WHERE Id = :claimId
             ];
-            System.assertEquals('dev@example.com', claim.ClaimantEmailTxt__c);
+            System.assertEquals('dev@example.com', claim.ClaimantEmail__c);
             System.assertEquals('Active', claim.StatusPk__c);
             System.assertEquals('I can build this!', claim.NoteTxt__c);
         }
@@ -247,12 +247,12 @@ private class DeliveryBountyServiceTest {
             Test.stopTest();
 
             BountyClaim__c claim = [
-                SELECT StatusPk__c, WorkProofUrlTxt__c FROM BountyClaim__c
-                WHERE ClaimantEmailTxt__c = 'dev@example.com'
-                AND WorkItemId__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
+                SELECT StatusPk__c, WorkProofUrl__c FROM BountyClaim__c
+                WHERE ClaimantEmail__c = 'dev@example.com'
+                AND WorkItemLookup__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
             ];
             System.assertEquals('Submitted', claim.StatusPk__c);
-            System.assertEquals('https://github.com/example/pr/1', claim.WorkProofUrlTxt__c);
+            System.assertEquals('https://github.com/example/pr/1', claim.WorkProofUrl__c);
 
             WorkItem__c bounty = [
                 SELECT BountyStatusPk__c FROM WorkItem__c
@@ -292,8 +292,8 @@ private class DeliveryBountyServiceTest {
 
             BountyClaim__c claim = [
                 SELECT StatusPk__c FROM BountyClaim__c
-                WHERE ClaimantEmailTxt__c = 'dev@example.com'
-                AND WorkItemId__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
+                WHERE ClaimantEmail__c = 'dev@example.com'
+                AND WorkItemLookup__r.BountyTokenTxt__c = 'tok-lwc-dashboard-001'
             ];
             System.assertEquals('Withdrawn', claim.StatusPk__c);
         }
@@ -358,9 +358,9 @@ private class DeliveryBountyServiceTest {
             Test.stopTest();
 
             BountyClaim__c claim = [
-                SELECT ClaimantEntityId__c FROM BountyClaim__c WHERE Id = :claimId
+                SELECT ClaimantEntityLookup__c FROM BountyClaim__c WHERE Id = :claimId
             ];
-            System.assertNotEquals(null, claim.ClaimantEntityId__c,
+            System.assertNotEquals(null, claim.ClaimantEntityLookup__c,
                 'Should auto-link to NetworkEntity with matching email');
         }
     }

@@ -45,35 +45,35 @@ private class DeliveryStatusPageControllerTest {
                 BriefDescriptionTxt__c = 'Setup environment',
                 StageNamePk__c = 'Backlog',
                 PriorityPk__c = 'Medium',
-                ClientNetworkEntityId__c = entity.Id,
+                ClientNetworkEntityLookup__c = entity.Id,
                 SLATargetDate__c = Date.today().addDays(10)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Build feature A',
                 StageNamePk__c = 'In Development',
                 PriorityPk__c = 'High',
-                ClientNetworkEntityId__c = entity.Id,
+                ClientNetworkEntityLookup__c = entity.Id,
                 SLATargetDate__c = Date.today().addDays(2)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Deploy v1.0',
                 StageNamePk__c = 'Done',
                 PriorityPk__c = 'Low',
-                ClientNetworkEntityId__c = entity.Id,
+                ClientNetworkEntityLookup__c = entity.Id,
                 SLATargetDate__c = Date.today().addDays(-5)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Fix login bug',
                 StageNamePk__c = 'Done',
                 PriorityPk__c = 'Critical',
-                ClientNetworkEntityId__c = entity.Id,
+                ClientNetworkEntityLookup__c = entity.Id,
                 SLATargetDate__c = Date.today().addDays(-2)
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Overdue item',
                 StageNamePk__c = 'In Progress',
                 PriorityPk__c = 'Critical',
-                ClientNetworkEntityId__c = entity.Id,
+                ClientNetworkEntityLookup__c = entity.Id,
                 SLATargetDate__c = Date.today().addDays(-1)
             )
         };

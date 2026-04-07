@@ -3,7 +3,7 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Sends email notifications to external requesters (non-Salesforce users)
  *               when their work item changes stage or breaches SLA. Uses the
- *               ExternalRequesterEmailTxt__c field on WorkItem__c. Runs asynchronously
+ *               ExternalRequesterEmail__c field on WorkItem__c. Runs asynchronously
  *               (@future) from trigger context. No-ops if external notifications are
  *               disabled in settings or if no external email is populated.
  * @author Cloud Nimbus LLC
@@ -27,7 +27,7 @@ public with sharing class DeliveryExternalNotificationService {
         List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
 
         for (WorkItem__c wi : workItems) {
-            String externalEmail = wi.ExternalRequesterEmailTxt__c;
+            String externalEmail = wi.ExternalRequesterEmail__c;
             if (String.isBlank(externalEmail)) {
                 continue;
             }
@@ -58,17 +58,17 @@ public with sharing class DeliveryExternalNotificationService {
         }
         List<WorkItem__c> workItems = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   ExternalRequesterEmailTxt__c, SLATargetDate__c
+                   ExternalRequesterEmail__c, SLATargetDate__c
             FROM WorkItem__c
             WHERE Id IN :workItemIds
-              AND ExternalRequesterEmailTxt__c != null
+              AND ExternalRequesterEmail__c != null
             WITH SYSTEM_MODE
         ];
 
         List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
         for (WorkItem__c wi : workItems) {
             Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
-            email.setToAddresses(new List<String>{ wi.ExternalRequesterEmailTxt__c });
+            email.setToAddresses(new List<String>{ wi.ExternalRequesterEmail__c });
             email.setSubject('Action needed: ' + wi.Name + ' is past its target date');
             email.setHtmlBody(buildSLABreachHtml(wi));
             email.setSaveAsActivity(false);
@@ -89,10 +89,10 @@ public with sharing class DeliveryExternalNotificationService {
     private static List<WorkItem__c> queryWorkItems(Set<Id> workItemIds) {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   ExternalRequesterEmailTxt__c
+                   ExternalRequesterEmail__c
             FROM WorkItem__c
             WHERE Id IN :workItemIds
-              AND ExternalRequesterEmailTxt__c != null
+              AND ExternalRequesterEmail__c != null
             WITH SYSTEM_MODE
         ];
     }

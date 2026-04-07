@@ -148,7 +148,7 @@ global with sharing class DeliveryWorkflowBuilderController {
             addMetadataValue(stageRecord, 'AttentionStateDateTime__c', stage.get('isAttention') == true ? Datetime.now() : null);
             addMetadataValue(stageRecord, 'VisibleByDefaultDateTime__c', Datetime.now());
             addMetadataValue(stageRecord, 'OwnerPersonaTxt__c', 'Admin');
-            addMetadataValue(stageRecord, 'WorkflowTypeMdtId__c', typeName);
+            addMetadataValue(stageRecord, 'WorkflowTypeMdt__c', typeName);
 
             if (stage.containsKey('nextStages')) {
                 addMetadataValue(stageRecord, 'AllowedForwardTransitionsTxt__c',
@@ -172,7 +172,7 @@ global with sharing class DeliveryWorkflowBuilderController {
             viewRecord.fullName = 'WorkflowPersonaView__mdt.' + viewApiName;
             viewRecord.label = typeName + ' - Admin - ' + stage.get('label');
 
-            addMetadataValue(viewRecord, 'WorkflowTypeMdtId__c', typeName);
+            addMetadataValue(viewRecord, 'WorkflowTypeMdt__c', typeName);
             addMetadataValue(viewRecord, 'PersonaNameTxt__c', 'Admin');
             addMetadataValue(viewRecord, 'ColumnNameTxt__c', stage.get('label'));
             addMetadataValue(viewRecord, 'StageApiValuesTxt__c', stage.get('label'));

@@ -31,9 +31,9 @@ private class DeliveryExternalNotificationServiceTest {
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            ExternalRequesterEmailTxt__c = 'external@example.com',
+            ExternalRequesterEmail__c = 'external@example.com',
             SLATargetDate__c = Date.today().addDays(-3),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Item without external requester email (should be skipped)
@@ -43,7 +43,7 @@ private class DeliveryExternalNotificationServiceTest {
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         insert items;
@@ -77,7 +77,7 @@ private class DeliveryExternalNotificationServiceTest {
 
     /**
      * @description Verifies sendExternalStageChangeEmails skips items without
-     *              ExternalRequesterEmailTxt__c populated.
+     *              ExternalRequesterEmail__c populated.
      */
     @IsTest
     static void testStageChangeEmailSkipsInternalOnly() {
@@ -98,7 +98,7 @@ private class DeliveryExternalNotificationServiceTest {
 
             // No email should be sent for internal-only items; verify no exception
             System.assert(true,
-                'Should skip items without ExternalRequesterEmailTxt__c');
+                'Should skip items without ExternalRequesterEmail__c');
         }
     }
 
@@ -128,7 +128,7 @@ private class DeliveryExternalNotificationServiceTest {
 
     /**
      * @description Verifies sendExternalSLABreachEmails skips items without
-     *              ExternalRequesterEmailTxt__c populated.
+     *              ExternalRequesterEmail__c populated.
      */
     @IsTest
     static void testSlaBreachEmailSkipsInternalOnly() {
@@ -146,7 +146,7 @@ private class DeliveryExternalNotificationServiceTest {
             Test.stopTest();
 
             System.assert(true,
-                'Should skip items without ExternalRequesterEmailTxt__c');
+                'Should skip items without ExternalRequesterEmail__c');
         }
     }
 
@@ -270,7 +270,7 @@ private class DeliveryExternalNotificationServiceTest {
         System.runAs(testUser) {
             WorkItem__c wi = [
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                       ExternalRequesterEmailTxt__c, SLATargetDate__c
+                       ExternalRequesterEmail__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE BriefDescriptionTxt__c = 'External requester item'
                 WITH SYSTEM_MODE LIMIT 1

@@ -3,7 +3,7 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description Controller for the deliveryTimeLogger LWC. Creates a WorkLog__c
  *              entry against a Work Item, which the roll-up summary on
- *              TotalLoggedHoursNumber__c then reflects automatically.
+ *              TotalLoggedHoursSum__c then reflects automatically.
  *              Also provides approval/rejection of WorkLogs and an
  *              isApprovalRequired check for the UI.
  * @author Cloud Nimbus LLC
@@ -24,7 +24,7 @@ global with sharing class DeliveryTimeLoggerController {
     global static void logHours(Id workItemId, Decimal hours, String workNotes, Date workDate) {
         List<WorkRequest__c> activeReqs = [
             SELECT Id FROM WorkRequest__c
-            WHERE WorkItemId__c = :workItemId
+            WHERE WorkItemLookup__c = :workItemId
             AND StatusPk__c IN ('Draft', 'Accepted', 'In Progress')
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -38,8 +38,8 @@ global with sharing class DeliveryTimeLoggerController {
         String status = approvalRequired ? 'Draft' : 'Approved';
 
         WorkLog__c entry = new WorkLog__c(
-            RequestId__c          = activeReqs[0].Id,
-            WorkItemId__c           = workItemId,
+            RequestLookup__c          = activeReqs[0].Id,
+            WorkItemLookup__c           = workItemId,
             HoursLoggedNumber__c  = hours,
             WorkDateDate__c       = workDate != null ? workDate : Date.today(),
             WorkDescriptionTxt__c = workNotes,

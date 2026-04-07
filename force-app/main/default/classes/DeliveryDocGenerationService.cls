@@ -70,7 +70,7 @@ public with sharing class DeliveryDocGenerationService {
             + ' AND PeriodStartDate__c = :periodStart'
             + ' AND PeriodEndDate__c = :periodEnd'
             + ' AND StatusPk__c != \'Superseded\''
-            + (entityId != null ? ' AND NetworkEntityId__c = :entityId' : ' AND NetworkEntityId__c = NULL')
+            + (entityId != null ? ' AND NetworkEntityLookup__c = :entityId' : ' AND NetworkEntityLookup__c = NULL')
             + ' ORDER BY VersionNumber__c DESC LIMIT 1';
         List<DeliveryDocument__c> existing = Database.queryWithBinds(
             versionQuery,
@@ -87,7 +87,7 @@ public with sharing class DeliveryDocGenerationService {
         }
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c          = entityId,
+            NetworkEntityLookup__c          = entityId,
             TemplatePk__c               = templateType,
             PeriodStartDate__c          = periodStart,
             PeriodEndDate__c            = periodEnd,
@@ -99,8 +99,8 @@ public with sharing class DeliveryDocGenerationService {
             TermsTxt__c                 = 'Net 30',
             MetadataTxt__c              = JSON.serialize(metaMap),
             VersionNumber__c            = nextVersion,
-            PreviousVersionId__c        = previousVersionId,
-            RequiresSigningCheckbox__c  = DeliveryDocActionService.templateRequiresSigning(templateType)
+            PreviousVersionLookup__c        = previousVersionId,
+            RequireSigningDateTime__c  = DeliveryDocActionService.templateSigningRequiredAt(templateType)
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
@@ -114,8 +114,8 @@ public with sharing class DeliveryDocGenerationService {
         String entityName = entityMap != null ? (String) entityMap.get('name') : '';
         EventBus.publish(new DeliveryDocEvent__e(
             DocumentIdTxt__c = doc.Id,
-            TemplatePk__c    = templateType,
-            StatusPk__c      = 'Draft',
+            TemplateTxt__c   = templateType,
+            StatusTxt__c     = 'Draft',
             EntityNameTxt__c = entityName
         ));
 
@@ -145,12 +145,12 @@ public with sharing class DeliveryDocGenerationService {
         // Work items linked to this entity
         List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                   EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
+                   EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
                    BillableRateCurrency__c, BudgetVarianceNumber__c,
-                   ClientNetworkEntityId__c, WorkflowTypeTxt__c,
-                   DeveloperLookupId__c, DeveloperLookupId__r.Name, DeveloperLookupId__r.Title
+                   ClientNetworkEntityLookup__c, WorkflowTypeTxt__c,
+                   DeveloperLookup__c, DeveloperLookup__r.Name, DeveloperLookup__r.Title
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entityId
+            WHERE ClientNetworkEntityLookup__c = :entityId
             WITH SYSTEM_MODE
             ORDER BY Name
         ];
@@ -161,11 +161,11 @@ public with sharing class DeliveryDocGenerationService {
         List<WorkLog__c> logs;
         if (templateType == 'Invoice' || templateType == 'Daily_Hours_Summary') {
             logs = [
-                SELECT Id, Name, WorkItemId__c, WorkItemId__r.Name,
+                SELECT Id, Name, WorkItemLookup__c, WorkItemLookup__r.Name,
                        HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
                        ResourceTitleTxt__c
                 FROM WorkLog__c
-                WHERE WorkItemId__c IN :itemIds
+                WHERE WorkItemLookup__c IN :itemIds
                 AND WorkDateDate__c >= :periodStart
                 AND WorkDateDate__c <= :periodEnd
                 AND (StatusPk__c = 'Approved' OR StatusPk__c = null)
@@ -174,11 +174,11 @@ public with sharing class DeliveryDocGenerationService {
             ];
         } else {
             logs = [
-                SELECT Id, Name, WorkItemId__c, WorkItemId__r.Name,
+                SELECT Id, Name, WorkItemLookup__c, WorkItemLookup__r.Name,
                        HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
                        ResourceTitleTxt__c
                 FROM WorkLog__c
-                WHERE WorkItemId__c IN :itemIds
+                WHERE WorkItemLookup__c IN :itemIds
                 AND WorkDateDate__c >= :periodStart
                 AND WorkDateDate__c <= :periodEnd
                 WITH SYSTEM_MODE
@@ -189,16 +189,16 @@ public with sharing class DeliveryDocGenerationService {
 
         // Work requests (for rates and status)
         List<WorkRequest__c> requests = [
-            SELECT Id, WorkItemId__c, WorkItemId__r.Name, StatusPk__c,
+            SELECT Id, WorkItemLookup__c, WorkItemLookup__r.Name, StatusPk__c,
                    HourlyRateCurrency__c, QuotedHoursNumber__c,
-                   PreApprovedHoursNumber__c, TotalLoggedHoursNumber__c,
-                   BudgetUtilizationPercent__c, DeliveryEntityId__c,
-                   DeliveryEntityId__r.Name
+                   PreApprovedHoursNumber__c, TotalLoggedHoursSum__c,
+                   BudgetUtilizationPct__c, DeliveryEntityLookup__c,
+                   DeliveryEntityLookup__r.Name
             FROM WorkRequest__c
-            WHERE WorkItemId__c IN :itemIds
+            WHERE WorkItemLookup__c IN :itemIds
             AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
-            ORDER BY WorkItemId__r.Name
+            ORDER BY WorkItemLookup__r.Name
         ];
         snapshot.put('workRequests', serializeWorkRequests(requests));
 
@@ -234,7 +234,7 @@ public with sharing class DeliveryDocGenerationService {
             // Skip work items with zero hours only for invoices (billable items only);
             // agreements and status reports should include all work items
             if (templateType == 'Invoice'
-                && (wi.TotalLoggedHoursNumber__c == null || wi.TotalLoggedHoursNumber__c <= 0)) {
+                && (wi.TotalLoggedHoursSum__c == null || wi.TotalLoggedHoursSum__c <= 0)) {
                 continue;
             }
             Map<String, Object> m = new Map<String, Object>();
@@ -244,12 +244,12 @@ public with sharing class DeliveryDocGenerationService {
             m.put('stage', wi.StageNamePk__c);
             m.put('priority', wi.PriorityPk__c);
             m.put('estimatedHours', wi.EstimatedHoursNumber__c);
-            m.put('totalLoggedHours', wi.TotalLoggedHoursNumber__c);
+            m.put('totalLoggedHours', wi.TotalLoggedHoursSum__c);
             m.put('billableRate', wi.BillableRateCurrency__c);
             m.put('budgetVariance', wi.BudgetVarianceNumber__c);
             m.put('workflowType', wi.WorkflowTypeTxt__c);
-            m.put('developerName', wi.DeveloperLookupId__r != null ? wi.DeveloperLookupId__r.Name : null);
-            m.put('developerTitle', wi.DeveloperLookupId__r != null ? wi.DeveloperLookupId__r.Title : null);
+            m.put('developerName', wi.DeveloperLookup__r != null ? wi.DeveloperLookup__r.Name : null);
+            m.put('developerTitle', wi.DeveloperLookup__r != null ? wi.DeveloperLookup__r.Title : null);
             result.add(m);
         }
         return result;
@@ -260,8 +260,8 @@ public with sharing class DeliveryDocGenerationService {
         for (WorkLog__c wl : logs) {
             Map<String, Object> m = new Map<String, Object>();
             m.put('id', wl.Id);
-            m.put('workItemId', wl.WorkItemId__c);
-            m.put('workItemName', wl.WorkItemId__r.Name);
+            m.put('workItemId', wl.WorkItemLookup__c);
+            m.put('workItemName', wl.WorkItemLookup__r.Name);
             m.put('hours', wl.HoursLoggedNumber__c);
             m.put('date', String.valueOf(wl.WorkDateDate__c));
             m.put('description', wl.WorkDescriptionTxt__c);
@@ -276,16 +276,16 @@ public with sharing class DeliveryDocGenerationService {
         for (WorkRequest__c wr : requests) {
             Map<String, Object> m = new Map<String, Object>();
             m.put('id', wr.Id);
-            m.put('workItemId', wr.WorkItemId__c);
-            m.put('workItemName', wr.WorkItemId__r.Name);
+            m.put('workItemId', wr.WorkItemLookup__c);
+            m.put('workItemName', wr.WorkItemLookup__r.Name);
             m.put('status', wr.StatusPk__c);
             m.put('hourlyRate', wr.HourlyRateCurrency__c);
             m.put('quotedHours', wr.QuotedHoursNumber__c);
             m.put('preApprovedHours', wr.PreApprovedHoursNumber__c);
-            m.put('totalLoggedHours', wr.TotalLoggedHoursNumber__c);
-            m.put('budgetUtilization', wr.BudgetUtilizationPercent__c);
-            m.put('vendorEntityId', wr.DeliveryEntityId__c);
-            m.put('vendorEntityName', wr.DeliveryEntityId__r.Name);
+            m.put('totalLoggedHours', wr.TotalLoggedHoursSum__c);
+            m.put('budgetUtilization', wr.BudgetUtilizationPct__c);
+            m.put('vendorEntityId', wr.DeliveryEntityLookup__c);
+            m.put('vendorEntityName', wr.DeliveryEntityLookup__r.Name);
             result.add(m);
         }
         return result;

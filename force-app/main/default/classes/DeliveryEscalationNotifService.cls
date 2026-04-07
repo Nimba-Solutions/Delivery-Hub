@@ -20,7 +20,7 @@ public with sharing class DeliveryEscalationNotifService {
         // Query work items for email context
         List<WorkItem__c> workItems = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   DeveloperLookupId__c, OwnerId
+                   DeveloperLookup__c, OwnerId
             FROM WorkItem__c
             WHERE Id IN :escalationDetails.keySet()
             WITH SYSTEM_MODE
@@ -33,8 +33,8 @@ public with sharing class DeliveryEscalationNotifService {
         // Collect recipient user Ids
         Set<Id> recipientIds = new Set<Id>();
         for (WorkItem__c wi : workItems) {
-            if (wi.DeveloperLookupId__c != null) {
-                recipientIds.add(wi.DeveloperLookupId__c);
+            if (wi.DeveloperLookup__c != null) {
+                recipientIds.add(wi.DeveloperLookup__c);
             }
             if (wi.OwnerId != null && String.valueOf(wi.OwnerId).startsWith('005')) {
                 recipientIds.add(wi.OwnerId);
@@ -56,8 +56,8 @@ public with sharing class DeliveryEscalationNotifService {
 
         for (WorkItem__c wi : workItems) {
             List<String> toAddresses = new List<String>();
-            if (wi.DeveloperLookupId__c != null && userMap.containsKey(wi.DeveloperLookupId__c)) {
-                toAddresses.add(userMap.get(wi.DeveloperLookupId__c).Email);
+            if (wi.DeveloperLookup__c != null && userMap.containsKey(wi.DeveloperLookup__c)) {
+                toAddresses.add(userMap.get(wi.DeveloperLookup__c).Email);
             }
             if (wi.OwnerId != null && userMap.containsKey(wi.OwnerId)) {
                 String ownerEmail = userMap.get(wi.OwnerId).Email;
@@ -125,7 +125,7 @@ public with sharing class DeliveryEscalationNotifService {
      */
     public static void sendEscalationSlack(Map<String, String> workItemNameToMessage) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+        if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
             return;
         }
 
@@ -148,7 +148,7 @@ public with sharing class DeliveryEscalationNotifService {
         });
 
         HttpRequest req = new HttpRequest();
-        req.setEndpoint(settings.SlackWebhookUrl__c);
+        req.setEndpoint(settings.SlackWebhookUrlTxt__c);
         req.setMethod('POST');
         req.setHeader('Content-Type', 'application/json');
         req.setBody(payload);

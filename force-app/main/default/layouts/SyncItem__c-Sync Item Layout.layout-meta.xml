@@ -51,17 +51,17 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>WorkItemId__c</field>
+                <field>WorkItemLookup__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>RequestId__c</field>
+                <field>RequestLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>WorkItemCommentId__c</field>
+                <field>WorkItemCommentLookup__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>

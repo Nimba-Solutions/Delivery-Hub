@@ -56,7 +56,7 @@ public with sharing class DeliveryEmailService {
     }
 
     private static WorkItem__c queryWorkItem(Id workItemId) {
-        List<WorkItem__c> items = [SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookupId__c, OwnerId FROM WorkItem__c WHERE Id = :workItemId WITH SYSTEM_MODE LIMIT 1];
+        List<WorkItem__c> items = [SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookup__c, OwnerId FROM WorkItem__c WHERE Id = :workItemId WITH SYSTEM_MODE LIMIT 1];
         return items.isEmpty() ? null : items[0];
     }
 
@@ -67,7 +67,7 @@ public with sharing class DeliveryEmailService {
 
     private static Map<Id, User> resolveRecipients(WorkItem__c workItem, Id authorUserId) {
         Set<Id> candidateIds = new Set<Id>();
-        if (workItem.DeveloperLookupId__c != null && workItem.DeveloperLookupId__c != authorUserId) { candidateIds.add(workItem.DeveloperLookupId__c); }
+        if (workItem.DeveloperLookup__c != null && workItem.DeveloperLookup__c != authorUserId) { candidateIds.add(workItem.DeveloperLookup__c); }
         if (workItem.OwnerId != null && String.valueOf(workItem.OwnerId).startsWith('005') && workItem.OwnerId != authorUserId) { candidateIds.add(workItem.OwnerId); }
         if (candidateIds.isEmpty()) { return new Map<Id, User>(); }
         return new Map<Id, User>([SELECT Id, Email, Name FROM User WHERE Id IN :candidateIds AND IsActive = true WITH SYSTEM_MODE]);

@@ -159,20 +159,20 @@ global without sharing class DeliveryPublicApiService {
         if (String.isNotBlank(workItemIdParam)) {
             Id wiId = Id.valueOf(workItemIdParam);
             logs = [
-                SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                SELECT Id, WorkItemLookup__c, WorkItemLookup__r.Name, WorkItemLookup__r.BriefDescriptionTxt__c,
                        HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
                        StatusPk__c, CreatedDate, CreatedBy.Name
                 FROM WorkLog__c
-                WHERE WorkItemId__c = :wiId AND WorkItemId__r.ClientNetworkEntityId__c = :entityId
+                WHERE WorkItemLookup__c = :wiId AND WorkItemLookup__r.ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE ORDER BY WorkDateDate__c DESC, CreatedDate DESC LIMIT 200
             ];
         } else {
             logs = [
-                SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                SELECT Id, WorkItemLookup__c, WorkItemLookup__r.Name, WorkItemLookup__r.BriefDescriptionTxt__c,
                        HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c,
                        StatusPk__c, CreatedDate, CreatedBy.Name
                 FROM WorkLog__c
-                WHERE WorkItemId__r.ClientNetworkEntityId__c = :entityId
+                WHERE WorkItemLookup__r.ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE ORDER BY CreatedDate DESC LIMIT 200
             ];
         }
@@ -185,9 +185,9 @@ global without sharing class DeliveryPublicApiService {
 
     private static Map<String, Object> buildWorkLogMap(WorkLog__c wl) {
         return new Map<String, Object>{
-            'id' => wl.Id, 'workItemId' => wl.WorkItemId__c,
-            'workItemName' => wl.WorkItemId__r.Name,
-            'workItemTitle' => wl.WorkItemId__r.BriefDescriptionTxt__c,
+            'id' => wl.Id, 'workItemId' => wl.WorkItemLookup__c,
+            'workItemName' => wl.WorkItemLookup__r.Name,
+            'workItemTitle' => wl.WorkItemLookup__r.BriefDescriptionTxt__c,
             'hours' => wl.HoursLoggedNumber__c, 'workDate' => wl.WorkDateDate__c,
             'description' => wl.WorkDescriptionTxt__c, 'status' => wl.StatusPk__c,
             'userName' => wl.CreatedBy.Name, 'createdDate' => wl.CreatedDate
@@ -222,9 +222,9 @@ global without sharing class DeliveryPublicApiService {
         Set<Id> ids = new Set<Id>();
         List<WorkItem__c> items;
         if (String.isNotBlank(workItemIdParam)) {
-            items = [SELECT Id FROM WorkItem__c WHERE Id = :workItemIdParam AND ClientNetworkEntityId__c = :entityId WITH SYSTEM_MODE];
+            items = [SELECT Id FROM WorkItem__c WHERE Id = :workItemIdParam AND ClientNetworkEntityLookup__c = :entityId WITH SYSTEM_MODE];
         } else {
-            items = [SELECT Id FROM WorkItem__c WHERE ClientNetworkEntityId__c = :entityId WITH SYSTEM_MODE LIMIT 500];
+            items = [SELECT Id FROM WorkItem__c WHERE ClientNetworkEntityLookup__c = :entityId WITH SYSTEM_MODE LIMIT 500];
         }
         for (WorkItem__c wi : items) { ids.add(wi.Id); }
         return ids;
@@ -295,7 +295,7 @@ global without sharing class DeliveryPublicApiService {
         }
         List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c FROM WorkItem__c
-            WHERE Id = :workItemId AND ClientNetworkEntityId__c = :entityId
+            WHERE Id = :workItemId AND ClientNetworkEntityLookup__c = :entityId
             WITH SYSTEM_MODE LIMIT 1
         ];
         if (items.isEmpty()) { sendError(403, 'Work item not found or access denied.'); return; }

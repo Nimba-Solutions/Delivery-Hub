@@ -17,7 +17,7 @@ private class DeliveryRequestManagerControllerTest {
             WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c='Test Work Item', StageNamePk__c='Backlog');
             insert t;
 
-            WorkRequest__c r = new WorkRequest__c(WorkItemId__c = t.Id, StatusPk__c = 'Draft');
+            WorkRequest__c r = new WorkRequest__c(WorkItemLookup__c = t.Id, StatusPk__c = 'Draft');
             insert r;
 
             Test.startTest();

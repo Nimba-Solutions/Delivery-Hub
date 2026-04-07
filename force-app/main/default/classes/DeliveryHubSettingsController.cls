@@ -174,7 +174,7 @@ global with sharing class DeliveryHubSettingsController {
                 : null;
             dto.openaiModel = settings.OpenAIModelTxt__c;
             dto.openAiApiTested = settings.OpenAiApiTestedDateTime__c != null;
-            dto.slackWebhookUrl = settings.SlackWebhookUrl__c;
+            dto.slackWebhookUrl = settings.SlackWebhookUrlTxt__c;
             dto.emailNotificationsEnabled = settings.EnableEmailNotificationsDateTime__c != null;
             dto.showBoardMetrics = settings.EnableBoardMetricsDateTime__c != null;
 
@@ -458,7 +458,7 @@ global with sharing class DeliveryHubSettingsController {
     global static void saveSlackWebhookUrl(String webhookUrl) {
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
-            settings.SlackWebhookUrl__c = webhookUrl;
+            settings.SlackWebhookUrlTxt__c = webhookUrl;
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});
             upsert decision.getRecords();

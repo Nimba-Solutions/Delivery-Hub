@@ -224,7 +224,7 @@ private class DeliveryHubSettingsControllerTest {
             Test.stopTest();
 
             DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-            System.assertEquals('https://hooks.slack.com/test', s.SlackWebhookUrl__c, 'Slack webhook URL should be saved');
+            System.assertEquals('https://hooks.slack.com/test', s.SlackWebhookUrlTxt__c, 'Slack webhook URL should be saved');
         }
     }
 
@@ -236,7 +236,7 @@ private class DeliveryHubSettingsControllerTest {
             Test.stopTest();
 
             DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-            System.assert(String.isBlank(s.SlackWebhookUrl__c), 'Slack webhook URL should be cleared');
+            System.assert(String.isBlank(s.SlackWebhookUrlTxt__c), 'Slack webhook URL should be cleared');
         }
     }
 

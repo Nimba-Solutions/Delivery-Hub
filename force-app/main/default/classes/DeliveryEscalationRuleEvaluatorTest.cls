@@ -31,7 +31,7 @@ private class DeliveryEscalationRuleEvaluatorTest {
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Software_Delivery item in In Development
@@ -41,7 +41,7 @@ private class DeliveryEscalationRuleEvaluatorTest {
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Item in Backlog — should NOT be matched
@@ -60,7 +60,7 @@ private class DeliveryEscalationRuleEvaluatorTest {
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Loan_Approval',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         insert items;
@@ -289,7 +289,7 @@ private class DeliveryEscalationRuleEvaluatorTest {
 
             // Add a comment from the same user who created the work item
             insert new WorkItemComment__c(
-                WorkItemId__c = wi.Id,
+                WorkItemLookup__c = wi.Id,
                 BodyTxt__c = 'Self-comment should not count as a response'
             );
 

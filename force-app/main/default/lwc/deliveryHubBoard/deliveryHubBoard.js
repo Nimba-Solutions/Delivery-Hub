@@ -60,17 +60,17 @@ const FIELDS = {
     CALCULATED_ETA: `%%%NAMESPACED_ORG%%%CalculatedETADate__c`,
     
     // NEW FIELDS FOR CARD UI
-    TOTAL_LOGGED_HOURS: `%%%NAMESPACED_ORG%%%TotalLoggedHoursNumber__c`,
+    TOTAL_LOGGED_HOURS: `%%%NAMESPACED_ORG%%%TotalLoggedHoursSum__c`,
     ESTIMATED_HOURS: `%%%NAMESPACED_ORG%%%EstimatedHoursNumber__c`,
     PROJECTED_UAT_READY: `%%%NAMESPACED_ORG%%%ProjectedUATReadyDate__c`,
     
     CREATED_DATE: 'CreatedDate',
-    DEVELOPER: `%%%NAMESPACED_ORG%%%DeveloperLookupId__c`,
+    DEVELOPER: `%%%NAMESPACED_ORG%%%DeveloperLookup__c`,
     // Relationships
     DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%BlockedByDeps__r`,
     DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%BlockingDeps__r`,
-    BLOCKING_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockingWorkItemId__c`,
-    BLOCKED_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockedWorkItemId__c`,
+    BLOCKING_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockingWorkItemLookup__c`,
+    BLOCKED_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockedWorkItemLookup__c`,
     WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`,
     // Card enrichment
     LAST_MODIFIED: 'LastModifiedDate',
@@ -314,7 +314,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         const fields = {
-            '%%%NAMESPACED_ORG%%%WorkItemId__c': workItemId,
+            '%%%NAMESPACED_ORG%%%WorkItemLookup__c': workItemId,
             '%%%NAMESPACED_ORG%%%BodyTxt__c': this.moveComment,
             '%%%NAMESPACED_ORG%%%SourcePk__c': 'Salesforce',
             '%%%NAMESPACED_ORG%%%AuthorTxt__c': this.currentUserName 
@@ -645,13 +645,13 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
             const isBlockedBy = blockedByRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKING_WORK_ITEM),
-                name: dep['BlockingWorkItemId__r']?.Name || dep['BlockingWorkItemId__r']?.Name || dep['BlockingWorkItemId__c'],
+                name: dep['BlockingWorkItemLookup__r']?.Name || dep['BlockingWorkItemLookup__r']?.Name || dep['BlockingWorkItemLookup__c'],
                 dependencyId: dep.Id
             }));
 
             const isBlocking = blockingRaw.map(dep => ({
                 id: getValue(dep, FIELDS.BLOCKED_WORK_ITEM),
-                name: dep['BlockedWorkItemId__r']?.Name || dep['BlockedWorkItemId__r']?.Name || dep['BlockedWorkItemId__c'],
+                name: dep['BlockedWorkItemLookup__r']?.Name || dep['BlockedWorkItemLookup__r']?.Name || dep['BlockedWorkItemLookup__c'],
                 dependencyId: dep.Id
             }));
 
@@ -1609,7 +1609,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         return `priority-badge priority-${p}`;
     }
     get detailEpicName() { return this.detailWorkItem?.Epic__r?.Name || this.detailWorkItem?.delivery__Epic__r?.Name || ''; }
-    get detailDeveloperName() { return this.detailWorkItem?.DeveloperLookupId__r?.Name || this.detailWorkItem?.delivery__DeveloperLookupId__r?.Name || ''; }
+    get detailDeveloperName() { return this.detailWorkItem?.DeveloperLookup__r?.Name || this.detailWorkItem?.delivery__DeveloperLookupId__r?.Name || ''; }
     get detailCreatedBy() { return this.detailWorkItem?.CreatedBy?.Name || this.detailWorkItem?.delivery__CreatedBy?.Name || ''; }
     get hasDetailEpic() { return !!this.detailEpicName; }
     get hasDetailDeveloper() { return !!this.detailDeveloperName; }

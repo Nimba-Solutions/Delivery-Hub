@@ -82,11 +82,11 @@ global with sharing class DeliveryDataLineageController {
         Map<Id, Map<String, Integer>> healthMap = new Map<Id, Map<String, Integer>>();
 
         for (AggregateResult ar : [
-            SELECT WorkItemId__r.ClientNetworkEntityId__c entityId,
+            SELECT WorkItemLookup__r.ClientNetworkEntityLookup__c entityId,
                    StatusPk__c status, COUNT(Id) cnt
             FROM SyncItem__c
-            WHERE WorkItemId__r.ClientNetworkEntityId__c != null
-            GROUP BY WorkItemId__r.ClientNetworkEntityId__c, StatusPk__c
+            WHERE WorkItemLookup__r.ClientNetworkEntityLookup__c != null
+            GROUP BY WorkItemLookup__r.ClientNetworkEntityLookup__c, StatusPk__c
         ]) {
             Id entityId = (Id) ar.get('entityId');
             String status = (String) ar.get('status');

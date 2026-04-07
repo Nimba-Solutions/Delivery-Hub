@@ -58,16 +58,16 @@ global without sharing class DeliveryTaskAPI {
 
             String soql = 'SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c, '
                 + 'AcceptanceCriteriaTxt__c, StageNamePk__c, PriorityPk__c, '
-                + 'WorkflowTypeTxt__c, EstimatedHoursNumber__c, ParentWorkItemId__c, '
-                + 'DeveloperLookupId__c '
+                + 'WorkflowTypeTxt__c, EstimatedHoursNumber__c, ParentWorkItemLookup__c, '
+                + 'DeveloperLookup__c '
                 + 'FROM WorkItem__c';
 
             List<String> conditions = new List<String>();
 
             if (assignee == 'ai') {
-                conditions.add('DeveloperLookupId__c != null');
+                conditions.add('DeveloperLookup__c != null');
             } else if (assigneeId != null) {
-                conditions.add('DeveloperLookupId__c = :assigneeId');
+                conditions.add('DeveloperLookup__c = :assigneeId');
             }
 
             if (String.isNotBlank(status)) {
@@ -174,8 +174,8 @@ global without sharing class DeliveryTaskAPI {
             WorkItem__c updated = [
                 SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
                        AcceptanceCriteriaTxt__c, StageNamePk__c, PriorityPk__c,
-                       WorkflowTypeTxt__c, EstimatedHoursNumber__c, ParentWorkItemId__c,
-                       DeveloperLookupId__c
+                       WorkflowTypeTxt__c, EstimatedHoursNumber__c, ParentWorkItemLookup__c,
+                       DeveloperLookup__c
                 FROM WorkItem__c
                 WHERE Id = :workItemId
                 WITH SYSTEM_MODE
@@ -250,7 +250,7 @@ global without sharing class DeliveryTaskAPI {
             }
 
             WorkItemComment__c comment = new WorkItemComment__c(
-                WorkItemId__c = workItemId,
+                WorkItemLookup__c = workItemId,
                 BodyTxt__c    = commentBody,
                 AuthorTxt__c  = String.isNotBlank(author) ? author : 'API',
                 SourcePk__c   = 'API'
@@ -281,8 +281,8 @@ global without sharing class DeliveryTaskAPI {
             'priority'           => item.PriorityPk__c,
             'workflowType'       => item.WorkflowTypeTxt__c,
             'estimatedHours'     => item.EstimatedHoursNumber__c,
-            'parentWorkItemId'   => item.ParentWorkItemId__c,
-            'assignee'           => item.DeveloperLookupId__c
+            'parentWorkItemId'   => item.ParentWorkItemLookup__c,
+            'assignee'           => item.DeveloperLookup__c
         };
     }
 

@@ -59,7 +59,7 @@ public with sharing class DeliveryDocActionController {
     }
 
     /**
-     * @description Updates the AssignedEntityId__c on a slot. Used by the embedded viewer
+     * @description Updates the AssignedEntityLookup__c on a slot. Used by the embedded viewer
      *              to let admins assign unassigned slots (e.g., the lessor in a lease)
      *              before sending the document.
      * @param actionId        The DocumentAction__c Id.
@@ -72,7 +72,7 @@ public with sharing class DeliveryDocActionController {
             throw new AuraHandledException('Action Id is required.');
         }
         List<DocumentAction__c> actions = [
-            SELECT Id, AssignedEntityId__c, StatusPk__c
+            SELECT Id, AssignedEntityLookup__c, StatusPk__c
             FROM DocumentAction__c
             WHERE Id = :actionId
             WITH SYSTEM_MODE
@@ -85,7 +85,7 @@ public with sharing class DeliveryDocActionController {
         if (action.StatusPk__c != 'Pending') {
             throw new AuraHandledException('Cannot reassign a slot that has already been actioned.');
         }
-        action.AssignedEntityId__c = networkEntityId;
+        action.AssignedEntityLookup__c = networkEntityId;
         Database.update(action, AccessLevel.SYSTEM_MODE);
 
         String entityName = null;
@@ -117,11 +117,11 @@ public with sharing class DeliveryDocActionController {
         m.put('signatureType', a.SignatureTypePk__c);
         m.put('signatureData', a.SignatureDataTxt__c);
         m.put('signerName', a.SignerNameTxt__c);
-        m.put('signerEmail', a.SignerEmailTxt__c);
+        m.put('signerEmail', a.SignerEmail__c);
         m.put('completedAt', a.CompletedDateTime__c);
         m.put('signerToken', a.SignerTokenTxt__c);
-        m.put('assignedEntityId', a.AssignedEntityId__c);
-        m.put('assignedEntityName', a.AssignedEntityId__r != null ? a.AssignedEntityId__r.Name : null);
+        m.put('assignedEntityId', a.AssignedEntityLookup__c);
+        m.put('assignedEntityName', a.AssignedEntityLookup__r != null ? a.AssignedEntityLookup__r.Name : null);
         m.put('isPending', a.StatusPk__c == 'Pending');
         m.put('isCompleted', a.StatusPk__c == 'Completed');
         return m;

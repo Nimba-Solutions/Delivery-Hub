@@ -49,7 +49,7 @@ private class DeliverySlackServiceTest {
     static void makeData() {
         DeliveryHubSettings__c settings = new DeliveryHubSettings__c(
             SetupOwnerId        = UserInfo.getOrganizationId(),
-            SlackWebhookUrl__c  = 'https://hooks.slack.com/services/test'
+            SlackWebhookUrlTxt__c  = 'https://hooks.slack.com/services/test'
         );
         insert settings;
     }
@@ -115,7 +115,7 @@ private class DeliverySlackServiceTest {
         System.runAs(testUser) {
             // Overwrite settings with no Slack URL — should no-op
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.SlackWebhookUrl__c = null;
+            settings.SlackWebhookUrlTxt__c = null;
             update settings;
 
             Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
@@ -160,7 +160,7 @@ private class DeliverySlackServiceTest {
     static void testPostApprovalRequestNoUrl() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.SlackWebhookUrl__c = null;
+            settings.SlackWebhookUrlTxt__c = null;
             update settings;
 
             String ctxJson = JSON.serialize(new Map<String, String>{

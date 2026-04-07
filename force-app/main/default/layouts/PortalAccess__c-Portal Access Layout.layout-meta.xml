@@ -13,7 +13,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>NetworkEntityId__c</field>
+                <field>NetworkEntityLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

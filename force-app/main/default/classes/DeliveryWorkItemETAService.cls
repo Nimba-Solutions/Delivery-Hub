@@ -53,7 +53,7 @@ global with sharing class DeliveryWorkItemETAService {
             Set<Id> processedIds = calculator.getProcessedWorkItemIds();
 
             List<WorkItem__c> queriedWorkItems = [
-                SELECT Id, ProjectedUATReadyDate__c, DeveloperLookupId__c,
+                SELECT Id, ProjectedUATReadyDate__c, DeveloperLookup__c,
                        DeveloperDaysSizeNumber__c, StageNamePk__c
                 FROM WorkItem__c
                 WHERE Id IN :processedIds
@@ -62,14 +62,14 @@ global with sharing class DeliveryWorkItemETAService {
             // Collect blocked work item IDs for confidence calculation
             Set<Id> blockedIds = new Set<Id>();
             for (WorkItemDependency__c dep : [
-                SELECT BlockedWorkItemId__c FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__c IN :processedIds
-                AND BlockingWorkItemId__c NOT IN (
+                SELECT BlockedWorkItemLookup__c FROM WorkItemDependency__c
+                WHERE BlockedWorkItemLookup__c IN :processedIds
+                AND BlockingWorkItemLookup__c NOT IN (
                     SELECT Id FROM WorkItem__c WHERE StageNamePk__c IN ('Done', 'Deployed to Prod', 'Cancelled')
                 )
                 WITH SYSTEM_MODE
             ]) {
-                blockedIds.add(dep.BlockedWorkItemId__c);
+                blockedIds.add(dep.BlockedWorkItemLookup__c);
             }
 
             Set<String> activeDevStages = new Set<String>{'In Development', 'In Code Review', 'In QA'};
@@ -127,7 +127,7 @@ global with sharing class DeliveryWorkItemETAService {
     @TestVisible
     private static Integer calculateConfidence(WorkItem__c wi, Set<String> activeDevStages, Set<Id> blockedIds) {
         Integer score = 0;
-        if (wi.DeveloperLookupId__c != null) { score += 25; }
+        if (wi.DeveloperLookup__c != null) { score += 25; }
         if (wi.DeveloperDaysSizeNumber__c != null && wi.DeveloperDaysSizeNumber__c > 0) { score += 25; }
         if (activeDevStages.contains(wi.StageNamePk__c)) { score += 25; }
         if (!blockedIds.contains(wi.Id)) { score += 25; }
@@ -249,7 +249,7 @@ global with sharing class DeliveryWorkItemETAService {
             List<WorkItem__c> workItemsToUpdate = new List<WorkItem__c>();
 
             for (WorkItemWrapper wrapper : masterQueue) {
-                Id assignedDevId = wrapper.workItem.DeveloperLookupId__c;
+                Id assignedDevId = wrapper.workItem.DeveloperLookup__c;
 
                 if (assignedDevId == null || !developers.containsKey(assignedDevId)) {
                     assignedDevId = findNextAvailableDeveloper(devNextAvailableDate);
@@ -342,7 +342,7 @@ global with sharing class DeliveryWorkItemETAService {
             // produced misleading dates across the entire delivery portal.
             return [
                 SELECT Id, Name, StageNamePk__c, PriorityPk__c, DeveloperDaysSizeNumber__c,
-                       SortOrderNumber__c, DeveloperLookupId__c, CreatedDate
+                       SortOrderNumber__c, DeveloperLookup__c, CreatedDate
                 FROM WorkItem__c
                 WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
                   AND DeveloperDaysSizeNumber__c != null
@@ -362,8 +362,8 @@ global with sharing class DeliveryWorkItemETAService {
             }
 
             Set<Id> allBlockedWorkItemIds = new Set<Id>();
-            for (WorkItemDependency__c dep : [SELECT BlockedWorkItemId__c FROM WorkItemDependency__c WHERE BlockingWorkItemId__c IN :incompleteWorkItemIds WITH SYSTEM_MODE]) {
-                allBlockedWorkItemIds.add(dep.BlockedWorkItemId__c);
+            for (WorkItemDependency__c dep : [SELECT BlockedWorkItemLookup__c FROM WorkItemDependency__c WHERE BlockingWorkItemLookup__c IN :incompleteWorkItemIds WITH SYSTEM_MODE]) {
+                allBlockedWorkItemIds.add(dep.BlockedWorkItemLookup__c);
             }
 
             List<WorkItemWrapper> queue = new List<WorkItemWrapper>();

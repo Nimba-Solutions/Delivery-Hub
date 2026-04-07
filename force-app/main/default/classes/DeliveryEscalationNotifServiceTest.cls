@@ -28,7 +28,7 @@ private class DeliveryEscalationNotifServiceTest {
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         items.add(new WorkItem__c(
@@ -37,7 +37,7 @@ private class DeliveryEscalationNotifServiceTest {
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         insert items;
@@ -294,7 +294,7 @@ private class DeliveryEscalationNotifServiceTest {
     static void testSlackNotificationCallout() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.SlackWebhookUrl__c = 'https://hooks.slack.com/test';
+            settings.SlackWebhookUrlTxt__c = 'https://hooks.slack.com/test';
             update settings;
 
             List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();
@@ -326,12 +326,12 @@ private class DeliveryEscalationNotifServiceTest {
     }
 
     /**
-     * @description Verifies sendEscalationSlack is a no-op when SlackWebhookUrl__c is blank.
+     * @description Verifies sendEscalationSlack is a no-op when SlackWebhookUrlTxt__c is blank.
      */
     @IsTest
     static void testSlackNotificationNoWebhookUrl() {
         System.runAs(testUser) {
-            // Ensure SlackWebhookUrl__c is not set (default from @TestSetup)
+            // Ensure SlackWebhookUrlTxt__c is not set (default from @TestSetup)
 
             Test.startTest();
             // Direct call — should silently return without callout

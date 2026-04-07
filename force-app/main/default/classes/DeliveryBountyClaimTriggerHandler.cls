@@ -10,10 +10,10 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
 
     private static final Set<String> SYNC_FIELDS = new Set<String>{
         'StatusPk__c',
-        'ClaimantEmailTxt__c',
+        'ClaimantEmail__c',
         'ClaimantNameTxt__c',
         'NoteTxt__c',
-        'WorkProofUrlTxt__c',
+        'WorkProofUrl__c',
         'ClaimedDateTime__c',
         'SubmittedDateTime__c'
     };
@@ -48,16 +48,16 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
         // Query parent WorkItem -> ClientNetworkEntity for routing
         Set<Id> workItemIds = new Set<Id>();
         for (BountyClaim__c c : newClaims) {
-            workItemIds.add(c.WorkItemId__c);
+            workItemIds.add(c.WorkItemLookup__c);
         }
 
         Map<Id, WorkItem__c> parentItems = new Map<Id, WorkItem__c>([
-            SELECT Id, ClientNetworkEntityId__c,
-                   ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c,
-                   ClientNetworkEntityId__r.ApiKeyTxt__c,
-                   ClientNetworkEntityId__r.EnableVendorPushDateTime__c,
-                   ClientNetworkEntityId__r.EntityTypePk__c,
-                   ClientNetworkEntityId__r.ConnectionStatusPk__c
+            SELECT Id, ClientNetworkEntityLookup__c,
+                   ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c,
+                   ClientNetworkEntityLookup__r.ApiKeyTxt__c,
+                   ClientNetworkEntityLookup__r.EnableVendorPushDateTime__c,
+                   ClientNetworkEntityLookup__r.EntityTypePk__c,
+                   ClientNetworkEntityLookup__r.ConnectionStatusPk__c
             FROM WorkItem__c
             WHERE Id IN :workItemIds
             WITH SYSTEM_MODE
@@ -66,18 +66,18 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
         List<SyncItem__c> syncItems = new List<SyncItem__c>();
 
         for (BountyClaim__c claim : newClaims) {
-            WorkItem__c parent = parentItems.get(claim.WorkItemId__c);
-            if (parent == null || parent.ClientNetworkEntityId__c == null) { continue; }
-            if (parent.ClientNetworkEntityId__r.ConnectionStatusPk__c == 'Pending Approval') { continue; }
+            WorkItem__c parent = parentItems.get(claim.WorkItemLookup__c);
+            if (parent == null || parent.ClientNetworkEntityLookup__c == null) { continue; }
+            if (parent.ClientNetworkEntityLookup__r.ConnectionStatusPk__c == 'Pending Approval') { continue; }
 
-            Boolean hasPushEndpoint = parent.ClientNetworkEntityId__r.EnableVendorPushDateTime__c != null
-                && String.isNotBlank(parent.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c);
+            Boolean hasPushEndpoint = parent.ClientNetworkEntityLookup__r.EnableVendorPushDateTime__c != null
+                && String.isNotBlank(parent.ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c);
 
             Map<String, Object> payload = new Map<String, Object>();
             payload.put('SourceId', claim.Id);
             payload.put('SenderOrgId', UserInfo.getOrganizationId());
             payload.put('GlobalSourceId', (String) claim.Id);
-            payload.put('WorkItemId__c', claim.WorkItemId__c);
+            payload.put('WorkItemLookup__c', claim.WorkItemLookup__c);
             for (String field : SYNC_FIELDS) {
                 payload.put(field, claim.get(field));
             }
@@ -87,7 +87,7 @@ public without sharing class DeliveryBountyClaimTriggerHandler {
                 DirectionPk__c = 'Outbound',
                 ObjectTypePk__c = 'BountyClaim__c',
                 LocalRecordIdTxt__c = (String) claim.Id,
-                WorkItemId__c = claim.WorkItemId__c,
+                WorkItemLookup__c = claim.WorkItemLookup__c,
                 GlobalSourceIdTxt__c = (String) claim.Id,
                 PayloadTxt__c = JSON.serialize(payload)
             );

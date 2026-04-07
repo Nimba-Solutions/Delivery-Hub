@@ -43,7 +43,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DeliveryDocument__c.PreviousVersionId__c</field>
+        <field>DeliveryDocument__c.PreviousVersionLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -188,7 +188,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkItem__c.ClientNetworkEntityId__c</field>
+        <field>WorkItem__c.ClientNetworkEntityLookup__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -243,7 +243,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>WorkItem__c.TotalLoggedHoursNumber__c</field>
+        <field>WorkItem__c.TotalLoggedHoursSum__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

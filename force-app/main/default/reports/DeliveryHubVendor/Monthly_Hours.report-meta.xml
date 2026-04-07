@@ -19,7 +19,7 @@
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
-        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemId__c</field>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
     <name>Hours Logged</name>

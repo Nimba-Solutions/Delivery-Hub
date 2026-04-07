@@ -37,7 +37,7 @@ global without sharing class DeliveryPortalController {
         Integer activeCount = [
             SELECT COUNT()
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :networkEntityId
+            WHERE ClientNetworkEntityLookup__c = :networkEntityId
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
         ];
@@ -47,7 +47,7 @@ global without sharing class DeliveryPortalController {
         Integer completedCount = [
             SELECT COUNT()
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :networkEntityId
+            WHERE ClientNetworkEntityLookup__c = :networkEntityId
             AND StageNamePk__c IN :terminalStages
             WITH SYSTEM_MODE
         ];
@@ -57,7 +57,7 @@ global without sharing class DeliveryPortalController {
         Integer attentionCount = [
             SELECT COUNT()
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :networkEntityId
+            WHERE ClientNetworkEntityLookup__c = :networkEntityId
             AND StageNamePk__c IN :attentionStages
             WITH SYSTEM_MODE
         ];
@@ -82,7 +82,7 @@ global without sharing class DeliveryPortalController {
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :networkEntityId
+            WHERE ClientNetworkEntityLookup__c = :networkEntityId
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
@@ -107,7 +107,7 @@ global without sharing class DeliveryPortalController {
         for (WorkItem__c wi : [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :networkEntityId
+            WHERE ClientNetworkEntityLookup__c = :networkEntityId
             AND StageNamePk__c IN :terminalStages
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -122,7 +122,7 @@ global without sharing class DeliveryPortalController {
         for (WorkItem__c wi : [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :networkEntityId
+            WHERE ClientNetworkEntityLookup__c = :networkEntityId
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 5
@@ -154,11 +154,11 @@ global without sharing class DeliveryPortalController {
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                        LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
-                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
-                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
-                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
+                       DeveloperLookup__c, DeveloperLookup__r.Name,
+                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
-                WHERE ClientNetworkEntityId__c = :networkEntityId
+                WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 AND StageNamePk__c IN :terminalStages
                 WITH SYSTEM_MODE
                 ORDER BY LastModifiedDate DESC
@@ -169,11 +169,11 @@ global without sharing class DeliveryPortalController {
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                        LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
-                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
-                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
-                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
+                       DeveloperLookup__c, DeveloperLookup__r.Name,
+                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
-                WHERE ClientNetworkEntityId__c = :networkEntityId
+                WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 AND StageNamePk__c IN :attentionStages
                 WITH SYSTEM_MODE
                 ORDER BY LastModifiedDate DESC
@@ -184,11 +184,11 @@ global without sharing class DeliveryPortalController {
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                        LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
-                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
-                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
-                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
+                       DeveloperLookup__c, DeveloperLookup__r.Name,
+                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
-                WHERE ClientNetworkEntityId__c = :networkEntityId
+                WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 AND StageNamePk__c NOT IN :terminalStages
                 WITH SYSTEM_MODE
                 ORDER BY LastModifiedDate DESC
@@ -199,11 +199,11 @@ global without sharing class DeliveryPortalController {
                 SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                        LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
-                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursNumber__c,
-                       DeveloperLookupId__c, DeveloperLookupId__r.Name,
-                       ParentWorkItemId__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
+                       DeveloperLookup__c, DeveloperLookup__r.Name,
+                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
-                WHERE ClientNetworkEntityId__c = :networkEntityId
+                WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 WITH SYSTEM_MODE
                 ORDER BY LastModifiedDate DESC
                 LIMIT 100
@@ -224,9 +224,9 @@ global without sharing class DeliveryPortalController {
             m.put('projectedUATDate', wi.ProjectedUATReadyDate__c);
             m.put('slaTargetDate', wi.SLATargetDate__c);
             m.put('estimatedHours', wi.EstimatedHoursNumber__c);
-            m.put('loggedHours', wi.TotalLoggedHoursNumber__c);
-            m.put('developerName', wi.DeveloperLookupId__c != null ? wi.DeveloperLookupId__r.Name : null);
-            m.put('parentWorkItemId', wi.ParentWorkItemId__c);
+            m.put('loggedHours', wi.TotalLoggedHoursSum__c);
+            m.put('developerName', wi.DeveloperLookup__c != null ? wi.DeveloperLookup__r.Name : null);
+            m.put('parentWorkItemId', wi.ParentWorkItemLookup__c);
             m.put('tags', wi.TagsTxt__c);
             m.put('epic', wi.EpicTxt__c);
             result.add(m);
@@ -247,11 +247,11 @@ global without sharing class DeliveryPortalController {
         List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
                    LastModifiedDate, CalculatedETADate__c, DetailsTxt__c, RequestTypePk__c,
-                   CreatedDate, ClientNetworkEntityId__c, DeveloperDaysSizeNumber__c,
-                   EstimatedHoursNumber__c, TotalLoggedHoursNumber__c
+                   CreatedDate, ClientNetworkEntityLookup__c, DeveloperDaysSizeNumber__c,
+                   EstimatedHoursNumber__c, TotalLoggedHoursSum__c
             FROM WorkItem__c
             WHERE Id = :workItemId
-            AND ClientNetworkEntityId__c = :networkEntityId
+            AND ClientNetworkEntityLookup__c = :networkEntityId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
@@ -271,17 +271,17 @@ global without sharing class DeliveryPortalController {
         result.put('description', wi.DetailsTxt__c);
         result.put('requestType', wi.RequestTypePk__c);
         result.put('createdDate', wi.CreatedDate);
-        result.put('networkEntityId', wi.ClientNetworkEntityId__c);
+        result.put('networkEntityId', wi.ClientNetworkEntityLookup__c);
         result.put('estimatedDays', wi.DeveloperDaysSizeNumber__c);
         result.put('estimatedHours', wi.EstimatedHoursNumber__c);
-        result.put('loggedHours', wi.TotalLoggedHoursNumber__c);
+        result.put('loggedHours', wi.TotalLoggedHoursSum__c);
 
         // Comments
         List<Map<String, Object>> comments = new List<Map<String, Object>>();
         for (WorkItemComment__c c : [
             SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c
             FROM WorkItemComment__c
-            WHERE WorkItemId__c = :workItemId
+            WHERE WorkItemLookup__c = :workItemId
             WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
             LIMIT 200
@@ -339,7 +339,7 @@ global without sharing class DeliveryPortalController {
         newItem.StatusPk__c = 'New';
 
         if (String.isNotBlank(networkEntityId)) {
-            newItem.ClientNetworkEntityId__c = networkEntityId;
+            newItem.ClientNetworkEntityLookup__c = networkEntityId;
         }
 
         insert newItem;
@@ -368,7 +368,7 @@ global without sharing class DeliveryPortalController {
         }
 
         WorkItemComment__c comment = new WorkItemComment__c();
-        comment.WorkItemId__c = workItemId;
+        comment.WorkItemLookup__c = workItemId;
         comment.BodyTxt__c = commentBody;
         comment.AuthorTxt__c = 'Portal User';
         comment.SourcePk__c = 'Client';
