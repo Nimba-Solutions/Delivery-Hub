@@ -43,6 +43,8 @@ Meanwhile your CRM &mdash; the system that already knows every account, contact,
 
 ## Install
 
+**Current version**: `release/0.153.0.5` &mdash; see the [Changelog](docs/CHANGELOG.md) for the full history.
+
 | Environment | Link |
 |---|---|
 | **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
@@ -117,9 +119,13 @@ Scheduled invoice generation runs on the DeliveryHubScheduler and produces docum
 
 The engine generates Draft invoices that can be reviewed before sending. Overdue invoice detection automatically marks past-due invoices as Overdue. A pending invoices banner in the Document Viewer alerts users to documents awaiting review. The `LastInvoiceGenerationDate__c` setting tracks when the last generation run completed to prevent duplicate processing.
 
+### Native Document Actioning & Signatures
+
+Multi-party document signing built into the package — no DocuSign integration required. Templates that `RequiresSigningCheckbox__c = true` (Client Agreement, Contractor Agreement, and any custom template you configure) auto-generate one `DocumentAction__c` record per signer slot from `DocumentTemplateSlot__mdt`. Each slot gets a unique signer token, a dedicated public URL (`/portal/documents/<token>`), and captures the signer's IP address (via `X-Forwarded-For` / `X-Salesforce-SIP`), user agent, electronic consent timestamp, and either a text stamp (`Name (digitally signed MMM DD, YYYY)`) or a drawn canvas signature persisted as a ContentVersion. Signatures ride the existing `ActivityLog__c` SHA-256 hash chain for tamper-evident audit — `DocumentAction__c.PriorHashTxt__c` materializes the chain parent at sign time. Documents flow `Draft → Ready → Sent → Awaiting_Signatures → Approved` once every slot is Completed, and a `Certificate_Of_Completion` template can auto-render a full audit trail listing every signer, IP, timestamp, and hash. Admin-side has a "Copy Signer Link" button per slot and `FOR UPDATE` locking so two simultaneous signers cannot double-sign the same slot. Details: [DOCUMENT_ACTIONING_FEATURE.md](docs/DOCUMENT_ACTIONING_FEATURE.md).
+
 ### Document Engine
 
-Generate professional invoices, status reports, client agreements, contractor agreements, and security audit reports directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. Zero-hour work items are automatically filtered from invoices so only billable items appear. PDF rendering via Visualforce produces print-ready output with clickable hyperlinks to the source Salesforce records. The VF URL builder detects the namespace at runtime, so PDF and web preview links work correctly in both managed and unmanaged installations.
+Generate professional invoices, status reports, client agreements, contractor agreements, certificates of completion, and security audit reports directly from Delivery Hub data. Each document captures an immutable JSON snapshot of hours, rates, and work items for the billing period. Zero-hour work items are automatically filtered from invoices so only billable items appear. PDF rendering via Visualforce produces print-ready output with clickable hyperlinks to the source Salesforce records. The VF URL builder detects the namespace at runtime, so PDF and web preview links work correctly in both managed and unmanaged installations. Issuer branding (company name, address, URL) is sourced from the configured vendor `NetworkEntity__c` — no hardcoded strings.
 
 **Email Preview & Scheduled Send:** The "Prepare Email" button opens a full preview modal showing the rendered email body, subject line, recipient (editable), CC addresses, and a clickable PDF attachment link &mdash; all before anything is sent. Send immediately or toggle "Schedule for later" with a datetime picker and a "Next business day at 8 AM" shortcut. The DeliveryHubScheduler checks every 15 minutes for scheduled sends and delivers them automatically. Multiple CC addresses are supported via comma-separated values in `DocumentCcEmailTxt__c`. The email body includes This Invoice, Prior Balance (if outstanding), and Amount Due breakdowns.
 
@@ -127,7 +133,7 @@ Payment tracking through `DeliveryTransaction__c` records supports multiple tran
 
 ### Configurable Workflows
 
-Not just software delivery &mdash; the workflow engine supports any stage-based process. Ships with five workflow types out of the box: Software Delivery (40+ stages), Loan Approval (8 stages), Customer Onboarding, HR Recruiting, and Marketing Campaign. Define your own workflow types, stages, personas, and transitions through Custom Metadata. The Workflow Builder admin tab provides a visual editor for creating and modifying workflows without touching metadata files.
+Not just software delivery &mdash; the workflow engine supports any stage-based process. Ships with seven workflow types out of the box: Software Delivery (40+ stages), Loan Approval (8 stages), Customer Onboarding, HR Recruiting, Marketing Campaign, Change Management (12 stages, 3 personas: Requester/CAB/Implementer), and Operations (9 stages, 3 personas: Technician/Supervisor/Customer). Define your own workflow types, stages, personas, and transitions through Custom Metadata. The Workflow Builder admin tab provides a visual editor for creating and modifying workflows without touching metadata files.
 
 ### Workspace
 
@@ -215,13 +221,13 @@ The engine is retry-aware (configurable limit, default 3 attempts), handles name
 
 | Layer | Count | Key Components |
 |-------|-------|----------------|
-| **Apex Classes** | 208 (109 production + 99 test) | SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, WorkItemController, DocumentController, DocumentPdfController, GuideController, EscalationService, WeeklyDigestService, ETAService, AiController, WorkflowConfigService, VelocityService, DeliverySyncReconciler, SettingsController, TimelineController, SavedFilterController, InboundEmailHandler, EmailService, InvoiceGenerationService, PermissionAnalyzerController, FieldTrackingService, FieldChangeService, GhostController, GanttController, GanttRemoteController, VoiceNotesController, ExternalNotificationService, RateLimitService, AuditChainService, CryptoService, ApprovalChainService, TeamPermissionService, ArchivalService, NotificationPreferenceService, WorkItemQueryService, DocumentQueryService, DocumentApprovalService, DocumentEmailService, DocumentGenerationService, DocumentPaymentService, EscalationRuleEvaluator, EscalationActionExecutor, EscalationNotificationService, EscalationContext |
-| **LWC Components** | 63 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryNimbusGantt, deliveryVoiceNotes, deliveryPermissionAnalyzer, deliveryHubWorkspace, deliveryWorkflowBuilder |
-| **Custom Objects** | 14 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c |
-| **Custom Metadata** | 10 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, DeveloperCapacity\_\_mdt |
+| **Apex Classes** | 224 (114 production + 110 test) | Core: SyncEngine, SyncItemProcessor, SyncItemIngestor, HubPoller, HubSyncService, HubPoller, InboundEmailHandler, EmailService, InvoiceGenerationService. Controllers: WorkItemController, DocumentController, DocumentPdfController, GuideController, PortalController, AiController, SettingsController, TimelineController, SavedFilterController, WorkflowConfigService, PermissionAnalyzerController, GhostController, GanttController, GanttRemoteController, VoiceNotesController, ExecutiveDashboardController, DashboardCardController. Services (enterprise): RateLimitService, AuditChainService, CryptoService, ApprovalChainService, TeamPermissionService, ArchivalService, NotificationPreferenceService, SLAService, WorkItemQueryService, VelocityService, WeeklyDigestService, WorkItemETAService, EscalationService, EscalationRuleEvaluator, EscalationActionExecutor, EscalationNotifService. Document engine: DocQueryService, DocApprovalService, DocEmailService, DocGenerationService, DocPaymentService, DocActionService, DocActionController, DocActionRestApi, DocCertificateService. |
+| **LWC Components** | 68 | deliveryHubBoard, deliveryClientDashboard, deliveryGuide, deliveryDocumentViewer, deliveryDocumentSignatureBlock, deliveryDocumentSignPortal, deliverySignaturePad, deliveryVelocityDashboard, deliveryBurndownChart, deliveryCycleTimeChart, deliveryDeveloperWorkload, deliveryDependencyGraph, deliveryCsvImport, deliveryStatusPage, deliveryActivityTimeline, deliveryActivityFeed, deliveryDataLineage, deliveryGhostRecorder, deliveryScore, deliverySettingsContainer, deliveryNimbusGantt, deliveryVoiceNotes, deliveryPermissionAnalyzer, deliveryHubWorkspace, deliveryWorkflowBuilder, deliveryExecutiveDashboard |
+| **Custom Objects** | 16 | WorkItem\_\_c, WorkRequest\_\_c, SyncItem\_\_c, NetworkEntity\_\_c, WorkItemComment\_\_c, WorkItemDependency\_\_c, WorkLog\_\_c, ActivityLog\_\_c, DeliveryDocument\_\_c, DeliveryTransaction\_\_c, DocumentAction\_\_c, PortalAccess\_\_c, DeliveryHubSettings\_\_c, BountyClaim\_\_c, DeliverySavedFilter\_\_c, NotificationPreference\_\_c |
+| **Custom Metadata** | 14 | WorkflowType\_\_mdt, WorkflowStage\_\_mdt, WorkflowPersonaView\_\_mdt, WorkflowEscalationRule\_\_mdt, WorkflowStageRequirement\_\_mdt, CloudNimbusGlobalSettings\_\_mdt, DocumentTemplate\_\_mdt, DocumentTemplateSlot\_\_mdt, SLARule\_\_mdt, TrackedField\_\_mdt, DeveloperCapacity\_\_mdt, ApprovalStep\_\_mdt, DashboardCard\_\_mdt, DeliveryTeam\_\_mdt |
 | **Platform Events** | 5 | DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e, GanttRemoteEvent\_\_e |
-| **Triggers** | 12 | WorkItemTrigger, WorkItemCommentTrigger, ContentDocumentLinkTrigger, WorkLogTrigger, BountyClaimTrigger, DocumentTrigger, DependencyTrigger, NetworkEntityTrigger, TransactionTrigger, WorkRequestTrigger, SyncEventTrigger, DocEventTrigger |
-| **FlexiPages** | 15 | Record pages, admin home, and workspace pages for all major objects |
+| **Triggers** | 13 | Across WorkItem, WorkItemComment, ContentDocumentLink, WorkLog, BountyClaim, DeliveryDocument, DocumentAction, WorkItemDependency, NetworkEntity, DeliveryTransaction, WorkRequest, plus platform event subscribers |
+| **FlexiPages** | 15+ | Record pages, admin home, and workspace pages for all major objects |
 | **Reports** | 25 | Attention Items, In-Flight, Blocked, Recently Completed, Monthly Hours, phase breakdowns, activity tracking, budget health |
 
 ---
@@ -253,7 +259,7 @@ cci task run retrieve_changes --org dev
 git push origin feature/your-feature
 ```
 
-Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 900+ Apex tests (90%+ coverage), and runs PMD static analysis (zero violations enforced).
+Every pull request automatically spins up a namespaced scratch org, deploys the package, runs 1,000+ Apex tests (90%+ coverage enforced on new services), and runs PMD static analysis (zero violations enforced, priority 1-4 blocking).
 
 ### Reconciliation
 
@@ -304,9 +310,10 @@ Delivery Hub exposes a REST API for non-Salesforce clients (websites, mobile app
 | GET | `/api/board-summary` | AI-generated board summary |
 | GET | `/api/files` | Files attached to entity work items |
 | GET | `/api/documents` | Documents generated for the entity |
-| GET | `/api/documents/{token}` | Document detail by public token |
+| GET | `/api/documents/{token}` | Document detail by public token (now includes `signingRequired`, `signingComplete`, `signingSlots[]`, `hashChainVerified`) |
 | POST | `/api/document-approve` | Approve a document by public token |
 | POST | `/api/document-dispute` | Dispute a document with reason by public token |
+| POST | `/sign/{signerToken}` | Public signing endpoint — accepts `signatureType: "Text"` or `"Image"` (base64 PNG via `signatureData`/`drawnSignature`), captures `X-Forwarded-For` IP and User-Agent |
 | GET | `/sync/health` | Org-level sync health &mdash; record counts, hours, status breakdown (no auth required) |
 
 All requests require an `X-Api-Key` header matched against a NetworkEntity record. **Rate limiting** is available: set `PublicApiRateLimitNumber__c` on `DeliveryHubSettings__c` to cap requests per entity per hour (default off; returns HTTP 429 when exceeded). See the [Public API Guide](docs/PUBLIC_API_GUIDE.md) for complete documentation.
@@ -334,7 +341,10 @@ For org-to-org synchronization (with opt-in HMAC request signing and rate limiti
 | Document | Description |
 |----------|-------------|
 | [Getting Started](docs/GETTING_STARTED.md) | Installation, setup wizard, first work item, and optional sync configuration |
-| [Architecture](docs/ARCHITECTURE.md) | Object model, sync engine, API layer, LWC components, and permission model |
+| [Architecture](docs/ARCHITECTURE.md) | Object model, sync engine, API layer, LWC components, enterprise services, and permission model |
+| [Changelog](docs/CHANGELOG.md) | Version history grouped by unlocked package release |
+| [Field Naming](docs/FIELD_NAMING.md) | Type-suffix convention enforced by PMD (`*Txt__c`, `*Number__c`, etc.) |
+| [Document Actioning](docs/DOCUMENT_ACTIONING_FEATURE.md) | Native multi-party signing with hash chain audit |
 | [Public API Guide](docs/PUBLIC_API_GUIDE.md) | REST API for websites and external apps &mdash; endpoints, auth, response schemas |
 | [Sync API Guide](docs/SYNC_API_GUIDE.md) | Org-to-org synchronization &mdash; push/pull flows, echo suppression, setup steps |
 | [Bounty API Guide](docs/BOUNTY_API_GUIDE.md) | Bounty marketplace &mdash; publishing bounties, claim lifecycle, sync to origin orgs |
@@ -377,7 +387,8 @@ If you're not sure where to start, check [open issues](https://github.com/Nimba-
 | **WorkLog Approval** | Draft &rarr; Approved &rarr; Synced pipeline, gated by org setting |
 | **Activity Feed** | Cross-item unified timeline of comments, hours, and changes with inline reply |
 | **Data Lineage** | Visual sync chain with per-entity health metrics on admin home |
-| **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering with hyperlinks to SF records, zero-hour filtering, runtime namespace detection for VF URLs, email delivery with CC, payment tracking, A/R balance, white-label vendor branding, and cloudnimbusllc.com footer. Document versioning tracks regeneration history with version numbers and superseded-document chains. |
+| **Document Engine** | Generate invoices, status reports, proposals with AI narratives, PDF rendering with hyperlinks to SF records, zero-hour filtering, runtime namespace detection for VF URLs, email delivery with CC, payment tracking, A/R balance, white-label vendor branding (sourced from NetworkEntity, no hardcoded strings), and cloudnimbusllc.com footer. Document versioning tracks regeneration history with version numbers and superseded-document chains. |
+| **Native Document Actioning & Signatures** | Multi-party document signing without a DocuSign integration. Auto-generates one `DocumentAction__c` record per signer slot from `DocumentTemplateSlot__mdt`. Each slot has a unique signer token, public `/portal/documents/<token>` URL, captured IP (`X-Forwarded-For` / `X-Salesforce-SIP`), user-agent, electronic consent timestamp, and either text-stamp or drawn-canvas signature (persisted as a ContentVersion). SHA-256 hash chain rides the existing ActivityLog audit chain for tamper evidence. `FOR UPDATE` locking prevents double-sign races. Certificate_Of_Completion template auto-renders the full audit trail. |
 | **Invoice Automation** | Scheduled invoice generation via DeliveryInvoiceGenerationService. Supports Daily (hours summary), Weekly, Monthly (full dollar invoice), and Quarterly frequencies per NetworkEntity. Auto-generates Draft invoices on schedule, detects overdue invoices and marks them past-due, and shows a pending invoices banner in the Document Viewer. Invoices only include Approved work logs. |
 | **Invoice Approval Flow** | Client-facing approve/dispute workflow via portal. Clients review invoices by public token and either approve or dispute with a reason. Dispute details stored in DisputeReasonTxt__c. All actions logged to ActivityLog for audit trail. |
 | **Timeline View** | Gantt-style horizontal timeline showing active work items grouped by NetworkEntity. CSS Grid-based bars with zoom (week/month/quarter), scroll controls, today-line marker, stage-based colors from workflow config, and click-to-navigate to work item records. Available as the Delivery Timeline tab. |
