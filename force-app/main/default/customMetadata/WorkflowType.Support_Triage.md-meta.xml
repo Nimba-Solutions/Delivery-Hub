@@ -4,7 +4,7 @@
     <protected>false</protected>
     <values>
         <field>DescriptionTxt__c</field>
-        <value xsi:type="xsd:string">Support ticket lifecycle from intake through resolution. Three persona views for Support Agent, Engineering, and Customer with fast linear flow.</value>
+        <value xsi:type="xsd:string">Support work item lifecycle from intake through resolution. Three persona views for Support Agent, Engineering, and Customer with a fast linear flow.</value>
     </values>
     <values>
         <field>IconNameTxt__c</field>
