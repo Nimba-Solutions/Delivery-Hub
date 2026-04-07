@@ -37,6 +37,53 @@
                     </div>
                 </template>
             </div>
+
+            <!-- Phase 4: Audit trail (admin-only) -->
+            <template lwc:if={hasAuditTrail}>
+                <div class="audit-trail">
+                    <div class="audit-trail-header">
+                        <lightning-icon icon-name="utility:lock" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        <h4 class="audit-trail-title">Tamper-Evident Audit Trail</h4>
+                    </div>
+                    <div class="audit-trail-meta">
+                        <div class="audit-trail-meta-item">
+                            <span class="audit-trail-meta-label">Document Hash</span>
+                            <code class="audit-trail-hash">{documentHashShort}</code>
+                        </div>
+                        <div class="audit-trail-meta-item">
+                            <span class="audit-trail-meta-label">Chain Head</span>
+                            <code class="audit-trail-hash">{chainHeadShort}</code>
+                        </div>
+                    </div>
+                    <table class="audit-trail-table">
+                        <thead>
+                            <tr>
+                                <th>Slot</th>
+                                <th>Signer</th>
+                                <th>Signed At</th>
+                                <th>IP</th>
+                                <th>User Agent</th>
+                                <th>Chain Hash</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={auditRows} for:item="row">
+                                <tr key={row.key}>
+                                    <td>{row.slotLabel}</td>
+                                    <td>
+                                        <div>{row.signerName}</div>
+                                        <div class="audit-trail-subtle">{row.signerEmail}</div>
+                                    </td>
+                                    <td>{row.signedAt}</td>
+                                    <td><code class="audit-trail-mono">{row.ipAddress}</code></td>
+                                    <td class="audit-trail-subtle">{row.userAgentShort}</td>
+                                    <td><code class="audit-trail-hash">{row.priorHashShort}</code></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
         </div>
     </template>
 

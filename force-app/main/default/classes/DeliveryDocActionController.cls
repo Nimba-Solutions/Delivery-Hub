@@ -154,6 +154,24 @@ public with sharing class DeliveryDocActionController {
         return DeliveryDocActionService.signActionByToken(signerToken, ctx);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 4: CERTIFICATE OF COMPLETION
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Returns the Certificate of Completion payload for a document.
+     *              Used by the viewer LWC's audit-trail UI; surfaces the document
+     *              hash, per-signer rows (name, email, IP, UA, timestamps, chain
+     *              hash), and a chain head value. Cacheable so the viewer can
+     *              refresh without an Apex round-trip when nothing has changed.
+     * @param documentId The DeliveryDocument__c Id.
+     * @return The certificate map. See DeliveryDocCertificateService.buildCertificate.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getCertificateOfCompletion(Id documentId) {
+        return DeliveryDocCertificateService.buildCertificate(documentId);
+    }
+
     /**
      * @description Reshapes a DocumentAction__c into the LWC-friendly map format.
      */
