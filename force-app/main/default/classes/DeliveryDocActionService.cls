@@ -91,7 +91,7 @@ public with sharing class DeliveryDocActionService {
         DocumentAction__c action = new DocumentAction__c(
             DocumentId__c       = documentId,
             ActionLabelTxt__c   = slot.ActionLabelTxt__c,
-            SortOrder__c        = slot.SortOrder__c,
+            SortOrderNumber__c  = slot.SortOrderNumber__c,
             StatusPk__c         = 'Pending',
             SignatureTypePk__c  = 'Text',
             SignerTokenTxt__c   = generateSignerToken()
@@ -132,12 +132,12 @@ public with sharing class DeliveryDocActionService {
             SELECT Id, Name, DocumentId__c, ActionLabelTxt__c, AssignedEntityId__c,
                    AssignedEntityId__r.Name, StatusPk__c, CompletedDateTime__c,
                    SignatureTypePk__c, SignatureDataTxt__c, SignerNameTxt__c,
-                   SignerEmailTxt__c, SortOrder__c, SignerTokenTxt__c,
+                   SignerEmailTxt__c, SortOrderNumber__c, SignerTokenTxt__c,
                    IpAddressTxt__c, ElectronicConsentDateTime__c
             FROM DocumentAction__c
             WHERE DocumentId__c = :documentId
             WITH SYSTEM_MODE
-            ORDER BY SortOrder__c ASC NULLS LAST, CreatedDate ASC
+            ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate ASC
         ];
     }
 
@@ -164,10 +164,10 @@ public with sharing class DeliveryDocActionService {
         }
         List<DocumentTemplateSlot__mdt> slots = [
             SELECT DeveloperName, TemplateTypeTxt__c, ActionLabelTxt__c, RoleTxt__c,
-                   SortOrder__c, AutoAssignTxt__c
+                   SortOrderNumber__c, AutoAssignTxt__c
             FROM DocumentTemplateSlot__mdt
             WHERE TemplateTypeTxt__c = :templateType
-            ORDER BY SortOrder__c ASC NULLS LAST
+            ORDER BY SortOrderNumber__c ASC NULLS LAST
         ];
         slotConfigCache.put(templateType, slots);
         return slots;
@@ -284,7 +284,7 @@ public with sharing class DeliveryDocActionService {
      */
     private static DocumentAction__c loadPendingAction(Id actionId) {
         List<DocumentAction__c> actions = [
-            SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SortOrder__c
+            SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SortOrderNumber__c
             FROM DocumentAction__c
             WHERE Id = :actionId
             WITH SYSTEM_MODE

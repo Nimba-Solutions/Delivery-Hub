@@ -15,7 +15,7 @@
         <value xsi:type="xsd:string">consultant</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">1</value>
     </values>
     <values>

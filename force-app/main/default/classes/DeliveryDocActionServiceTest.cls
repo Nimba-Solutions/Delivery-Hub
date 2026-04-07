@@ -100,14 +100,14 @@ private class DeliveryDocActionServiceTest {
             List<DocumentAction__c> slots = DeliveryDocActionService.getActionsForDocument(doc.Id);
             System.assertEquals(2, slots.size(), 'Should query back 2 slots');
             System.assertEquals('Sign as Consultant', slots[0].ActionLabelTxt__c, 'First slot should be Consultant');
-            System.assertEquals(1, slots[0].SortOrder__c, 'Consultant should have sort order 1');
+            System.assertEquals(1, slots[0].SortOrderNumber__c, 'Consultant should have sort order 1');
             System.assertEquals('Pending', slots[0].StatusPk__c, 'New slots should be Pending');
             System.assertEquals('Text', slots[0].SignatureTypePk__c, 'New slots should default to Text type');
             System.assertNotEquals(null, slots[0].SignerTokenTxt__c, 'Signer token should be populated');
             System.assertEquals(64, slots[0].SignerTokenTxt__c.length(), 'Signer token should be 64 chars');
 
             System.assertEquals('Sign as Client', slots[1].ActionLabelTxt__c, 'Second slot should be Client');
-            System.assertEquals(2, slots[1].SortOrder__c, 'Client should have sort order 2');
+            System.assertEquals(2, slots[1].SortOrderNumber__c, 'Client should have sort order 2');
             System.assertEquals(entity.Id, slots[1].AssignedEntityId__c, 'Client slot should auto-assign to customer entity');
         }
     }

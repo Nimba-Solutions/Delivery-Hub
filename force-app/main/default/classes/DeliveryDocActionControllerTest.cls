@@ -69,10 +69,10 @@ private class DeliveryDocActionControllerTest {
 
     private static List<DocumentAction__c> getActions(Id documentId) {
         return [
-            SELECT Id, ActionLabelTxt__c, StatusPk__c, SortOrder__c
+            SELECT Id, ActionLabelTxt__c, StatusPk__c, SortOrderNumber__c
             FROM DocumentAction__c
             WHERE DocumentId__c = :documentId
-            ORDER BY SortOrder__c ASC NULLS LAST
+            ORDER BY SortOrderNumber__c ASC NULLS LAST
         ];
     }
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>SortOrder__c</fullName>
+    <fullName>SortOrderNumber__c</fullName>
     <description>Render order of this slot within the parent document's signature block. Lower numbers render first.</description>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <inlineHelpText>Render order. Lower numbers render first.</inlineHelpText>

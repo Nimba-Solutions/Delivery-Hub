@@ -15,7 +15,7 @@
         <value xsi:type="xsd:string">client</value>
     </values>
     <values>
-        <field>SortOrder__c</field>
+        <field>SortOrderNumber__c</field>
         <value xsi:type="xsd:double">2</value>
     </values>
     <values>

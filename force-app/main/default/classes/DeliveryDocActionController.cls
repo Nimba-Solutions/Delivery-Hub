@@ -113,7 +113,7 @@ public with sharing class DeliveryDocActionController {
         m.put('id', a.Id);
         m.put('label', a.ActionLabelTxt__c);
         m.put('status', a.StatusPk__c);
-        m.put('sortOrder', a.SortOrder__c);
+        m.put('sortOrder', a.SortOrderNumber__c);
         m.put('signatureType', a.SignatureTypePk__c);
         m.put('signatureData', a.SignatureDataTxt__c);
         m.put('signerName', a.SignerNameTxt__c);
