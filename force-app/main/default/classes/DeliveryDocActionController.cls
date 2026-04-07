@@ -48,10 +48,14 @@ public with sharing class DeliveryDocActionController {
             );
         }
         String stamp = DeliveryDocActionService.formatTextSignatureStamp(signerName, Datetime.now());
-        String emailToUse = String.isNotBlank(signerEmail) ? signerEmail : UserInfo.getUserEmail();
-        return DeliveryDocActionService.signActionInternal(
-            actionId, signerName, emailToUse, 'Text', stamp, consentGiven, null, null
-        );
+        DeliveryDocActionService.SignContext ctx = new DeliveryDocActionService.SignContext();
+        ctx.actionId = actionId;
+        ctx.signerName = signerName;
+        ctx.signerEmail = String.isNotBlank(signerEmail) ? signerEmail : UserInfo.getUserEmail();
+        ctx.signatureType = 'Text';
+        ctx.signatureData = stamp;
+        ctx.consentGiven = consentGiven;
+        return DeliveryDocActionService.signActionInternal(ctx);
     }
 
     /**

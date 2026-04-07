@@ -69,27 +69,54 @@ public with sharing class DeliveryDocActionService {
 
         List<DocumentAction__c> toInsert = new List<DocumentAction__c>();
         for (DocumentTemplateSlot__mdt slot : slots) {
-            DocumentAction__c action = new DocumentAction__c(
-                DocumentId__c       = documentId,
-                ActionLabelTxt__c   = slot.ActionLabelTxt__c,
-                SortOrder__c        = slot.SortOrder__c,
-                StatusPk__c         = 'Pending',
-                SignatureTypePk__c  = 'Text',
-                SignerTokenTxt__c   = generateSignerToken()
-            );
-            String autoAssign = slot.AutoAssignTxt__c != null ? slot.AutoAssignTxt__c.toLowerCase() : null;
-            if (autoAssign == 'vendor' && vendorEntityId != null) {
-                action.AssignedEntityId__c = vendorEntityId;
-            } else if (autoAssign == 'customer' && customerEntityId != null) {
-                action.AssignedEntityId__c = customerEntityId;
-            }
-            toInsert.add(action);
+            toInsert.add(buildSlotRecord(documentId, slot, vendorEntityId, customerEntityId));
         }
 
         if (!toInsert.isEmpty()) {
             Database.insert(toInsert, AccessLevel.SYSTEM_MODE);
         }
         return toInsert;
+    }
+
+    /**
+     * @description Builds a single DocumentAction__c record for a slot config row,
+     *              applying the auto-assignment hint when present.
+     */
+    private static DocumentAction__c buildSlotRecord(
+        Id documentId,
+        DocumentTemplateSlot__mdt slot,
+        Id vendorEntityId,
+        Id customerEntityId
+    ) {
+        DocumentAction__c action = new DocumentAction__c(
+            DocumentId__c       = documentId,
+            ActionLabelTxt__c   = slot.ActionLabelTxt__c,
+            SortOrder__c        = slot.SortOrder__c,
+            StatusPk__c         = 'Pending',
+            SignatureTypePk__c  = 'Text',
+            SignerTokenTxt__c   = generateSignerToken()
+        );
+        action.AssignedEntityId__c = resolveAutoAssignEntityId(slot, vendorEntityId, customerEntityId);
+        return action;
+    }
+
+    /**
+     * @description Returns the auto-assigned entity Id for a slot, or null if no match.
+     *              Branches on the slot's AutoAssignTxt__c hint ('vendor' / 'customer').
+     */
+    private static Id resolveAutoAssignEntityId(
+        DocumentTemplateSlot__mdt slot,
+        Id vendorEntityId,
+        Id customerEntityId
+    ) {
+        String autoAssign = slot.AutoAssignTxt__c != null ? slot.AutoAssignTxt__c.toLowerCase() : null;
+        if (autoAssign == 'vendor') {
+            return vendorEntityId;
+        }
+        if (autoAssign == 'customer') {
+            return customerEntityId;
+        }
+        return null;
     }
 
     /**
@@ -194,41 +221,68 @@ public with sharing class DeliveryDocActionService {
     // ═══════════════════════════════════════════════════════════
 
     /**
+     * @description Bundles signing inputs to keep the public sign API to one parameter.
+     *              Used by both admin and public sign flows so the surface stays consistent.
+     */
+    public class SignContext {
+        public Id actionId;
+        public String signerName;
+        public String signerEmail;
+        public String signatureType;
+        public String signatureData;
+        public Boolean consentGiven;
+        public String ipAddress;
+        public String userAgent;
+    }
+
+    /**
      * @description Internal sign-action handler used by both admin and public sign flows.
      *              Validates consent, updates the action record with signature details,
      *              records an ActivityLog__c audit entry (the existing trigger writes the
      *              chain hash), materializes that hash on the action, and conditionally
      *              advances the parent document status.
-     * @param actionId The DocumentAction__c Id to sign.
-     * @param signerName The signer's typed name.
-     * @param signerEmail The signer's email address.
-     * @param signatureType 'Text' or 'Image'.
-     * @param signatureData For Text: the rendered stamp string. For Image: the ContentVersion Id.
-     * @param consentGiven Must be true (signer affirmatively consented to electronic signature).
-     * @param ipAddress Captured at sign time. Null in admin context.
-     * @param userAgent Captured at sign time. Null in admin context.
+     * @param ctx The SignContext bundle (see inner class).
      * @return Map with actionId, status, documentStatus.
      */
-    public static Map<String, Object> signActionInternal(
-        Id actionId,
-        String signerName,
-        String signerEmail,
-        String signatureType,
-        String signatureData,
-        Boolean consentGiven,
-        String ipAddress,
-        String userAgent
-    ) {
-        if (consentGiven != true) {
+    public static Map<String, Object> signActionInternal(SignContext ctx) {
+        validateSignContext(ctx);
+        DocumentAction__c action = loadPendingAction(ctx.actionId);
+
+        applySignatureToAction(action, ctx);
+        Database.update(action, AccessLevel.SYSTEM_MODE);
+
+        Id activityLogId = recordSignatureAuditLog(action, ctx);
+        action.ActivityLogId__c = activityLogId;
+        Database.update(action, AccessLevel.SYSTEM_MODE);
+
+        String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentId__c);
+
+        return new Map<String, Object>{
+            'actionId'       => action.Id,
+            'status'         => 'Completed',
+            'documentStatus' => newDocStatus
+        };
+    }
+
+    /**
+     * @description Throws if the sign context is missing required inputs (consent, name, id).
+     */
+    private static void validateSignContext(SignContext ctx) {
+        if (ctx == null || ctx.consentGiven != true) {
             throw new AuraHandledException('Electronic signature consent is required.');
         }
-        if (String.isBlank(signerName)) {
+        if (String.isBlank(ctx.signerName)) {
             throw new AuraHandledException('Signer name is required.');
         }
-        if (actionId == null) {
+        if (ctx.actionId == null) {
             throw new AuraHandledException('Action Id is required.');
         }
+    }
 
+    /**
+     * @description Loads the action by id and asserts it is in Pending status.
+     */
+    private static DocumentAction__c loadPendingAction(Id actionId) {
         List<DocumentAction__c> actions = [
             SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SortOrder__c
             FROM DocumentAction__c
@@ -243,21 +297,33 @@ public with sharing class DeliveryDocActionService {
         if (action.StatusPk__c != 'Pending') {
             throw new AuraHandledException('This signature slot has already been actioned.');
         }
+        return action;
+    }
 
+    /**
+     * @description Mutates the action record in place with the signature payload.
+     *              Caller is responsible for the DML.
+     */
+    private static void applySignatureToAction(DocumentAction__c action, SignContext ctx) {
         Datetime now = Datetime.now();
         action.StatusPk__c = 'Completed';
         action.CompletedDateTime__c = now;
         action.ElectronicConsentDateTime__c = now;
-        action.SignatureTypePk__c = String.isNotBlank(signatureType) ? signatureType : 'Text';
-        action.SignatureDataTxt__c = signatureData;
-        action.SignerNameTxt__c = signerName;
-        action.SignerEmailTxt__c = signerEmail;
-        action.IpAddressTxt__c = ipAddress;
-        action.UserAgentTxt__c = userAgent;
-        Database.update(action, AccessLevel.SYSTEM_MODE);
+        action.SignatureTypePk__c = String.isNotBlank(ctx.signatureType) ? ctx.signatureType : 'Text';
+        action.SignatureDataTxt__c = ctx.signatureData;
+        action.SignerNameTxt__c = ctx.signerName;
+        action.SignerEmailTxt__c = ctx.signerEmail;
+        action.IpAddressTxt__c = ctx.ipAddress;
+        action.UserAgentTxt__c = ctx.userAgent;
+    }
 
-        // Audit trail entry — chain hash populated automatically by the
-        // ActivityLog before-insert trigger via DeliveryAuditChainService.
+    /**
+     * @description Inserts an ActivityLog__c row for the sign event.
+     *              The before-insert trigger (DeliveryAuditChainService) populates the
+     *              tamper-evident HashChainTxt__c automatically.
+     * @return The inserted ActivityLog__c Id (for materialization on the action).
+     */
+    private static Id recordSignatureAuditLog(DocumentAction__c action, SignContext ctx) {
         ActivityLog__c log = new ActivityLog__c(
             ActionTypePk__c = 'Document_Action',
             RecordIdTxt__c = action.DocumentId__c,
@@ -265,24 +331,13 @@ public with sharing class DeliveryDocActionService {
                 'action'        => 'sign',
                 'actionId'      => action.Id,
                 'documentId'    => action.DocumentId__c,
-                'signerName'    => signerName,
+                'signerName'    => ctx.signerName,
                 'signatureType' => action.SignatureTypePk__c,
                 'slotLabel'     => action.ActionLabelTxt__c
             })
         );
         Database.insert(log, AccessLevel.SYSTEM_MODE);
-
-        // Materialize the activity log id on the action for fast hash chain lookup.
-        action.ActivityLogId__c = log.Id;
-        Database.update(action, AccessLevel.SYSTEM_MODE);
-
-        String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentId__c);
-
-        return new Map<String, Object>{
-            'actionId'       => action.Id,
-            'status'         => 'Completed',
-            'documentStatus' => newDocStatus
-        };
+        return log.Id;
     }
 
     /**
@@ -356,11 +411,11 @@ public with sharing class DeliveryDocActionService {
      * @description Builds the standard text-stamp signature string in the GSU
      *              AutomatedDocuments format: "<Name> (digitally signed Apr 6, 2026)".
      * @param signerName The printed name to embed.
-     * @param when The signing timestamp.
+     * @param signedAt The signing timestamp.
      * @return The formatted stamp string.
      */
-    public static String formatTextSignatureStamp(String signerName, Datetime when) {
-        String dateStr = when.format('MMM d, yyyy');
+    public static String formatTextSignatureStamp(String signerName, Datetime signedAt) {
+        String dateStr = signedAt.format('MMM d, yyyy');
         return signerName + ' (digitally signed ' + dateStr + ')';
     }
 }

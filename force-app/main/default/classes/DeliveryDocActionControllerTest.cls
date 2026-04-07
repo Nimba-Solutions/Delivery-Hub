@@ -139,6 +139,7 @@ private class DeliveryDocActionControllerTest {
                 System.assert(false, 'Expected AuraHandledException for missing consent');
             } catch (AuraHandledException e) {
                 // Expected — do not assert on getMessage() per CLAUDE.md
+                System.assertNotEquals(null, e, 'Expected exception instance');
             }
             Test.stopTest();
         }
@@ -160,7 +161,8 @@ private class DeliveryDocActionControllerTest {
                 DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen', null, true);
                 System.assert(false, 'Expected AuraHandledException when feature flag is off');
             } catch (AuraHandledException e) {
-                // Expected
+                // Expected — do not assert on getMessage() per CLAUDE.md
+                System.assertNotEquals(null, e, 'Expected exception instance');
             }
             Test.stopTest();
         }
@@ -232,7 +234,8 @@ private class DeliveryDocActionControllerTest {
                 DeliveryDocActionController.signActionAdmin(firstActionId, 'Glen Again', null, true);
                 System.assert(false, 'Expected AuraHandledException for double-sign');
             } catch (AuraHandledException e) {
-                // Expected
+                // Expected — do not assert on getMessage() per CLAUDE.md
+                System.assertNotEquals(null, e, 'Expected exception instance');
             }
             Test.stopTest();
         }
@@ -275,7 +278,8 @@ private class DeliveryDocActionControllerTest {
                 DeliveryDocActionController.updateAssignedEntity(firstActionId, entity.Id);
                 System.assert(false, 'Expected AuraHandledException for completed slot reassignment');
             } catch (AuraHandledException e) {
-                // Expected
+                // Expected — do not assert on getMessage() per CLAUDE.md
+                System.assertNotEquals(null, e, 'Expected exception instance');
             }
             Test.stopTest();
         }
@@ -283,8 +287,8 @@ private class DeliveryDocActionControllerTest {
 
     @IsTest
     static void testFormatTextSignatureStamp() {
-        Datetime when_ = Datetime.newInstance(2026, 4, 6, 14, 30, 0);
-        String stamp = DeliveryDocActionService.formatTextSignatureStamp('Coleman Cameron', when_);
+        Datetime signedAt = Datetime.newInstance(2026, 4, 6, 14, 30, 0);
+        String stamp = DeliveryDocActionService.formatTextSignatureStamp('Coleman Cameron', signedAt);
         System.assert(stamp.contains('Coleman Cameron'), 'Stamp should include name');
         System.assert(stamp.contains('digitally signed'), 'Stamp should include phrase');
         System.assert(stamp.contains('Apr 6, 2026'), 'Stamp should include formatted date');
