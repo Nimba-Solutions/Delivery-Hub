@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PriorHashTxt__c</fullName>
+    <description>Materialized chain hash from the corresponding ActivityLog__c row. Denormalized for fast read access; the canonical hash lives on ActivityLog__c.HashChainTxt__c. Wired in Phase 4.</description>
+    <inlineHelpText>SHA-256 chain hash at the moment of signing. Materialized from ActivityLog.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Prior Hash</label>
+    <length>64</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

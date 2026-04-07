@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableAdminSigningDateTime__c</fullName>
+    <description>When non-null, allows admin users inside the org to sign DocumentAction__c slots on behalf of others (e.g., for demo prep). Off by default because admin-on-behalf signing is legally questionable for real signing — use the public portal flow for real signers.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to enable admin-side signing in the embedded document viewer. Leave blank to require all signing through the public portal.</inlineHelpText>
+    <label>Enable Admin Signing</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

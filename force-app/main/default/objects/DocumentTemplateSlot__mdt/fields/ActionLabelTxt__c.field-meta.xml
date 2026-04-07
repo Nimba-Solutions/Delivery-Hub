@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActionLabelTxt__c</fullName>
+    <description>Human-readable label shown on the sign button (e.g., "Sign as Consultant").</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>The text shown on the sign button for this slot.</inlineHelpText>
+    <label>Action Label</label>
+    <length>255</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

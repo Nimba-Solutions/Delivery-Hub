@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequiresSigningCheckbox__c</fullName>
+    <description>True when this document's template type has signature slots configured. Set at generation time based on the matching DocumentTemplate__mdt.RequiresSigningCheckbox__c value.</description>
+    <inlineHelpText>True if this document requires signatures before it can be marked Approved.</inlineHelpText>
+    <defaultValue>false</defaultValue>
+    <externalId>false</externalId>
+    <label>Requires Signing</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
