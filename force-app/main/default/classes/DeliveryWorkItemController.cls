@@ -386,7 +386,6 @@ global with sharing class DeliveryWorkItemController {
 
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Error parsing OpenAI response: ' + e.getMessage());
-            System.debug(LoggingLevel.DEBUG, 'Response body: ' + responseBody);
             AuraHandledException ahe = new AuraHandledException('Failed to parse AI response: ' + e.getMessage());
             ahe.setMessage('Failed to parse AI response: ' + e.getMessage());
             throw ahe;
