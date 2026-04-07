@@ -391,10 +391,15 @@ public with sharing class DeliveryDocActionService {
     }
 
     /**
-     * @description Inserts an ActivityLog__c row for the sign event.
-     *              The before-insert trigger (DeliveryAuditChainService) populates
-     *              HashChainTxt__c automatically. Returns the in-memory record so
-     *              the caller can materialize the chain hash onto the action.
+     * @description Inserts an ActivityLog__c row for the sign event and re-queries
+     *              it so the caller can read the chain hash that the before-insert
+     *              trigger (DeliveryAuditChainService.setHashOnInsert) wrote.
+     *              The re-query is needed because the in-memory reference doesn't
+     *              reliably reflect the trigger's mutation in the namespaced
+     *              packaging org used by upload-beta — the unmanaged feature-test
+     *              scratch sees the in-memory value, but the packaging org leaves
+     *              it null and that propagates as a null PriorHashTxt__c on the
+     *              action, breaking the certificate test assertions.
      */
     private static ActivityLog__c recordSignatureAuditLog(DocumentAction__c action, SignContext ctx) {
         ActivityLog__c log = new ActivityLog__c(
@@ -410,7 +415,13 @@ public with sharing class DeliveryDocActionService {
             })
         );
         Database.insert(log, AccessLevel.SYSTEM_MODE);
-        return log;
+        return [
+            SELECT Id, HashChainTxt__c
+            FROM ActivityLog__c
+            WHERE Id = :log.Id
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
     }
 
     /**
