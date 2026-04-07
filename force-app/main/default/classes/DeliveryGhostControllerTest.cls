@@ -336,7 +336,7 @@ private class DeliveryGhostControllerTest {
                 SELECT NetworkEntityLookup__c FROM ActivityLog__c
             ];
             System.assertEquals(1, logs.size(), 'One activity log should be persisted');
-            System.assertNotEquals(null, logs[0].NetworkEntityId__c, 'NetworkEntity should be linked when active entity exists');
+            System.assertNotEquals(null, logs[0].NetworkEntityLookup__c, 'NetworkEntity should be linked when active entity exists');
         }
     }
 

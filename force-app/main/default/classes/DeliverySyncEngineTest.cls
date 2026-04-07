@@ -122,7 +122,7 @@ private class DeliverySyncEngineTest {
             }
 
             System.assertEquals(1, items.size(), 'Engine should have blocked the downstream route and only staged the upstream one.');
-            System.assertEquals(null, items[0].RequestId__c, 'The created item should be the upstream Hub item (RequestId == null).');
+            System.assertEquals(null, items[0].RequestLookup__c, 'The created item should be the upstream Hub item (RequestLookup == null).');
         }
     }
 
@@ -217,7 +217,7 @@ private class DeliverySyncEngineTest {
             }
 
             System.assertEquals(1, items.size(), 'Engine should have blocked the upstream route and only created the downstream push.');
-            System.assertNotEquals(null, items[0].RequestId__c, 'The created item should be the downstream Push item (RequestId != null).');
+            System.assertNotEquals(null, items[0].RequestLookup__c, 'The created item should be the downstream Push item (RequestLookup != null).');
         }
     }
 

@@ -82,7 +82,7 @@ private class DeliverySyncReconcilerTest {
             ];
             System.assertEquals(1, created.size(), 'Reconciler should create exactly one WorkItem SyncItem for the gap.');
             System.assertEquals('Queued', created[0].StatusPk__c, 'Gap SyncItem should be Queued for processing.');
-            System.assertNotEquals(null, created[0].RequestId__c, 'Gap SyncItem should be linked to the WorkRequest.');
+            System.assertNotEquals(null, created[0].RequestLookup__c, 'Gap SyncItem should be linked to the WorkRequest.');
         }
     }
 
@@ -104,8 +104,8 @@ private class DeliverySyncReconcilerTest {
             for (WorkRequest__c req : allReqs) {
                 preCreated.add(new SyncItem__c(
                     ObjectTypePk__c     = 'WorkItem__c',
-                    LocalRecordIdTxt__c = req.WorkItemLookup__c,
-                    WorkItemLookup__c       = req.WorkItemLookup__c,
+                    LocalRecordIdTxt__c = req.WorkItemId__c,
+                    WorkItemLookup__c       = req.WorkItemId__c,
                     RequestLookup__c        = req.Id,
                     DirectionPk__c      = 'Outbound',
                     StatusPk__c         = 'Synced',
