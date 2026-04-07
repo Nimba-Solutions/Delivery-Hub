@@ -62,9 +62,12 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'ProjectedUATReadyDate__c',
             'AcceptanceCriteriaTxt__c',
             'StepsToReproduceTxt__c',
-            // SLA & scheduling fields — must sync to preserve explicit dates
+            // SLA & scheduling fields — must sync to preserve explicit dates.
+            // NOTE: SLAStatusTxt__c is intentionally NOT synced. It's a Formula(Text)
+            // computed from SLATargetDate__c + stage; the receiving org recalculates
+            // it locally. Including it caused inbound sync writes to fail with
+            // "Field delivery__SLAStatusTxt__c is not editable".
             'SLATargetDate__c',
-            'SLAStatusTxt__c',
             'EstimatedStartDevDate__c',
             'EstimatedEndDevDate__c',
             'RequestTypePk__c',
