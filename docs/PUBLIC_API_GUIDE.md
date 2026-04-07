@@ -84,9 +84,10 @@ Error responses:
 | GET | `/api/board-summary` | AI-generated board summary |
 | GET | `/api/files` | Files attached to the entity's work items |
 | GET | `/api/documents` | Generated documents (invoices, statements) for the entity |
-| GET | `/api/documents/{token}` | Document detail by public token |
+| GET | `/api/documents/{token}` | Document detail by public token — includes `signingRequired`, `signingComplete`, `signingSlots[]`, `hashChainVerified` for signing-required templates |
 | POST | `/api/document-approve` | Approve a document by public token |
 | POST | `/api/document-dispute` | Dispute a document with reason by public token |
+| POST | `/sign/{signerToken}` | Public signing endpoint — accepts `Text` or `Image` (base64 PNG) signatures. No `X-Api-Key` required; signer token is the credential. |
 
 ---
 
@@ -959,26 +960,146 @@ curl -s \
     "success": true,
     "data": {
         "id": "a07xx0000000001AAA",
-        "name": "INV-0001",
-        "template": "Invoice",
+        "name": "CA-0012",
+        "template": "Client_Agreement",
         "periodStart": "2026-03-01",
         "periodEnd": "2026-03-31",
-        "status": "Sent",
+        "status": "Awaiting_Signatures",
         "totalHours": 42.5,
         "totalCost": 3825.00,
         "createdDate": "2026-03-15T09:00:00.000Z",
         "snapshot": { ... },
         "versionNumber": 1,
-        "disputeReason": null
+        "disputeReason": null,
+        "signingRequired": true,
+        "signingComplete": false,
+        "signingSlots": [
+            {
+                "id": "a08xx0000000001AAA",
+                "role": "Sign as Consultant",
+                "signerName": "Glen Bradford",
+                "signerEmail": "glen@cloudnimbusllc.com",
+                "status": "Completed",
+                "signedDate": "2026-04-06T18:42:00.000Z",
+                "signerToken": null
+            },
+            {
+                "id": "a08xx0000000002AAA",
+                "role": "Sign as Client",
+                "signerName": null,
+                "signerEmail": null,
+                "status": "Pending",
+                "signedDate": null,
+                "signerToken": "abc123def456..."
+            }
+        ],
+        "hashChainVerified": false,
+        "hashChainVerifiedAt": null
     }
 }
 ```
+
+**Signing response fields** (introduced in PR #597):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `signingRequired` | Boolean | `true` if the document template has `RequiresSigningCheckbox__c = true` (Client Agreement, Contractor Agreement, or any custom signing template). `false` for regular invoices. |
+| `signingComplete` | Boolean | `true` only when `signingRequired` is `true`, at least one slot exists, and every slot is `Completed`. |
+| `signingSlots` | Array | One entry per signer slot. Empty for documents that do not require signing. |
+| `signingSlots[].id` | String | `DocumentAction__c` record id |
+| `signingSlots[].role` | String | Signer role label (e.g. "Sign as Consultant", "Sign as Client") |
+| `signingSlots[].signerName` | String or null | Signer's full name (null until signed) |
+| `signingSlots[].signerEmail` | String or null | Signer's email (null until signed) |
+| `signingSlots[].status` | String | `Pending`, `Completed`, or `Voided` |
+| `signingSlots[].signedDate` | DateTime or null | When the slot was signed |
+| `signingSlots[].signerToken` | String or null | Per-signer access token for the `POST /sign/<token>` endpoint. Rotated to `null` on completion as defense in depth — only pending slots return a non-null token. |
+| `hashChainVerified` | Boolean | Whether the audit hash chain has been validated end-to-end for this document. Currently always `false` — per-document validation helper is planned. |
+| `hashChainVerifiedAt` | DateTime or null | Timestamp of the last successful verification. |
 
 **Errors**:
 
 | Code | Condition |
 |------|-----------|
 | 404 | No document found for the given token |
+
+---
+
+### POST /sign/{signerToken}
+
+**Public signing endpoint.** Accepts a signature for a single `DocumentAction__c` slot identified by the per-signer token returned on `GET /api/documents/<token>`. Does NOT require an `X-Api-Key` header — the signer token itself is the access credential. Captures the client IP from `X-Forwarded-For` (preferred) or `X-Salesforce-SIP`, and the user agent from `User-Agent`.
+
+**Endpoint base**: `/services/apexrest/delivery/sign/{signerToken}` (note: this is a separate `@RestResource` at the `/sign/*` URL mapping, NOT under `/api/`).
+
+**Request — Text signature**:
+
+```bash
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signerName": "Coleman Cameron",
+    "signerEmail": "coleman@example.com",
+    "consentGiven": true,
+    "signatureType": "Text"
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/sign/abc123def456..."
+```
+
+**Request — Drawn/Image signature** (PR #597):
+
+```bash
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signerName": "Coleman Cameron",
+    "signerEmail": "coleman@example.com",
+    "consentGiven": true,
+    "signatureType": "Image",
+    "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+    "portalSessionEmail": "coleman@example.com"
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/sign/abc123def456..."
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `signerName` | Yes | String | Signer's full name. Used verbatim in the text stamp (`<Name> (digitally signed MMM DD, YYYY)`) and stored in `SignerNameTxt__c`. |
+| `signerEmail` | No | String | Signer's email address. Stored in `DocumentAction__c.SignerEmail__c`. |
+| `consentGiven` | Yes | Boolean | Must be `true`. The service records `ElectronicConsentDateTime__c` only when this is `true`. |
+| `signatureType` | No | String | `Text` (default) or `Image`. Legacy `Drawn` is normalized to `Image` for backward compatibility. |
+| `signatureData` | Conditional | String | When `signatureType = Image`, this is the base64-encoded PNG from the canvas pad. The `data:image/png;base64,` URI prefix is stripped server-side before decoding. When `signatureType = Text`, this field is ignored — the service formats the stamp itself. |
+| `drawnSignature` | No | String | Alternative field name for the base64 PNG. Takes precedence over `signatureData` when both are sent. |
+| `portalSessionEmail` | No | String | Authenticated portal session identifier for tamper-evident session-to-signer attribution. Currently appended to the user-agent string in the audit log (a dedicated field is planned). |
+
+**Response** (200):
+
+```json
+{
+    "actionId": "a08xx0000000002AAA",
+    "documentId": "a07xx0000000001AAA",
+    "status": "Completed",
+    "signatureType": "Image",
+    "signedAt": "2026-04-06T18:42:00.000Z"
+}
+```
+
+On success:
+
+- `DocumentAction__c.StatusPk__c` transitions to `Completed`
+- `CompletedDateTime__c`, `SignerNameTxt__c`, `SignerEmail__c`, `SignatureDataTxt__c` (or ContentVersion id for Image), `IpAddressTxt__c`, `UserAgentTxt__c`, `ElectronicConsentDateTime__c`, `PriorHashTxt__c` are all populated
+- `SignerTokenTxt__c` is rotated to `null` — the token cannot be reused
+- An `ActivityLog__c` row is inserted with the SHA-256 parent hash, extending the audit chain
+- When every slot on the parent document is `Completed`, the document auto-advances from `Awaiting_Signatures` to `Approved`
+- A `DeliveryDocEvent__e` platform event is published
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Invalid signer token, missing request URI, signer already completed, document voided, or decode failure on the base64 image |
+
+**Concurrency**: The service uses `WITH SYSTEM_MODE ... FOR UPDATE` on the slot lookup so two simultaneous signers hitting the same token cannot double-sign. The second transaction blocks until the first commits, then sees the slot as already Completed and throws.
 
 ---
 
@@ -1044,7 +1165,6 @@ curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "token": "abc123def456...",
-    "reason": "Hours for WI-0042 seem incorrect -- we agreed on 8 hours, not 12."
     "reason": "Hours for WI-0042 seem incorrect — we agreed on 8 hours, not 12."
   }' \
   "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/document-dispute"
