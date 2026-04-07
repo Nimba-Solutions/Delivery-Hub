@@ -150,6 +150,11 @@ public with sharing class DeliveryDocGenerationService {
         ];
         snapshot.put('entity', serializeEntity(entity));
 
+        // Issuer (vendor/self) info — frozen into the snapshot so the public
+        // renderer can show the org's own brand on the document instead of any
+        // hardcoded fallback in the static resource.
+        snapshot.put('issuer', buildIssuerSnapshot());
+
         // Work items linked to this entity
         List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
@@ -234,6 +239,49 @@ public with sharing class DeliveryDocGenerationService {
         m.put('email', entity.ContactEmailTxt__c);
         m.put('phone', entity.ContactPhoneTxt__c);
         return m;
+    }
+
+    /**
+     * @description Builds the issuer (vendor/self) block included in document
+     * snapshots so the public renderer can show the customer's own brand on
+     * generated documents instead of any package-level fallback.
+     * @return Map with name/url/address/email/phone for the first Vendor or Both NetworkEntity.
+     */
+    private static Map<String, Object> buildIssuerSnapshot() {
+        Map<String, Object> issuer = new Map<String, Object>();
+        // Default fallback if no Vendor entity has been configured.
+        // TODO: surface a dedicated DeliveryHubSettings__c branding block so
+        // admins can override the issuer name/url without creating a Vendor.
+        issuer.put('name', 'Your Organization');
+        issuer.put('url', '');
+        issuer.put('address', '');
+        issuer.put('email', '');
+        issuer.put('phone', '');
+
+        List<NetworkEntity__c> vendors = [
+            SELECT Name, AddressTxt__c, ContactEmailTxt__c, ContactPhoneTxt__c, IntegrationEndpointUrlTxt__c
+            FROM NetworkEntity__c
+            WHERE EntityTypePk__c IN ('Vendor', 'Both')
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC
+            LIMIT 1
+        ];
+        if (!vendors.isEmpty()) {
+            NetworkEntity__c v = vendors[0];
+            if (String.isNotBlank(v.Name)) {
+                issuer.put('name', v.Name);
+            }
+            if (String.isNotBlank(v.AddressTxt__c)) {
+                issuer.put('address', v.AddressTxt__c);
+            }
+            if (String.isNotBlank(v.ContactEmailTxt__c)) {
+                issuer.put('email', v.ContactEmailTxt__c);
+            }
+            if (String.isNotBlank(v.ContactPhoneTxt__c)) {
+                issuer.put('phone', v.ContactPhoneTxt__c);
+            }
+        }
+        return issuer;
     }
 
     private static List<Map<String, Object>> serializeWorkItems(List<WorkItem__c> items, String templateType) {

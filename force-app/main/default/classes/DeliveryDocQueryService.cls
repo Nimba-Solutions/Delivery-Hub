@@ -278,9 +278,78 @@ public with sharing class DeliveryDocQueryService {
         result.put('requiresSigning', doc.RequireSigningDateTime__c != null);
         result.put('requireSigningDateTime', doc.RequireSigningDateTime__c);
         result.put('actions', DeliveryDocActionController.getActionsForDocument(doc.Id));
+        // Portal signing status block — slot metadata + audit chain verification.
+        // Portal /portal/documents/[token] page reads these keys to render the
+        // signing status section and the "Audit chain verified" badge.
+        Map<String, Object> signingStatus = buildSigningStatusBlock(doc.Id, doc.TemplatePk__c);
+        result.put('signingRequired', signingStatus.get('signingRequired'));
+        result.put('signingComplete', signingStatus.get('signingComplete'));
+        result.put('signingSlots', signingStatus.get('signingSlots'));
+        result.put('hashChainVerified', signingStatus.get('hashChainVerified'));
+        result.put('hashChainVerifiedAt', signingStatus.get('hashChainVerifiedAt'));
         if (includePublicToken) {
             result.put('publicToken', doc.PublicTokenTxt__c);
         }
         return result;
+    }
+
+    /**
+     * @description Builds the signing status block exposed to the public portal.
+     *              Returns slot-level metadata for the doc viewer's signing section
+     *              plus a hash-chain verification flag for the "Audit chain verified"
+     *              badge. Internal hash data is intentionally NOT exposed — only the
+     *              boolean + timestamp pair the portal renders.
+     *
+     *              Per-slot `signerToken` is null when the slot is already completed
+     *              (DeliveryDocActionService.applySignatureToAction nulls the token
+     *              on completion as defense-in-depth). The portal uses a non-null
+     *              token to decide whether to render the "Sign Now" button.
+     *
+     * @param documentId   The DeliveryDocument__c Id whose slots to fetch.
+     * @param templateType The template DeveloperName (drives signingRequired).
+     * @return Map with signingRequired, signingComplete, signingSlots,
+     *         hashChainVerified, hashChainVerifiedAt.
+     */
+    private static Map<String, Object> buildSigningStatusBlock(Id documentId, String templateType) {
+        Boolean signingRequired = DeliveryDocActionService.templateRequiresSigning(templateType);
+
+        List<DocumentAction__c> actions = DeliveryDocActionService.getActionsForDocument(documentId);
+        List<Map<String, Object>> slots = new List<Map<String, Object>>();
+        Boolean allCompleted = true;
+        for (DocumentAction__c a : actions) {
+            Boolean isCompleted = a.StatusPk__c == 'Completed';
+            if (!isCompleted) {
+                allCompleted = false;
+            }
+            slots.add(new Map<String, Object>{
+                'id'          => a.Id,
+                'role'        => a.ActionLabelTxt__c,
+                'signerName'  => a.SignerNameTxt__c,
+                'signerEmail' => a.SignerEmail__c,
+                'status'      => a.StatusPk__c,
+                'signedDate'  => a.CompletedDateTime__c,
+                // Token is rotated to null at sign time; only pending slots return one.
+                'signerToken' => isCompleted ? null : a.SignerTokenTxt__c
+            });
+        }
+
+        // signingComplete is only meaningful when signing is required AND we have
+        // at least one slot. An empty slot list on a non-signing template stays false.
+        Boolean signingComplete = signingRequired && !actions.isEmpty() && allCompleted;
+
+        // TODO: wire to DeliveryAuditChainService.validateChain — current implementation
+        // only validates the global ActivityLog__c chain (validateChain(Integer batchSize))
+        // and does not yet expose a per-document verification entry point. Returning
+        // false/null until that helper exists keeps the portal contract stable.
+        Boolean hashChainVerified = false;
+        Datetime hashChainVerifiedAt = null;
+
+        return new Map<String, Object>{
+            'signingRequired'     => signingRequired,
+            'signingComplete'     => signingComplete,
+            'signingSlots'        => slots,
+            'hashChainVerified'   => hashChainVerified,
+            'hashChainVerifiedAt' => hashChainVerifiedAt
+        };
     }
 }

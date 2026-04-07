@@ -12,7 +12,7 @@
     <bandwidthExceededPage>UnderConstruction</bandwidthExceededPage>
     <browserXssProtection>true</browserXssProtection>
     <cachePublicVisualforcePagesInProxyServers>true</cachePublicVisualforcePagesInProxyServers>
-    <clickjackProtectionLevel>AllowAllFraming</clickjackProtectionLevel>
+    <clickjackProtectionLevel>SameOriginOnly</clickjackProtectionLevel>
     <contentSniffingProtection>true</contentSniffingProtection>
     <enableAuraRequests>true</enableAuraRequests>
     <fileNotFoundPage>UnderConstruction</fileNotFoundPage>

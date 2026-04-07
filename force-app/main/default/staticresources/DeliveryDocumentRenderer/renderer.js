@@ -53,6 +53,13 @@
     function render(doc) {
         var snapshot = typeof doc.snapshot === 'string' ? JSON.parse(doc.snapshot) : doc.snapshot;
         var entity = snapshot.entity || {};
+        // Issuer is the org that produced the document. New snapshots populate
+        // this from the configured Vendor NetworkEntity. Older snapshots fall
+        // back to a generic placeholder so the renderer never leaks branding
+        // for the package author.
+        var issuer = snapshot.issuer || {};
+        var issuerName = issuer.name || 'Your Organization';
+        var issuerUrl = issuer.url || '';
         var workItems = snapshot.workItems || [];
         var workLogs = snapshot.workLogs || [];
         var isInvoice = doc.template === 'Invoice';
@@ -81,11 +88,14 @@
         html += '  </div>';
         html += '</div>';
 
-        // Brand Header
+        // Brand Header — issuer details come from the frozen snapshot so each
+        // org renders its own name/url instead of the package author's brand.
         html += '<div class="doc-brand-bar">';
         html += '  <div class="doc-brand-left">';
-        html += '    <div class="doc-brand-name">Cloud Nimbus LLC</div>';
-        html += '    <div class="doc-brand-url">cloudnimbusllc.com</div>';
+        html += '    <div class="doc-brand-name">' + esc(issuerName) + '</div>';
+        if (issuerUrl) {
+            html += '    <div class="doc-brand-url">' + esc(issuerUrl) + '</div>';
+        }
         html += '  </div>';
         html += '  <div class="doc-brand-right">';
         html += '    <div class="doc-brand-type">' + esc(templateDisplay) + '</div>';
@@ -195,7 +205,7 @@
         container.innerHTML = '<div class="doc-page">' + html + '</div>';
         container.style.display = 'block';
         document.getElementById('loading-state').style.display = 'none';
-        document.title = (doc.name || 'Document') + ' - ' + templateDisplay + ' - Cloud Nimbus LLC';
+        document.title = (doc.name || 'Document') + ' - ' + templateDisplay + ' - ' + issuerName;
 
         // Wire PDF button
         var pdfBtn = document.getElementById('btn-pdf');

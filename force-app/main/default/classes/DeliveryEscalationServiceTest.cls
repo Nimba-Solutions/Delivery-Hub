@@ -22,12 +22,26 @@ private class DeliveryEscalationServiceTest {
 
         List<WorkItem__c> items = new List<WorkItem__c>();
 
+        // Defensive: explicitly set ActivatedDateTime__c and StageEnteredDateTime__c
+        // because the DeliveryWorkItemTriggerHandler before-insert population does not
+        // reliably materialize on the in-memory reference in the namespaced packaging
+        // org used by upload-beta. The DeliveryEscalationRuleEvaluator filters
+        // candidates with `WHERE ActivatedDateTime__c != null`, so missing the trigger
+        // population would silently exclude every test row from escalation. Same
+        // pattern as DeliveryEscalationRuleEvaluatorTest / ActionExecutorTest /
+        // NotifServiceTest. See PR #595 for the analogous re-query fix on the
+        // DocumentAction hash chain.
+        Datetime activatedAt = Datetime.now().addDays(-5);
+        Datetime stageEnteredAt = Datetime.now();
+
         // Item stalled in Clarification Requested (Pre-Dev) — Software_Delivery
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Stalled clarification item',
             StageNamePk__c = 'Clarification Requested (Pre-Dev)',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt,
             DeveloperLookup__c = UserInfo.getUserId()
         ));
 
@@ -37,6 +51,8 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'Dev Blocked',
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt,
             DeveloperLookup__c = UserInfo.getUserId()
         ));
 
@@ -46,6 +62,8 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'In Client Approval',
             PriorityPk__c = 'High',
             WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt,
             DeveloperLookup__c = UserInfo.getUserId()
         ));
 
@@ -54,7 +72,9 @@ private class DeliveryEscalationServiceTest {
             BriefDescriptionTxt__c = 'Backlog item',
             StageNamePk__c = 'Backlog',
             PriorityPk__c = 'Low',
-            WorkflowTypeTxt__c = 'Software_Delivery'
+            WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt
         ));
 
         // Item in In Development for summary/severity tests
@@ -63,6 +83,8 @@ private class DeliveryEscalationServiceTest {
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt,
             DeveloperLookup__c = UserInfo.getUserId()
         ));
 

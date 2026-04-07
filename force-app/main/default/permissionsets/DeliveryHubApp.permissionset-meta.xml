@@ -4,6 +4,14 @@
         <application>DeliveryHub</application>
         <visible>true</visible>
     </applicationVisibilities>
+    <classAccesses>
+        <apexClass>DeliveryDocActionController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryGanttController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <description>This permission set provides access to the &quot;Delivery Hub&quot; Lightning App</description>
     <fieldPermissions>
         <editable>false</editable>

@@ -617,6 +617,93 @@ private class DeliveryDocActionControllerTest {
     }
 
     @IsTest
+    static void testRestApiPostSignsImageWithDrawnSignature() {
+        // Phase 5: portal canvas signing. Body sends signatureType="Image" with the
+        // base64 PNG packed into signatureData (with the data-URI prefix). REST entry
+        // point must route the bytes into ctx.drawnSignature so the service layer
+        // persists them as a ContentVersion and stores the CV Id on SignatureDataTxt__c.
+        System.runAs(testUser) {
+            String token = getFirstSignerToken();
+            Id firstActionId = getActions(getDoc().Id)[0].Id;
+
+            // Reuse the class-level TINY_PNG_BASE64 constant. The REST endpoint
+            // must strip the data-URI prefix before EncodingUtil.base64Decode runs.
+            String dataUri = 'data:image/png;base64,' + TINY_PNG_BASE64;
+
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/sign/' + token;
+            req.httpMethod = 'POST';
+            // X-Forwarded-For takes precedence over X-Salesforce-SIP, and the
+            // proxy-chain leftmost address is the one persisted.
+            req.headers.put('X-Forwarded-For', '198.51.100.7, 10.0.0.1');
+            req.headers.put('X-Salesforce-SIP', '203.0.113.42');
+            req.headers.put('User-Agent', 'Mozilla/5.0 Portal');
+            req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                'signerName'         => 'Coleman Cameron',
+                'signerEmail'        => 'coleman@example.com',
+                'consentGiven'       => true,
+                'signatureType'      => 'Image',
+                'signatureData'      => dataUri,
+                'portalSessionEmail' => 'coleman@example.com'
+            }));
+            RestContext.request = req;
+            RestContext.response = new RestResponse();
+
+            Test.startTest();
+            DeliveryDocActionRestApi.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(200, RestContext.response.statusCode,
+                'REST POST with Image signature should return 200');
+            Map<String, Object> result = (Map<String, Object>) JSON.deserializeUntyped(
+                RestContext.response.responseBody.toString()
+            );
+            System.assertEquals('Completed', result.get('status'),
+                'REST POST with Image signature should sign the slot');
+
+            DocumentAction__c reloaded = [
+                SELECT StatusPk__c, SignatureTypePk__c, SignatureDataTxt__c,
+                       IpAddressTxt__c, UserAgentTxt__c
+                FROM DocumentAction__c
+                WHERE Id = :firstActionId
+            ];
+            System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
+            System.assertEquals('Image', reloaded.SignatureTypePk__c,
+                'SignatureTypePk__c should be Image, not the default Text');
+            System.assertNotEquals(null, reloaded.SignatureDataTxt__c,
+                'SignatureDataTxt__c should hold the persisted ContentVersion Id');
+            System.assert(String.isNotBlank(reloaded.SignatureDataTxt__c),
+                'ContentVersion Id should be non-blank');
+            // ContentVersion Ids start with the 068 keyprefix.
+            System.assert(reloaded.SignatureDataTxt__c.startsWith('068'),
+                'SignatureDataTxt__c should be a ContentVersion Id (068 prefix), got: '
+                    + reloaded.SignatureDataTxt__c);
+            // X-Forwarded-For wins over X-Salesforce-SIP, leftmost address only.
+            System.assertEquals('198.51.100.7', reloaded.IpAddressTxt__c,
+                'IP should be captured from leftmost X-Forwarded-For entry');
+            // portalSessionEmail is appended to the user-agent string until a
+            // dedicated PortalSessionEmail__c field exists.
+            System.assert(reloaded.UserAgentTxt__c != null
+                    && reloaded.UserAgentTxt__c.contains('Mozilla/5.0 Portal'),
+                'User-agent prefix should still be the original UA');
+            System.assert(reloaded.UserAgentTxt__c != null
+                    && reloaded.UserAgentTxt__c.contains('portalSession=coleman@example.com'),
+                'portalSessionEmail should be embedded in user-agent until a dedicated field exists');
+
+            // The persisted ContentVersion should be linked to the parent document
+            // (so existing file-share permissions govern access to the signature image).
+            List<ContentVersion> cvs = [
+                SELECT Id, FirstPublishLocationId
+                FROM ContentVersion
+                WHERE Id = :reloaded.SignatureDataTxt__c
+            ];
+            System.assertEquals(1, cvs.size(), 'ContentVersion should exist');
+            System.assertEquals(getDoc().Id, cvs[0].FirstPublishLocationId,
+                'ContentVersion should be linked to the parent document');
+        }
+    }
+
+    @IsTest
     static void testRestApiGetReturnsBundle() {
         System.runAs(testUser) {
             String token = getFirstSignerToken();
