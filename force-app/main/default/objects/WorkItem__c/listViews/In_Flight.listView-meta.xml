@@ -7,7 +7,7 @@
     <columns>BriefDescriptionTxt__c</columns>
     <columns>StageNamePk__c</columns>
     <columns>BudgetVarianceNumber__c</columns>
-    <columns>TotalLoggedHoursNumber__c</columns>
+    <columns>TotalLoggedHoursSum__c</columns>
     <columns>EstimatedHoursNumber__c</columns>
     <columns>CREATED_DATE</columns>
     <filterScope>Everything</filterScope>

@@ -222,7 +222,7 @@ global with sharing class DeliveryFieldChangeService {
         log.ContextDataTxt__c   = JSON.serialize(contextMap);
 
         if (networkEntityId != null) {
-            log.NetworkEntityId__c = networkEntityId;
+            log.NetworkEntityLookup__c = networkEntityId;
         }
 
         return log;

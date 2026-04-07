@@ -25,7 +25,7 @@ public with sharing class DeliveryDocApprovalService {
         DeliveryDocument__c doc = queryDocumentByToken(publicToken);
         validateApprovableStatus(doc);
 
-        if (doc.RequiresSigningCheckbox__c == true) {
+        if (doc.RequireSigningDateTime__c != null) {
             return shortCircuitToAwaitingSignatures(doc);
         }
 
@@ -33,7 +33,7 @@ public with sharing class DeliveryDocApprovalService {
         Database.update(doc, AccessLevel.SYSTEM_MODE);
 
         DeliveryTransaction__c txn = new DeliveryTransaction__c(
-            DocumentId__c          = doc.Id,
+            DocumentLookup__c          = doc.Id,
             TypePk__c              = 'Approval',
             AmountCurrency__c      = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0,
             TransactionDateDate__c = Date.today(),
@@ -106,8 +106,8 @@ public with sharing class DeliveryDocApprovalService {
             throw new AuraHandledException('Public token is required.');
         }
         List<DeliveryDocument__c> docs = [
-            SELECT Id, StatusPk__c, TotalCurrency__c, NetworkEntityId__c,
-                   TemplatePk__c, NetworkEntityId__r.Name, RequiresSigningCheckbox__c
+            SELECT Id, StatusPk__c, TotalCurrency__c, NetworkEntityLookup__c,
+                   TemplatePk__c, NetworkEntityLookup__r.Name, RequireSigningDateTime__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = :publicToken
             WITH SYSTEM_MODE

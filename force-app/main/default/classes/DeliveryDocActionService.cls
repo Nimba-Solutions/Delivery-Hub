@@ -11,42 +11,56 @@
 public with sharing class DeliveryDocActionService {
 
     // Cache template lookups within a transaction so multi-doc generation does not re-query.
-    private static Map<String, Boolean> templateRequiresSigningCache = new Map<String, Boolean>();
+    // Stores the RequireSigningDateTime__c value (null = signing not required).
+    // Sentinel values: TRANSACTION_NULL marks "queried, returned null" so cache hits work for either case.
+    private static final Datetime TRANSACTION_NULL = Datetime.newInstance(0L);
+    private static Map<String, Datetime> templateSigningRequiredCache = new Map<String, Datetime>();
     private static Map<String, List<DocumentTemplateSlot__mdt>> slotConfigCache = new Map<String, List<DocumentTemplateSlot__mdt>>();
 
     /**
-     * @description Returns true when the given template type has signature slots configured.
-     *              Reads the RequiresSigningCheckbox__c field on DocumentTemplate__mdt.
+     * @description Returns the timestamp at which the given template type was flagged
+     *              as requiring signatures, or null if signing is not required.
+     *              Reads the RequireSigningDateTime__c field on DocumentTemplate__mdt.
      * @param templateType The template DeveloperName (e.g., 'Client_Agreement').
-     * @return True if signing is required, false otherwise.
+     * @return The DateTime the requirement was set, or null if signing is not required.
      */
-    public static Boolean templateRequiresSigning(String templateType) {
+    public static Datetime templateSigningRequiredAt(String templateType) {
         if (String.isBlank(templateType)) {
-            return false;
+            return null;
         }
-        if (templateRequiresSigningCache.containsKey(templateType)) {
-            return templateRequiresSigningCache.get(templateType);
+        if (templateSigningRequiredCache.containsKey(templateType)) {
+            Datetime cached = templateSigningRequiredCache.get(templateType);
+            return cached == TRANSACTION_NULL ? null : cached;
         }
-        Boolean result = false;
+        Datetime result = null;
         List<DocumentTemplate__mdt> templates = [
-            SELECT DeveloperName, RequiresSigningCheckbox__c
+            SELECT DeveloperName, RequireSigningDateTime__c
             FROM DocumentTemplate__mdt
             WHERE DeveloperName = :templateType
             LIMIT 1
         ];
-        if (!templates.isEmpty() && templates[0].RequiresSigningCheckbox__c == true) {
-            result = true;
+        if (!templates.isEmpty() && templates[0].RequireSigningDateTime__c != null) {
+            result = templates[0].RequireSigningDateTime__c;
         }
-        templateRequiresSigningCache.put(templateType, result);
+        templateSigningRequiredCache.put(templateType, result == null ? TRANSACTION_NULL : result);
         return result;
+    }
+
+    /**
+     * @description Convenience boolean wrapper for templateSigningRequiredAt.
+     * @param templateType The template DeveloperName.
+     * @return True if the template requires signing (i.e. RequireSigningDateTime__c is non-null).
+     */
+    public static Boolean templateRequiresSigning(String templateType) {
+        return templateSigningRequiredAt(templateType) != null;
     }
 
     /**
      * @description Creates DocumentAction__c child records for the given document based on
      *              the slot configuration in DocumentTemplateSlot__mdt for the template type.
-     *              Auto-assigns AssignedEntityId__c based on the slot's AutoAssignTxt__c hint:
+     *              Auto-assigns AssignedEntityLookup__c based on the slot's AutoAssignTxt__c hint:
      *                - 'vendor'   → DeliveryHubSettings__c.DefaultBillingEntityIdTxt__c
-     *                - 'customer' → the document's NetworkEntityId__c (from the snapshot)
+     *                - 'customer' → the document's NetworkEntityLookup__c (from the snapshot)
      *                - any other  → unassigned
      *              Returns the inserted records. Returns an empty list if the template has
      *              no slots configured (i.e., does not require signing).
@@ -89,14 +103,14 @@ public with sharing class DeliveryDocActionService {
         Id customerEntityId
     ) {
         DocumentAction__c action = new DocumentAction__c(
-            DocumentId__c       = documentId,
+            DocumentLookup__c       = documentId,
             ActionLabelTxt__c   = slot.ActionLabelTxt__c,
             SortOrderNumber__c  = slot.SortOrderNumber__c,
             StatusPk__c         = 'Pending',
             SignatureTypePk__c  = 'Text',
             SignerTokenTxt__c   = generateSignerToken()
         );
-        action.AssignedEntityId__c = resolveAutoAssignEntityId(slot, vendorEntityId, customerEntityId);
+        action.AssignedEntityLookup__c = resolveAutoAssignEntityId(slot, vendorEntityId, customerEntityId);
         return action;
     }
 
@@ -129,13 +143,13 @@ public with sharing class DeliveryDocActionService {
             return new List<DocumentAction__c>();
         }
         return [
-            SELECT Id, Name, DocumentId__c, ActionLabelTxt__c, AssignedEntityId__c,
-                   AssignedEntityId__r.Name, StatusPk__c, CompletedDateTime__c,
+            SELECT Id, Name, DocumentLookup__c, ActionLabelTxt__c, AssignedEntityLookup__c,
+                   AssignedEntityLookup__r.Name, StatusPk__c, CompletedDateTime__c,
                    SignatureTypePk__c, SignatureDataTxt__c, SignerNameTxt__c,
-                   SignerEmailTxt__c, SortOrderNumber__c, SignerTokenTxt__c,
+                   SignerEmail__c, SortOrderNumber__c, SignerTokenTxt__c,
                    IpAddressTxt__c, ElectronicConsentDateTime__c
             FROM DocumentAction__c
-            WHERE DocumentId__c = :documentId
+            WHERE DocumentLookup__c = :documentId
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate ASC
         ];
@@ -252,10 +266,10 @@ public with sharing class DeliveryDocActionService {
         Database.update(action, AccessLevel.SYSTEM_MODE);
 
         Id activityLogId = recordSignatureAuditLog(action, ctx);
-        action.ActivityLogId__c = activityLogId;
+        action.ActivityLogLookup__c = activityLogId;
         Database.update(action, AccessLevel.SYSTEM_MODE);
 
-        String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentId__c);
+        String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentLookup__c);
 
         return new Map<String, Object>{
             'actionId'       => action.Id,
@@ -284,7 +298,7 @@ public with sharing class DeliveryDocActionService {
      */
     private static DocumentAction__c loadPendingAction(Id actionId) {
         List<DocumentAction__c> actions = [
-            SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SortOrderNumber__c
+            SELECT Id, DocumentLookup__c, ActionLabelTxt__c, StatusPk__c, SortOrderNumber__c
             FROM DocumentAction__c
             WHERE Id = :actionId
             WITH SYSTEM_MODE
@@ -312,7 +326,7 @@ public with sharing class DeliveryDocActionService {
         action.SignatureTypePk__c = String.isNotBlank(ctx.signatureType) ? ctx.signatureType : 'Text';
         action.SignatureDataTxt__c = ctx.signatureData;
         action.SignerNameTxt__c = ctx.signerName;
-        action.SignerEmailTxt__c = ctx.signerEmail;
+        action.SignerEmail__c = ctx.signerEmail;
         action.IpAddressTxt__c = ctx.ipAddress;
         action.UserAgentTxt__c = ctx.userAgent;
     }
@@ -326,11 +340,11 @@ public with sharing class DeliveryDocActionService {
     private static Id recordSignatureAuditLog(DocumentAction__c action, SignContext ctx) {
         ActivityLog__c log = new ActivityLog__c(
             ActionTypePk__c = 'Document_Action',
-            RecordIdTxt__c = action.DocumentId__c,
+            RecordIdTxt__c = action.DocumentLookup__c,
             ContextDataTxt__c = JSON.serialize(new Map<String, Object>{
                 'action'        => 'sign',
                 'actionId'      => action.Id,
-                'documentId'    => action.DocumentId__c,
+                'documentId'    => action.DocumentLookup__c,
                 'signerName'    => ctx.signerName,
                 'signatureType' => action.SignatureTypePk__c,
                 'slotLabel'     => action.ActionLabelTxt__c
@@ -358,7 +372,7 @@ public with sharing class DeliveryDocActionService {
         Integer pendingCount = [
             SELECT COUNT()
             FROM DocumentAction__c
-            WHERE DocumentId__c = :documentId AND StatusPk__c = 'Pending'
+            WHERE DocumentLookup__c = :documentId AND StatusPk__c = 'Pending'
             WITH SYSTEM_MODE
         ];
         if (pendingCount > 0) {
@@ -386,7 +400,7 @@ public with sharing class DeliveryDocActionService {
         Database.update(doc, AccessLevel.SYSTEM_MODE);
 
         DeliveryTransaction__c txn = new DeliveryTransaction__c(
-            DocumentId__c          = doc.Id,
+            DocumentLookup__c          = doc.Id,
             TypePk__c              = 'Approval',
             AmountCurrency__c      = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0,
             TransactionDateDate__c = Date.today(),
@@ -434,9 +448,9 @@ public with sharing class DeliveryDocActionService {
      */
     public static Map<String, Object> getDocumentBundleForSignerToken(String signerToken) {
         DocumentAction__c signerAction = findActionBySignerToken(signerToken);
-        DeliveryDocument__c doc = loadDocumentForPortal(signerAction.DocumentId__c);
+        DeliveryDocument__c doc = loadDocumentForPortal(signerAction.DocumentLookup__c);
         Map<String, Object> docMap = serializeDocumentForPortal(doc);
-        List<Map<String, Object>> actions = serializeActionsForPortal(signerAction.DocumentId__c);
+        List<Map<String, Object>> actions = serializeActionsForPortal(signerAction.DocumentLookup__c);
 
         return new Map<String, Object>{
             'document'         => docMap,
@@ -478,7 +492,7 @@ public with sharing class DeliveryDocActionService {
             throw new AuraHandledException('Invalid signer link.');
         }
         List<DocumentAction__c> actions = [
-            SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SignerTokenTxt__c
+            SELECT Id, DocumentLookup__c, ActionLabelTxt__c, StatusPk__c, SignerTokenTxt__c
             FROM DocumentAction__c
             WHERE SignerTokenTxt__c = :signerToken
             WITH SYSTEM_MODE
@@ -496,8 +510,8 @@ public with sharing class DeliveryDocActionService {
     private static DeliveryDocument__c loadDocumentForPortal(Id documentId) {
         List<DeliveryDocument__c> docs = [
             SELECT Id, Name, StatusPk__c, TemplatePk__c, SnapshotTxt__c,
-                   RequiresSigningCheckbox__c, TotalCurrency__c, NetworkEntityId__c,
-                   NetworkEntityId__r.Name, PublicTokenTxt__c
+                   RequireSigningDateTime__c, TotalCurrency__c, NetworkEntityLookup__c,
+                   NetworkEntityLookup__r.Name, PublicTokenTxt__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -522,8 +536,9 @@ public with sharing class DeliveryDocActionService {
             'status'          => doc.StatusPk__c,
             'template'        => doc.TemplatePk__c,
             'snapshot'        => doc.SnapshotTxt__c,
-            'requiresSigning' => doc.RequiresSigningCheckbox__c,
-            'entityName'      => doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : null,
+            'requiresSigning' => doc.RequireSigningDateTime__c != null,
+            'requireSigningDateTime' => doc.RequireSigningDateTime__c,
+            'entityName'      => doc.NetworkEntityLookup__r != null ? doc.NetworkEntityLookup__r.Name : null,
             'consentText'     => consentText
         };
     }
@@ -545,7 +560,7 @@ public with sharing class DeliveryDocActionService {
                 'signatureData'      => a.SignatureDataTxt__c,
                 'signerName'         => a.SignerNameTxt__c,
                 'completedAt'        => a.CompletedDateTime__c,
-                'assignedEntityName' => a.AssignedEntityId__r != null ? a.AssignedEntityId__r.Name : null,
+                'assignedEntityName' => a.AssignedEntityLookup__r != null ? a.AssignedEntityLookup__r.Name : null,
                 'isPending'          => a.StatusPk__c == 'Pending',
                 'isCompleted'        => a.StatusPk__c == 'Completed'
             });

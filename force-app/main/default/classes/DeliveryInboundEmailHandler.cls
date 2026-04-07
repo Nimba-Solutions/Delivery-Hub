@@ -53,7 +53,7 @@ public with sharing class DeliveryInboundEmailHandler implements Messaging.Inbou
         }
         String commentBody = extractBody(email);
         WorkItemComment__c comment = new WorkItemComment__c(
-            WorkItemId__c = workItem.Id,
+            WorkItemLookup__c = workItem.Id,
             BodyTxt__c = commentBody,
             AuthorTxt__c = sender.Name,
             SourcePk__c = 'Email'
@@ -111,7 +111,7 @@ public with sharing class DeliveryInboundEmailHandler implements Messaging.Inbou
 
     @TestVisible
     private static WorkItem__c resolveWorkItem(String workItemName) {
-        List<WorkItem__c> items = [SELECT Id, Name, BriefDescriptionTxt__c, DeveloperLookupId__c, OwnerId FROM WorkItem__c WHERE Name = :workItemName WITH SYSTEM_MODE LIMIT 1];
+        List<WorkItem__c> items = [SELECT Id, Name, BriefDescriptionTxt__c, DeveloperLookup__c, OwnerId FROM WorkItem__c WHERE Name = :workItemName WITH SYSTEM_MODE LIMIT 1];
         return items.isEmpty() ? null : items[0];
     }
 

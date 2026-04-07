@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TemplateTxt__c</fullName>
+    <description>The template type used to generate the document (e.g. Invoice, Status_Report).</description>
+    <inlineHelpText>Document template type.</inlineHelpText>
+    <label>Template</label>
+    <length>80</length>
+    <type>Text</type>
+</CustomField>

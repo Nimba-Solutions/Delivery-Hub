@@ -5,8 +5,8 @@
     <columns>BriefDescriptionTxt__c</columns>
     <columns>StageNamePk__c</columns>
     <columns>PriorityPk__c</columns>
-    <columns>ClientNetworkEntityId__c</columns>
-    <columns>TotalLoggedHoursNumber__c</columns>
+    <columns>ClientNetworkEntityLookup__c</columns>
+    <columns>TotalLoggedHoursSum__c</columns>
     <filters>
         <field>StageNamePk__c</field>
         <operation>equals</operation>

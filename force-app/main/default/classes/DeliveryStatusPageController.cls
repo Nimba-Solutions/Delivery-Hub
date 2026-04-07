@@ -114,7 +114,7 @@ global without sharing class DeliveryStatusPageController {
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entityId
+            WHERE ClientNetworkEntityLookup__c = :entityId
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
@@ -140,7 +140,7 @@ global without sharing class DeliveryStatusPageController {
             return [
                 SELECT COUNT()
                 FROM WorkItem__c
-                WHERE ClientNetworkEntityId__c = :entityId
+                WHERE ClientNetworkEntityLookup__c = :entityId
                 AND StageNamePk__c IN :terminalStages
                 WITH SYSTEM_MODE
             ];
@@ -148,7 +148,7 @@ global without sharing class DeliveryStatusPageController {
         return [
             SELECT COUNT()
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entityId
+            WHERE ClientNetworkEntityLookup__c = :entityId
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
         ];
@@ -169,7 +169,7 @@ global without sharing class DeliveryStatusPageController {
         for (WorkItem__c wi : [
             SELECT SLAStatusTxt__c
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entityId
+            WHERE ClientNetworkEntityLookup__c = :entityId
             AND SLATargetDate__c != NULL
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
@@ -228,7 +228,7 @@ global without sharing class DeliveryStatusPageController {
         for (WorkItem__c wi : [
             SELECT BriefDescriptionTxt__c, LastModifiedDate
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entityId
+            WHERE ClientNetworkEntityLookup__c = :entityId
             AND StageNamePk__c IN :terminalStages
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
@@ -252,7 +252,7 @@ global without sharing class DeliveryStatusPageController {
         List<WorkItem__c> lastMod = [
             SELECT LastModifiedDate
             FROM WorkItem__c
-            WHERE ClientNetworkEntityId__c = :entityId
+            WHERE ClientNetworkEntityLookup__c = :entityId
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate DESC
             LIMIT 1

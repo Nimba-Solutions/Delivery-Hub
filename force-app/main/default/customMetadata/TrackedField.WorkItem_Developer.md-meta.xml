@@ -8,7 +8,7 @@
     </values>
     <values>
         <field>FieldApiNameTxt__c</field>
-        <value xsi:type="xsd:string">DeveloperLookupId__c</value>
+        <value xsi:type="xsd:string">DeveloperLookup__c</value>
     </values>
     <values>
         <field>FieldLabelTxt__c</field>

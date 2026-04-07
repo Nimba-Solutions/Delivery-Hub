@@ -22,16 +22,16 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         // Excludes entities with 'Pending Approval' connection status
         List<SyncItem__c> pushItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
-                   RetryCountNumber__c, RequestId__c,
-                   RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c,
-                   RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c,
-                   RequestId__r.DeliveryEntityId__r.HmacSecretTxt__c,
-                   RequestId__r.DeliveryEntityId__r.ConnectionStatusPk__c
+                   RetryCountNumber__c, RequestLookup__c,
+                   RequestLookup__r.DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c,
+                   RequestLookup__r.DeliveryEntityLookup__r.ApiKeyTxt__c,
+                   RequestLookup__r.DeliveryEntityLookup__r.HmacSecretTxt__c,
+                   RequestLookup__r.DeliveryEntityLookup__r.ConnectionStatusPk__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
-            AND RequestId__c != NULL
-            AND RequestId__r.DeliveryEntityId__r.ConnectionStatusPk__c != 'Pending Approval'
+            AND RequestLookup__c != NULL
+            AND RequestLookup__r.DeliveryEntityLookup__r.ConnectionStatusPk__c != 'Pending Approval'
             WITH SYSTEM_MODE
             LIMIT 50
         ];
@@ -40,17 +40,17 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         // Excludes entities with 'Pending Approval' connection status
         List<SyncItem__c> hubItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
-                   RetryCountNumber__c, RequestId__c,
-                   WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c,
-                   WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c,
-                   WorkItemId__r.ClientNetworkEntityId__r.HmacSecretTxt__c,
-                   WorkItemId__r.ClientNetworkEntityId__r.ConnectionStatusPk__c
+                   RetryCountNumber__c, RequestLookup__c,
+                   WorkItemLookup__r.ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c,
+                   WorkItemLookup__r.ClientNetworkEntityLookup__r.ApiKeyTxt__c,
+                   WorkItemLookup__r.ClientNetworkEntityLookup__r.HmacSecretTxt__c,
+                   WorkItemLookup__r.ClientNetworkEntityLookup__r.ConnectionStatusPk__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
-            AND RequestId__c = NULL
-            AND WorkItemId__r.ClientNetworkEntityId__c != NULL
-            AND WorkItemId__r.ClientNetworkEntityId__r.ConnectionStatusPk__c != 'Pending Approval'
+            AND RequestLookup__c = NULL
+            AND WorkItemLookup__r.ClientNetworkEntityLookup__c != NULL
+            AND WorkItemLookup__r.ClientNetworkEntityLookup__r.ConnectionStatusPk__c != 'Pending Approval'
             WITH SYSTEM_MODE
             LIMIT 50
         ];
@@ -59,7 +59,7 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         // These have no Request or WorkItem linkage and are resolved locally.
         List<SyncItem__c> localItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
-                   RetryCountNumber__c, RequestId__c
+                   RetryCountNumber__c, RequestLookup__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Queued'
             AND DirectionPk__c = 'Outbound'
@@ -89,24 +89,24 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                     item.StatusPk__c = 'Synced';
                     itemsToUpdate.add(item);
                     syncEvents.add(new DeliverySync__e(
-                        ObjectTypePk__c = item.ObjectTypePk__c,
-                        DirectionPk__c = 'Outbound',
-                        StatusPk__c = 'Synced',
+                        ObjectTypeTxt__c = item.ObjectTypePk__c,
+                        DirectionTxt__c = 'Outbound',
+                        StatusTxt__c = 'Synced',
                         RecordIdTxt__c = item.LocalRecordIdTxt__c
                     ));
                     continue;
                 }
 
                 // Resolve endpoint and API key: Push Mode uses Request→Entity, Hub Mode uses WorkItem→ClientEntity
-                String endpointUrl = item.RequestId__c != null
-                    ? item.RequestId__r.DeliveryEntityId__r.IntegrationEndpointUrlTxt__c
-                    : item.WorkItemId__r.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c;
-                String apiKey = item.RequestId__c != null
-                    ? item.RequestId__r.DeliveryEntityId__r.ApiKeyTxt__c
-                    : item.WorkItemId__r.ClientNetworkEntityId__r.ApiKeyTxt__c;
-                String hmacSecret = item.RequestId__c != null
-                    ? item.RequestId__r.DeliveryEntityId__r.HmacSecretTxt__c
-                    : item.WorkItemId__r.ClientNetworkEntityId__r.HmacSecretTxt__c;
+                String endpointUrl = item.RequestLookup__c != null
+                    ? item.RequestLookup__r.DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c
+                    : item.WorkItemLookup__r.ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c;
+                String apiKey = item.RequestLookup__c != null
+                    ? item.RequestLookup__r.DeliveryEntityLookup__r.ApiKeyTxt__c
+                    : item.WorkItemLookup__r.ClientNetworkEntityLookup__r.ApiKeyTxt__c;
+                String hmacSecret = item.RequestLookup__c != null
+                    ? item.RequestLookup__r.DeliveryEntityLookup__r.HmacSecretTxt__c
+                    : item.WorkItemLookup__r.ClientNetworkEntityLookup__r.HmacSecretTxt__c;
 
                 // Validate Endpoint Configuration — no endpoint means entity isn't set up
                 // for push sync. Park as Staged (available for polling) instead of failing.
@@ -179,9 +179,9 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                             }
 
                             // If we pushed a Work Item, map the Vendor's new ID to our Request bridge
-                            if (String.isNotBlank(remoteId) && item.ObjectTypePk__c.endsWithIgnoreCase('WorkItem__c') && item.RequestId__c != null) {
-                                requestsToUpdate.put(item.RequestId__c, new WorkRequest__c(
-                                    Id = item.RequestId__c,
+                            if (String.isNotBlank(remoteId) && item.ObjectTypePk__c.endsWithIgnoreCase('WorkItem__c') && item.RequestLookup__c != null) {
+                                requestsToUpdate.put(item.RequestLookup__c, new WorkRequest__c(
+                                    Id = item.RequestLookup__c,
                                     RemoteWorkItemIdTxt__c = remoteId
                                 ));
                             }
@@ -202,9 +202,9 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
 
             // Collect platform event for each processed sync item
             syncEvents.add(new DeliverySync__e(
-                ObjectTypePk__c = item.ObjectTypePk__c,
-                DirectionPk__c = 'Outbound',
-                StatusPk__c = item.StatusPk__c,
+                ObjectTypeTxt__c = item.ObjectTypePk__c,
+                DirectionTxt__c = 'Outbound',
+                StatusTxt__c = item.StatusPk__c,
                 RecordIdTxt__c = item.LocalRecordIdTxt__c,
                 ErrorMessageTxt__c = item.ErrorLogTxt__c
             ));

@@ -13,7 +13,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>NetworkEntityId__c</field>
+                <field>NetworkEntityLookup__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
@@ -153,7 +153,7 @@
         <fields>TransactionDateDate__c</fields>
         <fields>TypePk__c</fields>
         <fields>NoteTxt__c</fields>
-        <relatedList>DeliveryTransaction__c.DocumentId__c</relatedList>
+        <relatedList>DeliveryTransaction__c.DocumentLookup__c</relatedList>
         <sortField>TransactionDateDate__c</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>

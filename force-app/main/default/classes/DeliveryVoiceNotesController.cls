@@ -71,7 +71,7 @@ global with sharing class DeliveryVoiceNotesController {
                 parseDateSafe(startDateStr)
             );
             if (String.isNotBlank(entityId)) {
-                wi.ClientNetworkEntityId__c = entityId;
+                wi.ClientNetworkEntityLookup__c = entityId;
             }
             if (String.isNotBlank(actionType)) {
                 wi.RequestTypePk__c = actionType;

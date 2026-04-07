@@ -22,7 +22,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
     private static final Set<String> WORK_ITEM_SYNC_FIELDS = new Set<String>{
         'BriefDescriptionTxt__c', 'DetailsTxt__c', 'StageNamePk__c', 'StatusPk__c',
         'PriorityPk__c', 'DeveloperDaysSizeNumber__c', 'EstimatedHoursNumber__c',
-        'ClientPreApprovedHoursNumber__c', 'DeveloperLookupId__c', 'CalculatedETADate__c',
+        'ClientPreApprovedHoursNumber__c', 'DeveloperLookup__c', 'CalculatedETADate__c',
         'ProjectedUATReadyDate__c', 'AcceptanceCriteriaTxt__c', 'StepsToReproduceTxt__c',
         'ClientIntentionPk__c', 'RequestTypePk__c', 'TagsTxt__c', 'WorkflowTypeTxt__c',
         'EpicTxt__c', 'SLATargetDate__c', 'ActivatedDateTime__c', 'SortOrderNumber__c'
@@ -101,9 +101,9 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
 
         List<WorkRequest__c> requests = [
-            SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c
+            SELECT Id, WorkItemLookup__c, RemoteWorkItemIdTxt__c
             FROM WorkRequest__c
-            WHERE DeliveryEntityId__c = :entity.Id
+            WHERE DeliveryEntityLookup__c = :entity.Id
             AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
         ];
@@ -118,21 +118,21 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
 
         for (WorkRequest__c req : requests) {
             requestIds.add(req.Id);
-            if (req.WorkItemId__c != null) {
-                workItemIds.add(req.WorkItemId__c);
-                workItemToRequest.put(req.WorkItemId__c, req);
+            if (req.WorkItemLookup__c != null) {
+                workItemIds.add(req.WorkItemLookup__c);
+                workItemToRequest.put(req.WorkItemLookup__c, req);
             }
         }
 
         // Find WorkItem gaps
         Set<Id> coveredRequestIds = new Set<Id>();
         for (SyncItem__c existing : [
-            SELECT RequestId__c FROM SyncItem__c
-            WHERE RequestId__c IN :requestIds
+            SELECT RequestLookup__c FROM SyncItem__c
+            WHERE RequestLookup__c IN :requestIds
             AND ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Synced'
             WITH SYSTEM_MODE
         ]) {
-            coveredRequestIds.add(existing.RequestId__c);
+            coveredRequestIds.add(existing.RequestLookup__c);
         }
 
         fillWorkItemGaps(requests, coveredRequestIds, itemsToInsert);
@@ -156,9 +156,9 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         Set<Id> gapWorkItemIds = new Set<Id>();
         Map<Id, WorkRequest__c> gapWorkItemToRequest = new Map<Id, WorkRequest__c>();
         for (WorkRequest__c req : requests) {
-            if (!coveredRequestIds.contains(req.Id) && req.WorkItemId__c != null) {
-                gapWorkItemIds.add(req.WorkItemId__c);
-                gapWorkItemToRequest.put(req.WorkItemId__c, req);
+            if (!coveredRequestIds.contains(req.Id) && req.WorkItemLookup__c != null) {
+                gapWorkItemIds.add(req.WorkItemLookup__c);
+                gapWorkItemToRequest.put(req.WorkItemLookup__c, req);
             }
         }
 
@@ -169,7 +169,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         Map<Id, WorkItem__c> gapWorkItems = new Map<Id, WorkItem__c>([
             SELECT Id, BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c, StatusPk__c,
                    PriorityPk__c, DeveloperDaysSizeNumber__c, EstimatedHoursNumber__c,
-                   ClientPreApprovedHoursNumber__c, DeveloperLookupId__c, CalculatedETADate__c,
+                   ClientPreApprovedHoursNumber__c, DeveloperLookup__c, CalculatedETADate__c,
                    ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c, StepsToReproduceTxt__c,
                    ClientIntentionPk__c, RequestTypePk__c, TagsTxt__c, WorkflowTypeTxt__c,
                    EpicTxt__c, SLATargetDate__c, ActivatedDateTime__c, SortOrderNumber__c
@@ -198,9 +198,9 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private void fillWorkLogGaps(Set<Id> workItemIds, Map<Id, WorkRequest__c> workItemToRequest, List<SyncItem__c> itemsToInsert) {
         List<WorkLog__c> workLogs = [
-            SELECT Id, WorkItemId__c, HoursLoggedNumber__c, WorkDateDate__c,
+            SELECT Id, WorkItemLookup__c, HoursLoggedNumber__c, WorkDateDate__c,
                    WorkDescriptionTxt__c, StatusPk__c
-            FROM WorkLog__c WHERE WorkItemId__c IN :workItemIds
+            FROM WorkLog__c WHERE WorkItemLookup__c IN :workItemIds
             WITH SYSTEM_MODE
         ];
 
@@ -231,7 +231,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
             if (coveredWorkLogIds.contains((String) wl.Id)) {
                 continue;
             }
-            WorkRequest__c parentReq = workItemToRequest.get(wl.WorkItemId__c);
+            WorkRequest__c parentReq = workItemToRequest.get(wl.WorkItemLookup__c);
             if (parentReq == null) {
                 continue;
             }
@@ -266,8 +266,8 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         return new SyncItem__c(
             ObjectTypePk__c      = 'WorkItem__c',
             LocalRecordIdTxt__c  = (String) wi.Id,
-            WorkItemId__c        = wi.Id,
-            RequestId__c         = req.Id,
+            WorkItemLookup__c        = wi.Id,
+            RequestLookup__c         = req.Id,
             DirectionPk__c       = 'Outbound',
             StatusPk__c          = 'Queued',
             GlobalSourceIdTxt__c = (String) wi.Id,
@@ -288,7 +288,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
             'SourceId'               => (String) wl.Id,
             'GlobalSourceId'         => (String) wl.Id,
             'SenderOrgId'            => senderOrgId,
-            'WorkItemId__c'          => wl.WorkItemId__c,
+            'WorkItemLookup__c'          => wl.WorkItemLookup__c,
             'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
             'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
             'WorkDescriptionTxt__c'  => wl.WorkDescriptionTxt__c,
@@ -298,8 +298,8 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         return new SyncItem__c(
             ObjectTypePk__c      = 'WorkLog__c',
             LocalRecordIdTxt__c  = (String) wl.Id,
-            WorkItemId__c        = wl.WorkItemId__c,
-            RequestId__c         = parentReq.Id,
+            WorkItemLookup__c        = wl.WorkItemLookup__c,
+            RequestLookup__c         = parentReq.Id,
             DirectionPk__c       = 'Outbound',
             StatusPk__c          = 'Queued',
             GlobalSourceIdTxt__c = (String) wl.Id,

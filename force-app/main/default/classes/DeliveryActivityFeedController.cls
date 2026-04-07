@@ -91,9 +91,9 @@ global with sharing class DeliveryActivityFeedController {
         if (scopedWorkItemIds != null) {
             comments = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemId__c, CreatedBy.Name
+                       WorkItemLookup__c, CreatedBy.Name
                 FROM WorkItemComment__c
-                WHERE WorkItemId__c IN :scopedWorkItemIds
+                WHERE WorkItemLookup__c IN :scopedWorkItemIds
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
                 LIMIT 500
@@ -101,7 +101,7 @@ global with sharing class DeliveryActivityFeedController {
         } else {
             comments = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemId__c, CreatedBy.Name
+                       WorkItemLookup__c, CreatedBy.Name
                 FROM WorkItemComment__c
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
@@ -120,10 +120,10 @@ global with sharing class DeliveryActivityFeedController {
     private static Map<Id, List<WorkItemComment__c>> groupCommentsByWorkItem(List<WorkItemComment__c> comments) {
         Map<Id, List<WorkItemComment__c>> grouped = new Map<Id, List<WorkItemComment__c>>();
         for (WorkItemComment__c c : comments) {
-            if (!grouped.containsKey(c.WorkItemId__c)) {
-                grouped.put(c.WorkItemId__c, new List<WorkItemComment__c>());
+            if (!grouped.containsKey(c.WorkItemLookup__c)) {
+                grouped.put(c.WorkItemLookup__c, new List<WorkItemComment__c>());
             }
-            grouped.get(c.WorkItemId__c).add(c);
+            grouped.get(c.WorkItemLookup__c).add(c);
         }
         return grouped;
     }
@@ -191,9 +191,9 @@ global with sharing class DeliveryActivityFeedController {
         if (scopedWorkItemIds != null) {
             logs = [
                 SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
-                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemLookup__c, StatusPk__c
                 FROM WorkLog__c
-                WHERE StatusPk__c = 'Draft' AND WorkItemId__c IN :scopedWorkItemIds
+                WHERE StatusPk__c = 'Draft' AND WorkItemLookup__c IN :scopedWorkItemIds
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
                 LIMIT 200
@@ -201,7 +201,7 @@ global with sharing class DeliveryActivityFeedController {
         } else {
             logs = [
                 SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
-                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemLookup__c, StatusPk__c
                 FROM WorkLog__c
                 WHERE StatusPk__c = 'Draft'
                 WITH SYSTEM_MODE
@@ -212,7 +212,7 @@ global with sharing class DeliveryActivityFeedController {
 
         Set<Id> wiIds = new Set<Id>();
         for (WorkLog__c wl : logs) {
-            wiIds.add(wl.WorkItemId__c);
+            wiIds.add(wl.WorkItemLookup__c);
         }
         Map<Id, WorkItem__c> workItemMap = resolveWorkItemNames(wiIds);
 
@@ -228,10 +228,10 @@ global with sharing class DeliveryActivityFeedController {
     }
 
     private static Map<String, Object> buildApprovalMap(WorkLog__c wl, Map<Id, WorkItem__c> workItemMap) {
-        WorkItem__c wi = workItemMap.get(wl.WorkItemId__c);
+        WorkItem__c wi = workItemMap.get(wl.WorkItemLookup__c);
         return new Map<String, Object>{
             'id' => wl.Id,
-            'workItemId' => wl.WorkItemId__c,
+            'workItemId' => wl.WorkItemLookup__c,
             'workItemName' => wi != null ? wi.Name : '',
             'workItemDescription' => wi != null ? wi.BriefDescriptionTxt__c : '',
             'hours' => wl.HoursLoggedNumber__c,
@@ -276,7 +276,7 @@ global with sharing class DeliveryActivityFeedController {
             throw new AuraHandledException('Work item and comment body are required.');
         }
         WorkItemComment__c comment = new WorkItemComment__c(
-            WorkItemId__c = workItemId,
+            WorkItemLookup__c = workItemId,
             BodyTxt__c = body,
             SourcePk__c = 'Client',
             AuthorTxt__c = UserInfo.getName()
@@ -291,9 +291,9 @@ global with sharing class DeliveryActivityFeedController {
         if (scopedWorkItemIds != null) {
             records = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemId__c, CreatedBy.Name
+                       WorkItemLookup__c, CreatedBy.Name
                 FROM WorkItemComment__c
-                WHERE WorkItemId__c IN :scopedWorkItemIds
+                WHERE WorkItemLookup__c IN :scopedWorkItemIds
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
                 LIMIT 200
@@ -301,7 +301,7 @@ global with sharing class DeliveryActivityFeedController {
         } else {
             records = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemId__c, CreatedBy.Name
+                       WorkItemLookup__c, CreatedBy.Name
                 FROM WorkItemComment__c
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
@@ -333,7 +333,7 @@ global with sharing class DeliveryActivityFeedController {
             'title' => 'Comment by ' + author,
             'detail' => bodyPreview,
             'icon' => 'standard:feedback',
-            'workItemId' => c.WorkItemId__c,
+            'workItemId' => c.WorkItemLookup__c,
             'source' => String.isNotBlank(c.SourcePk__c) ? c.SourcePk__c : 'Salesforce'
         };
     }
@@ -343,9 +343,9 @@ global with sharing class DeliveryActivityFeedController {
         if (scopedWorkItemIds != null) {
             records = [
                 SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
-                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemLookup__c, StatusPk__c
                 FROM WorkLog__c
-                WHERE WorkItemId__c IN :scopedWorkItemIds
+                WHERE WorkItemLookup__c IN :scopedWorkItemIds
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
                 LIMIT 200
@@ -353,7 +353,7 @@ global with sharing class DeliveryActivityFeedController {
         } else {
             records = [
                 SELECT Id, CreatedDate, CreatedBy.Name, HoursLoggedNumber__c,
-                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemId__c, StatusPk__c
+                       WorkDateDate__c, WorkDescriptionTxt__c, WorkItemLookup__c, StatusPk__c
                 FROM WorkLog__c
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
@@ -381,7 +381,7 @@ global with sharing class DeliveryActivityFeedController {
             'title' => hours + 'h logged by ' + wl.CreatedBy.Name,
             'detail' => detail,
             'icon' => 'standard:timesheet',
-            'workItemId' => wl.WorkItemId__c,
+            'workItemId' => wl.WorkItemLookup__c,
             'hours' => hours,
             'status' => statusLabel
         };
@@ -556,7 +556,7 @@ global with sharing class DeliveryActivityFeedController {
             Set<Id> ids = new Set<Id>();
             for (WorkItem__c wi : [
                 SELECT Id FROM WorkItem__c
-                WHERE ClientNetworkEntityId__c = :networkEntityId
+                WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 WITH SYSTEM_MODE
                 LIMIT 2000
             ]) {

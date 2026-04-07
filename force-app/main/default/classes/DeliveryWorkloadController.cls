@@ -48,7 +48,7 @@ global with sharing class DeliveryWorkloadController {
             return [
                 SELECT COUNT()
                 FROM WorkItem__c
-                WHERE DeveloperLookupId__c = NULL
+                WHERE DeveloperLookup__c = NULL
                 AND StageNamePk__c NOT IN :terminalStages
                 WITH SYSTEM_MODE
                 LIMIT 2000
@@ -67,17 +67,17 @@ global with sharing class DeliveryWorkloadController {
     /**
      * @description Queries active work items with developer assigned, excluding terminal stages.
      * @param terminalStages Set of stage API values considered terminal.
-     * @return List of active WorkItem__c records with DeveloperLookupId__c populated.
+     * @return List of active WorkItem__c records with DeveloperLookup__c populated.
      */
     private static List<WorkItem__c> queryActiveItems(Set<String> terminalStages) {
         return [
-            SELECT Id, DeveloperLookupId__c, DeveloperLookupId__r.Name,
+            SELECT Id, DeveloperLookup__c, DeveloperLookup__r.Name,
                    StageNamePk__c, EstimatedHoursNumber__c
             FROM WorkItem__c
-            WHERE DeveloperLookupId__c != NULL
+            WHERE DeveloperLookup__c != NULL
             AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
-            ORDER BY DeveloperLookupId__r.Name ASC
+            ORDER BY DeveloperLookup__r.Name ASC
             LIMIT 2000
         ];
     }
@@ -93,9 +93,9 @@ global with sharing class DeliveryWorkloadController {
         Map<Id, Map<String, Object>> devMap = new Map<Id, Map<String, Object>>();
 
         for (WorkItem__c wi : activeItems) {
-            Id devId = wi.DeveloperLookupId__c;
+            Id devId = wi.DeveloperLookup__c;
             if (!devMap.containsKey(devId)) {
-                devMap.put(devId, initDeveloperEntry(devId, wi.DeveloperLookupId__r.Name));
+                devMap.put(devId, initDeveloperEntry(devId, wi.DeveloperLookup__r.Name));
             }
             Map<String, Object> entry = devMap.get(devId);
             incrementEntry(entry, wi);

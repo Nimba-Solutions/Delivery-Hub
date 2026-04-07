@@ -28,17 +28,17 @@ public class DeliveryHubBoardControllerTest {
         insert new List<NetworkEntity__c>{ entityA, entityB };
 
         List<WorkItem__c> workItems = new List<WorkItem__c>{
-            new WorkItem__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Blocked Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Blocking Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityA.Id),
-            new WorkItem__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityId__c = entityB.Id)
+            new WorkItem__c(BriefDescriptionTxt__c = 'Stage Test', StageNamePk__c = 'Open', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityLookup__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Sort Test', StageNamePk__c = 'Open', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityLookup__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocked Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityLookup__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Blocking Work Item', StageNamePk__c = 'Open', SortOrderNumber__c = 2, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityLookup__c = entityA.Id),
+            new WorkItem__c(BriefDescriptionTxt__c = 'Search Target', StageNamePk__c = 'In Progress', SortOrderNumber__c = 1, ActivatedDateTime__c = Datetime.now(), ClientNetworkEntityLookup__c = entityB.Id)
         };
         insert workItems;
 
         WorkItemDependency__c dep = new WorkItemDependency__c(
-            BlockedWorkItemId__c = workItems[2].Id,
-            BlockingWorkItemId__c = workItems[3].Id,
+            BlockedWorkItemLookup__c = workItems[2].Id,
+            BlockingWorkItemLookup__c = workItems[3].Id,
             TypePk__c = 'Blocks'
         );
         insert dep;
@@ -180,7 +180,7 @@ public class DeliveryHubBoardControllerTest {
 
             // Add a comment for richer coverage
             insert new WorkItemComment__c(
-                WorkItemId__c = workItem.Id,
+                WorkItemLookup__c = workItem.Id,
                 BodyTxt__c = 'Test panel comment',
                 AuthorTxt__c = 'Test User'
             );

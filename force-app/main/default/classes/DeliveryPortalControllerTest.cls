@@ -36,7 +36,7 @@ private class DeliveryPortalControllerTest {
                 PriorityPk__c = 'High',
                 ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
-                ClientNetworkEntityId__c = entityA.Id,
+                ClientNetworkEntityLookup__c = entityA.Id,
                 DetailsTxt__c = '<p>Some <b>HTML</b> description for testing.</p>'
             ),
             new WorkItem__c(
@@ -45,7 +45,7 @@ private class DeliveryPortalControllerTest {
                 PriorityPk__c = 'Medium',
                 ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
-                ClientNetworkEntityId__c = entityA.Id
+                ClientNetworkEntityLookup__c = entityA.Id
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Completed Item',
@@ -53,7 +53,7 @@ private class DeliveryPortalControllerTest {
                 PriorityPk__c = 'Low',
                 ActivatedDateTime__c = null,
                 StatusPk__c = 'Closed',
-                ClientNetworkEntityId__c = entityA.Id
+                ClientNetworkEntityLookup__c = entityA.Id
             ),
             // Entity B: 1 active (should not appear in Entity A queries)
             new WorkItem__c(
@@ -62,20 +62,20 @@ private class DeliveryPortalControllerTest {
                 PriorityPk__c = 'Low',
                 ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
-                ClientNetworkEntityId__c = entityB.Id
+                ClientNetworkEntityLookup__c = entityB.Id
             )
         };
         insert items;
 
         // Add comments to the first item
         WorkItemComment__c c1 = new WorkItemComment__c(
-            WorkItemId__c = items[0].Id,
+            WorkItemLookup__c = items[0].Id,
             BodyTxt__c = 'First comment on active item 1',
             AuthorTxt__c = 'Developer',
             SourcePk__c = 'Salesforce'
         );
         WorkItemComment__c c2 = new WorkItemComment__c(
-            WorkItemId__c = items[0].Id,
+            WorkItemLookup__c = items[0].Id,
             BodyTxt__c = 'Second comment',
             AuthorTxt__c = 'Client User',
             SourcePk__c = 'Client'
@@ -277,7 +277,7 @@ private class DeliveryPortalControllerTest {
 
             WorkItem__c created = [
                 SELECT BriefDescriptionTxt__c, DetailsTxt__c, PriorityPk__c,
-                       StageNamePk__c, ActivatedDateTime__c, ClientNetworkEntityId__c
+                       StageNamePk__c, ActivatedDateTime__c, ClientNetworkEntityLookup__c
                 FROM WorkItem__c
                 WHERE Id = :newItemId
                 LIMIT 1
@@ -288,7 +288,7 @@ private class DeliveryPortalControllerTest {
             System.assertEquals('High', created.PriorityPk__c, 'Priority should match');
             System.assertEquals('Backlog', created.StageNamePk__c, 'New items should start in Backlog');
             System.assertNotEquals(null, created.ActivatedDateTime__c, 'Should be active');
-            System.assertEquals(entityA.Id, created.ClientNetworkEntityId__c, 'Should be linked to the entity');
+            System.assertEquals(entityA.Id, created.ClientNetworkEntityLookup__c, 'Should be linked to the entity');
         }
     }
 

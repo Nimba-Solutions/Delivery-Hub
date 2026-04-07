@@ -33,7 +33,7 @@
         </columns>
         <columns>
             <checkedByDefault>true</checkedByDefault>
-            <field>WorkItemId__c</field>
+            <field>WorkItemLookup__c</field>
             <table>WorkLog__c</table>
         </columns>
         <columns>

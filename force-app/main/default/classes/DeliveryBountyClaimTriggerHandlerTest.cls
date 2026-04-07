@@ -34,7 +34,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
             BountyTokenTxt__c = 'sync-test-token-001',
             BountyDifficultyPk__c = 'Intermediate',
             BountyMaxClaimsNumber__c = 5,
-            ClientNetworkEntityId__c = entity.Id
+            ClientNetworkEntityLookup__c = entity.Id
         );
         insert bounty;
     }
@@ -46,8 +46,8 @@ private class DeliveryBountyClaimTriggerHandlerTest {
 
             Test.startTest();
             BountyClaim__c claim = new BountyClaim__c(
-                WorkItemId__c = bounty.Id,
-                ClaimantEmailTxt__c = 'dev@example.com',
+                WorkItemLookup__c = bounty.Id,
+                ClaimantEmail__c = 'dev@example.com',
                 ClaimantNameTxt__c = 'Test Dev',
                 StatusPk__c = 'Active',
                 ClaimedDateTime__c = Datetime.now()
@@ -75,8 +75,8 @@ private class DeliveryBountyClaimTriggerHandlerTest {
             WorkItem__c bounty = [SELECT Id FROM WorkItem__c WHERE BountyTokenTxt__c = 'sync-test-token-001'];
 
             BountyClaim__c claim = new BountyClaim__c(
-                WorkItemId__c = bounty.Id,
-                ClaimantEmailTxt__c = 'dev@example.com',
+                WorkItemLookup__c = bounty.Id,
+                ClaimantEmail__c = 'dev@example.com',
                 ClaimantNameTxt__c = 'Test Dev',
                 StatusPk__c = 'Active',
                 ClaimedDateTime__c = Datetime.now()
@@ -86,7 +86,7 @@ private class DeliveryBountyClaimTriggerHandlerTest {
             Test.startTest();
             claim.StatusPk__c = 'Submitted';
             claim.SubmittedDateTime__c = Datetime.now();
-            claim.WorkProofUrlTxt__c = 'https://github.com/example/pr/1';
+            claim.WorkProofUrl__c = 'https://github.com/example/pr/1';
             update claim;
             Test.stopTest();
 
@@ -119,14 +119,14 @@ private class DeliveryBountyClaimTriggerHandlerTest {
                 BountyStatusPk__c = 'Open',
                 BountyTokenTxt__c = 'no-push-token-001',
                 BountyMaxClaimsNumber__c = 3,
-                ClientNetworkEntityId__c = noPushEntity.Id
+                ClientNetworkEntityLookup__c = noPushEntity.Id
             );
             insert bounty;
 
             Test.startTest();
             BountyClaim__c claim = new BountyClaim__c(
-                WorkItemId__c = bounty.Id,
-                ClaimantEmailTxt__c = 'dev2@example.com',
+                WorkItemLookup__c = bounty.Id,
+                ClaimantEmail__c = 'dev2@example.com',
                 ClaimantNameTxt__c = 'Dev Two',
                 StatusPk__c = 'Active',
                 ClaimedDateTime__c = Datetime.now()

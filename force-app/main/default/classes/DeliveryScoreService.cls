@@ -48,18 +48,18 @@ global with sharing class DeliveryScoreService {
         if (entityId != null) {
             items = [
                 SELECT Id, StageNamePk__c, PriorityPk__c, WorkflowTypeTxt__c,
-                       ClientNetworkEntityId__c, LastModifiedDate,
+                       ClientNetworkEntityLookup__c, LastModifiedDate,
                        (SELECT Id FROM WorkItemComments__r)
                 FROM WorkItem__c
                 WHERE TemplateMarkedDateTime__c = null
-                AND ClientNetworkEntityId__c = :entityId
+                AND ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
             ];
         } else {
             items = [
                 SELECT Id, StageNamePk__c, PriorityPk__c, WorkflowTypeTxt__c,
-                       ClientNetworkEntityId__c, LastModifiedDate,
+                       ClientNetworkEntityLookup__c, LastModifiedDate,
                        (SELECT Id FROM WorkItemComments__r)
                 FROM WorkItem__c
                 WHERE TemplateMarkedDateTime__c = null

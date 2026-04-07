@@ -4,7 +4,7 @@
     <description>Alias of BudgetVarianceNumber__c. Difference between estimated and logged hours.</description>
     <inlineHelpText>Estimated Hours minus Total Logged Hours. Positive means under estimate; negative means over.</inlineHelpText>
     <externalId>false</externalId>
-    <formula>EstimatedHoursNumber__c - TotalLoggedHoursNumber__c</formula>
+    <formula>EstimatedHoursNumber__c - TotalLoggedHoursSum__c</formula>
     <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
     <label>Hours Variance</label>
     <precision>18</precision>

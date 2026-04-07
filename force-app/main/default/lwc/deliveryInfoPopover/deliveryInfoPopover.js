@@ -126,7 +126,7 @@ const INFO_REGISTRY = {
             'The main drag-and-drop board for managing work items through workflow stages. Columns, transitions, and colors are driven by Custom Metadata, not hardcoded. Supports persona-based views (Client, Developer, PM), filtering by tags/priority/developer, swimlanes, and card quick-actions.',
         friendlyName: 'Kanban Board',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.WorkflowTypeTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.DeveloperLookupId__c, WorkItem__c.TagsTxt__c, WorkflowType__mdt, WorkflowStage__mdt, WorkflowPersonaView__mdt'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.WorkflowTypeTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.DeveloperLookup__c, WorkItem__c.TagsTxt__c, WorkflowType__mdt, WorkflowStage__mdt, WorkflowPersonaView__mdt'
     },
     deliveryHubSetup: {
         dataSource:
@@ -144,7 +144,7 @@ const INFO_REGISTRY = {
             'Generates formatted release notes from completed work items within a date range. Items are grouped by category with priority badges and developer attribution. Supports one-click copy to clipboard for sharing.',
         friendlyName: 'Release Notes',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.CompletedDate__c, WorkItem__c.RequestTypePk__c, WorkItem__c.BriefDescriptionTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.DeveloperLookupId__c'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.CompletedDate__c, WorkItem__c.RequestTypePk__c, WorkItem__c.BriefDescriptionTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.DeveloperLookup__c'
     },
     deliveryScore: {
         dataSource:
@@ -171,7 +171,7 @@ const INFO_REGISTRY = {
             'Stage transition control panel on a Work Item record page. Shows the current stage with phase label, missing field warnings, forward move buttons, backtrack options, and fast-track indicators. Buttons are dynamically enabled/disabled based on field completeness.',
         friendlyName: 'Action Center',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.DeveloperLookupId__c, WorkItem__c.AcceptanceCriteriaTxt__c, WorkflowStage__mdt.ForwardTransitions, WorkflowStage__mdt.BacktrackTransitions'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.DeveloperLookup__c, WorkItem__c.AcceptanceCriteriaTxt__c, WorkflowStage__mdt.ForwardTransitions, WorkflowStage__mdt.BacktrackTransitions'
     },
     deliveryWorkItemStageGateWarning: {
         dataSource:
@@ -180,7 +180,7 @@ const INFO_REGISTRY = {
             'Context-sensitive alert banner on a Work Item record page. Evaluates gating rules based on the current stage and shows warnings, errors, or "fast track" green-light messages when certain fields are missing or budget conditions are met.',
         friendlyName: 'Stage Gate Warning',
         keyFields:
-            'WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.DeveloperLookupId__c'
+            'WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.DeveloperLookup__c'
     },
     deliveryNimbusGantt: {
         dataSource:
@@ -189,7 +189,7 @@ const INFO_REGISTRY = {
             'Interactive Gantt timeline built on the Nimbus Gantt canvas library. Five visualization modes: Gantt (timeline bars with dependencies), Treemap (rectangles sized by hours), Bubbles (scatter by timeline/entity/effort), Calendar (GitHub-style heatmap), and Flow (stage distribution). Supports drag-to-reschedule, zoom levels (day/week/month/quarter), dark mode, critical path highlighting, and phone remote control via Platform Events.',
         friendlyName: 'Project Timeline',
         keyFields:
-            'WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.DeveloperLookupId__c, WorkItem__c.EstimatedHoursNumber__c, WorkItemDependency__c'
+            'WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.DeveloperLookup__c, WorkItem__c.EstimatedHoursNumber__c, WorkItemDependency__c'
     }
 };
 

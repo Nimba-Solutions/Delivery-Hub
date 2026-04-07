@@ -29,7 +29,7 @@ public without sharing class DeliveryBountyService {
                        AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
                        BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
                        BountySkillsTxt__c, BountyMaxClaimsNumber__c,
-                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       ClientNetworkEntityLookup__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
                 WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
@@ -42,7 +42,7 @@ public without sharing class DeliveryBountyService {
                        AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
                        BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
                        BountySkillsTxt__c, BountyMaxClaimsNumber__c,
-                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       ClientNetworkEntityLookup__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
                 WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
@@ -55,7 +55,7 @@ public without sharing class DeliveryBountyService {
                        AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
                        BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
                        BountySkillsTxt__c, BountyMaxClaimsNumber__c,
-                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       ClientNetworkEntityLookup__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
                 WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
@@ -68,7 +68,7 @@ public without sharing class DeliveryBountyService {
                        AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
                        BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
                        BountySkillsTxt__c, BountyMaxClaimsNumber__c,
-                       ClientNetworkEntityId__r.Name, CreatedDate,
+                       ClientNetworkEntityLookup__r.Name, CreatedDate,
                        (SELECT Id FROM BountyClaims__r WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review'))
                 FROM WorkItem__c
                 WHERE BountyEnabledDateTime__c != null AND BountyStatusPk__c = 'Open' AND ActivatedDateTime__c != null
@@ -96,7 +96,7 @@ public without sharing class DeliveryBountyService {
                    AcceptanceCriteriaTxt__c, BountyAmountCurrency__c, BountyDeadlineDate__c,
                    BountyStatusPk__c, BountyTokenTxt__c, BountyDifficultyPk__c,
                    BountySkillsTxt__c, BountyMaxClaimsNumber__c,
-                   ClientNetworkEntityId__r.Name, CreatedDate,
+                   ClientNetworkEntityLookup__r.Name, CreatedDate,
                    (SELECT Id, ClaimantNameTxt__c, StatusPk__c, ClaimedDateTime__c
                     FROM BountyClaims__r
                     WHERE StatusPk__c IN ('Active', 'Submitted', 'Under Review')
@@ -129,8 +129,8 @@ public without sharing class DeliveryBountyService {
         validateClaimEligibility(bounty, claimantEmail);
 
         BountyClaim__c claim = new BountyClaim__c(
-            WorkItemId__c = bounty.Id,
-            ClaimantEmailTxt__c = claimantEmail,
+            WorkItemLookup__c = bounty.Id,
+            ClaimantEmail__c = claimantEmail,
             ClaimantNameTxt__c = claimantName,
             NoteTxt__c = note,
             StatusPk__c = 'Active',
@@ -144,7 +144,7 @@ public without sharing class DeliveryBountyService {
             WITH SYSTEM_MODE LIMIT 1
         ];
         if (!entities.isEmpty()) {
-            claim.ClaimantEntityId__c = entities[0].Id;
+            claim.ClaimantEntityLookup__c = entities[0].Id;
         }
 
         insert claim;
@@ -152,7 +152,7 @@ public without sharing class DeliveryBountyService {
         // Update bounty status if max claims reached
         Integer activeClaims = [
             SELECT COUNT() FROM BountyClaim__c
-            WHERE WorkItemId__c = :bounty.Id
+            WHERE WorkItemLookup__c = :bounty.Id
                 AND StatusPk__c IN ('Active', 'Submitted', 'Under Review')
             WITH SYSTEM_MODE
         ];
@@ -180,8 +180,8 @@ public without sharing class DeliveryBountyService {
 
         List<BountyClaim__c> claims = [
             SELECT Id, StatusPk__c FROM BountyClaim__c
-            WHERE WorkItemId__c = :bounty.Id
-                AND ClaimantEmailTxt__c = :claimantEmail
+            WHERE WorkItemLookup__c = :bounty.Id
+                AND ClaimantEmail__c = :claimantEmail
                 AND StatusPk__c = 'Active'
             WITH SYSTEM_MODE
             LIMIT 1
@@ -193,7 +193,7 @@ public without sharing class DeliveryBountyService {
         BountyClaim__c claim = claims[0];
         claim.StatusPk__c = 'Submitted';
         claim.SubmittedDateTime__c = Datetime.now();
-        claim.WorkProofUrlTxt__c = workProofUrl;
+        claim.WorkProofUrl__c = workProofUrl;
         if (String.isNotBlank(note)) { claim.NoteTxt__c = note; }
         update claim;
 
@@ -213,8 +213,8 @@ public without sharing class DeliveryBountyService {
 
         List<BountyClaim__c> claims = [
             SELECT Id, StatusPk__c FROM BountyClaim__c
-            WHERE WorkItemId__c = :bounty.Id
-                AND ClaimantEmailTxt__c = :claimantEmail
+            WHERE WorkItemLookup__c = :bounty.Id
+                AND ClaimantEmail__c = :claimantEmail
                 AND StatusPk__c = 'Active'
             WITH SYSTEM_MODE
             LIMIT 1
@@ -272,8 +272,8 @@ public without sharing class DeliveryBountyService {
         // Check for duplicate claim
         Integer existingClaims = [
             SELECT COUNT() FROM BountyClaim__c
-            WHERE WorkItemId__c = :bounty.Id
-                AND ClaimantEmailTxt__c = :claimantEmail
+            WHERE WorkItemLookup__c = :bounty.Id
+                AND ClaimantEmail__c = :claimantEmail
                 AND StatusPk__c IN ('Active', 'Submitted', 'Under Review')
             WITH SYSTEM_MODE
         ];
@@ -285,7 +285,7 @@ public without sharing class DeliveryBountyService {
         if (bounty.BountyMaxClaimsNumber__c != null) {
             Integer activeClaims = [
                 SELECT COUNT() FROM BountyClaim__c
-                WHERE WorkItemId__c = :bounty.Id
+                WHERE WorkItemLookup__c = :bounty.Id
                     AND StatusPk__c IN ('Active', 'Submitted', 'Under Review')
                 WITH SYSTEM_MODE
             ];
@@ -308,7 +308,7 @@ public without sharing class DeliveryBountyService {
             'skills' => parseSkills(wi.BountySkillsTxt__c),
             'maxClaims' => wi.BountyMaxClaimsNumber__c,
             'claimCount' => wi.BountyClaims__r != null ? wi.BountyClaims__r.size() : 0,
-            'posterName' => wi.ClientNetworkEntityId__r != null ? wi.ClientNetworkEntityId__r.Name : null,
+            'posterName' => wi.ClientNetworkEntityLookup__r != null ? wi.ClientNetworkEntityLookup__r.Name : null,
             'postedDate' => wi.CreatedDate
         };
     }
