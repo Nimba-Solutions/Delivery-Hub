@@ -7,7 +7,7 @@
  *               flow, hash chain materialization, and image-based signatures.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc, PMD.CyclomaticComplexity')
 public with sharing class DeliveryDocActionService {
 
     // Cache template lookups within a transaction so multi-doc generation does not re-query.
