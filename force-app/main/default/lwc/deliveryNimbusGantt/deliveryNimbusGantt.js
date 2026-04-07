@@ -430,12 +430,14 @@ export default class DeliveryNimbusGantt extends LightningElement {
             // Sonification (play project as music)
             use(G.SonificationPlugin, { tempo: 120, scale: 'pentatonic', volume: 0.3 });
 
-            // Telemetry (local logging only, no external endpoint)
+            // Telemetry (local logging only, no external endpoint).
+            // Only forward error events to console.warn — non-error events are too noisy.
             if (G.TelemetryPlugin) {
                 g.use(G.TelemetryPlugin({
                     onEvent: function(event) {
-                        if (event.type.includes('error') || event.type === 'gantt.session.duration') {
-                            console.info('[NimbusGantt]', event.type, event.data);
+                        if (event.type.includes('error')) {
+                            // eslint-disable-next-line no-console
+                            console.warn('[NimbusGantt]', event.type, event.data);
                         }
                     }
                 }));
@@ -2081,7 +2083,6 @@ export default class DeliveryNimbusGantt extends LightningElement {
         function runStep() {
             if (!self.isDemoRunning) { return; }
             step++;
-            console.log('[NimbusGantt:demo] Step ' + step + '/' + TOTAL);
             try {
                 switch(step) {
 

@@ -3,7 +3,7 @@
 // Run this script on each org (MF-Prod, Nimba, dh-prod) AFTER package upgrade.
 //
 // Migrates data from old field names to new field names:
-//   Developer__c           → DeveloperLookupId__c  (Lookup to User)
+//   Developer__c           → DeveloperLookup__c  (Lookup to User)
 //   Epic__c                → EpicTxt__c            (Text 255)
 //   Tags__c                → TagsTxt__c            (Text 255)
 //   EstimatedEffortNum__c  → EstimatedHoursNumber__c  (Number — already renamed in schema)
@@ -30,15 +30,15 @@ Integer totalBountyMaxClaims = 0;
 Integer totalErrors = 0;
 
 // =============================================================================
-// MIGRATION 1: Developer__c → DeveloperLookupId__c
+// MIGRATION 1: Developer__c → DeveloperLookup__c
 // =============================================================================
-System.debug('=== MIGRATION 1: Developer__c → DeveloperLookupId__c ===');
+System.debug('=== MIGRATION 1: Developer__c → DeveloperLookup__c ===');
 
 List<delivery__WorkItem__c> devItems = [
-    SELECT Id, delivery__Developer__c, delivery__DeveloperLookupId__c
+    SELECT Id, delivery__Developer__c, delivery__DeveloperLookup__c
     FROM delivery__WorkItem__c
     WHERE delivery__Developer__c != null
-      AND delivery__DeveloperLookupId__c = null
+      AND delivery__DeveloperLookup__c = null
     LIMIT 10000
 ];
 
@@ -48,7 +48,7 @@ for (Integer i = 0; i < devItems.size(); i += BATCH_SIZE) {
     List<delivery__WorkItem__c> batch = new List<delivery__WorkItem__c>();
     for (Integer j = i; j < Math.min(i + BATCH_SIZE, devItems.size()); j++) {
         delivery__WorkItem__c wi = devItems[j];
-        wi.delivery__DeveloperLookupId__c = wi.delivery__Developer__c;
+        wi.delivery__DeveloperLookup__c = wi.delivery__Developer__c;
         batch.add(wi);
     }
 
@@ -230,7 +230,7 @@ System.debug('BountyMaxClaims migration complete: ' + totalBountyMaxClaims + ' r
 // SUMMARY
 // =============================================================================
 System.debug('=== MIGRATION SUMMARY ===');
-System.debug('Developer__c → DeveloperLookupId__c : ' + totalDeveloper + ' records');
+System.debug('Developer__c → DeveloperLookup__c : ' + totalDeveloper + ' records');
 System.debug('Epic__c → EpicTxt__c               : ' + totalEpic + ' records');
 System.debug('Tags__c → TagsTxt__c               : ' + totalTags + ' records');
 System.debug('EstimatedEffortNum → EstimatedHours : ' + totalEffort + ' records');
