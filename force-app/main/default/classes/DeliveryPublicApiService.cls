@@ -231,9 +231,18 @@ global without sharing class DeliveryPublicApiService {
     }
 
     private static void getBoardSummary() {
+        // Use the REST-safe variant — draftBoardSummary() throws AuraHandledException
+        // on validation failure, which raises an UNCATCHABLE LimitException when
+        // called outside an Aura/VF context (this is a REST endpoint).
         try {
-            sendSuccess(new Map<String, Object>{ 'summary' => DeliveryAiController.draftBoardSummary() });
+            sendSuccess(new Map<String, Object>{ 'summary' => DeliveryAiController.draftBoardSummaryForRest() });
+        } catch (DeliveryHubException e) {
+            // Expected: AI not configured, no work items, OpenAI down, etc.
+            // Degrade gracefully — the client treats `summary: null` as "no summary available".
+            sendSuccess(new Map<String, Object>{ 'summary' => null, 'reason' => e.getMessage() });
         } catch (Exception e) {
+            // Unexpected: log + degrade. Don't leak the raw message to the client.
+            System.debug(LoggingLevel.WARN, 'getBoardSummary failed: ' + e.getMessage() + '\n' + e.getStackTraceString());
             sendSuccess(new Map<String, Object>{ 'summary' => null });
         }
     }

@@ -20,24 +20,28 @@ global with sharing class DeliveryAiController {
      */
     @AuraEnabled
     global static String draftStatusUpdate(Id workItemId) {
-        DeliveryHubSettings__c settings = getValidatedSettings();
+        try {
+            DeliveryHubSettings__c settings = getValidatedSettings();
 
-        List<WorkItem__c> workItems = [
-            SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
-                   EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
-                   ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c
-            FROM WorkItem__c
-            WHERE Id = :workItemId
-            WITH SYSTEM_MODE
-            LIMIT 1
-        ];
+            List<WorkItem__c> workItems = [
+                SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c,
+                       EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
+                       ProjectedUATReadyDate__c, AcceptanceCriteriaTxt__c
+                FROM WorkItem__c
+                WHERE Id = :workItemId
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
 
-        if (workItems.isEmpty()) {
-            throw new AuraHandledException('Work Item not found.');
+            if (workItems.isEmpty()) {
+                throw new DeliveryHubException('Work Item not found.');
+            }
+
+            String model = getModel(settings);
+            return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildStatusPrompt(workItems[0]));
+        } catch (DeliveryHubException e) {
+            throw new AuraHandledException(e.getMessage());
         }
-
-        String model = getModel(settings);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildStatusPrompt(workItems[0]));
     }
 
     /**
@@ -48,22 +52,26 @@ global with sharing class DeliveryAiController {
      */
     @AuraEnabled
     global static String suggestAcceptanceCriteria(Id workItemId) {
-        DeliveryHubSettings__c settings = getValidatedSettings();
+        try {
+            DeliveryHubSettings__c settings = getValidatedSettings();
 
-        List<WorkItem__c> workItems = [
-            SELECT BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c
-            FROM WorkItem__c
-            WHERE Id = :workItemId
-            WITH SYSTEM_MODE
-            LIMIT 1
-        ];
+            List<WorkItem__c> workItems = [
+                SELECT BriefDescriptionTxt__c, DetailsTxt__c, StageNamePk__c
+                FROM WorkItem__c
+                WHERE Id = :workItemId
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
 
-        if (workItems.isEmpty()) {
-            throw new AuraHandledException('Work Item not found.');
+            if (workItems.isEmpty()) {
+                throw new DeliveryHubException('Work Item not found.');
+            }
+
+            String model = getModel(settings);
+            return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildCriteriaPrompt(workItems[0]));
+        } catch (DeliveryHubException e) {
+            throw new AuraHandledException(e.getMessage());
         }
-
-        String model = getModel(settings);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildCriteriaPrompt(workItems[0]));
     }
 
     /**
@@ -73,6 +81,24 @@ global with sharing class DeliveryAiController {
      */
     @AuraEnabled
     global static String draftBoardSummary() {
+        try {
+            return draftBoardSummaryForRest();
+        } catch (DeliveryHubException e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+    /**
+     * @description REST-safe variant of draftBoardSummary. Throws DeliveryHubException
+     *              (catchable in any context) instead of AuraHandledException
+     *              (which is uncatchable when thrown from a non-Aura context and
+     *              raises a System.LimitException).
+     *
+     *              REST callers (e.g., DeliveryPublicApiService.getBoardSummary)
+     *              MUST call this method, not draftBoardSummary().
+     * @return String The generated weekly status text.
+     */
+    public static String draftBoardSummaryForRest() {
         DeliveryHubSettings__c settings = getValidatedSettings();
 
         List<WorkItem__c> workItems = [
@@ -85,7 +111,7 @@ global with sharing class DeliveryAiController {
         ];
 
         if (workItems.isEmpty()) {
-            throw new AuraHandledException('No active work items found to summarise.');
+            throw new DeliveryHubException('No active work items found to summarise.');
         }
 
         String model = getModel(settings);
@@ -100,25 +126,29 @@ global with sharing class DeliveryAiController {
      */
     @AuraEnabled
     global static String draftReleaseNotes() {
-        DeliveryHubSettings__c settings = getValidatedSettings();
+        try {
+            DeliveryHubSettings__c settings = getValidatedSettings();
 
-        List<WorkItem__c> workItems = [
-            SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
-            FROM WorkItem__c
-            WHERE StageNamePk__c IN ('Done', 'Deployed to Prod')
-            AND LastModifiedDate >= :Datetime.now().addDays(-30)
-            WITH SYSTEM_MODE
-            ORDER BY PriorityPk__c, Name
-        ];
+            List<WorkItem__c> workItems = [
+                SELECT Name, BriefDescriptionTxt__c, StageNamePk__c, PriorityPk__c
+                FROM WorkItem__c
+                WHERE StageNamePk__c IN ('Done', 'Deployed to Prod')
+                AND LastModifiedDate >= :Datetime.now().addDays(-30)
+                WITH SYSTEM_MODE
+                ORDER BY PriorityPk__c, Name
+            ];
 
-        if (workItems.isEmpty()) {
-            throw new AuraHandledException(
-                'No work items were completed or deployed in the last 30 days.'
-            );
+            if (workItems.isEmpty()) {
+                throw new DeliveryHubException(
+                    'No work items were completed or deployed in the last 30 days.'
+                );
+            }
+
+            String model = getModel(settings);
+            return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildReleaseNotesPrompt(workItems));
+        } catch (DeliveryHubException e) {
+            throw new AuraHandledException(e.getMessage());
         }
-
-        String model = getModel(settings);
-        return callOpenAi(settings.OpenAIApiKeyTxt__c, model, buildReleaseNotesPrompt(workItems));
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
@@ -131,12 +161,12 @@ global with sharing class DeliveryAiController {
     private static DeliveryHubSettings__c getValidatedSettings() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null || settings.EnableAISuggestionsDateTime__c == null) {
-            throw new AuraHandledException(
+            throw new DeliveryHubException(
                 'AI features are not enabled. Turn them on in Delivery Hub \u2192 AI Settings.'
             );
         }
         if (String.isBlank(settings.OpenAIApiKeyTxt__c)) {
-            throw new AuraHandledException(
+            throw new DeliveryHubException(
                 'No OpenAI API key found. Add and test your key in Delivery Hub \u2192 AI Settings.'
             );
         }
@@ -182,7 +212,7 @@ global with sharing class DeliveryAiController {
         HttpResponse res = new Http().send(req);
 
         if (res.getStatusCode() != 200) {
-            throw new AuraHandledException(
+            throw new DeliveryHubException(
                 'OpenAI returned an error (' + res.getStatusCode() + '). '
                 + 'Verify your API key is active and try again.'
             );
@@ -193,7 +223,7 @@ global with sharing class DeliveryAiController {
         List<Object> choices = (List<Object>) responseMap.get('choices');
 
         if (choices == null || choices.isEmpty()) {
-            throw new AuraHandledException('No response received from OpenAI. Please try again.');
+            throw new DeliveryHubException('No response received from OpenAI. Please try again.');
         }
 
         Map<String, Object> msg =
