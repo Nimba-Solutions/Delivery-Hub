@@ -328,7 +328,7 @@
                     <h1>Status Unavailable</h1>
                     <p>{!errorMessage}</p>
                     <div class="footer" style="margin-top: 30px;">
-                        Powered by <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Delivery Hub</a> | Cloud Nimbus LLC
+                        Powered by <a href="https://www.cloudnimbusllc.com" target="_blank" rel="noopener">Delivery Hub</a> | Cloud Nimbus LLC
                     </div>
                 </div>
             </apex:outputPanel>
@@ -462,7 +462,7 @@
 
                     <!-- Footer -->
                     <div class="footer">
-                        Powered by <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Delivery Hub</a> | <a href="https://www.cloudnimbus.dev" target="_blank" rel="noopener">Cloud Nimbus LLC</a>
+                        Powered by <a href="https://www.cloudnimbusllc.com" target="_blank" rel="noopener">Delivery Hub</a> | <a href="https://www.cloudnimbusllc.com" target="_blank" rel="noopener">Cloud Nimbus LLC</a>
                     </div>
                 </div>
             </apex:outputPanel>
