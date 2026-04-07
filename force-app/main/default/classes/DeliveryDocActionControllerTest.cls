@@ -401,6 +401,7 @@ private class DeliveryDocActionControllerTest {
         // via getDocumentForSigner (which has no status filter).
         System.runAs(testUser) {
             String token = getFirstSignerToken();
+            Id firstActionId = getActions(getDoc().Id)[0].Id;
 
             Test.startTest();
             DeliveryDocActionController.signActionPublic(
@@ -415,9 +416,7 @@ private class DeliveryDocActionControllerTest {
             DocumentAction__c reloaded = [
                 SELECT StatusPk__c, SignerTokenTxt__c
                 FROM DocumentAction__c
-                WHERE Id IN (
-                    SELECT Id FROM DocumentAction__c WHERE SignerNameTxt__c = 'Coleman Cameron'
-                )
+                WHERE Id = :firstActionId
                 LIMIT 1
             ];
             System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
