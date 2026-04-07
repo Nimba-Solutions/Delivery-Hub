@@ -367,7 +367,13 @@ private class DeliveryDocActionControllerTest {
 
             Test.startTest();
             Map<String, Object> result = DeliveryDocActionController.signActionPublic(
-                token, 'Coleman Cameron', 'coleman@example.com', true, 'Mozilla/5.0 Test'
+                token,
+                new Map<String, Object>{
+                    'signerName'   => 'Coleman Cameron',
+                    'signerEmail'  => 'coleman@example.com',
+                    'consentGiven' => true,
+                    'userAgent'    => 'Mozilla/5.0 Test'
+                }
             );
             Test.stopTest();
 
@@ -393,7 +399,11 @@ private class DeliveryDocActionControllerTest {
             Test.startTest();
             try {
                 DeliveryDocActionController.signActionPublic(
-                    token, 'Coleman', null, false, null
+                    token,
+                    new Map<String, Object>{
+                        'signerName'   => 'Coleman',
+                        'consentGiven' => false
+                    }
                 );
                 System.assert(false, 'Expected AuraHandledException for missing consent');
             } catch (AuraHandledException e) {
@@ -417,7 +427,13 @@ private class DeliveryDocActionControllerTest {
             Test.startTest();
             for (DocumentAction__c a : allActions) {
                 DeliveryDocActionController.signActionPublic(
-                    a.SignerTokenTxt__c, 'Signer ' + a.Id, 'signer@example.com', true, 'UA'
+                    a.SignerTokenTxt__c,
+                    new Map<String, Object>{
+                        'signerName'   => 'Signer ' + a.Id,
+                        'signerEmail'  => 'signer@example.com',
+                        'consentGiven' => true,
+                        'userAgent'    => 'UA'
+                    }
                 );
             }
             Test.stopTest();
@@ -449,9 +465,14 @@ private class DeliveryDocActionControllerTest {
             RestContext.response = new RestResponse();
 
             Test.startTest();
-            Map<String, Object> result = DeliveryDocActionRestApi.handlePost();
+            DeliveryDocActionRestApi.handlePost();
             Test.stopTest();
 
+            System.assertEquals(200, RestContext.response.statusCode,
+                'REST POST should return 200 on success');
+            Map<String, Object> result = (Map<String, Object>) JSON.deserializeUntyped(
+                RestContext.response.responseBody.toString()
+            );
             System.assertEquals('Completed', result.get('status'),
                 'REST POST should sign the slot');
 
@@ -480,9 +501,14 @@ private class DeliveryDocActionControllerTest {
             RestContext.response = new RestResponse();
 
             Test.startTest();
-            Map<String, Object> result = DeliveryDocActionRestApi.handleGet();
+            DeliveryDocActionRestApi.handleGet();
             Test.stopTest();
 
+            System.assertEquals(200, RestContext.response.statusCode,
+                'REST GET should return 200 on success');
+            Map<String, Object> result = (Map<String, Object>) JSON.deserializeUntyped(
+                RestContext.response.responseBody.toString()
+            );
             System.assertNotEquals(null, result.get('document'),
                 'GET should return the document bundle');
             System.assertNotEquals(null, result.get('signerActionId'),
@@ -500,13 +526,16 @@ private class DeliveryDocActionControllerTest {
             RestContext.response = new RestResponse();
 
             Test.startTest();
-            Map<String, Object> result = DeliveryDocActionRestApi.handleGet();
+            DeliveryDocActionRestApi.handleGet();
             Test.stopTest();
 
-            System.assertEquals(true, result.get('error'),
-                'Invalid token should return error response');
             System.assertEquals(400, RestContext.response.statusCode,
-                'Status should be 400');
+                'Invalid token should return 400');
+            Map<String, Object> result = (Map<String, Object>) JSON.deserializeUntyped(
+                RestContext.response.responseBody.toString()
+            );
+            System.assertEquals(true, result.get('error'),
+                'Invalid token should return error response body');
         }
     }
 }

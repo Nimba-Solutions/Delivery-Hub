@@ -55,11 +55,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DocumentAction__c.ActionLabelTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
         <field>DocumentAction__c.AssignedEntityId__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -70,17 +65,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>DocumentAction__c.DocumentId__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
         <field>DocumentAction__c.SignatureDataTxt__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>DocumentAction__c.SignatureTypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -101,11 +86,6 @@
     <fieldPermissions>
         <editable>false</editable>
         <field>DocumentAction__c.SortOrderNumber__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>DocumentAction__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

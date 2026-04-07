@@ -75,10 +75,12 @@ export default class DeliveryDocumentSignPortal extends LightningElement {
         try {
             const result = await signActionPublic({
                 signerToken: this.signerToken,
-                signerName: detail.signerName,
-                signerEmail: detail.signerEmail,
-                consentGiven: detail.consentGiven,
-                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null
+                payload: {
+                    signerName: detail.signerName,
+                    signerEmail: detail.signerEmail,
+                    consentGiven: detail.consentGiven,
+                    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null
+                }
             });
             this.signSuccess = true;
             this.docStatusAfterSign = (result && result.documentStatus) || '';

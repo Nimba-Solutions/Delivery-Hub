@@ -54,6 +54,8 @@ public with sharing class DeliveryDocApprovalService {
      *              flow, transition it to Awaiting_Signatures instead so the actual
      *              approval comes from signature completion. Logs the transition for
      *              auditability.
+     * @param doc The document to short-circuit.
+     * @return Map with id, status, requiresSigning flag.
      */
     private static Map<String, Object> shortCircuitToAwaitingSignatures(DeliveryDocument__c doc) {
         if (doc.StatusPk__c != 'Awaiting_Signatures') {

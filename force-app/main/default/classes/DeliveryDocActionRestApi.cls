@@ -14,34 +14,29 @@
  *                   "consentGiven": true
  *                 }
  *
- *               GET also supported for the portal LWC to fetch the document bundle
- *               without requiring an Apex/Aura session — handy for serving the sign
- *               page from a fully static front-end if needed.
+ *               GET also supported for clients that need to fetch the document
+ *               bundle without going through Aura.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
 @RestResource(urlMapping='/sign/*')
 global with sharing class DeliveryDocActionRestApi {
 
-    /**
-     * @description GET /sign/<token> — returns the document bundle for the signer.
-     */
+    /** @description Handles GET /sign/<token>. Writes the document bundle to the response body. */
     @HttpGet
-    global static Map<String, Object> handleGet() {
+    global static void handleGet() {
         try {
             String signerToken = extractTokenFromUri();
-            return DeliveryDocActionService.getDocumentBundleForSignerToken(signerToken);
+            Map<String, Object> bundle = DeliveryDocActionService.getDocumentBundleForSignerToken(signerToken);
+            writeJsonResponse(200, bundle);
         } catch (Exception e) {
-            return errorResponse(400, e.getMessage());
+            writeErrorResponse(400, e.getMessage());
         }
     }
 
-    /**
-     * @description POST /sign/<token> — signs the slot identified by the token.
-     *              Reads body as JSON, captures IP and user-agent from request headers,
-     *              delegates to DeliveryDocActionService.signActionByToken.
-     */
+    /** @description Handles POST /sign/<token>. Signs the slot identified by the token. */
     @HttpPost
-    global static Map<String, Object> handlePost() {
+    global static void handlePost() {
         try {
             String signerToken = extractTokenFromUri();
             DeliveryDocActionService.SignContext ctx = parseSignContextFromBody();
@@ -51,15 +46,16 @@ global with sharing class DeliveryDocActionRestApi {
             ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(
                 ctx.signerName, Datetime.now()
             );
-            return DeliveryDocActionService.signActionByToken(signerToken, ctx);
+            Map<String, Object> result = DeliveryDocActionService.signActionByToken(signerToken, ctx);
+            writeJsonResponse(200, result);
         } catch (Exception e) {
-            return errorResponse(400, e.getMessage());
+            writeErrorResponse(400, e.getMessage());
         }
     }
 
     /**
-     * @description Extracts the signer token from the request URI. The token is the
-     *              path segment after `/sign/`.
+     * @description Extracts the signer token from the request URI.
+     * @return The token segment after `/sign/`.
      */
     private static String extractTokenFromUri() {
         String uri = RestContext.request != null ? RestContext.request.requestURI : null;
@@ -81,8 +77,8 @@ global with sharing class DeliveryDocActionRestApi {
     }
 
     /**
-     * @description Parses the POST body into a SignContext. The body is expected to
-     *              be JSON with signerName, signerEmail, and consentGiven fields.
+     * @description Parses the POST body into a SignContext.
+     * @return A SignContext populated from the JSON body fields.
      */
     private static DeliveryDocActionService.SignContext parseSignContextFromBody() {
         DeliveryDocActionService.SignContext ctx = new DeliveryDocActionService.SignContext();
@@ -106,7 +102,8 @@ global with sharing class DeliveryDocActionRestApi {
     }
 
     /**
-     * @description Reads a header from the current REST request, or null if not set.
+     * @description Reads a header from the current REST request.
+     * @return The header value, or null if absent.
      */
     private static String readHeader(String name) {
         if (RestContext.request == null || RestContext.request.headers == null) {
@@ -116,16 +113,28 @@ global with sharing class DeliveryDocActionRestApi {
     }
 
     /**
-     * @description Builds a JSON-serializable error response and sets the REST status.
+     * @description Writes a JSON success response.
+     * @return Void — mutates RestContext.response.
      */
-    private static Map<String, Object> errorResponse(Integer status, String message) {
-        if (RestContext.response != null) {
-            RestContext.response.statusCode = status;
+    private static void writeJsonResponse(Integer status, Map<String, Object> body) {
+        if (RestContext.response == null) {
+            return;
         }
-        return new Map<String, Object>{
+        RestContext.response.statusCode = status;
+        RestContext.response.addHeader('Content-Type', 'application/json');
+        RestContext.response.responseBody = Blob.valueOf(JSON.serialize(body));
+    }
+
+    /**
+     * @description Writes a JSON error response.
+     * @return Void — mutates RestContext.response.
+     */
+    private static void writeErrorResponse(Integer status, String message) {
+        Map<String, Object> body = new Map<String, Object>{
             'error'   => true,
             'status'  => status,
             'message' => message
         };
+        writeJsonResponse(status, body);
     }
 }

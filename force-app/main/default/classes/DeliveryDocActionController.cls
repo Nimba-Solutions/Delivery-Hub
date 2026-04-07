@@ -123,33 +123,34 @@ public with sharing class DeliveryDocActionController {
 
     /**
      * @description Public-facing sign action for unauthenticated signers. Resolves the
-     *              signer token to the slot, builds a SignContext, and delegates to the
-     *              service layer. IP and user-agent capture happen in the REST endpoint
-     *              path (DeliveryDocActionRestApi) — when the LWC calls this Aura
-     *              method directly, those fields are null. Real ESIGN-quality sessions
-     *              should go through the REST path.
-     * @param signerToken  The signer's per-slot token.
-     * @param signerName   Typed signer name.
-     * @param signerEmail  Typed email.
-     * @param consentGiven Must be true.
-     * @param userAgent    Optional UA string captured from navigator.userAgent.
+     *              signer token to the slot, builds a SignContext from the payload map,
+     *              and delegates to the service layer. IP capture happens via the REST
+     *              endpoint (DeliveryDocActionRestApi) — when the LWC calls this Aura
+     *              method directly, IP is null. The payload map keeps the parameter
+     *              count low and matches the project rule of `primitives + Map<String, Object>`.
+     *
+     *              Expected payload keys:
+     *                signerName   (String, required)
+     *                signerEmail  (String, optional)
+     *                consentGiven (Boolean, must be true)
+     *                userAgent    (String, optional)
+     *
+     * @param signerToken The signer's per-slot token.
+     * @param payload     Map with signerName / signerEmail / consentGiven / userAgent.
      * @return Map with actionId, status, documentStatus.
      */
     @AuraEnabled
-    public static Map<String, Object> signActionPublic(
-        String signerToken,
-        String signerName,
-        String signerEmail,
-        Boolean consentGiven,
-        String userAgent
-    ) {
+    public static Map<String, Object> signActionPublic(String signerToken, Map<String, Object> payload) {
         DeliveryDocActionService.SignContext ctx = new DeliveryDocActionService.SignContext();
-        ctx.signerName = signerName;
-        ctx.signerEmail = signerEmail;
-        ctx.consentGiven = consentGiven;
+        if (payload != null) {
+            ctx.signerName  = (String) payload.get('signerName');
+            ctx.signerEmail = (String) payload.get('signerEmail');
+            Object consent  = payload.get('consentGiven');
+            ctx.consentGiven = consent instanceof Boolean ? (Boolean) consent : false;
+            ctx.userAgent   = (String) payload.get('userAgent');
+        }
         ctx.signatureType = 'Text';
-        ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(signerName, Datetime.now());
-        ctx.userAgent = userAgent;
+        ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(ctx.signerName, Datetime.now());
         return DeliveryDocActionService.signActionByToken(signerToken, ctx);
     }
 
