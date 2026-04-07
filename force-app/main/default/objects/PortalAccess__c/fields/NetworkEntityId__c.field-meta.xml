@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>NetworkEntityLookup__c</fullName>
+    <fullName>NetworkEntityId__c</fullName>
     <description>The Network Entity this portal access record belongs to.</description>
     <inlineHelpText>The Network Entity that this portal access grants entry to.</inlineHelpText>
     <label>Network Entity</label>

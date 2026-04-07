@@ -250,7 +250,7 @@ global without sharing class DeliveryTaskAPI {
             }
 
             WorkItemComment__c comment = new WorkItemComment__c(
-                WorkItemLookup__c = workItemId,
+                WorkItemId__c = workItemId,
                 BodyTxt__c    = commentBody,
                 AuthorTxt__c  = String.isNotBlank(author) ? author : 'API',
                 SourcePk__c   = 'API'

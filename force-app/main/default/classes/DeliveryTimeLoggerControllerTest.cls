@@ -24,7 +24,7 @@ private class DeliveryTimeLoggerControllerTest {
         insert t;
 
         insert new WorkRequest__c(
-            WorkItemLookup__c           = t.Id,
+            WorkItemId__c           = t.Id,
             DeliveryEntityLookup__c   = vendor.Id,
             QuotedHoursNumber__c  = 10,
             HourlyRateCurrency__c = 100,
@@ -46,14 +46,14 @@ private class DeliveryTimeLoggerControllerTest {
             Test.stopTest();
 
             List<WorkLog__c> logs = [
-                SELECT HoursLoggedNumber__c, WorkItemLookup__c, WorkDateDate__c, RequestLookup__c
+                SELECT HoursLoggedNumber__c, WorkItemLookup__c, WorkDateDate__c, RequestId__c
                 FROM WorkLog__c
                 WHERE WorkItemLookup__c = :t.Id
             ];
             System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
             System.assertEquals(2.5, logs[0].HoursLoggedNumber__c, 'Expected 2.5 hours');
             System.assertEquals(Date.today(), logs[0].WorkDateDate__c, 'Expected today\'s date');
-            System.assertNotEquals(null, logs[0].RequestLookup__c, 'WorkLog should be linked to the accepted request');
+            System.assertNotEquals(null, logs[0].RequestId__c, 'WorkLog should be linked to the accepted request');
         }
     }
 
@@ -103,7 +103,7 @@ private class DeliveryTimeLoggerControllerTest {
             insert noReqWorkItem;
 
             // Delete any auto-created WorkRequests (AutoCreateWorkRequest may fire in namespaced context)
-            List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :noReqWorkItem.Id];
+            List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :noReqWorkItem.Id];
             if (!autoCreated.isEmpty()) {
                 delete autoCreated;
             }

@@ -186,7 +186,7 @@ private class DeliveryOverdueReminderServiceTest {
 
             DeliveryTriggerControl.disableAfterLogic();
             DeliveryDocument__c doc = new DeliveryDocument__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 TemplatePk__c = 'Invoice',
                 StatusPk__c = 'Overdue',
                 DueDateDate__c = Date.today().addDays(-5),

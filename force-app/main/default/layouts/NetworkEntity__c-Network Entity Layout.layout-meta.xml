@@ -177,14 +177,14 @@
         <fields>NAME</fields>
         <fields>OBJECT_ID</fields>
         <fields>StatusPk__c</fields>
-        <fields>WorkItemLookup__c</fields>
+        <fields>WorkItemId__c</fields>
         <fields>TotalLoggedHoursSum__c</fields>
         <fields>WorkProofUrl__c</fields>
         <fields>PreApprovedHoursNumber__c</fields>
         <fields>HourlyRateCurrency__c</fields>
         <fields>BudgetUtilizationPct__c</fields>
         <relatedList>WorkRequest__c.DeliveryEntityLookup__c</relatedList>
-        <sortField>WorkItemLookup__c</sortField>
+        <sortField>WorkItemId__c</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>
     <showEmailCheckbox>false</showEmailCheckbox>

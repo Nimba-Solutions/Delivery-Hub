@@ -6,7 +6,7 @@
     <columns>PreApprovedHoursNumber__c</columns>
     <columns>QuotedHoursNumber__c</columns>
     <columns>DeliveryEntityLookup__c</columns>
-    <columns>WorkItemLookup__c</columns>
+    <columns>WorkItemId__c</columns>
     <columns>StatusPk__c</columns>
     <columns>RequestedBudgetIncreaseNumber__c</columns>
     <filterScope>Everything</filterScope>

@@ -13,7 +13,7 @@ import WORK_ITEM_HOURS from '@salesforce/schema/WorkItem__c.ClientPreApprovedHou
 
 // Request Object & Fields to Write
 import REQUEST_OBJ from '@salesforce/schema/WorkRequest__c';
-import REQ_WORK_ITEM_ID from '@salesforce/schema/WorkRequest__c.WorkItemLookup__c';
+import REQ_WORK_ITEM_ID from '@salesforce/schema/WorkRequest__c.WorkItemId__c';
 import REQ_PREAPPROVED from '@salesforce/schema/WorkRequest__c.PreApprovedHoursNumber__c';
 import REQ_STATUS from '@salesforce/schema/WorkRequest__c.StatusPk__c';
 

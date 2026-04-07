@@ -298,7 +298,7 @@
         <fields>NAME</fields>
         <fields>BodyTxt__c</fields>
         <fields>CREATED_DATE</fields>
-        <relatedList>WorkItemComment__c.WorkItemLookup__c</relatedList>
+        <relatedList>WorkItemComment__c.WorkItemId__c</relatedList>
         <sortField>CREATED_DATE</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>

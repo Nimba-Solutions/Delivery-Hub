@@ -322,8 +322,8 @@ global with sharing class DeliveryHubDashboardController {
 
         // Merge recent comments into the list
         List<WorkItemComment__c> recentComments = [
-            SELECT Id, WorkItemLookup__c, WorkItemLookup__r.Name, WorkItemLookup__r.BriefDescriptionTxt__c,
-                   WorkItemLookup__r.StageNamePk__c, AuthorTxt__c, BodyTxt__c, CreatedDate
+            SELECT Id, WorkItemId__c, WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c,
+                   WorkItemId__r.StageNamePk__c, AuthorTxt__c, BodyTxt__c, CreatedDate
             FROM WorkItemComment__c
             ORDER BY CreatedDate DESC
             LIMIT 5
@@ -331,12 +331,12 @@ global with sharing class DeliveryHubDashboardController {
 
         for (WorkItemComment__c c : recentComments) {
             WorkItemSummary item = new WorkItemSummary();
-            item.id = c.WorkItemLookup__c;
-            item.name = c.WorkItemLookup__r.Name;
+            item.id = c.WorkItemId__c;
+            item.name = c.WorkItemId__r.Name;
             String body = c.BodyTxt__c != null ? c.BodyTxt__c : '';
             item.title = (body.length() > 80 ? body.substring(0, 80) : body)
                 + ' \u2014 ' + (c.AuthorTxt__c != null ? c.AuthorTxt__c : '');
-            item.stage = c.WorkItemLookup__r.StageNamePk__c;
+            item.stage = c.WorkItemId__r.StageNamePk__c;
             item.isComment = true;
             items.add(item);
             sortDates.add(c.CreatedDate);

@@ -60,7 +60,7 @@ public with sharing class DeliveryDocActionService {
      *              the slot configuration in DocumentTemplateSlot__mdt for the template type.
      *              Auto-assigns AssignedEntityLookup__c based on the slot's AutoAssignTxt__c hint:
      *                - 'vendor'   → DeliveryHubSettings__c.DefaultBillingEntityIdTxt__c
-     *                - 'customer' → the document's NetworkEntityLookup__c (from the snapshot)
+     *                - 'customer' → the document's NetworkEntityId__c (from the snapshot)
      *                - any other  → unassigned
      *              Returns the inserted records. Returns an empty list if the template has
      *              no slots configured (i.e., does not require signing).
@@ -103,7 +103,7 @@ public with sharing class DeliveryDocActionService {
         Id customerEntityId
     ) {
         DocumentAction__c action = new DocumentAction__c(
-            DocumentLookup__c       = documentId,
+            DocumentId__c       = documentId,
             ActionLabelTxt__c   = slot.ActionLabelTxt__c,
             SortOrderNumber__c  = slot.SortOrderNumber__c,
             StatusPk__c         = 'Pending',
@@ -143,13 +143,13 @@ public with sharing class DeliveryDocActionService {
             return new List<DocumentAction__c>();
         }
         return [
-            SELECT Id, Name, DocumentLookup__c, ActionLabelTxt__c, AssignedEntityLookup__c,
+            SELECT Id, Name, DocumentId__c, ActionLabelTxt__c, AssignedEntityLookup__c,
                    AssignedEntityLookup__r.Name, StatusPk__c, CompletedDateTime__c,
                    SignatureTypePk__c, SignatureDataTxt__c, SignerNameTxt__c,
                    SignerEmail__c, SortOrderNumber__c, SignerTokenTxt__c,
                    IpAddressTxt__c, ElectronicConsentDateTime__c
             FROM DocumentAction__c
-            WHERE DocumentLookup__c = :documentId
+            WHERE DocumentId__c = :documentId
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST, CreatedDate ASC
         ];
@@ -287,7 +287,7 @@ public with sharing class DeliveryDocActionService {
         action.PriorHashTxt__c = log.HashChainTxt__c;
         Database.update(action, AccessLevel.SYSTEM_MODE);
 
-        String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentLookup__c);
+        String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentId__c);
 
         return new Map<String, Object>{
             'actionId'       => action.Id,
@@ -340,7 +340,7 @@ public with sharing class DeliveryDocActionService {
             Title           = fileName,
             PathOnClient    = fileName,
             VersionData     = pngBytes,
-            FirstPublishLocationId = action.DocumentLookup__c
+            FirstPublishLocationId = action.DocumentId__c
         );
         Database.insert(cv, AccessLevel.SYSTEM_MODE);
         return cv.Id;
@@ -351,7 +351,7 @@ public with sharing class DeliveryDocActionService {
      */
     private static DocumentAction__c loadPendingAction(Id actionId) {
         List<DocumentAction__c> actions = [
-            SELECT Id, DocumentLookup__c, ActionLabelTxt__c, StatusPk__c, SortOrderNumber__c
+            SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SortOrderNumber__c
             FROM DocumentAction__c
             WHERE Id = :actionId
             WITH SYSTEM_MODE
@@ -404,11 +404,11 @@ public with sharing class DeliveryDocActionService {
     private static ActivityLog__c recordSignatureAuditLog(DocumentAction__c action, SignContext ctx) {
         ActivityLog__c log = new ActivityLog__c(
             ActionTypePk__c = 'Document_Action',
-            RecordIdTxt__c = action.DocumentLookup__c,
+            RecordIdTxt__c = action.DocumentId__c,
             ContextDataTxt__c = JSON.serialize(new Map<String, Object>{
                 'action'        => 'sign',
                 'actionId'      => action.Id,
-                'documentId'    => action.DocumentLookup__c,
+                'documentId'    => action.DocumentId__c,
                 'signerName'    => ctx.signerName,
                 'signatureType' => action.SignatureTypePk__c,
                 'slotLabel'     => action.ActionLabelTxt__c
@@ -442,7 +442,7 @@ public with sharing class DeliveryDocActionService {
         Integer pendingCount = [
             SELECT COUNT()
             FROM DocumentAction__c
-            WHERE DocumentLookup__c = :documentId AND StatusPk__c = 'Pending'
+            WHERE DocumentId__c = :documentId AND StatusPk__c = 'Pending'
             WITH SYSTEM_MODE
         ];
         if (pendingCount > 0) {
@@ -470,7 +470,7 @@ public with sharing class DeliveryDocActionService {
         Database.update(doc, AccessLevel.SYSTEM_MODE);
 
         DeliveryTransaction__c txn = new DeliveryTransaction__c(
-            DocumentLookup__c          = doc.Id,
+            DocumentId__c          = doc.Id,
             TypePk__c              = 'Approval',
             AmountCurrency__c      = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0,
             TransactionDateDate__c = Date.today(),
@@ -518,9 +518,9 @@ public with sharing class DeliveryDocActionService {
      */
     public static Map<String, Object> getDocumentBundleForSignerToken(String signerToken) {
         DocumentAction__c signerAction = findActionBySignerToken(signerToken);
-        DeliveryDocument__c doc = loadDocumentForPortal(signerAction.DocumentLookup__c);
+        DeliveryDocument__c doc = loadDocumentForPortal(signerAction.DocumentId__c);
         Map<String, Object> docMap = serializeDocumentForPortal(doc);
-        List<Map<String, Object>> actions = serializeActionsForPortal(signerAction.DocumentLookup__c);
+        List<Map<String, Object>> actions = serializeActionsForPortal(signerAction.DocumentId__c);
 
         return new Map<String, Object>{
             'document'         => docMap,
@@ -562,7 +562,7 @@ public with sharing class DeliveryDocActionService {
             throw new AuraHandledException('Invalid signer link.');
         }
         List<DocumentAction__c> actions = [
-            SELECT Id, DocumentLookup__c, ActionLabelTxt__c, StatusPk__c, SignerTokenTxt__c
+            SELECT Id, DocumentId__c, ActionLabelTxt__c, StatusPk__c, SignerTokenTxt__c
             FROM DocumentAction__c
             WHERE SignerTokenTxt__c = :signerToken
             WITH SYSTEM_MODE
@@ -580,8 +580,8 @@ public with sharing class DeliveryDocActionService {
     private static DeliveryDocument__c loadDocumentForPortal(Id documentId) {
         List<DeliveryDocument__c> docs = [
             SELECT Id, Name, StatusPk__c, TemplatePk__c, SnapshotTxt__c,
-                   RequireSigningDateTime__c, TotalCurrency__c, NetworkEntityLookup__c,
-                   NetworkEntityLookup__r.Name, PublicTokenTxt__c
+                   RequireSigningDateTime__c, TotalCurrency__c, NetworkEntityId__c,
+                   NetworkEntityId__r.Name, PublicTokenTxt__c
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -608,7 +608,7 @@ public with sharing class DeliveryDocActionService {
             'snapshot'        => doc.SnapshotTxt__c,
             'requiresSigning' => doc.RequireSigningDateTime__c != null,
             'requireSigningDateTime' => doc.RequireSigningDateTime__c,
-            'entityName'      => doc.NetworkEntityLookup__r != null ? doc.NetworkEntityLookup__r.Name : null,
+            'entityName'      => doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : null,
             'consentText'     => consentText
         };
     }

@@ -240,7 +240,7 @@ private class DeliveryHubDashboardControllerTest {
             insert item;
 
             insert new WorkItemComment__c(
-                WorkItemLookup__c = item.Id,
+                WorkItemId__c = item.Id,
                 BodyTxt__c = 'Test comment for coverage',
                 AuthorTxt__c = 'Test Author',
                 SourcePk__c = 'Internal'

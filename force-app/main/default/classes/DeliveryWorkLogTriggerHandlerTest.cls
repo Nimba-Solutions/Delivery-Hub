@@ -34,14 +34,14 @@ private class DeliveryWorkLogTriggerHandlerTest {
         // Every WorkLog__c is Master-Detail to WorkRequest__c — create one per work item
         insert new List<WorkRequest__c>{
             new WorkRequest__c(
-                WorkItemLookup__c           = linkedWorkItem.Id,
+                WorkItemId__c           = linkedWorkItem.Id,
                 DeliveryEntityLookup__c   = vendor.Id,
                 QuotedHoursNumber__c  = 20,
                 HourlyRateCurrency__c = 100,
                 StatusPk__c           = 'Accepted'
             ),
             new WorkRequest__c(
-                WorkItemLookup__c           = unlinkedWorkItem.Id,
+                WorkItemId__c           = unlinkedWorkItem.Id,
                 DeliveryEntityLookup__c   = vendor.Id,
                 QuotedHoursNumber__c  = 10,
                 HourlyRateCurrency__c = 100,
@@ -54,11 +54,11 @@ private class DeliveryWorkLogTriggerHandlerTest {
     static void testWorkLogOnClientWorkItemCreatesSyncItem() {
         System.runAs(testUser) {
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestLookup__c           = request.Id,
+                RequestId__c           = request.Id,
                 WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 3.5,
                 WorkDateDate__c        = Date.today(),
@@ -83,11 +83,11 @@ private class DeliveryWorkLogTriggerHandlerTest {
     static void testWorkLogOnUnlinkedWorkItemNoSyncItem() {
         System.runAs(testUser) {
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'No Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestLookup__c           = request.Id,
+                RequestId__c           = request.Id,
                 WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 2.0,
                 WorkDateDate__c        = Date.today(),
@@ -104,13 +104,13 @@ private class DeliveryWorkLogTriggerHandlerTest {
     static void testTriggerControlDisabled() {
         System.runAs(testUser) {
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
 
             DeliveryTriggerControl.disableAfterLogic();
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestLookup__c           = request.Id,
+                RequestId__c           = request.Id,
                 WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 1.0,
                 WorkDateDate__c        = Date.today(),
@@ -136,11 +136,11 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestLookup__c           = request.Id,
+                RequestId__c           = request.Id,
                 WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 2.0,
                 WorkDateDate__c        = Date.today(),
@@ -163,11 +163,11 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
 
             // Insert as Draft — no SyncItem expected
             WorkLog__c draftLog = new WorkLog__c(
-                RequestLookup__c           = request.Id,
+                RequestId__c           = request.Id,
                 WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 4.0,
                 WorkDateDate__c        = Date.today(),
@@ -205,11 +205,11 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestLookup__c           = request.Id,
+                RequestId__c           = request.Id,
                 WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 1.5,
                 WorkDateDate__c        = Date.today(),
@@ -230,7 +230,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
             Test.startTest();
             try {
                 insert new WorkLog__c(
-                    RequestLookup__c           = request.Id,
+                    RequestId__c           = request.Id,
                     WorkItemLookup__c            = null,
                     HoursLoggedNumber__c   = 2.0,
                     WorkDateDate__c        = Date.today(),
@@ -254,13 +254,13 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
 
             // Insert 20 Draft WorkLogs
             List<WorkLog__c> draftLogs = new List<WorkLog__c>();
             for (Integer i = 0; i < 20; i++) {
                 draftLogs.add(new WorkLog__c(
-                    RequestLookup__c           = request.Id,
+                    RequestId__c           = request.Id,
                     WorkItemLookup__c            = workItem.Id,
                     HoursLoggedNumber__c   = 1.0,
                     WorkDateDate__c        = Date.today(),

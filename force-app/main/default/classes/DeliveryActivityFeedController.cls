@@ -91,9 +91,9 @@ global with sharing class DeliveryActivityFeedController {
         if (scopedWorkItemIds != null) {
             comments = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemLookup__c, CreatedBy.Name
+                       WorkItemId__c, CreatedBy.Name
                 FROM WorkItemComment__c
-                WHERE WorkItemLookup__c IN :scopedWorkItemIds
+                WHERE WorkItemId__c IN :scopedWorkItemIds
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
                 LIMIT 500
@@ -101,7 +101,7 @@ global with sharing class DeliveryActivityFeedController {
         } else {
             comments = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemLookup__c, CreatedBy.Name
+                       WorkItemId__c, CreatedBy.Name
                 FROM WorkItemComment__c
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
@@ -120,10 +120,10 @@ global with sharing class DeliveryActivityFeedController {
     private static Map<Id, List<WorkItemComment__c>> groupCommentsByWorkItem(List<WorkItemComment__c> comments) {
         Map<Id, List<WorkItemComment__c>> grouped = new Map<Id, List<WorkItemComment__c>>();
         for (WorkItemComment__c c : comments) {
-            if (!grouped.containsKey(c.WorkItemLookup__c)) {
-                grouped.put(c.WorkItemLookup__c, new List<WorkItemComment__c>());
+            if (!grouped.containsKey(c.WorkItemId__c)) {
+                grouped.put(c.WorkItemId__c, new List<WorkItemComment__c>());
             }
-            grouped.get(c.WorkItemLookup__c).add(c);
+            grouped.get(c.WorkItemId__c).add(c);
         }
         return grouped;
     }
@@ -276,7 +276,7 @@ global with sharing class DeliveryActivityFeedController {
             throw new AuraHandledException('Work item and comment body are required.');
         }
         WorkItemComment__c comment = new WorkItemComment__c(
-            WorkItemLookup__c = workItemId,
+            WorkItemId__c = workItemId,
             BodyTxt__c = body,
             SourcePk__c = 'Client',
             AuthorTxt__c = UserInfo.getName()
@@ -291,9 +291,9 @@ global with sharing class DeliveryActivityFeedController {
         if (scopedWorkItemIds != null) {
             records = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemLookup__c, CreatedBy.Name
+                       WorkItemId__c, CreatedBy.Name
                 FROM WorkItemComment__c
-                WHERE WorkItemLookup__c IN :scopedWorkItemIds
+                WHERE WorkItemId__c IN :scopedWorkItemIds
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
                 LIMIT 200
@@ -301,7 +301,7 @@ global with sharing class DeliveryActivityFeedController {
         } else {
             records = [
                 SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c,
-                       WorkItemLookup__c, CreatedBy.Name
+                       WorkItemId__c, CreatedBy.Name
                 FROM WorkItemComment__c
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate DESC
@@ -333,7 +333,7 @@ global with sharing class DeliveryActivityFeedController {
             'title' => 'Comment by ' + author,
             'detail' => bodyPreview,
             'icon' => 'standard:feedback',
-            'workItemId' => c.WorkItemLookup__c,
+            'workItemId' => c.WorkItemId__c,
             'source' => String.isNotBlank(c.SourcePk__c) ? c.SourcePk__c : 'Salesforce'
         };
     }

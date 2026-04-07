@@ -29,7 +29,7 @@ private class DeliverySyncItemIngestorTest {
 
         // 3. Create Downstream Request Bridge
         insert new WorkRequest__c(
-            WorkItemLookup__c = t.Id,
+            WorkItemId__c = t.Id,
             RemoteWorkItemIdTxt__c = 'REMOTE-123',
             StatusPk__c = 'Active'
         );
@@ -86,7 +86,7 @@ private class DeliverySyncItemIngestorTest {
             // Verify V2 Ledger Routing
             SyncItem__c ledger = [SELECT ObjectTypePk__c, RequestLookup__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-456' LIMIT 1];
             System.assert(ledger.ObjectTypePk__c.contains('WorkItemComment__c'), 'Ledger must have valid ObjectTypePk__c value');
-            System.assertNotEquals(null, ledger.RequestLookup__c, 'V2 DAG Rule: RequestLookup__c MUST be stamped on the inbound ledger item to log the routing edge.');
+            System.assertNotEquals(null, ledger.RequestLookup__c, 'V2 DAG Rule: RequestId__c MUST be stamped on the inbound ledger item to log the routing edge.');
         }
     }
     
@@ -111,7 +111,7 @@ private class DeliverySyncItemIngestorTest {
 
             // Verify V2 Ledger Routing & Upstream Echo Suppression
             SyncItem__c ledger = [SELECT ObjectTypePk__c, RequestLookup__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = 'REMOTE-COMM-789' LIMIT 1];
-            System.assertEquals(null, ledger.RequestLookup__c, 'V2 DAG Rule: RequestLookup__c must be NULL since this came from an upstream Client Ledger translation.');
+            System.assertEquals(null, ledger.RequestLookup__c, 'V2 DAG Rule: RequestId__c must be NULL since this came from an upstream Client Ledger translation.');
             System.assert(DeliverySyncEngine.blockedOrigins.size() > 0, 'The ClientNetworkEntityLookup__c must have been passed to memory to block upstream echoes.');
         }
     }
@@ -124,14 +124,14 @@ private class DeliverySyncItemIngestorTest {
             // - The payload references the remote WorkItem ID
             // - Cross-org lookup IDs in payload must be stripped before insert
             WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
-            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :localItem.Id LIMIT 1];
+            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
 
             Map<String, Object> payload = new Map<String, Object>{
                 'SourceId' => 'REMOTE-WORKLOG-001',
                 'SenderOrgId' => '00D_MOCK_ORG_ID',
                 'GlobalSourceId' => 'REMOTE-WORKLOG-001',
                 'WorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1',  // remote ID — resolved via Ledger
-                'RequestLookup__c' => 'REMOTE-REQUEST-INVALID',      // cross-org ID — must be stripped
+                'RequestId__c' => 'REMOTE-REQUEST-INVALID',      // cross-org ID — must be stripped
                 'HoursLoggedNumber__c' => 4.5,
                 'WorkDateDate__c' => String.valueOf(Date.today()),
                 'WorkDescriptionTxt__c' => 'Inbound work log test'
@@ -143,10 +143,10 @@ private class DeliverySyncItemIngestorTest {
 
             System.assertNotEquals(null, resultId, 'WorkLog should have been created');
 
-            WorkLog__c wl = [SELECT HoursLoggedNumber__c, WorkItemLookup__c, RequestLookup__c, WorkDescriptionTxt__c FROM WorkLog__c WHERE Id = :resultId];
+            WorkLog__c wl = [SELECT HoursLoggedNumber__c, WorkItemLookup__c, RequestId__c, WorkDescriptionTxt__c FROM WorkLog__c WHERE Id = :resultId];
             System.assertEquals(4.5, wl.HoursLoggedNumber__c, 'Hours should be mapped from payload');
             System.assertEquals(localItem.Id, wl.WorkItemLookup__c, 'Parent WorkItem should resolve to local ID via Ledger');
-            System.assertEquals(localReq.Id, wl.RequestLookup__c, 'RequestId should resolve to local WorkRequest, not the remote ID');
+            System.assertEquals(localReq.Id, wl.RequestId__c, 'RequestId should resolve to local WorkRequest, not the remote ID');
             System.assertEquals('Inbound work log test', wl.WorkDescriptionTxt__c, 'Description should be mapped');
 
             // Verify ledger entry was created

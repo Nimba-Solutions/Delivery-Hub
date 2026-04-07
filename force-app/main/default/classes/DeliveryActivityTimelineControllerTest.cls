@@ -40,7 +40,7 @@ private class DeliveryActivityTimelineControllerTest {
 
         // Work Request (master for WorkLog)
         WorkRequest__c wr = new WorkRequest__c(
-            WorkItemLookup__c = wi.Id,
+            WorkItemId__c = wi.Id,
             DeliveryEntityLookup__c = vendor.Id,
             QuotedHoursNumber__c = 20,
             HourlyRateCurrency__c = 150,
@@ -50,7 +50,7 @@ private class DeliveryActivityTimelineControllerTest {
 
         // Comment 1
         WorkItemComment__c comment1 = new WorkItemComment__c(
-            WorkItemLookup__c = wi.Id,
+            WorkItemId__c = wi.Id,
             AuthorTxt__c = 'Jane Developer',
             BodyTxt__c = 'Started working on the implementation.',
             SourcePk__c = 'Salesforce'
@@ -59,7 +59,7 @@ private class DeliveryActivityTimelineControllerTest {
 
         // Comment 2
         WorkItemComment__c comment2 = new WorkItemComment__c(
-            WorkItemLookup__c = wi.Id,
+            WorkItemId__c = wi.Id,
             AuthorTxt__c = 'Client User',
             BodyTxt__c = 'Looks good so far, please continue.',
             SourcePk__c = 'Client'
@@ -68,7 +68,7 @@ private class DeliveryActivityTimelineControllerTest {
 
         // Work Log
         WorkLog__c wlog = new WorkLog__c(
-            RequestLookup__c = wr.Id,
+            RequestId__c = wr.Id,
             WorkItemLookup__c = wi.Id,
             HoursLoggedNumber__c = 3.5,
             WorkDescriptionTxt__c = 'Completed API integration',
@@ -306,7 +306,7 @@ private class DeliveryActivityTimelineControllerTest {
 
             // Create a comment without AuthorTxt__c
             WorkItemComment__c noAuthor = new WorkItemComment__c(
-                WorkItemLookup__c = wi.Id,
+                WorkItemId__c = wi.Id,
                 BodyTxt__c = 'Comment with no author set.'
             );
             insert noAuthor;
@@ -344,7 +344,7 @@ private class DeliveryActivityTimelineControllerTest {
             // Build a body > 300 chars with HTML tags
             String longBody = '<p>' + 'A'.repeat(350) + '</p>';
             WorkItemComment__c longComment = new WorkItemComment__c(
-                WorkItemLookup__c = wi.Id,
+                WorkItemId__c = wi.Id,
                 AuthorTxt__c = 'Long Body Author',
                 BodyTxt__c = longBody,
                 SourcePk__c = 'Salesforce'
@@ -379,7 +379,7 @@ private class DeliveryActivityTimelineControllerTest {
             WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
 
             WorkItemComment__c blankComment = new WorkItemComment__c(
-                WorkItemLookup__c = wi.Id,
+                WorkItemId__c = wi.Id,
                 AuthorTxt__c = 'Blank Body Author',
                 SourcePk__c = 'GitHub'
             );
@@ -404,7 +404,7 @@ private class DeliveryActivityTimelineControllerTest {
             WorkRequest__c wr = [SELECT Id FROM WorkRequest__c LIMIT 1];
 
             WorkLog__c minLog = new WorkLog__c(
-                RequestLookup__c = wr.Id,
+                RequestId__c = wr.Id,
                 WorkItemLookup__c = wi.Id
             );
             insert minLog;
@@ -442,7 +442,7 @@ private class DeliveryActivityTimelineControllerTest {
             WorkRequest__c wr = [SELECT Id FROM WorkRequest__c LIMIT 1];
 
             WorkLog__c dateOnlyLog = new WorkLog__c(
-                RequestLookup__c = wr.Id,
+                RequestId__c = wr.Id,
                 WorkItemLookup__c = wi.Id,
                 HoursLoggedNumber__c = 1.0,
                 WorkDateDate__c = Date.today()

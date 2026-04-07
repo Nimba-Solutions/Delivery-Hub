@@ -39,7 +39,7 @@ private class DeliveryDocCertificateServiceTest {
         insert entity;
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityLookup__c = entity.Id,
+            NetworkEntityId__c = entity.Id,
             TemplatePk__c = 'Client_Agreement',
             PeriodStartDate__c = Date.newInstance(2026, 4, 1),
             PeriodEndDate__c = Date.newInstance(2026, 4, 30),
@@ -71,7 +71,7 @@ private class DeliveryDocCertificateServiceTest {
     private static List<DocumentAction__c> getActions(Id documentId) {
         return [
             SELECT Id FROM DocumentAction__c
-            WHERE DocumentLookup__c = :documentId
+            WHERE DocumentId__c = :documentId
             ORDER BY SortOrderNumber__c ASC NULLS LAST
         ];
     }
