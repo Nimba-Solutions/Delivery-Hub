@@ -364,6 +364,7 @@ private class DeliveryDocActionControllerTest {
     static void testSignActionPublicHappyPath() {
         System.runAs(testUser) {
             String token = getFirstSignerToken();
+            Id firstActionId = getActions(getDoc().Id)[0].Id;
 
             Test.startTest();
             Map<String, Object> result = DeliveryDocActionController.signActionPublic(
@@ -380,14 +381,56 @@ private class DeliveryDocActionControllerTest {
             System.assertEquals('Completed', result.get('status'),
                 'Sign should mark slot Completed');
 
+            // Look up by Id, not by token — token is rotated to null on completion
             DocumentAction__c reloaded = [
                 SELECT StatusPk__c, SignerNameTxt__c, SignerEmail__c, UserAgentTxt__c
                 FROM DocumentAction__c
-                WHERE SignerTokenTxt__c = :token
+                WHERE Id = :firstActionId
             ];
             System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
             System.assertEquals('Coleman Cameron', reloaded.SignerNameTxt__c, 'Name should persist');
             System.assertEquals('Mozilla/5.0 Test', reloaded.UserAgentTxt__c, 'User-agent should persist');
+        }
+    }
+
+    @IsTest
+    static void testSignActionPublicRotatesTokenOnCompletion() {
+        // Defense-in-depth: even though loadPendingAction rejects re-signing
+        // of a Completed slot, we null the SignerTokenTxt__c so that a leaked
+        // completed-slot token cannot be used to fetch the document bundle
+        // via getDocumentForSigner (which has no status filter).
+        System.runAs(testUser) {
+            String token = getFirstSignerToken();
+
+            Test.startTest();
+            DeliveryDocActionController.signActionPublic(
+                token,
+                new Map<String, Object>{
+                    'signerName'   => 'Coleman Cameron',
+                    'consentGiven' => true
+                }
+            );
+            Test.stopTest();
+
+            DocumentAction__c reloaded = [
+                SELECT StatusPk__c, SignerTokenTxt__c
+                FROM DocumentAction__c
+                WHERE Id IN (
+                    SELECT Id FROM DocumentAction__c WHERE SignerNameTxt__c = 'Coleman Cameron'
+                )
+                LIMIT 1
+            ];
+            System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
+            System.assertEquals(null, reloaded.SignerTokenTxt__c,
+                'SignerTokenTxt__c should be nulled out on completion');
+
+            // The old token should no longer resolve via getDocumentForSigner
+            try {
+                DeliveryDocActionController.getDocumentForSigner(token);
+                System.assert(false, 'Expected AuraHandledException — rotated token must not resolve');
+            } catch (AuraHandledException e) {
+                System.assertNotEquals(null, e, 'Expected exception instance');
+            }
         }
     }
 
@@ -450,6 +493,7 @@ private class DeliveryDocActionControllerTest {
     static void testRestApiPostSignsAction() {
         System.runAs(testUser) {
             String token = getFirstSignerToken();
+            Id firstActionId = getActions(getDoc().Id)[0].Id;
 
             RestRequest req = new RestRequest();
             req.requestURI = '/services/apexrest/sign/' + token;
@@ -476,10 +520,11 @@ private class DeliveryDocActionControllerTest {
             System.assertEquals('Completed', result.get('status'),
                 'REST POST should sign the slot');
 
+            // Look up by Id, not by token — token is rotated to null on completion
             DocumentAction__c reloaded = [
                 SELECT StatusPk__c, IpAddressTxt__c, UserAgentTxt__c
                 FROM DocumentAction__c
-                WHERE SignerTokenTxt__c = :token
+                WHERE Id = :firstActionId
             ];
             System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
             System.assertEquals('203.0.113.42', reloaded.IpAddressTxt__c,

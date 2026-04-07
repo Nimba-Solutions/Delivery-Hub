@@ -23,6 +23,16 @@
                                     class="slds-m-top_small"
                                 ></lightning-button>
                             </template>
+                            <template lwc:if={action.showCopyLink}>
+                                <lightning-button
+                                    label="Copy Signer Link"
+                                    icon-name="utility:copy_to_clipboard"
+                                    variant="neutral"
+                                    data-action-id={action.id}
+                                    onclick={handleCopyLinkClick}
+                                    class="slds-m-top_x-small"
+                                ></lightning-button>
+                            </template>
                         </template>
                     </div>
                 </template>

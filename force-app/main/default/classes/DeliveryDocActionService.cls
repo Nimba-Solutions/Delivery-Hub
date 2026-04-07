@@ -316,7 +316,12 @@ public with sharing class DeliveryDocActionService {
 
     /**
      * @description Mutates the action record in place with the signature payload.
-     *              Caller is responsible for the DML.
+     *              Caller is responsible for the DML. Nulls SignerTokenTxt__c on
+     *              completion as defense-in-depth — even though loadPendingAction
+     *              already rejects re-signing of completed slots, removing the
+     *              token closes the secondary risk that a leaked completed-slot
+     *              token could be used to fetch the document bundle via
+     *              findActionBySignerToken (which has no status filter).
      */
     private static void applySignatureToAction(DocumentAction__c action, SignContext ctx) {
         Datetime now = Datetime.now();
@@ -329,6 +334,7 @@ public with sharing class DeliveryDocActionService {
         action.SignerEmail__c = ctx.signerEmail;
         action.IpAddressTxt__c = ctx.ipAddress;
         action.UserAgentTxt__c = ctx.userAgent;
+        action.SignerTokenTxt__c = null;
     }
 
     /**
