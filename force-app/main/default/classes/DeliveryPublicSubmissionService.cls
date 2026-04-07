@@ -2,7 +2,7 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description REST Resource for receiving unauthenticated work item submissions from
- * public-facing websites (e.g., cloudnimbusllc.com contact forms). Exposed via
+ * public-facing websites (e.g., a marketing site contact form). Exposed via
  * Salesforce Sites / Experience Cloud guest user. Includes rate limiting and input
  * sanitization to prevent abuse.
  * @author Cloud Nimbus LLC

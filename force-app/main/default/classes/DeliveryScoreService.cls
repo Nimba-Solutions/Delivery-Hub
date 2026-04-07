@@ -4,7 +4,6 @@
  * @description  Calculates a 0-100 Delivery Score — a health rating for the delivery pipeline.
  *               Evaluates 6 factors: Flow Health, WIP Balance, Completion Rate,
  *               Backlog Health, Priority Balance, and Activity.
- *               Ported from the cloudnimbusllc.com website scoring algorithm.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount, PMD.ApexDoc')

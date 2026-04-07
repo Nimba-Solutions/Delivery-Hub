@@ -21,12 +21,23 @@ private class DeliveryEscalationJobTest {
 
         List<WorkItem__c> items = new List<WorkItem__c>();
 
+        // Defensive: explicitly set ActivatedDateTime__c and StageEnteredDateTime__c
+        // because the DeliveryWorkItemTriggerHandler before-insert population does not
+        // reliably materialize on the in-memory reference in the namespaced packaging
+        // org used by upload-beta. The DeliveryEscalationRuleEvaluator filters
+        // candidates with `WHERE ActivatedDateTime__c != null`, so missing the trigger
+        // population would silently exclude every test row from escalation.
+        Datetime activatedAt = Datetime.now().addDays(-5);
+        Datetime stageEnteredAt = Datetime.now();
+
         // Item in In Development — should be matched by rules
         items.add(new WorkItem__c(
             BriefDescriptionTxt__c = 'Stalled dev item',
             StageNamePk__c = 'In Development',
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt,
             DeveloperLookup__c = UserInfo.getUserId()
         ));
 
@@ -36,6 +47,8 @@ private class DeliveryEscalationJobTest {
             StageNamePk__c = 'Dev Blocked',
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt,
             DeveloperLookup__c = UserInfo.getUserId()
         ));
 
@@ -44,7 +57,9 @@ private class DeliveryEscalationJobTest {
             BriefDescriptionTxt__c = 'Backlog safe item',
             StageNamePk__c = 'Backlog',
             PriorityPk__c = 'Low',
-            WorkflowTypeTxt__c = 'Software_Delivery'
+            WorkflowTypeTxt__c = 'Software_Delivery',
+            ActivatedDateTime__c = activatedAt,
+            StageEnteredDateTime__c = stageEnteredAt
         ));
 
         insert items;

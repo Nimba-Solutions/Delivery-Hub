@@ -348,6 +348,9 @@ public with sharing class DeliveryDocActionService {
 
     /**
      * @description Loads the action by id and asserts it is in Pending status.
+     *              Uses FOR UPDATE to lock the row so two simultaneous signers
+     *              cannot both pass the Pending check and double-sign the same
+     *              slot. The lock is held for the rest of the transaction.
      */
     private static DocumentAction__c loadPendingAction(Id actionId) {
         List<DocumentAction__c> actions = [
@@ -356,6 +359,7 @@ public with sharing class DeliveryDocActionService {
             WHERE Id = :actionId
             WITH SYSTEM_MODE
             LIMIT 1
+            FOR UPDATE
         ];
         if (actions.isEmpty()) {
             throw new AuraHandledException('Signature slot not found.');
