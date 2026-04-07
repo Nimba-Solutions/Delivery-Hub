@@ -4,7 +4,7 @@
     <protected>false</protected>
     <values>
         <field>DescriptionTxt__c</field>
-        <value xsi:type="xsd:string">Professional services agreement for new clients. Covers scope, payment terms, confidentiality, and liability. Suitable for self-service onboarding via the Cloud Nimbus portal.</value>
+        <value xsi:type="xsd:string">Professional services agreement for new clients. Covers scope, payment terms, confidentiality, and liability. Suitable for self-service onboarding via the client portal.</value>
     </values>
     <values>
         <field>PortalComponentTxt__c</field>
