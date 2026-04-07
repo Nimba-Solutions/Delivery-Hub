@@ -105,6 +105,54 @@ public with sharing class DeliveryDocActionController {
         };
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 3: PUBLIC PORTAL SIGNING (TOKEN-BASED)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Returns the document bundle for an unauthenticated signer presenting
+     *              their per-signer access token. Used by the portal LWC to render the
+     *              sign page. Cacheable so guest users can hit Salesforce's edge cache.
+     * @param signerToken The 64-char hex token from the slot's SignerTokenTxt__c field.
+     * @return Map shaped for the portal LWC. See DeliveryDocActionService.getDocumentBundleForSignerToken.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getDocumentForSigner(String signerToken) {
+        return DeliveryDocActionService.getDocumentBundleForSignerToken(signerToken);
+    }
+
+    /**
+     * @description Public-facing sign action for unauthenticated signers. Resolves the
+     *              signer token to the slot, builds a SignContext, and delegates to the
+     *              service layer. IP and user-agent capture happen in the REST endpoint
+     *              path (DeliveryDocActionRestApi) — when the LWC calls this Aura
+     *              method directly, those fields are null. Real ESIGN-quality sessions
+     *              should go through the REST path.
+     * @param signerToken  The signer's per-slot token.
+     * @param signerName   Typed signer name.
+     * @param signerEmail  Typed email.
+     * @param consentGiven Must be true.
+     * @param userAgent    Optional UA string captured from navigator.userAgent.
+     * @return Map with actionId, status, documentStatus.
+     */
+    @AuraEnabled
+    public static Map<String, Object> signActionPublic(
+        String signerToken,
+        String signerName,
+        String signerEmail,
+        Boolean consentGiven,
+        String userAgent
+    ) {
+        DeliveryDocActionService.SignContext ctx = new DeliveryDocActionService.SignContext();
+        ctx.signerName = signerName;
+        ctx.signerEmail = signerEmail;
+        ctx.consentGiven = consentGiven;
+        ctx.signatureType = 'Text';
+        ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(signerName, Datetime.now());
+        ctx.userAgent = userAgent;
+        return DeliveryDocActionService.signActionByToken(signerToken, ctx);
+    }
+
     /**
      * @description Reshapes a DocumentAction__c into the LWC-friendly map format.
      */

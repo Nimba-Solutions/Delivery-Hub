@@ -1,0 +1,63 @@
+.sign-portal {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #1b1b1b;
+}
+
+.sign-portal__header {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e3e3e3;
+    padding-bottom: 1rem;
+}
+
+.sign-portal__header h1 {
+    font-size: 1.6rem;
+    margin: 0 0 0.4rem 0;
+    color: #14213d;
+}
+
+.sign-portal__sub {
+    color: #555;
+    margin: 0;
+}
+
+.sign-portal__loading {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: #666;
+}
+
+.sign-portal__error {
+    background: #fff5f5;
+    border: 1px solid #f5c2c2;
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: #8a1f1f;
+}
+
+.sign-portal__error h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+.sign-portal__error-help {
+    font-size: 0.875rem;
+    color: #6b3a3a;
+    margin-bottom: 0;
+}
+
+.sign-portal__success {
+    margin-top: 1.5rem;
+    background: #ecfdf5;
+    border: 1px solid #86efac;
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: #065f46;
+}
+
+.sign-portal__success h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}

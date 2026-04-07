@@ -293,4 +293,220 @@ private class DeliveryDocActionControllerTest {
         System.assert(stamp.contains('digitally signed'), 'Stamp should include phrase');
         System.assert(stamp.contains('Apr 6, 2026'), 'Stamp should include formatted date');
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 3: PUBLIC PORTAL SIGNING TESTS
+    // ═══════════════════════════════════════════════════════════
+
+    private static String getFirstSignerToken() {
+        DeliveryDocument__c doc = getDoc();
+        DocumentAction__c action = [
+            SELECT SignerTokenTxt__c
+            FROM DocumentAction__c
+            WHERE DocumentId__c = :doc.Id
+            ORDER BY SortOrderNumber__c ASC NULLS LAST
+            LIMIT 1
+        ];
+        return action.SignerTokenTxt__c;
+    }
+
+    @IsTest
+    static void testGetDocumentForSignerHappyPath() {
+        System.runAs(testUser) {
+            String token = getFirstSignerToken();
+
+            Test.startTest();
+            Map<String, Object> bundle = DeliveryDocActionController.getDocumentForSigner(token);
+            Test.stopTest();
+
+            System.assertNotEquals(null, bundle, 'Bundle should not be null');
+            System.assertNotEquals(null, bundle.get('document'), 'Bundle should include document');
+            System.assertNotEquals(null, bundle.get('signerActionId'), 'Bundle should include signer action id');
+            System.assertNotEquals(null, bundle.get('actions'), 'Bundle should include sibling actions');
+
+            Map<String, Object> docMap = (Map<String, Object>) bundle.get('document');
+            System.assertEquals(true, docMap.get('requiresSigning'),
+                'Document should be flagged as requires signing');
+            System.assertNotEquals(null, docMap.get('consentText'),
+                'Document bundle should include consent text');
+        }
+    }
+
+    @IsTest
+    static void testGetDocumentForSignerInvalidToken() {
+        System.runAs(testUser) {
+            Test.startTest();
+            try {
+                DeliveryDocActionController.getDocumentForSigner('not-a-real-token-just-padding-1234567890123456789012345678');
+                System.assert(false, 'Expected AuraHandledException for invalid token');
+            } catch (AuraHandledException e) {
+                System.assertNotEquals(null, e, 'Expected exception instance');
+            }
+            Test.stopTest();
+        }
+    }
+
+    @IsTest
+    static void testGetDocumentForSignerBlankToken() {
+        System.runAs(testUser) {
+            Test.startTest();
+            try {
+                DeliveryDocActionController.getDocumentForSigner('');
+                System.assert(false, 'Expected AuraHandledException for blank token');
+            } catch (AuraHandledException e) {
+                System.assertNotEquals(null, e, 'Expected exception instance');
+            }
+            Test.stopTest();
+        }
+    }
+
+    @IsTest
+    static void testSignActionPublicHappyPath() {
+        System.runAs(testUser) {
+            String token = getFirstSignerToken();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocActionController.signActionPublic(
+                token, 'Coleman Cameron', 'coleman@example.com', true, 'Mozilla/5.0 Test'
+            );
+            Test.stopTest();
+
+            System.assertEquals('Completed', result.get('status'),
+                'Sign should mark slot Completed');
+
+            DocumentAction__c reloaded = [
+                SELECT StatusPk__c, SignerNameTxt__c, SignerEmailTxt__c, UserAgentTxt__c
+                FROM DocumentAction__c
+                WHERE SignerTokenTxt__c = :token
+            ];
+            System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
+            System.assertEquals('Coleman Cameron', reloaded.SignerNameTxt__c, 'Name should persist');
+            System.assertEquals('Mozilla/5.0 Test', reloaded.UserAgentTxt__c, 'User-agent should persist');
+        }
+    }
+
+    @IsTest
+    static void testSignActionPublicBlocksWithoutConsent() {
+        System.runAs(testUser) {
+            String token = getFirstSignerToken();
+
+            Test.startTest();
+            try {
+                DeliveryDocActionController.signActionPublic(
+                    token, 'Coleman', null, false, null
+                );
+                System.assert(false, 'Expected AuraHandledException for missing consent');
+            } catch (AuraHandledException e) {
+                System.assertNotEquals(null, e, 'Expected exception instance');
+            }
+            Test.stopTest();
+        }
+    }
+
+    @IsTest
+    static void testSignActionPublicAdvancesDocumentWhenAllSigned() {
+        System.runAs(testUser) {
+            DeliveryDocument__c doc = getDoc();
+            List<DocumentAction__c> allActions = [
+                SELECT Id, SignerTokenTxt__c
+                FROM DocumentAction__c
+                WHERE DocumentId__c = :doc.Id
+                ORDER BY SortOrderNumber__c ASC NULLS LAST
+            ];
+
+            Test.startTest();
+            for (DocumentAction__c a : allActions) {
+                DeliveryDocActionController.signActionPublic(
+                    a.SignerTokenTxt__c, 'Signer ' + a.Id, 'signer@example.com', true, 'UA'
+                );
+            }
+            Test.stopTest();
+
+            DeliveryDocument__c reloaded = [
+                SELECT StatusPk__c FROM DeliveryDocument__c WHERE Id = :doc.Id LIMIT 1
+            ];
+            System.assertEquals('Approved', reloaded.StatusPk__c,
+                'Document should advance to Approved when all slots signed via public portal');
+        }
+    }
+
+    @IsTest
+    static void testRestApiPostSignsAction() {
+        System.runAs(testUser) {
+            String token = getFirstSignerToken();
+
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/sign/' + token;
+            req.httpMethod = 'POST';
+            req.headers.put('X-Salesforce-SIP', '203.0.113.42');
+            req.headers.put('User-Agent', 'curl/8.0 Test');
+            req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                'signerName'   => 'Coleman Cameron',
+                'signerEmail'  => 'coleman@example.com',
+                'consentGiven' => true
+            }));
+            RestContext.request = req;
+            RestContext.response = new RestResponse();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocActionRestApi.handlePost();
+            Test.stopTest();
+
+            System.assertEquals('Completed', result.get('status'),
+                'REST POST should sign the slot');
+
+            DocumentAction__c reloaded = [
+                SELECT StatusPk__c, IpAddressTxt__c, UserAgentTxt__c
+                FROM DocumentAction__c
+                WHERE SignerTokenTxt__c = :token
+            ];
+            System.assertEquals('Completed', reloaded.StatusPk__c, 'Slot should be Completed');
+            System.assertEquals('203.0.113.42', reloaded.IpAddressTxt__c,
+                'IP should be captured from X-Salesforce-SIP header');
+            System.assertEquals('curl/8.0 Test', reloaded.UserAgentTxt__c,
+                'User-agent should be captured from User-Agent header');
+        }
+    }
+
+    @IsTest
+    static void testRestApiGetReturnsBundle() {
+        System.runAs(testUser) {
+            String token = getFirstSignerToken();
+
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/sign/' + token;
+            req.httpMethod = 'GET';
+            RestContext.request = req;
+            RestContext.response = new RestResponse();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocActionRestApi.handleGet();
+            Test.stopTest();
+
+            System.assertNotEquals(null, result.get('document'),
+                'GET should return the document bundle');
+            System.assertNotEquals(null, result.get('signerActionId'),
+                'GET should include the signer action id');
+        }
+    }
+
+    @IsTest
+    static void testRestApiGetWithInvalidTokenReturnsError() {
+        System.runAs(testUser) {
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/sign/notarealtokennotarealtokennotarealtokennotarealtokennotarea1234';
+            req.httpMethod = 'GET';
+            RestContext.request = req;
+            RestContext.response = new RestResponse();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocActionRestApi.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(true, result.get('error'),
+                'Invalid token should return error response');
+            System.assertEquals(400, RestContext.response.statusCode,
+                'Status should be 400');
+        }
+    }
 }
