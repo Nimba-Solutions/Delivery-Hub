@@ -334,11 +334,19 @@ global with sharing class DeliveryWorkItemETAService {
         }
 
         private List<WorkItem__c> loadWorkItems() {
+            // Only items with effort sizing participate in ETA simulation.
+            // Items missing DeveloperDaysSizeNumber__c (or sized at 0) cannot be
+            // scheduled meaningfully — including them caused the engine to write
+            // EstimatedStartDevDate__c, EstimatedEndDevDate__c and
+            // ProjectedUATReadyDate__c = TODAY for every unsized work item, which
+            // produced misleading dates across the entire delivery portal.
             return [
                 SELECT Id, Name, StageNamePk__c, PriorityPk__c, DeveloperDaysSizeNumber__c,
                        SortOrderNumber__c, DeveloperLookupId__c, CreatedDate
                 FROM WorkItem__c
                 WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                  AND DeveloperDaysSizeNumber__c != null
+                  AND DeveloperDaysSizeNumber__c > 0
                 WITH SYSTEM_MODE
                 LIMIT 10000
             ];
