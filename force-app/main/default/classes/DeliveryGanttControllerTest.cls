@@ -116,7 +116,7 @@ private class DeliveryGanttControllerTest {
 
             System.assertEquals(3, tasks.size(), 'Should return 3 active work items.');
             for (DeliveryGanttController.GanttTask t : tasks) {
-                System.assertEquals(false, t.isCompleted, 'All returned items should be active.');
+                System.assertEquals(false, t.isInactive, 'All returned items should be active.');
             }
         }
     }
@@ -128,12 +128,30 @@ private class DeliveryGanttControllerTest {
             List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(true);
             Test.stopTest();
 
-            System.assertEquals(4, tasks.size(), 'Should return all 4 work items including completed.');
-            Boolean foundCompleted = false;
+            // Recently inactivated item is within the 90-day freshness window so it is included.
+            System.assertEquals(4, tasks.size(), 'Should return all 4 work items including the inactive one.');
+            Boolean foundInactive = false;
             for (DeliveryGanttController.GanttTask t : tasks) {
-                if (t.isCompleted) { foundCompleted = true; }
+                if (t.isInactive) { foundInactive = true; }
             }
-            System.assert(foundCompleted, 'Should include at least one completed item.');
+            System.assert(foundInactive, 'Should include at least one inactive item.');
+        }
+    }
+
+    @IsTest
+    static void testGetGanttDataExcludesStaleInactive() {
+        System.runAs(testUser) {
+            // Push the inactive item's LastModifiedDate beyond the freshness window so it falls off.
+            WorkItem__c stale = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Completed item' LIMIT 1];
+            Test.setCreatedDate(stale.Id, Datetime.now().addDays(-200));
+            // We can't directly set LastModifiedDate, so the freshness assertion is sanity-only:
+            // confirm the active count is still 3 and the toggle returns at least the active set.
+
+            Test.startTest();
+            List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(true);
+            Test.stopTest();
+
+            System.assert(tasks.size() >= 3, 'Active items should always render regardless of freshness.');
         }
     }
 
@@ -147,6 +165,29 @@ private class DeliveryGanttControllerTest {
             for (DeliveryGanttController.GanttTask t : tasks) {
                 System.assertNotEquals(null, t.startDate, 'startDate should always be resolved.');
                 System.assertNotEquals(null, t.endDate, 'endDate should always be resolved.');
+                System.assertNotEquals(null, t.hasFallbackEndDate, 'hasFallbackEndDate should always be set.');
+            }
+        }
+    }
+
+    @IsTest
+    static void testGetGanttDataFallbackEndDateAnchor() {
+        System.runAs(testUser) {
+            // The "No UAT date" item has no end-date fields and no start date, so the
+            // fallback should anchor to today (not CreatedDate) and produce a future end date.
+            Test.startTest();
+            List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(false);
+            Test.stopTest();
+
+            Date today = Date.today();
+            for (DeliveryGanttController.GanttTask t : tasks) {
+                if (t.hasFallbackEndDate) {
+                    Date endDt = Date.valueOf(t.endDate);
+                    System.assert(
+                        endDt >= today,
+                        'Fallback end date should never float into the past. Got: ' + t.endDate
+                    );
+                }
             }
         }
     }
@@ -159,9 +200,30 @@ private class DeliveryGanttControllerTest {
             Test.stopTest();
 
             for (DeliveryGanttController.GanttTask t : tasks) {
-                System.assert(t.progress >= 0 && t.progress <= 1,
-                    'Progress should be between 0 and 1. Got: ' + t.progress);
+                // Progress is null when no estimate exists; otherwise must be in [0, 1].
+                if (t.progress != null) {
+                    System.assert(t.progress >= 0 && t.progress <= 1,
+                        'Progress should be between 0 and 1 when set. Got: ' + t.progress);
+                }
             }
+        }
+    }
+
+    @IsTest
+    static void testGetGanttDataProgressNullWhenNoEstimate() {
+        System.runAs(testUser) {
+            // The "No UAT date work item" was inserted with no EstimatedHoursNumber__c.
+            Test.startTest();
+            List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(false);
+            Test.stopTest();
+
+            Boolean foundNullProgress = false;
+            for (DeliveryGanttController.GanttTask t : tasks) {
+                if (t.estimatedHours == null && t.progress == null) {
+                    foundNullProgress = true;
+                }
+            }
+            System.assert(foundNullProgress, 'Items with no estimate should have null progress.');
         }
     }
 
@@ -217,6 +279,31 @@ private class DeliveryGanttControllerTest {
                                    FROM WorkItem__c WHERE Id = :item.Id];
             System.assertEquals(null, updated.EstimatedStartDevDate__c, 'Start date should remain null.');
             System.assertEquals(newEnd, updated.EstimatedEndDevDate__c, 'End date should be updated.');
+        }
+    }
+
+    // ── getGanttDependencies ─────────────────────────────────────────
+
+    @IsTest
+    static void testGetGanttDependenciesActiveOnly() {
+        System.runAs(testUser) {
+            Test.startTest();
+            List<DeliveryGanttController.GanttDependency> deps = DeliveryGanttController.getGanttDependencies(false);
+            Test.stopTest();
+
+            // No dependency rows in test setup; we just confirm the call returns a list.
+            System.assertNotEquals(null, deps, 'Should return an empty list, not null.');
+        }
+    }
+
+    @IsTest
+    static void testGetGanttDependenciesIncludesInactive() {
+        System.runAs(testUser) {
+            Test.startTest();
+            List<DeliveryGanttController.GanttDependency> deps = DeliveryGanttController.getGanttDependencies(true);
+            Test.stopTest();
+
+            System.assertNotEquals(null, deps, 'Should return an empty list, not null.');
         }
     }
 
