@@ -7,7 +7,12 @@
                     <div key={action.id} class={action.slotClass}>
                         <p class="signature-slot-label">{action.label}</p>
                         <template lwc:if={action.isCompleted}>
-                            <p class="signature-slot-stamp">{action.signatureData}</p>
+                            <template lwc:if={action.isImageSignature}>
+                                <img class="signature-slot-image" src={action.signatureImageUrl} alt="Drawn signature"/>
+                            </template>
+                            <template lwc:if={action.isTextSignature}>
+                                <p class="signature-slot-stamp">{action.signatureData}</p>
+                            </template>
                             <template lwc:if={action.signerName}>
                                 <p class="signature-slot-meta">{action.signerName}</p>
                             </template>
@@ -37,6 +42,53 @@
                     </div>
                 </template>
             </div>
+
+            <!-- Phase 4: Audit trail (admin-only) -->
+            <template lwc:if={hasAuditTrail}>
+                <div class="audit-trail">
+                    <div class="audit-trail-header">
+                        <lightning-icon icon-name="utility:lock" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        <h4 class="audit-trail-title">Tamper-Evident Audit Trail</h4>
+                    </div>
+                    <div class="audit-trail-meta">
+                        <div class="audit-trail-meta-item">
+                            <span class="audit-trail-meta-label">Document Hash</span>
+                            <code class="audit-trail-hash">{documentHashShort}</code>
+                        </div>
+                        <div class="audit-trail-meta-item">
+                            <span class="audit-trail-meta-label">Chain Head</span>
+                            <code class="audit-trail-hash">{chainHeadShort}</code>
+                        </div>
+                    </div>
+                    <table class="audit-trail-table">
+                        <thead>
+                            <tr>
+                                <th>Slot</th>
+                                <th>Signer</th>
+                                <th>Signed At</th>
+                                <th>IP</th>
+                                <th>User Agent</th>
+                                <th>Chain Hash</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={auditRows} for:item="row">
+                                <tr key={row.key}>
+                                    <td>{row.slotLabel}</td>
+                                    <td>
+                                        <div>{row.signerName}</div>
+                                        <div class="audit-trail-subtle">{row.signerEmail}</div>
+                                    </td>
+                                    <td>{row.signedAt}</td>
+                                    <td><code class="audit-trail-mono">{row.ipAddress}</code></td>
+                                    <td class="audit-trail-subtle">{row.userAgentShort}</td>
+                                    <td><code class="audit-trail-hash">{row.priorHashShort}</code></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
         </div>
     </template>
 
@@ -70,6 +122,26 @@
                         onchange={handleEmailChange}
                         class="slds-m-top_small"
                     ></lightning-input>
+
+                    <!-- Phase 5: drawn-signature toggle + pad -->
+                    <lightning-input
+                        type="toggle"
+                        label="Draw my signature instead"
+                        message-toggle-active="Drawing"
+                        message-toggle-inactive="Type stamp"
+                        checked={useDrawnSignature}
+                        onchange={handleDrawToggle}
+                        class="slds-m-top_medium"
+                    ></lightning-input>
+                    <template lwc:if={useDrawnSignature}>
+                        <div class="slds-m-top_small">
+                            <c-delivery-signature-pad
+                                label="Sign in the box below"
+                                onsignaturechange={handleSignaturePadChange}
+                            ></c-delivery-signature-pad>
+                        </div>
+                    </template>
+
                     <div class="consent-disclosure slds-m-top_medium">
                         <p class="slds-text-body_small consent-text">{consentDisclosure}</p>
                         <lightning-input

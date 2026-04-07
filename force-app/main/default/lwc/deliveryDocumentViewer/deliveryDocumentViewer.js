@@ -23,6 +23,7 @@ import getPendingInvoices from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocu
 import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
 import signActionAdmin from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.signActionAdmin';
 import getActionsForDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.getActionsForDocument';
+import getCertificateOfCompletion from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.getCertificateOfCompletion';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { currency: 'USD', style: 'currency' });
 
@@ -100,6 +101,9 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track actions = [];
     @track requiresSigning = false;
     @track consentText = '';
+
+    // Phase 4: certificate of completion (audit trail) for the previewed doc
+    @track certificate = null;
 
     // Template options loaded from DocumentTemplate__mdt
     @track docTemplateOptions = DEFAULT_TEMPLATE_OPTIONS;
@@ -880,6 +884,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.totalPaid = 0;
         this.actions = [];
         this.requiresSigning = false;
+        this.certificate = null;
 
         try {
             const result = await getDocumentById({ documentId: docId });
@@ -903,6 +908,11 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.requiresSigning = result.requiresSigning === true;
             if (result.snapshot) {
                 this.snapshot = JSON.parse(result.snapshot);
+            }
+            // Phase 4: load certificate of completion in parallel — fire-and-forget
+            // since the audit trail is supplementary and shouldn't block the doc view
+            if (this.requiresSigning) {
+                this.loadCertificate(docId);
             }
             if (result.metadata) {
                 try {
@@ -928,20 +938,27 @@ export default class DeliveryDocumentViewer extends LightningElement {
      * stays in submitting state until we call its completeSubmission(success) API.
      */
     async handleSignSubmit(event) {
-        const { actionId, signerName, signerEmail, consentGiven } = event.detail;
+        const { actionId, signerName, signerEmail, consentGiven, signatureType, drawnSignature } = event.detail;
         const childLwc = this.template.querySelector('c-delivery-document-signature-block');
         try {
             const result = await signActionAdmin({
                 actionId,
-                signerName,
-                signerEmail,
-                consentGiven
+                payload: {
+                    signerName,
+                    signerEmail,
+                    consentGiven,
+                    signatureType,
+                    drawnSignature
+                }
             });
             this.showToast('Signed', `${signerName} signed the document.`, 'success');
 
             // Refresh the actions list from the server so the slot now shows as completed
             const refreshed = await getActionsForDocument({ documentId: this.previewDoc.id });
             this.actions = refreshed || [];
+
+            // Phase 4: refresh the audit trail certificate after signing
+            this.loadCertificate(this.previewDoc.id);
 
             // If the doc status flipped to Approved, update the preview
             if (result && result.documentStatus) {
@@ -978,6 +995,24 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.showToast('Error', this.extractError(err), 'error');
         } finally {
             this.isUpdatingStatus = false;
+        }
+    }
+
+    /**
+     * @description Phase 4 — fetches the Certificate of Completion for the
+     *              current document and stores it for the signature block child
+     *              LWC to render as an audit trail. Fire-and-forget; failures
+     *              just leave the audit trail empty (the section is gated on
+     *              `hasAuditTrail` which checks for non-empty signers).
+     */
+    async loadCertificate(docId) {
+        if (!docId) {
+            return;
+        }
+        try {
+            this.certificate = await getCertificateOfCompletion({ documentId: docId });
+        } catch (err) { // eslint-disable-line no-unused-vars
+            this.certificate = null;
         }
     }
 

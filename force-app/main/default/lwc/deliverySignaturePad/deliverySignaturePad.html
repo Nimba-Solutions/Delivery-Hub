@@ -1,0 +1,16 @@
+<template>
+    <div class="signature-pad">
+        <div class="signature-pad-label">{label}</div>
+        <div class="signature-pad-canvas-wrap">
+            <canvas class="signature-pad-canvas"></canvas>
+        </div>
+        <div class="signature-pad-actions">
+            <lightning-button
+                label="Clear"
+                variant="neutral"
+                icon-name="utility:erase"
+                onclick={handleClearClick}
+            ></lightning-button>
+        </div>
+    </div>
+</template>

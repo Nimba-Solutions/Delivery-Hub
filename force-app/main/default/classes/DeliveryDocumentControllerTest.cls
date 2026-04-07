@@ -123,7 +123,8 @@ private class DeliveryDocumentControllerTest {
             DeliveryDocument__c doc = [
                 SELECT Id, Name, TemplatePk__c, StatusPk__c, PublicTokenTxt__c,
                        TotalHoursNumber__c, TotalCurrency__c, SnapshotTxt__c,
-                       PeriodStartDate__c, PeriodEndDate__c, MetadataTxt__c
+                       PeriodStartDate__c, PeriodEndDate__c, MetadataTxt__c,
+                       DocumentHashTxt__c
                 FROM DeliveryDocument__c
                 WHERE Id = :docId
             ];
@@ -142,6 +143,11 @@ private class DeliveryDocumentControllerTest {
             System.assertEquals(Date.newInstance(2026, 3, 1), doc.PeriodStartDate__c, 'Period start should match');
             System.assertEquals(Date.newInstance(2026, 3, 31), doc.PeriodEndDate__c, 'Period end should match');
             System.assert(doc.MetadataTxt__c.contains('priorBalance'), 'Metadata should be stored');
+            // Phase 4: tamper-evidence anchor
+            System.assertNotEquals(null, doc.DocumentHashTxt__c,
+                'DocumentHashTxt__c should be computed at generation time');
+            System.assertEquals(64, doc.DocumentHashTxt__c.length(),
+                'Document hash should be a 64-char SHA-256 hex digest');
         }
     }
 
