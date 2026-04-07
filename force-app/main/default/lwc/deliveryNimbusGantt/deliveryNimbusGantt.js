@@ -306,6 +306,29 @@ export default class DeliveryNimbusGantt extends LightningElement {
     _loadLibrary() {
         if (this._scriptLoading) { return; }
         this._scriptLoading = true;
+        // Polyfill ResizeObserver as a no-op stub BEFORE the library loads.
+        // The bundled NimbusGantt library references ResizeObserver in its
+        // own constructor; in Lightning Locker (and some Aura Sites contexts)
+        // ResizeObserver is not on the SecureWindow, so the library throws
+        // before our own try/catch around `new ResizeObserver()` ever runs.
+        // Without this stub the entire Gantt fails to initialize and the
+        // user sees "Failed to initialize Nimbus Gantt: ResizeObserver is
+        // not a constructor". With the stub the library loads, the Gantt
+        // renders, and only the auto-resize-on-container-change degrades.
+        try {
+            if (typeof ResizeObserver === 'undefined') {
+                // eslint-disable-next-line no-global-assign
+                window.ResizeObserver = function NoopResizeObserver() {
+                    this.observe = function() {};
+                    this.unobserve = function() {};
+                    this.disconnect = function() {};
+                };
+            }
+        } catch (_polyfillIgnored) {
+            // SecureWindow may reject the assignment in some Locker contexts.
+            // The Gantt will still try to load; the outer catch will surface
+            // a useful error if the library can't cope.
+        }
         loadScript(this, NIMBUS_GANTT)
             .then(() => {
                 this._scriptLoaded = true;
