@@ -3,7 +3,7 @@
     <fullName>RequestLookup__c</fullName>
     <deleteConstraint>SetNull</deleteConstraint>
     <description>The specific Vendor/Connection this sync item is associated with.</description>
-    <inlineHelpText>The Vendor or Mothership connection for this transaction.</inlineHelpText>
+    <inlineHelpText>The connected vendor or partner this sync item belongs to.</inlineHelpText>
     <label>Request</label>
     <referenceTo>WorkRequest__c</referenceTo>
     <relationshipLabel>Sync Items</relationshipLabel>

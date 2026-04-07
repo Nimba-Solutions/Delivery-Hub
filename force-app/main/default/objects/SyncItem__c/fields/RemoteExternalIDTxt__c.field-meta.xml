@@ -3,7 +3,7 @@
     <fullName>RemoteExternalIDTxt__c</fullName>
     <description>The ID of this record in the Remote system. Used for mapping and deduping.</description>
     <externalId>false</externalId>
-    <inlineHelpText>The ID assigned to this record by the remote system (Mothership).</inlineHelpText>
+    <inlineHelpText>The ID assigned to this record by the connected remote org.</inlineHelpText>
     <label>Remote External ID</label>
     <length>255</length>
     <required>false</required>
