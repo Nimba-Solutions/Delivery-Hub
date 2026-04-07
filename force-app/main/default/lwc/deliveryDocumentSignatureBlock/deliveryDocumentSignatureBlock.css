@@ -1,0 +1,76 @@
+.signature-block {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--lwc-colorBorder, #dddbda);
+}
+
+.signature-block-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #181818;
+}
+
+.signature-block-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.signature-slot {
+    border-radius: 0.25rem;
+    padding: 1rem;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.signature-slot--pending {
+    border: 2px dashed #c9c9c9;
+    background-color: #fff7e6;
+}
+
+.signature-slot--completed {
+    border: 2px solid #04844b;
+    background-color: #f3faf6;
+}
+
+.signature-slot-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #181818;
+}
+
+.signature-slot-empty {
+    color: #706e6b;
+    font-style: italic;
+    font-size: 0.875rem;
+    margin-top: auto;
+    margin-bottom: 0.75rem;
+}
+
+.signature-slot-stamp {
+    font-family: 'Brush Script MT', 'Lucida Handwriting', cursive;
+    font-size: 1.25rem;
+    color: #04395e;
+    margin: 0.75rem 0 0.25rem 0;
+    line-height: 1.4;
+}
+
+.signature-slot-meta {
+    font-size: 0.75rem;
+    color: #706e6b;
+}
+
+.consent-disclosure {
+    background-color: #f3f3f3;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    border-left: 3px solid #1589ee;
+}
+
+.consent-text {
+    color: #444;
+    line-height: 1.5;
+}

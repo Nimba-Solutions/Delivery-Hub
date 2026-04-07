@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SignatureDataTxt__c</fullName>
+    <description>The signature payload. For Text type: the rendered stamp string. For Image type: the ContentVersion Id of the drawn signature PNG.</description>
+    <inlineHelpText>Text stamp string OR ContentVersion Id, depending on Signature Type.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Signature Data</label>
+    <length>32768</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

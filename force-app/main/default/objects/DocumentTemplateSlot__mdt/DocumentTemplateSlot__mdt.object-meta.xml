@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Defines a single signature slot for a document template type. One record per signer role per template (e.g., Client_Agreement_Consultant, Client_Agreement_Client). Read at document generation time to create DocumentAction__c child records.</description>
+    <label>Document Template Slot</label>
+    <pluralLabel>Document Template Slots</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>
