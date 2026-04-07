@@ -71,6 +71,12 @@
                             onchange={handleEntityChange}
                             class="entity-picker"></lightning-combobox>
                     </template>
+                    <lightning-combobox value={dateRangePreset}
+                        options={dateRangeOptions} variant="label-hidden"
+                        placeholder="All Dates"
+                        onchange={handleDateRangeChange}
+                        class="date-range-picker slds-m-left_xx-small"
+                        title="Limit timeline to a date range"></lightning-combobox>
                 </template>
                 <lightning-button icon-name={lockIcon}
                     label={lockLabel} variant={lockVariant}

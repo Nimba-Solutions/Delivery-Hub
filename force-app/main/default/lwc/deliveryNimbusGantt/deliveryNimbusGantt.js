@@ -19,17 +19,87 @@ import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGan
 
 const STORAGE_KEY = 'dh-nimbus-gantt-prefs';
 
-// Phase color mapping — matches Delivery Hub workflow stages
+// Stage color mapping — covers every picklist value on WorkItem__c.StageNamePk__c.
+// Stages are bucketed into visual phases so the timeline reads at a glance.
+// Any stage not listed here falls back to UNMAPPED_STAGE_COLOR and is logged
+// once via warnUnmappedStage() so the gap is visible during prod review.
+const PHASE_INTAKE      = '#64748b'; // slate-500
+const PHASE_SIZING      = '#3b82f6'; // blue-500
+const PHASE_APPROVAL    = '#f59e0b'; // amber-500
+const PHASE_DEVELOPMENT = '#22c55e'; // green-500
+const PHASE_BLOCKED     = '#ef4444'; // red-500
+const PHASE_QA          = '#a855f7'; // purple-500
+const PHASE_UAT         = '#14b8a6'; // teal-500
+const PHASE_DEPLOYMENT  = '#f97316'; // orange-500
+const PHASE_DONE        = '#9ca3af'; // gray-400
+const PHASE_CANCELLED   = '#cbd5e1'; // slate-300
+const UNMAPPED_STAGE_COLOR = '#94a3b8'; // slate-400 (visible-but-muted fallback)
+
 const PHASE_COLORS = {
-    Planning:    '#3b82f6',
-    Approval:    '#f59e0b',
-    Development: '#22c55e',
-    Testing:     '#a855f7',
-    UAT:         '#14b8a6',
-    Deployment:  '#ef4444',
-    Done:        '#9ca3af',
-    Intake:      '#64748b'
+    // Intake / scoping
+    'Backlog':                          PHASE_INTAKE,
+    'Scoping In Progress':              PHASE_INTAKE,
+    'Clarification Requested (Pre-Dev)': PHASE_INTAKE,
+    'Providing Clarification':          PHASE_INTAKE,
+
+    // Sizing / prioritization
+    'Ready for Sizing':                 PHASE_SIZING,
+    'Sizing Underway':                  PHASE_SIZING,
+    'Ready for Prioritization':         PHASE_SIZING,
+    'Prioritizing':                     PHASE_SIZING,
+
+    // Proposal / approval
+    'Proposal Requested':               PHASE_APPROVAL,
+    'Drafting Proposal':                PHASE_APPROVAL,
+    'Ready for Tech Review':            PHASE_APPROVAL,
+    'Tech Reviewing':                   PHASE_APPROVAL,
+    'Ready for Final Approval':         PHASE_APPROVAL,
+    'Final Approving':                  PHASE_APPROVAL,
+
+    // Development
+    'Ready for Development':            PHASE_DEVELOPMENT,
+    'In Development':                   PHASE_DEVELOPMENT,
+    'Dev Clarification Requested':      PHASE_DEVELOPMENT,
+    'Providing Dev Clarification':      PHASE_DEVELOPMENT,
+    'Back For Development':             PHASE_DEVELOPMENT,
+    'Ready for Scratch Test':           PHASE_DEVELOPMENT,
+    'Scratch Testing':                  PHASE_DEVELOPMENT,
+
+    // Blocked
+    'Dev Blocked':                      PHASE_BLOCKED,
+
+    // QA
+    'Ready for QA':                     PHASE_QA,
+    'QA In Progress':                   PHASE_QA,
+
+    // UAT
+    'Ready for Internal UAT':           PHASE_UAT,
+    'Internal UAT':                     PHASE_UAT,
+    'Ready for Client UAT':             PHASE_UAT,
+    'In Client UAT':                    PHASE_UAT,
+    'Ready for UAT Sign-off':           PHASE_UAT,
+    'Processing Sign-off':              PHASE_UAT,
+
+    // Deployment
+    'Ready for Merge':                  PHASE_DEPLOYMENT,
+    'Merging':                          PHASE_DEPLOYMENT,
+    'Ready for Deployment':             PHASE_DEPLOYMENT,
+    'Deploying':                        PHASE_DEPLOYMENT,
+    'Deployed to Prod':                 PHASE_DEPLOYMENT,
+
+    // Terminal
+    'Done':                             PHASE_DONE,
+    'Cancelled':                        PHASE_CANCELLED
 };
+
+// Track unmapped stages so we only warn once per stage per session.
+const _warnedUnmappedStages = new Set();
+function warnUnmappedStage(stage) {
+    if (!stage || _warnedUnmappedStages.has(stage)) { return; }
+    _warnedUnmappedStages.add(stage);
+    // eslint-disable-next-line no-console
+    console.warn('[DeliveryNimbusGantt] Unmapped stage falls back to default color:', stage);
+}
 
 // Zoom label (toolbar) to NimbusGantt ZoomLevel mapping
 const ZOOM_MAP = {
@@ -67,6 +137,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
     showCompleted = false;
     showOverdue = false;
     myWorkOnly = false;
+    dateRangePreset = 'all'; // 'all' | 'next-30-days' | 'next-90-days' | 'current-quarter'
     editLocked = true;
     currentView = 'gantt';
     showQuickEdit = false;
@@ -152,7 +223,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
         }
     }
 
-    @wire(getGanttDependencies)
+    @wire(getGanttDependencies, { showCompleted: '$showCompleted' })
     wiredDependencies(result) {
         this._wiredDepsResult = result;
         if (result.data) {
@@ -208,12 +279,47 @@ export default class DeliveryNimbusGantt extends LightningElement {
         if (this.showOverdue) {
             var now = Date.now();
             tasks = tasks.filter(function(t) {
-                if (t.isCompleted) { return false; }
+                if (t.isInactive) { return false; }
                 if (!t.endDate) { return false; }
                 return new Date(t.endDate).getTime() < now;
             });
         }
+        if (this.dateRangePreset && this.dateRangePreset !== 'all') {
+            const bounds = this._dateRangeBounds(this.dateRangePreset);
+            if (bounds) {
+                tasks = tasks.filter(function(t) {
+                    if (!t.startDate || !t.endDate) { return false; }
+                    const startMs = new Date(t.startDate).getTime();
+                    const endMs = new Date(t.endDate).getTime();
+                    // Keep any item whose bar overlaps the visible window.
+                    return endMs >= bounds.fromMs && startMs <= bounds.toMs;
+                });
+            }
+        }
+        // Drop orphans: children whose parent has been filtered out should not
+        // jump to the root level. Either the parent renders too, or the child
+        // is hidden along with it.
+        const visibleIds = new Set(tasks.map(t => t.workItemId));
+        tasks = tasks.filter(t => !t.parentWorkItemId || visibleIds.has(t.parentWorkItemId));
         return tasks;
+    }
+
+    _dateRangeBounds(preset) {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        if (preset === 'next-30-days') {
+            return { fromMs: startOfToday, toMs: startOfToday + 30 * 86400000 };
+        }
+        if (preset === 'next-90-days') {
+            return { fromMs: startOfToday, toMs: startOfToday + 90 * 86400000 };
+        }
+        if (preset === 'current-quarter') {
+            const q = Math.floor(now.getMonth() / 3);
+            const qStart = new Date(now.getFullYear(), q * 3, 1).getTime();
+            const qEnd = new Date(now.getFullYear(), q * 3 + 3, 0).getTime();
+            return { fromMs: qStart, toMs: qEnd };
+        }
+        return null;
     }
 
     get isGanttView()       { return this.currentView === 'gantt'; }
@@ -240,7 +346,11 @@ export default class DeliveryNimbusGantt extends LightningElement {
     get dependenciesVariant() { return this.showDependencies ? 'brand' : 'border'; }
 
     get hasActiveFilters() {
-        return !!this.selectedEntity || this.myWorkOnly || this.showOverdue || this.showCompleted;
+        return !!this.selectedEntity
+            || this.myWorkOnly
+            || this.showOverdue
+            || this.showCompleted
+            || (this.dateRangePreset && this.dateRangePreset !== 'all');
     }
 
     get activeFilterText() {
@@ -249,7 +359,24 @@ export default class DeliveryNimbusGantt extends LightningElement {
         if (this.myWorkOnly) { parts.push('My Work'); }
         if (this.showOverdue) { parts.push('Overdue Only'); }
         if (this.showCompleted) { parts.push('Incl. Completed'); }
+        if (this.dateRangePreset && this.dateRangePreset !== 'all') {
+            parts.push(this._dateRangePresetLabel(this.dateRangePreset));
+        }
         return parts.join(' \u00b7 ');
+    }
+
+    get dateRangeOptions() {
+        return [
+            { label: 'All Dates',        value: 'all' },
+            { label: 'Next 30 Days',     value: 'next-30-days' },
+            { label: 'Next 90 Days',     value: 'next-90-days' },
+            { label: 'Current Quarter',  value: 'current-quarter' }
+        ];
+    }
+
+    _dateRangePresetLabel(preset) {
+        const opt = this.dateRangeOptions.find(o => o.value === preset);
+        return opt ? opt.label : preset;
     }
 
     get hasMultipleEntities() { return this.entityOptions.length > 2; }
@@ -267,25 +394,34 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
     _mapTasks() {
         const filteredIds = new Set(this.filteredTasks.map(t => t.workItemId));
-        return this.filteredTasks.map(t => ({
-            id: t.workItemId,
-            name: t.name + (t.description ? ' \u2014 ' + t.description : ''),
-            startDate: t.startDate,
-            endDate: t.endDate,
-            progress: t.progress || 0,
-            status: t.stage,
-            assignee: t.developerName,
-            parentId: filteredIds.has(t.parentWorkItemId) ? t.parentWorkItemId : undefined,
-            groupId: t.entityId,
-            groupName: t.entityName,
-            isCompleted: t.isCompleted,
-            metadata: {
-                estimatedHours: t.estimatedHours,
-                loggedHours: t.loggedHours,
-                priority: t.priority,
-                description: t.description
+        return this.filteredTasks.map(t => {
+            // Surface unmapped stages exactly once per session so prod review
+            // can catch picklist additions that don't have a color yet.
+            if (t.stage && !PHASE_COLORS[t.stage]) {
+                warnUnmappedStage(t.stage);
             }
-        }));
+            return {
+                id: t.workItemId,
+                name: t.name + (t.description ? ' \u2014 ' + t.description : ''),
+                startDate: t.startDate,
+                endDate: t.endDate,
+                progress: t.progress != null ? t.progress : 0,
+                status: t.stage,
+                assignee: t.developerName,
+                parentId: filteredIds.has(t.parentWorkItemId) ? t.parentWorkItemId : undefined,
+                groupId: t.entityId,
+                groupName: t.entityName,
+                isCompleted: t.isInactive,
+                metadata: {
+                    estimatedHours: t.estimatedHours,
+                    loggedHours: t.loggedHours,
+                    priority: t.priority,
+                    description: t.description,
+                    hasEstimate: t.progress != null,
+                    hasFallbackEndDate: t.hasFallbackEndDate
+                }
+            };
+        });
     }
 
     _mapDependencies() {
@@ -590,11 +726,18 @@ export default class DeliveryNimbusGantt extends LightningElement {
         this._rebuildChart();
     }
 
+    handleDateRangeChange(event) {
+        this.dateRangePreset = event.detail.value || 'all';
+        this._savePrefs();
+        this._rebuildChart();
+    }
+
     handleClearFilters() {
         this.selectedEntity = '';
         this.myWorkOnly = false;
         this.showOverdue = false;
         this.showCompleted = false;
+        this.dateRangePreset = 'all';
         this._savePrefs();
         this._rebuildChart();
     }
@@ -637,7 +780,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
             ctx.clearRect(0, 0, w, h);
 
             var tasks = self.filteredTasks;
-            var colors = { Submitted: '#3b82f6', 'In Development': '#22c55e', 'Code Review': '#a855f7', 'UAT Ready': '#14b8a6', Deployment: '#f97316', Done: '#6b7280', Backlog: '#64748b' };
+            var colors = PHASE_COLORS;
 
             // Capture previous positions for animation
             var prevPositions = self._vizPositions || null;
@@ -724,7 +867,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.clearRect(0, 0, w, h);
                 var tasks = self.filteredTasks;
-                var colors2 = { Submitted: '#3b82f6', 'In Development': '#22c55e', 'Code Review': '#a855f7', 'UAT Ready': '#14b8a6', Deployment: '#f97316', Done: '#6b7280', Backlog: '#64748b' };
+                var colors2 = PHASE_COLORS;
                 switch(self.currentView) {
                     case 'treemap': self._drawTreemap(ctx, w, h, tasks, colors2); break;
                     case 'bubbles': self._drawBubbles(ctx, w, h, tasks, colors2); break;
@@ -865,7 +1008,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
 
             // Overdue red tint overlay
             var endMs = r.task.endDate ? new Date(r.task.endDate).getTime() : 0;
-            if (endMs > 0 && endMs < today.getTime() && !r.task.isCompleted) {
+            if (endMs > 0 && endMs < today.getTime() && !r.task.isInactive) {
                 ctx.fillStyle = 'rgba(239, 68, 68, 0.18)';
                 ctx.beginPath();
                 ctx.roundRect(r.x, r.y, rw, rh, 6);
@@ -2326,7 +2469,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
                             var endMs = t.endDate ? new Date(t.endDate).getTime() : startMs + 7 * 86400000;
                             var prog = t.progress || 0; var hrs = t.estimatedHours || 1;
                             var entityIdx = entities37.indexOf(t.entityName || 'Unassigned');
-                            var isOverdue = endMs < today37.getTime() && !t.isCompleted;
+                            var isOverdue = endMs < today37.getTime() && !t.isInactive;
                             if (isOverdue) { overdueCount37++; } else { onTrackCount37++; }
                             var noteStart = ac.currentTime + ((startMs - minStart37) / timeSpan37) * (PLAY_DUR - 0.8);
                             var palette = isOverdue ? overdueNotes : onTrackNotes;
@@ -2980,7 +3123,8 @@ export default class DeliveryNimbusGantt extends LightningElement {
                 myWorkOnly: this.myWorkOnly,
                 currentZoom: this.currentZoom,
                 selectedEntity: this.selectedEntity,
-                editLocked: this.editLocked
+                editLocked: this.editLocked,
+                dateRangePreset: this.dateRangePreset
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
         } catch (e) {
@@ -3000,6 +3144,7 @@ export default class DeliveryNimbusGantt extends LightningElement {
             if (prefs.currentZoom) { this.currentZoom = prefs.currentZoom; }
             if (prefs.selectedEntity != null) { this.selectedEntity = prefs.selectedEntity; }
             if (prefs.editLocked != null) { this.editLocked = prefs.editLocked; }
+            if (prefs.dateRangePreset) { this.dateRangePreset = prefs.dateRangePreset; }
         } catch (e) {
             // fail silently
         }

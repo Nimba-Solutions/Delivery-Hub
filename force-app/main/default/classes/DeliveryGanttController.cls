@@ -56,7 +56,7 @@ public with sharing class DeliveryGanttController {
         @AuraEnabled public Decimal estimatedHours { get; set; }
         /** @description Total logged hours against this work item */
         @AuraEnabled public Decimal loggedHours { get; set; }
-        /** @description Progress ratio (0-1) based on logged vs estimated hours */
+        /** @description Progress ratio (0-1) based on logged vs estimated hours, or null when no estimate exists */
         @AuraEnabled public Decimal progress { get; set; }
         /** @description Name of the assigned developer */
         @AuraEnabled public String developerName { get; set; }
@@ -66,8 +66,10 @@ public with sharing class DeliveryGanttController {
         @AuraEnabled public String entityName { get; set; }
         /** @description Parent work item Id for hierarchy */
         @AuraEnabled public String parentWorkItemId { get; set; }
-        /** @description True when the work item is no longer active */
-        @AuraEnabled public Boolean isCompleted { get; set; }
+        /** @description True when the work item is no longer in the active workflow (ActivatedDateTime is null) */
+        @AuraEnabled public Boolean isInactive { get; set; }
+        /** @description True when endDate was synthesized (no real EstimatedEnd / UAT / ETA date existed) */
+        @AuraEnabled public Boolean hasFallbackEndDate { get; set; }
     }
 
     /**
@@ -109,11 +111,17 @@ public with sharing class DeliveryGanttController {
         }
     }
 
+    /** @description Default freshness window (days) when including completed items. */
+    @TestVisible private static final Integer DEFAULT_STALE_CUTOFF_DAYS = 90;
+
     /**
      * @description Returns work items with full date/hour/developer/client data
      *              for the Frappe Gantt chart. Resolves start/end dates using a
      *              fallback chain and calculates progress from logged vs estimated hours.
-     * @param showCompleted When true, includes completed (inactive) items.
+     *              When showCompleted is true, completed items are still bounded by
+     *              LastModifiedDate >= LAST_N_DAYS:90 so the timeline does not get
+     *              flooded with archived work.
+     * @param showCompleted When true, includes inactive (completed/archived) items.
      * @return List of GanttTask ordered by entity then start date.
      */
     @AuraEnabled(cacheable=true)
@@ -129,7 +137,11 @@ public with sharing class DeliveryGanttController {
                 + 'FROM WorkItem__c '
                 + 'WHERE TemplateMarkedDateTime__c = null ';
 
-            if (showCompleted != true) {
+            if (showCompleted == true) {
+                // Active items always show; inactive items must be recently modified.
+                query += 'AND (ActivatedDateTime__c != null '
+                    + 'OR LastModifiedDate >= LAST_N_DAYS:' + DEFAULT_STALE_CUTOFF_DAYS + ') ';
+            } else {
                 query += 'AND ActivatedDateTime__c != null ';
             }
 
@@ -184,14 +196,16 @@ public with sharing class DeliveryGanttController {
         task.priority = item.PriorityPk__c;
         task.estimatedHours = item.EstimatedHoursNumber__c;
         task.loggedHours = item.TotalLoggedHoursSum__c;
-        task.isCompleted = item.ActivatedDateTime__c == null;
+        task.isInactive = item.ActivatedDateTime__c == null;
         task.parentWorkItemId = item.ParentWorkItemLookup__c;
 
+        // Progress is null (not 0) when no estimate exists, so the LWC can render
+        // "no estimate" differently from "0% complete".
         if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
             Decimal logged = item.TotalLoggedHoursSum__c != null ? item.TotalLoggedHoursSum__c : 0;
             task.progress = Math.min(logged / item.EstimatedHoursNumber__c, 1.0);
         } else {
-            task.progress = 0;
+            task.progress = null;
         }
 
         task.developerName = item.DeveloperLookup__r != null ? item.DeveloperLookup__r.Name : null;
@@ -204,6 +218,11 @@ public with sharing class DeliveryGanttController {
             ? item.EstimatedStartDevDate__c
             : item.CreatedDate.date();
         task.startDate = String.valueOf(startDt);
+
+        Boolean hasRealEndDate = item.EstimatedEndDevDate__c != null
+            || item.ProjectedUATReadyDate__c != null
+            || item.CalculatedETADate__c != null;
+        task.hasFallbackEndDate = !hasRealEndDate;
 
         Date endDt = resolveEndDate(item, startDt);
         if (endDt < startDt) {
@@ -229,22 +248,36 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
-     * @description Returns active work item dependencies for rendering arrows
-     *              between tasks on the Gantt chart.
-     * @return List of GanttDependency for active blocked/blocking pairs.
+     * @description Returns work item dependencies for rendering arrows on the
+     *              Gantt chart. When showCompleted is true, dependencies that
+     *              touch inactive items are also returned so the dependency
+     *              graph stays consistent with the visible task set.
+     * @param showCompleted Mirrors the same flag on getGanttData.
+     * @return List of GanttDependency for the relevant blocked/blocking pairs.
      */
     @AuraEnabled(cacheable=true)
-    public static List<GanttDependency> getGanttDependencies() {
+    public static List<GanttDependency> getGanttDependencies(Boolean showCompleted) {
         try {
+            List<WorkItemDependency__c> rows;
+            if (showCompleted == true) {
+                rows = [
+                    SELECT Id, BlockedWorkItemLookup__c, BlockingWorkItemLookup__c, TypePk__c
+                    FROM WorkItemDependency__c
+                    WITH SYSTEM_MODE
+                    LIMIT 500
+                ];
+            } else {
+                rows = [
+                    SELECT Id, BlockedWorkItemLookup__c, BlockingWorkItemLookup__c, TypePk__c
+                    FROM WorkItemDependency__c
+                    WHERE BlockedWorkItemLookup__r.ActivatedDateTime__c != null
+                      AND BlockingWorkItemLookup__r.ActivatedDateTime__c != null
+                    WITH SYSTEM_MODE
+                    LIMIT 500
+                ];
+            }
             List<GanttDependency> deps = new List<GanttDependency>();
-            for (WorkItemDependency__c d : [
-                SELECT Id, BlockedWorkItemLookup__c, BlockingWorkItemLookup__c, TypePk__c
-                FROM WorkItemDependency__c
-                WHERE BlockedWorkItemLookup__r.ActivatedDateTime__c != null
-                  AND BlockingWorkItemLookup__r.ActivatedDateTime__c != null
-                WITH SYSTEM_MODE
-                LIMIT 500
-            ]) {
+            for (WorkItemDependency__c d : rows) {
                 GanttDependency dep = new GanttDependency();
                 dep.id = d.Id;
                 dep.source = d.BlockingWorkItemLookup__c;
@@ -278,6 +311,12 @@ public with sharing class DeliveryGanttController {
         }
     }
 
+    /**
+     * @description Resolves an end date from the first non-null real date
+     *              field. When all are null, falls back to a 14-day bar
+     *              anchored to the LATER of (startDt, today) so stale items
+     *              don't render as floating bars in the past.
+     */
     private static Date resolveEndDate(WorkItem__c item, Date startDt) {
         if (item.EstimatedEndDevDate__c != null) {
             return item.EstimatedEndDevDate__c;
@@ -288,7 +327,9 @@ public with sharing class DeliveryGanttController {
         if (item.CalculatedETADate__c != null) {
             return item.CalculatedETADate__c;
         }
-        return startDt.addDays(14);
+        Date today = Date.today();
+        Date anchor = startDt > today ? startDt : today;
+        return anchor.addDays(14);
     }
 }
 
