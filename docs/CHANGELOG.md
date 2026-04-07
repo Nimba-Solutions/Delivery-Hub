@@ -1,10 +1,140 @@
 # Changelog
 
-All notable changes to the Delivery Hub package are documented here.
+All notable changes to the Delivery Hub package are documented here. Versions match the CumulusCI unlocked package release number (e.g. `release/0.153.0.5`). PR numbers reference https://github.com/Nimba-Solutions/Delivery-Hub/pull/N.
 
 ---
 
-## 2026-04-06
+## [0.153.0] — 2026-04-07
+
+### Security & Quality
+
+#### PR #597 — Phase A P0 fixes + portal HIGH gaps
+- **Clickjacking** — `Delivery_Hub.site-meta.xml` `AllowAllFraming` changed to `SameOriginOnly`
+- **FLS leak** — removed `DocumentAction__c.SignerTokenTxt__c` from `DeliveryHubGuestUser` permission set (service layer still reads it via `SYSTEM_MODE`)
+- **Hardcoded issuer branding** — document renderer now sources issuer name/url/address from the configured vendor `NetworkEntity__c` instead of the hardcoded Cloud Nimbus literal
+- **Escalation test fixes (16)** — `DeliveryEscalationServiceTest` + `DeliveryEscalationJobTest` now set `ActivatedDateTime__c`/`StageEnteredDateTime__c` explicitly in `@TestSetup` to work around the namespaced-packaging trigger-mutation gotcha (same pattern as #595)
+- **`loadPendingAction` race** — added `FOR UPDATE` so two concurrent signers cannot double-sign the same slot
+- **classAccesses gap** — `DeliveryGanttController` and `DeliveryDocActionController` added to both `DeliveryHubAdmin_App` and `DeliveryHubApp` permission sets (both are `public`, not `global`, so they need explicit class access)
+- **Canvas signature persistence in REST API** — `DeliveryDocActionRestApi` POST now reads `signatureType`/`signatureData`/`drawnSignature` from the body and routes canvas PNG bytes through the existing image-handling path instead of silently dropping them. Also picks up `X-Forwarded-For` for end-to-end client IP capture and `portalSessionEmail` for tamper-evident portal-session attribution.
+- **`signingRequired`/`signingComplete`/`signingSlots` on `getDocumentByToken`** — new `buildSigningStatusBlock` helper in `DeliveryDocQueryService` returns signing slot metadata and a `hashChainVerified` flag. Automatically surfaced on `GET /api/documents/<token>`.
+
+#### PR #596 — Revert all 8 Master-Detail field renames (unblock prod install)
+- Reverted PR #590's Master-Detail renames. Salesforce does not permit Master-Detail field rename via package upgrade (the platform refuses to delete the old MD field while child records reference it and refuses to create the new MD field while the old one still exists).
+- All 8 MD fields stay on the legacy `*Id__c` suffix forever: `BountyClaim__c.WorkItemId__c`, `DeliveryDocument__c.NetworkEntityId__c`, `DeliveryTransaction__c.DocumentId__c`, `DocumentAction__c.DocumentId__c`, `PortalAccess__c.NetworkEntityId__c`, `WorkItemComment__c.WorkItemId__c`, `WorkLog__c.RequestId__c`, `WorkRequest__c.WorkItemId__c`.
+- `MasterDetailFieldNamingConvention` PMD rule disabled in `category/xml/default.xml`; `LookupFieldNamingConvention` still enforced.
+- See [FIELD_NAMING.md](FIELD_NAMING.md) for the full exception rationale.
+
+### Features — Document Actioning + Signatures
+
+#### PR #593 — Phase 5: drawn signature pad (canvas)
+- New `deliverySignaturePad` LWC — HTML5 canvas pad with mouse + touch + Apple Pencil support, ported from mobilization-funding repo with Flow code stripped
+- DocuSign-parity drawn signatures: signer drags in the box, preview renders, signature persists as a ContentVersion attached to the `DocumentAction__c` row
+- `DeliveryDocActionService` accepts `signatureType = 'Image'` with the base64 PNG in `drawnSignature`; normalizes legacy `Drawn` spelling to `Image`
+- Public portal signing LWC wires the pad into the signing modal alongside the existing text-stamp mode
+
+#### PR #592 — Phase 4: hash chain materialization + Certificate of Completion
+- `DeliveryDocActionService.applySignatureToAction` now materializes the SHA-256 chain parent hash from the latest `ActivityLog__c.HashChainTxt__c` at sign time, stamping `DocumentAction__c.PriorHashTxt__c` for tamper evidence
+- Re-queries `ActivityLog__c` after insert so the trigger-computed `PriorHashTxt__c` materializes (see #595 for the follow-up fix)
+- `Certificate_Of_Completion` DocumentTemplate and `DeliveryDocCertificateService` — auto-generates an ESIGN/UETA-compliant audit certificate listing every signer, IP, user-agent, consent timestamp, and hash chain entry
+- `scripts/backfill-document-hashes.apex` — one-shot script to populate hashes on pre-existing signed documents
+
+#### PR #591 — Admin Copy Signer Link button + token rotation
+- `deliveryDocumentViewer` admin view gains a "Copy Signer Link" button per signer slot — one click copies the public `/portal/documents/<token>` URL with the signer token pre-filled
+- Tokens rotate to null on sign completion (defense in depth); non-null tokens indicate the slot is still pending
+- Admins can force a token rotation to invalidate a previously-sent signer link
+- See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full phase map
+
+#### PR #590 — Enforce strict field naming convention across all custom fields
+- **NOTE**: Fully reverted by PR #596 for the 8 Master-Detail fields. Lookup renames stayed.
+- Original intent: rename 44 fields to enforce type-suffix conventions package-wide
+
+#### PR #589 — Phase 3: public portal signing (Coleman demo)
+- New `deliveryDocumentSignPortal` LWC — guest-context signing UX that loads a document by signer token, shows a consent checkbox, and writes a signature via the text-stamp mode
+- `DeliveryDocActionRestApi` exposes `POST /services/apexrest/sign/<token>` for the portal LWC to post the signature (captures `X-Salesforce-SIP` / `X-Forwarded-For` IP and `User-Agent`)
+- `DeliveryDocApprovalService` auto-transitions `Sent → Awaiting_Signatures` when the document is signed and signing is still incomplete
+- `DeliveryHubGuestUser` permission set widened for the new flow (read on `DocumentAction__c` fields required by the portal, explicit class access for the REST resource)
+- **Coleman demo is fully demoable at the end of this PR** — full lease-signing flow works end-to-end
+
+#### PR #586 — Native multi-party document actioning + signatures (Phase 1 + 2)
+- New `DocumentAction__c` object (master-detail child of `DeliveryDocument__c`) holds one record per signer slot with signer name/email, status, signature type, signature data, signer token, prior hash, IP address, user agent, and electronic consent timestamp
+- New `DocumentTemplateSlot__mdt` CMT defines signer slots per template (4 records ship: Client_Agreement × Consultant/Client, Contractor_Agreement × Company/Contractor)
+- New `DeliveryDocActionService` with `createSlotsForTemplate`, `signActionByToken`, `getDocumentBundleForSignerToken`, `templateRequiresSigning`, `formatTextSignatureStamp`, `generateSignerToken`
+- New `DeliveryDocActionController` and `DeliveryDocActionControllerTest`
+- New `deliveryDocumentSignatureBlock` child LWC shared by admin viewer and public portal
+- New `DeliveryHubSettings__c.EnableAdminSigningDateTime__c` feature flag gates admin-side signing UI
+- `DeliveryDocument__c` gains `DocumentHashTxt__c` and `RequiresSigningCheckbox__c`; `StatusPk__c` gains `Awaiting_Signatures` value
+- `DocumentTemplate__mdt` gains `RequiresSigningCheckbox__c` and `ElectronicConsentTextTxt__c`
+- `Client_Agreement` and `Contractor_Agreement` CMT records set to require signing
+- Phase 1 (data model + slot creation) and Phase 2 (text-stamp admin signing) ship in this PR
+
+### Features
+
+#### PR #585 — Introduce Delivery Hub design system for hero components
+- New `deliveryDesignTokens` static resource — CSS variables for color, spacing, typography, shadow
+- `deliveryHubBoard`, `deliveryClientDashboard`, and `deliveryDocumentViewer` updated to consume design tokens
+- Consistent look across hero components
+
+#### PR #581 — Add CMT-driven Executive Dashboard framework
+- New `DashboardCard__mdt` CMT defines card configuration (title, metric query, size, target app)
+- New `DeliveryExecutiveDashboardController` resolves card metrics at runtime
+- Admin-only `deliveryExecutiveDashboard` LWC placed on the admin home flexipage
+- First-cut cards: active work items, hours this period, open invoices, rate-limit breaches
+
+#### PR #580 — Add coverage for 11 untested service classes (91 methods)
+- Closes the coverage gap on `DeliveryApprovalChainService`, `DeliveryArchivalService`, `DeliveryAuditChainService`, `DeliveryCryptoService`, `DeliveryNotificationPreferenceService`, `DeliveryRateLimitService`, `DeliverySLAService`, `DeliveryTeamPermissionService`, `DeliveryWorkItemQueryService`, and the decomposed document/escalation services
+
+#### PR #579 — Operations workflow type (9 stages, 3 personas)
+- New `Operations` workflow type via CMT: 9 stages (Backlog → Scheduled → In Progress → Waiting on Parts → Work Complete → Documentation → Quality Check → Signed Off → Closed) and 3 personas (Technician, Supervisor, Customer)
+
+#### PR #578 — Change Management workflow type (12 stages, 3 personas)
+- New `Change_Management` workflow type via CMT: 12 stages covering Request → Approve → Implement → Post-Implementation Review lifecycle; 3 personas (Requester, CAB, Implementer)
+
+#### PR #577 — Wire Permission Analyzer to Security Report document generation
+- `deliveryPermissionAnalyzer` LWC gains a "Generate Security Report" button
+- Renders as a `Security_Audit` DocumentTemplate — PDF + email delivery via the Document Engine
+- Executives get a plain-English permission audit without running SOQL
+
+#### PR #576 — Expose Gantt/timeline fields in portal work-items API
+- `GET /api/work-items` and `GET /api/work-items/{id}` now include `estimatedStartDate`, `estimatedEndDate`, `calculatedETADate`, and `stageEnteredDateTime`
+- Portal Gantt at cloudnimbusllc.com/portal can render the Nimbus Gantt directly from the REST payload
+
+### Fixes
+
+#### PR #595 — Re-query ActivityLog after insert so PriorHashTxt__c materializes
+- Trigger-computed `PriorHashTxt__c` was not visible to the same transaction without a re-query
+- `DeliveryDocActionService.applySignatureToAction` now re-queries the inserted `ActivityLog__c` row before stamping the parent hash onto the `DocumentAction__c`
+
+#### PR #594 — Unbreak beta_create: fix CustomSite Apex page reference
+- `CustomSite` metadata was referencing a renamed Apex page using the `%%%NAMESPACED_ORG%%%` token, which does not resolve in subscriber orgs
+- Swapped to `%%%NAMESPACE%%%` so the reference resolves correctly in both scratch and subscriber contexts
+- Unblocks the `beta_create` job
+
+#### PR #588 — Skip unsized work items in ETA simulation
+- `DeliveryWorkItemETAService` was including work items with null `EstimatedHoursNumber__c` in the Monte Carlo ETA projection, producing NaN dates
+- Now skipped with a debug log
+
+#### PR #587 — Run scratch-org tests on all PRs, not just feature/* branches
+- `.github/workflows/feature_test.yml` trigger changed from `branches: ['feature/**']` to `branches: ['**']`
+- Closes the gap where PRs not prefixed with `feature/` were skipping the scratch-org feature-test job
+- Deserves its own PR so every downstream PR gets real CI coverage
+
+#### PR #584 — Resolve beta build #503 errors
+- Triaged the beta build #503 failures: permission set XML ordering, CMT references to deleted fields, and a missing field path in `DeliveryRateLimitService`
+
+#### PR #583 — Make DashboardCardController global for package visibility
+- `@AuraEnabled` methods on a `public` controller are invisible to subscriber-org LWCs in an unlocked package — had to be `global`
+
+#### PR #582 — Add Executive Dashboard to home page flexipage
+- `deliveryExecutiveDashboard` LWC placed on the admin home flexipage region
+
+### Chore
+
+#### Debug-statement hygiene sweep
+- Removed leftover `System.debug` / `console.log` dev tracing from `DeliveryContentDocLinkTriggerHandler`, `DeliveryWorkItemController`, and `deliveryHubBoard` ahead of the marketing push. Error-path logging retained.
+
+---
+
+## [0.152.0] — 2026-04-06
 
 ### Refactoring
 
@@ -54,9 +184,9 @@ All notable changes to the Delivery Hub package are documented here.
 
 ---
 
-## 2026-04-05 / 2026-04-06
+## [0.151.0] — 2026-04-05
 
-### Architecture
+### Architecture — Enterprise Readiness (Phases 0-8)
 
 #### PR #549 — Bool field elimination
 - Replaced all remaining Boolean/Checkbox custom fields with DateTime stamps across the entire schema (357 files touched)
@@ -149,7 +279,7 @@ All notable changes to the Delivery Hub package are documented here.
 
 ---
 
-## 2026-03-24
+## [0.150.0] — 2026-03-24
 
 ### PR #443 — Package upload fixes
 
@@ -293,7 +423,7 @@ All notable changes to the Delivery Hub package are documented here.
 
 ---
 
-## 2026-03-17
+## [0.149.0] — 2026-03-17
 
 ### PR #423 — Final PMD compliance
 

@@ -17,31 +17,38 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **WorkItem\_\_c** | Core work item (ticket, task, deliverable) | BriefDescriptionTxt\_\_c, StageNamePk\_\_c, PriorityPk\_\_c, ClientNetworkEntityId\_\_c, WorkflowTypeTxt\_\_c, EstimatedHoursNumber\_\_c, CalculatedETADate\_\_c |
 | **WorkItemComment\_\_c** | Comments/chat on a work item | WorkItemId\_\_c, BodyTxt\_\_c, AuthorTxt\_\_c, SourcePk\_\_c |
 | **WorkRequest\_\_c** | Bridge linking a WorkItem to a vendor NetworkEntity for downstream sync | WorkItemId\_\_c, DeliveryEntityId\_\_c, RemoteWorkItemIdTxt\_\_c, StatusPk\_\_c |
-| **NetworkEntity\_\_c** | Represents a connected org or external system | EntityTypePk\_\_c (Client/Vendor/Both), IntegrationEndpointUrlTxt\_\_c, ApiKeyTxt\_\_c, ConnectionStatusPk\_\_c, EnableVendorPushBool\_\_c, OrgIdTxt\_\_c |
+| **NetworkEntity\_\_c** | Represents a connected org or external system | EntityTypePk\_\_c (Client/Vendor/Both), IntegrationEndpointUrlTxt\_\_c, ApiKeyTxt\_\_c, ConnectionStatusPk\_\_c, EnableVendorPushDateTime\_\_c, HmacSecretTxt\_\_c, OrgIdTxt\_\_c, DefaultHourlyRateCurrency\_\_c, AddressTxt\_\_c, ContactEmail\_\_c, ContactPhone\_\_c |
 | **SyncItem\_\_c** | Audit ledger for every sync event (inbound and outbound) | DirectionPk\_\_c, StatusPk\_\_c, ObjectTypePk\_\_c, PayloadTxt\_\_c, GlobalSourceIdTxt\_\_c, RemoteExternalIdTxt\_\_c, LocalRecordIdTxt\_\_c |
 | **WorkItemDependency\_\_c** | Blocking relationship between two work items | BlockingWorkItemId\_\_c, DependentWorkItemId\_\_c |
 | **WorkLog\_\_c** | Time logging entries | WorkItemId\_\_c, HoursNumber\_\_c, DateDt\_\_c, DescriptionTxt\_\_c |
 | **DeliveryHubSettings\_\_c** | Org-level settings (hierarchy custom setting) | Scheduling, polling, AI config, ReconciliationHourNumber\_\_c, SyncRetryLimitNumber\_\_c, ActivityLogRetentionDaysNumber\_\_c, EscalationCooldownHoursNumber\_\_c |
 | **ActivityLog\_\_c** | Audit trail of changes on work items | WorkItemId\_\_c, ActionTypePk\_\_c, ComponentNameTxt\_\_c, ContextDataTxt\_\_c, PageUrlTxt\_\_c, NetworkEntityId\_\_c, SessionIdTxt\_\_c |
-| **DeliveryDocument\_\_c** | Generated documents (invoices, status reports) with versioning | NetworkEntityId\_\_c (MD), TemplatePk\_\_c, StatusPk\_\_c, SnapshotTxt\_\_c (131072 LTA), TotalHoursNumber\_\_c, TotalCurrency\_\_c, AiNarrativeTxt\_\_c, PublicTokenTxt\_\_c (External ID), PeriodStartDate\_\_c, PeriodEndDate\_\_c, TermsTxt\_\_c, DueDateDate\_\_c, VersionNumber\_\_c (default 1), PreviousVersionId\_\_c (self-lookup), DisputeReasonTxt\_\_c (LTA 5000) |
-| **DeliveryTransaction\_\_c** | Financial transactions against a document (payments, credits, refunds) | DocumentId\_\_c (MD to DeliveryDocument\_\_c), AmountCurrency\_\_c, TypePk\_\_c (Payment/Credit/Refund/Adjustment/Write-Off), MethodPk\_\_c, TransactionDateDate\_\_c, NoteTxt\_\_c |
+| **DeliveryDocument\_\_c** | Generated documents (invoices, status reports, agreements) with versioning | NetworkEntityId\_\_c (MD), TemplatePk\_\_c, StatusPk\_\_c (includes `Awaiting_Signatures`), SnapshotTxt\_\_c (131072 LTA), TotalHoursNumber\_\_c, TotalCurrency\_\_c, AiNarrativeTxt\_\_c, PublicTokenTxt\_\_c (External ID), PeriodStartDate\_\_c, PeriodEndDate\_\_c, TermsTxt\_\_c, DueDateDate\_\_c, VersionNumber\_\_c, PreviousVersionId\_\_c (self-lookup), DisputeReasonTxt\_\_c (LTA 5000), DocumentHashTxt\_\_c (SHA-256 snapshot hash), RequiresSigningCheckbox\_\_c |
+| **DocumentAction\_\_c** | One record per signer slot on a document | DocumentId\_\_c (MD to DeliveryDocument\_\_c, non-reparentable), ActionLabelTxt\_\_c, AssignedEntityLookup\_\_c, StatusPk\_\_c (Pending/Completed/Voided), CompletedDateTime\_\_c, SignatureTypePk\_\_c (Text/Image), SignatureDataTxt\_\_c (LTA 32768 — text stamp OR ContentVersion id), SignerNameTxt\_\_c, SignerEmail\_\_c, SignerTokenTxt\_\_c (unique external id, rotates to null on completion), PriorHashTxt\_\_c (SHA-256 chain parent), IpAddressTxt\_\_c, UserAgentTxt\_\_c, ElectronicConsentDateTime\_\_c, ActivityLogIdTxt\_\_c |
+| **DeliveryTransaction\_\_c** | Financial transactions against a document (payments, credits, refunds) | DocumentId\_\_c (MD to DeliveryDocument\_\_c), AmountCurrency\_\_c, TypePk\_\_c (Payment/Credit/Refund/Adjustment/Write-Off/Approval), MethodPk\_\_c, TransactionDateDate\_\_c, NoteTxt\_\_c |
 | **PortalAccess\_\_c** | Controls portal user access; links email to NetworkEntity with access level | NetworkEntityId\_\_c (MD), EmailTxt\_\_c, RolePk\_\_c |
-| **DeliverySavedFilter\_\_c** | User-owned saved board filter presets (Private sharing model) | LabelTxt\_\_c, FilterJsonTxt\_\_c (LTA), IsDefaultBool\_\_c, WorkflowTypeTxt\_\_c |
+| **DeliverySavedFilter\_\_c** | User-owned saved board filter presets (Private sharing model) | LabelTxt\_\_c, FilterJsonTxt\_\_c (LTA), DefaultSetDateTime\_\_c, WorkflowTypeTxt\_\_c |
+| **NotificationPreference\_\_c** | Per-user per-event notification channel configuration | UserId\_\_c, EventTypeTxt\_\_c, ChannelPk\_\_c (Email/PlatformEvent/Both/None) |
 
 ### Custom Metadata Types
 
 | CMT | Purpose | Key Fields |
 |-----|---------|------------|
-| **WorkflowType\_\_mdt** | Defines a workflow type (e.g., Software Delivery, Loan Approval) | Label, IconName\_\_c, SortOrderNumber\_\_c, IsDefaultBool\_\_c, UseSimplifiedViewBool\_\_c |
-| **WorkflowStage\_\_mdt** | Stage definition within a workflow type | ApiValueTxt\_\_c, DisplayNameTxt\_\_c, CardColorTxt\_\_c, HeaderBgColorTxt\_\_c, PhaseTxt\_\_c, IsTerminalBool\_\_c, IsBlockedStateBool\_\_c, IsAttentionStateBool\_\_c, AllowedForwardTransitionsTxt\_\_c, AllowedBacktrackTransitionsTxt\_\_c |
-| **WorkflowPersonaView\_\_mdt** | Column grouping for a persona's board view | PersonaNameTxt\_\_c, ColumnNameTxt\_\_c, StageApiValuesTxt\_\_c, SortOrderNumber\_\_c, IsExtendedColumnBool\_\_c |
+| **WorkflowType\_\_mdt** | Defines a workflow type (e.g., Software Delivery, Loan Approval) | Label, IconNameTxt\_\_c, SortOrderNumber\_\_c, DefaultDateTime\_\_c, UseSimplifiedViewDateTime\_\_c, DescriptionTxt\_\_c |
+| **WorkflowStage\_\_mdt** | Stage definition within a workflow type | ApiValueTxt\_\_c, DisplayNameTxt\_\_c, CardColorTxt\_\_c, HeaderBgColorTxt\_\_c, HeaderTextColorTxt\_\_c, PhaseTxt\_\_c, TerminalDateTime\_\_c, BlockedStateDateTime\_\_c, AttentionStateDateTime\_\_c, VisibleByDefaultDateTime\_\_c, AllowedForwardTransitionsTxt\_\_c, AllowedBacktrackTransitionsTxt\_\_c, EtaWeightNumber\_\_c, OwnerPersonaTxt\_\_c, WorkflowTypeMdt\_\_c |
+| **WorkflowPersonaView\_\_mdt** | Column grouping for a persona's board view | PersonaNameTxt\_\_c, ColumnNameTxt\_\_c, StageApiValuesTxt\_\_c, SortOrderNumber\_\_c, ExtendedColumnDateTime\_\_c, WorkflowTypeMdt\_\_c |
 | **WorkflowEscalationRule\_\_mdt** | Rule-based escalation conditions and actions | Condition fields, notification config |
 | **WorkflowStageRequirement\_\_mdt** | Required fields for stage gate enforcement | Stage, required field, validation message |
 | **SLARule\_\_mdt** | SLA target definitions | Response/resolution time targets |
 | **CloudNimbusGlobalSettings\_\_mdt** | Global configuration defaults | Default vendor settings |
 | **OpenAIConfiguration\_\_mdt** | AI integration settings | API key, model, endpoint |
-| **DocumentTemplate\_\_mdt** | Registry of document templates (Invoice, Status\_Report) | PortalComponentTxt\_\_c, DataQueryTxt\_\_c, OutputFormatsTxt\_\_c, AiPromptTxt\_\_c, WorkflowTypeTxt\_\_c, DescriptionTxt\_\_c |
-| **TrackedField\_\_mdt** | Defines which fields the Activity Tracking system monitors for change logging. Records: WorkItem\_Developer, WorkItem\_Priority, WorkItem\_Stage, WorkItem\_Status | ObjectApiName\_\_c, FieldApiName\_\_c, FieldLabel\_\_c, IsEnabledBool\_\_c, SortOrderNumber\_\_c |
+| **DocumentTemplate\_\_mdt** | Registry of document templates (Invoice, Status\_Report, Client\_Agreement, Contractor\_Agreement, Security\_Audit, Certificate\_Of\_Completion) | PortalComponentTxt\_\_c, DataQueryTxt\_\_c, OutputFormatsTxt\_\_c, AiPromptTxt\_\_c, WorkflowTypeTxt\_\_c, DescriptionTxt\_\_c, RequiresSigningCheckbox\_\_c, ElectronicConsentTextTxt\_\_c |
+| **DocumentTemplateSlot\_\_mdt** | Signer slot configuration per template (one record per signer role) | TemplateTypeTxt\_\_c, ActionLabelTxt\_\_c, RoleTxt\_\_c, SortOrderNumber\_\_c, AutoAssignTxt\_\_c |
+| **TrackedField\_\_mdt** | Fields the Activity Tracking system monitors for change logging | ObjectApiNameTxt\_\_c, FieldApiNameTxt\_\_c, FieldLabelTxt\_\_c, EnabledDateTime\_\_c, SortOrderNumber\_\_c |
+| **ApprovalStep\_\_mdt** | Formal approval chain definition — sequential approvers per workflow stage transition | WorkflowTypeTxt\_\_c, FromStageTxt\_\_c, ToStageTxt\_\_c, StepOrderNumber\_\_c, ApproverProfileTxt\_\_c, RequiredCheckboxDateTime\_\_c |
+| **DashboardCard\_\_mdt** | Executive Dashboard card configuration (CMT-driven, no code deploy to add cards) | TitleTxt\_\_c, QueryTxt\_\_c, SizePk\_\_c, TargetAppPk\_\_c, SortOrderNumber\_\_c |
+| **DeliveryTeam\_\_mdt** | Team-based visibility membership — defines who sees which board | TeamNameTxt\_\_c, MemberUserIdTxt\_\_c, NetworkEntityIdTxt\_\_c |
+| **DeveloperCapacity\_\_mdt** | Developer capacity for allocation calculations (Phase 4 velocity planning) | DeveloperUserIdTxt\_\_c, WeeklyCapacityNumber\_\_c, UtilizationTargetPct\_\_c |
 
 ### Platform Events
 
@@ -50,7 +57,8 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **DeliveryWorkItemChange\_\_e** | Published on work item changes to drive real-time UI updates | -- |
 | **DeliverySync\_\_e** | Published on sync item completion (success or failure) for external subscribers | RecordIdTxt\_\_c, ObjectTypePk\_\_c, DirectionPk\_\_c, StatusPk\_\_c, ErrorMessageTxt\_\_c |
 | **DeliveryEscalation\_\_e** | Published when an escalation rule fires, enabling external alerting integrations | WorkItemIdTxt\_\_c, RuleNameTxt\_\_c, SeverityPk\_\_c, ActionTypePk\_\_c, DaysInStageNum\_\_c |
-| **DeliveryDocEvent\_\_e** | Published on document lifecycle events (generated, sent, approved, disputed) | DocumentIdTxt\_\_c, StatusPk\_\_c, TemplatePk\_\_c, EntityNameTxt\_\_c |
+| **DeliveryDocEvent\_\_e** | Published on document lifecycle events (generated, sent, signed, approved, disputed) | DocumentIdTxt\_\_c, StatusPk\_\_c, TemplatePk\_\_c, EntityNameTxt\_\_c |
+| **GanttRemoteEvent\_\_e** | Phone → desktop Gantt remote control events (tilt, swipe, tap) | DirectionPk\_\_c, ValueNumber\_\_c, SessionTokenTxt\_\_c |
 
 ### Relationship Diagram
 
@@ -274,12 +282,20 @@ See [Sync API Guide](SYNC_API_GUIDE.md) for full documentation.
 
 | Trigger | Object | Purpose |
 |---------|--------|---------|
-| `DeliveryWorkItemTrigger` | WorkItem\_\_c | Fires sync engine on insert/update. Publishes platform events for real-time UI. |
+| `DeliveryWorkItemTrigger` | WorkItem\_\_c | Fires sync engine on insert/update. Stamps `StageEnteredDateTime__c` on stage change. Publishes platform events for real-time UI. |
 | `DeliveryWorkItemCommentTrigger` | WorkItemComment\_\_c | Fires sync engine for comment replication. |
 | `DeliveryContentDocumentLinkTrigger` | ContentDocumentLink | Fires sync engine when files are attached to work items. |
-| `DeliveryWorkLogTrigger` | WorkLog\_\_c | Fires sync engine for time entry replication. |
+| `DeliveryWorkLogTrigger` | WorkLog\_\_c | Fires sync engine for time entry replication, gated on approval. |
+| `DeliveryBountyClaimTrigger` | BountyClaim\_\_c | Routes bounty claims back to the origin org via the sync engine. |
+| `DeliveryWorkItemDependencyTrigger` | WorkItemDependency\_\_c | Invalidates the dependency graph cache on insert/update/delete. |
+| `DeliveryWorkRequestTrigger` | WorkRequest\_\_c | Resolves vendor routing on insert; fires sync engine bridge updates. |
+| `DeliveryNetworkEntityTrigger` | NetworkEntity\_\_c | Validates connection status + API key fields on insert/update. |
+| `DeliveryDeliveryDocumentTrigger` | DeliveryDocument\_\_c | Auto-creates `DocumentAction__c` slots for signing-required templates. |
+| `DeliveryDeliveryTransactionTrigger` | DeliveryTransaction\_\_c | Rolls up payment totals onto the parent document. |
+| `DeliveryDocumentActionTrigger` | DocumentAction\_\_c | Advances the parent document status to `Approved` when all slots are `Completed`. |
+| `DeliveryActivityLogTrigger` | ActivityLog\_\_c | Computes the SHA-256 hash chain via `DeliveryAuditChainService.setHashOnInsert()`. |
 
-All triggers delegate to `DeliverySyncEngine.captureChanges()` with a curated set of allowed fields. The sync engine checks `isSyncContext` to prevent recursive firing during inbound sync processing.
+All triggers delegate to the appropriate service. The sync engine checks `DeliverySyncEngine.isSyncContext` to prevent recursive firing during inbound sync processing.
 
 ---
 
@@ -322,9 +338,11 @@ Most Apex classes that handle sync or portal operations use `without sharing` co
 1. Spin up a namespaced scratch org
 2. Deploy the package source
 3. Deploy `unpackaged/post/` (reports, test suites, etc.)
-4. Run 300+ Apex tests (75%+ coverage enforced)
-5. Run PMD static analysis (zero violations enforced)
+4. Run 1,000+ Apex tests (75%+ coverage enforced; 90%+ on new enterprise services per PR #580)
+5. Run PMD static analysis (zero priority 1-4 violations enforced; `AvoidDebugStatements` and `ExcessiveParameterList` tuned — see `category/xml/default.xml`)
 6. Tear down scratch org
+
+Since PR #587 the feature-test workflow runs on every branch, not just `feature/*` — this closed a silent gap where docs/chore/refactor branches were skipping the scratch-org feature-test job entirely.
 
 ### Release Process
 
@@ -362,6 +380,11 @@ The board UI is entirely data-driven. No stage names, colors, transitions, or pe
 |------|--------|----------|----------|
 | Software_Delivery | 40+ | Client, Consultant, Developer, QA | Full software delivery lifecycle |
 | Loan_Approval | 8 | Borrower, Processor, Admin | Simplified loan processing |
+| Customer_Onboarding | (CMT) | (CMT) | Customer onboarding flow |
+| HR_Recruiting | (CMT) | (CMT) | Hiring pipeline |
+| Marketing_Campaign | (CMT) | (CMT) | Campaign lifecycle |
+| Change_Management | 12 | Requester, CAB, Implementer | ITIL change management (PR #578) |
+| Operations | 9 | Technician, Supervisor, Customer | Field operations (PR #579) |
 
 ---
 
@@ -508,6 +531,153 @@ Both methods are exposed through `DeliveryPublicApiService` as `POST /api/docume
 
 ---
 
+## Document Actioning & Signatures
+
+Native multi-party document signing built into the package — no DocuSign integration. ESIGN Act / UETA compliant via tamper-evident hash chain, per-signer access tokens, electronic consent capture, IP/user-agent recording, and a Certificate of Completion template.
+
+### Components
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryDocActionService** | Core service. `createSlotsForTemplate(documentId, templateType, snapshot)` auto-generates one `DocumentAction__c` per signer slot from `DocumentTemplateSlot__mdt`. `signActionByToken(token, ctx)` applies a signature with `FOR UPDATE` locking, writes an `ActivityLog__c` chain entry, materializes `PriorHashTxt__c` from the re-queried log row, and rotates the signer token to null. `getDocumentBundleForSignerToken(token)` returns the portal signing bundle. `formatTextSignatureStamp(name, ts)` produces the `Name (digitally signed MMM DD, YYYY)` text format. `templateRequiresSigning(templateType)` checks `DocumentTemplate__mdt.RequiresSigningCheckbox__c`. |
+| **DeliveryDocActionController** | LWC-facing facade (`public`, not `global` — primitives + `Map<String, Object>` only). Methods: `getActionsForDocument`, `signActionAdmin`, `updateAssignedEntity`, `getDocumentForSigner`, `signActionPublic`. |
+| **DeliveryDocActionRestApi** | `@RestResource /sign/*`. `GET /sign/<token>` returns the document bundle; `POST /sign/<token>` accepts `{signerName, signerEmail, consentGiven, signatureType, signatureData, drawnSignature, portalSessionEmail}`. Captures client IP from `X-Forwarded-For` (preferred) or `X-Salesforce-SIP`, and user agent from `User-Agent`. Text signatures are formatted server-side; image signatures route base64 PNG bytes through the ContentVersion path after stripping the `data:image/png;base64,` URI prefix. |
+| **DeliveryDocCertificateService** | Generates the `Certificate_Of_Completion` document automatically after a multi-party document reaches Approved. Lists every signer, IP, timestamp, user agent, consent stamp, and hash chain entry. |
+| **DeliveryDocQueryService.buildSigningStatusBlock** | Exposes `signingRequired`, `signingComplete`, `signingSlots[]`, `hashChainVerified`, `hashChainVerifiedAt` on `GET /api/documents/<token>` so the public portal can render the signing status section and "Audit chain verified" badge. Signer tokens on completed slots return `null` (defense in depth). |
+| **deliveryDocumentSignatureBlock (LWC)** | Shared signature block rendering between admin viewer and public portal. |
+| **deliveryDocumentSignPortal (LWC)** | Guest-context portal signing UX. Loads document by signer token, shows consent checkbox + electronic consent text, renders the text-stamp or drawn-canvas pad. |
+| **deliverySignaturePad (LWC)** | HTML5 canvas pad. Mouse + touch + Apple Pencil. Exports a base64 PNG that the REST API persists as a ContentVersion and links back to the slot. |
+
+### Status Flow
+
+```
+Draft → Ready → Sent → Awaiting_Signatures → Approved → Paid
+                          ↓ (only when RequiresSigningCheckbox__c=true)
+                     Viewed (skipped for sign-required docs)
+```
+
+Documents without `RequiresSigningCheckbox__c=true` keep the existing `Sent → Viewed → Approved` flow via `DeliveryDocApprovalService.approveDocumentByToken`.
+
+### Slot Generation
+
+At document generation time, `DeliveryDocGenerationService` calls `DeliveryDocActionService.templateRequiresSigning(templateType)`. When true, `createSlotsForTemplate` queries `DocumentTemplateSlot__mdt WHERE TemplateTypeTxt__c = :templateType` and inserts one `DocumentAction__c` per slot with a freshly-generated signer token. Four slots ship out of the box:
+
+- `Client_Agreement_Consultant` (Sign as Consultant)
+- `Client_Agreement_Client` (Sign as Client)
+- `Contractor_Agreement_Company` (Sign as Company)
+- `Contractor_Agreement_Contractor` (Sign as Contractor)
+
+### Hash Chain Integration
+
+Signatures ride the existing `ActivityLog__c` SHA-256 hash chain that `DeliveryAuditChainService.setHashOnInsert()` maintains. On sign:
+
+1. `applySignatureToAction` updates the `DocumentAction__c` with status/signer/ip/user-agent/consent/signature data
+2. An `ActivityLog__c` row is inserted with `ActionTypePk__c = 'Document_Sign'`
+3. The inserted row is re-queried so the trigger-computed `PriorHashTxt__c` materializes (see PR #595)
+4. The parent hash is stamped onto `DocumentAction__c.PriorHashTxt__c`
+
+The whole chain can be verified programmatically via `DeliveryAuditChainService.validateChain(batchSize)`. A per-document helper (`validateChainForDocument`) is planned — until it lands, `hashChainVerified` on the portal API returns `false` by contract.
+
+### Race-Condition Protection
+
+`DeliveryDocActionService.loadPendingAction` uses `WITH SYSTEM_MODE ... FOR UPDATE` so two simultaneous signers hitting the same slot via parallel portal submissions cannot double-sign. The second transaction blocks until the first commits, then sees the slot as already `Completed` and throws.
+
+### REST API Payload
+
+```json
+POST /services/apexrest/sign/<signerToken>
+{
+  "signerName": "Coleman Cameron",
+  "signerEmail": "coleman@example.com",
+  "consentGiven": true,
+  "signatureType": "Image",
+  "signatureData": "data:image/png;base64,iVBOR…",
+  "portalSessionEmail": "coleman@example.com"
+}
+```
+
+`signatureType` defaults to `Text`. For `Text` the service formats the stamp; for `Image` the base64 PNG is decoded and stored as a ContentVersion. `portalSessionEmail` is currently appended to the user-agent string for audit (a dedicated `PortalSessionEmail__c` field is planned).
+
+See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full phase history (Phases 1-5).
+
+---
+
+## Enterprise Services
+
+17 service classes ship with the package for organizations that need formal governance, compliance controls, and audit-grade integrity. Every one is opt-in via a `*DateTime__c` toggle on `DeliveryHubSettings__c` or a per-entity configuration field — installing the package doesn't change behavior until you turn something on.
+
+### Security & Compliance
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryRateLimitService** | Per-entity request throttle for Public API (`PublicApiRateLimitNumber__c`, default 100/hr) and Sync API (`SyncApiRateLimitNumber__c`, default 60/hr). HTTP 429 + `Retry-After: 3600` on breach. Disabled when fields are `null`. |
+| **DeliveryAuditChainService** | SHA-256 hash chain on `ActivityLog__c`. Each row stores its hash and parent hash. `LegalHoldEnabledDateTime__c` on settings prevents deletion. `validateChain(batchSize)` walks the chain and returns first-mismatch metadata. |
+| **DeliveryCryptoService** | HMAC-SHA256 request signing for outbound sync. Reads `HmacSecretTxt__c` from the target `NetworkEntity__c` and adds `X-Signature` header. Receiving org validates. No secret = no signing (backward compatible). |
+| **DeliveryApprovalChainService** | Multi-step approval workflows for work item stage transitions. Approvers + order defined via `ApprovalStep__mdt`. Approval events tracked with timestamps, approver identity, and comments. Integrates with stage gates. |
+| **DeliveryTeamPermissionService** | Record-level board scoping by team membership. Work items visible only to members of the assigned team (defined on `NetworkEntity__c` via `DeliveryTeam__mdt`). Admins retain full visibility. Opt-in via `TeamVisibilityEnabledDateTime__c`. |
+| **DeliveryArchivalService** | Automated archival of completed work items and related records after a configurable retention period (`ArchivalRetentionDaysNumber__c`, default 365). Archived records excluded from board queries and API responses but remain queryable for compliance. Restore on demand. |
+
+### Operational
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliverySLAService** | Business-hours SLA clock via `BusinessHoursId` on `SLARule__mdt`. Clocks pause outside configured business hours, weekends, and holidays. Response and resolution targets evaluated against business time, not wall-clock time. |
+| **DeliveryNotificationPreferenceService** | Per-event notification channel configuration via `NotificationPreference__c`. Channels: email, platform event, both, or none. Respected by escalation engine, digest service, and stage-change alerts. |
+| **DeliveryWorkItemQueryService** | Centralized SOQL for WorkItem queries. Eliminates duplicated SOQL across controllers. All queries run `WITH SYSTEM_MODE` for portal/sync context. |
+| **DeliveryEscalationRuleEvaluator / ActionExecutor / NotifService / Context** | Decomposed escalation engine. `DeliveryEscalationService` delegates to these four focused classes — `RuleEvaluator` picks matching rules, `ActionExecutor` runs the action, `NotifService` handles email/platform event dispatch, `Context` carries the evaluation state. No behavior change from the monolithic version; improves testability. |
+
+### Document Service Decomposition
+
+`DeliveryDocumentController` was decomposed into five focused services in PR #551. The controller now delegates to them:
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryDocQueryService** | Read path — `getDocumentByToken`, `getDocumentById`, `getDocumentsForEntity`, `buildDocumentResultMap`, `buildSigningStatusBlock`. |
+| **DeliveryDocGenerationService** | Snapshot generation, slot creation, version chain maintenance. |
+| **DeliveryDocApprovalService** | `approveDocumentByToken`, `disputeDocumentByToken`, `autoAdvanceStatusOnSign`. |
+| **DeliveryDocEmailService** | Outbound document email with CC, PDF attachment, scheduled send. |
+| **DeliveryDocPaymentService** | `DeliveryTransaction__c` CRUD, A/R rollup for prior balance calculations. |
+
+### Enable/Disable Fields
+
+Every enterprise feature uses the DateTime pattern — `null` means off, a populated timestamp means "on, since X". Examples:
+
+- `LegalHoldEnabledDateTime__c`, `TeamVisibilityEnabledDateTime__c`, `ArchivalEnabledDateTime__c`, `EnableAdminSigningDateTime__c`, `EnableBusinessHoursSLADateTime__c` — all on `DeliveryHubSettings__c`
+- `HmacSecretTxt__c`, `EnableVendorPushDateTime__c` — per `NetworkEntity__c`
+- `PublicApiRateLimitNumber__c`, `SyncApiRateLimitNumber__c`, `ArchivalRetentionDaysNumber__c` — numeric knobs on `DeliveryHubSettings__c`
+
+See the README "Enterprise Security & Compliance" section and [CHANGELOG.md](CHANGELOG.md) entries for PRs #549-#563 for the full rollout history.
+
+---
+
+## Portal API (External Portal)
+
+The portal at `cloudnimbusllc.com/portal` is a standalone Next.js app that calls Delivery Hub over the Public API. The cross-module contract lives in the dedicated `PORTAL_DH_API_GAPS.md` file in the portal repo; this section documents the DH side of the contract.
+
+### Surface
+
+Portal consumers authenticate with an `X-Api-Key` matched against a `NetworkEntity__c`. All reads/writes are scoped to that entity. Key endpoints:
+
+- **Board data**: `GET /api/work-items` (with `estimatedStartDate`, `estimatedEndDate`, `calculatedETADate`, `stageEnteredDateTime` for the portal Gantt), `GET /api/work-items/{id}`, `POST /api/work-items`
+- **Activity**: `GET /api/activity-feed`, `GET /api/conversations`, `POST /api/work-items/{id}/comments`
+- **Hours**: `GET /api/work-logs`, `POST /api/log-hours`, `POST /api/approve-worklogs`, `POST /api/reject-worklogs`, `GET /api/pending-approvals`
+- **Documents**: `GET /api/documents`, `GET /api/documents/{token}` (now returns `signingRequired`, `signingComplete`, `signingSlots[]`, `hashChainVerified`), `POST /api/document-approve`, `POST /api/document-dispute`
+- **Document signing**: `POST /sign/{signerToken}` — accepts `signatureType: "Text"` or `"Image"` with base64 PNG
+- **Files**: `GET /api/files` (ContentVersion ids, max 500 per call)
+- **Entity metadata**: `GET /api/my-entities`, `GET /api/portal-users`
+
+### Authentication Patterns
+
+| Caller | Auth |
+|--------|------|
+| Next.js server (SSR) | `X-Api-Key` sent directly to `DeliveryPublicApiService`. Key never hits the browser. |
+| Portal signing page | Public token in URL (`/portal/documents/<token>`), per-signer token for POST submissions. No API key. |
+| Portal OAuth flow (portal users logging into DH) | PKCE via `DeliveryConnectedApp` → portal receives access token → calls existing DH REST endpoints with `Authorization: Bearer` |
+
+See [PUBLIC_API_GUIDE.md](PUBLIC_API_GUIDE.md) for full endpoint reference.
+
+---
+
 ## Email System
 
 ### Inbound Email Handler
@@ -576,10 +746,10 @@ These are in addition to `DeliveryWorkItemChange__e` which drives real-time UI u
 
 | Category | Count |
 |----------|-------|
-| Apex classes | 148 (75 production + 73 test) |
-| LWC components | 57 |
-| Custom Objects | 15 (includes DeliverySavedFilter\_\_c) |
-| Custom Metadata Types | 10 |
-| Platform Events | 4 (DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e) |
-| Permission Sets | 3 |
-| Triggers | 5 |
+| Apex classes | 224 (114 production + 110 test) |
+| LWC components | 68 |
+| Custom Objects | 16 |
+| Custom Metadata Types | 14 |
+| Platform Events | 5 (DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e, GanttRemoteEvent\_\_e) |
+| Permission Sets | 3 (DeliveryHubApp, DeliveryHubAdmin_App, DeliveryHubGuestUser) |
+| Triggers | 13 |

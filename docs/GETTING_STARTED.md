@@ -1,6 +1,8 @@
 # Getting Started with Delivery Hub
 
-This guide walks you through installing Delivery Hub, running the setup wizard, creating your first work item, and optionally configuring cross-org sync and external API access.
+This guide walks you through installing Delivery Hub, running the setup wizard, creating your first work item, and optionally configuring cross-org sync, document signing, and external API access.
+
+**Current release**: `0.153.0.5` — see the [Changelog](CHANGELOG.md) for the full history.
 
 ---
 
@@ -13,7 +15,7 @@ Install Delivery Hub into your Salesforce org:
 | **Production** | [Install in Production](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
 | **Sandbox** | [Install in Sandbox](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
 
-When prompted, select **Install for All Users** (recommended) or configure per-profile access.
+When prompted, select **Install for All Users** (recommended) or configure per-profile access. The install links always point to the latest promoted release; check `release/*` tags in the repo if you need a specific version.
 
 ---
 
@@ -135,7 +137,7 @@ For additional security on the sync connection:
 By default, client orgs poll for updates. To enable real-time push from vendor to client:
 
 1. On the vendor org's client NetworkEntity:
-   - Set **Enable Vendor Push** to `true`
+   - Set **EnableVendorPushDateTime__c** to the current timestamp (non-null = enabled)
    - Set **Integration Endpoint URL** to the client's sync endpoint
 2. Changes are now pushed to the client immediately instead of waiting for the next poll cycle
 
@@ -353,6 +355,34 @@ Documents display the vendor entity's branding, not the Salesforce org identity.
 ### Public Access Tokens
 
 Each generated document receives a unique 64-character token. This token enables portal viewing without Salesforce authentication -- share the document link with clients and they can view it directly in the portal.
+
+### Native Document Signing
+
+Client Agreements, Contractor Agreements, and any custom template with `RequiresSigningCheckbox__c = true` on `DocumentTemplate__mdt` trigger the multi-party signing flow:
+
+1. Generate the document from the Document Viewer
+2. Delivery Hub auto-creates one `DocumentAction__c` per signer slot (from `DocumentTemplateSlot__mdt`)
+3. Each slot gets its own public URL: `/portal/documents/<signerToken>`
+4. Admin-side: click **Copy Signer Link** next to any slot to copy the URL to clipboard, paste into an email
+5. Client-side: the signer visits the URL, reads the electronic consent disclosure, clicks the consent checkbox, types their name (text stamp) or draws a signature with mouse/finger/stylus, and submits
+6. The signature is persisted with the captured IP, user agent, timestamp, and SHA-256 hash chain parent for tamper evidence
+7. When every slot is `Completed`, the document auto-advances from `Awaiting_Signatures` to `Approved`
+
+#### Enabling admin-side signing
+
+By default, admins cannot sign on behalf of a client from the in-app viewer. To enable:
+
+```apex
+DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+s.EnableAdminSigningDateTime__c = Datetime.now();
+upsert s;
+```
+
+#### Certificate of Completion
+
+After the document reaches `Approved`, `DeliveryDocCertificateService` can auto-generate a `Certificate_Of_Completion` companion document listing every signer, IP, timestamp, user agent, consent stamp, and hash chain entry — suitable for ESIGN Act / UETA audit records.
+
+See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full phase history and implementation details.
 
 ---
 
