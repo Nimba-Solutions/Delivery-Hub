@@ -24,6 +24,11 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     // pending slot so admins can grab the per-signer URL without dropping into
     // a SOQL console. Default off — guest portal contexts won't show it.
     @api adminContext = false;
+    // Phase 4: Certificate of Completion payload from
+    // DeliveryDocActionController.getCertificateOfCompletion. When provided
+    // and adminContext is true, the audit trail section renders below the
+    // slots with hash chain data, IP, and user agent per signer.
+    @api certificate;
 
     // Modal state
     @track showSignModal = false;
@@ -32,6 +37,11 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     @track formEmail = '';
     @track formConsent = false;
     @track isSubmitting = false;
+    // Phase 5: drawn-signature mode toggle. When true, the modal swaps the
+    // text-stamp explanation for an inline signature pad and the submit
+    // sends the captured PNG bytes instead of the typed name.
+    @track useDrawnSignature = false;
+    @track drawnHasInk = false;
 
     get hasActions() {
         return this.requiresSigning && Array.isArray(this.actions) && this.actions.length > 0;
@@ -44,22 +54,89 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     get sortedActions() {
         const list = Array.isArray(this.actions) ? [...this.actions] : [];
         list.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-        return list.map((a) => ({
-            ...a,
-            slotClass: a.isCompleted
-                ? 'signature-slot signature-slot--completed'
-                : 'signature-slot signature-slot--pending',
-            showSignButton: !a.isCompleted && !this.signingDisabled,
-            showCopyLink: !a.isCompleted && this.adminContext && !!a.signerToken
-        }));
+        return list.map((a) => {
+            const isImage = a.signatureType === 'Image';
+            return {
+                ...a,
+                slotClass: a.isCompleted
+                    ? 'signature-slot signature-slot--completed'
+                    : 'signature-slot signature-slot--pending',
+                showSignButton: !a.isCompleted && !this.signingDisabled,
+                showCopyLink: !a.isCompleted && this.adminContext && !!a.signerToken,
+                isImageSignature: a.isCompleted && isImage && !!a.signatureImageUrl,
+                isTextSignature: a.isCompleted && !isImage
+            };
+        });
     }
 
     get isSubmitDisabled() {
-        return this.isSubmitting || !this.formName || !this.formConsent;
+        if (this.isSubmitting || !this.formName || !this.formConsent) {
+            return true;
+        }
+        // Phase 5: drawn-mode requires the user to have actually drawn something
+        if (this.useDrawnSignature && !this.drawnHasInk) {
+            return true;
+        }
+        return false;
     }
 
     get modalHeading() {
         return this.activeAction ? this.activeAction.label : 'Sign';
+    }
+
+    // ─── Phase 4: Audit trail rendering ───────────────────────────
+
+    get hasAuditTrail() {
+        return (
+            this.adminContext &&
+            this.certificate &&
+            Array.isArray(this.certificate.signers) &&
+            this.certificate.signers.length > 0
+        );
+    }
+
+    get documentHashShort() {
+        const h = this.certificate && this.certificate.documentHash;
+        return h ? `${h.slice(0, 12)}…${h.slice(-6)}` : '—';
+    }
+
+    get chainHeadShort() {
+        const h = this.certificate && this.certificate.chainHead;
+        return h ? `${h.slice(0, 12)}…${h.slice(-6)}` : '—';
+    }
+
+    get auditRows() {
+        if (!this.hasAuditTrail) {
+            return [];
+        }
+        return this.certificate.signers.map((s, idx) => {
+            const ua = s.userAgent || '';
+            return {
+                key: s.actionId || `row-${idx}`,
+                slotLabel: s.slotLabel,
+                signerName: s.signerName || '—',
+                signerEmail: s.signerEmail || '—',
+                signedAt: this.formatTimestamp(s.signedAt),
+                ipAddress: s.ipAddress || '—',
+                userAgentShort: ua.length > 60 ? `${ua.slice(0, 60)}…` : (ua || '—'),
+                priorHashShort: s.priorHash ? `${s.priorHash.slice(0, 12)}…${s.priorHash.slice(-6)}` : '—',
+                signatureType: s.signatureType || 'Text'
+            };
+        });
+    }
+
+    formatTimestamp(value) {
+        if (!value) {
+            return '—';
+        }
+        try {
+            return new Date(value).toLocaleString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+            });
+        } catch (err) { // eslint-disable-line no-unused-vars
+            return String(value);
+        }
     }
 
     handleSignClick(event) {
@@ -73,7 +150,18 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         this.formEmail = '';
         this.formConsent = false;
         this.isSubmitting = false;
+        this.useDrawnSignature = false;
+        this.drawnHasInk = false;
         this.showSignModal = true;
+    }
+
+    handleDrawToggle(event) {
+        this.useDrawnSignature = event.target.checked;
+        this.drawnHasInk = false;
+    }
+
+    handleSignaturePadChange(event) {
+        this.drawnHasInk = !!(event.detail && event.detail.hasInk);
     }
 
     /**
@@ -115,6 +203,22 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         if (this.isSubmitDisabled) {
             return;
         }
+        // Phase 5: pull the PNG bytes off the drawn pad if the user toggled
+        // drawn mode. Drawn signatures send signatureType=Image; the parent
+        // routes them through the same signsubmit event.
+        let signatureType = 'Text';
+        let drawnSignature = null;
+        if (this.useDrawnSignature) {
+            const pad = this.template.querySelector('c-delivery-signature-pad');
+            if (pad) {
+                drawnSignature = pad.getSignatureData();
+            }
+            if (!drawnSignature) {
+                // Should be guarded by isSubmitDisabled, but defend anyway.
+                return;
+            }
+            signatureType = 'Image';
+        }
         this.isSubmitting = true;
         this.dispatchEvent(
             new CustomEvent('signsubmit', {
@@ -123,7 +227,9 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
                     actionLabel: this.activeAction.label,
                     signerName: this.formName,
                     signerEmail: this.formEmail,
-                    consentGiven: this.formConsent
+                    consentGiven: this.formConsent,
+                    signatureType: signatureType,
+                    drawnSignature: drawnSignature
                 }
             })
         );
@@ -134,6 +240,8 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         this.showSignModal = false;
         this.activeAction = null;
         this.isSubmitting = false;
+        this.useDrawnSignature = false;
+        this.drawnHasInk = false;
     }
 
     /**
@@ -150,6 +258,8 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
             this.formName = '';
             this.formEmail = '';
             this.formConsent = false;
+            this.useDrawnSignature = false;
+            this.drawnHasInk = false;
         }
     }
 }

@@ -29,32 +29,48 @@ public with sharing class DeliveryDocActionController {
 
     /**
      * @description Admin-side sign action used inside the org. Stamps the slot with
-     *              "<signerName> (digitally signed Apr 6, 2026)" and advances the document
-     *              status if all slots are completed and the doc is past Draft.
-     *              Gated behind the EnableAdminSigningDateTime__c feature flag — admin-on-
-     *              behalf signing is legally questionable for real signing and disabled by
-     *              default. Use the public portal flow for real signers.
-     * @param actionId     The DocumentAction__c Id.
-     * @param signerName   Name to stamp.
-     * @param signerEmail  Email; falls back to UserInfo.getUserEmail() if blank.
-     * @param consentGiven Must be true.
+     *              "<signerName> (digitally signed Apr 6, 2026)" or — when the
+     *              payload includes drawn signature bytes — saves them as a
+     *              ContentVersion and stores the new ContentVersion Id on the slot.
+     *              Advances the document status if all slots are completed and the
+     *              doc is past Draft. Gated behind the EnableAdminSigningDateTime__c
+     *              feature flag — admin-on-behalf signing is legally questionable for
+     *              real signing and is disabled by default. Use the public portal
+     *              flow for real signers.
+     *
+     *              Expected payload keys (matches signActionPublic for symmetry):
+     *                signerName       (String, required)
+     *                signerEmail      (String, optional — defaults to UserInfo.getUserEmail())
+     *                consentGiven     (Boolean, must be true)
+     *                signatureType    (String, optional — 'Text' or 'Image', defaults to 'Text')
+     *                drawnSignature   (String, optional — base64 PNG bytes when signatureType='Image')
+     *
+     * @param actionId The DocumentAction__c Id.
+     * @param payload  Map with the signing inputs.
      * @return Map with actionId, status, documentStatus.
      */
     @AuraEnabled
-    public static Map<String, Object> signActionAdmin(Id actionId, String signerName, String signerEmail, Boolean consentGiven) {
+    public static Map<String, Object> signActionAdmin(Id actionId, Map<String, Object> payload) {
         if (!DeliveryDocActionService.isAdminSigningEnabled()) {
             throw new AuraHandledException(
                 'Admin signing is disabled. Set EnableAdminSigningDateTime__c on Delivery Hub Settings to enable.'
             );
         }
-        String stamp = DeliveryDocActionService.formatTextSignatureStamp(signerName, Datetime.now());
         DeliveryDocActionService.SignContext ctx = new DeliveryDocActionService.SignContext();
         ctx.actionId = actionId;
-        ctx.signerName = signerName;
-        ctx.signerEmail = String.isNotBlank(signerEmail) ? signerEmail : UserInfo.getUserEmail();
-        ctx.signatureType = 'Text';
-        ctx.signatureData = stamp;
-        ctx.consentGiven = consentGiven;
+        if (payload != null) {
+            ctx.signerName  = (String) payload.get('signerName');
+            String email    = (String) payload.get('signerEmail');
+            ctx.signerEmail = String.isNotBlank(email) ? email : UserInfo.getUserEmail();
+            Object consent  = payload.get('consentGiven');
+            ctx.consentGiven = consent instanceof Boolean ? (Boolean) consent : false;
+            String type     = (String) payload.get('signatureType');
+            ctx.signatureType = String.isNotBlank(type) ? type : 'Text';
+            ctx.drawnSignature = (String) payload.get('drawnSignature');
+        }
+        if (ctx.signatureType != 'Image') {
+            ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(ctx.signerName, Datetime.now());
+        }
         return DeliveryDocActionService.signActionInternal(ctx);
     }
 
@@ -148,14 +164,41 @@ public with sharing class DeliveryDocActionController {
             Object consent  = payload.get('consentGiven');
             ctx.consentGiven = consent instanceof Boolean ? (Boolean) consent : false;
             ctx.userAgent   = (String) payload.get('userAgent');
+            // Phase 5: optional drawn signature payload
+            String type     = (String) payload.get('signatureType');
+            ctx.signatureType = String.isNotBlank(type) ? type : 'Text';
+            ctx.drawnSignature = (String) payload.get('drawnSignature');
         }
-        ctx.signatureType = 'Text';
-        ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(ctx.signerName, Datetime.now());
+        if (ctx.signatureType != 'Image') {
+            ctx.signatureType = 'Text';
+            ctx.signatureData = DeliveryDocActionService.formatTextSignatureStamp(ctx.signerName, Datetime.now());
+        }
         return DeliveryDocActionService.signActionByToken(signerToken, ctx);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PHASE 4: CERTIFICATE OF COMPLETION
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Returns the Certificate of Completion payload for a document.
+     *              Used by the viewer LWC's audit-trail UI; surfaces the document
+     *              hash, per-signer rows (name, email, IP, UA, timestamps, chain
+     *              hash), and a chain head value. Cacheable so the viewer can
+     *              refresh without an Apex round-trip when nothing has changed.
+     * @param documentId The DeliveryDocument__c Id.
+     * @return The certificate map. See DeliveryDocCertificateService.buildCertificate.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getCertificateOfCompletion(Id documentId) {
+        return DeliveryDocCertificateService.buildCertificate(documentId);
     }
 
     /**
      * @description Reshapes a DocumentAction__c into the LWC-friendly map format.
+     *              For Image-type completed slots, the SignatureDataTxt__c holds
+     *              a ContentVersion Id; we surface a sfc/servlet URL the LWC can
+     *              drop straight into an <img src> attribute.
      */
     private static Map<String, Object> serializeAction(DocumentAction__c a) {
         Map<String, Object> m = new Map<String, Object>();
@@ -173,6 +216,10 @@ public with sharing class DeliveryDocActionController {
         m.put('assignedEntityName', a.AssignedEntityLookup__r != null ? a.AssignedEntityLookup__r.Name : null);
         m.put('isPending', a.StatusPk__c == 'Pending');
         m.put('isCompleted', a.StatusPk__c == 'Completed');
+        // Phase 5: image URL for drawn signatures
+        if (a.SignatureTypePk__c == 'Image' && String.isNotBlank(a.SignatureDataTxt__c)) {
+            m.put('signatureImageUrl', '/sfc/servlet.shepherd/version/download/' + a.SignatureDataTxt__c);
+        }
         return m;
     }
 }
