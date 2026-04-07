@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ClientPreApprovedHoursNumber__c</fullName>
-    <description>The Client is willing to pay for 4 hours total.</description>
+    <description>Hours the client has pre-approved for this work item, allowing it to skip sizing and proposal review.</description>
     <externalId>false</externalId>
-    <inlineHelpText>Enter how many hours you&apos;d be willing to pay to have this done without having to go through sizing and proposal feedback stages, aka fast track enablement.</inlineHelpText>
-    <label>Client Pre Approved Hours</label>
+    <inlineHelpText>Hours the client pre-approves to fast-track this work item past sizing and proposal review.</inlineHelpText>
+    <label>Client Pre-Approved Hours</label>
     <precision>18</precision>
     <required>false</required>
     <scale>2</scale>

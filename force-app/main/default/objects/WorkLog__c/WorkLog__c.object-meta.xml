@@ -157,7 +157,7 @@
     <label>Work Log</label>
     <nameField>
         <displayFormat>WL-{000000}</displayFormat>
-        <label>WorkLog Name</label>
+        <label>Work Log Name</label>
         <type>AutoNumber</type>
     </nameField>
     <pluralLabel>Work Logs</pluralLabel>

@@ -288,7 +288,7 @@
 </table>
 
 <div style="font-size: 9pt; font-weight: bold; font-style: italic; text-align: center; padding-top: 12px; color: #333333;">THANK YOU FOR YOUR BUSINESS!</div>
-<div style="font-size: 7pt; color: #888888; text-align: left; padding-top: 16px;">*3% a month charge to balance will accrue to overdue balances</div>
+<div style="font-size: 7pt; color: #888888; text-align: left; padding-top: 16px;">*A 3% monthly finance charge accrues on overdue balances.</div>
 <div style="font-size: 7pt; color: #0176d3; text-align: center; padding-top: 8px;"><a href="https://cloudnimbusllc.com" style="color: #0176d3; text-decoration: none;">cloudnimbusllc.com</a> &middot; Powered by Delivery Hub</div>
 
 </apex:outputPanel>
