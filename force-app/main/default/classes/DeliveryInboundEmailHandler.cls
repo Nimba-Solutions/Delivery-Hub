@@ -53,7 +53,7 @@ public with sharing class DeliveryInboundEmailHandler implements Messaging.Inbou
         }
         String commentBody = extractBody(email);
         WorkItemComment__c comment = new WorkItemComment__c(
-            WorkItemLookup__c = workItem.Id,
+            WorkItemId__c = workItem.Id,
             BodyTxt__c = commentBody,
             AuthorTxt__c = sender.Name,
             SourcePk__c = 'Email'

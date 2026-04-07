@@ -37,7 +37,7 @@ private class DeliveryDocumentTriggerHandlerTest {
 
             Test.startTest();
             DeliveryDocument__c doc = new DeliveryDocument__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 TemplatePk__c = 'Invoice',
                 StatusPk__c = 'Draft',
                 PeriodStartDate__c = Date.today().addDays(-30),
@@ -64,7 +64,7 @@ private class DeliveryDocumentTriggerHandlerTest {
             DeliveryTriggerControl.disableAfterLogic();
 
             DeliveryDocument__c doc = new DeliveryDocument__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 TemplatePk__c = 'Invoice',
                 StatusPk__c = 'Draft',
                 PeriodStartDate__c = Date.today().addDays(-30),
@@ -97,7 +97,7 @@ private class DeliveryDocumentTriggerHandlerTest {
             DeliveryTriggerControl.disableAfterLogic();
 
             DeliveryDocument__c doc = new DeliveryDocument__c(
-                NetworkEntityLookup__c = entity.Id,
+                NetworkEntityId__c = entity.Id,
                 TemplatePk__c = 'Invoice',
                 StatusPk__c = 'Draft',
                 PeriodStartDate__c = Date.today().addDays(-30),

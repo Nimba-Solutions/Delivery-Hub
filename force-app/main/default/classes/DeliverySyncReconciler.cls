@@ -101,7 +101,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
 
         List<WorkRequest__c> requests = [
-            SELECT Id, WorkItemLookup__c, RemoteWorkItemIdTxt__c
+            SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c
             FROM WorkRequest__c
             WHERE DeliveryEntityLookup__c = :entity.Id
             AND StatusPk__c != 'Inactive'
@@ -118,9 +118,9 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
 
         for (WorkRequest__c req : requests) {
             requestIds.add(req.Id);
-            if (req.WorkItemLookup__c != null) {
-                workItemIds.add(req.WorkItemLookup__c);
-                workItemToRequest.put(req.WorkItemLookup__c, req);
+            if (req.WorkItemId__c != null) {
+                workItemIds.add(req.WorkItemId__c);
+                workItemToRequest.put(req.WorkItemId__c, req);
             }
         }
 
@@ -156,9 +156,9 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         Set<Id> gapWorkItemIds = new Set<Id>();
         Map<Id, WorkRequest__c> gapWorkItemToRequest = new Map<Id, WorkRequest__c>();
         for (WorkRequest__c req : requests) {
-            if (!coveredRequestIds.contains(req.Id) && req.WorkItemLookup__c != null) {
-                gapWorkItemIds.add(req.WorkItemLookup__c);
-                gapWorkItemToRequest.put(req.WorkItemLookup__c, req);
+            if (!coveredRequestIds.contains(req.Id) && req.WorkItemId__c != null) {
+                gapWorkItemIds.add(req.WorkItemId__c);
+                gapWorkItemToRequest.put(req.WorkItemId__c, req);
             }
         }
 

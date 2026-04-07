@@ -57,15 +57,15 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
         // 4. Query Routes (WorkRequest__c Bridge) exactly like DeliverySyncEngine
         Set<Id> workItemIds = new Set<Id>(docToWorkItemMap.values());
         List<WorkRequest__c> connections = [
-            SELECT Id, WorkItemLookup__c, RemoteWorkItemIdTxt__c, DeliveryEntityLookup__c 
+            SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityLookup__c 
             FROM WorkRequest__c 
-            WHERE WorkItemLookup__c IN :workItemIds AND StatusPk__c != 'Inactive'
+            WHERE WorkItemId__c IN :workItemIds AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
         ];
 
         Map<Id, List<WorkRequest__c>> routes = new Map<Id, List<WorkRequest__c>>();
         for (WorkRequest__c r : connections) {
-            Id tId = (Id) r.get('WorkItemLookup__c'); // Dynamic get for namespace safety
+            Id tId = (Id) r.get('WorkItemId__c'); // Dynamic get for namespace safety
             if (!routes.containsKey(tId)) {
                 routes.put(tId, new List<WorkRequest__c>());
             }

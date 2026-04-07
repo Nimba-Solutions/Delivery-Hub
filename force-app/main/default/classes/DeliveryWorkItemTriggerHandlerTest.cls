@@ -24,7 +24,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
         System.runAs(testUser) {
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
             NetworkEntity__c v = [SELECT Id FROM NetworkEntity__c LIMIT 1];
-            insert new WorkRequest__c(WorkItemLookup__c = t.Id, DeliveryEntityLookup__c = v.Id, StatusPk__c = 'Active', RemoteWorkItemIdTxt__c = 'R-123');
+            insert new WorkRequest__c(WorkItemId__c = t.Id, DeliveryEntityLookup__c = v.Id, StatusPk__c = 'Active', RemoteWorkItemIdTxt__c = 'R-123');
 
             delete [SELECT Id FROM SyncItem__c];
 
@@ -52,9 +52,9 @@ public class DeliveryWorkItemTriggerHandlerTest {
             Test.stopTest();
 
             List<WorkRequest__c> requests = [
-                SELECT Id, StatusPk__c, WorkItemLookup__c
+                SELECT Id, StatusPk__c, WorkItemId__c
                 FROM WorkRequest__c
-                WHERE WorkItemLookup__c = :newItem.Id
+                WHERE WorkItemId__c = :newItem.Id
             ];
             System.assert(!requests.isEmpty(), 'A WorkRequest should be auto-created on insert when AutoCreate is enabled');
             System.assertEquals('Draft', requests[0].StatusPk__c, 'Auto-created request should have Draft status');
@@ -214,7 +214,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
             List<WorkRequest__c> requests = [
                 SELECT Id, DeliveryEntityLookup__c, StatusPk__c
                 FROM WorkRequest__c
-                WHERE WorkItemLookup__c = :newItem.Id
+                WHERE WorkItemId__c = :newItem.Id
             ];
             System.assert(!requests.isEmpty(),
                 'A WorkRequest should be auto-created via the client fallback path');

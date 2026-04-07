@@ -29,17 +29,17 @@ private class DeliveryPortalAccessServiceTest {
         // User with access to only one entity
         List<PortalAccess__c> accessRecords = new List<PortalAccess__c>{
             new PortalAccess__c(
-                NetworkEntityLookup__c = entityA.Id,
+                NetworkEntityId__c = entityA.Id,
                 EmailTxt__c = 'multiuser@example.com',
                 RolePk__c = 'Admin'
             ),
             new PortalAccess__c(
-                NetworkEntityLookup__c = entityB.Id,
+                NetworkEntityId__c = entityB.Id,
                 EmailTxt__c = 'multiuser@example.com',
                 RolePk__c = 'Member'
             ),
             new PortalAccess__c(
-                NetworkEntityLookup__c = entityA.Id,
+                NetworkEntityId__c = entityA.Id,
                 EmailTxt__c = 'singleuser@example.com',
                 RolePk__c = 'Member'
             )

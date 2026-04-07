@@ -40,10 +40,10 @@ private class DeliveryScoreServiceTest {
 
         // Add comments to some items
         List<WorkItemComment__c> comments = new List<WorkItemComment__c>{
-            new WorkItemComment__c(WorkItemLookup__c = items[2].Id, BodyTxt__c = 'Started dev work', AuthorTxt__c = 'Dev'),
-            new WorkItemComment__c(WorkItemLookup__c = items[2].Id, BodyTxt__c = 'Making progress', AuthorTxt__c = 'Dev'),
-            new WorkItemComment__c(WorkItemLookup__c = items[4].Id, BodyTxt__c = 'Testing complete', AuthorTxt__c = 'QA'),
-            new WorkItemComment__c(WorkItemLookup__c = items[5].Id, BodyTxt__c = 'Deployed', AuthorTxt__c = 'Dev')
+            new WorkItemComment__c(WorkItemId__c = items[2].Id, BodyTxt__c = 'Started dev work', AuthorTxt__c = 'Dev'),
+            new WorkItemComment__c(WorkItemId__c = items[2].Id, BodyTxt__c = 'Making progress', AuthorTxt__c = 'Dev'),
+            new WorkItemComment__c(WorkItemId__c = items[4].Id, BodyTxt__c = 'Testing complete', AuthorTxt__c = 'QA'),
+            new WorkItemComment__c(WorkItemId__c = items[5].Id, BodyTxt__c = 'Deployed', AuthorTxt__c = 'Dev')
         };
         insert comments;
 

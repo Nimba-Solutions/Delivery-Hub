@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>DocumentLookup__c</fullName>
+    <fullName>DocumentId__c</fullName>
     <description>The parent document this signature slot belongs to. Master-detail with reparenting disabled for tamper evidence.</description>
     <inlineHelpText>The document this signature slot is part of.</inlineHelpText>
     <externalId>false</externalId>

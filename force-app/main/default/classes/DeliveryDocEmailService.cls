@@ -16,8 +16,8 @@ public with sharing class DeliveryDocEmailService {
      */
     public static Map<String, Object> sendDocumentEmail(Id documentId, String recipientEmail) {
         DeliveryDocument__c doc = [
-            SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__r.Name,
-                   NetworkEntityLookup__r.ContactEmailTxt__c,
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                   NetworkEntityId__r.ContactEmailTxt__c,
                    PeriodStartDate__c, PeriodEndDate__c,
                    StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
                    TermsTxt__c, DueDateDate__c, SentDateTime__c,
@@ -31,7 +31,7 @@ public with sharing class DeliveryDocEmailService {
         // Resolve recipient: explicit param > entity contact email
         String toEmail = String.isNotBlank(recipientEmail)
             ? recipientEmail.trim()
-            : doc.NetworkEntityLookup__r.ContactEmailTxt__c;
+            : doc.NetworkEntityId__r.ContactEmailTxt__c;
 
         if (String.isBlank(toEmail)) {
             throw new AuraHandledException(
@@ -109,8 +109,8 @@ public with sharing class DeliveryDocEmailService {
      */
     public static Map<String, Object> previewDocumentEmail(Id documentId, String recipientEmail) {
         DeliveryDocument__c doc = [
-            SELECT Id, Name, TemplatePk__c, NetworkEntityLookup__r.Name,
-                   NetworkEntityLookup__r.ContactEmailTxt__c,
+            SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name,
+                   NetworkEntityId__r.ContactEmailTxt__c,
                    PeriodStartDate__c, PeriodEndDate__c,
                    StatusPk__c, TotalHoursNumber__c, TotalCurrency__c,
                    TermsTxt__c, DueDateDate__c, MetadataTxt__c
@@ -122,7 +122,7 @@ public with sharing class DeliveryDocEmailService {
 
         String toEmail = String.isNotBlank(recipientEmail)
             ? recipientEmail.trim()
-            : doc.NetworkEntityLookup__r.ContactEmailTxt__c;
+            : doc.NetworkEntityId__r.ContactEmailTxt__c;
 
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         String ccEmail = (settings != null) ? settings.DocumentCcEmailTxt__c : null;
@@ -140,7 +140,7 @@ public with sharing class DeliveryDocEmailService {
         preview.put('bodyHtml', bodyHtml);
         preview.put('attachmentName', attachmentName);
         preview.put('documentId', documentId);
-        preview.put('entityName', doc.NetworkEntityLookup__r != null ? doc.NetworkEntityLookup__r.Name : '');
+        preview.put('entityName', doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '');
         return preview;
     }
 
@@ -259,7 +259,7 @@ public with sharing class DeliveryDocEmailService {
     /** @description Builds the HTML email body for a document with explicit vendor name. */
     @TestVisible
     public static String buildDocumentEmailBody(DeliveryDocument__c doc, String templateDisplay, String vendorName) {
-        String entityName = doc.NetworkEntityLookup__r != null ? doc.NetworkEntityLookup__r.Name : '';
+        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
         Decimal totalHours = doc.TotalHoursNumber__c != null ? doc.TotalHoursNumber__c : 0;
         Decimal totalCost = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
 

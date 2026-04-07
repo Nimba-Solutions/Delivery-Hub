@@ -45,7 +45,7 @@ private class DeliveryHubPollerTest {
 
         // 4. Setup the Ledger bridge
         SObject req = (SObject) Type.forName(ns + 'WorkRequest__c').newInstance();
-        req.put(ns + 'WorkItemLookup__c', t.get('Id'));
+        req.put(ns + 'WorkItemId__c', t.get('Id'));
         req.put(ns + 'DeliveryEntityLookup__c', vendor.get('Id'));
         req.put(ns + 'StatusPk__c', 'Active');
         req.put(ns + 'RemoteWorkItemIdTxt__c', 'MOTHERSHIP-TKT-001');

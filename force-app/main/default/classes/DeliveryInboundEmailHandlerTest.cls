@@ -36,7 +36,7 @@ private class DeliveryInboundEmailHandlerTest {
             Messaging.InboundEmailResult result = new DeliveryInboundEmailHandler().handleInboundEmail(email, envelope);
             Test.stopTest();
             System.assert(result.success, 'Inbound email should succeed');
-            List<WorkItemComment__c> comments = [SELECT BodyTxt__c, SourcePk__c FROM WorkItemComment__c WHERE WorkItemLookup__c = :wi.Id];
+            List<WorkItemComment__c> comments = [SELECT BodyTxt__c, SourcePk__c FROM WorkItemComment__c WHERE WorkItemId__c = :wi.Id];
             System.assertEquals(1, comments.size(), 'Should create exactly 1 comment');
             System.assertEquals('This is my reply comment.', comments[0].BodyTxt__c);
             System.assertEquals('Email', comments[0].SourcePk__c);
@@ -77,7 +77,7 @@ private class DeliveryInboundEmailHandlerTest {
             Messaging.InboundEmailResult result = new DeliveryInboundEmailHandler().handleInboundEmail(email, new Messaging.InboundEnvelope());
             Test.stopTest();
             System.assert(!result.success, 'Should fail when sender is not authorized');
-            System.assertEquals(0, [SELECT COUNT() FROM WorkItemComment__c WHERE WorkItemLookup__c = :wi.Id]);
+            System.assertEquals(0, [SELECT COUNT() FROM WorkItemComment__c WHERE WorkItemId__c = :wi.Id]);
         }
     }
 

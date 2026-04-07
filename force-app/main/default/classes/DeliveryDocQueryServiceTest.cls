@@ -27,7 +27,7 @@ private class DeliveryDocQueryServiceTest {
 
         // Draft document
         DeliveryDocument__c draftDoc = new DeliveryDocument__c(
-            NetworkEntityLookup__c = entity.Id,
+            NetworkEntityId__c = entity.Id,
             TemplatePk__c = 'Invoice',
             PeriodStartDate__c = Date.newInstance(2026, 3, 1),
             PeriodEndDate__c = Date.newInstance(2026, 3, 31),
@@ -39,7 +39,7 @@ private class DeliveryDocQueryServiceTest {
 
         // Sent document (for viewing test)
         DeliveryDocument__c sentDoc = new DeliveryDocument__c(
-            NetworkEntityLookup__c = entity.Id,
+            NetworkEntityId__c = entity.Id,
             TemplatePk__c = 'Invoice',
             PeriodStartDate__c = Date.newInstance(2026, 2, 1),
             PeriodEndDate__c = Date.newInstance(2026, 2, 28),
@@ -54,7 +54,7 @@ private class DeliveryDocQueryServiceTest {
 
         // Create a transaction for the sent doc
         insert new DeliveryTransaction__c(
-            DocumentLookup__c = sentDoc.Id,
+            DocumentId__c = sentDoc.Id,
             TypePk__c = 'Payment',
             AmountCurrency__c = 1000,
             TransactionDateDate__c = Date.today()

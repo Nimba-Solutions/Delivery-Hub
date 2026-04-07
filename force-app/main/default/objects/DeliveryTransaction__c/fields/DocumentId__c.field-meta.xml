@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>DocumentLookup__c</fullName>
+    <fullName>DocumentId__c</fullName>
     <description>The parent document this transaction is recorded against. Controls sharing via master-detail.</description>
     <inlineHelpText>The document (invoice, proposal, etc.) that this payment or credit applies to.</inlineHelpText>
     <externalId>false</externalId>

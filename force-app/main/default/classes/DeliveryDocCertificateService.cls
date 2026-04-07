@@ -72,7 +72,7 @@ public with sharing class DeliveryDocCertificateService {
                    IpAddressTxt__c, UserAgentTxt__c,
                    PriorHashTxt__c, ActivityLogLookup__c
             FROM DocumentAction__c
-            WHERE DocumentLookup__c = :documentId
+            WHERE DocumentId__c = :documentId
             WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c ASC NULLS LAST, CompletedDateTime__c ASC NULLS LAST
         ];

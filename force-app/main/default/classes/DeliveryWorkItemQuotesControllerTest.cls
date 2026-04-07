@@ -20,7 +20,7 @@ private class DeliveryWorkItemQuotesControllerTest {
         insert vendor;
 
         insert new WorkRequest__c(
-            WorkItemLookup__c            = workItem.Id,
+            WorkItemId__c            = workItem.Id,
             DeliveryEntityLookup__c    = vendor.Id,
             QuotedHoursNumber__c   = 10,
             HourlyRateCurrency__c  = 150,
@@ -97,7 +97,7 @@ private class DeliveryWorkItemQuotesControllerTest {
             insert vendor2;
 
             WorkRequest__c secondReq = new WorkRequest__c(
-                WorkItemLookup__c = workItem.Id,
+                WorkItemId__c = workItem.Id,
                 DeliveryEntityLookup__c = vendor2.Id,
                 QuotedHoursNumber__c = 20,
                 HourlyRateCurrency__c = 120,

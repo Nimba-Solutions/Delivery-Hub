@@ -48,7 +48,7 @@ public with sharing class DeliveryTeamPermissionService {
             SELECT RolePk__c, PermissionsTxt__c
             FROM PortalAccess__c
             WHERE EmailTxt__c = :email
-            AND NetworkEntityLookup__c = :entityId
+            AND NetworkEntityId__c = :entityId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
@@ -91,7 +91,7 @@ public with sharing class DeliveryTeamPermissionService {
             SELECT RolePk__c, PermissionsTxt__c
             FROM PortalAccess__c
             WHERE EmailTxt__c = :email
-            AND NetworkEntityLookup__c = :entityId
+            AND NetworkEntityId__c = :entityId
             WITH SYSTEM_MODE
             LIMIT 1
         ];

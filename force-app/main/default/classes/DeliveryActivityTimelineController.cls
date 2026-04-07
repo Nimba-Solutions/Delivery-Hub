@@ -89,7 +89,7 @@ global with sharing class DeliveryActivityTimelineController {
         List<WorkItemComment__c> comments = [
             SELECT Id, CreatedDate, AuthorTxt__c, BodyTxt__c, SourcePk__c, CreatedBy.Name
             FROM WorkItemComment__c
-            WHERE WorkItemLookup__c = :workItemId
+            WHERE WorkItemId__c = :workItemId
             WITH SYSTEM_MODE
             ORDER BY CreatedDate DESC
             LIMIT 200

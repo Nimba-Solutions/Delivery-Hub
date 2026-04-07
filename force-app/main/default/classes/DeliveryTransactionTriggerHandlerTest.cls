@@ -27,7 +27,7 @@ private class DeliveryTransactionTriggerHandlerTest {
         insert entity;
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityLookup__c = entity.Id,
+            NetworkEntityId__c = entity.Id,
             TemplatePk__c = 'Invoice',
             StatusPk__c = 'Sent',
             PeriodStartDate__c = Date.today().addDays(-30),
@@ -49,7 +49,7 @@ private class DeliveryTransactionTriggerHandlerTest {
 
             Test.startTest();
             DeliveryTransaction__c txn = new DeliveryTransaction__c(
-                DocumentLookup__c = doc.Id,
+                DocumentId__c = doc.Id,
                 TypePk__c = 'Payment',
                 AmountCurrency__c = 500.00,
                 TransactionDateDate__c = Date.today()
@@ -73,7 +73,7 @@ private class DeliveryTransactionTriggerHandlerTest {
 
             DeliveryTriggerControl.disableAfterLogic();
             DeliveryTransaction__c txn = new DeliveryTransaction__c(
-                DocumentLookup__c = doc.Id,
+                DocumentId__c = doc.Id,
                 TypePk__c = 'Payment',
                 AmountCurrency__c = 500.00,
                 TransactionDateDate__c = Date.today()
@@ -98,7 +98,7 @@ private class DeliveryTransactionTriggerHandlerTest {
 
             DeliveryTriggerControl.disableAfterLogic();
             DeliveryTransaction__c txn = new DeliveryTransaction__c(
-                DocumentLookup__c = doc.Id,
+                DocumentId__c = doc.Id,
                 TypePk__c = 'Payment',
                 AmountCurrency__c = 500.00,
                 TransactionDateDate__c = Date.today()

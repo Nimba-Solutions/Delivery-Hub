@@ -28,7 +28,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>RequestLookup__c</field>
+                <field>RequestId__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

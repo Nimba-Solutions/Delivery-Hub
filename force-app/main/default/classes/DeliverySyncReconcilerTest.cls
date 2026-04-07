@@ -42,7 +42,7 @@ private class DeliverySyncReconcilerTest {
 
         // 4. Work Request (The downstream bridge)
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemLookup__c = wi.Id,
+            WorkItemId__c = wi.Id,
             DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'Active',
             RemoteWorkItemIdTxt__c = 'REMOTE-RECON-001'
@@ -52,7 +52,7 @@ private class DeliverySyncReconcilerTest {
         // 5. Work Log (child of the Work Item)
         WorkLog__c wl = new WorkLog__c(
             WorkItemLookup__c = wi.Id,
-            RequestLookup__c = req.Id,
+            RequestId__c = req.Id,
             HoursLoggedNumber__c = 2.5,
             WorkDateDate__c = Date.today(),
             WorkDescriptionTxt__c = 'Reconcile test log entry'
@@ -97,15 +97,15 @@ private class DeliverySyncReconcilerTest {
             delete [SELECT Id FROM SyncItem__c];
 
             // Cover ALL WorkRequests (packaging org may auto-create extras)
-            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemLookup__c FROM WorkRequest__c];
+            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c];
             List<WorkLog__c> allWLs = [SELECT Id, WorkItemLookup__c FROM WorkLog__c];
 
             List<SyncItem__c> preCreated = new List<SyncItem__c>();
             for (WorkRequest__c req : allReqs) {
                 preCreated.add(new SyncItem__c(
                     ObjectTypePk__c     = 'WorkItem__c',
-                    LocalRecordIdTxt__c = req.WorkItemLookup__c,
-                    WorkItemLookup__c       = req.WorkItemLookup__c,
+                    LocalRecordIdTxt__c = req.WorkItemId__c,
+                    WorkItemLookup__c       = req.WorkItemId__c,
                     RequestLookup__c        = req.Id,
                     DirectionPk__c      = 'Outbound',
                     StatusPk__c         = 'Synced',
