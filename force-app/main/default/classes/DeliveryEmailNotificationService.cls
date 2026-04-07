@@ -59,7 +59,7 @@ public with sharing class DeliveryEmailNotificationService {
     private static List<WorkItem__c> queryWorkItems(Set<Id> workItemIds) {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   DeveloperLookupId__c, OwnerId
+                   DeveloperLookup__c, OwnerId
             FROM WorkItem__c
             WHERE Id IN :workItemIds
             WITH SYSTEM_MODE
@@ -74,8 +74,8 @@ public with sharing class DeliveryEmailNotificationService {
     private static Map<Id, User> queryActiveRecipients(List<WorkItem__c> workItems) {
         Set<Id> recipientIds = new Set<Id>();
         for (WorkItem__c wi : workItems) {
-            if (wi.DeveloperLookupId__c != null) {
-                recipientIds.add(wi.DeveloperLookupId__c);
+            if (wi.DeveloperLookup__c != null) {
+                recipientIds.add(wi.DeveloperLookup__c);
             }
             if (wi.OwnerId != null && String.valueOf(wi.OwnerId).startsWith('005')) {
                 recipientIds.add(wi.OwnerId);
@@ -137,8 +137,8 @@ public with sharing class DeliveryEmailNotificationService {
      */
     private static List<String> resolveAddresses(WorkItem__c wi, Map<Id, User> userMap) {
         Set<String> addresses = new Set<String>();
-        if (wi.DeveloperLookupId__c != null && userMap.containsKey(wi.DeveloperLookupId__c)) {
-            addresses.add(userMap.get(wi.DeveloperLookupId__c).Email);
+        if (wi.DeveloperLookup__c != null && userMap.containsKey(wi.DeveloperLookup__c)) {
+            addresses.add(userMap.get(wi.DeveloperLookup__c).Email);
         }
         if (wi.OwnerId != null && userMap.containsKey(wi.OwnerId)) {
             addresses.add(userMap.get(wi.OwnerId).Email);

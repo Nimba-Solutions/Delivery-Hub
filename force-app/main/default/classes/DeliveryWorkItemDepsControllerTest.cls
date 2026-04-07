@@ -16,8 +16,8 @@ private class DeliveryWorkItemDepsControllerTest {
         insert new List<WorkItem__c>{ blocker, blocked };
 
         insert new WorkItemDependency__c(
-            BlockingWorkItemId__c = blocker.Id,
-            BlockedWorkItemId__c  = blocked.Id,
+            BlockingWorkItemLookup__c = blocker.Id,
+            BlockedWorkItemLookup__c  = blocked.Id,
             TypePk__c          = 'Blocks'
         );
     }

@@ -20,7 +20,7 @@ global without sharing class DeliveryRequestManagerController {
     global static void sendRequestToVendor(Id requestId) {
         // 1. Fetch the Request using SYSTEM_MODE to ensure availability
         WorkRequest__c req = [
-            SELECT Id, WorkItemId__c, StatusPk__c 
+            SELECT Id, WorkItemLookup__c, StatusPk__c 
             FROM WorkRequest__c 
             WHERE Id = :requestId 
             WITH SYSTEM_MODE 
@@ -34,8 +34,8 @@ global without sharing class DeliveryRequestManagerController {
         Database.update(req, AccessLevel.SYSTEM_MODE);
         
         // 3. "Touch" the parent Work Item to trigger the DeliverySyncEngine push
-        if (req.WorkItemId__c != null) {
-            WorkItem__c parentWorkItem = new WorkItem__c(Id = req.WorkItemId__c);
+        if (req.WorkItemLookup__c != null) {
+            WorkItem__c parentWorkItem = new WorkItem__c(Id = req.WorkItemLookup__c);
             Database.update(parentWorkItem, AccessLevel.SYSTEM_MODE);
         }
     }

@@ -44,7 +44,7 @@ private class DeliveryDataLineageControllerTest {
             WorkItem__c wi = new WorkItem__c(
                 BriefDescriptionTxt__c = 'Lineage Test',
                 StageNamePk__c = 'Backlog',
-                ClientNetworkEntityId__c = client.Id
+                ClientNetworkEntityLookup__c = client.Id
             );
             insert wi;
 
@@ -52,7 +52,7 @@ private class DeliveryDataLineageControllerTest {
                 ObjectTypePk__c = 'WorkItem__c',
                 DirectionPk__c = 'Outbound',
                 StatusPk__c = 'Synced',
-                WorkItemId__c = wi.Id,
+                WorkItemLookup__c = wi.Id,
                 LocalRecordIdTxt__c = wi.Id
             );
 

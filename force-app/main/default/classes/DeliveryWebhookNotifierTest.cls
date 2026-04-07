@@ -142,15 +142,15 @@ private class DeliveryWebhookNotifierTest {
 
             List<DeliverySync__e> events = new List<DeliverySync__e>{
                 new DeliverySync__e(
-                    ObjectTypePk__c  = 'WorkItem__c',
-                    DirectionPk__c   = 'Outbound',
-                    StatusPk__c      = 'Synced',
+                    ObjectTypeTxt__c = 'WorkItem__c',
+                    DirectionTxt__c  = 'Outbound',
+                    StatusTxt__c     = 'Synced',
                     RecordIdTxt__c   = 'a0B000000000001AAA'
                 ),
                 new DeliverySync__e(
-                    ObjectTypePk__c  = 'WorkLog__c',
-                    DirectionPk__c   = 'Inbound',
-                    StatusPk__c      = 'Synced',
+                    ObjectTypeTxt__c = 'WorkLog__c',
+                    DirectionTxt__c  = 'Inbound',
+                    StatusTxt__c     = 'Synced',
                     RecordIdTxt__c   = 'a0B000000000002AAA'
                 )
             };
@@ -175,9 +175,9 @@ private class DeliveryWebhookNotifierTest {
 
             List<DeliverySync__e> events = new List<DeliverySync__e>{
                 new DeliverySync__e(
-                    ObjectTypePk__c = 'WorkItem__c',
-                    DirectionPk__c  = 'Outbound',
-                    StatusPk__c     = 'Synced'
+                    ObjectTypeTxt__c = 'WorkItem__c',
+                    DirectionTxt__c  = 'Outbound',
+                    StatusTxt__c     = 'Synced'
                 )
             };
 
@@ -201,8 +201,8 @@ private class DeliveryWebhookNotifierTest {
                 new DeliveryDocEvent__e(
                     DocumentIdTxt__c = 'a0D000000000001AAA',
                     EntityNameTxt__c = 'Mobilization Funding',
-                    StatusPk__c      = 'Generated',
-                    TemplatePk__c    = 'Invoice'
+                    StatusTxt__c     = 'Generated',
+                    TemplateTxt__c   = 'Invoice'
                 )
             };
 
@@ -227,7 +227,7 @@ private class DeliveryWebhookNotifierTest {
             List<DeliveryDocEvent__e> events = new List<DeliveryDocEvent__e>{
                 new DeliveryDocEvent__e(
                     DocumentIdTxt__c = 'a0D000000000001AAA',
-                    StatusPk__c      = 'Generated'
+                    StatusTxt__c     = 'Generated'
                 )
             };
 

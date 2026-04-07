@@ -92,7 +92,7 @@ global with sharing class DeliveryReleaseNotesController {
         return [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
                    RequestTypePk__c, PriorityPk__c,
-                   DeveloperLookupId__c, DeveloperLookupId__r.Name, LastModifiedDate
+                   DeveloperLookup__c, DeveloperLookup__r.Name, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c IN :terminalStages
             AND LastModifiedDate >= :startDt
@@ -181,7 +181,7 @@ global with sharing class DeliveryReleaseNotesController {
         m.put('name', item.Name);
         m.put('title', item.BriefDescriptionTxt__c);
         m.put('priority', item.PriorityPk__c);
-        m.put('developer', item.DeveloperLookupId__r != null ? item.DeveloperLookupId__r.Name : null);
+        m.put('developer', item.DeveloperLookup__r != null ? item.DeveloperLookup__r.Name : null);
         m.put('completedDate', item.LastModifiedDate.format('yyyy-MM-dd'));
         return m;
     }

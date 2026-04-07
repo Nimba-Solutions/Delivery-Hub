@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DirectionTxt__c</fullName>
+    <description>Direction of the sync item: Inbound or Outbound.</description>
+    <inlineHelpText>Sync direction: Inbound or Outbound.</inlineHelpText>
+    <label>Direction</label>
+    <length>20</length>
+    <type>Text</type>
+</CustomField>

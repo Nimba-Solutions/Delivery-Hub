@@ -23,7 +23,7 @@ private class DeliveryTimelineControllerTest {
                 PriorityPk__c              = 'High',
                 ActivatedDateTime__c            = Datetime.now(),
                 WorkflowTypeTxt__c         = 'Software_Delivery',
-                ClientNetworkEntityId__c   = entity.Id,
+                ClientNetworkEntityLookup__c   = entity.Id,
                 EstimatedStartDevDate__c   = Date.today(),
                 EstimatedEndDevDate__c     = Date.today().addDays(14)
             ),
@@ -33,7 +33,7 @@ private class DeliveryTimelineControllerTest {
                 PriorityPk__c              = 'Medium',
                 ActivatedDateTime__c            = Datetime.now(),
                 WorkflowTypeTxt__c         = 'Software_Delivery',
-                ClientNetworkEntityId__c   = entity.Id,
+                ClientNetworkEntityLookup__c   = entity.Id,
                 ProjectedUATReadyDate__c   = Date.today().addDays(7)
             ),
             new WorkItem__c(

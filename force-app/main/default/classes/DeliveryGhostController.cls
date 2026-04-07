@@ -43,7 +43,7 @@ global with sharing class DeliveryGhostController {
                 LIMIT 1
             ];
             if (!entities.isEmpty()) {
-                log.NetworkEntityId__c = entities[0].Id;
+                log.NetworkEntityLookup__c = entities[0].Id;
             }
 
             insert as system log;

@@ -24,7 +24,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
 
         // Require parent Work Item — prevents orphaned logs that drop off invoices
         for (WorkLog__c wl : newLogs) {
-            if (wl.WorkItemId__c == null) {
+            if (wl.WorkItemLookup__c == null) {
                 wl.addError('A Work Item is required. Work logs without a parent work item are excluded from invoices and reports.');
             }
         }
@@ -40,8 +40,8 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         // Collect work item IDs to resolve client entity context
         Set<Id> workItemIds = new Set<Id>();
         for (WorkLog__c wl : newLogs) {
-            if (String.isBlank(wl.ResourceTitleTxt__c) && wl.WorkItemId__c != null) {
-                workItemIds.add(wl.WorkItemId__c);
+            if (String.isBlank(wl.ResourceTitleTxt__c) && wl.WorkItemLookup__c != null) {
+                workItemIds.add(wl.WorkItemLookup__c);
             }
         }
         if (workItemIds.isEmpty()) {
@@ -51,16 +51,16 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         // Build workItemId → clientEntityId map
         Map<Id, Id> itemToEntityMap = new Map<Id, Id>();
         for (WorkItem__c wi : [
-            SELECT Id, ClientNetworkEntityId__c FROM WorkItem__c
+            SELECT Id, ClientNetworkEntityLookup__c FROM WorkItem__c
             WHERE Id IN :workItemIds WITH SYSTEM_MODE
         ]) {
-            itemToEntityMap.put(wi.Id, wi.ClientNetworkEntityId__c);
+            itemToEntityMap.put(wi.Id, wi.ClientNetworkEntityLookup__c);
         }
 
         // Find last used title per entity for this user
         Map<Id, String> entityTitleMap = new Map<Id, String>();
         for (WorkLog__c recent : [
-            SELECT ResourceTitleTxt__c, WorkItemId__r.ClientNetworkEntityId__c
+            SELECT ResourceTitleTxt__c, WorkItemLookup__r.ClientNetworkEntityLookup__c
             FROM WorkLog__c
             WHERE CreatedById = :UserInfo.getUserId()
             AND ResourceTitleTxt__c != null
@@ -68,7 +68,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             ORDER BY CreatedDate DESC
             LIMIT 50
         ]) {
-            Id entityId = recent.WorkItemId__r.ClientNetworkEntityId__c;
+            Id entityId = recent.WorkItemLookup__r.ClientNetworkEntityLookup__c;
             if (entityId != null && !entityTitleMap.containsKey(entityId)) {
                 entityTitleMap.put(entityId, recent.ResourceTitleTxt__c);
             }
@@ -85,7 +85,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
                 continue;
             }
             // Priority: last title for this engagement > User.Title
-            Id entityId = itemToEntityMap.get(wl.WorkItemId__c);
+            Id entityId = itemToEntityMap.get(wl.WorkItemLookup__c);
             String contextTitle = entityId != null ? entityTitleMap.get(entityId) : null;
             if (String.isNotBlank(contextTitle)) {
                 wl.ResourceTitleTxt__c = contextTitle;
@@ -174,8 +174,8 @@ public with sharing class DeliveryWorkLogTriggerHandler {
     private static void createSyncItemsForLogs(List<WorkLog__c> logs) {
         Set<Id> workItemIds = new Set<Id>();
         for (WorkLog__c wl : logs) {
-            if (wl.WorkItemId__c != null) {
-                workItemIds.add(wl.WorkItemId__c);
+            if (wl.WorkItemLookup__c != null) {
+                workItemIds.add(wl.WorkItemLookup__c);
             }
         }
         if (workItemIds.isEmpty()) {
@@ -183,11 +183,11 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         }
 
         Map<Id, WorkItem__c> clientWorkItems = new Map<Id, WorkItem__c>([
-            SELECT Id, ClientNetworkEntityId__c
+            SELECT Id, ClientNetworkEntityLookup__c
             FROM WorkItem__c
             WHERE Id IN :workItemIds
-            AND ClientNetworkEntityId__c != null
-            AND ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c != null
+            AND ClientNetworkEntityLookup__c != null
+            AND ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c != null
             WITH SYSTEM_MODE
         ]);
 
@@ -248,14 +248,14 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         String senderOrgId = UserInfo.getOrganizationId();
         List<SyncItem__c> items = new List<SyncItem__c>();
         for (WorkLog__c wl : logs) {
-            if (!clientWorkItems.containsKey(wl.WorkItemId__c)) {
+            if (!clientWorkItems.containsKey(wl.WorkItemLookup__c)) {
                 continue;
             }
             Map<String, Object> payload = new Map<String, Object>{
                 'SourceId'               => wl.Id,
                 'SenderOrgId'            => senderOrgId,
                 'GlobalSourceId'         => (String) wl.Id,
-                'WorkItemId__c'          => wl.WorkItemId__c,
+                'WorkItemLookup__c'          => wl.WorkItemLookup__c,
                 'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
                 'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
                 'WorkDescriptionTxt__c'  => wl.WorkDescriptionTxt__c
@@ -263,7 +263,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             items.add(new SyncItem__c(
                 ObjectTypePk__c         = 'WorkLog__c',
                 LocalRecordIdTxt__c     = wl.Id,
-                WorkItemId__c           = wl.WorkItemId__c,
+                WorkItemLookup__c           = wl.WorkItemLookup__c,
                 DirectionPk__c          = 'Outbound',
                 StatusPk__c             = 'Queued',
                 GlobalSourceIdTxt__c    = (String) wl.Id,

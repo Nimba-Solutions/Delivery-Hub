@@ -16,7 +16,7 @@
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityId__c</field>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityLookup__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
     <name>Work Items by Client</name>

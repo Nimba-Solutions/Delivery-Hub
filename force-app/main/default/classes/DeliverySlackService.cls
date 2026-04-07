@@ -20,10 +20,10 @@ global with sharing class DeliverySlackService {
     @future(callout=true)
     public static void postStageChanges(Map<String, String> workItemNameToStage) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+        if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
             return;
         }
-        post(settings.SlackWebhookUrl__c, buildStagePayload(workItemNameToStage));
+        post(settings.SlackWebhookUrlTxt__c, buildStagePayload(workItemNameToStage));
     }
 
     /**
@@ -36,11 +36,11 @@ global with sharing class DeliverySlackService {
     @future(callout=true)
     public static void postApprovalRequest(String approvalContextJson) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+        if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
             return;
         }
         Map<String, String> ctx = (Map<String, String>) JSON.deserialize(approvalContextJson, Map<String, String>.class);
-        post(settings.SlackWebhookUrl__c, buildApprovalPayload(ctx));
+        post(settings.SlackWebhookUrlTxt__c, buildApprovalPayload(ctx));
     }
 
     /**
@@ -52,11 +52,11 @@ global with sharing class DeliverySlackService {
     @future(callout=true)
     public static void postConnectionApprovalRequest(String approvalContextJson) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+        if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
             return;
         }
         Map<String, String> ctx = (Map<String, String>) JSON.deserialize(approvalContextJson, Map<String, String>.class);
-        post(settings.SlackWebhookUrl__c, buildConnectionApprovalPayload(ctx));
+        post(settings.SlackWebhookUrlTxt__c, buildConnectionApprovalPayload(ctx));
     }
 
     /**

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActivityLogLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Lookup to the ActivityLog__c row whose hash chain entry corresponds to this signing event. Source of truth for the canonical chain hash. SetNull on delete so a purged audit log does not silently destroy DocumentAction history.</description>
+    <inlineHelpText>The ActivityLog row that captured this signing event in the audit chain.</inlineHelpText>
+    <label>Activity Log</label>
+    <referenceTo>ActivityLog__c</referenceTo>
+    <relationshipLabel>Document Actions</relationshipLabel>
+    <relationshipName>DocumentActions</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

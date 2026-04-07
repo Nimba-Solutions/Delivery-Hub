@@ -24,8 +24,8 @@ private class DeliveryTimeLoggerControllerTest {
         insert t;
 
         insert new WorkRequest__c(
-            WorkItemId__c           = t.Id,
-            DeliveryEntityId__c   = vendor.Id,
+            WorkItemLookup__c           = t.Id,
+            DeliveryEntityLookup__c   = vendor.Id,
             QuotedHoursNumber__c  = 10,
             HourlyRateCurrency__c = 100,
             StatusPk__c           = 'Accepted'
@@ -46,14 +46,14 @@ private class DeliveryTimeLoggerControllerTest {
             Test.stopTest();
 
             List<WorkLog__c> logs = [
-                SELECT HoursLoggedNumber__c, WorkItemId__c, WorkDateDate__c, RequestId__c
+                SELECT HoursLoggedNumber__c, WorkItemLookup__c, WorkDateDate__c, RequestLookup__c
                 FROM WorkLog__c
-                WHERE WorkItemId__c = :t.Id
+                WHERE WorkItemLookup__c = :t.Id
             ];
             System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
             System.assertEquals(2.5, logs[0].HoursLoggedNumber__c, 'Expected 2.5 hours');
             System.assertEquals(Date.today(), logs[0].WorkDateDate__c, 'Expected today\'s date');
-            System.assertNotEquals(null, logs[0].RequestId__c, 'WorkLog should be linked to the accepted request');
+            System.assertNotEquals(null, logs[0].RequestLookup__c, 'WorkLog should be linked to the accepted request');
         }
     }
 
@@ -69,7 +69,7 @@ private class DeliveryTimeLoggerControllerTest {
             DeliveryTimeLoggerController.logHours(t.Id, 0.25, null, null);
             Test.stopTest();
 
-            List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
+            List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemLookup__c = :t.Id];
             System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
             System.assertEquals(0.25, logs[0].HoursLoggedNumber__c, 'Expected 0.25 hours');
         }
@@ -88,7 +88,7 @@ private class DeliveryTimeLoggerControllerTest {
             DeliveryTimeLoggerController.logHours(t.Id, 3.0, 'Afternoon session', null);
             Test.stopTest();
 
-            List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id];
+            List<WorkLog__c> logs = [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE WorkItemLookup__c = :t.Id];
             System.assertEquals(2, logs.size(), 'Expected two WorkLog records');
         }
     }
@@ -103,7 +103,7 @@ private class DeliveryTimeLoggerControllerTest {
             insert noReqWorkItem;
 
             // Delete any auto-created WorkRequests (AutoCreateWorkRequest may fire in namespaced context)
-            List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :noReqWorkItem.Id];
+            List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :noReqWorkItem.Id];
             if (!autoCreated.isEmpty()) {
                 delete autoCreated;
             }
@@ -135,7 +135,7 @@ private class DeliveryTimeLoggerControllerTest {
             List<WorkLog__c> logs = [
                 SELECT HoursLoggedNumber__c, WorkDateDate__c, WorkDescriptionTxt__c
                 FROM WorkLog__c
-                WHERE WorkItemId__c = :t.Id
+                WHERE WorkItemLookup__c = :t.Id
             ];
             System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
             System.assertEquals(pastDate, logs[0].WorkDateDate__c, 'Work date should be the explicit date provided');
@@ -159,7 +159,7 @@ private class DeliveryTimeLoggerControllerTest {
             List<WorkLog__c> logs = [
                 SELECT WorkDescriptionTxt__c
                 FROM WorkLog__c
-                WHERE WorkItemId__c = :t.Id
+                WHERE WorkItemLookup__c = :t.Id
             ];
             System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
             System.assertEquals(null, logs[0].WorkDescriptionTxt__c, 'Notes should be null when none provided');
@@ -217,7 +217,7 @@ private class DeliveryTimeLoggerControllerTest {
             List<WorkLog__c> logs = [
                 SELECT StatusPk__c
                 FROM WorkLog__c
-                WHERE WorkItemId__c = :t.Id
+                WHERE WorkItemLookup__c = :t.Id
             ];
             System.assertEquals(1, logs.size(), 'Expected one WorkLog record');
             System.assertEquals('Draft', logs[0].StatusPk__c, 'WorkLog should be Draft when approval is required');
@@ -237,7 +237,7 @@ private class DeliveryTimeLoggerControllerTest {
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
             DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'To approve', null);
 
-            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
+            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemLookup__c = :t.Id LIMIT 1];
             System.assertEquals('Draft', log.StatusPk__c, 'Precondition: should be Draft');
 
             Test.startTest();
@@ -262,7 +262,7 @@ private class DeliveryTimeLoggerControllerTest {
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
             DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'To reject', null);
 
-            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
+            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemLookup__c = :t.Id LIMIT 1];
             System.assertEquals('Draft', log.StatusPk__c, 'Precondition: should be Draft');
 
             Test.startTest();
@@ -284,7 +284,7 @@ private class DeliveryTimeLoggerControllerTest {
             // Default (no approval required) creates Approved logs
             DeliveryTimeLoggerController.logHours(t.Id, 1.0, 'Already approved', null);
 
-            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemId__c = :t.Id LIMIT 1];
+            WorkLog__c log = [SELECT Id, StatusPk__c FROM WorkLog__c WHERE WorkItemLookup__c = :t.Id LIMIT 1];
             System.assertEquals('Approved', log.StatusPk__c, 'Precondition: should already be Approved');
 
             Test.startTest();

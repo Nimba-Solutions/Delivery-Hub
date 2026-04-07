@@ -32,20 +32,20 @@ global with sharing class DeliveryWorkItemDependenciesController {
     private static List<DependencyRow> fetchBlocking(Id workItemId) {
         List<DependencyRow> rows = new List<DependencyRow>();
         for (WorkItemDependency__c td : [
-            SELECT BlockedWorkItemId__r.Id, BlockedWorkItemId__r.Name,
-                   BlockedWorkItemId__r.BriefDescriptionTxt__c, BlockedWorkItemId__r.StageNamePk__c,
+            SELECT BlockedWorkItemLookup__r.Id, BlockedWorkItemLookup__r.Name,
+                   BlockedWorkItemLookup__r.BriefDescriptionTxt__c, BlockedWorkItemLookup__r.StageNamePk__c,
                    TypePk__c
             FROM WorkItemDependency__c
-            WHERE BlockingWorkItemId__c = :workItemId
+            WHERE BlockingWorkItemLookup__c = :workItemId
             WITH SYSTEM_MODE
-            ORDER BY BlockedWorkItemId__r.Name ASC
+            ORDER BY BlockedWorkItemLookup__r.Name ASC
             LIMIT 20
         ]) {
             DependencyRow row = new DependencyRow();
-            row.id    = td.BlockedWorkItemId__r.Id;
-            row.name  = td.BlockedWorkItemId__r.Name;
-            row.title = td.BlockedWorkItemId__r.BriefDescriptionTxt__c;
-            row.stage = td.BlockedWorkItemId__r.StageNamePk__c;
+            row.id    = td.BlockedWorkItemLookup__r.Id;
+            row.name  = td.BlockedWorkItemLookup__r.Name;
+            row.title = td.BlockedWorkItemLookup__r.BriefDescriptionTxt__c;
+            row.stage = td.BlockedWorkItemLookup__r.StageNamePk__c;
             row.type  = td.TypePk__c;
             rows.add(row);
         }
@@ -55,20 +55,20 @@ global with sharing class DeliveryWorkItemDependenciesController {
     private static List<DependencyRow> fetchBlockedBy(Id workItemId) {
         List<DependencyRow> rows = new List<DependencyRow>();
         for (WorkItemDependency__c td : [
-            SELECT BlockingWorkItemId__r.Id, BlockingWorkItemId__r.Name,
-                   BlockingWorkItemId__r.BriefDescriptionTxt__c, BlockingWorkItemId__r.StageNamePk__c,
+            SELECT BlockingWorkItemLookup__r.Id, BlockingWorkItemLookup__r.Name,
+                   BlockingWorkItemLookup__r.BriefDescriptionTxt__c, BlockingWorkItemLookup__r.StageNamePk__c,
                    TypePk__c
             FROM WorkItemDependency__c
-            WHERE BlockedWorkItemId__c = :workItemId
+            WHERE BlockedWorkItemLookup__c = :workItemId
             WITH SYSTEM_MODE
-            ORDER BY BlockingWorkItemId__r.Name ASC
+            ORDER BY BlockingWorkItemLookup__r.Name ASC
             LIMIT 20
         ]) {
             DependencyRow row = new DependencyRow();
-            row.id    = td.BlockingWorkItemId__r.Id;
-            row.name  = td.BlockingWorkItemId__r.Name;
-            row.title = td.BlockingWorkItemId__r.BriefDescriptionTxt__c;
-            row.stage = td.BlockingWorkItemId__r.StageNamePk__c;
+            row.id    = td.BlockingWorkItemLookup__r.Id;
+            row.name  = td.BlockingWorkItemLookup__r.Name;
+            row.title = td.BlockingWorkItemLookup__r.BriefDescriptionTxt__c;
+            row.stage = td.BlockingWorkItemLookup__r.StageNamePk__c;
             row.type  = td.TypePk__c;
             rows.add(row);
         }

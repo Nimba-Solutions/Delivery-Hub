@@ -16,7 +16,7 @@ import IS_TEMPLATE_FIELD from "@salesforce/schema/WorkItem__c.TemplateMarkedDate
 import RECURRENCE_SCHEDULE_FIELD from "@salesforce/schema/WorkItem__c.RecurrenceScheduleTxt__c";
 import RECURRENCE_DAY_FIELD from "@salesforce/schema/WorkItem__c.RecurrenceDayTxt__c";
 import NEXT_RECURRENCE_DATE_FIELD from "@salesforce/schema/WorkItem__c.NextRecurrenceDate__c";
-import TEMPLATE_SOURCE_ID_FIELD from "@salesforce/schema/WorkItem__c.TemplateSourceId__c";
+import TEMPLATE_SOURCE_ID_FIELD from "@salesforce/schema/WorkItem__c.TemplateSourceLookup__c";
 import ID_FIELD from "@salesforce/schema/WorkItem__c.Id";
 
 const FIELDS = [

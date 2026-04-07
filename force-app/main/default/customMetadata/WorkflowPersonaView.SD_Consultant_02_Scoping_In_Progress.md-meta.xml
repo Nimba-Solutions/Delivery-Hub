@@ -3,7 +3,7 @@
     <label>SD Consultant - Scoping In Progress</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowTypeMdtId__c</field>
+        <field>WorkflowTypeMdt__c</field>
         <value xsi:type="xsd:string">Software_Delivery</value>
     </values>
     <values>

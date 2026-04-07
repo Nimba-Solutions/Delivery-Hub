@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkItemLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Optional scope to a single work item. When null, the document covers all items for the entity within the period.</description>
+    <inlineHelpText>Leave blank for entity-wide documents. Set to scope the document to a single work item.</inlineHelpText>
+    <label>Work Item</label>
+    <referenceTo>WorkItem__c</referenceTo>
+    <relationshipLabel>Documents</relationshipLabel>
+    <relationshipName>Documents</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

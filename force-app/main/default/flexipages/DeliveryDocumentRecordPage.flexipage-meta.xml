@@ -73,7 +73,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.NetworkEntityId__c</fieldItem>
+                <fieldItem>Record.NetworkEntityLookup__c</fieldItem>
                 <identifier>RecordNetworkEntityId_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -89,7 +89,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.WorkItemId__c</fieldItem>
+                <fieldItem>Record.WorkItemLookup__c</fieldItem>
                 <identifier>RecordWorkItemId_cField</identifier>
             </fieldInstance>
         </itemInstances>

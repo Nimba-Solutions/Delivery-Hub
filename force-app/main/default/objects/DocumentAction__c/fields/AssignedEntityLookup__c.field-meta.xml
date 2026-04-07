@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AssignedEntityLookup__c</fullName>
+    <description>The network entity assigned to action this slot. Optional — some slots may be unassigned until claimed.</description>
+    <inlineHelpText>Which network entity is responsible for actioning this slot. Leave blank for slots that are filled in later.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Assigned Entity</label>
+    <referenceTo>NetworkEntity__c</referenceTo>
+    <relationshipLabel>Assigned Document Actions</relationshipLabel>
+    <relationshipName>AssignedDocumentActions</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

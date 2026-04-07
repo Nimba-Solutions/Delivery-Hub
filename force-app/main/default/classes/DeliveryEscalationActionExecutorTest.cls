@@ -30,7 +30,7 @@ private class DeliveryEscalationActionExecutorTest {
             PriorityPk__c = 'Low',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Medium priority item for bump tests
@@ -40,7 +40,7 @@ private class DeliveryEscalationActionExecutorTest {
             PriorityPk__c = 'Medium',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // High priority item for bump tests
@@ -50,7 +50,7 @@ private class DeliveryEscalationActionExecutorTest {
             PriorityPk__c = 'High',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         // Critical priority item (ceiling test)
@@ -60,7 +60,7 @@ private class DeliveryEscalationActionExecutorTest {
             PriorityPk__c = 'Critical',
             WorkflowTypeTxt__c = 'Software_Delivery',
             ActivatedDateTime__c = Datetime.now().addDays(-5),
-            DeveloperLookupId__c = UserInfo.getUserId()
+            DeveloperLookup__c = UserInfo.getUserId()
         ));
 
         insert items;
@@ -481,7 +481,7 @@ private class DeliveryEscalationActionExecutorTest {
     static void testSlackAlertActionLogsActivity() {
         System.runAs(testUser) {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            settings.SlackWebhookUrl__c = 'https://hooks.slack.com/test';
+            settings.SlackWebhookUrlTxt__c = 'https://hooks.slack.com/test';
             update settings;
 
             List<WorkflowEscalationRule__mdt> rules = new List<WorkflowEscalationRule__mdt>();

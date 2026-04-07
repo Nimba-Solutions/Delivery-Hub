@@ -41,8 +41,8 @@ private class DeliveryDependencyTriggerHandlerTest {
 
             Test.startTest();
             WorkItemDependency__c dep = new WorkItemDependency__c(
-                BlockedWorkItemId__c = blocked.Id,
-                BlockingWorkItemId__c = blocker.Id
+                BlockedWorkItemLookup__c = blocked.Id,
+                BlockingWorkItemLookup__c = blocker.Id
             );
             insert dep;
             Test.stopTest();
@@ -59,8 +59,8 @@ private class DeliveryDependencyTriggerHandlerTest {
 
             DeliveryTriggerControl.disableAfterLogic();
             WorkItemDependency__c dep = new WorkItemDependency__c(
-                BlockedWorkItemId__c = blocked.Id,
-                BlockingWorkItemId__c = blocker.Id
+                BlockedWorkItemLookup__c = blocked.Id,
+                BlockingWorkItemLookup__c = blocker.Id
             );
             insert dep;
             DeliveryTriggerControl.enableAfterLogic();
@@ -83,8 +83,8 @@ private class DeliveryDependencyTriggerHandlerTest {
 
             DeliveryTriggerControl.disableAfterLogic();
             WorkItemDependency__c dep = new WorkItemDependency__c(
-                BlockedWorkItemId__c = blocked.Id,
-                BlockingWorkItemId__c = blocker.Id
+                BlockedWorkItemLookup__c = blocked.Id,
+                BlockingWorkItemLookup__c = blocker.Id
             );
             insert dep;
             DeliveryTriggerControl.enableAfterLogic();

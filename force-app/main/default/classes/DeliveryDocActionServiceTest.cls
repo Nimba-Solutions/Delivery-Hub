@@ -26,7 +26,7 @@ private class DeliveryDocActionServiceTest {
         insert entity;
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
+            NetworkEntityLookup__c = entity.Id,
             TemplatePk__c = 'Client_Agreement',
             PeriodStartDate__c = Date.newInstance(2026, 1, 1),
             PeriodEndDate__c = Date.newInstance(2026, 1, 31),
@@ -41,7 +41,7 @@ private class DeliveryDocActionServiceTest {
 
     private static DeliveryDocument__c getDoc() {
         return [
-            SELECT Id, NetworkEntityId__c, TemplatePk__c, RequiresSigningCheckbox__c
+            SELECT Id, NetworkEntityLookup__c, TemplatePk__c, RequireSigningDateTime__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = 'aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44'
             LIMIT 1
@@ -108,7 +108,7 @@ private class DeliveryDocActionServiceTest {
 
             System.assertEquals('Sign as Client', slots[1].ActionLabelTxt__c, 'Second slot should be Client');
             System.assertEquals(2, slots[1].SortOrderNumber__c, 'Client should have sort order 2');
-            System.assertEquals(entity.Id, slots[1].AssignedEntityId__c, 'Client slot should auto-assign to customer entity');
+            System.assertEquals(entity.Id, slots[1].AssignedEntityLookup__c, 'Client slot should auto-assign to customer entity');
         }
     }
 
@@ -117,7 +117,7 @@ private class DeliveryDocActionServiceTest {
         System.runAs(testUser) {
             DeliveryDocument__c doc = getDoc();
             Map<String, Object> snapshot = new Map<String, Object>{
-                'entity' => new Map<String, Object>{ 'id' => doc.NetworkEntityId__c }
+                'entity' => new Map<String, Object>{ 'id' => doc.NetworkEntityLookup__c }
             };
 
             Test.startTest();
@@ -217,12 +217,12 @@ private class DeliveryDocActionServiceTest {
             System.assertNotEquals(null, generatedDocId, 'Generated document Id should be returned');
 
             DeliveryDocument__c generated = [
-                SELECT Id, RequiresSigningCheckbox__c, TemplatePk__c
+                SELECT Id, RequireSigningDateTime__c, TemplatePk__c
                 FROM DeliveryDocument__c
                 WHERE Id = :generatedDocId
                 LIMIT 1
             ];
-            System.assertEquals(true, generated.RequiresSigningCheckbox__c, 'Agreement should be flagged as requiring signing');
+            System.assertNotEquals(null, generated.RequireSigningDateTime__c, 'Agreement should be flagged as requiring signing');
 
             List<DocumentAction__c> slots = DeliveryDocActionService.getActionsForDocument(generatedDocId);
             System.assertEquals(2, slots.size(), 'Generation should auto-create 2 slots for Client_Agreement');
@@ -245,12 +245,12 @@ private class DeliveryDocActionServiceTest {
             Test.stopTest();
 
             DeliveryDocument__c generated = [
-                SELECT Id, RequiresSigningCheckbox__c
+                SELECT Id, RequireSigningDateTime__c
                 FROM DeliveryDocument__c
                 WHERE Id = :generatedDocId
                 LIMIT 1
             ];
-            System.assertEquals(false, generated.RequiresSigningCheckbox__c, 'Invoice should not be flagged as requiring signing');
+            System.assertEquals(null, generated.RequireSigningDateTime__c, 'Invoice should not be flagged as requiring signing');
 
             List<DocumentAction__c> slots = DeliveryDocActionService.getActionsForDocument(generatedDocId);
             System.assertEquals(0, slots.size(), 'Invoice should have zero slots');

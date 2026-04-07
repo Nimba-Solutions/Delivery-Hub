@@ -39,14 +39,14 @@ private class DeliveryDocActionControllerTest {
         insert entity;
 
         DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c = entity.Id,
+            NetworkEntityLookup__c = entity.Id,
             TemplatePk__c = 'Client_Agreement',
             PeriodStartDate__c = Date.newInstance(2026, 3, 1),
             PeriodEndDate__c = Date.newInstance(2026, 3, 31),
             PublicTokenTxt__c = 'bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55',
             StatusPk__c = 'Sent',
             TotalCurrency__c = 10000,
-            RequiresSigningCheckbox__c = true
+            RequireSigningDateTime__c = Datetime.now()
         );
         insert doc;
 
@@ -60,7 +60,7 @@ private class DeliveryDocActionControllerTest {
 
     private static DeliveryDocument__c getDoc() {
         return [
-            SELECT Id, StatusPk__c, RequiresSigningCheckbox__c
+            SELECT Id, StatusPk__c, RequireSigningDateTime__c
             FROM DeliveryDocument__c
             WHERE PublicTokenTxt__c = 'bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55'
             LIMIT 1
@@ -71,7 +71,7 @@ private class DeliveryDocActionControllerTest {
         return [
             SELECT Id, ActionLabelTxt__c, StatusPk__c, SortOrderNumber__c
             FROM DocumentAction__c
-            WHERE DocumentId__c = :documentId
+            WHERE DocumentLookup__c = :documentId
             ORDER BY SortOrderNumber__c ASC NULLS LAST
         ];
     }
@@ -114,7 +114,7 @@ private class DeliveryDocActionControllerTest {
 
             DocumentAction__c reloaded = [
                 SELECT StatusPk__c, SignerNameTxt__c, SignatureDataTxt__c,
-                       CompletedDateTime__c, ElectronicConsentDateTime__c, ActivityLogId__c
+                       CompletedDateTime__c, ElectronicConsentDateTime__c, ActivityLogLookup__c
                 FROM DocumentAction__c WHERE Id = :firstActionId LIMIT 1
             ];
             System.assertEquals('Completed', reloaded.StatusPk__c, 'Action should be Completed');
@@ -123,7 +123,7 @@ private class DeliveryDocActionControllerTest {
                 'Signature data should be the formatted stamp');
             System.assertNotEquals(null, reloaded.CompletedDateTime__c, 'CompletedDateTime persisted');
             System.assertNotEquals(null, reloaded.ElectronicConsentDateTime__c, 'Consent timestamp persisted');
-            System.assertNotEquals(null, reloaded.ActivityLogId__c, 'ActivityLogId materialized');
+            System.assertNotEquals(null, reloaded.ActivityLogLookup__c, 'ActivityLogId materialized');
         }
     }
 
@@ -189,7 +189,7 @@ private class DeliveryDocActionControllerTest {
             List<DeliveryTransaction__c> txns = [
                 SELECT TypePk__c, AmountCurrency__c
                 FROM DeliveryTransaction__c
-                WHERE DocumentId__c = :doc.Id AND TypePk__c = 'Approval'
+                WHERE DocumentLookup__c = :doc.Id AND TypePk__c = 'Approval'
             ];
             System.assertEquals(1, txns.size(), 'Should create one Approval transaction');
             System.assertEquals(10000, txns[0].AmountCurrency__c,
@@ -258,9 +258,9 @@ private class DeliveryDocActionControllerTest {
             System.assertEquals(entity.Name, result.get('assignedEntityName'), 'Result should include entity name');
 
             DocumentAction__c reloaded = [
-                SELECT AssignedEntityId__c FROM DocumentAction__c WHERE Id = :firstActionId LIMIT 1
+                SELECT AssignedEntityLookup__c FROM DocumentAction__c WHERE Id = :firstActionId LIMIT 1
             ];
-            System.assertEquals(entity.Id, reloaded.AssignedEntityId__c, 'Assignment persisted');
+            System.assertEquals(entity.Id, reloaded.AssignedEntityLookup__c, 'Assignment persisted');
         }
     }
 
@@ -303,7 +303,7 @@ private class DeliveryDocActionControllerTest {
         DocumentAction__c action = [
             SELECT SignerTokenTxt__c
             FROM DocumentAction__c
-            WHERE DocumentId__c = :doc.Id
+            WHERE DocumentLookup__c = :doc.Id
             ORDER BY SortOrderNumber__c ASC NULLS LAST
             LIMIT 1
         ];
@@ -381,7 +381,7 @@ private class DeliveryDocActionControllerTest {
                 'Sign should mark slot Completed');
 
             DocumentAction__c reloaded = [
-                SELECT StatusPk__c, SignerNameTxt__c, SignerEmailTxt__c, UserAgentTxt__c
+                SELECT StatusPk__c, SignerNameTxt__c, SignerEmail__c, UserAgentTxt__c
                 FROM DocumentAction__c
                 WHERE SignerTokenTxt__c = :token
             ];
@@ -420,7 +420,7 @@ private class DeliveryDocActionControllerTest {
             List<DocumentAction__c> allActions = [
                 SELECT Id, SignerTokenTxt__c
                 FROM DocumentAction__c
-                WHERE DocumentId__c = :doc.Id
+                WHERE DocumentLookup__c = :doc.Id
                 ORDER BY SortOrderNumber__c ASC NULLS LAST
             ];
 

@@ -40,7 +40,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>DeveloperLookupId__c</field>
+                <field>DeveloperLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
@@ -132,7 +132,7 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Readonly</behavior>
-                <field>TotalLoggedHoursNumber__c</field>
+                <field>TotalLoggedHoursSum__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Readonly</behavior>
@@ -173,7 +173,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>ParentWorkItemId__c</field>
+                <field>ParentWorkItemLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsLeftToRight</style>
@@ -208,7 +208,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>TemplateSourceId__c</field>
+                <field>TemplateSourceLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsLeftToRight</style>
@@ -225,7 +225,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>ExternalRequesterEmailTxt__c</field>
+                <field>ExternalRequesterEmail__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
@@ -239,7 +239,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>ClientNetworkEntityId__c</field>
+                <field>ClientNetworkEntityLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <style>TwoColumnsLeftToRight</style>
@@ -298,7 +298,7 @@
         <fields>NAME</fields>
         <fields>BodyTxt__c</fields>
         <fields>CREATED_DATE</fields>
-        <relatedList>WorkItemComment__c.WorkItemId__c</relatedList>
+        <relatedList>WorkItemComment__c.WorkItemLookup__c</relatedList>
         <sortField>CREATED_DATE</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>
@@ -310,7 +310,7 @@
         <fields>WorkDateDate__c</fields>
         <fields>WorkDescriptionTxt__c</fields>
         <fields>HoursLoggedNumber__c</fields>
-        <relatedList>WorkLog__c.WorkItemId__c</relatedList>
+        <relatedList>WorkLog__c.WorkItemLookup__c</relatedList>
         <sortField>WorkDateDate__c</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>

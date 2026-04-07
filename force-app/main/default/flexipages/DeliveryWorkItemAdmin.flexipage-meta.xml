@@ -218,7 +218,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>parentFieldApiName</name>
-                    <value>WorkItem__c.ClientNetworkEntityId__c</value>
+                    <value>WorkItem__c.ClientNetworkEntityLookup__c</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListApiName</name>
@@ -378,7 +378,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.DeveloperLookupId__c</fieldItem>
+                <fieldItem>Record.DeveloperLookup__c</fieldItem>
                 <identifier>RecordDeveloper_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -522,7 +522,7 @@
                     <name>uiBehavior</name>
                     <value>readonly</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.TotalLoggedHoursNumber__c</fieldItem>
+                <fieldItem>Record.TotalLoggedHoursSum__c</fieldItem>
                 <identifier>RecordTotalLoggedHoursNumber_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -650,7 +650,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.ParentWorkItemId__c</fieldItem>
+                <fieldItem>Record.ParentWorkItemLookup__c</fieldItem>
                 <identifier>RecordParentWorkItemId_cField</identifier>
             </fieldInstance>
         </itemInstances>
@@ -666,7 +666,7 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.ClientNetworkEntityId__c</fieldItem>
+                <fieldItem>Record.ClientNetworkEntityLookup__c</fieldItem>
                 <identifier>RecordClientNetworkEntityId_cField</identifier>
             </fieldInstance>
         </itemInstances>

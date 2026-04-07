@@ -44,12 +44,12 @@ private class DeliveryPublicApiServiceTest {
         // Portal access records for multi-tenant testing
         List<PortalAccess__c> portalAccessRecords = new List<PortalAccess__c>{
             new PortalAccess__c(
-                NetworkEntityId__c = entityA.Id,
+                NetworkEntityLookup__c = entityA.Id,
                 EmailTxt__c = 'portal@example.com',
                 RolePk__c = 'Admin'
             ),
             new PortalAccess__c(
-                NetworkEntityId__c = entityB.Id,
+                NetworkEntityLookup__c = entityB.Id,
                 EmailTxt__c = 'portal@example.com',
                 RolePk__c = 'Member'
             )
@@ -64,7 +64,7 @@ private class DeliveryPublicApiServiceTest {
                 PriorityPk__c = 'High',
                 ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
-                ClientNetworkEntityId__c = entityA.Id,
+                ClientNetworkEntityLookup__c = entityA.Id,
                 DetailsTxt__c = 'Active item for API testing'
             ),
             new WorkItem__c(
@@ -73,7 +73,7 @@ private class DeliveryPublicApiServiceTest {
                 PriorityPk__c = 'Low',
                 ActivatedDateTime__c = null,
                 StatusPk__c = 'Closed',
-                ClientNetworkEntityId__c = entityA.Id
+                ClientNetworkEntityLookup__c = entityA.Id
             ),
             // Entity B item (isolation)
             new WorkItem__c(
@@ -82,7 +82,7 @@ private class DeliveryPublicApiServiceTest {
                 PriorityPk__c = 'Medium',
                 ActivatedDateTime__c = Datetime.now(),
                 StatusPk__c = 'New',
-                ClientNetworkEntityId__c = entityB.Id
+                ClientNetworkEntityLookup__c = entityB.Id
             )
         };
         insert items;
@@ -94,8 +94,8 @@ private class DeliveryPublicApiServiceTest {
         insert vendorForReq;
 
         WorkRequest__c req = new WorkRequest__c(
-            WorkItemId__c = items[0].Id,
-            DeliveryEntityId__c = vendorForReq.Id,
+            WorkItemLookup__c = items[0].Id,
+            DeliveryEntityLookup__c = vendorForReq.Id,
             QuotedHoursNumber__c = 20,
             HourlyRateCurrency__c = 100,
             StatusPk__c = 'Accepted'
@@ -104,7 +104,7 @@ private class DeliveryPublicApiServiceTest {
 
         // Comment on first item
         insert new WorkItemComment__c(
-            WorkItemId__c = items[0].Id,
+            WorkItemLookup__c = items[0].Id,
             BodyTxt__c = 'Existing API test comment',
             AuthorTxt__c = 'Developer',
             SourcePk__c = 'Salesforce'
@@ -112,8 +112,8 @@ private class DeliveryPublicApiServiceTest {
 
         // Draft work log on first item (for pending-approvals / approve / reject tests)
         insert new WorkLog__c(
-            RequestId__c = req.Id,
-            WorkItemId__c = items[0].Id,
+            RequestLookup__c = req.Id,
+            WorkItemLookup__c = items[0].Id,
             HoursLoggedNumber__c = 2.5,
             WorkDateDate__c = Date.today(),
             WorkDescriptionTxt__c = 'Draft work log for API test',
@@ -354,13 +354,13 @@ private class DeliveryPublicApiServiceTest {
 
             // Verify entity was auto-linked
             WorkItem__c created = [
-                SELECT ClientNetworkEntityId__c, BriefDescriptionTxt__c
+                SELECT ClientNetworkEntityLookup__c, BriefDescriptionTxt__c
                 FROM WorkItem__c
                 WHERE BriefDescriptionTxt__c = '[Portal] New API Request'
                 LIMIT 1
             ];
             NetworkEntity__c entityA = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
-            System.assertEquals(entityA.Id, created.ClientNetworkEntityId__c, 'Should auto-link to authenticated entity');
+            System.assertEquals(entityA.Id, created.ClientNetworkEntityLookup__c, 'Should auto-link to authenticated entity');
         }
     }
 

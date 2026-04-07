@@ -18,7 +18,7 @@ private class DeliverySyncRetryControllerTest {
             new SyncItem__c(
                 ObjectTypePk__c     = 'WorkItem__c',
                 LocalRecordIdTxt__c = workItem.Id,
-                WorkItemId__c         = workItem.Id,
+                WorkItemLookup__c         = workItem.Id,
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Failed',
                 ErrorLogTxt__c      = 'Connection timeout'
@@ -26,7 +26,7 @@ private class DeliverySyncRetryControllerTest {
             new SyncItem__c(
                 ObjectTypePk__c     = 'WorkItem__c',
                 LocalRecordIdTxt__c = workItem.Id,
-                WorkItemId__c         = workItem.Id,
+                WorkItemLookup__c         = workItem.Id,
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Failed',
                 ErrorLogTxt__c      = 'Auth error'
@@ -34,7 +34,7 @@ private class DeliverySyncRetryControllerTest {
             new SyncItem__c(
                 ObjectTypePk__c     = 'WorkItem__c',
                 LocalRecordIdTxt__c = workItem.Id,
-                WorkItemId__c         = workItem.Id,
+                WorkItemLookup__c         = workItem.Id,
                 DirectionPk__c      = 'Outbound',
                 StatusPk__c         = 'Synced',
                 ErrorLogTxt__c      = null

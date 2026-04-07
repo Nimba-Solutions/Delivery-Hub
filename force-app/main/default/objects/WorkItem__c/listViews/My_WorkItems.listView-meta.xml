@@ -6,7 +6,7 @@
     <columns>StageNamePk__c</columns>
     <columns>PriorityPk__c</columns>
     <columns>CalculatedETADate__c</columns>
-    <columns>TotalLoggedHoursNumber__c</columns>
+    <columns>TotalLoggedHoursSum__c</columns>
     <filterScope>Mine</filterScope>
     <label>My Work Items</label>
 </ListView>

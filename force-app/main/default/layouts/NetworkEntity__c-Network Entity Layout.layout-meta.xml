@@ -169,7 +169,7 @@
         <fields>StatusPk__c</fields>
         <fields>StageNamePk__c</fields>
         <fields>ActivatedDateTime__c</fields>
-        <relatedList>WorkItem__c.ClientNetworkEntityId__c</relatedList>
+        <relatedList>WorkItem__c.ClientNetworkEntityLookup__c</relatedList>
         <sortField>NAME</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>
@@ -177,14 +177,14 @@
         <fields>NAME</fields>
         <fields>OBJECT_ID</fields>
         <fields>StatusPk__c</fields>
-        <fields>WorkItemId__c</fields>
-        <fields>TotalLoggedHoursNumber__c</fields>
+        <fields>WorkItemLookup__c</fields>
+        <fields>TotalLoggedHoursSum__c</fields>
         <fields>WorkProofUrl__c</fields>
         <fields>PreApprovedHoursNumber__c</fields>
         <fields>HourlyRateCurrency__c</fields>
-        <fields>BudgetUtilizationPercent__c</fields>
-        <relatedList>WorkRequest__c.DeliveryEntityId__c</relatedList>
-        <sortField>WorkItemId__c</sortField>
+        <fields>BudgetUtilizationPct__c</fields>
+        <relatedList>WorkRequest__c.DeliveryEntityLookup__c</relatedList>
+        <sortField>WorkItemLookup__c</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>
     <showEmailCheckbox>false</showEmailCheckbox>

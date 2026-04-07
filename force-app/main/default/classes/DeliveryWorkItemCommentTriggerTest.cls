@@ -17,7 +17,7 @@ private class DeliveryWorkItemCommentTriggerTest {
         insert vendor;
         WorkItem__c t = new WorkItem__c(BriefDescriptionTxt__c='T', StageNamePk__c='Backlog');
         insert t;
-        insert new WorkRequest__c(WorkItemId__c=t.Id, DeliveryEntityId__c=vendor.Id, StatusPk__c='Active', RemoteWorkItemIdTxt__c='R-101');
+        insert new WorkRequest__c(WorkItemLookup__c=t.Id, DeliveryEntityLookup__c=vendor.Id, StatusPk__c='Active', RemoteWorkItemIdTxt__c='R-101');
     }
 
     @IsTest
@@ -27,7 +27,7 @@ private class DeliveryWorkItemCommentTriggerTest {
             delete [SELECT Id FROM SyncItem__c];
 
             Test.startTest();
-            insert new WorkItemComment__c(WorkItemId__c = t.Id, BodyTxt__c = 'Hello');
+            insert new WorkItemComment__c(WorkItemLookup__c = t.Id, BodyTxt__c = 'Hello');
             Test.stopTest();
 
             List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE ObjectTypePk__c LIKE '%WorkItemComment__c'];
@@ -39,7 +39,7 @@ private class DeliveryWorkItemCommentTriggerTest {
     static void testUpdateSyncsComment() {
         System.runAs(testUser) {
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
-            WorkItemComment__c c = new WorkItemComment__c(WorkItemId__c = t.Id, BodyTxt__c = 'Old');
+            WorkItemComment__c c = new WorkItemComment__c(WorkItemLookup__c = t.Id, BodyTxt__c = 'Old');
             insert c;
             delete [SELECT Id FROM SyncItem__c];
 

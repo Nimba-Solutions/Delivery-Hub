@@ -115,8 +115,8 @@ global with sharing class DeliveryHubBoardController {
         try {
             if (Schema.sObjectType.WorkItemDependency__c.isCreateable()) {
                 WorkItemDependency__c newDependency = new WorkItemDependency__c(
-                    BlockedWorkItemId__c = blockedWorkItemId,
-                    BlockingWorkItemId__c = blockingWorkItemId,
+                    BlockedWorkItemLookup__c = blockedWorkItemId,
+                    BlockingWorkItemLookup__c = blockingWorkItemId,
                     TypePk__c = 'Blocks'
                 );
                 insert newDependency;
@@ -204,7 +204,7 @@ global with sharing class DeliveryHubBoardController {
      * When entityId is null, returns metrics across all entities (admin view).
      * When entityId is provided, filters all counts to that single client entity.
      * @param workflowType The workflow type DeveloperName (defaults to 'Software_Delivery').
-     * @param entityId Optional ClientNetworkEntityId__c to scope metrics. Null for all entities.
+     * @param entityId Optional ClientNetworkEntityLookup__c to scope metrics. Null for all entities.
      * @return Map of metric name to value.
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
@@ -226,7 +226,7 @@ global with sharing class DeliveryHubBoardController {
                 FROM WorkItem__c
                 WHERE StageNamePk__c NOT IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
-                AND ClientNetworkEntityId__c = :entityId
+                AND ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE
             ];
         } else {
@@ -251,7 +251,7 @@ global with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :weekStartDt
-                AND ClientNetworkEntityId__c = :entityId
+                AND ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE
             ];
         } else {
@@ -277,7 +277,7 @@ global with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :monthStartDt
-                AND ClientNetworkEntityId__c = :entityId
+                AND ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE
             ];
         } else {
@@ -303,7 +303,7 @@ global with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :thirtyDaysAgoDt
-                AND ClientNetworkEntityId__c = :entityId
+                AND ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE
                 LIMIT 200
             ];
@@ -332,36 +332,36 @@ global with sharing class DeliveryHubBoardController {
         Set<Id> blockedIds = new Set<Id>();
         if (entityId != null) {
             for (WorkItemDependency__c dep : [
-                SELECT BlockedWorkItemId__c
+                SELECT BlockedWorkItemLookup__c
                 FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__c IN (
+                WHERE BlockedWorkItemLookup__c IN (
                     SELECT Id FROM WorkItem__c
                     WHERE StageNamePk__c NOT IN :terminalStages
                     AND WorkflowTypeTxt__c = :workflowType
-                    AND ClientNetworkEntityId__c = :entityId
+                    AND ClientNetworkEntityLookup__c = :entityId
                 )
-                AND BlockingWorkItemId__c IN (
+                AND BlockingWorkItemLookup__c IN (
                     SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
                 )
                 WITH SYSTEM_MODE
             ]) {
-                blockedIds.add(dep.BlockedWorkItemId__c);
+                blockedIds.add(dep.BlockedWorkItemLookup__c);
             }
         } else {
             for (WorkItemDependency__c dep : [
-                SELECT BlockedWorkItemId__c
+                SELECT BlockedWorkItemLookup__c
                 FROM WorkItemDependency__c
-                WHERE BlockedWorkItemId__c IN (
+                WHERE BlockedWorkItemLookup__c IN (
                     SELECT Id FROM WorkItem__c
                     WHERE StageNamePk__c NOT IN :terminalStages
                     AND WorkflowTypeTxt__c = :workflowType
                 )
-                AND BlockingWorkItemId__c IN (
+                AND BlockingWorkItemLookup__c IN (
                     SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
                 )
                 WITH SYSTEM_MODE
             ]) {
-                blockedIds.add(dep.BlockedWorkItemId__c);
+                blockedIds.add(dep.BlockedWorkItemLookup__c);
             }
         }
         metrics.put('blockedCount', blockedIds.size());
@@ -374,7 +374,7 @@ global with sharing class DeliveryHubBoardController {
                 FROM WorkItem__c
                 WHERE StageNamePk__c IN :attentionStages
                 AND WorkflowTypeTxt__c = :workflowType
-                AND ClientNetworkEntityId__c = :entityId
+                AND ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE
             ];
         } else {
@@ -396,7 +396,7 @@ global with sharing class DeliveryHubBoardController {
      * When entityId is null, returns all active work items for the workflow type (admin view).
      * When entityId is provided, filters to only that entity's work items (client view).
      * @param workflowType The workflow type DeveloperName (defaults to 'Software_Delivery').
-     * @param entityId Optional ClientNetworkEntityId__c to scope results. Null for all entities.
+     * @param entityId Optional ClientNetworkEntityLookup__c to scope results. Null for all entities.
      * @return List of active WorkItem__c records with related dependencies and comments.
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
@@ -417,18 +417,18 @@ global with sharing class DeliveryHubBoardController {
                     EpicTxt__c,
                     TagsTxt__c,
                     WorkflowTypeTxt__c,
-                    TotalLoggedHoursNumber__c,
+                    TotalLoggedHoursSum__c,
                     EstimatedHoursNumber__c,
                     LastModifiedDate,
                     PriorityPk__c,
-                    (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
-                    (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                    (SELECT Id, BlockingWorkItemLookup__c, BlockingWorkItemLookup__r.Name FROM BlockedByDeps__r),
+                    (SELECT Id, BlockedWorkItemLookup__c, BlockedWorkItemLookup__r.Name FROM BlockingDeps__r),
                     (SELECT Id FROM WorkItemComments__r LIMIT 100)
                 FROM WorkItem__c
                 WHERE ActivatedDateTime__c != null
                 AND TemplateMarkedDateTime__c = null
                 AND WorkflowTypeTxt__c = :workflowType
-                AND ClientNetworkEntityId__c = :entityId
+                AND ClientNetworkEntityLookup__c = :entityId
                 WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c
             ];
@@ -444,13 +444,13 @@ global with sharing class DeliveryHubBoardController {
                 EpicTxt__c,
                 TagsTxt__c,
                 WorkflowTypeTxt__c,
-                TotalLoggedHoursNumber__c,
+                TotalLoggedHoursSum__c,
                 EstimatedHoursNumber__c,
                 LastModifiedDate,
                 PriorityPk__c,
                 CreatedBy.Name,
-                (SELECT Id, BlockingWorkItemId__c, BlockingWorkItemId__r.Name FROM BlockedByDeps__r),
-                (SELECT Id, BlockedWorkItemId__c, BlockedWorkItemId__r.Name FROM BlockingDeps__r),
+                (SELECT Id, BlockingWorkItemLookup__c, BlockingWorkItemLookup__r.Name FROM BlockedByDeps__r),
+                (SELECT Id, BlockedWorkItemLookup__c, BlockedWorkItemLookup__r.Name FROM BlockingDeps__r),
                 (SELECT Id FROM WorkItemComments__r LIMIT 100)
             FROM WorkItem__c
             WHERE ActivatedDateTime__c != null
@@ -478,11 +478,11 @@ global with sharing class DeliveryHubBoardController {
         List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, DetailsTxt__c,
                    StageNamePk__c, PriorityPk__c, Owner.Name, OwnerId,
-                   DeveloperDaysSizeNumber__c, TotalLoggedHoursNumber__c,
+                   DeveloperDaysSizeNumber__c, TotalLoggedHoursSum__c,
                    EstimatedHoursNumber__c, CalculatedETADate__c,
                    TagsTxt__c, WorkflowTypeTxt__c, CreatedDate, LastModifiedDate,
                    CreatedBy.Name,
-                   DeveloperLookupId__c, DeveloperLookupId__r.Name, EpicTxt__c,
+                   DeveloperLookup__c, DeveloperLookup__r.Name, EpicTxt__c,
                    ProjectedUATReadyDate__c, ClientIntentionPk__c
             FROM WorkItem__c
             WHERE Id = :workItemId

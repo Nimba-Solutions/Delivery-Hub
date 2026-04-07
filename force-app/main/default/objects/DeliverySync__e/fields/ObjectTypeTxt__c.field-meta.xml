@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ObjectTypeTxt__c</fullName>
+    <description>The object type of the sync item (e.g. WorkItem__c, WorkLog__c).</description>
+    <inlineHelpText>Object type being synced.</inlineHelpText>
+    <label>Object Type</label>
+    <length>80</length>
+    <type>Text</type>
+</CustomField>
