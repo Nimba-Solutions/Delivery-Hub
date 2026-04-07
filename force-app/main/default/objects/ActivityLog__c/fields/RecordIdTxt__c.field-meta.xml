@@ -3,7 +3,7 @@
     <fullName>RecordIdTxt__c</fullName>
     <description>The Salesforce record ID this activity relates to (e.g., WorkItem__c Id for stage changes). Enables querying activity history per record.</description>
     <externalId>true</externalId>
-    <label>Record Id</label>
+    <label>Record ID</label>
     <length>18</length>
     <required>false</required>
     <type>Text</type>
