@@ -265,8 +265,12 @@ public with sharing class DeliveryDocActionService {
         applySignatureToAction(action, ctx);
         Database.update(action, AccessLevel.SYSTEM_MODE);
 
-        Id activityLogId = recordSignatureAuditLog(action, ctx);
-        action.ActivityLogLookup__c = activityLogId;
+        // Phase 4: insert the audit log row (the trigger writes HashChainTxt__c
+        // pre-insert), then materialize that hash + the FK back onto the action
+        // so consumers can render the chain head without a SOQL join.
+        ActivityLog__c log = recordSignatureAuditLog(action, ctx);
+        action.ActivityLogLookup__c = log.Id;
+        action.PriorHashTxt__c = log.HashChainTxt__c;
         Database.update(action, AccessLevel.SYSTEM_MODE);
 
         String newDocStatus = maybeAdvanceDocumentStatus(action.DocumentLookup__c);
@@ -339,11 +343,11 @@ public with sharing class DeliveryDocActionService {
 
     /**
      * @description Inserts an ActivityLog__c row for the sign event.
-     *              The before-insert trigger (DeliveryAuditChainService) populates the
-     *              tamper-evident HashChainTxt__c automatically.
-     * @return The inserted ActivityLog__c Id (for materialization on the action).
+     *              The before-insert trigger (DeliveryAuditChainService) populates
+     *              HashChainTxt__c automatically. Returns the in-memory record so
+     *              the caller can materialize the chain hash onto the action.
      */
-    private static Id recordSignatureAuditLog(DocumentAction__c action, SignContext ctx) {
+    private static ActivityLog__c recordSignatureAuditLog(DocumentAction__c action, SignContext ctx) {
         ActivityLog__c log = new ActivityLog__c(
             ActionTypePk__c = 'Document_Action',
             RecordIdTxt__c = action.DocumentLookup__c,
@@ -357,7 +361,7 @@ public with sharing class DeliveryDocActionService {
             })
         );
         Database.insert(log, AccessLevel.SYSTEM_MODE);
-        return log.Id;
+        return log;
     }
 
     /**

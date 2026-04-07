@@ -74,3 +74,93 @@
     color: #444;
     line-height: 1.5;
 }
+
+/* ─── Phase 4: Audit trail ─── */
+
+.audit-trail {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #fafaf9;
+    border: 1px solid #dddbda;
+    border-radius: 0.25rem;
+}
+
+.audit-trail-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.audit-trail-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #181818;
+    margin: 0;
+}
+
+.audit-trail-meta {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.audit-trail-meta-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.audit-trail-meta-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #706e6b;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.125rem;
+}
+
+.audit-trail-hash {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #04395e;
+    background-color: #fff;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.125rem;
+    border: 1px solid #dddbda;
+}
+
+.audit-trail-mono {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #181818;
+}
+
+.audit-trail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.audit-trail-table th {
+    text-align: left;
+    font-weight: 600;
+    color: #706e6b;
+    padding: 0.5rem 0.5rem;
+    border-bottom: 2px solid #dddbda;
+    text-transform: uppercase;
+    font-size: 0.6875rem;
+    letter-spacing: 0.05em;
+}
+
+.audit-trail-table td {
+    padding: 0.5rem 0.5rem;
+    border-bottom: 1px solid #efefef;
+    vertical-align: top;
+    color: #181818;
+}
+
+.audit-trail-subtle {
+    color: #706e6b;
+    font-size: 0.6875rem;
+}

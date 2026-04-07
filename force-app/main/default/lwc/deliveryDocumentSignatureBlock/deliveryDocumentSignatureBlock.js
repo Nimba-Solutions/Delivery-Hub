@@ -24,6 +24,11 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     // pending slot so admins can grab the per-signer URL without dropping into
     // a SOQL console. Default off — guest portal contexts won't show it.
     @api adminContext = false;
+    // Phase 4: Certificate of Completion payload from
+    // DeliveryDocActionController.getCertificateOfCompletion. When provided
+    // and adminContext is true, the audit trail section renders below the
+    // slots with hash chain data, IP, and user agent per signer.
+    @api certificate;
 
     // Modal state
     @track showSignModal = false;
@@ -60,6 +65,61 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
 
     get modalHeading() {
         return this.activeAction ? this.activeAction.label : 'Sign';
+    }
+
+    // ─── Phase 4: Audit trail rendering ───────────────────────────
+
+    get hasAuditTrail() {
+        return (
+            this.adminContext &&
+            this.certificate &&
+            Array.isArray(this.certificate.signers) &&
+            this.certificate.signers.length > 0
+        );
+    }
+
+    get documentHashShort() {
+        const h = this.certificate && this.certificate.documentHash;
+        return h ? `${h.slice(0, 12)}…${h.slice(-6)}` : '—';
+    }
+
+    get chainHeadShort() {
+        const h = this.certificate && this.certificate.chainHead;
+        return h ? `${h.slice(0, 12)}…${h.slice(-6)}` : '—';
+    }
+
+    get auditRows() {
+        if (!this.hasAuditTrail) {
+            return [];
+        }
+        return this.certificate.signers.map((s, idx) => {
+            const ua = s.userAgent || '';
+            return {
+                key: s.actionId || `row-${idx}`,
+                slotLabel: s.slotLabel,
+                signerName: s.signerName || '—',
+                signerEmail: s.signerEmail || '—',
+                signedAt: this.formatTimestamp(s.signedAt),
+                ipAddress: s.ipAddress || '—',
+                userAgentShort: ua.length > 60 ? `${ua.slice(0, 60)}…` : (ua || '—'),
+                priorHashShort: s.priorHash ? `${s.priorHash.slice(0, 12)}…${s.priorHash.slice(-6)}` : '—',
+                signatureType: s.signatureType || 'Text'
+            };
+        });
+    }
+
+    formatTimestamp(value) {
+        if (!value) {
+            return '—';
+        }
+        try {
+            return new Date(value).toLocaleString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+            });
+        } catch (err) { // eslint-disable-line no-unused-vars
+            return String(value);
+        }
     }
 
     handleSignClick(event) {
