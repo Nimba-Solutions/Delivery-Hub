@@ -19,12 +19,12 @@
     <genericErrorPage>UnderConstruction</genericErrorPage>
     <inMaintenancePage>UnderConstruction</inMaintenancePage>
     <inactiveIndexPage>UnderConstruction</inactiveIndexPage>
-    <indexPage>%%%NAMESPACED_ORG%%%DeliveryHubSite</indexPage>
+    <indexPage>%%%NAMESPACE%%%DeliveryHubSite</indexPage>
     <masterLabel>Delivery Hub</masterLabel>
     <redirectToCustomDomain>true</redirectToCustomDomain>
     <referrerPolicyOriginWhenCrossOrigin>true</referrerPolicyOriginWhenCrossOrigin>
     <siteAdmin>%%%CURRENT_USER%%%</siteAdmin>
     <siteGuestRecordDefaultOwner>%%%CURRENT_USER%%%</siteGuestRecordDefaultOwner>
-    <siteTemplate>%%%NAMESPACED_ORG%%%DeliveryHubSite</siteTemplate>
+    <siteTemplate>%%%NAMESPACE%%%DeliveryHubSite</siteTemplate>
     <siteType>Visualforce</siteType>
 </CustomSite>

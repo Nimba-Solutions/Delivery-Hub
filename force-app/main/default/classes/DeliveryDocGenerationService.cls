@@ -86,6 +86,13 @@ public with sharing class DeliveryDocGenerationService {
             Database.update(prev, AccessLevel.SYSTEM_MODE);
         }
 
+        // Phase 4: anchor the tamper-evidence chain. The document hash is a
+        // SHA-256 over the frozen snapshot JSON; any later mutation of the
+        // snapshot would change the hash and break the chain that signers
+        // attest to. Computed once at generation time and never updated.
+        String snapshotJson = JSON.serialize(snapshot);
+        String documentHash = DeliveryCryptoService.computeSHA256(snapshotJson);
+
         DeliveryDocument__c doc = new DeliveryDocument__c(
             NetworkEntityLookup__c          = entityId,
             TemplatePk__c               = templateType,
@@ -93,14 +100,15 @@ public with sharing class DeliveryDocGenerationService {
             PeriodEndDate__c            = periodEnd,
             StatusPk__c                 = 'Draft',
             PublicTokenTxt__c           = publicToken,
-            SnapshotTxt__c              = JSON.serialize(snapshot),
+            SnapshotTxt__c              = snapshotJson,
             TotalHoursNumber__c         = calculateTotalHours(snapshot),
             TotalCurrency__c            = currentCharges,
             TermsTxt__c                 = 'Net 30',
             MetadataTxt__c              = JSON.serialize(metaMap),
             VersionNumber__c            = nextVersion,
             PreviousVersionLookup__c        = previousVersionId,
-            RequireSigningDateTime__c  = DeliveryDocActionService.templateSigningRequiredAt(templateType)
+            RequireSigningDateTime__c  = DeliveryDocActionService.templateSigningRequiredAt(templateType),
+            DocumentHashTxt__c          = documentHash
         );
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
