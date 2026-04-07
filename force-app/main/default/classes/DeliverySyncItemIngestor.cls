@@ -51,7 +51,7 @@ public without sharing class DeliverySyncItemIngestor {
         if (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             WorkRequest__c bridge = findWorkItemBridge(sourceId);
             if (bridge != null) {
-                localRecordId = bridge.WorkItemId__c;
+                localRecordId = bridge.WorkItemLookup__c;
                 localRequestId = bridge.Id;
             }
         }
@@ -73,18 +73,18 @@ public without sharing class DeliverySyncItemIngestor {
         // and strip cross-org lookup IDs BEFORE mapFields runs (applies to both insert and update)
         String parentWorkItemRef = targetId;
         if (objectType.endsWithIgnoreCase('WorkLog__c')) {
-            String wiRef = (String) payload.get('WorkItemId__c');
+            String wiRef = (String) payload.get('WorkItemLookup__c');
             if (String.isBlank(wiRef)) {
-                wiRef = (String) payload.get('delivery__WorkItemId__c');
+                wiRef = (String) payload.get('delivery__WorkItemLookup__c');
             }
             if (String.isNotBlank(wiRef)) {
                 parentWorkItemRef = wiRef;
             }
             // Always strip remote lookup IDs — they are invalid cross-org references
-            payload.remove('WorkItemId__c');
-            payload.remove('delivery__WorkItemId__c');
-            payload.remove('RequestId__c');
-            payload.remove('delivery__RequestId__c');
+            payload.remove('WorkItemLookup__c');
+            payload.remove('delivery__WorkItemLookup__c');
+            payload.remove('RequestLookup__c');
+            payload.remove('delivery__RequestLookup__c');
         }
 
         Id localParentId = null;
@@ -93,7 +93,7 @@ public without sharing class DeliverySyncItemIngestor {
             // 1. Try to find parent via Request Bridge (Downstream Origin)
             WorkRequest__c parentBridge = findWorkItemBridge(parentWorkItemRef);
             if (parentBridge != null) {
-                localParentId = parentBridge.WorkItemId__c;
+                localParentId = parentBridge.WorkItemLookup__c;
                 localRequestId = parentBridge.Id;
             }
 
@@ -118,21 +118,21 @@ public without sharing class DeliverySyncItemIngestor {
             }
 
             if (localParentId != null && objectType.containsIgnoreCase('WorkItemComment__c')) {
-                putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
+                putSafe(recordToUpsert, 'WorkItemLookup__c', localParentId);
             }
             if (objectType.endsWithIgnoreCase('WorkLog__c')) {
                 if (localParentId == null) {
                     throw new DeliverySyncEngine.SyncException('Cannot resolve parent WorkItem for WorkLog. Parent ref: ' + parentWorkItemRef + '. The parent WorkItem may not have synced yet.');
                 }
-                putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
+                putSafe(recordToUpsert, 'WorkItemLookup__c', localParentId);
                 // Find a local WorkRequest for the Master-Detail parent
                 List<WorkRequest__c> localRequests = [
                     SELECT Id FROM WorkRequest__c
-                    WHERE WorkItemId__c = :localParentId
+                    WHERE WorkItemLookup__c = :localParentId
                     WITH SYSTEM_MODE LIMIT 1
                 ];
                 if (!localRequests.isEmpty()) {
-                    putSafe(recordToUpsert, 'RequestId__c', localRequests[0].Id);
+                    putSafe(recordToUpsert, 'RequestLookup__c', localRequests[0].Id);
                 }
             }
         }
@@ -149,7 +149,7 @@ public without sharing class DeliverySyncItemIngestor {
         if (String.isNotBlank(defaultBillingEntityId) && objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             // Override: Use the configured billing entity instead of sender-org auto-detection
             try {
-                putSafe(recordToUpsert, 'ClientNetworkEntityId__c', (Id) defaultBillingEntityId);
+                putSafe(recordToUpsert, 'ClientNetworkEntityLookup__c', (Id) defaultBillingEntityId);
             } catch (Exception e) {
                 System.debug(LoggingLevel.FINE, 'Invalid DefaultBillingEntityIdTxt__c: ' + e.getMessage());
             }
@@ -174,7 +174,7 @@ public without sharing class DeliverySyncItemIngestor {
 
                     // If the sender is registered as a Client in our org, lock them in as the Client for this Work Item
                     if (eType == 'Client' || eType == 'Both') {
-                        putSafe(recordToUpsert, 'ClientNetworkEntityId__c', (Id)entities[0].get('Id'));
+                        putSafe(recordToUpsert, 'ClientNetworkEntityLookup__c', (Id)entities[0].get('Id'));
                     }
                 }
             } catch (Exception e) {
@@ -220,16 +220,16 @@ public without sharing class DeliverySyncItemIngestor {
             
             if (parentWorkItemId != null) {
                 try {
-                    // Look up the ClientNetworkEntityId__c of the target Work Item (which we just stamped!)
-                    String query = 'SELECT ClientNetworkEntityId__c FROM WorkItem__c WHERE Id = :parentWorkItemId LIMIT 1';
+                    // Look up the ClientNetworkEntityLookup__c of the target Work Item (which we just stamped!)
+                    String query = 'SELECT ClientNetworkEntityLookup__c FROM WorkItem__c WHERE Id = :parentWorkItemId LIMIT 1';
                     if (String.isNotBlank(getNamespacePrefix())) {
                         query = query.replace('WorkItem__c', getNamespacePrefix() + 'WorkItem__c')
-                                     .replace('ClientNetworkEntityId__c', getNamespacePrefix() + 'ClientNetworkEntityId__c');
+                                     .replace('ClientNetworkEntityLookup__c', getNamespacePrefix() + 'ClientNetworkEntityLookup__c');
                     }
                     
                     List<SObject> tix = Database.query(query); // NOPMD
                     if (!tix.isEmpty()) {
-                        Id clientId = (Id)tix[0].get(tix[0].getSObjectType().getDescribe().fields.getMap().containsKey('ClientNetworkEntityId__c') ? 'ClientNetworkEntityId__c' : getNamespacePrefix() + 'ClientNetworkEntityId__c');
+                        Id clientId = (Id)tix[0].get(tix[0].getSObjectType().getDescribe().fields.getMap().containsKey('ClientNetworkEntityLookup__c') ? 'ClientNetworkEntityLookup__c' : getNamespacePrefix() + 'ClientNetworkEntityLookup__c');
                         if (clientId != null) {
                             DeliverySyncEngine.ignoreOrigin(clientId);
                         }
@@ -259,7 +259,7 @@ public without sharing class DeliverySyncItemIngestor {
 
     // Helper to grab both the Work Item ID and the Request ID
     private static WorkRequest__c findWorkItemBridge(String remoteWorkItemId) {
-        List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteWorkItemIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
+        List<WorkRequest__c> reqs = [SELECT Id, WorkItemLookup__c FROM WorkRequest__c WHERE RemoteWorkItemIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
         return reqs.isEmpty() ? null : reqs[0];
     }
 
@@ -273,7 +273,7 @@ public without sharing class DeliverySyncItemIngestor {
             RemoteExternalIdTxt__c = remoteId, 
             LocalRecordIdTxt__c = (String)localId, 
             PayloadTxt__c = 'Ledger Mapping Created',
-            RequestId__c = requestId,
+            RequestLookup__c = requestId,
             GlobalSourceIdTxt__c = globalSourceId // Stamps the trace ID!
         );
         
@@ -364,7 +364,7 @@ public without sharing class DeliverySyncItemIngestor {
     private static void notifyPendingConnection(SObject entity) {
         try {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-            if (settings == null || String.isBlank(settings.SlackWebhookUrl__c)) {
+            if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
                 return;
             }
             String entityName = (String) entity.get('Name');

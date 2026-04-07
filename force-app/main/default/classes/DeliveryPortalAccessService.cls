@@ -23,15 +23,15 @@ global without sharing class DeliveryPortalAccessService {
         }
 
         for (PortalAccess__c pa : [
-            SELECT NetworkEntityId__c, NetworkEntityId__r.Name, RolePk__c
+            SELECT NetworkEntityLookup__c, NetworkEntityLookup__r.Name, RolePk__c
             FROM PortalAccess__c
             WHERE EmailTxt__c = :email
             WITH SYSTEM_MODE
-            ORDER BY NetworkEntityId__r.Name ASC
+            ORDER BY NetworkEntityLookup__r.Name ASC
         ]) {
             Map<String, Object> entry = new Map<String, Object>();
-            entry.put('id', pa.NetworkEntityId__c);
-            entry.put('name', pa.NetworkEntityId__r.Name);
+            entry.put('id', pa.NetworkEntityLookup__c);
+            entry.put('name', pa.NetworkEntityLookup__r.Name);
             entry.put('role', pa.RolePk__c);
             results.add(entry);
         }
@@ -55,13 +55,13 @@ global without sharing class DeliveryPortalAccessService {
         // Get entity IDs where this user is Admin
         Set<Id> adminEntityIds = new Set<Id>();
         for (PortalAccess__c pa : [
-            SELECT NetworkEntityId__c
+            SELECT NetworkEntityLookup__c
             FROM PortalAccess__c
             WHERE EmailTxt__c = :adminEmail
             AND RolePk__c = 'Admin'
             WITH SYSTEM_MODE
         ]) {
-            adminEntityIds.add(pa.NetworkEntityId__c);
+            adminEntityIds.add(pa.NetworkEntityLookup__c);
         }
 
         if (adminEntityIds.isEmpty()) {
@@ -71,20 +71,20 @@ global without sharing class DeliveryPortalAccessService {
         // Get all users for those entities, grouped by entity
         Map<Id, Map<String, Object>> entityMap = new Map<Id, Map<String, Object>>();
         for (PortalAccess__c pa : [
-            SELECT NetworkEntityId__c, NetworkEntityId__r.Name, EmailTxt__c, RolePk__c
+            SELECT NetworkEntityLookup__c, NetworkEntityLookup__r.Name, EmailTxt__c, RolePk__c
             FROM PortalAccess__c
-            WHERE NetworkEntityId__c IN :adminEntityIds
+            WHERE NetworkEntityLookup__c IN :adminEntityIds
             WITH SYSTEM_MODE
-            ORDER BY NetworkEntityId__r.Name ASC, EmailTxt__c ASC
+            ORDER BY NetworkEntityLookup__r.Name ASC, EmailTxt__c ASC
         ]) {
-            if (!entityMap.containsKey(pa.NetworkEntityId__c)) {
+            if (!entityMap.containsKey(pa.NetworkEntityLookup__c)) {
                 Map<String, Object> entry = new Map<String, Object>();
-                entry.put('entityId', pa.NetworkEntityId__c);
-                entry.put('entityName', pa.NetworkEntityId__r.Name);
+                entry.put('entityId', pa.NetworkEntityLookup__c);
+                entry.put('entityName', pa.NetworkEntityLookup__r.Name);
                 entry.put('users', new List<Map<String, Object>>());
-                entityMap.put(pa.NetworkEntityId__c, entry);
+                entityMap.put(pa.NetworkEntityLookup__c, entry);
             }
-            List<Map<String, Object>> users = (List<Map<String, Object>>) entityMap.get(pa.NetworkEntityId__c).get('users');
+            List<Map<String, Object>> users = (List<Map<String, Object>>) entityMap.get(pa.NetworkEntityLookup__c).get('users');
             Map<String, Object> user = new Map<String, Object>();
             user.put('email', pa.EmailTxt__c);
             user.put('role', pa.RolePk__c);
@@ -134,7 +134,7 @@ global without sharing class DeliveryPortalAccessService {
         List<PortalAccess__c> existing = [
             SELECT Id, AccessTokenTxt__c, RolePk__c
             FROM PortalAccess__c
-            WHERE NetworkEntityId__c = :entityId
+            WHERE NetworkEntityLookup__c = :entityId
             AND EmailTxt__c = :email
             WITH SYSTEM_MODE
             LIMIT 1
@@ -150,7 +150,7 @@ global without sharing class DeliveryPortalAccessService {
 
         String token = EncodingUtil.convertToHex(Crypto.generateAesKey(128));
         PortalAccess__c pa = new PortalAccess__c(
-            NetworkEntityId__c = entityId,
+            NetworkEntityLookup__c = entityId,
             EmailTxt__c = email,
             RolePk__c = String.isNotBlank(role) ? role : 'Member',
             AccessTokenTxt__c = token
@@ -175,7 +175,7 @@ global without sharing class DeliveryPortalAccessService {
             SELECT COUNT()
             FROM PortalAccess__c
             WHERE EmailTxt__c = :email
-            AND NetworkEntityId__c = :networkEntityId
+            AND NetworkEntityLookup__c = :networkEntityId
             WITH SYSTEM_MODE
         ];
 

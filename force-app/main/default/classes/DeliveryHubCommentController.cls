@@ -22,7 +22,7 @@ global with sharing class DeliveryHubCommentController {
             return [
                 SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate, SourcePk__c
                 FROM WorkItemComment__c
-                WHERE WorkItemId__c = :workItemId
+                WHERE WorkItemLookup__c = :workItemId
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate ASC
             ];
@@ -46,7 +46,7 @@ global with sharing class DeliveryHubCommentController {
             Id workItemId = resolveWorkItemId(requestId);
 
             WorkItemComment__c comment = new WorkItemComment__c(
-                WorkItemId__c = workItemId,
+                WorkItemLookup__c = workItemId,
                 BodyTxt__c = body,
                 AuthorTxt__c = UserInfo.getName(),
                 SourcePk__c = 'Client'
@@ -107,9 +107,9 @@ global with sharing class DeliveryHubCommentController {
         }
         else if (type == WorkRequest__c.SObjectType) {
             // FIX: Swapped USER_MODE to SYSTEM_MODE
-            List<WorkRequest__c> reqs = [SELECT WorkItemId__c FROM WorkRequest__c WHERE Id = :recordId WITH SYSTEM_MODE LIMIT 1];
+            List<WorkRequest__c> reqs = [SELECT WorkItemLookup__c FROM WorkRequest__c WHERE Id = :recordId WITH SYSTEM_MODE LIMIT 1];
             if (!reqs.isEmpty()) {
-                return reqs[0].WorkItemId__c;
+                return reqs[0].WorkItemLookup__c;
             }
         }
 

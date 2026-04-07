@@ -39,7 +39,7 @@ private class DeliverySyncEngineTest {
         WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'T', 
             StageNamePk__c = 'Backlog', 
-            ClientNetworkEntityId__c = client.Id // The Upstream Map
+            ClientNetworkEntityLookup__c = client.Id // The Upstream Map
         );
         insert t;
 
@@ -48,8 +48,8 @@ private class DeliverySyncEngineTest {
 
         // 4. Request Bridge (The Explicit Downstream Edge)
         insert new WorkRequest__c(
-            WorkItemId__c = t.Id, 
-            DeliveryEntityId__c = vendor.Id, 
+            WorkItemLookup__c = t.Id, 
+            DeliveryEntityLookup__c = vendor.Id, 
             StatusPk__c = 'Active', 
             RemoteWorkItemIdTxt__c = 'REMOTE-101'
         );
@@ -67,7 +67,7 @@ private class DeliverySyncEngineTest {
             Test.stopTest();
 
             // STRICT APEX FILTER: Long Text Areas cannot be filtered in SOQL.
-            List<SyncItem__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM SyncItem__c];
+            List<SyncItem__c> allItems = [SELECT Id, RequestLookup__c, PayloadTxt__c FROM SyncItem__c];
             List<SyncItem__c> items = new List<SyncItem__c>();
             for (SyncItem__c si : allItems) {
                 if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('New Desc')) {
@@ -81,7 +81,7 @@ private class DeliverySyncEngineTest {
             Integer pushCount = 0;
             Integer hubCount = 0;
             for (SyncItem__c si : items) {
-                if (si.RequestId__c != null) {
+                if (si.RequestLookup__c != null) {
                     pushCount++;
                 } else {
                     hubCount++;
@@ -96,7 +96,7 @@ private class DeliverySyncEngineTest {
     static void testSmartRoutingBlocksDownstreamEcho() {
         System.runAs(testUser) {
             WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
-            WorkRequest__c req = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :t.Id LIMIT 1];
+            WorkRequest__c req = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :t.Id LIMIT 1];
 
             delete [SELECT Id FROM SyncItem__c]; // Clear setup noise
 
@@ -113,7 +113,7 @@ private class DeliverySyncEngineTest {
             Test.stopTest();
 
             // STRICT APEX FILTER
-            List<SyncItem__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM SyncItem__c];
+            List<SyncItem__c> allItems = [SELECT Id, RequestLookup__c, PayloadTxt__c FROM SyncItem__c];
             List<SyncItem__c> items = new List<SyncItem__c>();
             for (SyncItem__c si : allItems) {
                 if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Downstream Echo Update')) {
@@ -122,7 +122,7 @@ private class DeliverySyncEngineTest {
             }
 
             System.assertEquals(1, items.size(), 'Engine should have blocked the downstream route and only staged the upstream one.');
-            System.assertEquals(null, items[0].RequestId__c, 'The created item should be the upstream Hub item (RequestId == null).');
+            System.assertEquals(null, items[0].RequestLookup__c, 'The created item should be the upstream Hub item (RequestId == null).');
         }
     }
 
@@ -148,10 +148,10 @@ private class DeliverySyncEngineTest {
             );
             Test.stopTest();
 
-            List<SyncItem__c> allItems = [SELECT Id, RequestId__c, StatusPk__c, PayloadTxt__c FROM SyncItem__c];
+            List<SyncItem__c> allItems = [SELECT Id, RequestLookup__c, StatusPk__c, PayloadTxt__c FROM SyncItem__c];
             List<SyncItem__c> upstreamItems = new List<SyncItem__c>();
             for (SyncItem__c si : allItems) {
-                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Vendor Push Update') && si.RequestId__c == null) {
+                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Vendor Push Update') && si.RequestLookup__c == null) {
                     upstreamItems.add(si);
                 }
             }
@@ -175,10 +175,10 @@ private class DeliverySyncEngineTest {
             update t;
             Test.stopTest();
 
-            List<SyncItem__c> allItems = [SELECT Id, RequestId__c, StatusPk__c, PayloadTxt__c FROM SyncItem__c];
+            List<SyncItem__c> allItems = [SELECT Id, RequestLookup__c, StatusPk__c, PayloadTxt__c FROM SyncItem__c];
             List<SyncItem__c> upstreamItems = new List<SyncItem__c>();
             for (SyncItem__c si : allItems) {
-                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Poll Mode Update') && si.RequestId__c == null) {
+                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Poll Mode Update') && si.RequestLookup__c == null) {
                     upstreamItems.add(si);
                 }
             }
@@ -191,13 +191,13 @@ private class DeliverySyncEngineTest {
     @IsTest
     static void testSmartRoutingBlocksUpstreamEcho() {
         System.runAs(testUser) {
-            WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityId__c FROM WorkItem__c LIMIT 1];
+            WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c, ClientNetworkEntityLookup__c FROM WorkItem__c LIMIT 1];
 
             delete [SELECT Id FROM SyncItem__c]; // Clear setup noise
 
             Test.startTest();
             // Simulate Ingestor receiving a payload from the Client (Upstream)
-            DeliverySyncEngine.ignoreOrigin(t.ClientNetworkEntityId__c);
+            DeliverySyncEngine.ignoreOrigin(t.ClientNetworkEntityLookup__c);
 
             t.BriefDescriptionTxt__c = 'Upstream Echo Update';
             DeliverySyncEngine.captureChanges(
@@ -208,7 +208,7 @@ private class DeliverySyncEngineTest {
             Test.stopTest();
 
             // STRICT APEX FILTER
-            List<SyncItem__c> allItems = [SELECT Id, RequestId__c, PayloadTxt__c FROM SyncItem__c];
+            List<SyncItem__c> allItems = [SELECT Id, RequestLookup__c, PayloadTxt__c FROM SyncItem__c];
             List<SyncItem__c> items = new List<SyncItem__c>();
             for (SyncItem__c si : allItems) {
                 if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Upstream Echo Update')) {
@@ -217,7 +217,7 @@ private class DeliverySyncEngineTest {
             }
 
             System.assertEquals(1, items.size(), 'Engine should have blocked the upstream route and only created the downstream push.');
-            System.assertNotEquals(null, items[0].RequestId__c, 'The created item should be the downstream Push item (RequestId != null).');
+            System.assertNotEquals(null, items[0].RequestLookup__c, 'The created item should be the downstream Push item (RequestId != null).');
         }
     }
 
@@ -361,7 +361,7 @@ private class DeliverySyncEngineTest {
                 StatusPk__c = 'Synced',
                 DirectionPk__c = 'Inbound',
                 ObjectTypePk__c = 'WorkItem__c',
-                WorkItemId__c = t.Id
+                WorkItemLookup__c = t.Id
             );
 
             delete [SELECT Id FROM SyncItem__c WHERE DirectionPk__c = 'Outbound'];

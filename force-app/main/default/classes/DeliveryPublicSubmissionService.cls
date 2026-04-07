@@ -111,7 +111,7 @@ global without sharing class DeliveryPublicSubmissionService {
         DateTime windowStart = DateTime.now().addHours(-RATE_LIMIT_HOURS);
         Integer recentCount = [
             SELECT COUNT() FROM WorkItem__c
-            WHERE ExternalRequesterEmailTxt__c = :email
+            WHERE ExternalRequesterEmail__c = :email
             AND CreatedDate >= :windowStart
             WITH SYSTEM_MODE
         ];
@@ -163,7 +163,7 @@ global without sharing class DeliveryPublicSubmissionService {
         WorkItem__c newItem = new WorkItem__c();
         newItem.BriefDescriptionTxt__c = '[Public] ' + input.title;
         newItem.DetailsTxt__c = fullDescription;
-        newItem.ExternalRequesterEmailTxt__c = input.email;
+        newItem.ExternalRequesterEmail__c = input.email;
         newItem.StageNamePk__c = 'Backlog';
         newItem.PriorityPk__c = input.priority;
         newItem.RequestTypePk__c = String.isNotBlank(input.requestType) ? input.requestType : 'Public Lead';
@@ -175,7 +175,7 @@ global without sharing class DeliveryPublicSubmissionService {
         }
 
         if (resolvedEntityId != null) {
-            newItem.ClientNetworkEntityId__c = resolvedEntityId;
+            newItem.ClientNetworkEntityLookup__c = resolvedEntityId;
         }
 
         return newItem;

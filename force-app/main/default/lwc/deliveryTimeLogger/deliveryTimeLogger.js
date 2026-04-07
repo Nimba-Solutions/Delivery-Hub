@@ -8,8 +8,8 @@ import { getRecord, getFieldValue, refreshApex } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import logHours from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTimeLoggerController.logHours';
 import isApprovalRequired from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTimeLoggerController.isApprovalRequired';
-import TOTAL_LOGGED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.TotalLoggedHoursNumber__c';
-import CLIENT_ENTITY_FIELD from '@salesforce/schema/WorkItem__c.ClientNetworkEntityId__c';
+import TOTAL_LOGGED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.TotalLoggedHoursSum__c';
+import CLIENT_ENTITY_FIELD from '@salesforce/schema/WorkItem__c.ClientNetworkEntityLookup__c';
 
 const FIELDS = [TOTAL_LOGGED_HOURS_FIELD, CLIENT_ENTITY_FIELD];
 

@@ -23,7 +23,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         WorkItem__c linkedWorkItem = new WorkItem__c(
             BriefDescriptionTxt__c   = 'Client Work Item',
             StageNamePk__c           = 'In Development',
-            ClientNetworkEntityId__c = client.Id
+            ClientNetworkEntityLookup__c = client.Id
         );
         WorkItem__c unlinkedWorkItem = new WorkItem__c(
             BriefDescriptionTxt__c = 'No Client Work Item',
@@ -34,15 +34,15 @@ private class DeliveryWorkLogTriggerHandlerTest {
         // Every WorkLog__c is Master-Detail to WorkRequest__c — create one per work item
         insert new List<WorkRequest__c>{
             new WorkRequest__c(
-                WorkItemId__c           = linkedWorkItem.Id,
-                DeliveryEntityId__c   = vendor.Id,
+                WorkItemLookup__c           = linkedWorkItem.Id,
+                DeliveryEntityLookup__c   = vendor.Id,
                 QuotedHoursNumber__c  = 20,
                 HourlyRateCurrency__c = 100,
                 StatusPk__c           = 'Accepted'
             ),
             new WorkRequest__c(
-                WorkItemId__c           = unlinkedWorkItem.Id,
-                DeliveryEntityId__c   = vendor.Id,
+                WorkItemLookup__c           = unlinkedWorkItem.Id,
+                DeliveryEntityLookup__c   = vendor.Id,
                 QuotedHoursNumber__c  = 10,
                 HourlyRateCurrency__c = 100,
                 StatusPk__c           = 'Accepted'
@@ -54,12 +54,12 @@ private class DeliveryWorkLogTriggerHandlerTest {
     static void testWorkLogOnClientWorkItemCreatesSyncItem() {
         System.runAs(testUser) {
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestId__c           = request.Id,
-                WorkItemId__c            = workItem.Id,
+                RequestLookup__c           = request.Id,
+                WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 3.5,
                 WorkDateDate__c        = Date.today(),
                 WorkDescriptionTxt__c  = 'Implemented feature X'
@@ -67,9 +67,9 @@ private class DeliveryWorkLogTriggerHandlerTest {
             Test.stopTest();
 
             List<SyncItem__c> items = [
-                SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c, WorkItemId__c
+                SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c, WorkItemLookup__c
                 FROM SyncItem__c
-                WHERE WorkItemId__c = :workItem.Id
+                WHERE WorkItemLookup__c = :workItem.Id
                 AND ObjectTypePk__c = 'WorkLog__c'
             ];
             System.assertEquals(1, items.size(), 'Should create 1 sync item for client-linked work item');
@@ -83,19 +83,19 @@ private class DeliveryWorkLogTriggerHandlerTest {
     static void testWorkLogOnUnlinkedWorkItemNoSyncItem() {
         System.runAs(testUser) {
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'No Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestId__c           = request.Id,
-                WorkItemId__c            = workItem.Id,
+                RequestLookup__c           = request.Id,
+                WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 2.0,
                 WorkDateDate__c        = Date.today(),
                 WorkDescriptionTxt__c  = 'Internal work only'
             );
             Test.stopTest();
 
-            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
             System.assertEquals(0, items.size(), 'Should not create sync items for work items without a client');
         }
     }
@@ -104,14 +104,14 @@ private class DeliveryWorkLogTriggerHandlerTest {
     static void testTriggerControlDisabled() {
         System.runAs(testUser) {
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
 
             DeliveryTriggerControl.disableAfterLogic();
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestId__c           = request.Id,
-                WorkItemId__c            = workItem.Id,
+                RequestLookup__c           = request.Id,
+                WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 1.0,
                 WorkDateDate__c        = Date.today(),
                 WorkDescriptionTxt__c  = 'Trigger disabled test'
@@ -120,7 +120,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
 
             DeliveryTriggerControl.enableAfterLogic();
 
-            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
             System.assertEquals(0, items.size(), 'Should not create sync items when trigger control is disabled');
         }
     }
@@ -136,12 +136,12 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestId__c           = request.Id,
-                WorkItemId__c            = workItem.Id,
+                RequestLookup__c           = request.Id,
+                WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 2.0,
                 WorkDateDate__c        = Date.today(),
                 WorkDescriptionTxt__c  = 'Draft log test',
@@ -149,7 +149,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
             );
             Test.stopTest();
 
-            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
             System.assertEquals(0, items.size(), 'Draft WorkLog should NOT create SyncItem when approval is required');
         }
     }
@@ -163,12 +163,12 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
 
             // Insert as Draft — no SyncItem expected
             WorkLog__c draftLog = new WorkLog__c(
-                RequestId__c           = request.Id,
-                WorkItemId__c            = workItem.Id,
+                RequestLookup__c           = request.Id,
+                WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 4.0,
                 WorkDateDate__c        = Date.today(),
                 WorkDescriptionTxt__c  = 'Approval update test',
@@ -176,7 +176,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
             );
             insert draftLog;
 
-            List<SyncItem__c> beforeItems = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+            List<SyncItem__c> beforeItems = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
             System.assertEquals(0, beforeItems.size(), 'No SyncItem before approval');
 
             Test.startTest();
@@ -187,7 +187,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
             List<SyncItem__c> afterItems = [
                 SELECT ObjectTypePk__c, DirectionPk__c, StatusPk__c
                 FROM SyncItem__c
-                WHERE WorkItemId__c = :workItem.Id
+                WHERE WorkItemLookup__c = :workItem.Id
                 AND ObjectTypePk__c = 'WorkLog__c'
             ];
             System.assertEquals(1, afterItems.size(), 'Approving a Draft log should create SyncItem');
@@ -205,19 +205,19 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestId__c           = request.Id,
-                WorkItemId__c            = workItem.Id,
+                RequestLookup__c           = request.Id,
+                WorkItemLookup__c            = workItem.Id,
                 HoursLoggedNumber__c   = 1.5,
                 WorkDateDate__c        = Date.today(),
                 WorkDescriptionTxt__c  = 'No approval setting test'
             );
             Test.stopTest();
 
-            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+            List<SyncItem__c> items = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
             System.assertEquals(1, items.size(), 'Without approval setting, WorkLog should sync immediately');
         }
     }
@@ -230,8 +230,8 @@ private class DeliveryWorkLogTriggerHandlerTest {
             Test.startTest();
             try {
                 insert new WorkLog__c(
-                    RequestId__c           = request.Id,
-                    WorkItemId__c            = null,
+                    RequestLookup__c           = request.Id,
+                    WorkItemLookup__c            = null,
                     HoursLoggedNumber__c   = 2.0,
                     WorkDateDate__c        = Date.today(),
                     WorkDescriptionTxt__c  = 'Orphan log should fail'
@@ -254,14 +254,14 @@ private class DeliveryWorkLogTriggerHandlerTest {
             upsert settings;
 
             WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemLookup__c = :workItem.Id LIMIT 1];
 
             // Insert 20 Draft WorkLogs
             List<WorkLog__c> draftLogs = new List<WorkLog__c>();
             for (Integer i = 0; i < 20; i++) {
                 draftLogs.add(new WorkLog__c(
-                    RequestId__c           = request.Id,
-                    WorkItemId__c            = workItem.Id,
+                    RequestLookup__c           = request.Id,
+                    WorkItemLookup__c            = workItem.Id,
                     HoursLoggedNumber__c   = 1.0,
                     WorkDateDate__c        = Date.today(),
                     WorkDescriptionTxt__c  = 'Bulk test log ' + i,
@@ -271,7 +271,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
             insert draftLogs;
 
             // Verify no SyncItems yet
-            List<SyncItem__c> beforeItems = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+            List<SyncItem__c> beforeItems = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
             System.assertEquals(0, beforeItems.size(), 'No SyncItems before bulk approval');
 
             // Approve all in one DML
@@ -282,7 +282,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
             update draftLogs;
             Test.stopTest();
 
-            List<SyncItem__c> afterItems = [SELECT Id FROM SyncItem__c WHERE WorkItemId__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
+            List<SyncItem__c> afterItems = [SELECT Id FROM SyncItem__c WHERE WorkItemLookup__c = :workItem.Id AND ObjectTypePk__c = 'WorkLog__c'];
             System.assertEquals(20, afterItems.size(), 'Bulk approval should create 20 SyncItems');
         }
     }

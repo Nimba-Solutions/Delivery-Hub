@@ -20,8 +20,8 @@ private class DeliveryWorkItemQuotesControllerTest {
         insert vendor;
 
         insert new WorkRequest__c(
-            WorkItemId__c            = workItem.Id,
-            DeliveryEntityId__c    = vendor.Id,
+            WorkItemLookup__c            = workItem.Id,
+            DeliveryEntityLookup__c    = vendor.Id,
             QuotedHoursNumber__c   = 10,
             HourlyRateCurrency__c  = 150,
             StatusPk__c            = 'Open for Bids'
@@ -97,15 +97,15 @@ private class DeliveryWorkItemQuotesControllerTest {
             insert vendor2;
 
             WorkRequest__c secondReq = new WorkRequest__c(
-                WorkItemId__c = workItem.Id,
-                DeliveryEntityId__c = vendor2.Id,
+                WorkItemLookup__c = workItem.Id,
+                DeliveryEntityLookup__c = vendor2.Id,
                 QuotedHoursNumber__c = 20,
                 HourlyRateCurrency__c = 120,
                 StatusPk__c = 'Open for Bids'
             );
             insert secondReq;
 
-            WorkRequest__c firstReq = [SELECT Id FROM WorkRequest__c WHERE DeliveryEntityId__r.Name = 'Test Vendor' LIMIT 1];
+            WorkRequest__c firstReq = [SELECT Id FROM WorkRequest__c WHERE DeliveryEntityLookup__r.Name = 'Test Vendor' LIMIT 1];
 
             Test.startTest();
             DeliveryWorkItemQuotesController.acceptQuote(firstReq.Id, workItem.Id);

@@ -17,9 +17,9 @@ public with sharing class DeliveryWorkItemQueryService {
     // -------------------------------------------------------------------------
     public static final String STANDARD_FIELDS = 'Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
         + 'PriorityPk__c, StatusPk__c, WorkflowTypeTxt__c, ActivatedDateTime__c, '
-        + 'TemplateMarkedDateTime__c, DeveloperLookupId__c, DeveloperLookupId__r.Name, OwnerId, '
-        + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name, '
-        + 'EstimatedHoursNumber__c, TotalLoggedHoursNumber__c, '
+        + 'TemplateMarkedDateTime__c, DeveloperLookup__c, DeveloperLookup__r.Name, OwnerId, '
+        + 'ClientNetworkEntityLookup__c, ClientNetworkEntityLookup__r.Name, '
+        + 'EstimatedHoursNumber__c, TotalLoggedHoursSum__c, '
         + 'StageEnteredDateTime__c, CreatedDate, LastModifiedDate, CreatedBy.Name';
 
     // -------------------------------------------------------------------------
@@ -28,7 +28,7 @@ public with sharing class DeliveryWorkItemQueryService {
     // -------------------------------------------------------------------------
     public static final String BOARD_FIELDS = STANDARD_FIELDS + ', '
         + 'RequestTypePk__c, DeveloperDaysSizeNumber__c, CalculatedETADate__c, '
-        + 'SLATargetDate__c, SLAStatusTxt__c, ParentWorkItemId__c, '
+        + 'SLATargetDate__c, SLAStatusTxt__c, ParentWorkItemLookup__c, '
         + 'ProjectedUATReadyDate__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
         + 'LastEscalatedDateTime__c, SortOrderNumber__c, EpicTxt__c, TagsTxt__c, '
         + 'ClientIntentionPk__c, DetailsTxt__c, CreatedById';
@@ -54,14 +54,14 @@ public with sharing class DeliveryWorkItemQueryService {
 
     /**
      * @description Returns active work items scoped to a single NetworkEntity using STANDARD_FIELDS.
-     * @param entityId The ClientNetworkEntityId__c to filter by
+     * @param entityId The ClientNetworkEntityLookup__c to filter by
      * @return List of active WorkItem__c records for the given entity
      */
     public static List<WorkItem__c> getActiveByEntity(Id entityId) {
         if (entityId == null) {
             return new List<WorkItem__c>();
         }
-        String whereClause = ACTIVE_FILTER + ' AND ClientNetworkEntityId__c = :entityId';
+        String whereClause = ACTIVE_FILTER + ' AND ClientNetworkEntityLookup__c = :entityId';
         return queryWithFields(STANDARD_FIELDS, whereClause, 'LastModifiedDate DESC', null, new Map<String, Object>{ 'entityId' => entityId });
     }
 
@@ -97,14 +97,14 @@ public with sharing class DeliveryWorkItemQueryService {
 
     /**
      * @description Returns active work items scoped to a NetworkEntity using BOARD_FIELDS.
-     * @param entityId The ClientNetworkEntityId__c to filter by
+     * @param entityId The ClientNetworkEntityLookup__c to filter by
      * @return List of active WorkItem__c records with board-level detail for the entity
      */
     public static List<WorkItem__c> getActiveWithBoardFieldsByEntity(Id entityId) {
         if (entityId == null) {
             return new List<WorkItem__c>();
         }
-        String whereClause = ACTIVE_FILTER + ' AND ClientNetworkEntityId__c = :entityId';
+        String whereClause = ACTIVE_FILTER + ' AND ClientNetworkEntityLookup__c = :entityId';
         return queryWithFields(BOARD_FIELDS, whereClause, 'SortOrderNumber__c ASC NULLS LAST, CreatedDate DESC', null, new Map<String, Object>{ 'entityId' => entityId });
     }
 

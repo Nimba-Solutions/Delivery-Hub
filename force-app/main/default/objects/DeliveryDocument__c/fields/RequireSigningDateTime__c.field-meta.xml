@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequireSigningDateTime__c</fullName>
+    <description>When populated, this document requires signatures before it can be marked Approved. The timestamp records when the requirement was set (typically at generation time, copied from DocumentTemplate__mdt.RequireSigningDateTime__c). When null, signing is not required.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set this to enable the signing requirement. Documents with a non-null value require signatures before approval.</inlineHelpText>
+    <label>Require Signing Since</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

@@ -3,7 +3,7 @@
     <label>IP Consultant - Discovery</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowTypeMdtId__c</field>
+        <field>WorkflowTypeMdt__c</field>
         <value xsi:type="xsd:string">Implementation_Project</value>
     </values>
     <values>

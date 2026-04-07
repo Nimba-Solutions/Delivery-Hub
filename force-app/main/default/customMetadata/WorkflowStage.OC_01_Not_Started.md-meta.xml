@@ -3,7 +3,7 @@
     <label>OC - Not Started</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowTypeMdtId__c</field>
+        <field>WorkflowTypeMdt__c</field>
         <value xsi:type="xsd:string">Onboarding_Checklist</value>
     </values>
     <values>

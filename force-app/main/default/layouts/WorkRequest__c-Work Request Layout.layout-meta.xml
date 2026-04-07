@@ -13,11 +13,11 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>WorkItemId__c</field>
+                <field>WorkItemLookup__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>DeliveryEntityId__c</field>
+                <field>DeliveryEntityLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
@@ -59,11 +59,11 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Readonly</behavior>
-                <field>TotalLoggedHoursNumber__c</field>
+                <field>TotalLoggedHoursSum__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Readonly</behavior>
-                <field>BudgetUtilizationPercent__c</field>
+                <field>BudgetUtilizationPct__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Readonly</behavior>
@@ -127,7 +127,7 @@
         <fields>WorkDateDate__c</fields>
         <fields>WorkDescriptionTxt__c</fields>
         <fields>HoursLoggedNumber__c</fields>
-        <relatedList>WorkLog__c.RequestId__c</relatedList>
+        <relatedList>WorkLog__c.RequestLookup__c</relatedList>
         <sortField>WorkDateDate__c</sortField>
         <sortOrder>Desc</sortOrder>
     </relatedLists>

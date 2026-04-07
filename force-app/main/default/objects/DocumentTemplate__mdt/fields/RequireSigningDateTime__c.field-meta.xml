@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequireSigningDateTime__c</fullName>
+    <description>When populated, documents generated from this template require signature slots. The timestamp records when the requirement was set on this template. Slot definitions live in DocumentTemplateSlot__mdt records keyed by template type.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Set this to make documents generated from this template require signatures.</inlineHelpText>
+    <label>Require Signing Since</label>
+    <type>DateTime</type>
+</CustomField>

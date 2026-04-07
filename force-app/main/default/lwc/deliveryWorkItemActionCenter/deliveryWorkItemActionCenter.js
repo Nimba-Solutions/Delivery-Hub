@@ -17,7 +17,7 @@ import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkf
 import STAGE_FIELD from '@salesforce/schema/WorkItem__c.StageNamePk__c';
 import ESTIMATED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.EstimatedHoursNumber__c';
 import PRE_APPROVED_HOURS_FIELD from '@salesforce/schema/WorkItem__c.ClientPreApprovedHoursNumber__c';
-import DEVELOPER_FIELD from '@salesforce/schema/WorkItem__c.DeveloperLookupId__c';
+import DEVELOPER_FIELD from '@salesforce/schema/WorkItem__c.DeveloperLookup__c';
 import CRITERIA_FIELD from '@salesforce/schema/WorkItem__c.AcceptanceCriteriaTxt__c';
 import PRIORITY_FIELD from '@salesforce/schema/WorkItem__c.PriorityPk__c';
 
@@ -133,7 +133,7 @@ export default class DeliveryWorkItemActionCenter extends LightningElement {
         const devStages = ['Ready for Development', 'In Development', 'Dev Blocked', 'Dev Clarification Requested'];
         if (!dev && devStages.includes(stage)) {
             this.missingFields.push({ 
-                apiName: 'DeveloperLookupId__c', 
+                apiName: 'DeveloperLookup__c', 
                 reason: 'Assign Developer to Start Work' 
             });
         }

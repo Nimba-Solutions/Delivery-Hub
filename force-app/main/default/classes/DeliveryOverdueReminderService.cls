@@ -34,7 +34,7 @@ public with sharing class DeliveryOverdueReminderService {
             SELECT Id, Name, StatusPk__c, TemplatePk__c, DueDateDate__c,
                    OverdueReminderCountNumber__c, LastOverdueReminderDateTime__c,
                    OverdueReminderLevelPk__c,
-                   NetworkEntityId__r.Name, NetworkEntityId__r.ContactEmailTxt__c,
+                   NetworkEntityLookup__r.Name, NetworkEntityLookup__r.ContactEmailTxt__c,
                    TotalCurrency__c, TotalHoursNumber__c,
                    PeriodStartDate__c, PeriodEndDate__c
             FROM DeliveryDocument__c
@@ -60,8 +60,8 @@ public with sharing class DeliveryOverdueReminderService {
             }
 
             // Determine recipient
-            String recipientEmail = doc.NetworkEntityId__r != null
-                ? doc.NetworkEntityId__r.ContactEmailTxt__c : null;
+            String recipientEmail = doc.NetworkEntityLookup__r != null
+                ? doc.NetworkEntityLookup__r.ContactEmailTxt__c : null;
             if (String.isBlank(recipientEmail)) {
                 continue;
             }
@@ -148,13 +148,13 @@ public with sharing class DeliveryOverdueReminderService {
      */
     @TestVisible
     private static Messaging.SingleEmailMessage buildReminderEmail(DeliveryDocument__c doc, Integer level, String vendorName) {
-        String recipientEmail = doc.NetworkEntityId__r != null
-            ? doc.NetworkEntityId__r.ContactEmailTxt__c : null;
+        String recipientEmail = doc.NetworkEntityLookup__r != null
+            ? doc.NetworkEntityLookup__r.ContactEmailTxt__c : null;
         if (String.isBlank(recipientEmail)) {
             return null;
         }
 
-        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
+        String entityName = doc.NetworkEntityLookup__r != null ? doc.NetworkEntityLookup__r.Name : '';
         Integer daysOverdue = doc.DueDateDate__c.daysBetween(Date.today());
         Decimal amountDue = doc.TotalCurrency__c != null ? doc.TotalCurrency__c : 0;
 

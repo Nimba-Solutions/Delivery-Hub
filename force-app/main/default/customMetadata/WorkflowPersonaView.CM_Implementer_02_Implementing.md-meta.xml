@@ -3,7 +3,7 @@
     <label>CM Implementer - Implementing</label>
     <protected>false</protected>
     <values>
-        <field>WorkflowTypeMdtId__c</field>
+        <field>WorkflowTypeMdt__c</field>
         <value xsi:type="xsd:string">Change_Management</value>
     </values>
     <values>

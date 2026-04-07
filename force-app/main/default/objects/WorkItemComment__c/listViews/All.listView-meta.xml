@@ -5,7 +5,7 @@
     <columns>BodyTxt__c</columns>
     <columns>AuthorTxt__c</columns>
     <columns>SourcePk__c</columns>
-    <columns>WorkItemId__c</columns>
+    <columns>WorkItemLookup__c</columns>
     <columns>CREATED_DATE</columns>
     <columns>CREATEDBY_USER</columns>
     <filterScope>Everything</filterScope>

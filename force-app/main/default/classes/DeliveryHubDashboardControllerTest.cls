@@ -28,14 +28,14 @@ private class DeliveryHubDashboardControllerTest {
                 ObjectTypePk__c = 'WorkItem__c',
                 StatusPk__c = 'Synced',
                 PayloadTxt__c = '{}',
-                WorkItemId__c = t.Id
+                WorkItemLookup__c = t.Id
             ));
 
             items.add(new SyncItem__c(
                 ObjectTypePk__c = 'WorkItem__c',
                 StatusPk__c = 'Failed',
                 PayloadTxt__c = '{}',
-                WorkItemId__c = t.Id
+                WorkItemLookup__c = t.Id
             ));
 
             insert items;
@@ -240,7 +240,7 @@ private class DeliveryHubDashboardControllerTest {
             insert item;
 
             insert new WorkItemComment__c(
-                WorkItemId__c = item.Id,
+                WorkItemLookup__c = item.Id,
                 BodyTxt__c = 'Test comment for coverage',
                 AuthorTxt__c = 'Test Author',
                 SourcePk__c = 'Internal'

@@ -51,7 +51,7 @@ global with sharing class DeliveryTimelineController {
                 + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
                 + 'WorkflowTypeTxt__c, '
-                + 'ClientNetworkEntityId__c, ClientNetworkEntityId__r.Name '
+                + 'ClientNetworkEntityLookup__c, ClientNetworkEntityLookup__r.Name '
                 + 'FROM WorkItem__c '
                 + 'WHERE ActivatedDateTime__c != null '
                 + 'AND TemplateMarkedDateTime__c = null ';
@@ -61,7 +61,7 @@ global with sharing class DeliveryTimelineController {
             }
 
             query += 'WITH SYSTEM_MODE '
-                + 'ORDER BY ClientNetworkEntityId__r.Name ASC NULLS LAST, '
+                + 'ORDER BY ClientNetworkEntityLookup__r.Name ASC NULLS LAST, '
                 + 'EstimatedStartDevDate__c ASC NULLS LAST, CreatedDate ASC';
 
             List<WorkItem__c> items = Database.query(query); // NOPMD — bind variable (:workflowTypeName) is safe
@@ -92,9 +92,9 @@ global with sharing class DeliveryTimelineController {
         row.priority = item.PriorityPk__c;
         row.workflowType = item.WorkflowTypeTxt__c;
 
-        row.entityName = item.ClientNetworkEntityId__r != null
-            ? item.ClientNetworkEntityId__r.Name : 'Unassigned';
-        row.entityId = item.ClientNetworkEntityId__c;
+        row.entityName = item.ClientNetworkEntityLookup__r != null
+            ? item.ClientNetworkEntityLookup__r.Name : 'Unassigned';
+        row.entityId = item.ClientNetworkEntityLookup__c;
 
         // Determine if the item has at least one explicitly set date
         Boolean hasStart = item.EstimatedStartDevDate__c != null;

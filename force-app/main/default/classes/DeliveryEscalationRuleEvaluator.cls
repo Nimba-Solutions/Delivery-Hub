@@ -57,7 +57,7 @@ public with sharing class DeliveryEscalationRuleEvaluator {
         // Query all active work items in any of the trigger stages
         List<WorkItem__c> allCandidates = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
-                   PriorityPk__c, OwnerId, DeveloperLookupId__c, CreatedById,
+                   PriorityPk__c, OwnerId, DeveloperLookup__c, CreatedById,
                    WorkflowTypeTxt__c, StageEnteredDateTime__c,
                    LastModifiedDate, LastEscalatedDateTime__c
             FROM WorkItem__c
@@ -96,14 +96,14 @@ public with sharing class DeliveryEscalationRuleEvaluator {
                 candidateCreators.put(wi.Id, wi.CreatedById);
             }
             for (WorkItemComment__c c : [
-                SELECT WorkItemId__c, CreatedById
+                SELECT WorkItemLookup__c, CreatedById
                 FROM WorkItemComment__c
-                WHERE WorkItemId__c IN :candidateCreators.keySet()
+                WHERE WorkItemLookup__c IN :candidateCreators.keySet()
                 WITH SYSTEM_MODE
             ]) {
-                Id creator = candidateCreators.get(c.WorkItemId__c);
+                Id creator = candidateCreators.get(c.WorkItemLookup__c);
                 if (creator != null && c.CreatedById != creator) {
-                    workItemsWithResponse.add(c.WorkItemId__c);
+                    workItemsWithResponse.add(c.WorkItemLookup__c);
                 }
             }
         }

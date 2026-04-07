@@ -2,7 +2,7 @@
 <ListView xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>All</fullName>
     <columns>NAME</columns>
-    <columns>DocumentId__c</columns>
+    <columns>DocumentLookup__c</columns>
     <columns>TypePk__c</columns>
     <columns>AmountCurrency__c</columns>
     <columns>TransactionDateDate__c</columns>

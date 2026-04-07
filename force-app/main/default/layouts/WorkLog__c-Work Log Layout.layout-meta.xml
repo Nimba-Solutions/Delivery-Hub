@@ -12,7 +12,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>WorkItemId__c</field>
+                <field>WorkItemLookup__c</field>
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
@@ -28,7 +28,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Required</behavior>
-                <field>RequestId__c</field>
+                <field>RequestLookup__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

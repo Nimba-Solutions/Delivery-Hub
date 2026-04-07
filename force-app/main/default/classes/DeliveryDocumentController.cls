@@ -75,7 +75,7 @@ global with sharing class DeliveryDocumentController {
     global static void updateDocumentStatus(Id documentId, String newStatus) {
         DeliveryDocument__c doc = [
             SELECT Id, StatusPk__c, SentDateTime__c, DueDateDate__c, TermsTxt__c,
-                   TemplatePk__c, NetworkEntityId__r.Name
+                   TemplatePk__c, NetworkEntityLookup__r.Name
             FROM DeliveryDocument__c
             WHERE Id = :documentId
             WITH SYSTEM_MODE
@@ -93,11 +93,11 @@ global with sharing class DeliveryDocumentController {
 
         Database.update(doc, AccessLevel.SYSTEM_MODE);
 
-        String entityName = doc.NetworkEntityId__r != null ? doc.NetworkEntityId__r.Name : '';
+        String entityName = doc.NetworkEntityLookup__r != null ? doc.NetworkEntityLookup__r.Name : '';
         EventBus.publish(new DeliveryDocEvent__e(
             DocumentIdTxt__c = doc.Id,
-            TemplatePk__c    = doc.TemplatePk__c,
-            StatusPk__c      = newStatus,
+            TemplateTxt__c   = doc.TemplatePk__c,
+            StatusTxt__c     = newStatus,
             EntityNameTxt__c = entityName
         ));
     }

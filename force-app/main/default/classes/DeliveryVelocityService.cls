@@ -100,7 +100,7 @@ global with sharing class DeliveryVelocityService {
             FROM WorkItem__c
             WHERE TemplateMarkedDateTime__c = null
             AND StageNamePk__c IN :allTerminalStages
-            AND DeveloperLookupId__c = :developerId
+            AND DeveloperLookup__c = :developerId
             AND LastModifiedDate >= :startDate
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate ASC
@@ -164,14 +164,14 @@ global with sharing class DeliveryVelocityService {
         // Count active items per developer
         Map<String, Integer> activeCountByDev = new Map<String, Integer>();
         for (AggregateResult ar : [
-            SELECT DeveloperLookupId__c devId, COUNT(Id) cnt
+            SELECT DeveloperLookup__c devId, COUNT(Id) cnt
             FROM WorkItem__c
             WHERE TemplateMarkedDateTime__c = null
             AND StageNamePk__c NOT IN :terminalStages
             AND WorkflowTypeTxt__c = :workflowType
-            AND DeveloperLookupId__c != null
+            AND DeveloperLookup__c != null
             WITH SYSTEM_MODE
-            GROUP BY DeveloperLookupId__c
+            GROUP BY DeveloperLookup__c
         ]) {
             String devId = String.valueOf(ar.get('devId'));
             Integer cnt = (Integer) ar.get('cnt');

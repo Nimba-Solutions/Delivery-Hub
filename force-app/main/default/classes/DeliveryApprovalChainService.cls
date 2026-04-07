@@ -49,14 +49,14 @@ public with sharing class DeliveryApprovalChainService {
     ) {
         WorkLog__c wl = [
             SELECT Id, StatusPk__c, ApprovalStepNumber__c, ApprovedByTxt__c,
-                   WorkItemId__r.WorkflowTypeTxt__c
+                   WorkItemLookup__r.WorkflowTypeTxt__c
             FROM WorkLog__c
             WHERE Id = :workLogId
             WITH SYSTEM_MODE
             LIMIT 1
         ];
 
-        String wfType = wl.WorkItemId__r.WorkflowTypeTxt__c;
+        String wfType = wl.WorkItemLookup__r.WorkflowTypeTxt__c;
         List<ApprovalStep__mdt> steps = getActiveSteps(wfType);
         Integer currentStep = wl.ApprovalStepNumber__c != null
             ? wl.ApprovalStepNumber__c.intValue() : 1;
@@ -124,7 +124,7 @@ public with sharing class DeliveryApprovalChainService {
         List<WorkLog__c> pending = [
             SELECT Id, StatusPk__c, ApprovalStepNumber__c,
                    ApprovalRequestedDateTime__c,
-                   WorkItemId__r.WorkflowTypeTxt__c
+                   WorkItemLookup__r.WorkflowTypeTxt__c
             FROM WorkLog__c
             WHERE StatusPk__c = 'Pending_Approval'
             AND ApprovalRequestedDateTime__c != null
@@ -137,7 +137,7 @@ public with sharing class DeliveryApprovalChainService {
 
         List<WorkLog__c> toUpdate = new List<WorkLog__c>();
         for (WorkLog__c wl : pending) {
-            String wfType = wl.WorkItemId__r.WorkflowTypeTxt__c;
+            String wfType = wl.WorkItemLookup__r.WorkflowTypeTxt__c;
             List<ApprovalStep__mdt> steps = getActiveSteps(wfType);
             Integer currentStep = wl.ApprovalStepNumber__c != null
                 ? wl.ApprovalStepNumber__c.intValue() : 1;
@@ -182,7 +182,7 @@ public with sharing class DeliveryApprovalChainService {
         WorkLog__c wl = [
             SELECT Id, StatusPk__c, ApprovalStepNumber__c, ApprovedByTxt__c,
                    ApprovalRequestedDateTime__c,
-                   WorkItemId__r.WorkflowTypeTxt__c
+                   WorkItemLookup__r.WorkflowTypeTxt__c
             FROM WorkLog__c
             WHERE Id = :workLogId
             WITH SYSTEM_MODE

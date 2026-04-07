@@ -26,14 +26,14 @@ private class DeliveryWorkItemQueryServiceTest {
                 PriorityPk__c              = 'High',
                 ActivatedDateTime__c       = Datetime.now(),
                 EstimatedHoursNumber__c    = 20,
-                ClientNetworkEntityId__c   = entity.Id
+                ClientNetworkEntityLookup__c   = entity.Id
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c     = 'Active item in QA',
                 StageNamePk__c             = 'Ready for QA',
                 PriorityPk__c              = 'Medium',
                 ActivatedDateTime__c       = Datetime.now(),
-                ClientNetworkEntityId__c   = entity.Id
+                ClientNetworkEntityLookup__c   = entity.Id
             ),
             new WorkItem__c(
                 BriefDescriptionTxt__c     = 'Active backlog item',
@@ -125,7 +125,7 @@ private class DeliveryWorkItemQueryServiceTest {
             System.assertEquals(2, results.size(),
                 'Should return only active items for the given entity.');
             for (WorkItem__c wi : results) {
-                System.assertEquals(entity.Id, wi.ClientNetworkEntityId__c,
+                System.assertEquals(entity.Id, wi.ClientNetworkEntityLookup__c,
                     'All results should belong to the specified entity.');
             }
         }

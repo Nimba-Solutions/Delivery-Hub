@@ -36,14 +36,14 @@ private class DeliveryHubSyncServiceTest {
         WorkItem__c t = new WorkItem__c(
             BriefDescriptionTxt__c = 'Original Name',
             StageNamePk__c = 'Backlog',
-            ClientNetworkEntityId__c = client.Id
+            ClientNetworkEntityLookup__c = client.Id
         );
         insert t;
 
         // 4. Create Request (The Ledger bridge linking Work Item to Remote ID)
         insert new WorkRequest__c(
-            WorkItemId__c = t.Id,
-            DeliveryEntityId__c = vendor.Id,
+            WorkItemLookup__c = t.Id,
+            DeliveryEntityLookup__c = vendor.Id,
             RemoteWorkItemIdTxt__c = 'REMOTE-WORKITEM-123',
             StatusPk__c = 'Active'
         );
@@ -53,8 +53,8 @@ private class DeliveryHubSyncServiceTest {
         insert new SyncItem__c(
             DirectionPk__c = 'Outbound',
             StatusPk__c = 'Staged',
-            RequestId__c = null, // Null indicates Hub Mode
-            WorkItemId__c = t.Id,  // Mandatory for routing
+            RequestLookup__c = null, // Null indicates Hub Mode
+            WorkItemLookup__c = t.Id,  // Mandatory for routing
             ObjectTypePk__c = 'WorkItem__c',
             PayloadTxt__c = '{"Test":"Payload"}'
         );

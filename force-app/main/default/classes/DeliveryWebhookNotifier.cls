@@ -60,9 +60,9 @@ public with sharing class DeliveryWebhookNotifier implements Queueable, Database
         for (DeliverySync__e evt : events) {
             payloads.add(new Map<String, Object>{
                 'eventType'  => 'DeliverySync',
-                'objectType' => evt.ObjectTypePk__c,
-                'direction'  => evt.DirectionPk__c,
-                'status'     => evt.StatusPk__c,
+                'objectType' => evt.ObjectTypeTxt__c,
+                'direction'  => evt.DirectionTxt__c,
+                'status'     => evt.StatusTxt__c,
                 'recordId'   => evt.RecordIdTxt__c,
                 'error'      => evt.ErrorMessageTxt__c,
                 'timestamp'  => Datetime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
@@ -92,8 +92,8 @@ public with sharing class DeliveryWebhookNotifier implements Queueable, Database
                 'eventType'  => 'DeliveryDocEvent',
                 'documentId' => evt.DocumentIdTxt__c,
                 'entityName' => evt.EntityNameTxt__c,
-                'status'     => evt.StatusPk__c,
-                'template'   => evt.TemplatePk__c,
+                'status'     => evt.StatusTxt__c,
+                'template'   => evt.TemplateTxt__c,
                 'timestamp'  => Datetime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
             });
         }

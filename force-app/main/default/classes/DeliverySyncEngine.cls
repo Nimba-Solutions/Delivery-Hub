@@ -74,9 +74,9 @@ public without sharing class DeliverySyncEngine {
 
             // 2. Evaluate Upstream Routing Edges (The Parent Work Items)
             Map<Id, WorkItem__c> parentWorkItems = new Map<Id, WorkItem__c>([
-                SELECT Id, ClientNetworkEntityId__c, ClientNetworkEntityId__r.EntityTypePk__c,
-                       ClientNetworkEntityId__r.EnableVendorPushDateTime__c,
-                       ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c
+                SELECT Id, ClientNetworkEntityLookup__c, ClientNetworkEntityLookup__r.EntityTypePk__c,
+                       ClientNetworkEntityLookup__r.EnableVendorPushDateTime__c,
+                       ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c
                 FROM WorkItem__c
                 WHERE Id IN :workItemIds
                 WITH SYSTEM_MODE
@@ -84,23 +84,23 @@ public without sharing class DeliverySyncEngine {
 
             // 3. Evaluate Downstream Routing Edges (Active, Typed Requests)
             List<WorkRequest__c> connections = [
-                SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityId__c, 
-                       DeliveryEntityId__r.IntegrationEndpointUrlTxt__c, 
-                       DeliveryEntityId__r.EntityTypePk__c, StatusPk__c 
+                SELECT Id, WorkItemLookup__c, RemoteWorkItemIdTxt__c, DeliveryEntityLookup__c, 
+                       DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c, 
+                       DeliveryEntityLookup__r.EntityTypePk__c, StatusPk__c 
                 FROM WorkRequest__c 
-                WHERE WorkItemId__c IN :workItemIds 
+                WHERE WorkItemLookup__c IN :workItemIds 
                   AND StatusPk__c != 'Inactive' 
-                  AND DeliveryEntityId__c != NULL 
-                  AND DeliveryEntityId__r.EntityTypePk__c IN ('Vendor', 'Both')
+                  AND DeliveryEntityLookup__c != NULL 
+                  AND DeliveryEntityLookup__r.EntityTypePk__c IN ('Vendor', 'Both')
                 WITH SYSTEM_MODE
             ];
 
             Map<Id, List<WorkRequest__c>> routes = new Map<Id, List<WorkRequest__c>>();
             for (WorkRequest__c r : connections) {
-                if (!routes.containsKey(r.WorkItemId__c)) {
-                    routes.put(r.WorkItemId__c, new List<WorkRequest__c>());
+                if (!routes.containsKey(r.WorkItemLookup__c)) {
+                    routes.put(r.WorkItemLookup__c, new List<WorkRequest__c>());
                 }
-                routes.get(r.WorkItemId__c).add(r);
+                routes.get(r.WorkItemLookup__c).add(r);
             }
 
             List<SyncItem__c> itemsToInsert = new List<SyncItem__c>();
@@ -134,18 +134,18 @@ public without sharing class DeliverySyncEngine {
                 // ==========================================
                 // FAN OUT UPSTREAM (Push to Client or Stage for Poller)
                 // ==========================================
-                if (parentWorkItem != null && parentWorkItem.ClientNetworkEntityId__c != null) {
-                    String entityType = parentWorkItem.ClientNetworkEntityId__r.EntityTypePk__c;
+                if (parentWorkItem != null && parentWorkItem.ClientNetworkEntityLookup__c != null) {
+                    String entityType = parentWorkItem.ClientNetworkEntityLookup__r.EntityTypePk__c;
 
                     if (entityType == 'Client' || entityType == 'Both') {
                         // Kill-Switch: Do not sync to Client if they are the Global Source or sent this to us
-                        if (blockedOrigins.contains((String)parentWorkItem.ClientNetworkEntityId__c) ||
-                            (String)parentWorkItem.ClientNetworkEntityId__c == globalSourceId) {
+                        if (blockedOrigins.contains((String)parentWorkItem.ClientNetworkEntityLookup__c) ||
+                            (String)parentWorkItem.ClientNetworkEntityLookup__c == globalSourceId) {
                             continue;
                         }
 
-                        Boolean vendorPushEnabled = parentWorkItem.ClientNetworkEntityId__r.EnableVendorPushDateTime__c != null
-                            && String.isNotBlank(parentWorkItem.ClientNetworkEntityId__r.IntegrationEndpointUrlTxt__c);
+                        Boolean vendorPushEnabled = parentWorkItem.ClientNetworkEntityLookup__r.EnableVendorPushDateTime__c != null
+                            && String.isNotBlank(parentWorkItem.ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c);
 
                         itemsToInsert.add(createSyncItem(rec, null, allowedFields, globalSourceId, vendorPushEnabled));
                     }
@@ -180,7 +180,7 @@ public without sharing class DeliverySyncEngine {
         if (name.endsWithIgnoreCase('WorkItem__c') && !name.endsWithIgnoreCase('WorkItemComment__c')) {
             return rec.Id;
         }
-        return (Id) getSafeValue(rec, 'WorkItemId__c');
+        return (Id) getSafeValue(rec, 'WorkItemLookup__c');
     }
 
     private static Object getSafeValue(SObject rec, String field) {
@@ -204,7 +204,7 @@ public without sharing class DeliverySyncEngine {
             GlobalSourceIdTxt__c = globalSourceId
         );
         item.LocalRecordIdTxt__c = (String)rec.Id;
-        item.WorkItemId__c = getWorkItemId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
+        item.WorkItemLookup__c = getWorkItemId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
 
         String fullApiName = rec.getSObjectType().getDescribe().getName();
         String cleanName = fullApiName.replace('delivery__', '');
@@ -222,17 +222,17 @@ public without sharing class DeliverySyncEngine {
 
         if (req != null) {
             // Push Mode: Explicit Downstream Route
-            item.RequestId__c = req.Id;
+            item.RequestLookup__c = req.Id;
             payload.put('TargetId', req.RemoteWorkItemIdTxt__c);
         } else if (vendorPush) {
             // Vendor Push Mode: Real-time push upstream to client
             // RequestId stays null — processor resolves endpoint from WorkItem→ClientNetworkEntity
-            payload.put('TargetId', item.WorkItemId__c);
+            payload.put('TargetId', item.WorkItemLookup__c);
             payload.put('VendorPush', true);
         } else {
             // Poll Mode: Staged for client to pull via GET /sync/changes
             item.StatusPk__c = 'Staged';
-            payload.put('TargetId', item.WorkItemId__c);
+            payload.put('TargetId', item.WorkItemLookup__c);
         }
 
         item.PayloadTxt__c = JSON.serialize(payload);
