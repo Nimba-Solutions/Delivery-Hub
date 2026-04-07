@@ -175,4 +175,36 @@ private class DeliveryDocApprovalServiceTest {
             System.assertEquals(null, updated.DisputeReasonTxt__c, 'Blank reason should store as null');
         }
     }
+
+    @IsTest
+    static void testApproveShortCircuitsForSignRequiredDocument() {
+        System.runAs(testUser) {
+            DeliveryTriggerControl.disableAfterLogic();
+            DeliveryDocument__c doc = getDoc();
+            doc.RequiresSigningCheckbox__c = true;
+            update doc;
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocApprovalService.approveDocumentByToken(doc.PublicTokenTxt__c);
+            Test.stopTest();
+
+            System.assertEquals('Awaiting_Signatures', result.get('status'),
+                'Sign-required doc should short-circuit to Awaiting_Signatures, not Approved');
+            System.assertEquals(true, result.get('requiresSigning'),
+                'Result should flag requiresSigning so the caller can route to the sign portal');
+
+            DeliveryDocument__c updated = getDoc();
+            System.assertEquals('Awaiting_Signatures', updated.StatusPk__c,
+                'Document status should be Awaiting_Signatures');
+
+            // No Approval transaction should be created on short-circuit
+            List<DeliveryTransaction__c> txns = [
+                SELECT Id FROM DeliveryTransaction__c
+                WHERE DocumentId__c = :doc.Id AND TypePk__c = 'Approval'
+            ];
+            System.assertEquals(0, txns.size(),
+                'No Approval transaction should be created when short-circuiting to Awaiting_Signatures');
+        }
+    }
 }
