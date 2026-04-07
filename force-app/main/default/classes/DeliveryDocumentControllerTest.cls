@@ -201,6 +201,92 @@ private class DeliveryDocumentControllerTest {
     }
 
     /**
+     * @description Generate a Client_Agreement (signing-required) document, complete
+     *              one of its two slots, then call getDocumentByToken and verify the
+     *              new portal signing status block is correctly populated:
+     *                - signingRequired = true
+     *                - signingSlots.size() == 2
+     *                - completed slot exposes signedDate and a NULL signerToken
+     *                - pending slot exposes a non-null 64-char signerToken
+     *                - signingComplete = false (one slot still pending)
+     *                - hashChainVerified = false (TODO until per-doc validation lands)
+     */
+    @isTest
+    static void testGetDocumentByTokenSigningStatusBlock() {
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
+
+            Test.startTest();
+            // Client_Agreement template auto-creates 2 signing slots via
+            // DeliveryDocActionService.createSlotsForTemplate during generation.
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Client_Agreement',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
+
+            // Mark the first slot as Completed (mirrors what applySignatureToAction
+            // does on a real sign — including nulling SignerTokenTxt__c).
+            List<DocumentAction__c> slots = [
+                SELECT Id, StatusPk__c, SignerTokenTxt__c, CompletedDateTime__c,
+                       SignerNameTxt__c, SignerEmail__c
+                FROM DocumentAction__c
+                WHERE DocumentId__c = :docId
+                WITH SYSTEM_MODE
+                ORDER BY SortOrderNumber__c ASC
+            ];
+            System.assertEquals(2, slots.size(), 'Client_Agreement should yield 2 slots');
+
+            slots[0].StatusPk__c = 'Completed';
+            slots[0].CompletedDateTime__c = Datetime.now();
+            slots[0].SignerNameTxt__c = 'Test Signer One';
+            slots[0].SignerEmail__c = 'one@example.com';
+            slots[0].SignerTokenTxt__c = null;
+            update slots[0];
+
+            DeliveryDocument__c doc = [SELECT PublicTokenTxt__c FROM DeliveryDocument__c WHERE Id = :docId];
+            Map<String, Object> result = DeliveryDocumentController.getDocumentByToken(doc.PublicTokenTxt__c);
+            Test.stopTest();
+
+            System.assertEquals(true, result.get('signingRequired'),
+                'Client_Agreement should report signingRequired = true');
+            System.assertEquals(false, result.get('signingComplete'),
+                'signingComplete should be false while one slot is still Pending');
+
+            List<Object> signingSlots = (List<Object>) result.get('signingSlots');
+            System.assertNotEquals(null, signingSlots, 'signingSlots key must be present');
+            System.assertEquals(2, signingSlots.size(), 'Two signing slots should be returned');
+
+            // Slot 0 = completed (we just marked it). Slot 1 = still Pending.
+            Map<String, Object> completedSlot = (Map<String, Object>) signingSlots[0];
+            Map<String, Object> pendingSlot   = (Map<String, Object>) signingSlots[1];
+
+            System.assertEquals('Completed', completedSlot.get('status'),
+                'First slot should be Completed');
+            System.assertEquals(null, completedSlot.get('signerToken'),
+                'Completed slot should expose null signerToken (rotated at sign time)');
+            System.assertNotEquals(null, completedSlot.get('signedDate'),
+                'Completed slot should expose its signedDate');
+            System.assertNotEquals(null, completedSlot.get('role'),
+                'Completed slot should expose its role label');
+
+            System.assertEquals('Pending', pendingSlot.get('status'),
+                'Second slot should still be Pending');
+            System.assertNotEquals(null, pendingSlot.get('signerToken'),
+                'Pending slot should expose its signer token so the portal can render Sign Now');
+            String pendingToken = (String) pendingSlot.get('signerToken');
+            System.assertEquals(64, pendingToken.length(),
+                'Pending signer token should be 64 hex chars');
+
+            // Hash chain verification is gated behind a TODO until a per-document
+            // validateChain entry point exists on DeliveryAuditChainService.
+            System.assertEquals(false, result.get('hashChainVerified'),
+                'hashChainVerified should be false until per-doc validateChain is wired');
+            System.assertEquals(null, result.get('hashChainVerifiedAt'),
+                'hashChainVerifiedAt should be null until per-doc validateChain is wired');
+        }
+    }
+
+    /**
      * @description Try to retrieve a document with an invalid token.
      *              Expect AuraHandledException.
      */
