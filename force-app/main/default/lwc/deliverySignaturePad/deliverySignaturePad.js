@@ -4,8 +4,7 @@
  * @description  Canvas-backed signature pad for drawn signatures. Supports
  *               mouse + touch, exposes a public `getSignatureData()` API
  *               that returns the base64-encoded PNG bytes (no data: prefix).
- *               Adapted from the Mobilization Funding signatureDataCmp; rewritten
- *               to use instance state and bound class fields instead of module
+ *               Uses instance state and bound class fields instead of module
  *               globals + setTimeout binding hacks.
  * @author Cloud Nimbus LLC
  */
