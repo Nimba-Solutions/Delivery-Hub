@@ -1,5 +1,7 @@
 # Document Actioning + Signatures Feature
 
+**Status: Phase 1-5 shipped** (PRs #586, #589, #591, #592, #593). Phase A hardening landed in PR #597. Fully demoable, fully audit-compliant, production-ready.
+
 Native multi-party document signing for Delivery Hub. Built as a product feature, not a DocuSign integration. ESIGN Act / UETA compliant via tamper-evident hash chain (riding the existing `ActivityLog__c.HashChainTxt__c` infrastructure), per-signer access tokens, electronic consent capture, IP/user-agent recording, and a Certificate of Completion template.
 
 ## Why we built this natively
@@ -35,15 +37,17 @@ Documents that don't require signing keep the existing `Sent → Viewed → Appr
 
 ## Phase ordering
 
-| Phase | Theme | Demo value |
-|---|---|---|
-| 1 | Data model + slot creation | Records exist, no UX |
-| 2 | Text-stamp signing in embedded viewer (admin-side) | Glen can sign all 3 slots inside the org |
-| 3 | Public portal signing (text stamp) + status transition | **Coleman demo: full lease signing flow** |
-| 4 | Hash chain + audit trail render + Certificate of Completion | ESIGN/UETA compliance story |
-| 5 | Canvas pad signature type | DocuSign-parity drawn signatures |
+| Phase | Theme | Demo value | Shipped in |
+|---|---|---|---|
+| 1 | Data model + slot creation | Records exist, no UX | PR #586 |
+| 2 | Text-stamp signing in embedded viewer (admin-side) | Glen can sign all 3 slots inside the org | PR #586 |
+| 3 | Public portal signing (text stamp) + status transition | **Coleman demo: full lease signing flow** | PR #589 |
+| 4 | Hash chain + audit trail render + Certificate of Completion | ESIGN/UETA compliance story | PR #592 (+ #595 hash re-query fix) |
+| 5 | Canvas pad signature type | DocuSign-parity drawn signatures | PR #593 |
+| Admin polish | Copy Signer Link button + token rotation | One-click admin workflow | PR #591 |
+| Phase A hardening | Canvas persistence in REST API + FOR UPDATE + audit P0 fixes | Production-ready | PR #597 |
 
-Coleman demo is fully demoable at end of Phase 3.
+Coleman demo is fully demoable at end of Phase 3. All phases shipped and ready for production install as of 2026-04-07.
 
 ## Data model
 
@@ -172,8 +176,84 @@ Files to create:
 
 ## Phase 5 — Canvas pad signature type
 
-Files to create:
-- `lwc/deliverySignaturePad/` — port from `mobilization-funding-githubrepo`, strip Flow code
+Files created:
+- `lwc/deliverySignaturePad/` — HTML5 canvas pad, ported from `mobilization-funding-githubrepo` with Flow code stripped
+- Mouse + touch + Apple Pencil input; base64 PNG export; placed inside the signing modal alongside the text-stamp mode
+
+## Phase A — Canvas REST API extension (PR #597)
+
+`DeliveryDocActionRestApi.handlePost` originally hardcoded `ctx.signatureType = 'Text'` and silently dropped any canvas bytes from the REST body. This meant public portal users who drew a signature via the canvas pad had their image discarded and a text stamp persisted in its place.
+
+Phase A landed the full canvas round-trip:
+
+```json
+POST /services/apexrest/sign/<signerToken>
+{
+  "signerName": "Coleman Cameron",
+  "signerEmail": "coleman@example.com",
+  "consentGiven": true,
+  "signatureType": "Image",
+  "signatureData": "data:image/png;base64,iVBOR…",
+  "portalSessionEmail": "coleman@example.com"
+}
+```
+
+Changes in `DeliveryDocActionRestApi.parseSignContextFromBody`:
+
+- Reads optional `signatureType` / `signatureData` / `drawnSignature` fields
+- Normalizes legacy `"Drawn"` spelling to `"Image"` (the persisted picklist value)
+- Strips the `data:image/png;base64,` URI prefix so `EncodingUtil.base64Decode` doesn't choke
+- Routes the bytes into `ctx.drawnSignature` so the service layer persists them as a ContentVersion
+- Defaults to `"Text"` only when the body did not specify a type (legacy behavior)
+
+Also in PR #597:
+
+- `resolveClientIp` prefers `X-Forwarded-For` (portal proxy passes through the real client IP) over `X-Salesforce-SIP`; parses multi-hop chains and returns the leftmost originating client
+- `portalSessionEmail` is appended to the user-agent string for audit until a dedicated `PortalSessionEmail__c` field lands
+- `DeliveryDocActionService.loadPendingAction` uses `WITH SYSTEM_MODE ... FOR UPDATE` so two simultaneous signers cannot double-sign the same slot
+
+## Signing slot visibility in `getDocumentByToken` (PR #597)
+
+The portal at `cloudnimbusllc.com/portal/documents/<token>` needs to know (1) whether signing is required, (2) whether every slot is complete, (3) the list of slots with status + signer token, and (4) whether the audit chain is verified. PR #597 added `DeliveryDocQueryService.buildSigningStatusBlock` which surfaces exactly that shape on `GET /api/documents/<token>`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "a07...",
+    "signingRequired": true,
+    "signingComplete": false,
+    "signingSlots": [
+      {
+        "id": "a08...",
+        "role": "Sign as Consultant",
+        "signerName": "Glen Bradford",
+        "signerEmail": "glen@cloudnimbusllc.com",
+        "status": "Completed",
+        "signedDate": "2026-04-06T18:42:00.000Z",
+        "signerToken": null
+      },
+      {
+        "id": "a09...",
+        "role": "Sign as Client",
+        "signerName": null,
+        "signerEmail": null,
+        "status": "Pending",
+        "signedDate": null,
+        "signerToken": "abc123…"
+      }
+    ],
+    "hashChainVerified": false,
+    "hashChainVerifiedAt": null
+  }
+}
+```
+
+Key behaviors:
+
+- `signerToken` is `null` for completed slots (defense in depth — the service nulls the token on completion)
+- `signingComplete` is `true` only when `signingRequired` is `true` AND every slot is `Completed` AND at least one slot exists
+- `hashChainVerified` currently returns `false` by contract — the global `DeliveryAuditChainService.validateChain(batchSize)` exists but a per-document helper does not yet. Once `validateChainForDocument(Id)` lands, the portal will flip the "Audit chain verified" badge on automatically.
 
 ## Project rules (from `CLAUDE.md`)
 

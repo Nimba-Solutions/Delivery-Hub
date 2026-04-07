@@ -37,14 +37,14 @@ The Bounty Marketplace lets organizations publish work items as fixed-price boun
 | Field | Type | Description |
 |-------|------|-------------|
 | `WorkItemId__c` | Master-Detail | Parent bounty work item |
-| `ClaimantEntityId__c` | Lookup | NetworkEntity of the developer (auto-linked by email) |
-| `ClaimantEmailTxt__c` | Email | Developer's email address |
+| `ClaimantEntityLookup__c` | Lookup | NetworkEntity of the developer (auto-linked by email) |
+| `ClaimantEmail__c` | Email | Developer's email address (Email fields drop the `Txt` suffix per convention) |
 | `ClaimantNameTxt__c` | Text | Developer's display name |
 | `StatusPk__c` | Picklist | Active, Submitted, Under Review, Approved, Rejected, Withdrawn |
 | `ClaimedDateTime__c` | DateTime | When the claim was created |
 | `SubmittedDateTime__c` | DateTime | When work was submitted |
 | `NoteTxt__c` | Long Text | Developer's note about approach or submission |
-| `WorkProofUrlTxt__c` | URL | Link to PR, demo, or completed work |
+| `WorkProofUrl__c` | URL | Link to PR, demo, or completed work (Url fields drop the `Txt` suffix per convention) |
 
 ---
 
