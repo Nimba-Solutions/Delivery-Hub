@@ -548,9 +548,18 @@ private class DeliveryEscalationActionExecutorTest {
 
     // -- Helpers ---------------------------------------------------------------
 
+    /**
+     * @description Returns empty string. Helper used to construct CMT records via
+     *              JSON.deserialize. The previous implementation prepended the org
+     *              namespace ('delivery__') to JSON field keys, which broke install-beta:
+     *              JSON.deserialize matches bare field names against the SObject
+     *              describe (the namespace is implicit in the SObject type reference),
+     *              so prefixed keys deserialized to null. See sibling
+     *              DeliveryEscalationServiceTest for the same fix and full root cause.
+     * @return Empty string in all contexts.
+     */
     private static String getNamespace() {
-        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return String.isBlank(ns) ? '' : ns + '__';
+        return '';
     }
 
     @SuppressWarnings('PMD.ExcessiveParameterList')

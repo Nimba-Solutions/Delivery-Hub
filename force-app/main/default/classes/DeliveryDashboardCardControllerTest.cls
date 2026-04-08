@@ -77,6 +77,8 @@ private class DeliveryDashboardCardControllerTest {
 
     @IsTest
     static void testActiveWorkItemsCounts() {
+        // Two active items inserted normally — the trigger will (re)stamp
+        // ActivatedDateTime__c here, which is fine, both rows should count.
         insert new List<WorkItem__c>{
             new WorkItem__c(
                 BriefDescriptionTxt__c = 'Active 1',
@@ -87,12 +89,25 @@ private class DeliveryDashboardCardControllerTest {
                 BriefDescriptionTxt__c = 'Active 2',
                 StageNamePk__c         = 'In Development',
                 ActivatedDateTime__c   = Datetime.now()
-            ),
-            new WorkItem__c(
-                BriefDescriptionTxt__c = 'Inactive (no Activated)',
-                StageNamePk__c         = 'Backlog'
             )
         };
+
+        // The third "inactive" row simulates a legacy record where
+        // ActivatedDateTime__c is genuinely NULL — exactly the case the
+        // controller's `WHERE ActivatedDateTime__c != NULL` filter is meant
+        // to exclude. DeliveryWorkItemTriggerHandler.handleBeforeInsert
+        // auto-stamps ActivatedDateTime__c on insert, so we have to bypass
+        // the trigger to land a row with the field still null. Without this
+        // bypass the test would always count 3, masking the filter.
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            insert new WorkItem__c(
+                BriefDescriptionTxt__c = 'Inactive (no Activated)',
+                StageNamePk__c         = 'Backlog'
+            );
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+        }
 
         Test.startTest();
         Object result = DeliveryDashboardCardController.getCardData('activeWorkItems', null);
