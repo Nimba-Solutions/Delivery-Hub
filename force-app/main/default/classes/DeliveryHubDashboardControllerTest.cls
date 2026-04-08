@@ -60,6 +60,70 @@ private class DeliveryHubDashboardControllerTest {
         }
     }
 
+    /**
+     * @description Bug A regression guard: System Pulse "Hours This Month" should
+     *              still count WorkLog records that have NULL WorkDateDate__c by
+     *              falling back to CreatedDate. Pre-fix the query filtered exclusively
+     *              on WorkDateDate__c, so legacy logs created before PR #613's trigger
+     *              default landed (and any integration-inserted logs that don't set
+     *              the field) silently dropped out of the System Pulse total.
+     */
+    @IsTest
+    static void testHoursThisMonthIncludesLogsWithNullWorkDate() {
+        System.runAs(testUser) {
+            WorkItem__c wi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Hours fallback test',
+                StageNamePk__c = 'In Development'
+            );
+            insert wi;
+
+            // Master-detail to WorkRequest__c per the WorkLog__c trigger contract
+            NetworkEntity__c vendor = new NetworkEntity__c(
+                Name = 'Hours Test Vendor',
+                EntityTypePk__c = 'Vendor',
+                StatusPk__c = 'Active'
+            );
+            insert vendor;
+            WorkRequest__c req = new WorkRequest__c(
+                WorkItemId__c = wi.Id,
+                DeliveryEntityLookup__c = vendor.Id,
+                StatusPk__c = 'Active'
+            );
+            insert req;
+
+            // Insert a WorkLog with WorkDateDate__c explicitly set (this month)
+            WorkLog__c logWithDate = new WorkLog__c(
+                RequestId__c = req.Id,
+                WorkItemLookup__c = wi.Id,
+                HoursLoggedNumber__c = 4.0,
+                WorkDateDate__c = Date.today(),
+                WorkDescriptionTxt__c = 'Has WorkDateDate'
+            );
+            insert logWithDate;
+
+            // Insert a second WorkLog and clear WorkDateDate__c afterwards
+            // (simulates the legacy / integration case where the field is null)
+            WorkLog__c logWithoutDate = new WorkLog__c(
+                RequestId__c = req.Id,
+                WorkItemLookup__c = wi.Id,
+                HoursLoggedNumber__c = 3.0,
+                WorkDateDate__c = Date.today(),
+                WorkDescriptionTxt__c = 'No WorkDateDate'
+            );
+            insert logWithoutDate;
+            logWithoutDate.WorkDateDate__c = null;
+            update logWithoutDate;
+
+            Test.startTest();
+            Map<String, Object> metrics = DeliveryHubDashboardController.getBudgetMetrics();
+            Test.stopTest();
+
+            Decimal hoursThisMonth = (Decimal) metrics.get('hoursThisMonth');
+            System.assertEquals(7.0, hoursThisMonth,
+                'Should count BOTH the dated log (4h) and the null-dated log (3h via CreatedDate fallback). Got: ' + hoursThisMonth);
+        }
+    }
+
     @IsTest
     static void testGetClientDashboard() {
         System.runAs(testUser) {
