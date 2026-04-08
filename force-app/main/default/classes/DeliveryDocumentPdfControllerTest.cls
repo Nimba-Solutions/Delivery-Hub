@@ -19,7 +19,7 @@ private class DeliveryDocumentPdfControllerTest {
             Name = 'PDF Test Corp',
             EntityTypePk__c = 'Client',
             StatusPk__c = 'Active',
-            DefaultHourlyRateCurrency__c = 90,
+            DefaultHourlyRateCurrency__c = 100,
             ContactEmailTxt__c = 'billing@pdftest.com',
             AddressTxt__c = '123 Test St'
         );
@@ -36,7 +36,7 @@ private class DeliveryDocumentPdfControllerTest {
             BriefDescriptionTxt__c = 'PDF Test Work Item',
             StageNamePk__c = 'In Development',
             ClientNetworkEntityLookup__c = entity.Id,
-            BillableRateCurrency__c = 90,
+            BillableRateCurrency__c = 100,
             EstimatedHoursNumber__c = 40
         );
         insert item;
@@ -45,7 +45,7 @@ private class DeliveryDocumentPdfControllerTest {
             WorkItemId__c = item.Id,
             DeliveryEntityLookup__c = vendor.Id,
             StatusPk__c = 'In Progress',
-            HourlyRateCurrency__c = 90,
+            HourlyRateCurrency__c = 100,
             QuotedHoursNumber__c = 40,
             PreApprovedHoursNumber__c = 40
         );
@@ -91,7 +91,7 @@ private class DeliveryDocumentPdfControllerTest {
             System.assertEquals('PDF Test Corp', ctrl.entityName, 'Entity name should match');
             System.assertEquals('123 Test St', ctrl.entityAddress, 'Address should match');
             System.assertEquals('billing@pdftest.com', ctrl.entityEmail, 'Email should match');
-            System.assertEquals(90, ctrl.defaultRate, 'Default rate should be 90');
+            System.assertEquals(100, ctrl.defaultRate, 'Default rate should be 100');
             System.assertEquals(8.0, ctrl.totalHours, 'Total hours should be 8');
             System.assertEquals(true, ctrl.getHasWorkItems(), 'Should have work items');
             System.assertEquals(true, ctrl.getHasWorkLogs(), 'Should have work logs');
