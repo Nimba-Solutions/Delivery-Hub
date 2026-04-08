@@ -163,6 +163,54 @@ private class DeliverySyncRetryControllerTest {
         }
     }
 
+    /**
+     * @description PR #621 regression guard: getSyncHealth should surface
+     *              stagedAwaitingPoll separately so the LWC can show
+     *              "X items waiting for downstream client to poll" without
+     *              confusing them with actual failures.
+     */
+    @IsTest
+    static void testGetSyncHealthSurfacesStagedAwaitingPoll() {
+        System.runAs(testUser) {
+            WorkItem__c workItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Test Work Item' LIMIT 1];
+            // Add 3 Staged outbound items — they should NOT count as failures,
+            // they should be surfaced separately under stagedAwaitingPoll.
+            insert new List<SyncItem__c>{
+                new SyncItem__c(
+                    ObjectTypePk__c     = 'WorkItem__c',
+                    LocalRecordIdTxt__c = workItem.Id,
+                    WorkItemLookup__c   = workItem.Id,
+                    DirectionPk__c      = 'Outbound',
+                    StatusPk__c         = 'Staged'
+                ),
+                new SyncItem__c(
+                    ObjectTypePk__c     = 'WorkItem__c',
+                    LocalRecordIdTxt__c = workItem.Id,
+                    WorkItemLookup__c   = workItem.Id,
+                    DirectionPk__c      = 'Outbound',
+                    StatusPk__c         = 'Staged'
+                ),
+                new SyncItem__c(
+                    ObjectTypePk__c     = 'WorkItem__c',
+                    LocalRecordIdTxt__c = workItem.Id,
+                    WorkItemLookup__c   = workItem.Id,
+                    DirectionPk__c      = 'Outbound',
+                    StatusPk__c         = 'Staged'
+                )
+            };
+
+            Map<String, Object> health = DeliverySyncRetryController.getSyncHealth(false);
+            Integer staged = (Integer) health.get('stagedAwaitingPoll');
+            System.assertEquals(3, staged,
+                'stagedAwaitingPoll should reflect Outbound Staged items separately from failedCount');
+
+            // Failures unchanged from setup (the 2 from @TestSetup)
+            Integer failed = (Integer) health.get('failedCount');
+            System.assertEquals(2, failed,
+                'failedCount should NOT include Staged items — they are not failures');
+        }
+    }
+
     @IsTest
     static void testGetSyncHealthNoFailures() {
         System.runAs(testUser) {
