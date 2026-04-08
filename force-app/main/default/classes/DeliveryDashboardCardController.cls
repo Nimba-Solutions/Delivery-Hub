@@ -126,8 +126,19 @@ global with sharing class DeliveryDashboardCardController {
             when 'syncHealth' {
                 // SyncItem__c.StatusPk__c is a restricted picklist: Queued, Staged, Processing, Synced, Failed.
                 // Prior code filtered on 'Succeeded' (not a valid value) so the count was structurally always 0.
-                Integer total = [SELECT COUNT() FROM SyncItem__c WHERE CreatedDate = LAST_N_DAYS:7 WITH SYSTEM_MODE];
-                Integer succeeded = [SELECT COUNT() FROM SyncItem__c WHERE StatusPk__c = 'Synced' AND CreatedDate = LAST_N_DAYS:7 WITH SYSTEM_MODE];
+                // Dismissed items (DismissedDateTime__c set) are excluded so admin-triaged failures
+                // stop dragging the denominator down — see DeliverySyncDismissalService.
+                Integer total = [
+                    SELECT COUNT() FROM SyncItem__c
+                    WHERE CreatedDate = LAST_N_DAYS:7
+                    AND DismissedDateTime__c = NULL
+                    WITH SYSTEM_MODE
+                ];
+                Integer succeeded = [
+                    SELECT COUNT() FROM SyncItem__c
+                    WHERE StatusPk__c = 'Synced' AND CreatedDate = LAST_N_DAYS:7
+                    WITH SYSTEM_MODE
+                ];
                 return total > 0 ? Math.round((Decimal.valueOf(succeeded) / total) * 100) : 100;
             }
             when else {
