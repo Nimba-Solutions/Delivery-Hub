@@ -8,14 +8,17 @@ import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getSyncHealth from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySyncRetryController.getSyncHealth';
 import retryFailed from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySyncRetryController.retryFailed';
+import dismissFailed from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySyncRetryController.dismissFailed';
+import restoreDismissed from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySyncRetryController.restoreDismissed';
 
 export default class DeliverySyncRetryPanel extends LightningElement {
     @track isRetrying = false;
     @track isLoading = true;
+    @track showDismissed = false;
 
     _wiredResult;
 
-    @wire(getSyncHealth)
+    @wire(getSyncHealth, { includeDismissed: '$showDismissed' })
     wiredHealth(result) {
         this._wiredResult = result;
         if (result.data || result.error) {
@@ -28,6 +31,7 @@ export default class DeliverySyncRetryPanel extends LightningElement {
     get hasFailures()   { return this.failedCount > 0; }
     get hasErrors()     { return this.recentErrors.length > 0; }
     get pluralSuffix()  { return this.failedCount === 1 ? '' : 's'; }
+    get toggleLabel()   { return this.showDismissed ? 'Hide dismissed' : 'Show dismissed'; }
 
     async handleRetry() {
         this.isRetrying = true;
@@ -53,5 +57,69 @@ export default class DeliverySyncRetryPanel extends LightningElement {
     handleRefresh() {
         this.isLoading = true;
         refreshApex(this._wiredResult).then(() => { this.isLoading = false; });
+    }
+
+    handleToggleDismissed() {
+        this.showDismissed = !this.showDismissed;
+    }
+
+    async handleDismissOne(event) {
+        const id = event.currentTarget.dataset.id;
+        try {
+            const count = await dismissFailed({ ids: [id], reason: 'Manual via Sync Retry Panel' });
+            await refreshApex(this._wiredResult);
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Dismissed',
+                message: `${count} sync item dismissed.`,
+                variant: 'success'
+            }));
+        } catch (error) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Error',
+                message: error.body ? error.body.message : error.message,
+                variant: 'error'
+            }));
+        }
+    }
+
+    async handleRestoreOne(event) {
+        const id = event.currentTarget.dataset.id;
+        try {
+            const count = await restoreDismissed({ ids: [id] });
+            await refreshApex(this._wiredResult);
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Restored',
+                message: `${count} sync item restored.`,
+                variant: 'success'
+            }));
+        } catch (error) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Error',
+                message: error.body ? error.body.message : error.message,
+                variant: 'error'
+            }));
+        }
+    }
+
+    async handleDismissAll() {
+        const ids = this.recentErrors.filter((r) => !r.dismissed).map((r) => r.id);
+        if (ids.length === 0) {
+            return;
+        }
+        try {
+            const count = await dismissFailed({ ids, reason: 'Bulk dismiss via Sync Retry Panel' });
+            await refreshApex(this._wiredResult);
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Dismissed',
+                message: `${count} sync item${count === 1 ? '' : 's'} dismissed.`,
+                variant: 'success'
+            }));
+        } catch (error) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Error',
+                message: error.body ? error.body.message : error.message,
+                variant: 'error'
+            }));
+        }
     }
 }
