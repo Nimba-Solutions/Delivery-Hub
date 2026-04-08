@@ -38,9 +38,12 @@
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
                                 <strong>{metrics.hoursThisMonth}</strong>
                             </div>
-                            <div class="slds-text-title_caps slds-text-color_weak">Hours This Month</div>
-                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small" onclick={handleHoursLastMonthClick}>
-                                Last Month: {metrics.hoursLastMonth} hrs
+                            <div class="slds-text-title_caps slds-text-color_weak">Hours Worked This Month</div>
+                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                                Logged this month: {metrics.hoursLoggedThisMonth} hrs
+                            </div>
+                            <div class="slds-text-body_small slds-text-color_weak" onclick={handleHoursLastMonthClick}>
+                                Last month: {metrics.hoursLastMonth} hrs worked / {metrics.hoursLoggedLastMonth} logged
                             </div>
                         </div>
                     </div>
