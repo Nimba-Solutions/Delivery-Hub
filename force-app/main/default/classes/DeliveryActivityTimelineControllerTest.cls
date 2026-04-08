@@ -395,7 +395,7 @@ private class DeliveryActivityTimelineControllerTest {
         }
     }
 
-    // ── Work log with null hours and no description or date ──────────────
+    // ── Work log with null hours and no description ─────────────────────
 
     @IsTest
     static void testWorkLogMinimalFields() {
@@ -418,14 +418,18 @@ private class DeliveryActivityTimelineControllerTest {
                 'Expected 2 work log events (1 from setup + 1 minimal)');
 
             // Find the minimal log — hours should default to 0
+            // WorkDateDate__c is now defaulted to today by the trigger handler
+            // (see DeliveryWorkLogTriggerHandler.defaultWorkDate), so the detail
+            // string always reflects the auto-populated work date.
             Boolean foundMinimal = false;
+            String expectedDateDetail = 'Work date: ' + String.valueOf(Date.today());
             for (Map<String, Object> ev : events) {
                 String title = (String) ev.get('title');
                 if (title.startsWith('0h logged')) {
                     foundMinimal = true;
                     String detail = (String) ev.get('detail');
-                    System.assertEquals('', detail,
-                        'Detail should be empty when no description or date');
+                    System.assertEquals(expectedDateDetail, detail,
+                        'Detail should reflect the auto-defaulted work date when no description supplied');
                 }
             }
             System.assert(foundMinimal,

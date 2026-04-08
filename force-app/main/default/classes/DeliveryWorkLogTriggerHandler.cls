@@ -29,6 +29,10 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             }
         }
 
+        // Default WorkDateDate__c to today when missing — extracted to helper to keep
+        // onBeforeInsert under PMD's NCSS line-count threshold.
+        defaultWorkDate(newLogs);
+
         // Enforce hour lockout for billing periods
         enforceLockout(newLogs, settings);
 
@@ -136,6 +140,23 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
         createSyncItemsForLogs(newlyApproved);
+    }
+
+    // ── Field defaults ─────────────────────────────────────────────────
+
+    /**
+     * @description Defaults WorkDateDate__c to today when null. System Pulse "Hours This Month"
+     *              and reports filter on this field, so a null value silently dropped logs from
+     *              totals. New logs going forward are always included; older logs heal forward.
+     * @param logs The WorkLog__c records being inserted.
+     */
+    private static void defaultWorkDate(List<WorkLog__c> logs) {
+        Date today = Date.today();
+        for (WorkLog__c wl : logs) {
+            if (wl.WorkDateDate__c == null) {
+                wl.WorkDateDate__c = today;
+            }
+        }
     }
 
     // ── Hour lockout enforcement ────────────────────────────────────────
