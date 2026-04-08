@@ -23,6 +23,7 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         List<SyncItem__c> pushItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RetryCountNumber__c, RequestLookup__c,
+                   RequestLookup__r.DeliveryEntityLookup__c,
                    RequestLookup__r.DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c,
                    RequestLookup__r.DeliveryEntityLookup__r.ApiKeyTxt__c,
                    RequestLookup__r.DeliveryEntityLookup__r.HmacSecretTxt__c,
@@ -41,6 +42,7 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         List<SyncItem__c> hubItems = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, LocalRecordIdTxt__c, GlobalSourceIdTxt__c,
                    RetryCountNumber__c, RequestLookup__c,
+                   WorkItemLookup__r.ClientNetworkEntityLookup__c,
                    WorkItemLookup__r.ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c,
                    WorkItemLookup__r.ClientNetworkEntityLookup__r.ApiKeyTxt__c,
                    WorkItemLookup__r.ClientNetworkEntityLookup__r.HmacSecretTxt__c,
@@ -80,6 +82,10 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         List<SyncItem__c> itemsToUpdate = new List<SyncItem__c>();
         Map<Id, WorkRequest__c> requestsToUpdate = new Map<Id, WorkRequest__c>();
         List<DeliverySync__e> syncEvents = new List<DeliverySync__e>();
+        // Destination NetworkEntity__c Ids whose LastOutboundSyncDateTime__c should be
+        // refreshed after a successful Synced. Collected via Set to dedupe across the
+        // batch — one entity may receive multiple items in a single processor run.
+        Set<Id> destinationEntityIds = new Set<Id>();
 
         for (SyncItem__c item : items) {
             try {
@@ -166,6 +172,20 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
                     item.StatusPk__c = 'Synced';
                     item.ErrorLogTxt__c = null;
 
+                    // Stamp Last Outbound Sync on the destination entity. Push Mode
+                    // resolves to Request→DeliveryEntityLookup; Hub Mode resolves to
+                    // WorkItem→ClientNetworkEntityLookup. Either way the destination
+                    // is a NetworkEntity__c whose LastOutboundSyncDateTime__c should
+                    // reflect the moment we successfully pushed to it.
+                    Id destEntityId = item.RequestLookup__c != null
+                        ? item.RequestLookup__r.DeliveryEntityLookup__c
+                        : (item.WorkItemLookup__c != null
+                            ? item.WorkItemLookup__r.ClientNetworkEntityLookup__c
+                            : null);
+                    if (destEntityId != null) {
+                        destinationEntityIds.add(destEntityId);
+                    }
+
                     // --- EXTRACT RESPONSE & UPDATE BRIDGE (Handshake Flow) ---
                     if (String.isNotBlank(res.getBody())) {
                         try {
@@ -214,7 +234,23 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
         if (!itemsToUpdate.isEmpty()) {
             Database.update(itemsToUpdate, AccessLevel.SYSTEM_MODE);
         }
-        
+
+        // Stamp LastOutboundSyncDateTime__c on every destination NetworkEntity that
+        // received a successful Synced item this batch. The Data Lineage / Data Flow
+        // widget reads this field for downstream client connections — without this
+        // write, the widget shows "Last sync: Never" forever even when sync is healthy.
+        if (!destinationEntityIds.isEmpty()) {
+            Datetime now = Datetime.now();
+            List<NetworkEntity__c> entitiesToStamp = new List<NetworkEntity__c>();
+            for (Id eId : destinationEntityIds) {
+                entitiesToStamp.add(new NetworkEntity__c(
+                    Id = eId,
+                    LastOutboundSyncDateTime__c = now
+                ));
+            }
+            Database.update(entitiesToStamp, AccessLevel.SYSTEM_MODE);
+        }
+
         if (!requestsToUpdate.isEmpty()) {
             Database.update(requestsToUpdate.values(), AccessLevel.SYSTEM_MODE);
         }

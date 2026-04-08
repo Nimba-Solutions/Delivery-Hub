@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastOutboundSyncDateTime__c</fullName>
+    <description>Tracks when we last successfully pushed an outbound sync to this client. Stamped by DeliverySyncItemProcessor when it processes a Synced outbound SyncItem__c whose payload's destination resolves to this entity. Used by the Data Lineage / Data Flow widget to show "Last sync" for downstream client connections.</description>
+    <inlineHelpText>Tracks when we last successfully pushed an outbound sync to this client.</inlineHelpText>
+    <label>Last Outbound Sync</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

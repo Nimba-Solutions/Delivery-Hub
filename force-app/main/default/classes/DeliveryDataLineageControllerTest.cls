@@ -85,6 +85,58 @@ private class DeliveryDataLineageControllerTest {
         }
     }
 
+    /**
+     * @description Bug B regression guard: vendors should display LastInboundSyncDateTime__c
+     *              and clients should display LastOutboundSyncDateTime__c. Pre-fix every
+     *              entity read the inbound field, so client connections always rendered
+     *              "Last sync: Never" because nothing ever stamped the inbound field for
+     *              outbound destinations.
+     */
+    @IsTest
+    static void testLastSyncReadsCorrectFieldPerDirection() {
+        System.runAs(testUser) {
+            DateTime inboundStamp = DateTime.newInstance(2026, 4, 1, 9, 30, 0);
+            DateTime outboundStamp = DateTime.newInstance(2026, 4, 8, 14, 45, 0);
+
+            // Stamp BOTH fields differently on each entity so we can detect which one is read.
+            NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Vendor' LIMIT 1];
+            vendor.LastInboundSyncDateTime__c = inboundStamp;
+            vendor.LastOutboundSyncDateTime__c = outboundStamp;
+            update vendor;
+
+            NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
+            client.LastInboundSyncDateTime__c = inboundStamp;
+            client.LastOutboundSyncDateTime__c = outboundStamp;
+            update client;
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDataLineageController.getNetworkEntities();
+            Test.stopTest();
+
+            List<Object> entities = (List<Object>) result.get('entities');
+            String vendorLastSync = null;
+            String clientLastSync = null;
+            for (Object obj : entities) {
+                Map<String, Object> e = (Map<String, Object>) obj;
+                if (e.get('entityType') == 'Vendor') {
+                    vendorLastSync = (String) e.get('lastSync');
+                } else if (e.get('entityType') == 'Client') {
+                    clientLastSync = (String) e.get('lastSync');
+                }
+            }
+
+            // Vendor should display the inbound stamp (Apr 1, 9:30 AM).
+            System.assertNotEquals(null, vendorLastSync, 'Vendor should have a lastSync value');
+            System.assert(vendorLastSync.contains('Apr 1'),
+                'Vendor lastSync should reflect inbound stamp (Apr 1) but got: ' + vendorLastSync);
+
+            // Client should display the outbound stamp (Apr 8, 2:45 PM).
+            System.assertNotEquals(null, clientLastSync, 'Client should have a lastSync value');
+            System.assert(clientLastSync.contains('Apr 8'),
+                'Client lastSync should reflect outbound stamp (Apr 8) but got: ' + clientLastSync);
+        }
+    }
+
     @IsTest
     static void testNoEntities() {
         System.runAs(testUser) {
