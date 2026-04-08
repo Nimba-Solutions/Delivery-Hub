@@ -51,18 +51,27 @@ global with sharing class DeliveryHubDashboardController {
         Date firstOfMonth = Date.today().toStartOfMonth();
         Date firstOfLastMonth = firstOfMonth.addMonths(-1);
 
+        // WorkDateDate__c is the canonical "when did the work happen" field, but it's only
+        // reliably populated on logs created AFTER PR #613's trigger default landed. Older
+        // WorkLog rows (and any logs created via integrations that don't set the field) have
+        // it null, which silently dropped them from the System Pulse total. Fall back to
+        // CreatedDate when WorkDateDate__c is null so legacy/integration logs still count.
+        // Backdated logs (where WorkDateDate__c is set explicitly to a past month) continue
+        // to be filtered correctly because the OR branches are mutually exclusive on null.
+        DateTime firstOfMonthDt = DateTime.newInstance(firstOfMonth, Time.newInstance(0, 0, 0, 0));
+        DateTime firstOfLastMonthDt = DateTime.newInstance(firstOfLastMonth, Time.newInstance(0, 0, 0, 0));
+
         AggregateResult[] mtdStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
-            WHERE WorkDateDate__c >= :firstOfMonth
-
+            WHERE (WorkDateDate__c >= :firstOfMonth)
+               OR (WorkDateDate__c = NULL AND CreatedDate >= :firstOfMonthDt)
         ];
         metrics.put('hoursThisMonth', mtdStats[0].get('total') != null ? (Decimal)mtdStats[0].get('total') : 0);
 
         AggregateResult[] lastMonthStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
-            WHERE WorkDateDate__c >= :firstOfLastMonth
-            AND WorkDateDate__c < :firstOfMonth
-
+            WHERE (WorkDateDate__c >= :firstOfLastMonth AND WorkDateDate__c < :firstOfMonth)
+               OR (WorkDateDate__c = NULL AND CreatedDate >= :firstOfLastMonthDt AND CreatedDate < :firstOfMonthDt)
         ];
         metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
 

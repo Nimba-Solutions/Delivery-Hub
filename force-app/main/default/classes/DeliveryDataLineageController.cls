@@ -21,7 +21,8 @@ global with sharing class DeliveryDataLineageController {
 
         List<NetworkEntity__c> entities = [
             SELECT Id, Name, EntityTypePk__c, StatusPk__c, ConnectionStatusPk__c,
-                   IntegrationEndpointUrlTxt__c, OrgIdTxt__c, LastInboundSyncDateTime__c,
+                   IntegrationEndpointUrlTxt__c, OrgIdTxt__c,
+                   LastInboundSyncDateTime__c, LastOutboundSyncDateTime__c,
                    EnableVendorPushDateTime__c
             FROM NetworkEntity__c
             WHERE StatusPk__c = 'Active'
@@ -40,8 +41,18 @@ global with sharing class DeliveryDataLineageController {
             Integer total = succeeded + failed;
             Integer healthPct = total > 0 ? (succeeded * 100) / total : null;
 
-            String lastSync = e.LastInboundSyncDateTime__c != null
-                ? e.LastInboundSyncDateTime__c.format('MMM d, h:mm a')
+            // Pick the right timestamp for the direction. Vendors are upstream — we
+            // PULL from them, so LastInboundSyncDateTime__c is the relevant signal
+            // (stamped by DeliveryHubPoller). Clients are downstream — we PUSH to
+            // them, so LastOutboundSyncDateTime__c is the right field (stamped by
+            // DeliverySyncItemProcessor on each successful Synced item). Pre-fix,
+            // both directions read the inbound field, which made every client
+            // entity render "Last sync: Never" forever even when sync was healthy.
+            DateTime lastSyncDt = (e.EntityTypePk__c == 'Client')
+                ? e.LastOutboundSyncDateTime__c
+                : e.LastInboundSyncDateTime__c;
+            String lastSync = lastSyncDt != null
+                ? lastSyncDt.format('MMM d, h:mm a')
                 : null;
 
             entityMaps.add(new Map<String, Object>{
