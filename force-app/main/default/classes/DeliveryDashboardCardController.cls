@@ -56,7 +56,19 @@ global with sharing class DeliveryDashboardCardController {
                 return [SELECT COUNT() FROM WorkItem__c WHERE StageNamePk__c = 'Done' AND LastModifiedDate >= :weekStart WITH SYSTEM_MODE];
             }
             when 'overdueItems' {
-                return [SELECT COUNT() FROM WorkItem__c WHERE CalculatedETADate__c < :Date.today() AND ActivatedDateTime__c != NULL AND ArchivedDateTime__c = NULL WITH SYSTEM_MODE];
+                // Use EstimatedEndDevDate__c, the date users actually populate during scoping.
+                // CalculatedETADate__c is never auto-computed by any service — its only writers
+                // are the demo seeder and rare manual entry — so it produced misleading counts.
+                // Also exclude terminal stages so a Done item with a stale date doesn't count.
+                return [
+                    SELECT COUNT()
+                    FROM WorkItem__c
+                    WHERE EstimatedEndDevDate__c < :Date.today()
+                    AND ActivatedDateTime__c != NULL
+                    AND ArchivedDateTime__c = NULL
+                    AND StageNamePk__c NOT IN ('Done', 'Cancelled', 'Closed', 'Rejected')
+                    WITH SYSTEM_MODE
+                ];
             }
             when 'avgDaysToComplete' {
                 AggregateResult[] results = [
