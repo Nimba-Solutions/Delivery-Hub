@@ -2,6 +2,12 @@
     <lightning-card title="Sync Health" icon-name="utility:sync">
         <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
             <c-delivery-info-popover component-name="deliverySyncRetryPanel"></c-delivery-info-popover>
+            <lightning-button
+                label={toggleLabel}
+                variant="neutral"
+                size="small"
+                onclick={handleToggleDismissed}>
+            </lightning-button>
             <lightning-button-icon
                 icon-name="utility:refresh"
                 variant="border-filled"
@@ -34,6 +40,13 @@
                             disabled={isRetrying}
                             class="srp-retry-btn">
                         </lightning-button>
+                        <lightning-button
+                            label="Dismiss All Shown"
+                            variant="neutral"
+                            size="small"
+                            onclick={handleDismissAll}
+                            class="srp-dismiss-btn">
+                        </lightning-button>
                     </template>
                     <template lwc:else>
                         <div class="srp-badge srp-badge--ok">
@@ -51,6 +64,7 @@
                                 <th>Object</th>
                                 <th>Error</th>
                                 <th>Time</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -59,6 +73,24 @@
                                     <td class="srp-obj">{err.objectType}</td>
                                     <td class="srp-err">{err.errorLog}</td>
                                     <td class="srp-time">{err.lastModified}</td>
+                                    <td class="srp-action">
+                                        <template lwc:if={err.dismissed}>
+                                            <lightning-button
+                                                label="Restore"
+                                                variant="base"
+                                                data-id={err.id}
+                                                onclick={handleRestoreOne}>
+                                            </lightning-button>
+                                        </template>
+                                        <template lwc:else>
+                                            <lightning-button
+                                                label="Dismiss"
+                                                variant="base"
+                                                data-id={err.id}
+                                                onclick={handleDismissOne}>
+                                            </lightning-button>
+                                        </template>
+                                    </td>
                                 </tr>
                             </template>
                         </tbody>

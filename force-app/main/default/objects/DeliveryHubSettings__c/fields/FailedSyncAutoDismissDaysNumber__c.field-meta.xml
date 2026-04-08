@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FailedSyncAutoDismissDaysNumber__c</fullName>
+    <description>Number of days a Failed SyncItem__c (with retries exhausted) can sit before the auto-dismissal job marks it Dismissed. Dismissed items remain queryable but stop dragging down Sync Health %. Set to 0 or leave blank to disable auto-aging — manual dismissal still works.</description>
+    <inlineHelpText>Days a Failed sync item ages before auto-dismissal. 0 or blank = disabled. Default 30.</inlineHelpText>
+    <label>Failed Sync Auto-Dismiss Days</label>
+    <precision>4</precision>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+    <required>false</required>
+</CustomField>
