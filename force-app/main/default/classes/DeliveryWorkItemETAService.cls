@@ -263,7 +263,18 @@ global with sharing class DeliveryWorkItemETAService {
                 Date startDate = (Date.today() > devAvailableDate) ? Date.today() : devAvailableDate;
                 wrapper.workItem.EstimatedStartDevDate__c = startDate;
 
-                Decimal effort = wrapper.workItem.DeveloperDaysSizeNumber__c == null ? 0 : wrapper.workItem.DeveloperDaysSizeNumber__c;
+                // Prefer DeveloperDaysSizeNumber__c when set; otherwise convert
+                // EstimatedHoursNumber__c to days at 8h/day, rounded up so a 3h
+                // task still consumes a full day. The else branch is unreachable
+                // given loadWorkItems()'s filter, but kept as a safety net.
+                Decimal effort;
+                if (wrapper.workItem.DeveloperDaysSizeNumber__c != null && wrapper.workItem.DeveloperDaysSizeNumber__c > 0) {
+                    effort = wrapper.workItem.DeveloperDaysSizeNumber__c;
+                } else if (wrapper.workItem.EstimatedHoursNumber__c != null && wrapper.workItem.EstimatedHoursNumber__c > 0) {
+                    effort = Math.ceil(wrapper.workItem.EstimatedHoursNumber__c / 8.0);
+                } else {
+                    effort = 1;
+                }
                 Date completionDate = addBusinessDays(startDate, Integer.valueOf(effort));
                 wrapper.workItem.EstimatedEndDevDate__c = completionDate;
 
@@ -274,6 +285,19 @@ global with sharing class DeliveryWorkItemETAService {
 
                 workItemsToUpdate.add(wrapper.workItem);
                 this.processedWorkItemIds.add(wrapper.workItem.Id);
+            }
+
+            // Pre-loop cleanup: items entirely outside loadWorkItems()'s filter
+            // (no devdays AND no hours) never enter the simulation, so the loop
+            // below never touches them. Without this, stale Estimated dates from
+            // pre-PR #588 runs would persist forever on unsized items.
+            for (WorkItem__c stale : queryUnsizedStaleItems()) {
+                workItemsToUpdate.add(new WorkItem__c(
+                    Id = stale.Id,
+                    EstimatedStartDevDate__c = null,
+                    EstimatedEndDevDate__c = null,
+                    ProjectedUATReadyDate__c = null
+                ));
             }
 
             for (WorkItem__c workItem : allWorkItems) {
@@ -334,19 +358,50 @@ global with sharing class DeliveryWorkItemETAService {
         }
 
         private List<WorkItem__c> loadWorkItems() {
-            // Only items with effort sizing participate in ETA simulation.
-            // Items missing DeveloperDaysSizeNumber__c (or sized at 0) cannot be
-            // scheduled meaningfully — including them caused the engine to write
-            // EstimatedStartDevDate__c, EstimatedEndDevDate__c and
-            // ProjectedUATReadyDate__c = TODAY for every unsized work item, which
-            // produced misleading dates across the entire delivery portal.
+            // Items participate in ETA simulation if they have ANY effort sizing —
+            // either DeveloperDaysSizeNumber__c (the engine's native unit) OR
+            // EstimatedHoursNumber__c (which orgs like MF use exclusively).
+            //
+            // History: PR #588 originally restricted this to DeveloperDaysSizeNumber__c
+            // > 0 to prevent the engine writing misleading "start = end = TODAY" values
+            // for unsized items. That was correct in spirit but excluded 100% of
+            // hour-sized portfolios — the engine processed zero items in those orgs
+            // and stale dates persisted forever. Items missing BOTH fields are still
+            // excluded (and have their stale dates cleaned by the pre-loop cleanup
+            // pass in execute()).
             return [
-                SELECT Id, Name, StageNamePk__c, PriorityPk__c, DeveloperDaysSizeNumber__c,
+                SELECT Id, Name, StageNamePk__c, PriorityPk__c,
+                       DeveloperDaysSizeNumber__c, EstimatedHoursNumber__c,
                        SortOrderNumber__c, DeveloperLookup__c, CreatedDate
                 FROM WorkItem__c
                 WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
-                  AND DeveloperDaysSizeNumber__c != null
-                  AND DeveloperDaysSizeNumber__c > 0
+                  AND (
+                      (DeveloperDaysSizeNumber__c != null AND DeveloperDaysSizeNumber__c > 0)
+                      OR (EstimatedHoursNumber__c != null AND EstimatedHoursNumber__c > 0)
+                  )
+                WITH SYSTEM_MODE
+                LIMIT 10000
+            ];
+        }
+
+        /**
+         * @description Finds active WorkItems that are unsized (no devdays AND no hours)
+         *              but still carry stale Estimated date values from previous engine runs.
+         *              These need to be nulled out so the UI doesn't render misleading bars.
+         * @return List of WorkItem__c records carrying stale dates that should be cleared.
+         */
+        private List<WorkItem__c> queryUnsizedStaleItems() {
+            return [
+                SELECT Id
+                FROM WorkItem__c
+                WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                  AND (DeveloperDaysSizeNumber__c = null OR DeveloperDaysSizeNumber__c <= 0)
+                  AND (EstimatedHoursNumber__c = null OR EstimatedHoursNumber__c <= 0)
+                  AND (
+                      EstimatedStartDevDate__c != null
+                      OR EstimatedEndDevDate__c != null
+                      OR ProjectedUATReadyDate__c != null
+                  )
                 WITH SYSTEM_MODE
                 LIMIT 10000
             ];
