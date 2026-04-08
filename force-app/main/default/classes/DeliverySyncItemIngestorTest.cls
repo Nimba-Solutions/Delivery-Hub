@@ -190,6 +190,92 @@ private class DeliverySyncItemIngestorTest {
     }
 
     @IsTest
+    static void testTargetIdPointingAtDeletedRecordFallsThroughToInsert() {
+        System.runAs(testUser) {
+            // Simulate the production drift scenario: a sender's bridge points
+            // at a local record that we've since deleted. Without this fix the
+            // receiver would Database.update on the deleted Id, get silent
+            // success, and the real record would never receive the change.
+            WorkItem__c stale = new WorkItem__c(BriefDescriptionTxt__c = 'Will be deleted');
+            insert stale;
+            Id staleId = stale.Id;
+            delete stale;
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-STALE-TARGET-001',
+                'TargetId' => (String) staleId,
+                'BriefDescriptionTxt__c' => 'Should create new record, not silently no-op on the deleted one'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId, 'Result should be a freshly inserted record Id');
+            System.assertNotEquals(staleId, resultId, 'Result must NOT be the stale deleted Id — that path is the bug we are fixing');
+
+            WorkItem__c created = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :resultId];
+            System.assertEquals('Should create new record, not silently no-op on the deleted one', created.BriefDescriptionTxt__c);
+
+            // The insert path also creates a ledger entry — verifying that ensures
+            // future syncs for this SourceId will resolve to the freshly created record.
+            SyncItem__c ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = 'REMOTE-STALE-TARGET-001' AND DirectionPk__c = 'Inbound' LIMIT 1];
+            System.assertEquals((String) resultId, ledger.LocalRecordIdTxt__c, 'Ledger entry must record the new local Id so subsequent syncs auto-resolve');
+        }
+    }
+
+    @IsTest
+    static void testStaleLedgerEntrySkippedFavorsActiveRecord() {
+        System.runAs(testUser) {
+            // Older inbound created a local record that has since been deleted —
+            // but a newer inbound (correctly) created a fresh active record. Both
+            // ledger entries share the same RemoteExternalIdTxt__c. The resolver
+            // must skip the deleted-target entry and pick the active one.
+            WorkItem__c stale = new WorkItem__c(BriefDescriptionTxt__c = 'Stale duplicate');
+            insert stale;
+            Id staleId = stale.Id;
+
+            WorkItem__c active = new WorkItem__c(BriefDescriptionTxt__c = 'Active canonical');
+            insert active;
+
+            // Older entry pointing at the doomed record
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'REMOTE-DUPE-WORKITEM',
+                LocalRecordIdTxt__c = (String) staleId,
+                WorkItemLookup__c = staleId
+            );
+            // Newer entry pointing at the canonical record
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'REMOTE-DUPE-WORKITEM',
+                LocalRecordIdTxt__c = (String) active.Id,
+                WorkItemLookup__c = active.Id
+            );
+
+            // Delete the stale record — its ledger entry remains but is now stale
+            delete stale;
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-DUPE-WORKITEM',
+                'BriefDescriptionTxt__c' => 'Updated via ledger fallback'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertEquals(active.Id, resultId, 'Resolver must skip the stale-target ledger entry and find the active record');
+            WorkItem__c updated = [SELECT BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :active.Id];
+            System.assertEquals('Updated via ledger fallback', updated.BriefDescriptionTxt__c);
+        }
+    }
+
+    @IsTest
     static void testProcessInboundWorkItemAutoParentsClient() {
         System.runAs(testUser) {
             // 1. Setup a Client Network Entity with a simulated Org ID
