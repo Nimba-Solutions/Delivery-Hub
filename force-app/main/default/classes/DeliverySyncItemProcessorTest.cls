@@ -133,6 +133,41 @@ private class DeliverySyncItemProcessorTest {
     }
 
     /**
+     * @description Bug B regression guard: after a successful Synced outbound, the
+     *              destination NetworkEntity__c should have LastOutboundSyncDateTime__c
+     *              stamped. Pre-fix the field didn't exist and the Data Lineage widget
+     *              showed "Last sync: Never" for every client connection forever.
+     *              Push Mode: destination = Request.DeliveryEntityLookup (vendor).
+     *              Hub Mode:  destination = WorkItem.ClientNetworkEntityLookup (client).
+     *              Both paths must stamp the field.
+     */
+    @IsTest
+    static void testLastOutboundSyncStampedOnSuccess() {
+        System.runAs(testUser) {
+            Test.setMock(HttpCalloutMock.class, new MockSuccess());
+
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncItemProcessor());
+            Test.stopTest();
+
+            // Both the vendor (Push Mode dest) and the client (Hub Mode dest) should
+            // have LastOutboundSyncDateTime__c populated by the run.
+            NetworkEntity__c vendor = [
+                SELECT LastOutboundSyncDateTime__c FROM NetworkEntity__c
+                WHERE Name = 'Mothership HQ' LIMIT 1
+            ];
+            NetworkEntity__c client = [
+                SELECT LastOutboundSyncDateTime__c FROM NetworkEntity__c
+                WHERE Name = 'Client Org' LIMIT 1
+            ];
+            System.assertNotEquals(null, vendor.LastOutboundSyncDateTime__c,
+                'Push Mode destination (vendor) should have LastOutboundSyncDateTime__c stamped after Synced');
+            System.assertNotEquals(null, client.LastOutboundSyncDateTime__c,
+                'Hub Mode destination (client) should have LastOutboundSyncDateTime__c stamped after Synced');
+        }
+    }
+
+    /**
      * @description Verifies UsageAnalytics items are resolved locally without a callout.
      */
     @IsTest

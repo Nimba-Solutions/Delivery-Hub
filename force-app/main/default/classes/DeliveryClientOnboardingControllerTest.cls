@@ -78,7 +78,7 @@ private class DeliveryClientOnboardingControllerTest {
         System.runAs(testUser) {
             Test.startTest();
             Map<String, Object> result = DeliveryClientOnboardingController.onboardClient(
-                'Minimal Corp', 'hi@minimal.com', 90.00, null, null
+                'Minimal Corp', 'hi@minimal.com', 100.00, null, null
             );
             Test.stopTest();
 
