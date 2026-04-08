@@ -19,6 +19,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
      */
     global void execute(SchedulableContext sc) {
         requeueFailedItems();
+        requeueStagedItemsWithEndpoint();
         autoDismissAgedFailedItems();
         processEscalations();
         processRecurringItems();
@@ -29,6 +30,61 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         processScheduledDocumentSends();
         runReconciliation();
         recalcWorkItemETAsIfTopOfHour();
+    }
+
+    /**
+     * @description Heals stuck Staged outbound items. DeliverySyncItemProcessor parks
+     *              outbound items as 'Staged' (not Failed) when the destination
+     *              NetworkEntity has no IntegrationEndpointUrlTxt__c — that's the
+     *              correct fallback at the time, but pre-fix there was no path
+     *              back from Staged. Once an item became Staged it sat there
+     *              forever, even after an admin configured the endpoint URL.
+     *              Verified empirically on Nimba 2026-04-08: 54 outbound items
+     *              had been Staged for ~2 hours waiting for the dh-prod endpoint
+     *              configuration to land. This method runs every scheduler tick
+     *              and resets Staged items to Queued IF their destination
+     *              NetworkEntity now has an endpoint URL — Push Mode resolves
+     *              via Request.DeliveryEntityLookup, Hub Mode via
+     *              WorkItem.ClientNetworkEntityLookup. Both modes covered.
+     */
+    private static void requeueStagedItemsWithEndpoint() {
+        try {
+            // Push Mode: Staged items linked to a Request whose DeliveryEntity has an endpoint
+            List<SyncItem__c> pushHealable = [
+                SELECT Id
+                FROM SyncItem__c
+                WHERE StatusPk__c = 'Staged'
+                AND DirectionPk__c = 'Outbound'
+                AND RequestLookup__c != NULL
+                AND RequestLookup__r.DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c != NULL
+                WITH SYSTEM_MODE
+                LIMIT 100
+            ];
+            // Hub Mode: Staged items whose WorkItem's ClientNetworkEntity has an endpoint
+            List<SyncItem__c> hubHealable = [
+                SELECT Id
+                FROM SyncItem__c
+                WHERE StatusPk__c = 'Staged'
+                AND DirectionPk__c = 'Outbound'
+                AND RequestLookup__c = NULL
+                AND WorkItemLookup__r.ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c != NULL
+                WITH SYSTEM_MODE
+                LIMIT 100
+            ];
+            List<SyncItem__c> toRequeue = new List<SyncItem__c>();
+            for (SyncItem__c si : pushHealable) {
+                toRequeue.add(new SyncItem__c(Id = si.Id, StatusPk__c = 'Queued'));
+            }
+            for (SyncItem__c si : hubHealable) {
+                toRequeue.add(new SyncItem__c(Id = si.Id, StatusPk__c = 'Queued'));
+            }
+            if (!toRequeue.isEmpty()) {
+                Database.update(toRequeue, AccessLevel.SYSTEM_MODE);
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] Staged-item requeue failed: ' + e.getMessage());
+        }
     }
 
     /**
