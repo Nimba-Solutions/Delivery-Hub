@@ -246,6 +246,58 @@ private class DeliveryWorkLogTriggerHandlerTest {
     }
 
     @IsTest
+    static void testWorkDateDefaultsToTodayWhenNull() {
+        // Bug 2 regression guard: System Pulse "Hours This Month" filters on
+        // WorkDateDate__c, so a null value silently dropped logs from totals.
+        // The trigger now defaults the field to today on insert when missing.
+        System.runAs(testUser) {
+            WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+
+            Test.startTest();
+            WorkLog__c log = new WorkLog__c(
+                RequestId__c           = request.Id,
+                WorkItemLookup__c      = workItem.Id,
+                HoursLoggedNumber__c   = 2.0,
+                WorkDescriptionTxt__c  = 'No work date supplied'
+                // WorkDateDate__c intentionally omitted
+            );
+            insert log;
+            Test.stopTest();
+
+            WorkLog__c reloaded = [SELECT WorkDateDate__c FROM WorkLog__c WHERE Id = :log.Id];
+            System.assertEquals(Date.today(), reloaded.WorkDateDate__c,
+                'Trigger should default WorkDateDate__c to today when null on insert');
+        }
+    }
+
+    @IsTest
+    static void testWorkDateExplicitValuePreserved() {
+        // Confirms the default does not stomp explicit user-supplied dates.
+        System.runAs(testUser) {
+            WorkItem__c workItem   = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+
+            Date backdated = Date.today().addDays(-3);
+
+            Test.startTest();
+            WorkLog__c log = new WorkLog__c(
+                RequestId__c           = request.Id,
+                WorkItemLookup__c      = workItem.Id,
+                HoursLoggedNumber__c   = 1.5,
+                WorkDateDate__c        = backdated,
+                WorkDescriptionTxt__c  = 'Backdated entry'
+            );
+            insert log;
+            Test.stopTest();
+
+            WorkLog__c reloaded = [SELECT WorkDateDate__c FROM WorkLog__c WHERE Id = :log.Id];
+            System.assertEquals(backdated, reloaded.WorkDateDate__c,
+                'Trigger must preserve explicitly supplied WorkDateDate__c values');
+        }
+    }
+
+    @IsTest
     static void testBulkApproval() {
         System.runAs(testUser) {
             // Enable approval
