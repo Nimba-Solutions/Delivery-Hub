@@ -75,6 +75,76 @@ private class DeliveryDashboardCardControllerTest {
             'No SyncItems should return 100 (vacuous health)');
     }
 
+    /**
+     * @description Regression guard: Staged sync items must NOT pull syncHealth down.
+     *              They are intentionally queued for downstream client polling, not failures.
+     *              Pre-fix dh-prod showed syncHealth = 0% because 49 Staged items dragged
+     *              the denominator while the numerator (Synced) was 0 in the LAST_N_DAYS:7
+     *              window. After fix: Staged items are excluded from the denominator and
+     *              the metric reflects only items that should-have-completed-by-now.
+     */
+    @IsTest
+    static void testSyncHealthExcludesStagedFromDenominator() {
+        // Setup: 1 Synced (numerator) + 1 Staged (must be excluded from denominator)
+        insert new List<SyncItem__c>{
+            new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c  = 'Outbound',
+                StatusPk__c     = 'Synced',
+                PayloadTxt__c   = '{}'
+            ),
+            new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c  = 'Outbound',
+                StatusPk__c     = 'Staged',
+                PayloadTxt__c   = '{}'
+            )
+        };
+
+        Test.startTest();
+        Object result = DeliveryDashboardCardController.getCardData('syncHealth', null);
+        Test.stopTest();
+
+        // 1 Synced / 1 non-Staged-non-dismissed total = 100%, NOT 1/2 = 50%
+        System.assertEquals(100, ((Decimal) result).intValue(),
+            'Staged items must be excluded from the syncHealth denominator. They are queued for polling, not failures.');
+    }
+
+    /**
+     * @description Verifies the new stagedAwaitingPoll data source returns the
+     *              correct count of Staged outbound items waiting for client poll.
+     */
+    @IsTest
+    static void testStagedAwaitingPollDataSource() {
+        insert new List<SyncItem__c>{
+            new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c  = 'Outbound',
+                StatusPk__c     = 'Staged',
+                PayloadTxt__c   = '{}'
+            ),
+            new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c  = 'Outbound',
+                StatusPk__c     = 'Staged',
+                PayloadTxt__c   = '{}'
+            ),
+            new SyncItem__c(
+                ObjectTypePk__c = 'WorkItem__c',
+                DirectionPk__c  = 'Outbound',
+                StatusPk__c     = 'Synced',
+                PayloadTxt__c   = '{}'
+            )
+        };
+
+        Test.startTest();
+        Object result = DeliveryDashboardCardController.getCardData('stagedAwaitingPoll', null);
+        Test.stopTest();
+
+        System.assertEquals(2, (Integer) result,
+            'stagedAwaitingPoll should return only Staged items, not Synced or others');
+    }
+
     @IsTest
     static void testActiveWorkItemsCounts() {
         // Two active items inserted normally — the trigger will (re)stamp

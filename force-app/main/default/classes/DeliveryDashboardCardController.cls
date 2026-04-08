@@ -128,10 +128,16 @@ global with sharing class DeliveryDashboardCardController {
                 // Prior code filtered on 'Succeeded' (not a valid value) so the count was structurally always 0.
                 // Dismissed items (DismissedDateTime__c set) are excluded so admin-triaged failures
                 // stop dragging the denominator down — see DeliverySyncDismissalService.
+                // Staged items are ALSO excluded — they're not failures, they're items waiting for
+                // a downstream client to pull via GET /sync/changes (Poll Mode). Including them
+                // pulled health to 0 on orgs (like dh-prod) where lots of items target unconfigured
+                // clients. Health = synced / (synced + failed + queued + processing), where the
+                // denominator is "things that should have happened by now but might not have."
                 Integer total = [
                     SELECT COUNT() FROM SyncItem__c
                     WHERE CreatedDate = LAST_N_DAYS:7
                     AND DismissedDateTime__c = NULL
+                    AND StatusPk__c != 'Staged'
                     WITH SYSTEM_MODE
                 ];
                 Integer succeeded = [
@@ -140,6 +146,18 @@ global with sharing class DeliveryDashboardCardController {
                     WITH SYSTEM_MODE
                 ];
                 return total > 0 ? Math.round((Decimal.valueOf(succeeded) / total) * 100) : 100;
+            }
+            when 'stagedAwaitingPoll' {
+                // Items in Staged status are intentionally queued for downstream clients to
+                // pull via Poll Mode (GET /sync/changes). They are NOT failures. Surface
+                // them as a separate metric so admins can see "X items waiting for client X
+                // to poll" without confusing them with failed items.
+                return [
+                    SELECT COUNT() FROM SyncItem__c
+                    WHERE StatusPk__c = 'Staged'
+                    AND DismissedDateTime__c = NULL
+                    WITH SYSTEM_MODE
+                ];
             }
             when else {
                 return null;
