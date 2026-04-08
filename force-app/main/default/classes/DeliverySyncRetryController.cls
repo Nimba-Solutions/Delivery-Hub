@@ -79,6 +79,22 @@ global with sharing class DeliverySyncRetryController {
             rows.add(row);
         }
         result.put('recentErrors', rows);
+
+        // Surface Staged-awaiting-poll count separately so admins can see "X items
+        // waiting for client poll" without confusing them with actual failures.
+        // Staged is an INTENTIONAL state for outbound items going to clients in
+        // Poll Mode (i.e. the destination has not configured Vendor Push). It is
+        // NOT a failure. Pre-fix it was lumped into the failed count, making the
+        // sync retry panel look like every Staged item was a problem.
+        Integer stagedAwaitingPoll = [
+            SELECT COUNT() FROM SyncItem__c
+            WHERE StatusPk__c = 'Staged'
+            AND DirectionPk__c = 'Outbound'
+            AND DismissedDateTime__c = NULL
+            WITH SYSTEM_MODE
+        ];
+        result.put('stagedAwaitingPoll', stagedAwaitingPoll);
+
         return result;
     }
 

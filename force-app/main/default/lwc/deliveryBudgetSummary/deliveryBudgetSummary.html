@@ -36,14 +36,14 @@
                         </div>
                         <div class="slds-media__body" style="cursor: pointer;" onclick={handleHoursThisMonthClick}>
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
-                                <strong>{metrics.hoursThisMonth}</strong>
+                                <strong>{metrics.hoursLoggedThisMonth}</strong>
                             </div>
-                            <div class="slds-text-title_caps slds-text-color_weak">Hours Worked This Month</div>
+                            <div class="slds-text-title_caps slds-text-color_weak">Hours Logged This Month</div>
                             <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
-                                Logged this month: {metrics.hoursLoggedThisMonth} hrs
+                                {metrics.hoursThisMonth} hrs by Work Date
                             </div>
                             <div class="slds-text-body_small slds-text-color_weak" onclick={handleHoursLastMonthClick}>
-                                Last month: {metrics.hoursLastMonth} hrs worked / {metrics.hoursLoggedLastMonth} logged
+                                Last month: {metrics.hoursLoggedLastMonth} logged / {metrics.hoursLastMonth} by Work Date
                             </div>
                         </div>
                     </div>
