@@ -153,14 +153,114 @@ public without sharing class DeliverySyncEngine {
             }
 
             if (!itemsToInsert.isEmpty()) {
-                Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
-                if (Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
-                    System.enqueueJob(new DeliverySyncItemProcessor());
+                // Dedup against existing Staged SyncItems for the same record+destination.
+                // Pre-fix: every WorkItem update inserted a new outbound SyncItem, even if
+                // a previous Staged one for the same record was still waiting for poll.
+                // Result: 13 WorkItems on Nimba had 2-3 Staged sync items each (54 total)
+                // — sync table bloat that the dispatcher would have to walk through.
+                // Now: if a Staged SyncItem already exists for the same (LocalRecordId,
+                // destination), update its payload in place rather than insert a new one.
+                deduplicateAgainstStaged(itemsToInsert);
+                if (!itemsToInsert.isEmpty()) {
+                    Database.insert(itemsToInsert, AccessLevel.SYSTEM_MODE);
+                    if (Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
+                        System.enqueueJob(new DeliverySyncItemProcessor());
+                    }
                 }
             }
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'DeliverySyncEngine Failed: ' + e.getMessage());
         }
+    }
+
+    /**
+     * @description Dedups a list of about-to-insert SyncItem__c records against
+     *              existing Staged outbound items for the same record + destination.
+     *              For each item that matches an existing Staged row, the existing
+     *              row's payload is updated in place and the new item is removed
+     *              from the insert list. Items with no existing match stay in the
+     *              insert list. The list parameter is mutated.
+     *
+     *              Destination identity:
+     *                Push Mode: LocalRecordIdTxt__c + "|R|" + RequestLookup__c
+     *                Hub Mode:  LocalRecordIdTxt__c + "|H|" + WorkItemLookup__c
+     *
+     * @param items The list of pending SyncItem__c records to dedup. Mutated in place.
+     */
+    private static void deduplicateAgainstStaged(List<SyncItem__c> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        Set<String> recordIds = new Set<String>();
+        for (SyncItem__c si : items) {
+            if (String.isNotBlank(si.LocalRecordIdTxt__c)) {
+                recordIds.add(si.LocalRecordIdTxt__c);
+            }
+        }
+        if (recordIds.isEmpty()) {
+            return;
+        }
+        // Look up existing Staged outbound items for these source records.
+        Map<String, SyncItem__c> existingByKey = new Map<String, SyncItem__c>();
+        for (SyncItem__c existing : [
+            SELECT Id, LocalRecordIdTxt__c, RequestLookup__c, WorkItemLookup__c, PayloadTxt__c
+            FROM SyncItem__c
+            WHERE StatusPk__c = 'Staged'
+            AND DirectionPk__c = 'Outbound'
+            AND LocalRecordIdTxt__c IN :recordIds
+            WITH SYSTEM_MODE
+        ]) {
+            String key = stagedDedupKey(existing.LocalRecordIdTxt__c, existing.RequestLookup__c, existing.WorkItemLookup__c);
+            // Keep only one existing per key (latest wins in iteration order).
+            existingByKey.put(key, existing);
+        }
+        if (existingByKey.isEmpty()) {
+            return; // Nothing to dedup against.
+        }
+        // Walk the to-insert list and split: items with an existing match get
+        // their payload merged into the existing row; items with no match stay.
+        List<SyncItem__c> remaining = new List<SyncItem__c>();
+        List<SyncItem__c> toUpdate = new List<SyncItem__c>();
+        for (SyncItem__c pending : items) {
+            String key = stagedDedupKey(pending.LocalRecordIdTxt__c, pending.RequestLookup__c, pending.WorkItemLookup__c);
+            SyncItem__c match = existingByKey.get(key);
+            if (match != null) {
+                // Update the existing Staged row in place — payload reflects the latest
+                // state of the source record. Status stays Staged; the dispatcher will
+                // pick it up on the next tick (or the client will pull it on next poll).
+                match.PayloadTxt__c = pending.PayloadTxt__c;
+                toUpdate.add(match);
+            } else {
+                remaining.add(pending);
+            }
+        }
+        if (!toUpdate.isEmpty()) {
+            // Use partial-success DML so a single field-level reject doesn't drop the
+            // whole batch. Failures get logged at debug level and the corresponding
+            // pending item just stays Staged with its old payload (still better than
+            // a duplicate insert).
+            Database.update(toUpdate, false, AccessLevel.SYSTEM_MODE);
+        }
+        // Mutate the input list in place to only contain genuinely new items.
+        items.clear();
+        items.addAll(remaining);
+    }
+
+    /**
+     * @description Builds a composite key identifying a sync destination.
+     *              Push Mode keys on the WorkRequest; Hub Mode keys on the parent
+     *              WorkItem (which determines the destination via its
+     *              ClientNetworkEntityLookup__c).
+     * @param localRecordId Local source record id (LocalRecordIdTxt__c)
+     * @param requestId WorkRequest__c Id for Push Mode, null for Hub Mode
+     * @param workItemId WorkItem__c Id used as the Hub Mode destination key
+     * @return Composite dedup key string
+     */
+    private static String stagedDedupKey(String localRecordId, Id requestId, Id workItemId) {
+        if (requestId != null) {
+            return localRecordId + '|R|' + requestId;
+        }
+        return localRecordId + '|H|' + (workItemId != null ? String.valueOf(workItemId) : 'NULL');
     }
 
     private static Boolean hasSignificantChange(SObject rec, SObject oldRec, Set<String> allowedFields) {
