@@ -173,8 +173,15 @@ public without sharing class DeliverySyncItemIngestor {
                 // Grab the 15-char base ID to prevent 18-char mismatch failures on Text fields
                 String baseOrgId = senderOrgId.length() >= 15 ? senderOrgId.substring(0, 15) + '%' : senderOrgId;
 
-                // FIX: Look at BOTH OrgIdTxt__c and RemoteExternalIdTxt__c
-                String query = 'SELECT Id, EntityTypePk__c FROM NetworkEntity__c WHERE (OrgIdTxt__c LIKE :baseOrgId OR RemoteExternalIdTxt__c LIKE :baseOrgId) LIMIT 1';
+                // Look at BOTH OrgIdTxt__c and RemoteExternalIdTxt__c, AND restrict to
+                // Client/Both entity types so we never accidentally auto-parent to a
+                // Vendor record when both Vendor and Client entities exist for the same
+                // org id. Pre-fix this query just took LIMIT 1 with no type filter, which
+                // could attach an inbound WorkItem to the wrong NetworkEntity record.
+                String query = 'SELECT Id, EntityTypePk__c FROM NetworkEntity__c'
+                    + ' WHERE (OrgIdTxt__c LIKE :baseOrgId OR RemoteExternalIdTxt__c LIKE :baseOrgId)'
+                    + ' AND EntityTypePk__c IN (\'Client\', \'Both\')'
+                    + ' ORDER BY CreatedDate ASC LIMIT 1';
 
                 if (String.isNotBlank(getNamespacePrefix())) {
                     query = query.replace('NetworkEntity__c', getNamespacePrefix() + 'NetworkEntity__c')

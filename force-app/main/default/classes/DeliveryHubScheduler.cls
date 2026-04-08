@@ -159,7 +159,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         Integer maxRetries = settings != null && settings.SyncRetryLimitNumber__c != null
             ? (Integer) settings.SyncRetryLimitNumber__c : 3;
         List<SyncItem__c> failedItems = [
-            SELECT Id, StatusPk__c
+            SELECT Id, StatusPk__c, RetryCountNumber__c
             FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             AND DirectionPk__c = 'Outbound'
@@ -171,6 +171,13 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         if (!failedItems.isEmpty()) {
             for (SyncItem__c item : failedItems) {
                 item.StatusPk__c = 'Queued';
+                // Initialize the retry counter to 0 when null so the next failure
+                // increments cleanly to 1 (rather than 1 → 2 → null → 1 → 2 → null
+                // looping forever if the field starts null and the processor's
+                // exception handler also handles null badly).
+                if (item.RetryCountNumber__c == null) {
+                    item.RetryCountNumber__c = 0;
+                }
             }
             Database.update(failedItems, AccessLevel.SYSTEM_MODE);
         }
