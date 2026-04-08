@@ -70,16 +70,6 @@ global with sharing class DeliveryDashboardCardController {
                     WITH SYSTEM_MODE
                 ];
             }
-            when 'avgDaysToComplete' {
-                AggregateResult[] results = [
-                    SELECT AVG(EstimatedHoursNumber__c) avgHrs
-                    FROM WorkItem__c
-                    WHERE StageNamePk__c = 'Done'
-                    AND CreatedDate = LAST_N_DAYS:90
-                    WITH SYSTEM_MODE
-                ];
-                return results.isEmpty() || results[0].get('avgHrs') == null ? 0 : results[0].get('avgHrs');
-            }
             when 'workItemsByPriority' {
                 List<Map<String, Object>> data = new List<Map<String, Object>>();
                 for (AggregateResult ar : [
@@ -134,8 +124,10 @@ global with sharing class DeliveryDashboardCardController {
                 return data;
             }
             when 'syncHealth' {
+                // SyncItem__c.StatusPk__c is a restricted picklist: Queued, Staged, Processing, Synced, Failed.
+                // Prior code filtered on 'Succeeded' (not a valid value) so the count was structurally always 0.
                 Integer total = [SELECT COUNT() FROM SyncItem__c WHERE CreatedDate = LAST_N_DAYS:7 WITH SYSTEM_MODE];
-                Integer succeeded = [SELECT COUNT() FROM SyncItem__c WHERE StatusPk__c = 'Succeeded' AND CreatedDate = LAST_N_DAYS:7 WITH SYSTEM_MODE];
+                Integer succeeded = [SELECT COUNT() FROM SyncItem__c WHERE StatusPk__c = 'Synced' AND CreatedDate = LAST_N_DAYS:7 WITH SYSTEM_MODE];
                 return total > 0 ? Math.round((Decimal.valueOf(succeeded) / total) * 100) : 100;
             }
             when else {

@@ -176,9 +176,11 @@ global with sharing class DeliveryHubDashboardController {
             item.title = t.BriefDescriptionTxt__c;
             item.stage = t.StageNamePk__c;
             item.priority = t.PriorityPk__c;
-            item.daysInStage = Date.today().daysBetween(Date.today()) >= 0
-                ? (Integer) t.LastModifiedDate.date().daysBetween(Date.today())
-                : 0;
+            // Math.max guards against future LastModifiedDate (e.g. user clock skew, test data).
+            // Prior code had `Date.today().daysBetween(Date.today()) >= 0` which is always true,
+            // so the negative-days protection it intended never fired.
+            Integer rawDays = (Integer) t.LastModifiedDate.date().daysBetween(Date.today());
+            item.daysInStage = Math.max(0, rawDays);
             item.attentionScore = calculateAttentionScore(t, item.daysInStage);
             item.urgency = scoreToUrgency(item.attentionScore);
             items.add(item);
@@ -297,10 +299,11 @@ global with sharing class DeliveryHubDashboardController {
     }
 
     private static List<WorkItemSummary> fetchRecentWorkItems() {
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
         List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
-            WHERE StageNamePk__c NOT IN ('Done', 'Cancelled')
+            WHERE StageNamePk__c NOT IN :terminalStages
             ORDER BY LastModifiedDate DESC
             LIMIT 5
         ];
