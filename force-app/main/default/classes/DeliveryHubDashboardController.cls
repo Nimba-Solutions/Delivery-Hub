@@ -51,16 +51,26 @@ global with sharing class DeliveryHubDashboardController {
         Date firstOfMonth = Date.today().toStartOfMonth();
         Date firstOfLastMonth = firstOfMonth.addMonths(-1);
 
-        // WorkDateDate__c is the canonical "when did the work happen" field, but it's only
-        // reliably populated on logs created AFTER PR #613's trigger default landed. Older
-        // WorkLog rows (and any logs created via integrations that don't set the field) have
-        // it null, which silently dropped them from the System Pulse total. Fall back to
-        // CreatedDate when WorkDateDate__c is null so legacy/integration logs still count.
-        // Backdated logs (where WorkDateDate__c is set explicitly to a past month) continue
-        // to be filtered correctly because the OR branches are mutually exclusive on null.
+        // We surface TWO month-hours metrics — one keyed on WorkDateDate__c (the
+        // canonical "when did the work happen" date, the billing-correct semantic
+        // clients pay against) and one keyed on CreatedDate (when the entry was
+        // logged). They diverge whenever entries are backdated. Showing both makes
+        // the divergence self-documenting:
+        //
+        //   Worked = 0,  Logged = 35.5  → "everyone backdated their April entries"
+        //   Worked = 40, Logged = 38    → "two hours haven't been entered yet"
+        //   Worked = 40, Logged = 40    → "all caught up"
+        //
+        // Anyone (client, internal team, future operator) can read both numbers and
+        // understand the state without an explanation. This replaces the older
+        // single-metric design that forced a choice between two valid truths.
+        //
+        // Backwards compat: hoursThisMonth still means "hours WORKED this month by
+        // WorkDate" (no semantic change). hoursLoggedThisMonth is the new addition.
         DateTime firstOfMonthDt = DateTime.newInstance(firstOfMonth, Time.newInstance(0, 0, 0, 0));
         DateTime firstOfLastMonthDt = DateTime.newInstance(firstOfLastMonth, Time.newInstance(0, 0, 0, 0));
 
+        // Hours WORKED this month (by WorkDate) — billing-correct
         AggregateResult[] mtdStats = [
             SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
             WHERE (WorkDateDate__c >= :firstOfMonth)
@@ -74,6 +84,19 @@ global with sharing class DeliveryHubDashboardController {
                OR (WorkDateDate__c = NULL AND CreatedDate >= :firstOfLastMonthDt AND CreatedDate < :firstOfMonthDt)
         ];
         metrics.put('hoursLastMonth', lastMonthStats[0].get('total') != null ? (Decimal)lastMonthStats[0].get('total') : 0);
+
+        // Hours LOGGED this month (by CreatedDate) — entry-time semantic
+        AggregateResult[] mtdLoggedStats = [
+            SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
+            WHERE CreatedDate >= :firstOfMonthDt
+        ];
+        metrics.put('hoursLoggedThisMonth', mtdLoggedStats[0].get('total') != null ? (Decimal)mtdLoggedStats[0].get('total') : 0);
+
+        AggregateResult[] lastMonthLoggedStats = [
+            SELECT Sum(HoursLoggedNumber__c) total FROM WorkLog__c
+            WHERE CreatedDate >= :firstOfLastMonthDt AND CreatedDate < :firstOfMonthDt
+        ];
+        metrics.put('hoursLoggedLastMonth', lastMonthLoggedStats[0].get('total') != null ? (Decimal)lastMonthLoggedStats[0].get('total') : 0);
 
         // 2. Last Entry Logic (Find most recent activity on work items)
         List<WorkItem__c> lastActivity = [
@@ -285,10 +308,19 @@ global with sharing class DeliveryHubDashboardController {
             'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
         };
 
+        // The What's-In-Flight tile is meant to show items that are CURRENTLY being
+        // worked on. Pre-fix the SOQL only excluded terminal stages — it included
+        // unactivated/backlog items, recurring-item templates, and archived items,
+        // which made the per-phase counts diverge from every other "active items"
+        // metric on the dashboard. Adding the standard active-item filters here so
+        // the breakdown reconciles with activeRequests, hoursThisMonth scoping, etc.
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
+            AND ActivatedDateTime__c != NULL
+            AND TemplateMarkedDateTime__c = NULL
+            AND ArchivedDateTime__c = NULL
             GROUP BY StageNamePk__c
         ]) {
             String phase = stageToPhase.get((String)ar.get('stage'));
