@@ -46,21 +46,36 @@ public without sharing class DeliverySyncItemIngestor {
         
         Id localRequestId = null;
         Id localRecordId = findLocalId(targetType, sourceId);
-        
-        // If it's a Work Item, try to find the Request Bridge (Downstream Origin)
+
+        // If it's a Work Item, also check the WorkRequest__c bridge (Downstream Origin).
+        // The bridge carries explicit downstream routing context (localRequestId), so
+        // we always capture it when present. But we only promote bridge.WorkItemId__c
+        // to localRecordId if (a) the ledger lookup didn't already find one and
+        // (b) the bridge target still exists locally. Stale bridges that point at
+        // deleted records used to silently win and cause permanent sync no-ops.
         if (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             WorkRequest__c bridge = findWorkItemBridge(sourceId);
             if (bridge != null) {
-                localRecordId = bridge.WorkItemId__c;
                 localRequestId = bridge.Id;
+                if (localRecordId == null && validateLocalIdExists(targetType, bridge.WorkItemId__c)) {
+                    localRecordId = bridge.WorkItemId__c;
+                }
             }
         }
 
+        // Final fallback: explicit TargetId from the payload. Validate it points
+        // at a live record before trusting it — without validation, Database.update
+        // against a deleted Id silently returns success and the sync becomes a
+        // permanent no-op. Falling through to localRecordId == null routes to the
+        // insert path, which creates a fresh record AND a ledger entry, allowing
+        // the sender's bridge to auto-heal on its next response handshake.
         if (localRecordId == null && String.isNotBlank(targetId) && objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
             try {
                 Id castId = (Id) targetId;
-                if (castId.getSobjectType() == targetType) {
+                if (validateLocalIdExists(targetType, castId)) {
                     localRecordId = castId;
+                } else {
+                    System.debug(LoggingLevel.WARN, 'Inbound TargetId ' + targetId + ' resolves to deleted/missing record — falling through to insert path');
                 }
             } catch (Exception e) {
                 System.debug(LoggingLevel.FINE, 'TargetId invalid: ' + e.getMessage());
@@ -243,18 +258,71 @@ public without sharing class DeliverySyncItemIngestor {
         return recordToUpsert.Id;
     }
 
+    /**
+     * @description Resolves a remote source Id to a local record Id by walking the
+     * Inbound ledger newest-first and returning the first entry whose local target
+     * still exists. Stale ledger entries (whose local record has been deleted) are
+     * skipped, which is essential to prevent the receiver from resolving to a
+     * deleted Id and silently no-op'ing the upsert.
+     *
+     * Previously this lookup was skipped entirely for WorkItem__c (the bridge was
+     * assumed sufficient), but bridges go stale when their local target is deleted
+     * and there was no ledger fallback — leaving the receiver with no way to
+     * relocate the canonical record.
+     * @param type The SObjectType of the record being resolved.
+     * @param remoteId The remote source Id to look up in the inbound ledger.
+     * @return The local record Id of the active record, or null if no live mapping exists.
+     */
     private static Id findLocalId(Schema.SObjectType type, String remoteId) {
         if (String.isBlank(remoteId)) {
             return null;
         }
-        String objName = type.getDescribe().getName();
-        String cleanName = stripNamespace(objName);
+        String cleanName = stripNamespace(type.getDescribe().getName());
 
-        if (!cleanName.endsWithIgnoreCase('WorkItem__c') || cleanName.endsWithIgnoreCase('WorkItemComment__c')) {
-            List<SyncItem__c> ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = :remoteId AND ObjectTypePk__c = :cleanName WITH SYSTEM_MODE LIMIT 1];
-            return ledger.isEmpty() ? null : (Id)ledger[0].LocalRecordIdTxt__c;
+        List<SyncItem__c> ledger = [
+            SELECT LocalRecordIdTxt__c
+            FROM SyncItem__c
+            WHERE RemoteExternalIdTxt__c = :remoteId
+            AND ObjectTypePk__c = :cleanName
+            AND DirectionPk__c = 'Inbound'
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 50
+        ];
+
+        for (SyncItem__c entry : ledger) {
+            Id candidate = (Id) entry.LocalRecordIdTxt__c;
+            if (validateLocalIdExists(type, candidate)) {
+                return candidate;
+            }
         }
         return null;
+    }
+
+    /**
+     * @description Verifies that a candidate local record Id refers to a live row
+     * (not deleted or in the recycle bin). Returns false for null Ids, Ids of the
+     * wrong sobject type, and Ids that no longer resolve to a record.
+     *
+     * This guard exists because Salesforce's Database.update accepts a deleted
+     * record's Id without throwing — the call returns success and silently
+     * does nothing, which is exactly how stale bridges produced multi-day sync
+     * drift before this fix.
+     * @param type The expected SObjectType of the candidate Id.
+     * @param candidateId The Id to validate.
+     * @return True if the Id refers to an active local record of the expected type.
+     */
+    private static Boolean validateLocalIdExists(Schema.SObjectType type, Id candidateId) {
+        if (candidateId == null || candidateId.getSobjectType() != type) {
+            return false;
+        }
+        String soql = 'SELECT Id FROM ' + type.getDescribe().getName() + ' WHERE Id = :candidateId LIMIT 1';
+        List<SObject> existing = Database.queryWithBinds(
+            soql,
+            new Map<String, Object>{ 'candidateId' => candidateId },
+            AccessLevel.SYSTEM_MODE
+        );
+        return !existing.isEmpty();
     }
 
     // Helper to grab both the Work Item ID and the Request ID
