@@ -28,6 +28,30 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         enqueueOverdueRemindersIfEnabled();
         processScheduledDocumentSends();
         runReconciliation();
+        recalcWorkItemETAsIfTopOfHour();
+    }
+
+    /**
+     * @description Enqueues the WorkItem ETA recalculation queueable once per hour
+     *              (gated to the :00 tick of the four 15-minute scheduler slots).
+     *              This is the only place ETA recalc runs autonomously on subscriber
+     *              orgs — the existing NightlyRecalculation Schedulable was never
+     *              actually scheduled in production, so PR #614's engine fix never
+     *              ran without manual intervention. Verified empirically against
+     *              MF-Prod and Nimba on 2026-04-08: zero CronTriggers matching
+     *              ETA/Recalc/Nightly. Hourly is a safe default — the calculator
+     *              is idempotent and cheap for typical portfolio sizes.
+     */
+    private static void recalcWorkItemETAsIfTopOfHour() {
+        try {
+            if (Datetime.now().minute() != 0) {
+                return;
+            }
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] ETA recalc enqueue failed: ' + e.getMessage());
+        }
     }
 
     /**
