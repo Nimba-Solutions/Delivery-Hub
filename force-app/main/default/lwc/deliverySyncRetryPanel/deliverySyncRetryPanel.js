@@ -26,12 +26,15 @@ export default class DeliverySyncRetryPanel extends LightningElement {
         }
     }
 
-    get failedCount()   { return this._wiredResult && this._wiredResult.data ? this._wiredResult.data.failedCount || 0 : 0; }
-    get recentErrors()  { return this._wiredResult && this._wiredResult.data ? this._wiredResult.data.recentErrors || [] : []; }
-    get hasFailures()   { return this.failedCount > 0; }
-    get hasErrors()     { return this.recentErrors.length > 0; }
-    get pluralSuffix()  { return this.failedCount === 1 ? '' : 's'; }
-    get toggleLabel()   { return this.showDismissed ? 'Hide dismissed' : 'Show dismissed'; }
+    get failedCount()        { return this._wiredResult && this._wiredResult.data ? this._wiredResult.data.failedCount || 0 : 0; }
+    get recentErrors()       { return this._wiredResult && this._wiredResult.data ? this._wiredResult.data.recentErrors || [] : []; }
+    get stagedAwaitingPoll() { return this._wiredResult && this._wiredResult.data ? this._wiredResult.data.stagedAwaitingPoll || 0 : 0; }
+    get hasFailures()        { return this.failedCount > 0; }
+    get hasErrors()          { return this.recentErrors.length > 0; }
+    get hasStaged()          { return this.stagedAwaitingPoll > 0; }
+    get pluralSuffix()       { return this.failedCount === 1 ? '' : 's'; }
+    get stagedPluralSuffix() { return this.stagedAwaitingPoll === 1 ? '' : 's'; }
+    get toggleLabel()        { return this.showDismissed ? 'Hide dismissed' : 'Show dismissed'; }
 
     async handleRetry() {
         this.isRetrying = true;

@@ -218,7 +218,9 @@ global with sharing class DeliveryHubBoardController {
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
         Set<String> attentionStages = DeliveryWorkflowConfigService.getAttentionStageValues(workflowType);
 
-        // 1. Active items (non-terminal)
+        // 1. Active items (non-terminal). Apply the standard active-item filter set
+        // so this metric reconciles with every other "active" count on the dashboard:
+        // not a template, activated, not archived.
         Integer activeCount;
         if (entityId != null) {
             activeCount = [
@@ -227,6 +229,9 @@ global with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c NOT IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
                 AND ClientNetworkEntityLookup__c = :entityId
+                AND TemplateMarkedDateTime__c = null
+                AND ActivatedDateTime__c != null
+                AND ArchivedDateTime__c = null
                 WITH SYSTEM_MODE
             ];
         } else {
@@ -235,12 +240,15 @@ global with sharing class DeliveryHubBoardController {
                 FROM WorkItem__c
                 WHERE StageNamePk__c NOT IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
+                AND TemplateMarkedDateTime__c = null
+                AND ActivatedDateTime__c != null
+                AND ArchivedDateTime__c = null
                 WITH SYSTEM_MODE
             ];
         }
         metrics.put('activeCount', activeCount);
 
-        // 2. Completed this week
+        // 2. Completed this week — exclude templates so the count reflects real work.
         Date weekStart = Date.today().toStartOfWeek();
         Datetime weekStartDt = Datetime.newInstance(weekStart, Time.newInstance(0, 0, 0, 0));
         Integer completedThisWeek;
@@ -252,6 +260,7 @@ global with sharing class DeliveryHubBoardController {
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :weekStartDt
                 AND ClientNetworkEntityLookup__c = :entityId
+                AND TemplateMarkedDateTime__c = null
                 WITH SYSTEM_MODE
             ];
         } else {
@@ -261,12 +270,13 @@ global with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :weekStartDt
+                AND TemplateMarkedDateTime__c = null
                 WITH SYSTEM_MODE
             ];
         }
         metrics.put('completedThisWeek', completedThisWeek);
 
-        // 3. Completed this month (throughput)
+        // 3. Completed this month (throughput) — exclude templates.
         Date monthStart = Date.today().toStartOfMonth();
         Datetime monthStartDt = Datetime.newInstance(monthStart, Time.newInstance(0, 0, 0, 0));
         Integer completedThisMonth;
@@ -278,6 +288,7 @@ global with sharing class DeliveryHubBoardController {
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :monthStartDt
                 AND ClientNetworkEntityLookup__c = :entityId
+                AND TemplateMarkedDateTime__c = null
                 WITH SYSTEM_MODE
             ];
         } else {
@@ -287,12 +298,14 @@ global with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :monthStartDt
+                AND TemplateMarkedDateTime__c = null
                 WITH SYSTEM_MODE
             ];
         }
         metrics.put('completedThisMonth', completedThisMonth);
 
-        // 4. Average cycle time (days from creation to terminal stage, last 30 days)
+        // 4. Average cycle time (days from creation to terminal stage, last 30 days).
+        // Exclude templates so the cycle time reflects real work, not template clones.
         Date thirtyDaysAgo = Date.today().addDays(-30);
         Datetime thirtyDaysAgoDt = Datetime.newInstance(thirtyDaysAgo, Time.newInstance(0, 0, 0, 0));
         List<WorkItem__c> completedRecent;
@@ -304,6 +317,7 @@ global with sharing class DeliveryHubBoardController {
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :thirtyDaysAgoDt
                 AND ClientNetworkEntityLookup__c = :entityId
+                AND TemplateMarkedDateTime__c = null
                 WITH SYSTEM_MODE
                 LIMIT 200
             ];
@@ -314,6 +328,7 @@ global with sharing class DeliveryHubBoardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND WorkflowTypeTxt__c = :workflowType
                 AND LastModifiedDate >= :thirtyDaysAgoDt
+                AND TemplateMarkedDateTime__c = null
                 WITH SYSTEM_MODE
                 LIMIT 200
             ];
