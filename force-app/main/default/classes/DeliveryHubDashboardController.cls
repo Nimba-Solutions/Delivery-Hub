@@ -36,14 +36,18 @@ global with sharing class DeliveryHubDashboardController {
     global static Map<String, Object> getBudgetMetrics() {
         Map<String, Object> metrics = new Map<String, Object>();
 
-        // 1. Work Item Metrics (Active Count) — use CMT terminal stages so no hardcoded 'Closed'
+        // 1. Work Item Metrics (Active Count) — use CMT terminal stages so no hardcoded 'Closed'.
+        // Also requires the standard active-item filter set so this metric reconciles with
+        // every other dashboard count: must be activated, must not be a template, must not
+        // be archived. Pre-fix this query was missing the activated + archived checks.
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
         AggregateResult[] workItemStats = [
             SELECT Count(Id) total
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             AND TemplateMarkedDateTime__c = null
-
+            AND ActivatedDateTime__c != null
+            AND ArchivedDateTime__c = null
         ];
 
         Decimal activeCount = (workItemStats[0].get('total') != null) ? (Decimal)workItemStats[0].get('total') : 0;
@@ -99,11 +103,15 @@ global with sharing class DeliveryHubDashboardController {
         metrics.put('hoursLoggedLastMonth', lastMonthLoggedStats[0].get('total') != null ? (Decimal)lastMonthLoggedStats[0].get('total') : 0);
 
         // 2. Last Entry Logic (Find most recent activity on work items)
+        // Mirror the activeRequests filter so "last entry" reflects activity on the
+        // same population that activeRequests counts.
         List<WorkItem__c> lastActivity = [
             SELECT LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
             AND TemplateMarkedDateTime__c = null
+            AND ActivatedDateTime__c != null
+            AND ArchivedDateTime__c = null
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
@@ -116,12 +124,14 @@ global with sharing class DeliveryHubDashboardController {
         }
 
         // 3. Sync Health Metrics
-        // FIX: Alias 'StatusPk__c' to 'val' to prevent "Invalid field" errors in AggregateResult
+        // FIX: Alias 'StatusPk__c' to 'val' to prevent "Invalid field" errors in AggregateResult.
+        // Also excludes dismissed items so admin-triaged failures don't pollute the failed count
+        // (matches the dismissal-aware behavior of the syncHealth widget data source).
         AggregateResult[] syncStats = [
             SELECT StatusPk__c val, Count(Id) cnt
             FROM SyncItem__c
             WHERE StatusPk__c IN ('Synced', 'Failed')
-
+            AND DismissedDateTime__c = null
             GROUP BY StatusPk__c
         ];
 
@@ -158,6 +168,8 @@ global with sharing class DeliveryHubDashboardController {
             SELECT COUNT()
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
+            AND TemplateMarkedDateTime__c = null
+            AND ArchivedDateTime__c = null
         ];
     }
 
@@ -197,6 +209,8 @@ global with sharing class DeliveryHubDashboardController {
                    PriorityPk__c, LastModifiedDate, CalculatedETADate__c, DeveloperLookup__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
+            AND TemplateMarkedDateTime__c = null
+            AND ArchivedDateTime__c = null
             LIMIT 50
         ];
 
@@ -345,6 +359,8 @@ global with sharing class DeliveryHubDashboardController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
+            AND TemplateMarkedDateTime__c = null
+            AND ArchivedDateTime__c = null
             ORDER BY LastModifiedDate DESC
             LIMIT 5
         ];
@@ -458,7 +474,7 @@ global with sharing class DeliveryHubDashboardController {
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
 
-        // Items completed in range
+        // Items completed in range — exclude templates so the count reflects real work.
         Integer completed;
         if (endDt != null) {
             completed = [
@@ -467,6 +483,7 @@ global with sharing class DeliveryHubDashboardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
+                AND TemplateMarkedDateTime__c = null
             ];
         } else {
             completed = [
@@ -474,11 +491,12 @@ global with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
+                AND TemplateMarkedDateTime__c = null
             ];
         }
         metrics.put('completed', completed);
 
-        // Items modified (stage changed) in range
+        // Items modified (stage changed) in range — exclude templates and archived.
         Integer moved;
         if (endDt != null) {
             moved = [
@@ -487,6 +505,8 @@ global with sharing class DeliveryHubDashboardController {
                 WHERE LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
                 AND StageNamePk__c NOT IN :terminalStages
+                AND TemplateMarkedDateTime__c = null
+                AND ArchivedDateTime__c = null
             ];
         } else {
             moved = [
@@ -494,6 +514,8 @@ global with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE LastModifiedDate >= :startDt
                 AND StageNamePk__c NOT IN :terminalStages
+                AND TemplateMarkedDateTime__c = null
+                AND ArchivedDateTime__c = null
             ];
         }
         metrics.put('moved', moved);

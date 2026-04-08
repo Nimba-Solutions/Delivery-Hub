@@ -56,6 +56,14 @@
                     </template>
                 </div>
 
+                <!-- Staged-awaiting-poll info row (separate from failures) -->
+                <template lwc:if={hasStaged}>
+                    <div class="slds-text-body_small slds-text-color_weak slds-p-top_xx-small">
+                        <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                        {stagedAwaitingPoll} item{stagedPluralSuffix} waiting for downstream client to poll (Poll Mode — not failures)
+                    </div>
+                </template>
+
                 <!-- Recent errors table -->
                 <template lwc:if={hasErrors}>
                     <table class="srp-table">
