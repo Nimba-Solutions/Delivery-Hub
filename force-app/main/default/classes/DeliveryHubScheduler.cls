@@ -7,7 +7,7 @@
  * create recurring items, and deliver periodic status summaries.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.AvoidGlobalModifier')
+@SuppressWarnings('PMD.AvoidGlobalModifier, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 global without sharing class DeliveryHubScheduler implements Schedulable {
 
     /**
@@ -19,6 +19,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
      */
     global void execute(SchedulableContext sc) {
         requeueFailedItems();
+        autoDismissAgedFailedItems();
         processEscalations();
         processRecurringItems();
         runSyncAsync();
@@ -27,6 +28,45 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         enqueueOverdueRemindersIfEnabled();
         processScheduledDocumentSends();
         runReconciliation();
+        recalcWorkItemETAsIfTopOfHour();
+    }
+
+    /**
+     * @description Enqueues the WorkItem ETA recalculation queueable once per hour
+     *              (gated to the :00 tick of the four 15-minute scheduler slots).
+     *              This is the only place ETA recalc runs autonomously on subscriber
+     *              orgs — the existing NightlyRecalculation Schedulable was never
+     *              actually scheduled in production, so PR #614's engine fix never
+     *              ran without manual intervention. Verified empirically against
+     *              MF-Prod and Nimba on 2026-04-08: zero CronTriggers matching
+     *              ETA/Recalc/Nightly. Hourly is a safe default — the calculator
+     *              is idempotent and cheap for typical portfolio sizes.
+     */
+    private static void recalcWorkItemETAsIfTopOfHour() {
+        try {
+            if (Datetime.now().minute() != 0) {
+                return;
+            }
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] ETA recalc enqueue failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Auto-dismisses Failed sync items whose retries are exhausted
+     *              and have aged past FailedSyncAutoDismissDaysNumber__c. No-op
+     *              when the setting is null/0. Runs after requeueFailedItems()
+     *              so we never auto-dismiss something that could still self-heal.
+     */
+    private static void autoDismissAgedFailedItems() {
+        try {
+            DeliverySyncDismissalService.dismissAged();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] Auto-dismiss failed: ' + e.getMessage());
+        }
     }
 
     /**
