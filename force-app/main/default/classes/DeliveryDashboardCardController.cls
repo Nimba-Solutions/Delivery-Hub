@@ -39,7 +39,14 @@ global with sharing class DeliveryDashboardCardController {
                 return [SELECT COUNT() FROM WorkItem__c WHERE ActivatedDateTime__c != NULL AND ArchivedDateTime__c = NULL WITH SYSTEM_MODE];
             }
             when 'blockedItems' {
-                return [SELECT COUNT() FROM WorkItem__c WHERE StageNamePk__c LIKE '%Blocked%' AND ActivatedDateTime__c != NULL WITH SYSTEM_MODE];
+                return [
+                    SELECT COUNT() FROM WorkItem__c
+                    WHERE StageNamePk__c LIKE '%Blocked%'
+                    AND ActivatedDateTime__c != NULL
+                    AND ArchivedDateTime__c = NULL
+                    AND TemplateMarkedDateTime__c = NULL
+                    WITH SYSTEM_MODE
+                ];
             }
             when 'hoursThisMonth' {
                 Date monthStart = Date.today().toStartOfMonth();
@@ -53,7 +60,13 @@ global with sharing class DeliveryDashboardCardController {
             }
             when 'completedThisWeek' {
                 Date weekStart = Date.today().toStartOfWeek();
-                return [SELECT COUNT() FROM WorkItem__c WHERE StageNamePk__c = 'Done' AND LastModifiedDate >= :weekStart WITH SYSTEM_MODE];
+                return [
+                    SELECT COUNT() FROM WorkItem__c
+                    WHERE StageNamePk__c = 'Done'
+                    AND LastModifiedDate >= :weekStart
+                    AND TemplateMarkedDateTime__c = NULL
+                    WITH SYSTEM_MODE
+                ];
             }
             when 'overdueItems' {
                 // Use EstimatedEndDevDate__c, the date users actually populate during scoping.
@@ -75,7 +88,9 @@ global with sharing class DeliveryDashboardCardController {
                 for (AggregateResult ar : [
                     SELECT PriorityPk__c label, COUNT(Id) cnt
                     FROM WorkItem__c
-                    WHERE ActivatedDateTime__c != NULL AND ArchivedDateTime__c = NULL
+                    WHERE ActivatedDateTime__c != NULL
+                    AND ArchivedDateTime__c = NULL
+                    AND TemplateMarkedDateTime__c = NULL
                     WITH SYSTEM_MODE
                     GROUP BY PriorityPk__c
                     ORDER BY COUNT(Id) DESC
@@ -92,7 +107,9 @@ global with sharing class DeliveryDashboardCardController {
                 for (AggregateResult ar : [
                     SELECT StageNamePk__c label, COUNT(Id) cnt
                     FROM WorkItem__c
-                    WHERE ActivatedDateTime__c != NULL AND ArchivedDateTime__c = NULL
+                    WHERE ActivatedDateTime__c != NULL
+                    AND ArchivedDateTime__c = NULL
+                    AND TemplateMarkedDateTime__c = NULL
                     WITH SYSTEM_MODE
                     GROUP BY StageNamePk__c
                     ORDER BY COUNT(Id) DESC
@@ -142,7 +159,9 @@ global with sharing class DeliveryDashboardCardController {
                 ];
                 Integer succeeded = [
                     SELECT COUNT() FROM SyncItem__c
-                    WHERE StatusPk__c = 'Synced' AND CreatedDate = LAST_N_DAYS:7
+                    WHERE StatusPk__c = 'Synced'
+                    AND CreatedDate = LAST_N_DAYS:7
+                    AND DismissedDateTime__c = NULL
                     WITH SYSTEM_MODE
                 ];
                 return total > 0 ? Math.round((Decimal.valueOf(succeeded) / total) * 100) : 100;
