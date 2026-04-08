@@ -907,23 +907,14 @@ private class DeliveryEscalationServiceTest {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
-     * @description Returns empty string. The previous implementation read
-     *              Organization.NamespacePrefix and prepended it ('delivery__') to JSON
-     *              field keys passed to JSON.deserialize when constructing
-     *              WorkflowEscalationRule__mdt records. That worked in unmanaged scratch
-     *              orgs (where NamespacePrefix is blank) but in the namespaced packaging
-     *              org install-beta uses, it produced keys like
-     *              'delivery__TriggerStageTxt__c' which JSON.deserialize does not match
-     *              against the bare field names on the SObject describe — so every
-     *              custom field deserialized as null, the engine returned early at the
-     *              triggerStages.isEmpty() guard in DeliveryEscalationRuleEvaluator,
-     *              and 16 escalation tests failed in the Beta - Create workflow.
-     *              The fix: always return '' so JSON.deserialize sees bare keys in
-     *              both unmanaged and namespaced contexts.
-     * @return Empty string in all contexts.
+     * @description Returns the org namespace prefix (e.g. 'delivery__') or empty string
+     *              if running in an unpackaged context. Used to namespace-qualify custom
+     *              field keys in JSON deserialization of CMT records.
+     * @return Namespace prefix with trailing __ or empty string
      */
     private static String getNamespace() {
-        return '';
+        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
+        return String.isBlank(ns) ? '' : ns + '__';
     }
 
     /**
