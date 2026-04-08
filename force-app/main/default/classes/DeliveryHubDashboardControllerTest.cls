@@ -245,11 +245,14 @@ private class DeliveryHubDashboardControllerTest {
             Test.stopTest();
 
             // Sum the per-phase counts. Only the 1 active record should appear.
-            List<Object> phases = (List<Object>) result.get('phases');
+            // The phases list contains typed PhaseItem instances when called from
+            // Apex (not Map<String, Object> — that's only how it's serialized for
+            // @AuraEnabled JSON delivery to the LWC). Cast accordingly.
+            List<DeliveryHubDashboardController.PhaseItem> phases =
+                (List<DeliveryHubDashboardController.PhaseItem>) result.get('phases');
             Integer totalAcrossPhases = 0;
-            for (Object obj : phases) {
-                Map<String, Object> p = (Map<String, Object>) obj;
-                totalAcrossPhases += ((Integer) p.get('count'));
+            for (DeliveryHubDashboardController.PhaseItem p : phases) {
+                totalAcrossPhases += (p.count != null ? p.count : 0);
             }
             System.assertEquals(1, totalAcrossPhases,
                 'Per-phase total should equal the 1 active non-template non-archived item, not 4. Got: ' + totalAcrossPhases);
