@@ -130,6 +130,7 @@ public with sharing class DeliveryGanttController {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
                 + 'PriorityPk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, CreatedDate, '
+                + 'LastModifiedDate, '
                 + 'EstimatedHoursNumber__c, TotalLoggedHoursSum__c, '
                 + 'ActivatedDateTime__c, ParentWorkItemLookup__c, '
                 + 'DeveloperLookup__r.Name, '
@@ -219,18 +220,55 @@ public with sharing class DeliveryGanttController {
             : item.CreatedDate.date();
         task.startDate = String.valueOf(startDt);
 
-        Boolean hasRealEndDate = item.EstimatedEndDevDate__c != null
+        Boolean hasEngineeredEnd = item.EstimatedEndDevDate__c != null
             || item.ProjectedUATReadyDate__c != null
             || item.CalculatedETADate__c != null;
-        task.hasFallbackEndDate = !hasRealEndDate;
+        Boolean isTerminal = TERMINAL_STAGES.contains(item.StageNamePk__c);
 
-        Date endDt = resolveEndDate(item, startDt);
+        // Terminal items without engineered dates use LastModifiedDate as a real
+        // completion timestamp; otherwise the existing fallback chain handles it.
+        // hasFallbackEndDate = false in both real-data branches (engineered or
+        // terminal-LastModified), true only when we genuinely synthesize a future bar.
+        task.hasFallbackEndDate = !hasEngineeredEnd && !isTerminal;
+
+        Date endDt = chooseEndDate(item, startDt, hasEngineeredEnd, isTerminal);
         if (endDt < startDt) {
             endDt = startDt.addDays(1);
         }
         task.endDate = String.valueOf(endDt);
 
         return task;
+    }
+
+    /**
+     * @description Stage values considered terminal for Gantt rendering. Terminal
+     *              items receive their LastModifiedDate as the bar end instead of
+     *              the synthesized +14-day forward bar that the fallback chain
+     *              would otherwise produce. Hardcoded here (not CMT-driven) so the
+     *              Gantt's terminal definition stays stable across workflow types.
+     */
+    private static final Set<String> TERMINAL_STAGES = new Set<String>{
+        'Done', 'Deployed to Prod', 'Cancelled', 'Closed', 'Rejected'
+    };
+
+    /**
+     * @description Picks the right end date for a Gantt bar. Real engineered date
+     *              wins; otherwise terminal items use LastModifiedDate (their actual
+     *              completion timestamp); otherwise the +14d fallback chain runs.
+     * @param item The work item being mapped
+     * @param startDt The already-resolved start date for fallback anchoring
+     * @param hasEngineeredEnd True when at least one engineered end-date field is set
+     * @param isTerminal True when the item's stage is in TERMINAL_STAGES
+     * @return The end date the Gantt should render
+     */
+    private static Date chooseEndDate(WorkItem__c item, Date startDt, Boolean hasEngineeredEnd, Boolean isTerminal) {
+        if (hasEngineeredEnd) {
+            return resolveEndDate(item, startDt);
+        }
+        if (isTerminal) {
+            return item.LastModifiedDate.date();
+        }
+        return resolveEndDate(item, startDt);
     }
 
     /**
@@ -316,6 +354,10 @@ public with sharing class DeliveryGanttController {
      *              field. When all are null, falls back to a 14-day bar
      *              anchored to the LATER of (startDt, today) so stale items
      *              don't render as floating bars in the past.
+     * @param item The work item to resolve the end date for
+     * @param startDt The resolved start date used as the fallback anchor
+     * @return The resolved end date — real if any engineered field is set,
+     *         otherwise the synthesized +14-day fallback
      */
     private static Date resolveEndDate(WorkItem__c item, Date startDt) {
         if (item.EstimatedEndDevDate__c != null) {

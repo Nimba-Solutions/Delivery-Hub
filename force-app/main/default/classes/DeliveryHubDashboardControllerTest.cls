@@ -124,6 +124,141 @@ private class DeliveryHubDashboardControllerTest {
         }
     }
 
+    /**
+     * @description Bug A real-fix regression guard: hoursLoggedThisMonth surfaces
+     *              the entry-time view of hours, separate from hoursThisMonth which
+     *              honors WorkDate. The two diverge whenever entries are backdated.
+     *              Showing both makes the divergence self-documenting on the System
+     *              Pulse widget — no need for a human to explain why "this month = 0
+     *              but I worked 35 hours yesterday".
+     */
+    @IsTest
+    static void testHoursLoggedThisMonthIncludesBackdatedEntries() {
+        System.runAs(testUser) {
+            WorkItem__c wi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Logged-vs-worked test',
+                StageNamePk__c = 'In Development'
+            );
+            insert wi;
+
+            NetworkEntity__c vendor = new NetworkEntity__c(
+                Name = 'Logged Test Vendor',
+                EntityTypePk__c = 'Vendor',
+                StatusPk__c = 'Active'
+            );
+            insert vendor;
+            WorkRequest__c req = new WorkRequest__c(
+                WorkItemId__c = wi.Id,
+                DeliveryEntityLookup__c = vendor.Id,
+                StatusPk__c = 'Active'
+            );
+            insert req;
+
+            // Insert a log with a CURRENT-month WorkDate — counts in BOTH metrics
+            WorkLog__c currentLog = new WorkLog__c(
+                RequestId__c = req.Id,
+                WorkItemLookup__c = wi.Id,
+                HoursLoggedNumber__c = 4.0,
+                WorkDateDate__c = Date.today(),
+                WorkDescriptionTxt__c = 'Current month work'
+            );
+            insert currentLog;
+
+            // Insert a log BACKDATED to the previous month (CreatedDate is now,
+            // WorkDate is in the past). Should count in hoursLoggedThisMonth only,
+            // NOT in hoursThisMonth (which honors WorkDate).
+            WorkLog__c backdatedLog = new WorkLog__c(
+                RequestId__c = req.Id,
+                WorkItemLookup__c = wi.Id,
+                HoursLoggedNumber__c = 6.0,
+                WorkDateDate__c = Date.today().toStartOfMonth().addDays(-5),
+                WorkDescriptionTxt__c = 'Backdated work for last month'
+            );
+            insert backdatedLog;
+
+            Test.startTest();
+            Map<String, Object> metrics = DeliveryHubDashboardController.getBudgetMetrics();
+            Test.stopTest();
+
+            Decimal hoursWorked = (Decimal) metrics.get('hoursThisMonth');
+            Decimal hoursLogged = (Decimal) metrics.get('hoursLoggedThisMonth');
+
+            System.assertEquals(4.0, hoursWorked,
+                'hoursThisMonth (WorkDate-based) should count only the current-month log (4h)');
+            System.assertEquals(10.0, hoursLogged,
+                'hoursLoggedThisMonth (CreatedDate-based) should count BOTH logs (4h + 6h backdated)');
+            System.assertNotEquals(hoursWorked, hoursLogged,
+                'When entries are backdated, the two metrics MUST diverge — that is the whole point of surfacing both');
+        }
+    }
+
+    /**
+     * @description Bug C real-fix regression guard: the per-phase tile counts on
+     *              the "What's In Flight" widget should only include items that
+     *              are active (ActivatedDateTime__c not null), non-template, and
+     *              non-archived. Pre-fix the SOQL only excluded terminal stages,
+     *              so unactivated backlog items, recurring-item templates, and
+     *              archived items inflated the per-phase counts and caused the
+     *              tiles to disagree with every other "active items" metric.
+     */
+    @IsTest
+    static void testInFlightPhaseListExcludesUnactivatedAndTemplateAndArchived() {
+        System.runAs(testUser) {
+            // 1) Active item — should be counted
+            WorkItem__c active = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Active in dev',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now()
+            );
+            insert active;
+
+            // 2) Unactivated backlog item — should NOT be counted (no ActivatedDateTime)
+            // Bypass the auto-stamp trigger so it lands genuinely unactivated.
+            DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+            try {
+                insert new WorkItem__c(
+                    BriefDescriptionTxt__c = 'Backlog unactivated',
+                    StageNamePk__c = 'Backlog'
+                );
+            } finally {
+                DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+            }
+
+            // 3) Template item — should NOT be counted
+            insert new WorkItem__c(
+                BriefDescriptionTxt__c = 'Recurring template',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now(),
+                TemplateMarkedDateTime__c = Datetime.now()
+            );
+
+            // 4) Archived item — should NOT be counted
+            insert new WorkItem__c(
+                BriefDescriptionTxt__c = 'Archived',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now(),
+                ArchivedDateTime__c = Datetime.now()
+            );
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
+            Test.stopTest();
+
+            // Sum the per-phase counts. Only the 1 active record should appear.
+            // The phases list contains typed PhaseItem instances when called from
+            // Apex (not Map<String, Object> — that's only how it's serialized for
+            // @AuraEnabled JSON delivery to the LWC). Cast accordingly.
+            List<DeliveryHubDashboardController.PhaseItem> phases =
+                (List<DeliveryHubDashboardController.PhaseItem>) result.get('phases');
+            Integer totalAcrossPhases = 0;
+            for (DeliveryHubDashboardController.PhaseItem p : phases) {
+                totalAcrossPhases += (p.count != null ? p.count : 0);
+            }
+            System.assertEquals(1, totalAcrossPhases,
+                'Per-phase total should equal the 1 active non-template non-archived item, not 4. Got: ' + totalAcrossPhases);
+        }
+    }
+
     @IsTest
     static void testGetClientDashboard() {
         System.runAs(testUser) {

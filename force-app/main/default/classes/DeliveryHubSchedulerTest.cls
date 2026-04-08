@@ -185,6 +185,65 @@ private class DeliveryHubSchedulerTest {
     }
 
     /**
+     * @description Phase-2 / chain-repair regression guard: when an outbound
+     *              SyncItem is parked as 'Staged' because the destination
+     *              NetworkEntity had no endpoint URL at processing time, the
+     *              scheduler should heal it back to 'Queued' as soon as the
+     *              endpoint becomes available. Pre-fix Staged items sat there
+     *              forever; this test asserts the heal happens on the next tick.
+     */
+    @IsTest
+    static void testStagedItemRequeuesAfterEndpointConfigured() {
+        System.runAs(testUser) {
+            // Vendor with NO endpoint at insert time
+            NetworkEntity__c vendor = new NetworkEntity__c(
+                Name = 'Healable Vendor',
+                StatusPk__c = 'Active',
+                EntityTypePk__c = 'Vendor'
+            );
+            insert vendor;
+
+            WorkItem__c wi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Heal-staged test',
+                StageNamePk__c = 'Backlog'
+            );
+            insert wi;
+
+            WorkRequest__c req = new WorkRequest__c(
+                WorkItemId__c = wi.Id,
+                DeliveryEntityLookup__c = vendor.Id,
+                StatusPk__c = 'Active'
+            );
+            insert req;
+
+            // Insert the SyncItem already in Staged state (simulating what
+            // DeliverySyncItemProcessor would have done when endpoint was missing)
+            SyncItem__c stagedItem = new SyncItem__c(
+                StatusPk__c = 'Staged',
+                DirectionPk__c = 'Outbound',
+                WorkItemLookup__c = wi.Id,
+                RequestLookup__c = req.Id,
+                ObjectTypePk__c = 'WorkItem__c',
+                PayloadTxt__c = '{"test":true}'
+            );
+            insert stagedItem;
+
+            // Now CONFIGURE the endpoint on the destination entity
+            vendor.IntegrationEndpointUrlTxt__c = 'https://heal-test.example.com';
+            update vendor;
+
+            Test.startTest();
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
+            new DeliveryHubScheduler().execute(null);
+            Test.stopTest();
+
+            SyncItem__c reloaded = [SELECT StatusPk__c FROM SyncItem__c WHERE Id = :stagedItem.Id];
+            System.assertNotEquals('Staged', reloaded.StatusPk__c,
+                'Staged item should have been requeued (or further processed) once vendor endpoint was configured. Got: ' + reloaded.StatusPk__c);
+        }
+    }
+
+    /**
      * @description Mock implementation for the sync handshake.
      */
     public class MockResponse implements HttpCalloutMock {

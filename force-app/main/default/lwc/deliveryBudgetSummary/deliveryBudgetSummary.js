@@ -19,6 +19,8 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
     @track metrics = {
         hoursThisMonth: 0,
         hoursLastMonth: 0,
+        hoursLoggedThisMonth: 0,
+        hoursLoggedLastMonth: 0,
         activeRequests: 0,
         succeededSyncs: 0,
         failedSyncs: 0,
