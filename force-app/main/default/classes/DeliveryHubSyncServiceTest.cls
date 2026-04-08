@@ -387,6 +387,102 @@ private class DeliveryHubSyncServiceTest {
     }
 
     @IsTest
+    static void testGatewayEchoSuppressionRecentOutboundStillBlocks() {
+        System.runAs(testUser) {
+            // Simulates an in-flight round-trip: this org sent an outbound for
+            // GLOBAL-SRC-RECENT moments ago and the same payload is bouncing back.
+            // The recent outbound should still be classified as an echo and
+            // the inbound should be silently dropped before the ingestor runs.
+            String globalSourceId = 'GLOBAL-SRC-RECENT';
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
+
+            insert new SyncItem__c(
+                DirectionPk__c = 'Outbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                GlobalSourceIdTxt__c = globalSourceId,
+                LocalRecordIdTxt__c = (String) wi.Id,
+                WorkItemLookup__c = wi.Id,
+                PayloadTxt__c = '{"placeholder":true}'
+            );
+
+            RestRequest req = new RestRequest();
+            RestResponse res = new RestResponse();
+            req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
+            req.httpMethod = 'POST';
+            req.addHeader('X-Global-Source-Id', globalSourceId);
+            req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                'SourceId' => 'REMOTE-WORKITEM-123',
+                'BriefDescriptionTxt__c' => 'Should NOT be applied — this is an echo'
+            }));
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryHubSyncService.handleIncomingSync();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'Echo suppression returns 200 with a status body');
+            String body = res.responseBody.toString();
+            System.assert(body.contains('Echo suppressed'), 'Body should explicitly say Echo suppressed: ' + body);
+
+            // The inbound payload must NOT have been applied
+            WorkItem__c after = [SELECT BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :wi.Id];
+            System.assertNotEquals('Should NOT be applied — this is an echo', after.BriefDescriptionTxt__c, 'Recent outbound must still suppress the echo');
+        }
+    }
+
+    @IsTest
+    static void testGatewayEchoSuppressionStaleOutboundDoesNotBlock() {
+        System.runAs(testUser) {
+            // Simulates the production drift scenario: this org has an outbound
+            // for GLOBAL-SRC-STALE from days ago (long-since synced), then the
+            // peer org sends a legitimate later update for the same record.
+            // The stale outbound must NOT be treated as evidence of an echo —
+            // otherwise the inbound would be silently dropped and the records
+            // would diverge permanently.
+            String globalSourceId = 'GLOBAL-SRC-STALE';
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
+
+            SyncItem__c stale = new SyncItem__c(
+                DirectionPk__c = 'Outbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                GlobalSourceIdTxt__c = globalSourceId,
+                LocalRecordIdTxt__c = (String) wi.Id,
+                WorkItemLookup__c = wi.Id,
+                PayloadTxt__c = '{"placeholder":true}'
+            );
+            insert stale;
+            // Force CreatedDate to outside the suppression window so the gateway treats it as stale
+            Test.setCreatedDate(stale.Id, Datetime.now().addSeconds(-(DeliveryHubSyncService.ECHO_SUPPRESSION_WINDOW_SECONDS + 60)));
+
+            RestRequest req = new RestRequest();
+            RestResponse res = new RestResponse();
+            req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
+            req.httpMethod = 'POST';
+            req.addHeader('X-Global-Source-Id', globalSourceId);
+            req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                'SourceId' => 'REMOTE-WORKITEM-123',
+                'BriefDescriptionTxt__c' => 'Legitimate later update — must be applied'
+            }));
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryHubSyncService.handleIncomingSync();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'Inbound should succeed, not be suppressed');
+            String body = res.responseBody.toString();
+            System.assert(!body.contains('Echo suppressed'), 'Stale outbound must NOT trigger echo suppression: ' + body);
+
+            WorkItem__c after = [SELECT BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :wi.Id];
+            System.assertEquals('Legitimate later update — must be applied', after.BriefDescriptionTxt__c, 'Stale-outbound case must allow the inbound through to the ingestor');
+        }
+    }
+
+    @IsTest
     static void testGetWithInvalidApiKey() {
         System.runAs(testUser) {
             NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];

@@ -11,6 +11,16 @@
 global without sharing class DeliveryHubSyncService {
 
     /**
+     * @description Lookback window for gateway-level echo suppression. Outbound
+     * SyncItems older than this are NOT considered evidence of a round-trip
+     * echo. 300s (5 min) catches any in-flight loop (which closes in seconds)
+     * while preventing the GlobalSourceId-keyed check from permanently
+     * blocking legitimate later inbounds for already-synced records.
+     */
+    @TestVisible
+    private static final Integer ECHO_SUPPRESSION_WINDOW_SECONDS = 300;
+
+    /**
      * @description Handles incoming HTTP POST requests containing sync payloads (The Push Flow).
      * Identifies the object type from the URL path and delegates processing to the ingestor.
      * Supports opt-in API key validation: if the sender has an ApiKeyTxt__c configured,
@@ -78,13 +88,30 @@ global without sharing class DeliveryHubSyncService {
                 return;
             }
 
-            // Gateway-level echo suppression: if this payload originated here, suppress before running the ingestor
+            // Gateway-level echo suppression: if we very recently sent an outbound
+            // carrying this same X-Global-Source-Id, treat the inbound as the
+            // round-trip echo and drop it.
+            //
+            // CRITICAL: bound the lookup by a short time window. GlobalSourceId
+            // is the per-RECORD source Id (not a per-event Id), so once any
+            // record has been synced bidirectionally even once, BOTH orgs
+            // permanently have outbound SyncItems carrying that GlobalSourceId.
+            // Without a time window every legitimate later inbound for that
+            // record gets falsely classified as an echo and silently dropped —
+            // exactly the failure mode that caused multi-day MF-Prod ↔ Nimba
+            // drift before this fix.
+            //
+            // Real loops complete within seconds (Queueable retries take ~1s).
+            // ECHO_SUPPRESSION_WINDOW_SECONDS gives a generous safety margin
+            // while ensuring stale outbounds can't permanently block sync.
             String incomingGlobalSourceId = req.headers.get('X-Global-Source-Id');
             if (String.isNotBlank(incomingGlobalSourceId)) {
+                Datetime echoCutoff = Datetime.now().addSeconds(-ECHO_SUPPRESSION_WINDOW_SECONDS);
                 Integer echoCount = [
                     SELECT Count() FROM SyncItem__c
                     WHERE GlobalSourceIdTxt__c = :incomingGlobalSourceId
                     AND DirectionPk__c = 'Outbound'
+                    AND CreatedDate >= :echoCutoff
                     WITH SYSTEM_MODE
                     LIMIT 1
                 ];
