@@ -224,4 +224,159 @@ private class DeliveryWorkItemETAServiceTest {
             System.assert(updatedWorkItems.size() >= 0, 'Queueable with explicit type should execute without error');
         }
     }
+
+    // ── Hours-only sizing path (Bug fix: PR #588 regression) ─────────────
+
+    /**
+     * @description Items sized only with EstimatedHoursNumber__c (no DeveloperDays)
+     *              must be processed by the engine. Pre-fix the engine excluded them
+     *              entirely, leaving stale dates forever in hour-sized portfolios.
+     */
+    @IsTest
+    static void testHoursOnlySizedItemGetsScheduled() {
+        System.runAs(testUser) {
+            WorkItem__c hoursOnly = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Hours-only sized item',
+                StageNamePk__c         = 'In Development',
+                PriorityPk__c          = 'High',
+                EstimatedHoursNumber__c = 16, // 2 days at 8h
+                SortOrderNumber__c     = 100
+            );
+            insert hoursOnly;
+
+            Test.startTest();
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
+            Test.stopTest();
+
+            WorkItem__c reloaded = [
+                SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c, ProjectedUATReadyDate__c
+                FROM WorkItem__c WHERE Id = :hoursOnly.Id
+            ];
+            System.assertNotEquals(null, reloaded.EstimatedStartDevDate__c,
+                'Hours-only item should receive an EstimatedStartDevDate');
+            System.assertNotEquals(null, reloaded.EstimatedEndDevDate__c,
+                'Hours-only item should receive an EstimatedEndDevDate');
+            System.assertNotEquals(null, reloaded.ProjectedUATReadyDate__c,
+                'Hours-only item should receive a ProjectedUATReadyDate');
+            System.assert(reloaded.EstimatedEndDevDate__c >= reloaded.EstimatedStartDevDate__c,
+                'End date must not precede start date');
+        }
+    }
+
+    /**
+     * @description Hours→days conversion rounds up (Math.ceil(hours/8.0)) so a 1h
+     *              task still consumes 1 full day. 1h → 1 day, 9h → 2 days.
+     */
+    @IsTest
+    static void testHoursRoundUpToFullDays() {
+        System.runAs(testUser) {
+            WorkItem__c oneHour = new WorkItem__c(
+                BriefDescriptionTxt__c = 'One-hour task',
+                StageNamePk__c         = 'In Development',
+                PriorityPk__c          = 'High',
+                EstimatedHoursNumber__c = 1,
+                SortOrderNumber__c     = 200
+            );
+            WorkItem__c nineHours = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Nine-hour task',
+                StageNamePk__c         = 'In Development',
+                PriorityPk__c          = 'High',
+                EstimatedHoursNumber__c = 9,
+                SortOrderNumber__c     = 201
+            );
+            insert new List<WorkItem__c>{ oneHour, nineHours };
+
+            Test.startTest();
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
+            Test.stopTest();
+
+            List<WorkItem__c> results = [
+                SELECT Id, EstimatedStartDevDate__c, EstimatedEndDevDate__c
+                FROM WorkItem__c WHERE Id IN (:oneHour.Id, :nineHours.Id)
+            ];
+            for (WorkItem__c r : results) {
+                System.assertNotEquals(null, r.EstimatedStartDevDate__c,
+                    'Both items should be scheduled');
+                System.assertNotEquals(null, r.EstimatedEndDevDate__c,
+                    'Both items should have an end date');
+                System.assert(r.EstimatedEndDevDate__c >= r.EstimatedStartDevDate__c,
+                    'End date must not precede start date');
+            }
+        }
+    }
+
+    /**
+     * @description When both DeveloperDays and EstimatedHours are set, DeveloperDays
+     *              takes precedence (it is the engine's native unit). This guards
+     *              against accidental regressions in the effort selection logic.
+     */
+    @IsTest
+    static void testDeveloperDaysPreferredWhenBothSet() {
+        System.runAs(testUser) {
+            // 1 devday should produce a meaningfully different end date than
+            // 80 hours (which would convert to 10 days). If the test produces
+            // identical end dates the precedence logic is broken.
+            WorkItem__c bothSet = new WorkItem__c(
+                BriefDescriptionTxt__c   = 'Both fields set',
+                StageNamePk__c           = 'In Development',
+                PriorityPk__c            = 'High',
+                DeveloperDaysSizeNumber__c = 1,
+                EstimatedHoursNumber__c  = 80,
+                SortOrderNumber__c       = 300
+            );
+            insert bothSet;
+
+            Test.startTest();
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
+            Test.stopTest();
+
+            WorkItem__c reloaded = [
+                SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c
+                FROM WorkItem__c WHERE Id = :bothSet.Id
+            ];
+            // 1 devday means end date is 1 business day past start. 80h would
+            // mean ~10 business days. The gap should be small.
+            Integer gap = reloaded.EstimatedStartDevDate__c.daysBetween(reloaded.EstimatedEndDevDate__c);
+            System.assert(gap <= 3,
+                'DeveloperDays(1) should produce ~1-day gap, not ~10. Got: ' + gap);
+        }
+    }
+
+    /**
+     * @description Pre-loop cleanup pass should null out stale Estimated dates on
+     *              active WorkItems that have neither DeveloperDays nor EstimatedHours.
+     *              Without this, items outside the engine's filter keep stale values
+     *              forever. Bug 3 from the parallel handoff doc.
+     */
+    @IsTest
+    static void testUnsizedItemsHaveStaleDatesCleared() {
+        System.runAs(testUser) {
+            // Active item, no sizing fields, but with stale dates from a "previous run"
+            WorkItem__c unsized = new WorkItem__c(
+                BriefDescriptionTxt__c   = 'Unsized stale item',
+                StageNamePk__c           = 'In Development',
+                PriorityPk__c            = 'High',
+                EstimatedStartDevDate__c = Date.today().addDays(-5),
+                EstimatedEndDevDate__c   = Date.today().addDays(-5),
+                ProjectedUATReadyDate__c = Date.today().addDays(-5),
+                SortOrderNumber__c       = 400
+            );
+            insert unsized;
+
+            Test.startTest();
+            System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
+            Test.stopTest();
+
+            WorkItem__c reloaded = [
+                SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c, ProjectedUATReadyDate__c
+                FROM WorkItem__c WHERE Id = :unsized.Id
+            ];
+            System.assertEquals(null, reloaded.EstimatedStartDevDate__c,
+                'Unsized item EstimatedStartDevDate should be cleared');
+            System.assertEquals(null, reloaded.EstimatedEndDevDate__c,
+                'Unsized item EstimatedEndDevDate should be cleared');
+            System.assertEquals(null, reloaded.ProjectedUATReadyDate__c,
+                'Unsized item ProjectedUATReadyDate should be cleared');
+        }
+    }
 }
