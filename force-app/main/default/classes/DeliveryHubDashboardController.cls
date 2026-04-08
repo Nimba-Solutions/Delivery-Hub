@@ -168,6 +168,8 @@ global with sharing class DeliveryHubDashboardController {
             SELECT COUNT()
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
+            AND TemplateMarkedDateTime__c = null
+            AND ArchivedDateTime__c = null
         ];
     }
 
@@ -207,6 +209,8 @@ global with sharing class DeliveryHubDashboardController {
                    PriorityPk__c, LastModifiedDate, CalculatedETADate__c, DeveloperLookup__c
             FROM WorkItem__c
             WHERE StageNamePk__c IN :clientStages
+            AND TemplateMarkedDateTime__c = null
+            AND ArchivedDateTime__c = null
             LIMIT 50
         ];
 
@@ -355,6 +359,8 @@ global with sharing class DeliveryHubDashboardController {
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
             WHERE StageNamePk__c NOT IN :terminalStages
+            AND TemplateMarkedDateTime__c = null
+            AND ArchivedDateTime__c = null
             ORDER BY LastModifiedDate DESC
             LIMIT 5
         ];
@@ -468,7 +474,7 @@ global with sharing class DeliveryHubDashboardController {
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
 
-        // Items completed in range
+        // Items completed in range — exclude templates so the count reflects real work.
         Integer completed;
         if (endDt != null) {
             completed = [
@@ -477,6 +483,7 @@ global with sharing class DeliveryHubDashboardController {
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
+                AND TemplateMarkedDateTime__c = null
             ];
         } else {
             completed = [
@@ -484,11 +491,12 @@ global with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE StageNamePk__c IN :terminalStages
                 AND LastModifiedDate >= :startDt
+                AND TemplateMarkedDateTime__c = null
             ];
         }
         metrics.put('completed', completed);
 
-        // Items modified (stage changed) in range
+        // Items modified (stage changed) in range — exclude templates and archived.
         Integer moved;
         if (endDt != null) {
             moved = [
@@ -497,6 +505,8 @@ global with sharing class DeliveryHubDashboardController {
                 WHERE LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
                 AND StageNamePk__c NOT IN :terminalStages
+                AND TemplateMarkedDateTime__c = null
+                AND ArchivedDateTime__c = null
             ];
         } else {
             moved = [
@@ -504,6 +514,8 @@ global with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE LastModifiedDate >= :startDt
                 AND StageNamePk__c NOT IN :terminalStages
+                AND TemplateMarkedDateTime__c = null
+                AND ArchivedDateTime__c = null
             ];
         }
         metrics.put('moved', moved);
