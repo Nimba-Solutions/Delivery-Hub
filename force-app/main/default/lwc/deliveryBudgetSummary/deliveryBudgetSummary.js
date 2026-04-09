@@ -180,16 +180,25 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
     }
 
     /**
-     * Last-month sub-text click — same Monthly_Hours report. Narrows
-     * BOTH pairs to the previous month, so clicking either the "logged"
-     * or "by Work Date" number in the sub-text takes you to the full
-     * last-month view (both columns visible for comparison).
+     * "X logged" in the last-month sub-text — narrows CreatedDate to
+     * previous month, shows records entered during that month.
      */
-    handleHoursLastMonthClick(event) {
+    handleLastMonthLoggedClick(event) {
         if (event && event.stopPropagation) {
             event.stopPropagation();
         }
-        this.navigateToHoursReport(-1, 'both');
+        this.navigateToHoursReport(-1, 'created');
+    }
+
+    /**
+     * "X by Work Date" in the last-month sub-text — narrows WorkDate to
+     * previous month, shows records where work was performed that month.
+     */
+    handleLastMonthWorkedClick(event) {
+        if (event && event.stopPropagation) {
+            event.stopPropagation();
+        }
+        this.navigateToHoursReport(-1, 'worked');
     }
 
     /**

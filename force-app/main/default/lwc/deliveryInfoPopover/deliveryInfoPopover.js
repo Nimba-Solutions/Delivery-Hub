@@ -49,12 +49,12 @@ const INFO_REGISTRY = {
     },
     deliveryBudgetSummary: {
         dataSource:
-            'Calls getBudgetMetrics which counts active WorkItems (IsActive = true), sums WorkLog hours for current and previous months, and tallies Sync_Item__c records by status to compute connection health percentage.',
+            'Calls getBudgetMetrics which counts active WorkItems (ActivatedDateTime__c set, not archived, not a template), sums WorkLog hours two ways: "Logged" uses CreatedDate (when the entry was made), "by Work Date" uses WorkDateDate__c (when the work was performed). Connection health tallies SyncItem__c by StatusPk__c. Click any number to open the Monthly Hours report filtered to that exact data set.',
         description:
-            'Quick health check showing active work item count, hours logged this month vs. last month, and (optionally) sync connection health with success/failure counts.',
+            'System health at a glance. Shows active work items, hours logged this month (with a secondary "by Work Date" metric for backdated entries), and sync connection health. Each number is clickable and opens a report showing exactly the records behind that count.',
         friendlyName: 'System Pulse',
         keyFields:
-            'WorkItem__c.ActivatedDateTime__c, WorkLog__c.HoursNumber__c, WorkLog__c.WorkDateDate__c, Sync_Item__c.StatusPk__c'
+            'WorkItem__c.ActivatedDateTime__c, WorkLog__c.HoursLoggedNumber__c, WorkLog__c.WorkDateDate__c, WorkLog__c.CreatedDate, SyncItem__c.StatusPk__c'
     },
     deliveryClientDashboard: {
         dataSource:
