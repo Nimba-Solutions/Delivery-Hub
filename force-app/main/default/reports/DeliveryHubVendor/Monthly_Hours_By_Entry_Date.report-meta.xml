@@ -10,19 +10,13 @@
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</field>
     </columns>
     <columns>
+        <aggregateTypes>Sum</aggregateTypes>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%HoursLoggedNumber__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDescriptionTxt__c</field>
     </columns>
-    <description>Work logs filtered by ENTRY DATE (CreatedDate) — when the hours were logged into the system. Click from "Hours Logged This Month" on System Pulse.</description>
-    <format>Summary</format>
-    <groupingsDown>
-        <dateGranularity>Day</dateGranularity>
-        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
-        <sortOrder>Asc</sortOrder>
-    </groupingsDown>
-    <name>Hours Logged (by Entry Date)</name>
+    <description>Work logs filtered by ENTRY DATE (CreatedDate) — when the hours were logged into the system. Click from "Hours Entered This Month" on System Pulse.</description>
     <filter>
         <booleanFilter>1 AND 2</booleanFilter>
         <criteriaItems>
@@ -40,6 +34,13 @@
             <value>THIS_MONTH</value>
         </criteriaItems>
     </filter>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <name>Hours Logged (by Entry Date)</name>
     <reportType>%%%NAMESPACE%%%Work_Logs__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>

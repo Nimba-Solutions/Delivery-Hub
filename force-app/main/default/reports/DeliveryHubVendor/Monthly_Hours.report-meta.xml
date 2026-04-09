@@ -10,19 +10,13 @@
         <field>%%%NAMESPACE%%%WorkLog__c$CreatedDate</field>
     </columns>
     <columns>
+        <aggregateTypes>Sum</aggregateTypes>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%HoursLoggedNumber__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDescriptionTxt__c</field>
     </columns>
-    <description>Work logs filtered by WORK DATE — when the work was actually performed. Click from "hrs by Work Date" on System Pulse.</description>
-    <format>Summary</format>
-    <groupingsDown>
-        <dateGranularity>Day</dateGranularity>
-        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
-        <sortOrder>Asc</sortOrder>
-    </groupingsDown>
-    <name>Hours Logged (by Work Date)</name>
+    <description>Work logs filtered by WORK DATE — when the work was actually performed. Click from "hours performed" on System Pulse.</description>
     <filter>
         <booleanFilter>1 AND 2</booleanFilter>
         <criteriaItems>
@@ -40,6 +34,13 @@
             <value>THIS_MONTH</value>
         </criteriaItems>
     </filter>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <name>Hours Logged (by Work Date)</name>
     <reportType>%%%NAMESPACE%%%Work_Logs__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
