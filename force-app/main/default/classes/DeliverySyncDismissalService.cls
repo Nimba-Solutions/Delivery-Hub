@@ -65,11 +65,11 @@ public with sharing class DeliverySyncDismissalService {
     }
 
     /**
-     * @description Auto-dismisses Failed sync items whose retries are exhausted
-     *              and whose LastModifiedDate is older than
-     *              FailedSyncAutoDismissDaysNumber__c. Called from
-     *              DeliveryHubScheduler.execute(). Returns 0 (no-op) when the
-     *              setting is null or 0 — auto-aging is opt-in.
+     * @description Auto-dismisses aged sync items that are permanently stuck:
+     *              Failed items whose retries are exhausted AND Staged items
+     *              whose destination still has no endpoint after the aging window.
+     *              Called from DeliveryHubScheduler.execute(). Returns 0 (no-op)
+     *              when the setting is null or 0 — auto-aging is opt-in.
      * @return Count of records auto-dismissed.
      */
     public static Integer dismissAged() {
@@ -84,12 +84,27 @@ public with sharing class DeliverySyncDismissalService {
         Datetime cutoff = Datetime.now().addDays(-ageDays);
 
         Set<Id> agedIds = new Set<Id>();
+        // Failed items with exhausted retries
         for (SyncItem__c si : [
             SELECT Id FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             AND DismissedDateTime__c = NULL
             AND LastModifiedDate < :cutoff
             AND RetryCountNumber__c >= :maxRetries
+            WITH SYSTEM_MODE
+            LIMIT 200
+        ]) {
+            agedIds.add(si.Id);
+        }
+        // Staged items that have been sitting past the aging window — their
+        // destination still has no endpoint after N days, so they're not
+        // going to self-heal. Same aging window, no retry-count gate
+        // (Staged items never get retried, they just sit).
+        for (SyncItem__c si : [
+            SELECT Id FROM SyncItem__c
+            WHERE StatusPk__c = 'Staged'
+            AND DismissedDateTime__c = NULL
+            AND LastModifiedDate < :cutoff
             WITH SYSTEM_MODE
             LIMIT 200
         ]) {
@@ -105,8 +120,11 @@ public with sharing class DeliverySyncDismissalService {
 
     /**
      * @description Shared write path used by both manual and auto dismissal.
-     *              Skips items already dismissed or not in Failed status to keep
-     *              the operation idempotent.
+     *              Dismisses Failed OR Staged items. Staged items are outbound
+     *              items parked because the destination has no endpoint — they're
+     *              not failures but they're also not going anywhere, so admins
+     *              need to be able to dismiss them the same way. Pre-fix only
+     *              Failed items were dismissable which forced raw DML for Staged.
      * @param ids Candidate Ids.
      * @param reason Reason persisted on the audit log.
      * @param mode 'Manual' or 'Auto' — discriminator for the audit log only.
@@ -118,7 +136,7 @@ public with sharing class DeliverySyncDismissalService {
         for (SyncItem__c si : [
             SELECT Id FROM SyncItem__c
             WHERE Id IN :ids
-            AND StatusPk__c = 'Failed'
+            AND StatusPk__c IN ('Failed', 'Staged')
             AND DismissedDateTime__c = NULL
             WITH SYSTEM_MODE
         ]) {
