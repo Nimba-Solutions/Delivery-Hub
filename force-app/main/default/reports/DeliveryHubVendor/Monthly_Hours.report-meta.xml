@@ -7,6 +7,9 @@
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</field>
     </columns>
     <columns>
+        <field>%%%NAMESPACE%%%WorkLog__c$CreatedDate</field>
+    </columns>
+    <columns>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%HoursLoggedNumber__c</field>
     </columns>
     <columns>
@@ -15,7 +18,7 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%StatusPk__c</field>
     </columns>
-    <description>Work logs for the current month grouped by work item.</description>
+    <description>Work logs grouped by work item. Supports both Work Date and Created Date filtering via URL parameters (fv0-fv3) from the System Pulse widget click handlers.</description>
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
@@ -24,20 +27,34 @@
     </groupingsDown>
     <name>Hours Logged</name>
     <filter>
-        <booleanFilter>1 AND 2</booleanFilter>
+        <booleanFilter>1 AND 2 AND 3 AND 4</booleanFilter>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>greaterOrEqual</operator>
-            <value>THIS_WEEK</value>
+            <value>1/1/1900</value>
         </criteriaItems>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>lessOrEqual</operator>
-            <value>THIS_WEEK</value>
+            <value>12/31/2099</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkLog__c$CreatedDate</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>greaterOrEqual</operator>
+            <value>1/1/1900</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkLog__c$CreatedDate</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>lessOrEqual</operator>
+            <value>12/31/2099</value>
         </criteriaItems>
     </filter>
     <reportType>%%%NAMESPACE%%%Work_Logs__c</reportType>

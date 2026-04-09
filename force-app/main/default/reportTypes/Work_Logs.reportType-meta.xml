@@ -41,6 +41,16 @@
             <field>StatusPk__c</field>
             <table>WorkLog__c</table>
         </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>CreatedDate</field>
+            <table>WorkLog__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>CreatedBy</field>
+            <table>WorkLog__c</table>
+        </columns>
         <masterLabel>Work Logs</masterLabel>
     </sections>
 </ReportType>
