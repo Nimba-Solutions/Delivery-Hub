@@ -4,10 +4,10 @@
         <field>%%%NAMESPACE%%%WorkLog__c$Name</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</field>
+        <field>%%%NAMESPACE%%%WorkLog__c$CreatedDate</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkLog__c$CreatedDate</field>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%HoursLoggedNumber__c</field>
@@ -15,25 +15,25 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDescriptionTxt__c</field>
     </columns>
-    <description>Work logs filtered by WORK DATE — when the work was actually performed. Click from "hrs by Work Date" on System Pulse.</description>
+    <description>Work logs filtered by ENTRY DATE (CreatedDate) — when the hours were logged into the system. Click from "Hours Logged This Month" on System Pulse.</description>
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
-    <name>Hours Logged (by Work Date)</name>
+    <name>Hours Logged (by Entry Date)</name>
     <filter>
         <booleanFilter>1 AND 2</booleanFilter>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</column>
+            <column>%%%NAMESPACE%%%WorkLog__c$CreatedDate</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>greaterOrEqual</operator>
             <value>THIS_MONTH</value>
         </criteriaItems>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</column>
+            <column>%%%NAMESPACE%%%WorkLog__c$CreatedDate</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>lessOrEqual</operator>
@@ -46,7 +46,7 @@
     <showGrandTotal>true</showGrandTotal>
     <showSubTotals>true</showSubTotals>
     <timeFrameFilter>
-        <dateColumn>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</dateColumn>
+        <dateColumn>%%%NAMESPACE%%%WorkLog__c$CreatedDate</dateColumn>
         <interval>INTERVAL_CUSTOM</interval>
     </timeFrameFilter>
 </Report>
