@@ -124,12 +124,18 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
             }
         }
 
-        // Find WorkItem gaps
+        // Find WorkItem gaps. A request is "covered" if there's ANY non-terminal-failure
+        // SyncItem for it — Synced (already pushed), Queued / Processing (will be pushed
+        // on next tick), or Staged (waiting for poll). Pre-fix only Synced counted as
+        // covered, so the reconciler would create duplicates for items already queued
+        // and waiting for the processor — leading to retry-storms after every reconcile.
         Set<Id> coveredRequestIds = new Set<Id>();
         for (SyncItem__c existing : [
             SELECT RequestLookup__c FROM SyncItem__c
             WHERE RequestLookup__c IN :requestIds
-            AND ObjectTypePk__c = 'WorkItem__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Synced'
+            AND ObjectTypePk__c = 'WorkItem__c'
+            AND DirectionPk__c = 'Outbound'
+            AND StatusPk__c IN ('Synced', 'Queued', 'Processing', 'Staged')
             WITH SYSTEM_MODE
         ]) {
             coveredRequestIds.add(existing.RequestLookup__c);

@@ -111,6 +111,8 @@ global with sharing class DeliveryBurndownController {
             FROM WorkItem__c
             WHERE WorkflowTypeTxt__c = :workflowTypeName
             AND CreatedDate >= :windowStart
+            AND TemplateMarkedDateTime__c = NULL
+            AND ArchivedDateTime__c = NULL
             WITH SYSTEM_MODE
             ORDER BY CreatedDate ASC
         ];

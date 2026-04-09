@@ -116,9 +116,13 @@ global inherited sharing class DeliverySyncItemProcessor implements Queueable, D
 
                 // Validate Endpoint Configuration — no endpoint means entity isn't set up
                 // for push sync. Park as Staged (available for polling) instead of failing.
+                // Set a structured note in ErrorLogTxt__c so admins debugging stuck Staged
+                // items can see WHY they're parked rather than just "Staged with no info."
+                // The new requeueStagedItemsWithEndpoint scheduler hook will pick these up
+                // automatically once the destination entity gets an endpoint configured.
                 if (String.isBlank(endpointUrl)) {
                     item.StatusPk__c = 'Staged';
-                    item.ErrorLogTxt__c = null;
+                    item.ErrorLogTxt__c = 'Endpoint not configured on destination NetworkEntity. Will auto-heal once IntegrationEndpointUrlTxt__c is set.';
                 } else {
                     // --- NATIVE HTTP CALLOUT ---
                     String baseUrl = endpointUrl.removeEnd('/');
