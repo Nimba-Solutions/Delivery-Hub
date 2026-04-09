@@ -36,7 +36,13 @@ global with sharing class DeliveryDashboardCardController {
     public static Object getCardData(String dataSource, String filterJson) {
         switch on dataSource {
             when 'activeWorkItems' {
-                return [SELECT COUNT() FROM WorkItem__c WHERE ActivatedDateTime__c != NULL AND ArchivedDateTime__c = NULL WITH SYSTEM_MODE];
+                return [
+                    SELECT COUNT() FROM WorkItem__c
+                    WHERE ActivatedDateTime__c != NULL
+                    AND ArchivedDateTime__c = NULL
+                    AND TemplateMarkedDateTime__c = NULL
+                    WITH SYSTEM_MODE
+                ];
             }
             when 'blockedItems' {
                 return [

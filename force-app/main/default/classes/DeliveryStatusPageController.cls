@@ -116,6 +116,9 @@ global without sharing class DeliveryStatusPageController {
             FROM WorkItem__c
             WHERE ClientNetworkEntityLookup__c = :entityId
             AND StageNamePk__c NOT IN :terminalStages
+            AND ActivatedDateTime__c != NULL
+            AND TemplateMarkedDateTime__c = NULL
+            AND ArchivedDateTime__c = NULL
             WITH SYSTEM_MODE
             GROUP BY StageNamePk__c
         ]) {

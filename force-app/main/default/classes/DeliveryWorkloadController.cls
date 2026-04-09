@@ -76,6 +76,9 @@ global with sharing class DeliveryWorkloadController {
             FROM WorkItem__c
             WHERE DeveloperLookup__c != NULL
             AND StageNamePk__c NOT IN :terminalStages
+            AND ActivatedDateTime__c != NULL
+            AND TemplateMarkedDateTime__c = NULL
+            AND ArchivedDateTime__c = NULL
             WITH SYSTEM_MODE
             ORDER BY DeveloperLookup__r.Name ASC
             LIMIT 2000
