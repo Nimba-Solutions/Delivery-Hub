@@ -51,7 +51,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
         // Each click on the System Pulse hours section opens the matching report
         // with fv0/fv1 set to the month bounds. The report's grand total will
         // match the number the user clicked on.
-        getReportIds({ developerNames: ['Monthly_Hours', 'Monthly_Hours_By_Entry_Date', 'In_Flight_Work_Items'] })
+        getReportIds({ developerNames: ['Monthly_Hours', 'Monthly_Hours_By_Entry_Date', 'In_Flight_Work_Items', 'Synced_Items', 'Failed_Items'] })
             .then((data) => {
                 this.reportIds = data || {};
             })
@@ -97,34 +97,40 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
     }
 
     /**
-     * Navigates to the Sync Item list view showing all records.
+     * Synced count click — opens the Synced Items report.
      */
     handleSyncedClick() {
+        const reportId = this.reportIds.Synced_Items;
+        if (reportId) {
+            this[NavigationMixin.Navigate]({
+                type: 'standard__webPage',
+                attributes: { url: `/lightning/r/Report/${reportId}/view` }
+            });
+            return;
+        }
         this[NavigationMixin.Navigate]({
-            attributes: {
-                actionName: 'list',
-                objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c'
-            },
-            state: {
-                filterName: 'Recent'
-            },
-            type: 'standard__objectPage'
+            type: 'standard__objectPage',
+            attributes: { objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c', actionName: 'list' },
+            state: { filterName: 'Recent' }
         });
     }
 
     /**
-     * Navigates to the Sync Item list view (failed items).
+     * Failed count click — opens the Failed Sync Items report.
      */
     handleFailedClick() {
+        const reportId = this.reportIds.Failed_Items;
+        if (reportId) {
+            this[NavigationMixin.Navigate]({
+                type: 'standard__webPage',
+                attributes: { url: `/lightning/r/Report/${reportId}/view` }
+            });
+            return;
+        }
         this[NavigationMixin.Navigate]({
-            attributes: {
-                actionName: 'list',
-                objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c'
-            },
-            state: {
-                filterName: 'Recent'
-            },
-            type: 'standard__objectPage'
+            type: 'standard__objectPage',
+            attributes: { objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c', actionName: 'list' },
+            state: { filterName: 'Recent' }
         });
     }
 
