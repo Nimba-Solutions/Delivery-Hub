@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ReportType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <baseObject>SyncItem__c</baseObject>
+    <category>other</category>
+    <deployed>true</deployed>
+    <description>Sync items with status, direction, object type, and error details.</description>
+    <label>Sync Items</label>
+    <sections>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>Id</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>Name</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>StatusPk__c</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>DirectionPk__c</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>true</checkedByDefault>
+            <field>ObjectTypePk__c</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>ErrorLogTxt__c</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>RetryCountNumber__c</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>DismissedDateTime__c</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>CreatedDate</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>WorkItemLookup__c</field>
+            <table>SyncItem__c</table>
+        </columns>
+        <masterLabel>Sync Items</masterLabel>
+    </sections>
+</ReportType>

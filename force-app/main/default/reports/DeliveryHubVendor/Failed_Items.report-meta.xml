@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>%%%NAMESPACE%%%SyncItem__c$Name</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%SyncItem__c$%%%NAMESPACE%%%DirectionPk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%SyncItem__c$%%%NAMESPACE%%%StatusPk__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%SyncItem__c$%%%NAMESPACE%%%ErrorLogTxt__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%SyncItem__c$%%%NAMESPACE%%%RetryCountNumber__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%SyncItem__c$CreatedDate</field>
+    </columns>
+    <description>Failed sync items with error details. Click from "Failed" count on System Pulse.</description>
+    <filter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%SyncItem__c$%%%NAMESPACE%%%StatusPk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>false</isUnlocked>
+            <operator>equals</operator>
+            <value>Failed</value>
+        </criteriaItems>
+    </filter>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>%%%NAMESPACE%%%SyncItem__c$%%%NAMESPACE%%%ObjectTypePk__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <name>Failed Sync Items</name>
+    <reportType>%%%NAMESPACE%%%Sync_Items__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <showSubTotals>true</showSubTotals>
+    <timeFrameFilter>
+        <dateColumn>%%%NAMESPACE%%%SyncItem__c$CreatedDate</dateColumn>
+        <interval>INTERVAL_CUSTOM</interval>
+    </timeFrameFilter>
+</Report>
