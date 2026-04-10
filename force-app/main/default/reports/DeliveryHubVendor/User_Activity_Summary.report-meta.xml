@@ -12,7 +12,24 @@
     <columns>
         <field>%%%NAMESPACE%%%ActivityLog__c$Name</field>
     </columns>
-    <description>Activity logs grouped by user, showing count of actions per user. Identifies most active users and their navigation patterns.</description>
+    <description>Activity logs grouped by user. Click from "This Month" on Activity Tracking.</description>
+    <filter>
+        <booleanFilter>1 AND 2</booleanFilter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%ActivityLog__c$CreatedDate</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>greaterOrEqual</operator>
+            <value>THIS_MONTH</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%ActivityLog__c$CreatedDate</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>lessOrEqual</operator>
+            <value>THIS_MONTH</value>
+        </criteriaItems>
+    </filter>
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
@@ -25,4 +42,8 @@
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
     <showSubTotals>true</showSubTotals>
+    <timeFrameFilter>
+        <dateColumn>%%%NAMESPACE%%%ActivityLog__c$CreatedDate</dateColumn>
+        <interval>INTERVAL_CUSTOM</interval>
+    </timeFrameFilter>
 </Report>

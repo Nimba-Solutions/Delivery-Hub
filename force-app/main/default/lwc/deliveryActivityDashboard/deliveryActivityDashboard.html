@@ -20,7 +20,7 @@
                         <div class="slds-media__figure">
                             <lightning-icon icon-name="standard:today" size="medium"></lightning-icon>
                         </div>
-                        <div class="slds-media__body">
+                        <div class="slds-media__body" style="cursor: pointer;" onclick={handleThisWeekClick}>
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
                                 <strong>{totalThisWeek}</strong>
                             </div>
@@ -33,7 +33,7 @@
                         <div class="slds-media__figure">
                             <lightning-icon icon-name="standard:date_input" size="medium"></lightning-icon>
                         </div>
-                        <div class="slds-media__body">
+                        <div class="slds-media__body" style="cursor: pointer;" onclick={handleThisMonthClick}>
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
                                 <strong>{totalThisMonth}</strong>
                             </div>
