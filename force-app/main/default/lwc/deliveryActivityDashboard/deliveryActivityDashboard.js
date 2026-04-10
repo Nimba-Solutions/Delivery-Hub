@@ -22,6 +22,7 @@ const BAR_PERCENT_SCALE = 100,
     SECOND_ELEMENT = 1;
 
 export default class DeliveryActivityDashboard extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
+    @track reportIds = {};
     @track totalThisWeek = 0;
     @track totalThisMonth = 0;
     @track topUsers = [];
@@ -133,6 +134,35 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
 
     handleRefresh() {
         refreshApex(this.wiredSummaryResult);
+    }
+
+    connectedCallback() {
+        getReportIds({ developerNames: ['Activity_By_Day', 'User_Activity_Summary'] })
+            .then((data) => { this.reportIds = data || {}; })
+            .catch(() => { this.reportIds = {}; });
+    }
+
+    handleThisWeekClick() {
+        const reportId = this.reportIds.Activity_By_Day;
+        if (reportId) {
+            const now = new Date();
+            const day = now.getDay();
+            const s = new Date(now); s.setDate(now.getDate() - day);
+            const e = new Date(s); e.setDate(s.getDate() + 6);
+            const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view?fv0=${fmt(s)}&fv1=${fmt(e)}` } }); // eslint-disable-line new-cap
+        } else { this.navigateToActivityLogs(); }
+    }
+
+    handleThisMonthClick() {
+        const reportId = this.reportIds.User_Activity_Summary;
+        if (reportId) {
+            const now = new Date();
+            const s = new Date(now.getFullYear(), now.getMonth(), 1);
+            const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view?fv0=${fmt(s)}&fv1=${fmt(e)}` } }); // eslint-disable-line new-cap
+        } else { this.navigateToActivityLogs(); }
     }
 
     handleViewReport() {
