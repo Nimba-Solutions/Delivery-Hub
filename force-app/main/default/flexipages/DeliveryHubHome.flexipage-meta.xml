@@ -39,8 +39,8 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryNimbusGantt</componentName>
-                <identifier>c_deliveryNimbusGantt</identifier>
+                <componentName>deliveryProFormaTimeline</componentName>
+                <identifier>c_deliveryProFormaTimeline</identifier>
             </componentInstance>
         </itemInstances>
         <name>bottomLeft</name>
