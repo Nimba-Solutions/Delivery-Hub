@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PriorityGroupPk__c</fullName>
+    <description>Priority bucket for grouping work items in the delivery timeline (NOW / NEXT / PLANNED / PROPOSED / HOLD). When blank, the deliveryProFormaTimeline LWC derives the bucket at render time from PriorityPk__c + StageNamePk__c. Users can set this field directly to override the derived value for edge cases.</description>
+    <inlineHelpText>Leave blank to auto-derive the bucket from Priority + Stage. Set explicitly to override (e.g. a Backlog item that is actually top-priority because the client said so).</inlineHelpText>
+    <label>Priority Group</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>top-priority</fullName>
+                <default>false</default>
+                <label>NOW (Top Priority)</label>
+            </value>
+            <value>
+                <fullName>active</fullName>
+                <default>false</default>
+                <label>NEXT (Active)</label>
+            </value>
+            <value>
+                <fullName>follow-on</fullName>
+                <default>false</default>
+                <label>PLANNED (Follow-on)</label>
+            </value>
+            <value>
+                <fullName>proposed</fullName>
+                <default>false</default>
+                <label>PROPOSED</label>
+            </value>
+            <value>
+                <fullName>deferred</fullName>
+                <default>false</default>
+                <label>HOLD (Deferred)</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
