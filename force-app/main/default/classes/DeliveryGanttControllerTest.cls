@@ -371,4 +371,169 @@ private class DeliveryGanttControllerTest {
             System.assert(caught, 'Should throw AuraHandledException for invalid Id.');
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Pro Forma Timeline — getProFormaTimelineData + derivePriorityGroup
+    // ══════════════════════════════════════════════════════════════════
+
+    @IsTest
+    static void testGetProFormaTimelineDataActiveOnly() {
+        System.runAs(testUser) {
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(false);
+            Test.stopTest();
+
+            System.assertNotEquals(null, rows, 'Rows should not be null');
+            System.assert(rows.size() >= 3, 'Should include the 3 active work items from setup');
+            for (DeliveryGanttController.ProFormaTimelineRow row : rows) {
+                System.assertNotEquals(null, row.priorityGroup,
+                    'Every row should have a priorityGroup (explicit or derived)');
+                System.assertNotEquals(null, row.startDate, 'startDate should resolve');
+                System.assertNotEquals(null, row.endDate, 'endDate should resolve');
+            }
+        }
+    }
+
+    @IsTest
+    static void testGetProFormaTimelineDataIncludesCompleted() {
+        System.runAs(testUser) {
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(true);
+            Test.stopTest();
+
+            Boolean foundCompleted = false;
+            for (DeliveryGanttController.ProFormaTimelineRow row : rows) {
+                if (row.stage == 'Done') {
+                    foundCompleted = true;
+                    System.assertEquals('follow-on', row.priorityGroup,
+                        'Done items should derive to follow-on bucket');
+                }
+            }
+            System.assert(foundCompleted,
+                'showCompleted=true should return the Done item from test setup');
+        }
+    }
+
+    @IsTest
+    static void testDerivePriorityGroupRules() {
+        // Rule 1: Paused / blocked / hold → deferred
+        System.assertEquals('deferred',
+            DeliveryGanttController.derivePriorityGroup('High', 'Paused'),
+            'Paused stage → deferred');
+        System.assertEquals('deferred',
+            DeliveryGanttController.derivePriorityGroup('Low', 'On Hold'),
+            'On Hold stage → deferred');
+        System.assertEquals('deferred',
+            DeliveryGanttController.derivePriorityGroup('Medium', 'Blocked'),
+            'Blocked stage → deferred');
+        // Substring match — "Blocked on vendor" should still trigger deferred
+        System.assertEquals('deferred',
+            DeliveryGanttController.derivePriorityGroup('Medium', 'Blocked on vendor'),
+            'Substring "blocked" → deferred');
+
+        // Rule 2: Terminal stages → follow-on
+        System.assertEquals('follow-on',
+            DeliveryGanttController.derivePriorityGroup('High', 'Done'),
+            'Done → follow-on');
+        System.assertEquals('follow-on',
+            DeliveryGanttController.derivePriorityGroup('Critical', 'Deployed to Prod'),
+            'Deployed to Prod → follow-on');
+        System.assertEquals('follow-on',
+            DeliveryGanttController.derivePriorityGroup('High', 'Cancelled'),
+            'Cancelled → follow-on');
+
+        // Rule 3: High/Critical + active stage → top-priority
+        System.assertEquals('top-priority',
+            DeliveryGanttController.derivePriorityGroup('High', 'In Development'),
+            'High + In Development → top-priority');
+        System.assertEquals('top-priority',
+            DeliveryGanttController.derivePriorityGroup('Critical', 'Ready for QA'),
+            'Critical + Ready for QA → top-priority');
+
+        // Rule 4: Any active stage → active (for non-high priorities)
+        System.assertEquals('active',
+            DeliveryGanttController.derivePriorityGroup('Medium', 'In Development'),
+            'Medium + In Development → active');
+        System.assertEquals('active',
+            DeliveryGanttController.derivePriorityGroup('Low', 'Deploying'),
+            'Low + Deploying → active');
+
+        // Rule 5: Proposed stage → proposed
+        System.assertEquals('proposed',
+            DeliveryGanttController.derivePriorityGroup('High', 'Backlog'),
+            'High + Backlog → proposed (stage wins over priority)');
+        System.assertEquals('proposed',
+            DeliveryGanttController.derivePriorityGroup('Medium', 'Scoping In Progress'),
+            'Scoping In Progress → proposed');
+
+        // Rule 6: Fallback → follow-on
+        System.assertEquals('follow-on',
+            DeliveryGanttController.derivePriorityGroup('Medium', 'Some Unknown Stage'),
+            'Unknown stage → follow-on');
+
+        // Edge: blank stage → follow-on
+        System.assertEquals('follow-on',
+            DeliveryGanttController.derivePriorityGroup('High', null),
+            'Null stage → follow-on');
+        System.assertEquals('follow-on',
+            DeliveryGanttController.derivePriorityGroup('High', ''),
+            'Empty stage → follow-on');
+    }
+
+    @IsTest
+    static void testGetProFormaTimelineDataRowShape() {
+        // Verify the DTO carries every field the LWC maps to task.metadata
+        System.runAs(testUser) {
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(false);
+            Test.stopTest();
+
+            // Find the 'Build login page' row (High + In Development from setup)
+            DeliveryGanttController.ProFormaTimelineRow loginRow = null;
+            for (DeliveryGanttController.ProFormaTimelineRow r : rows) {
+                if (r.title == 'Build login page') { loginRow = r; break; }
+            }
+            System.assertNotEquals(null, loginRow, 'Login page row should be present');
+            System.assertEquals('In Development', loginRow.stage, 'Stage passes through');
+            System.assertEquals('High', loginRow.priority, 'Priority passes through');
+            System.assertEquals('top-priority', loginRow.priorityGroup,
+                'High + In Development derives to top-priority');
+            System.assertEquals(20, loginRow.estimatedHours, 'Estimated hours pass through');
+            System.assertNotEquals(null, loginRow.startDate, 'Start date resolves');
+            System.assertNotEquals(null, loginRow.endDate, 'End date resolves');
+            System.assertEquals(false, loginRow.isInactive, 'Active item is not inactive');
+        }
+    }
+
+    @IsTest
+    static void testGetProFormaTimelineDataExplicitOverride() {
+        // If PriorityGroup__c is set on the record, the DTO should use it
+        // directly without calling derivePriorityGroup.
+        System.runAs(testUser) {
+            WorkItem__c loginItem = [
+                SELECT Id, PriorityGroup__c
+                FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'Build login page'
+                LIMIT 1
+            ];
+            loginItem.PriorityGroup__c = 'proposed'; // explicit override
+            update loginItem;
+
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(false);
+            Test.stopTest();
+
+            DeliveryGanttController.ProFormaTimelineRow loginRow = null;
+            for (DeliveryGanttController.ProFormaTimelineRow r : rows) {
+                if (r.title == 'Build login page') { loginRow = r; break; }
+            }
+            System.assertNotEquals(null, loginRow, 'Login page row should still be present');
+            System.assertEquals('proposed', loginRow.priorityGroup,
+                'Explicit PriorityGroup__c override wins over derivation');
+        }
+    }
 }

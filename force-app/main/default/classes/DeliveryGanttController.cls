@@ -349,6 +349,207 @@ public with sharing class DeliveryGanttController {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    //  PRO FORMA TIMELINE — ported from cloudnimbusllc.com /mf/delivery-timeline-v5
+    // ═══════════════════════════════════════════════════════════════════════
+    // The v5 page on cloudnimbusllc.com renders a pro forma timeline grouped
+    // by priority bucket (NOW / NEXT / PLANNED / PROPOSED / HOLD), powered by
+    // nimbus-gantt's PriorityGroupingPlugin. This method serves the same shape
+    // from real WorkItem__c records so the deliveryProFormaTimeline LWC can
+    // render the same visual against actual DH data. The plugin reads
+    // `priorityGroup` from each row — if blank, it derives the bucket at
+    // render time from priority + stage using the same rule as
+    // derivePriorityGroup() below.
+    //
+    // Source of truth for the derivation rule:
+    //   cloudnimbusllc.com/src/lib/dhWorkItemToProForma.ts → derivePriorityGroup
+    // Keep these two in sync. If the rule changes in one place, change both.
+
+    /**
+     * @description DTO for pro forma timeline rows. Mirrors v5's ProFormaItem
+     *              shape. Used by deliveryProFormaTimeline LWC.
+     */
+    public class ProFormaTimelineRow {
+        @AuraEnabled public String id { get; set; }
+        @AuraEnabled public String name { get; set; }
+        @AuraEnabled public String title { get; set; }
+        @AuraEnabled public String stage { get; set; }
+        @AuraEnabled public String priority { get; set; }
+        /** Explicit picklist override, or derived at runtime from priority + stage */
+        @AuraEnabled public String priorityGroup { get; set; }
+        @AuraEnabled public String startDate { get; set; }
+        @AuraEnabled public String endDate { get; set; }
+        @AuraEnabled public Decimal estimatedHours { get; set; }
+        @AuraEnabled public Decimal loggedHours { get; set; }
+        @AuraEnabled public Decimal progress { get; set; }
+        @AuraEnabled public String developerName { get; set; }
+        @AuraEnabled public String parentWorkItemId { get; set; }
+        @AuraEnabled public String entityId { get; set; }
+        @AuraEnabled public String entityName { get; set; }
+        @AuraEnabled public Boolean isInactive { get; set; }
+    }
+
+    /** Stages where work is actively moving forward (bucket = active or top-priority) */
+    private static final Set<String> ACTIVE_STAGES = new Set<String>{
+        'Ready for Development', 'In Development',
+        'Ready for QA', 'QA In Progress',
+        'Ready for Client UAT', 'In Client UAT', 'Ready for UAT Sign-off',
+        'Ready for Deployment', 'Deploying'
+    };
+
+    /** Stages where the item is sized but not yet committed (bucket = proposed) */
+    private static final Set<String> PROPOSED_STAGES = new Set<String>{
+        'Backlog', 'Scoping In Progress',
+        'Clarification Requested (Pre-Dev)', 'Ready for Sizing'
+    };
+
+    /** Stages indicating the item is on hold (bucket = deferred) */
+    private static final Set<String> PAUSED_STAGES = new Set<String>{
+        'Paused', 'On Hold', 'Blocked', 'Awaiting Client'
+    };
+
+    /**
+     * @description Derives the priority bucket from priority + stage when
+     *              PriorityGroup__c is null on the record. Matches the
+     *              derivePriorityGroup() rule in
+     *              cloudnimbusllc.com/src/lib/dhWorkItemToProForma.ts.
+     *
+     * Rule:
+     *   1. Paused/blocked/hold stage → "deferred"
+     *   2. Terminal/done stage       → "follow-on"
+     *   3. High or Critical + active → "top-priority"
+     *   4. Any active stage          → "active"
+     *   5. Proposed stage            → "proposed"
+     *   6. Anything else             → "follow-on"
+     *
+     * @param priority The PriorityPk__c value
+     * @param stage    The StageNamePk__c value
+     * @return One of "top-priority", "active", "follow-on", "proposed", "deferred"
+     */
+    @TestVisible
+    private static String derivePriorityGroup(String priority, String stage) {
+        if (String.isBlank(stage)) {
+            return 'follow-on';
+        }
+        String lower = stage.toLowerCase();
+        Boolean looksPaused = PAUSED_STAGES.contains(stage)
+            || lower.contains('hold') || lower.contains('blocked') || lower.contains('paused');
+        if (looksPaused) {
+            return 'deferred';
+        }
+        if (TERMINAL_STAGES.contains(stage)) {
+            return 'follow-on';
+        }
+        Boolean isActive = ACTIVE_STAGES.contains(stage);
+        if (isActive) {
+            return (priority == 'High' || priority == 'Critical') ? 'top-priority' : 'active';
+        }
+        if (PROPOSED_STAGES.contains(stage)) {
+            return 'proposed';
+        }
+        return 'follow-on';
+    }
+
+    /**
+     * @description Returns work items shaped for the deliveryProFormaTimeline
+     *              LWC. Same SOQL strategy as getGanttData but includes
+     *              PriorityGroup__c and uses the ProFormaTimelineRow DTO. Rows
+     *              where PriorityGroup__c is null get their bucket derived
+     *              from priority + stage via derivePriorityGroup().
+     *
+     * @param showCompleted When true, includes inactive items (same semantics
+     *                      as getGanttData's showCompleted flag).
+     * @return List of ProFormaTimelineRow ordered by entity then start date.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<ProFormaTimelineRow> getProFormaTimelineData(Boolean showCompleted) {
+        try {
+            String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
+                + 'PriorityPk__c, PriorityGroup__c, '
+                + 'EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
+                + 'ProjectedUATReadyDate__c, CalculatedETADate__c, '
+                + 'CreatedDate, LastModifiedDate, '
+                + 'EstimatedHoursNumber__c, TotalLoggedHoursSum__c, '
+                + 'ActivatedDateTime__c, ParentWorkItemLookup__c, '
+                + 'DeveloperLookup__r.Name, '
+                + 'ClientNetworkEntityLookup__c, ClientNetworkEntityLookup__r.Name '
+                + 'FROM WorkItem__c '
+                + 'WHERE TemplateMarkedDateTime__c = null ';
+
+            if (showCompleted == true) {
+                query += 'AND (ActivatedDateTime__c != null '
+                    + 'OR LastModifiedDate >= LAST_N_DAYS:' + DEFAULT_STALE_CUTOFF_DAYS + ') ';
+            } else {
+                query += 'AND ActivatedDateTime__c != null ';
+            }
+
+            query += 'WITH SYSTEM_MODE '
+                + 'ORDER BY ClientNetworkEntityLookup__r.Name ASC NULLS LAST, '
+                + 'EstimatedStartDevDate__c ASC NULLS LAST, CreatedDate ASC';
+
+            List<WorkItem__c> items = Database.query(query); // NOPMD — dynamic for conditional WHERE
+            List<ProFormaTimelineRow> rows = new List<ProFormaTimelineRow>();
+            for (WorkItem__c item : items) {
+                rows.add(mapToProFormaRow(item));
+            }
+            return rows;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    private static ProFormaTimelineRow mapToProFormaRow(WorkItem__c item) {
+        ProFormaTimelineRow row = new ProFormaTimelineRow();
+        row.id = item.Id;
+        row.name = item.Name;
+        row.title = item.BriefDescriptionTxt__c;
+        row.stage = item.StageNamePk__c;
+        row.priority = item.PriorityPk__c;
+
+        // Picklist override wins; fall back to derivation when blank
+        row.priorityGroup = String.isNotBlank(item.PriorityGroup__c)
+            ? item.PriorityGroup__c
+            : derivePriorityGroup(item.PriorityPk__c, item.StageNamePk__c);
+
+        row.estimatedHours = item.EstimatedHoursNumber__c;
+        row.loggedHours = item.TotalLoggedHoursSum__c;
+        row.isInactive = item.ActivatedDateTime__c == null;
+        row.parentWorkItemId = item.ParentWorkItemLookup__c;
+
+        if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
+            Decimal logged = item.TotalLoggedHoursSum__c != null ? item.TotalLoggedHoursSum__c : 0;
+            row.progress = Math.min(logged / item.EstimatedHoursNumber__c, 1.0);
+        } else {
+            row.progress = null;
+        }
+
+        row.developerName = item.DeveloperLookup__r != null ? item.DeveloperLookup__r.Name : null;
+        row.entityId = item.ClientNetworkEntityLookup__c;
+        row.entityName = item.ClientNetworkEntityLookup__r != null
+            ? item.ClientNetworkEntityLookup__r.Name : null;
+
+        // Reuse the existing date resolution logic from getGanttData — same
+        // fallback chain, so the two LWCs render bars at identical positions.
+        Date startDt = item.EstimatedStartDevDate__c != null
+            ? item.EstimatedStartDevDate__c
+            : item.CreatedDate.date();
+        row.startDate = String.valueOf(startDt);
+
+        Boolean hasEngineeredEnd = item.EstimatedEndDevDate__c != null
+            || item.ProjectedUATReadyDate__c != null
+            || item.CalculatedETADate__c != null;
+        Boolean isTerminal = TERMINAL_STAGES.contains(item.StageNamePk__c);
+        Date endDt = chooseEndDate(item, startDt, hasEngineeredEnd, isTerminal);
+        if (endDt < startDt) {
+            endDt = startDt.addDays(1);
+        }
+        row.endDate = String.valueOf(endDt);
+
+        return row;
+    }
+
     /**
      * @description Resolves an end date from the first non-null real date
      *              field. When all are null, falls back to a 14-day bar
