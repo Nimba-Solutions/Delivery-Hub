@@ -510,16 +510,16 @@ private class DeliveryGanttControllerTest {
 
     @IsTest
     static void testGetProFormaTimelineDataExplicitOverride() {
-        // If PriorityGroup__c is set on the record, the DTO should use it
+        // If PriorityGroupPk__c is set on the record, the DTO should use it
         // directly without calling derivePriorityGroup.
         System.runAs(testUser) {
             WorkItem__c loginItem = [
-                SELECT Id, PriorityGroup__c
+                SELECT Id, PriorityGroupPk__c
                 FROM WorkItem__c
                 WHERE BriefDescriptionTxt__c = 'Build login page'
                 LIMIT 1
             ];
-            loginItem.PriorityGroup__c = 'proposed'; // explicit override
+            loginItem.PriorityGroupPk__c = 'proposed'; // explicit override
             update loginItem;
 
             Test.startTest();
@@ -533,7 +533,7 @@ private class DeliveryGanttControllerTest {
             }
             System.assertNotEquals(null, loginRow, 'Login page row should still be present');
             System.assertEquals('proposed', loginRow.priorityGroup,
-                'Explicit PriorityGroup__c override wins over derivation');
+                'Explicit PriorityGroupPk__c override wins over derivation');
         }
     }
 }

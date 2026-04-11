@@ -8,7 +8,7 @@
  *
  *               Buckets: NOW (top-priority) · NEXT (active) · PLANNED (follow-on) ·
  *               PROPOSED (proposed) · HOLD (deferred). Assignment reads
- *               WorkItem__c.PriorityGroup__c first; falls back to server-side
+ *               WorkItem__c.PriorityGroupPk__c first; falls back to server-side
  *               derivation when the picklist is blank. Users can override the
  *               derived bucket by setting the picklist directly on the record.
  *
@@ -134,7 +134,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             status: row.stage,
             priority: row.priority,
             // groupId is the plugin's default read; we use the metadata path
-            // instead so the bucket comes from PriorityGroup__c (with fallback)
+            // instead so the bucket comes from PriorityGroupPk__c (with fallback)
             groupId: row.priorityGroup || null,
             assignee: row.developerName || '',
             parentId: row.parentWorkItemId || undefined,
@@ -166,7 +166,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             onTaskClick: (task) => this.handleTaskClick(task),
         });
 
-        // Install the priority grouping plugin — reads PriorityGroup__c from
+        // Install the priority grouping plugin — reads PriorityGroupPk__c from
         // metadata, falls back to derived bucket via task.groupId (populated
         // server-side). Hours-weighted progress reads metadata.hoursHigh +
         // hoursLogged.

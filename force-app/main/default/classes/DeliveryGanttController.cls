@@ -370,22 +370,38 @@ public with sharing class DeliveryGanttController {
      *              shape. Used by deliveryProFormaTimeline LWC.
      */
     public class ProFormaTimelineRow {
+        /** @description Salesforce record Id of the WorkItem__c */
         @AuraEnabled public String id { get; set; }
+        /** @description Auto-number work item name */
         @AuraEnabled public String name { get; set; }
+        /** @description Brief description (used as the row title in the timeline) */
         @AuraEnabled public String title { get; set; }
+        /** @description Current workflow stage (StageNamePk__c) */
         @AuraEnabled public String stage { get; set; }
+        /** @description Priority level (PriorityPk__c — Low / Medium / High / Critical) */
         @AuraEnabled public String priority { get; set; }
-        /** Explicit picklist override, or derived at runtime from priority + stage */
+        /** @description Priority bucket for grouping — explicit PriorityGroupPk__c value
+         *  when present, otherwise derived at read time from priority + stage */
         @AuraEnabled public String priorityGroup { get; set; }
+        /** @description ISO YYYY-MM-DD start date for the timeline bar */
         @AuraEnabled public String startDate { get; set; }
+        /** @description ISO YYYY-MM-DD end date for the timeline bar */
         @AuraEnabled public String endDate { get; set; }
+        /** @description Sized estimate in hours (EstimatedHoursNumber__c) */
         @AuraEnabled public Decimal estimatedHours { get; set; }
+        /** @description Total logged hours (TotalLoggedHoursSum__c) */
         @AuraEnabled public Decimal loggedHours { get; set; }
+        /** @description Progress 0..1 computed from logged / estimated; null when no estimate */
         @AuraEnabled public Decimal progress { get; set; }
+        /** @description Developer/owner display name (DeveloperLookup__r.Name) */
         @AuraEnabled public String developerName { get; set; }
+        /** @description Parent work item record Id for tree rendering */
         @AuraEnabled public String parentWorkItemId { get; set; }
+        /** @description Client NetworkEntity__c record Id */
         @AuraEnabled public String entityId { get; set; }
+        /** @description Client NetworkEntity__c display name */
         @AuraEnabled public String entityName { get; set; }
+        /** @description True when the item has no ActivatedDateTime__c (completed/archived) */
         @AuraEnabled public Boolean isInactive { get; set; }
     }
 
@@ -410,7 +426,7 @@ public with sharing class DeliveryGanttController {
 
     /**
      * @description Derives the priority bucket from priority + stage when
-     *              PriorityGroup__c is null on the record. Matches the
+     *              PriorityGroupPk__c is null on the record. Matches the
      *              derivePriorityGroup() rule in
      *              cloudnimbusllc.com/src/lib/dhWorkItemToProForma.ts.
      *
@@ -453,8 +469,8 @@ public with sharing class DeliveryGanttController {
     /**
      * @description Returns work items shaped for the deliveryProFormaTimeline
      *              LWC. Same SOQL strategy as getGanttData but includes
-     *              PriorityGroup__c and uses the ProFormaTimelineRow DTO. Rows
-     *              where PriorityGroup__c is null get their bucket derived
+     *              PriorityGroupPk__c and uses the ProFormaTimelineRow DTO. Rows
+     *              where PriorityGroupPk__c is null get their bucket derived
      *              from priority + stage via derivePriorityGroup().
      *
      * @param showCompleted When true, includes inactive items (same semantics
@@ -465,7 +481,7 @@ public with sharing class DeliveryGanttController {
     public static List<ProFormaTimelineRow> getProFormaTimelineData(Boolean showCompleted) {
         try {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
-                + 'PriorityPk__c, PriorityGroup__c, '
+                + 'PriorityPk__c, PriorityGroupPk__c, '
                 + 'EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, '
                 + 'CreatedDate, LastModifiedDate, '
@@ -509,8 +525,8 @@ public with sharing class DeliveryGanttController {
         row.priority = item.PriorityPk__c;
 
         // Picklist override wins; fall back to derivation when blank
-        row.priorityGroup = String.isNotBlank(item.PriorityGroup__c)
-            ? item.PriorityGroup__c
+        row.priorityGroup = String.isNotBlank(item.PriorityGroupPk__c)
+            ? item.PriorityGroupPk__c
             : derivePriorityGroup(item.PriorityPk__c, item.StageNamePk__c);
 
         row.estimatedHours = item.EstimatedHoursNumber__c;
