@@ -4,6 +4,7 @@
  * @description Unit tests for DeliveryGanttController.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity')
 @IsTest
 private class DeliveryGanttControllerTest {
 

@@ -8,7 +8,7 @@
  *              updateWorkItemDates: saves date changes from drag-to-reschedule.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity')
 public with sharing class DeliveryGanttController {
 
     /**

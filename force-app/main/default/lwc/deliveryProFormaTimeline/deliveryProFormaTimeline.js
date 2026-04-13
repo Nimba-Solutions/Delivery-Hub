@@ -85,11 +85,7 @@ const V3_MATCH_THEME = {
     selectionColor:     '#3b82f6',
 };
 
-// ─── CSS overrides — v7 parity using data-task-id attribute selectors ─────────
-// NimbusGantt renders each row as <tr data-task-id="..."> — there is NO
-// ng-group-row class in the IIFE (the old selectors never matched anything).
-// We target bucket headers via [data-task-id^="__bucket_header__"] and entity
-// group rows via [data-task-id^="__entity__"].
+// ─── CSS overrides — full v5/v8 match using class selectors ──────────────────
 const V5_GANTT_STYLES = `
   .ng-grid {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
@@ -98,37 +94,44 @@ const V5_GANTT_STYLES = `
   .ng-grid table { border-collapse: collapse !important; border-spacing: 0 !important; }
   .ng-grid-header { background: #f3f4f6 !important; visibility: hidden !important; }
   .ng-grid-th { font-size: 12px !important; font-weight: 700 !important; color: #1f2937 !important; padding: 0 6px !important; border-right: none !important; }
-  .ng-grid-cell { padding-top: 0 !important; padding-right: 6px !important; padding-bottom: 0 !important; padding-left: 6px; border-right: none !important; }
-  .ng-grid-row { border: none !important; box-shadow: inset 0 -1px 0 #f3f4f6; box-sizing: border-box !important; height: 32px !important; }
+  .ng-grid-cell { padding-top: 0 !important; padding-right: 6px !important; padding-bottom: 0 !important; padding-left: 6px; border-right: none !important; line-height: 32px !important; }
+  .ng-grid-row { border: none !important; box-shadow: inset 0 -1px 0 #f3f4f6; box-sizing: border-box !important; }
   .ng-grid-row td { border: none !important; box-sizing: border-box !important; }
-  /* Task rows */
-  .ng-grid-row:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]) { cursor: grab; }
-  .ng-grid-row:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]):active { cursor: grabbing; }
-  .ng-row-alt:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]) { background: unset; }
-  .ng-row-selected:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]) { background: rgba(59, 130, 246, 0.06) !important; box-shadow: inset 3px 0 0 #3b82f6 !important; }
+  /* Parent rows — bold text */
+  .ng-grid-row:not(.ng-group-row) .ng-tree-cell .ng-expand-icon + .ng-grid-cell-text { font-weight: 700 !important; color: #1f2937 !important; }
+  /* Child/leaf rows — muted text */
+  .ng-grid-row .ng-tree-cell .ng-expand-spacer + .ng-grid-cell-text { font-weight: 400 !important; color: #6b7280 !important; font-size: 11px !important; }
+  /* Non-group rows: grab cursor + hover tint */
+  .ng-grid-row:not(.ng-group-row) { cursor: grab; }
+  .ng-grid-row:not(.ng-group-row):hover { background: rgba(59,130,246,0.04) !important; outline: 1px solid rgba(59,130,246,0.12) !important; outline-offset: -1px; }
+  .ng-grid-row:not(.ng-group-row):active { cursor: grabbing; }
+  /* Kill alternating row bg — depth shading handles backgrounds */
+  .ng-row-alt:not(.ng-group-row) { background: unset; }
   /* Bucket header rows */
-  .ng-grid-row[data-task-id^="__bucket_header__"] { font-weight: 700 !important; font-size: 12px !important; letter-spacing: 0.02em; box-sizing: border-box !important; box-shadow: none !important; color: #fff !important; height: 32px !important; cursor: pointer; }
-  .ng-grid-row[data-task-id^="__bucket_header__"] .ng-grid-cell-text { font-weight: 700 !important; font-size: 12px !important; color: #fff !important; letter-spacing: 0.02em; text-transform: uppercase; }
-  .ng-grid-row[data-task-id^="__bucket_header__"] .ng-expand-icon { color: rgba(255,255,255,0.8) !important; opacity: 1 !important; }
-  .ng-grid-row[data-task-id^="__bucket_header__"] .ng-expand-spacer { display: none !important; }
-  /* Bucket-specific background colors */
-  .ng-grid-row[data-task-id="__bucket_header__top-priority"] { background: #dc2626 !important; }
-  .ng-grid-row[data-task-id="__bucket_header__active"]       { background: #d97706 !important; }
-  .ng-grid-row[data-task-id="__bucket_header__follow-on"]    { background: #059669 !important; }
-  .ng-grid-row[data-task-id="__bucket_header__proposed"]     { background: #2563eb !important; }
-  .ng-grid-row[data-task-id="__bucket_header__deferred"]     { background: #94a3b8 !important; }
-  /* Entity group rows (client / project sub-headers within each bucket) */
-  .ng-grid-row[data-task-id^="__entity__"] { font-weight: 600 !important; background: #f1f5f9 !important; box-shadow: inset 0 -1px 0 #e2e8f0 !important; cursor: pointer; }
-  .ng-grid-row[data-task-id^="__entity__"] .ng-grid-cell-text { font-weight: 600 !important; font-size: 12px !important; color: #374151 !important; }
-  .ng-grid-row[data-task-id^="__entity__"] .ng-expand-icon { color: #6b7280 !important; opacity: 0.8 !important; }
-  /* Compact tree-cell indentation — depth 0 (bucket)=8px, depth 1 (entity)=8px, depth 2 (task)=18px */
-  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 28px"] { padding-left: 8px  !important; }
-  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 48px"] { padding-left: 18px !important; }
-  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 68px"] { padding-left: 28px !important; }
-  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 88px"] { padding-left: 38px !important; }
+  .ng-group-row { font-weight: 700; font-size: 11px; letter-spacing: 0.03em; box-sizing: border-box !important; box-shadow: none !important; color: #fff !important; }
+  .ng-group-row .ng-grid-cell-text { font-weight: 700 !important; font-size: 12px !important; color: #fff !important; letter-spacing: 0.02em; text-transform: uppercase; }
+  .ng-group-row .ng-expand-icon { color: inherit !important; opacity: 0.5 !important; }
+  .ng-group-row .ng-grid-cell[data-field="hoursLabel"] { font-weight: 600 !important; font-size: 11px !important; color: inherit !important; opacity: 0.75; white-space: nowrap !important; overflow: visible !important; text-overflow: unset !important; }
+  /* Hours column — monospace, muted */
+  .ng-grid-cell[data-field="hoursLabel"] { font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace; font-size: 10px; color: #94a3b8; font-weight: 400; }
+  /* Selected rows */
+  .ng-row-selected:not(.ng-group-row) { background: rgba(59,130,246,0.06) !important; box-shadow: inset 3px 0 0 #3b82f6 !important; }
+  .ng-row-selected.ng-group-row { box-shadow: inset 0 2px 0 currentColor, inset 3px 0 0 currentColor, inset 0 -1px 0 #f3f4f6 !important; }
+  /* Drag handle */
+  .ng-drag-handle { display:inline-flex; align-items:center; justify-content:center; cursor:grab; opacity:0.3; font-size:11px; color:#94a3b8; vertical-align:middle; user-select:none; width:14px; height:14px; flex-shrink:0; margin-left:-5px !important; margin-right:4px; }
+  .ng-grid-row:hover .ng-drag-handle { opacity:0.6; color:#64748b; }
+  .ng-drag-handle:active { cursor:grabbing; opacity:1; }
+  /* Canvas sticky */
+  .ng-scroll-content > canvas { position: sticky !important; left: 0 !important; }
+  /* Expand icon */
   .ng-expand-spacer { width: 0 !important; min-width: 0 !important; }
   .ng-expand-icon { font-size: 9px !important; opacity: 0.5 !important; color: #6b7280 !important; width: 14px !important; min-width: 14px !important; }
   .ng-expand-icon:hover { opacity: 1 !important; }
+  /* Depth indentation — maps library 28/48/68/88px to compact 8/18/28/38px */
+  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 28px"] { padding-left: 8px  !important; }
+  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 48px"] { padding-left: 18px !important; }
+  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 68px"] { padding-left: 28px !important; }
+  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 88px"] { padding-left: 38px !important; }
 `;
 
 // ─── Grid columns — two-column layout matching v7's nimbusColumns ────────────
@@ -151,6 +154,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     _zoomLevel = 'week';
     _deps = [];
     _dragCleanup = null;
+    _shadingCleanup = null;
     _depthMap = new Map();
     _viewMode = 'gantt';     // 'gantt' | 'list'
     _filterEntityId = null;  // null = all, string = filter by entity id
@@ -287,6 +291,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
 
     disconnectedCallback() {
         if (this._dragCleanup) { this._dragCleanup(); this._dragCleanup = null; }
+        if (this._shadingCleanup) { this._shadingCleanup(); this._shadingCleanup = null; }
         if (this._gantt) {
             try { this._gantt.destroy(); } catch (e) { /* swallow */ }
             this._gantt = null;
@@ -408,6 +413,12 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         // Inject v5 CSS overrides into document.head so they reach nimbus-gantt's
         // DOM children past LWC synthetic shadow boundaries.
         this.injectV5Styles();
+
+        // Apply depth-based tint shading with MutationObserver
+        if (this._shadingCleanup) { this._shadingCleanup(); this._shadingCleanup = null; }
+        Promise.resolve().then(() => {
+            this._shadingCleanup = this._applyDepthShading(container);
+        });
 
         // Initialize drag-to-reparent after gantt renders
         if (this._dragCleanup) { this._dragCleanup(); this._dragCleanup = null; }
@@ -538,6 +549,116 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         this._depthMap = map;
     }
 
+    _applyDepthShading(container) {
+        if (!container) return;
+        const applied = new Map();
+        let isApplying = false;
+
+        // Parse inline background "rgba(r,g,b,...)" or "#rrggbb" → {r,g,b}
+        const parseRgb = (s) => {
+            const m = s.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+            return m ? { r: +m[1], g: +m[2], b: +m[3] } : null;
+        };
+
+        const hexToRgb = (hex) => {
+            const h = hex.replace('#', '');
+            return { r: parseInt(h.substring(0,2), 16), g: parseInt(h.substring(2,4), 16), b: parseInt(h.substring(4,6), 16) };
+        };
+
+        // Pre-build bucket RGB map from PRIORITY_BUCKETS bgTint values
+        const bucketRgbMap = new Map();
+        for (const b of PRIORITY_BUCKETS) {
+            bucketRgbMap.set(b.id, hexToRgb(b.bgTint));
+        }
+
+        const scrollContent = container.querySelector('.ng-scroll-content');
+        let lastGrad = '';
+
+        const apply = () => {
+            if (isApplying) return;
+            isApplying = true;
+
+            const rows = container.querySelectorAll('.ng-grid-row');
+            let bucketRgb = null;
+            const stripes = [];
+
+            for (const row of rows) {
+                const el = row;
+                if (el.classList.contains('ng-group-row')) {
+                    // Get RGB from inline background or from data-task-id → bucketRgbMap
+                    const taskId = el.getAttribute('data-task-id') || '';
+                    const bucketId = taskId.replace('__bucket_header__', '');
+                    bucketRgb = bucketRgbMap.get(bucketId) || parseRgb(el.style.background || '');
+                    if (bucketRgb) {
+                        stripes.push({ top: el.offsetTop, height: el.offsetHeight, color: `rgba(${bucketRgb.r},${bucketRgb.g},${bucketRgb.b},0.18)` });
+                    }
+                    continue;
+                }
+
+                const taskId = el.getAttribute('data-task-id') || '';
+                const depth = this._depthMap.get(taskId) || 0;
+                let target = '';
+                if (bucketRgb) {
+                    const alpha = Math.max(0.03, 0.12 - depth * 0.04);
+                    target = `rgba(${bucketRgb.r},${bucketRgb.g},${bucketRgb.b},${alpha})`;
+                    stripes.push({ top: el.offsetTop, height: el.offsetHeight, color: target });
+                }
+                if (applied.get(el) !== target) {
+                    applied.set(el, target);
+                    if (target) el.style.setProperty('background', target, 'important');
+                    else el.style.removeProperty('background');
+                }
+            }
+
+            // Canvas-side: apply background-image gradient to .ng-scroll-content
+            if (scrollContent && stripes.length > 0) {
+                const liveCanvas = scrollContent.querySelector('canvas');
+                if (liveCanvas) {
+                    const cw = liveCanvas.offsetWidth || liveCanvas.width;
+                    if (cw > 0) {
+                        scrollContent.style.backgroundSize = cw + 'px 100%';
+                        scrollContent.style.backgroundRepeat = 'no-repeat';
+                    }
+                }
+                const totalHeight = scrollContent.scrollHeight || 2000;
+                const stops = [];
+                let lastEnd = 0;
+                for (const s of stripes) {
+                    if (s.top > lastEnd) stops.push(`transparent ${lastEnd}px`, `transparent ${s.top}px`);
+                    stops.push(`${s.color} ${s.top}px`, `${s.color} ${s.top + s.height}px`);
+                    lastEnd = s.top + s.height;
+                }
+                if (lastEnd < totalHeight) stops.push(`transparent ${lastEnd}px`, `transparent ${totalHeight}px`);
+                const grad = `linear-gradient(to bottom, ${stops.join(', ')})`;
+                if (grad !== lastGrad) { lastGrad = grad; scrollContent.style.backgroundImage = grad; }
+            }
+
+            isApplying = false;
+        };
+
+        // Run immediately via rAF, then watch for DOM mutations
+        const raf = requestAnimationFrame(apply);
+        let debounce = null;
+        const obs = new MutationObserver(() => {
+            if (isApplying) return;
+            if (debounce) clearTimeout(debounce);
+            debounce = setTimeout(apply, 50);
+        });
+        obs.observe(container, { childList: true, subtree: true });
+
+        // Return cleanup function
+        return () => {
+            cancelAnimationFrame(raf);
+            if (debounce) clearTimeout(debounce);
+            obs.disconnect();
+            if (scrollContent) {
+                scrollContent.style.backgroundImage = '';
+                scrollContent.style.backgroundSize = '';
+                scrollContent.style.backgroundRepeat = '';
+            }
+        };
+    }
+
     _getTaskGroup(taskId) {
         const row = this.rows.find(r => r.id === taskId);
         return row ? (row.priorityGroup || null) : null;
@@ -556,7 +677,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         let autoScrollRAF = null, autoScrollVelocity = 0;
         let lastClickId = null, lastClickTime = 0;
 
-        const findScrollEl = () => container.querySelector('.ng-grid-body') || container.querySelector('.ng-grid-body-inner');
+        const findScrollEl = () => container.querySelector('.ng-scroll-wrapper');
 
         const tickAutoScroll = () => {
             const el = findScrollEl();
