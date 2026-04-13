@@ -60,7 +60,16 @@ export default class DeliveryProFormaTimeline extends LightningElement {
 
     _mount() {
         const container = this.template.querySelector('.timeline-container');
-        if (!container || !window.DeliveryTimeline) return;
+        if (!container) {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] Container element not found in template');
+            return;
+        }
+        if (!window.DeliveryTimeline) {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] window.DeliveryTimeline not set — static resource may have failed to load');
+            return;
+        }
 
         // Map Apex DTOs to SFTask shape the React bundle expects
         const tasks = this._tasks.map(r => ({
@@ -80,11 +89,17 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             isInactive: !!r.isInactive,
         }));
 
-        window.DeliveryTimeline.mount(container, {
-            tasks,
-            onPatch: (patch) => this._handlePatch(patch),
-        });
-        this._mounted = true;
+        try {
+            window.DeliveryTimeline.mount(container, {
+                tasks,
+                onPatch: (patch) => this._handlePatch(patch),
+            });
+            this._mounted = true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] mount() threw — Locker Service container issue or bundle error:', error);
+            this._showError('Timeline failed to render', error);
+        }
     }
 
     async _handlePatch(patch) {
