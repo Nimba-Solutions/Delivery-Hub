@@ -25,6 +25,8 @@ import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%Deliver
 import getGanttDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttDependencies';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
 import updateWorkItemPriorityGroup from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemPriorityGroup';
+import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
+import updateWorkItemParent from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemParent';
 
 // ─── Bucket palette — bold solid colors match cloudnimbusllc.com v5 GROUP_BG ─
 const PRIORITY_BUCKETS = [
@@ -148,6 +150,8 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     _scriptLoaded = false;
     _zoomLevel = 'week';
     _deps = [];
+    _dragCleanup = null;
+    _depthMap = new Map();
     _viewMode = 'gantt';     // 'gantt' | 'list'
     _filterEntityId = null;  // null = all, string = filter by entity id
     _selectedTask = null;    // task object for floating detail panel
@@ -282,6 +286,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     }
 
     disconnectedCallback() {
+        if (this._dragCleanup) { this._dragCleanup(); this._dragCleanup = null; }
         if (this._gantt) {
             try { this._gantt.destroy(); } catch (e) { /* swallow */ }
             this._gantt = null;
@@ -403,6 +408,11 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         // Inject v5 CSS overrides into document.head so they reach nimbus-gantt's
         // DOM children past LWC synthetic shadow boundaries.
         this.injectV5Styles();
+
+        // Initialize drag-to-reparent after gantt renders
+        if (this._dragCleanup) { this._dragCleanup(); this._dragCleanup = null; }
+        this._buildDepthMap();
+        this._dragCleanup = this._initDragManager(container);
     }
 
     injectV5Styles() {
@@ -508,6 +518,268 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         if (!level || level === this._zoomLevel) return;
         this._zoomLevel = level;
         if (this._gantt) this._gantt.setZoom(level);
+    }
+
+    // ─── Drag-to-reparent — ported from cloudnimbusllc.com v5/v8 ─────────────
+
+    _buildDepthMap() {
+        const map = new Map();
+        const rowMap = new Map(this.rows.map(r => [r.id, r]));
+        const compute = (id) => {
+            if (map.has(id)) return map.get(id);
+            const row = rowMap.get(id);
+            if (!row || !row.parentWorkItemId || !rowMap.has(row.parentWorkItemId)) {
+                map.set(id, 0); return 0;
+            }
+            const d = 1 + compute(row.parentWorkItemId);
+            map.set(id, d); return d;
+        };
+        this.rows.forEach(r => compute(r.id));
+        this._depthMap = map;
+    }
+
+    _getTaskGroup(taskId) {
+        const row = this.rows.find(r => r.id === taskId);
+        return row ? (row.priorityGroup || null) : null;
+    }
+
+    _initDragManager(container) {
+        const self = this;
+        const DRAG_THRESHOLD = 5;
+        const LEAF_STEP = 10;
+        const INDENT_BASE = 8;
+
+        let dragTaskId = null, dragSourceGroup = null, dragRow = null;
+        let startX = 0, startY = 0, dragStartX = 0, dragStartDepth = 0;
+        let hasMoved = false, didDrag = false, pendingIP = null;
+        let ghost = null, spacer = null;
+        let autoScrollRAF = null, autoScrollVelocity = 0;
+        let lastClickId = null, lastClickTime = 0;
+
+        const findScrollEl = () => container.querySelector('.ng-grid-body') || container.querySelector('.ng-grid-body-inner');
+
+        const tickAutoScroll = () => {
+            const el = findScrollEl();
+            if (!el || !dragTaskId || autoScrollVelocity === 0) { autoScrollRAF = null; return; }
+            el.scrollTop = Math.max(0, Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + autoScrollVelocity));
+            autoScrollRAF = requestAnimationFrame(tickAutoScroll);
+        };
+
+        const groupFromRowId = (rowId) => {
+            if (rowId.startsWith('__bucket_header__')) return rowId.slice('__bucket_header__'.length);
+            if (rowId.startsWith('group-')) return rowId.slice(6);
+            return null;
+        };
+
+        const getGroupAtY = (clientY) => {
+            const groupRows = Array.from(container.querySelectorAll('.ng-group-row'));
+            let current = null;
+            for (const row of groupRows) {
+                const rect = row.getBoundingClientRect();
+                if (rect.top <= clientY) {
+                    const tid = row.getAttribute('data-task-id');
+                    if (tid) current = groupFromRowId(tid);
+                }
+            }
+            return current;
+        };
+
+        const getInsertionPoint = (clientY, clientX) => {
+            const allRows = Array.from(container.querySelectorAll('.ng-grid-row:not(.ng-group-row)')).filter(r => r !== dragRow && r !== spacer);
+            let rowAbove = null, rowBelow = null;
+            for (const row of allRows) {
+                const rect = row.getBoundingClientRect();
+                if (clientY < rect.top + rect.height / 2) { rowBelow = row; break; }
+                rowAbove = row;
+            }
+            const aboveId = rowAbove ? rowAbove.getAttribute('data-task-id') : null;
+            const belowId = rowBelow ? rowBelow.getAttribute('data-task-id') : null;
+            const aboveDepth = aboveId != null ? (self._depthMap.get(aboveId) || 0) : -1;
+            const aboveHasExpand = !!(rowAbove && rowAbove.querySelector('.ng-expand-icon'));
+            const maxDepth = rowAbove == null ? 0 : (aboveHasExpand ? aboveDepth + 1 : aboveDepth);
+            const depthDelta = Math.round((clientX - dragStartX) / 25);
+            const desiredDepth = Math.max(0, Math.min(maxDepth, dragStartDepth + depthDelta));
+
+            let parentId = null;
+            if (desiredDepth > 0 && aboveId) {
+                let curId = aboveId;
+                while (curId) {
+                    const d = self._depthMap.get(curId) || 0;
+                    if (d === desiredDepth - 1) { parentId = curId; break; }
+                    const row = self.rows.find(r => r.id === curId);
+                    curId = row ? row.parentWorkItemId : null;
+                }
+            }
+
+            const aboveRow = aboveId ? self.rows.find(r => r.id === aboveId) : null;
+            const belowRow = belowId ? self.rows.find(r => r.id === belowId) : null;
+            const sortAbove = aboveRow ? (aboveRow.sortOrder || 0) : 0;
+            const sortBelow = belowRow ? (belowRow.sortOrder || sortAbove + 2) : sortAbove + 2;
+            const targetSortOrder = (sortAbove + sortBelow) / 2;
+            const targetBucket = getGroupAtY(clientY) || dragSourceGroup || '';
+
+            return { parentId, depth: desiredDepth, targetBucket, targetSortOrder, insertBeforeRow: rowBelow };
+        };
+
+        const cleanupDrag = () => {
+            if (ghost) { ghost.remove(); ghost = null; }
+            if (spacer) { spacer.remove(); spacer = null; }
+            if (dragRow) { dragRow.style.opacity = ''; dragRow.style.visibility = ''; dragRow.style.outline = ''; }
+            document.body.style.cursor = '';
+            dragTaskId = null; dragSourceGroup = null; dragRow = null;
+            hasMoved = false; pendingIP = null;
+            autoScrollVelocity = 0;
+            if (autoScrollRAF != null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
+        };
+
+        const onClickCapture = (e) => {
+            if (didDrag) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); didDrag = false; }
+        };
+
+        const onMouseDown = (e) => {
+            const row = e.target.closest('.ng-grid-row:not(.ng-group-row)');
+            if (!row) return;
+            const tag = e.target.tagName.toLowerCase();
+            if (tag === 'input' || tag === 'button' || tag === 'select') return;
+            const taskId = row.getAttribute('data-task-id');
+            if (!taskId) return;
+            const groupId = self._getTaskGroup(taskId);
+            if (!groupId) return;
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+            dragTaskId = taskId; dragSourceGroup = groupId; dragRow = row;
+            startX = e.clientX; startY = e.clientY;
+            dragStartX = e.clientX;
+            dragStartDepth = self._depthMap.get(taskId) || 0;
+            hasMoved = false; didDrag = false; pendingIP = null;
+            document.body.style.cursor = 'grabbing';
+            row.style.outline = '2px solid #3b82f6';
+        };
+
+        const onMouseMove = (e) => {
+            if (!dragTaskId || !dragRow) return;
+            const dx = e.clientX - startX, dy = e.clientY - startY;
+            if (!hasMoved && (Math.abs(dy) > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)) {
+                hasMoved = true; didDrag = true;
+                // Ghost
+                const firstCell = dragRow.querySelector('td');
+                ghost = document.createElement('div');
+                ghost.style.cssText = [
+                    'position:fixed;z-index:10000;pointer-events:none;',
+                    `left:${e.clientX - 16}px;top:${e.clientY - 18}px;`,
+                    `width:${Math.min(firstCell ? firstCell.offsetWidth : 200, 320)}px;`,
+                    'background:#dbeafe;border:2px solid #2563eb;border-radius:8px;',
+                    'box-shadow:0 16px 40px rgba(37,99,235,0.45);',
+                    'padding:6px 12px;font-size:12px;font-weight:700;color:#1d4ed8;',
+                    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                    'cursor:grabbing;display:flex;align-items:center;gap:8px;',
+                    'transform:rotate(-1.5deg) scale(1.04);',
+                ].join('');
+                ghost.innerHTML = `<span style="font-size:14px;opacity:0.6">⠿</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis">${(firstCell ? firstCell.innerText : '').replace(/\s+/g,' ').slice(0,60)}</span>`;
+                document.body.appendChild(ghost);
+                // Spacer
+                const tbody = dragRow.parentElement;
+                if (tbody) {
+                    spacer = document.createElement('tr');
+                    spacer.setAttribute('data-drag-spacer','1');
+                    spacer.style.cssText = 'pointer-events:none;';
+                    const numCols = dragRow.querySelectorAll('td').length || 6;
+                    const td = document.createElement('td');
+                    td.setAttribute('colspan', String(numCols));
+                    td.style.cssText = 'padding:0;height:34px;background:rgba(59,130,246,0.07);border-top:2px solid #3b82f6;border-bottom:2px solid rgba(59,130,246,0.3);';
+                    const span = document.createElement('span');
+                    span.style.cssText = 'display:flex;align-items:center;height:100%;padding-left:10px;font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:0.05em;opacity:0.7;';
+                    span.textContent = '↓ drop here';
+                    td.appendChild(span); spacer.appendChild(td);
+                    tbody.insertBefore(spacer, dragRow.nextSibling);
+                }
+                dragRow.style.opacity = '0.25'; dragRow.style.outline = '';
+            }
+            if (!hasMoved) return;
+            if (ghost) { ghost.style.left = `${e.clientX - 12}px`; ghost.style.top = `${e.clientY - 14}px`; }
+            // Auto-scroll
+            const scrollEl = findScrollEl();
+            if (scrollEl) {
+                const srect = scrollEl.getBoundingClientRect();
+                const EDGE = 60, MAX_SPEED = 18;
+                let v = 0;
+                if (e.clientY < srect.top + EDGE) v = -Math.ceil(MAX_SPEED * Math.min(1, (srect.top + EDGE - e.clientY) / EDGE));
+                else if (e.clientY > srect.bottom - EDGE) v = Math.ceil(MAX_SPEED * Math.min(1, (e.clientY - (srect.bottom - EDGE)) / EDGE));
+                autoScrollVelocity = v;
+                if (v !== 0 && autoScrollRAF == null) autoScrollRAF = requestAnimationFrame(tickAutoScroll);
+            }
+            // Insertion point + spacer position
+            const ip = getInsertionPoint(e.clientY, e.clientX);
+            pendingIP = ip;
+            if (spacer) {
+                const tbody = dragRow && dragRow.parentElement;
+                if (tbody) {
+                    if (ip.insertBeforeRow && ip.insertBeforeRow !== spacer) tbody.insertBefore(spacer, ip.insertBeforeRow);
+                    else if (!ip.insertBeforeRow) tbody.appendChild(spacer);
+                }
+                const indent = INDENT_BASE + ip.depth * LEAF_STEP;
+                const label = spacer.querySelector('td span');
+                if (label) label.style.paddingLeft = `${indent + 8}px`;
+            }
+        };
+
+        const onMouseUp = async (e) => {
+            autoScrollVelocity = 0;
+            if (autoScrollRAF != null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
+            const savedId = dragTaskId, savedGroup = dragSourceGroup, savedMoved = hasMoved;
+            const ip = pendingIP;
+            cleanupDrag();
+            if (!savedId || !savedGroup) return;
+            if (!savedMoved) {
+                // Treat as click — show detail panel
+                const row = self.rows.find(r => r.id === savedId);
+                if (row) {
+                    const now = Date.now();
+                    if (lastClickId === savedId && (now - lastClickTime) < 350) {
+                        // Double-click: navigate to record
+                        self.dispatchEvent(new CustomEvent('ganttnavigate', { bubbles: true, composed: true, detail: { recordId: savedId, objectApiName: 'WorkItem__c' } }));
+                    }
+                    lastClickId = savedId; lastClickTime = now;
+                    // Show detail panel (same as handleTaskClick)
+                    self.handleTaskClick({ id: savedId });
+                }
+                return;
+            }
+            if (!ip) return;
+            // Apply the move via Apex
+            const currentRow = self.rows.find(r => r.id === savedId);
+            const promises = [];
+            // Sort order always updates
+            promises.push(updateWorkItemSortOrder({ workItemId: savedId, sortOrder: ip.targetSortOrder }));
+            // Parent changed
+            if (currentRow && (currentRow.parentWorkItemId || null) !== ip.parentId) {
+                promises.push(updateWorkItemParent({ workItemId: savedId, parentId: ip.parentId || '' }));
+            }
+            // Bucket changed
+            if (ip.targetBucket && ip.targetBucket !== savedGroup) {
+                promises.push(updateWorkItemPriorityGroup({ workItemId: savedId, priorityGroup: ip.targetBucket }));
+            }
+            try {
+                await Promise.all(promises);
+            } catch (err) {
+                self.handleError('Failed to save drag', err);
+            }
+            // Rebuild depth map and refresh
+            self._buildDepthMap();
+            if (self._scriptLoaded) await self.loadData();
+        };
+
+        container.addEventListener('click', onClickCapture, true);
+        container.addEventListener('mousedown', onMouseDown, true);
+        window.addEventListener('mousemove', onMouseMove, true);
+        window.addEventListener('mouseup', onMouseUp, true);
+
+        return () => {
+            container.removeEventListener('click', onClickCapture, true);
+            container.removeEventListener('mousedown', onMouseDown, true);
+            window.removeEventListener('mousemove', onMouseMove, true);
+            window.removeEventListener('mouseup', onMouseUp, true);
+            cleanupDrag();
+        };
     }
 
     handleError(prefix, error) {

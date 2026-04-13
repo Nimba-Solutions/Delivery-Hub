@@ -354,6 +354,21 @@ private class DeliveryGanttControllerTest {
         }
     }
 
+    // ── updateWorkItemParent ─────────────────────────────────────────
+
+    @IsTest
+    static void testUpdateWorkItemParent() {
+        System.runAs(testUser) {
+            WorkItem__c parent = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Build login page' LIMIT 1];
+            WorkItem__c child  = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Fix export bug' LIMIT 1];
+            Test.startTest();
+            DeliveryGanttController.updateWorkItemParent(child.Id, parent.Id);
+            Test.stopTest();
+            WorkItem__c updated = [SELECT ParentWorkItemLookup__c FROM WorkItem__c WHERE Id = :child.Id];
+            System.assertEquals(parent.Id, updated.ParentWorkItemLookup__c, 'Parent should be set');
+        }
+    }
+
     // ── updateWorkItemPriorityGroup ──────────────────────────────────
 
     @IsTest

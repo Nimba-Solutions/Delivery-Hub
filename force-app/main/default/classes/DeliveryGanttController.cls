@@ -352,6 +352,25 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
+     * @description Updates the parent work item after a drag-reparent action.
+     *              Pass null to clear the parent (promote to root level).
+     * @param workItemId The Salesforce record Id.
+     * @param parentId   The new parent WorkItem__c Id, or null to make root-level.
+     */
+    @AuraEnabled
+    public static void updateWorkItemParent(String workItemId, String parentId) {
+        try {
+            WorkItem__c item = new WorkItem__c(Id = workItemId);
+            item.ParentWorkItemLookup__c = String.isNotBlank(parentId) ? parentId : null;
+            update item; //NOPMD
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
      * @description Updates the sort order of a work item after a drag-to-reorder
      *              action in the Gantt chart.
      * @param workItemId The Salesforce record Id.
