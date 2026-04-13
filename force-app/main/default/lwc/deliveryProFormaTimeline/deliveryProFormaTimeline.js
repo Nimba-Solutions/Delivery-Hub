@@ -11,6 +11,7 @@
 import { LightningElement } from 'lwc';
 import { loadScript } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
 import DELIVERY_TIMELINE from '@salesforce/resourceUrl/deliverytimeline';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
@@ -25,12 +26,31 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     _tasks = [];
 
     async connectedCallback() {
+        // Load nimbusgantt first so window.NimbusGantt is available when the
+        // delivery-timeline bundle runs. Locker Service may reject loadScript
+        // even when the script actually executed — catch and continue.
+        try {
+            await loadScript(this, NIMBUS_GANTT);
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] nimbusgantt script warning (may be Locker Service):', e && e.message);
+        }
         try {
             await loadScript(this, DELIVERY_TIMELINE);
-            this._scriptLoaded = true;
-            await this._loadAndMount();
         } catch (error) {
-            this._showError('Failed to load delivery timeline', error);
+            // Locker Service may reject loadScript with a security warning
+            // even though the script executed and set window.DeliveryTimeline.
+            // Log the warning but do not bail — check if the bundle loaded anyway.
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] loadScript warning (may be Locker Service):', error && error.message);
+        }
+        this._scriptLoaded = true;
+        if (window.DeliveryTimeline) {
+            await this._loadAndMount();
+        } else {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] window.DeliveryTimeline not set after script load — bundle may have failed');
+            this._showError('Timeline bundle failed to load', new Error('window.DeliveryTimeline not defined'));
         }
     }
 
