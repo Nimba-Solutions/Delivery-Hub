@@ -93,14 +93,14 @@ const V5_GANTT_STYLES = `
   .ng-grid-header { background: #f3f4f6 !important; visibility: hidden !important; }
   .ng-grid-th { font-size: 12px !important; font-weight: 700 !important; color: #1f2937 !important; padding: 0 6px !important; border-right: none !important; }
   .ng-grid-cell { padding-top: 0 !important; padding-right: 6px !important; padding-bottom: 0 !important; padding-left: 6px; border-right: none !important; }
-  .ng-grid-row { border: none !important; box-shadow: inset 0 -1px 0 #f3f4f6; box-sizing: border-box !important; }
+  .ng-grid-row { border: none !important; box-shadow: inset 0 -1px 0 #f3f4f6; box-sizing: border-box !important; height: 32px !important; }
   .ng-grid-row:not(.ng-group-row) { cursor: grab; }
   .ng-grid-row:not(.ng-group-row):active { cursor: grabbing; }
   .ng-grid-row td { border: none !important; box-sizing: border-box !important; }
   .ng-row-alt:not(.ng-group-row) { background: unset; }
-  .ng-group-row { font-weight: 700; font-size: 12px; letter-spacing: 0.02em; box-sizing: border-box !important; box-shadow: none !important; color: #fff !important; padding: 4px 6px !important; }
+  .ng-group-row { font-weight: 700; font-size: 12px; letter-spacing: 0.02em; box-sizing: border-box !important; box-shadow: none !important; color: #fff !important; padding: 6px 8px !important; height: 32px !important; line-height: 20px !important; }
   .ng-group-row .ng-grid-cell-text { font-weight: 700 !important; font-size: 12px !important; color: #fff !important; letter-spacing: 0.02em; text-transform: uppercase; }
-  .ng-group-row .ng-expand-icon { color: inherit !important; opacity: 0.6 !important; }
+  .ng-group-row .ng-expand-icon { color: inherit !important; opacity: 0.7 !important; margin-right: 4px !important; }
   .ng-row-selected:not(.ng-group-row) { background: rgba(59, 130, 246, 0.06) !important; box-shadow: inset 3px 0 0 #3b82f6 !important; }
   .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 28px"] { padding-left: 8px  !important; }
   .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 48px"] { padding-left: 18px !important; }
@@ -109,12 +109,18 @@ const V5_GANTT_STYLES = `
   .ng-expand-spacer { width: 0 !important; min-width: 0 !important; }
   .ng-expand-icon { font-size: 9px !important; opacity: 0.5 !important; color: #6b7280 !important; width: 14px !important; min-width: 14px !important; }
   .ng-expand-icon:hover { opacity: 1 !important; }
+  /* Bucket-specific background colors */
+  .ng-group-row[data-bucket="top-priority"] { background: #dc2626 !important; }
+  .ng-group-row[data-bucket="active"] { background: #d97706 !important; }
+  .ng-group-row[data-bucket="follow-on"] { background: #059669 !important; }
+  .ng-group-row[data-bucket="proposed"] { background: #2563eb !important; }
+  .ng-group-row[data-bucket="deferred"] { background: #94a3b8 !important; }
 `;
 
-// ─── Grid columns — two-column layout matching v5's nimbusColumns ────────────
+// ─── Grid columns — two-column layout matching v7's nimbusColumns ────────────
 const GANTT_COLUMNS = [
-    { field: 'title',      header: '', width: 210, tree: true },
-    { field: 'hoursLabel', header: '', width: 85,  align: 'right' },
+    { field: 'title',      header: '', width: 240, tree: true },
+    { field: 'hoursLabel', header: '', width: 95,  align: 'right' },
 ];
 
 const ZOOM_LEVELS = ['day', 'week', 'month', 'quarter'];
@@ -240,7 +246,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             rowHeight:     32,
             barHeight:     20,
             headerHeight:  32,
-            gridWidth:     295,
+            gridWidth:     335,
             zoomLevel:     this._zoomLevel,
             showToday:     true,
             showWeekends:  true,
