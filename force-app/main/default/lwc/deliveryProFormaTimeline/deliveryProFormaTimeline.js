@@ -11,8 +11,10 @@
  *               WorkItem__c.PriorityGroupPk__c first; falls back to server-side
  *               derivation when the picklist is blank.
  *
- *               Set standalone=true (e.g. on the VF standalone page) to suppress
- *               the SLDS toolbar and render a minimal custom bar instead.
+ *               Root items (no parentWorkItemId) get a groupId that tells the
+ *               PriorityGroupingPlugin which bucket to place them in. Sub-items
+ *               return null from getBucket so the plugin leaves their parentId
+ *               intact, letting them nest under their parent category task naturally.
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api } from 'lwc';
@@ -129,20 +131,14 @@ const V5_GANTT_STYLES = `
 
 // ─── Grid columns — two-column layout matching v7's nimbusColumns ────────────
 const GANTT_COLUMNS = [
-    { field: 'title',      header: '', width: 240, tree: true },
-    { field: 'hoursLabel', header: '', width: 95,  align: 'right' },
+    { field: 'title',      header: '', width: 160, tree: true },
+    { field: 'hoursLabel', header: '', width: 60,  align: 'right' },
 ];
 
 const ZOOM_LEVELS = ['day', 'week', 'month', 'quarter'];
 
 export default class DeliveryProFormaTimeline extends LightningElement {
     @api showCompleted = false;
-    /**
-     * Standalone mode: render a minimal plain-HTML toolbar instead of SLDS components.
-     * Pass standalone=true on the VF page (DeliveryGanttStandalone) where there is no
-     * Salesforce chrome. Cannot default to true per LWC1503 — false is the correct default.
-     */
-    @api standalone = false;
 
     isLoading = true;
     errorMessage = null;
@@ -152,6 +148,9 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     _scriptLoaded = false;
     _zoomLevel = 'week';
     _deps = [];
+    _viewMode = 'gantt';     // 'gantt' | 'list'
+    _filterEntityId = null;  // null = all, string = filter by entity id
+    _selectedTask = null;    // task object for floating detail panel
 
     get zoomOptions() {
         return ZOOM_LEVELS.map((level) => ({
@@ -164,6 +163,113 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     get isEmpty() {
         return !this.isLoading && !this.errorMessage && this.rows.length === 0;
     }
+
+    get hasRows() {
+        return this.rows.length > 0;
+    }
+
+    get stats() {
+        const active = this.rows.filter(r => !r.isInactive);
+        const logged = active.reduce((s, r) => s + (Number(r.loggedHours) || 0), 0);
+        const estimated = active.reduce((s, r) => s + (Number(r.estimatedHours) || 0), 0);
+        const remaining = Math.max(0, estimated - logged);
+        const monthsLow = remaining > 0 ? (remaining / 160).toFixed(1) : '—';
+        const monthsHigh = remaining > 0 ? (remaining / 120).toFixed(1) : '—';
+        return {
+            items: active.length,
+            hoursLogged: logged % 1 === 0 ? logged : logged.toFixed(1),
+            hoursRemaining: Math.round(remaining),
+            months: monthsLow === monthsHigh ? monthsLow : `${monthsLow}–${monthsHigh}`,
+        };
+    }
+
+    get entityFilters() {
+        const seen = new Map();
+        this.rows.forEach(r => {
+            if (r.entityId && !seen.has(r.entityId)) {
+                seen.set(r.entityId, r.entityName || r.entityId);
+            }
+        });
+        const all = [{ id: 'null', label: 'All', isActive: this._filterEntityId === null }];
+        seen.forEach((label, id) => {
+            all.push({ id, label, isActive: this._filterEntityId === id });
+        });
+        return all;
+    }
+
+    get filteredRows() {
+        if (!this._filterEntityId) return this.rows;
+        return this.rows.filter(r => r.entityId === this._filterEntityId);
+    }
+
+    get isGanttMode() { return this._viewMode === 'gantt'; }
+    get isListMode()  { return this._viewMode === 'list'; }
+
+    get listGroups() {
+        const bucketOrder = ['top-priority', 'active', 'follow-on', 'proposed', 'deferred'];
+        const bucketLabels = {
+            'top-priority': 'NOW',
+            'active': 'NEXT',
+            'follow-on': 'PLANNED',
+            'proposed': 'PROPOSED',
+            'deferred': 'HOLD',
+        };
+        const bucketColors = {
+            'top-priority': '#ef4444',
+            'active': '#f59e0b',
+            'follow-on': '#10b981',
+            'proposed': '#3b82f6',
+            'deferred': '#94a3b8',
+        };
+        const groups = new Map();
+        this.filteredRows.forEach(r => {
+            const b = r.priorityGroup || 'follow-on';
+            if (!groups.has(b)) groups.set(b, []);
+            groups.get(b).push(r);
+        });
+        return bucketOrder.filter(b => groups.has(b)).map(b => ({
+            id: b,
+            label: bucketLabels[b],
+            color: bucketColors[b],
+            headerStyle: `background:${bucketColors[b]};color:#fff;padding:0.5rem 1rem;font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase`,
+            items: groups.get(b).map(r => ({
+                id: r.id,
+                title: r.title || r.name,
+                stage: r.stage || '—',
+                priority: r.priority || '—',
+                developer: r.developerName || '—',
+                entity: r.entityName || '—',
+                hours: r.estimatedHours ? `${Math.round(r.estimatedHours)}h` : '—',
+                startDate: r.startDate || '—',
+                endDate: r.endDate || '—',
+            })),
+        }));
+    }
+
+    get legendItems() {
+        const seenColors = new Set();
+        const stages = [
+            { label: 'Backlog / Scoping', color: '#64748b' },
+            { label: 'Sizing / Dev Ready', color: '#3b82f6' },
+            { label: 'In Development', color: '#22c55e' },
+            { label: 'QA', color: '#a855f7' },
+            { label: 'Client UAT', color: '#14b8a6' },
+            { label: 'Deployment', color: '#f97316' },
+            { label: 'Done', color: '#9ca3af' },
+            { label: 'Blocked', color: '#ef4444' },
+        ];
+        return stages.filter(s => {
+            if (seenColors.has(s.color)) return false;
+            seenColors.add(s.color);
+            return true;
+        }).map(s => ({
+            label: s.label,
+            color: s.color,
+            dotStyle: `background:${s.color};width:10px;height:10px;border-radius:2px;display:inline-block`,
+        }));
+    }
+
+    get hasSelectedTask() { return !!this._selectedTask; }
 
     async connectedCallback() {
         try {
@@ -209,7 +315,8 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             this._gantt = null;
         }
 
-        if (this.rows.length === 0) {
+        const source = this.filteredRows;
+        if (source.length === 0) {
             container.innerHTML = '';
             return;
         }
@@ -218,8 +325,12 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             id: d.id, source: d.source, target: d.target, type: d.dependencyType || 'FS',
         }));
 
-        // ── Step 1: Build leaf task objects ──────────────────────────────────
-        const leafTasks = this.rows.map((row) => {
+        // ── Step 1: Build task objects from filteredRows ──────────────────────
+        // Only root items (no parentWorkItemId) get a groupId — this tells the
+        // PriorityGroupingPlugin to bucket them. Sub-items return null from
+        // getBucket so the plugin leaves their parentId intact, letting them
+        // nest under their parent category task naturally.
+        const tasks = source.map((row) => {
             const hrs    = row.estimatedHours != null ? Math.round(Number(row.estimatedHours)) : 0;
             const logged = row.loggedHours    != null ? Number(row.loggedHours) : 0;
             const pct    = hrs > 0 ? Math.round((logged / hrs) * 100) : 0;
@@ -234,11 +345,13 @@ export default class DeliveryProFormaTimeline extends LightningElement {
                 status:     row.stage,
                 priority:   row.priority,
                 assignee:   row.developerName || '',
-                // parentId from sub-tasks — will be overwritten below for root-level tasks
+                // Root items get a groupId (tells the plugin which bucket to place them in)
+                // Sub-items (have a real parentId) get null → plugin ignores them
+                groupId:    row.parentWorkItemId ? null : (row.priorityGroup || null),
                 parentId:   row.parentWorkItemId || undefined,
                 color:      STAGE_COLORS[row.stage] || undefined,
                 metadata: {
-                    priorityGroup: row.priorityGroup,
+                    priorityGroup: row.parentWorkItemId ? null : row.priorityGroup,
                     hoursHigh:     hrs,
                     hoursLogged:   logged,
                     entityId:      row.entityId,
@@ -247,152 +360,116 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             };
         });
 
-        // ── Step 2: Aggregate per (bucket, entity) pair ───────────────────────
-        // Key: `${bucketId}||${entityId}` → entity aggregate data
-        const entityDataMap = new Map();
+        const allTasks = tasks;
 
-        leafTasks.forEach((task) => {
-            const bucketId   = task.metadata.priorityGroup;
-            if (!bucketId) return;
-            const entityId   = task.metadata.entityId   || '__none__';
-            const entityName = task.metadata.entityName || 'Other';
-            const key        = `${bucketId}||${entityId}`;
-
-            if (!entityDataMap.has(key)) {
-                entityDataMap.set(key, {
-                    key, bucketId, entityId, entityName,
-                    tasks: [], totalHours: 0, totalLogged: 0,
-                    minStart: null, maxEnd: null,
-                });
-            }
-            const eg = entityDataMap.get(key);
-            eg.tasks.push(task);
-            eg.totalHours  += task.metadata.hoursHigh   || 0;
-            eg.totalLogged += task.metadata.hoursLogged || 0;
-            if (task.startDate && (!eg.minStart || task.startDate < eg.minStart)) eg.minStart = task.startDate;
-            if (task.endDate   && (!eg.maxEnd   || task.endDate   > eg.maxEnd))   eg.maxEnd   = task.endDate;
-        });
-
-        // ── Step 3: Build bucket header synthetic rows ────────────────────────
-        const bucketHeaderRows = [];
-
-        PRIORITY_BUCKETS.forEach((bucket) => {
-            const bTasks = leafTasks.filter((t) => t.metadata.priorityGroup === bucket.id);
-            if (bTasks.length === 0) return;
-
-            const totalHours  = bTasks.reduce((s, t) => s + (t.metadata.hoursHigh   || 0), 0);
-            const totalLogged = bTasks.reduce((s, t) => s + (t.metadata.hoursLogged || 0), 0);
-            const minStart    = bTasks.filter((t) => t.startDate)
-                                      .reduce((mn, t) => (!mn || t.startDate < mn ? t.startDate : mn), null);
-            const maxEnd      = bTasks.filter((t) => t.endDate)
-                                      .reduce((mx, t) => (!mx || t.endDate   > mx ? t.endDate   : mx), null);
-            if (!minStart || !maxEnd) return; // need valid date range for timeline bar
-
-            bucketHeaderRows.push({
-                id:         `__bucket_header__${bucket.id}`,
-                title:      bucket.label,
-                name:       bucket.label,
-                hoursLabel: `${bTasks.length} · ${totalHours}h`,
-                startDate:  minStart,
-                endDate:    maxEnd,
-                progress:   totalHours > 0 ? totalLogged / totalHours : 0,
-                color:      bucket.color,
-                sortOrder:  bucket.order,
-                metadata:   { __bucketHeader: true, bucketId: bucket.id, hoursHigh: totalHours },
-            });
-        });
-
-        // ── Step 4: Build entity group rows + assign task parentIds ───────────
-        const entityGroupRows = [];
-
-        entityDataMap.forEach((eg) => {
-            const bucket = PRIORITY_BUCKETS.find((b) => b.id === eg.bucketId);
-            if (!bucket) return;
-
-            // Only create entity row if there's a valid date range for the bar
-            const hasDates = eg.minStart && eg.maxEnd;
-            const entityRowId = `__entity__${eg.key}`;
-
-            if (hasDates) {
-                entityGroupRows.push({
-                    id:         entityRowId,
-                    title:      eg.entityName,
-                    name:       eg.entityName,
-                    hoursLabel: eg.totalHours > 0 ? `${eg.totalHours}h` : '',
-                    startDate:  eg.minStart,
-                    endDate:    eg.maxEnd,
-                    progress:   eg.totalHours > 0 ? eg.totalLogged / eg.totalHours : 0,
-                    color:      bucket.bgTint,
-                    parentId:   `__bucket_header__${eg.bucketId}`,
-                    metadata:   { entityId: eg.entityId, bucketId: eg.bucketId, hoursHigh: eg.totalHours },
-                });
-            }
-
-            // Assign root-level tasks (no existing parentWorkItemId) to entity row
-            // Sub-tasks that already have parentId pointing to another task keep that relationship.
-            eg.tasks.forEach((task) => {
-                if (!task.parentId) {
-                    task.parentId = hasDates
-                        ? entityRowId
-                        : `__bucket_header__${eg.bucketId}`;
-                }
-            });
-        });
-
-        // ── Step 5: Combine and render — no PriorityGroupingPlugin ────────────
-        // PriorityGroupingPlugin would overwrite ALL parentIds, destroying the
-        // Bucket → Entity → Task hierarchy built above.
-        const allTasks = [...bucketHeaderRows, ...entityGroupRows, ...leafTasks];
-
-        const { NimbusGantt } = window.NimbusGantt;
+        const { NimbusGantt, PriorityGroupingPlugin, hoursWeightedProgress } = window.NimbusGantt;
 
         this._gantt = new NimbusGantt(container, {
-            tasks:         allTasks,
+            tasks,
             dependencies,
-            columns:       GANTT_COLUMNS,
-            theme:         V3_MATCH_THEME,
-            rowHeight:     32,
-            barHeight:     20,
-            headerHeight:  32,
-            gridWidth:     335,
-            zoomLevel:     this._zoomLevel,
-            showToday:     true,
-            showWeekends:  true,
-            showProgress:  true,
-            colorMap:      STAGE_COLORS,
-            readOnly:      false,
-            onTaskClick:   (task) => this.handleTaskClick(task),
-            onTaskMove:    (task, startDate, endDate) => this.handleTaskDateChange(task, startDate, endDate),
-            onTaskResize:  (task, startDate, endDate) => this.handleTaskDateChange(task, startDate, endDate),
+            columns:      GANTT_COLUMNS,
+            theme:        V3_MATCH_THEME,
+            rowHeight:    32,
+            barHeight:    20,
+            headerHeight: 32,
+            gridWidth:    220,
+            zoomLevel:    this._zoomLevel,
+            showToday:    true,
+            showWeekends: true,
+            showProgress: true,
+            colorMap:     STAGE_COLORS,
+            readOnly:     false,
+            onTaskClick:  (task) => this.handleTaskClick(task),
+            onTaskMove:   (task, startDate, endDate) => this.handleTaskDateChange(task, startDate, endDate),
+            onTaskResize: (task, startDate, endDate) => this.handleTaskDateChange(task, startDate, endDate),
         });
+
+        this._gantt.use(
+            PriorityGroupingPlugin({
+                buckets: PRIORITY_BUCKETS,
+                getBucket: (task) => {
+                    // Sub-items (with a real parentId pointing to another task, not a bucket header)
+                    // return null so the plugin leaves their parentId intact.
+                    if (task.parentId && !task.parentId.startsWith('__bucket_header__')) return null;
+                    return (task.metadata && task.metadata.priorityGroup) || task.groupId || null;
+                },
+                getBucketProgress: hoursWeightedProgress,
+            })
+        );
 
         this._gantt.setData(allTasks, dependencies);
         try { this._gantt.expandAll(); } catch (e) { /* swallow */ }
 
-        // Inject v5 CSS overrides into the container's light DOM so they win
-        // over nimbus-gantt's injected defaults.
-        this.injectV5Styles(container);
+        // Inject v5 CSS overrides into document.head so they reach nimbus-gantt's
+        // DOM children past LWC synthetic shadow boundaries.
+        this.injectV5Styles();
     }
 
-    injectV5Styles(container) {
-        const existing = container.querySelector('#ng-v5-overrides');
-        if (existing) existing.remove();
-        const style = document.createElement('style');
-        style.id = 'ng-v5-overrides';
-        style.textContent = V5_GANTT_STYLES;
-        container.appendChild(style);
+    injectV5Styles() {
+        const STYLE_ID = 'ng-v5-overrides-dh';
+        let el = document.getElementById(STYLE_ID);
+        if (!el) {
+            el = document.createElement('style');
+            el.id = STYLE_ID;
+            document.head.appendChild(el);
+        }
+        el.textContent = V5_GANTT_STYLES;
     }
 
     handleTaskClick(task) {
         if (!task || !task.id) return;
         if (task.id.startsWith('__bucket_header__') || task.id.startsWith('__entity__')) return;
-        // Use 'ganttnavigate' (not 'navigate') to avoid collision with platform
-        // Lightning Out global handlers that intercept the bare 'navigate' event
-        // and attempt a page redirect (causing Salesforce's redirect-block page).
+        // Find the source row for details
+        const row = this.rows.find(r => r.id === task.id);
+        if (!row) return;
+        const hrs = row.estimatedHours ? Math.round(Number(row.estimatedHours)) : 0;
+        const logged = row.loggedHours ? Number(row.loggedHours) : 0;
+        const pct = hrs > 0 ? Math.round((logged / hrs) * 100) : 0;
+        this._selectedTask = {
+            id: row.id,
+            title: row.title || row.name,
+            stage: row.stage || '—',
+            priority: row.priority || '—',
+            developer: row.developerName || '—',
+            entity: row.entityName || '—',
+            hours: hrs > 0 ? `${logged}h / ${hrs}h (${pct}%)` : '—',
+            startDate: row.startDate || '—',
+            endDate: row.endDate || '—',
+            recordUrl: `/lightning/r/WorkItem__c/${row.id}/view`,
+        };
+    }
+
+    handleViewMode(event) {
+        const mode = event.currentTarget.dataset.mode;
+        if (mode === this._viewMode) return;
+        this._viewMode = mode;
+        if (mode === 'gantt' && this._scriptLoaded) {
+            // Re-render the gantt after switching back
+            Promise.resolve().then(() => this.renderGantt());
+        }
+    }
+
+    handleEntityFilter(event) {
+        const id = event.currentTarget.dataset.id;
+        this._filterEntityId = (id === 'null' || id === null) ? null : id;
+        if (this._scriptLoaded) Promise.resolve().then(() => this.renderGantt());
+    }
+
+    handleDetailClose() {
+        this._selectedTask = null;
+    }
+
+    handleDetailNavigate() {
+        if (!this._selectedTask) return;
         this.dispatchEvent(new CustomEvent('ganttnavigate', {
             bubbles: true, composed: true,
-            detail: { recordId: task.id, objectApiName: 'WorkItem__c' },
+            detail: { recordId: this._selectedTask.id, objectApiName: 'WorkItem__c' },
         }));
+        this._selectedTask = null;
+    }
+
+    stopPropagation(event) {
+        event.stopPropagation();
     }
 
     handleShowCompletedChange(event) {
