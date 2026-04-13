@@ -81,9 +81,11 @@ const V3_MATCH_THEME = {
     selectionColor:     '#3b82f6',
 };
 
-// ─── CSS overrides — mirrors v7's bucket styling with proper background colors ───
-// Injected into the gantt container (light DOM) after construction so it wins
-// over nimbus-gantt's own defaults without touching the LWC shadow boundary.
+// ─── CSS overrides — v7 parity using data-task-id attribute selectors ─────────
+// NimbusGantt renders each row as <tr data-task-id="..."> — there is NO
+// ng-group-row class in the IIFE (the old selectors never matched anything).
+// We target bucket headers via [data-task-id^="__bucket_header__"] and entity
+// group rows via [data-task-id^="__entity__"].
 const V5_GANTT_STYLES = `
   .ng-grid {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
@@ -94,27 +96,35 @@ const V5_GANTT_STYLES = `
   .ng-grid-th { font-size: 12px !important; font-weight: 700 !important; color: #1f2937 !important; padding: 0 6px !important; border-right: none !important; }
   .ng-grid-cell { padding-top: 0 !important; padding-right: 6px !important; padding-bottom: 0 !important; padding-left: 6px; border-right: none !important; }
   .ng-grid-row { border: none !important; box-shadow: inset 0 -1px 0 #f3f4f6; box-sizing: border-box !important; height: 32px !important; }
-  .ng-grid-row:not(.ng-group-row) { cursor: grab; }
-  .ng-grid-row:not(.ng-group-row):active { cursor: grabbing; }
   .ng-grid-row td { border: none !important; box-sizing: border-box !important; }
-  .ng-row-alt:not(.ng-group-row) { background: unset; }
-  .ng-group-row { font-weight: 700; font-size: 12px; letter-spacing: 0.02em; box-sizing: border-box !important; box-shadow: none !important; color: #fff !important; padding: 6px 8px !important; height: 32px !important; line-height: 20px !important; }
-  .ng-group-row .ng-grid-cell-text { font-weight: 700 !important; font-size: 12px !important; color: #fff !important; letter-spacing: 0.02em; text-transform: uppercase; }
-  .ng-group-row .ng-expand-icon { color: inherit !important; opacity: 0.7 !important; margin-right: 4px !important; }
-  .ng-row-selected:not(.ng-group-row) { background: rgba(59, 130, 246, 0.06) !important; box-shadow: inset 3px 0 0 #3b82f6 !important; }
-  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 28px"] { padding-left: 8px  !important; }
-  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 48px"] { padding-left: 18px !important; }
-  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 68px"] { padding-left: 28px !important; }
-  .ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 88px"] { padding-left: 38px !important; }
+  /* Task rows */
+  .ng-grid-row:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]) { cursor: grab; }
+  .ng-grid-row:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]):active { cursor: grabbing; }
+  .ng-row-alt:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]) { background: unset; }
+  .ng-row-selected:not([data-task-id^="__bucket_header__"]):not([data-task-id^="__entity__"]) { background: rgba(59, 130, 246, 0.06) !important; box-shadow: inset 3px 0 0 #3b82f6 !important; }
+  /* Bucket header rows */
+  .ng-grid-row[data-task-id^="__bucket_header__"] { font-weight: 700 !important; font-size: 12px !important; letter-spacing: 0.02em; box-sizing: border-box !important; box-shadow: none !important; color: #fff !important; height: 32px !important; cursor: pointer; }
+  .ng-grid-row[data-task-id^="__bucket_header__"] .ng-grid-cell-text { font-weight: 700 !important; font-size: 12px !important; color: #fff !important; letter-spacing: 0.02em; text-transform: uppercase; }
+  .ng-grid-row[data-task-id^="__bucket_header__"] .ng-expand-icon { color: rgba(255,255,255,0.8) !important; opacity: 1 !important; }
+  .ng-grid-row[data-task-id^="__bucket_header__"] .ng-expand-spacer { display: none !important; }
+  /* Bucket-specific background colors */
+  .ng-grid-row[data-task-id="__bucket_header__top-priority"] { background: #dc2626 !important; }
+  .ng-grid-row[data-task-id="__bucket_header__active"]       { background: #d97706 !important; }
+  .ng-grid-row[data-task-id="__bucket_header__follow-on"]    { background: #059669 !important; }
+  .ng-grid-row[data-task-id="__bucket_header__proposed"]     { background: #2563eb !important; }
+  .ng-grid-row[data-task-id="__bucket_header__deferred"]     { background: #94a3b8 !important; }
+  /* Entity group rows (client / project sub-headers within each bucket) */
+  .ng-grid-row[data-task-id^="__entity__"] { font-weight: 600 !important; background: #f1f5f9 !important; box-shadow: inset 0 -1px 0 #e2e8f0 !important; cursor: pointer; }
+  .ng-grid-row[data-task-id^="__entity__"] .ng-grid-cell-text { font-weight: 600 !important; font-size: 12px !important; color: #374151 !important; }
+  .ng-grid-row[data-task-id^="__entity__"] .ng-expand-icon { color: #6b7280 !important; opacity: 0.8 !important; }
+  /* Compact tree-cell indentation — depth 0 (bucket)=8px, depth 1 (entity)=8px, depth 2 (task)=18px */
+  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 28px"] { padding-left: 8px  !important; }
+  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 48px"] { padding-left: 18px !important; }
+  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 68px"] { padding-left: 28px !important; }
+  .ng-grid-row:not([data-task-id^="__bucket_header__"]) .ng-tree-cell[style*="padding-left: 88px"] { padding-left: 38px !important; }
   .ng-expand-spacer { width: 0 !important; min-width: 0 !important; }
   .ng-expand-icon { font-size: 9px !important; opacity: 0.5 !important; color: #6b7280 !important; width: 14px !important; min-width: 14px !important; }
   .ng-expand-icon:hover { opacity: 1 !important; }
-  /* Bucket-specific background colors */
-  .ng-group-row[data-bucket="top-priority"] { background: #dc2626 !important; }
-  .ng-group-row[data-bucket="active"] { background: #d97706 !important; }
-  .ng-group-row[data-bucket="follow-on"] { background: #059669 !important; }
-  .ng-group-row[data-bucket="proposed"] { background: #2563eb !important; }
-  .ng-group-row[data-bucket="deferred"] { background: #94a3b8 !important; }
 `;
 
 // ─── Grid columns — two-column layout matching v7's nimbusColumns ────────────
@@ -208,10 +218,11 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             id: d.id, source: d.source, target: d.target, type: d.dependencyType || 'FS',
         }));
 
-        const tasks = this.rows.map((row) => {
-            const hrs = row.estimatedHours != null ? Math.round(Number(row.estimatedHours)) : 0;
-            const logged = row.loggedHours != null ? Number(row.loggedHours) : 0;
-            const pct = hrs > 0 ? Math.round((logged / hrs) * 100) : 0;
+        // ── Step 1: Build leaf task objects ──────────────────────────────────
+        const leafTasks = this.rows.map((row) => {
+            const hrs    = row.estimatedHours != null ? Math.round(Number(row.estimatedHours)) : 0;
+            const logged = row.loggedHours    != null ? Number(row.loggedHours) : 0;
+            const pct    = hrs > 0 ? Math.round((logged / hrs) * 100) : 0;
             return {
                 id:         row.id,
                 title:      row.title || row.name,
@@ -222,8 +233,8 @@ export default class DeliveryProFormaTimeline extends LightningElement {
                 progress:   row.progress != null ? Number(row.progress) : 0,
                 status:     row.stage,
                 priority:   row.priority,
-                groupId:    row.priorityGroup || null,
                 assignee:   row.developerName || '',
+                // parentId from sub-tasks — will be overwritten below for root-level tasks
                 parentId:   row.parentWorkItemId || undefined,
                 color:      STAGE_COLORS[row.stage] || undefined,
                 metadata: {
@@ -236,10 +247,107 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             };
         });
 
-        const { NimbusGantt, PriorityGroupingPlugin, hoursWeightedProgress } = window.NimbusGantt;
+        // ── Step 2: Aggregate per (bucket, entity) pair ───────────────────────
+        // Key: `${bucketId}||${entityId}` → entity aggregate data
+        const entityDataMap = new Map();
+
+        leafTasks.forEach((task) => {
+            const bucketId   = task.metadata.priorityGroup;
+            if (!bucketId) return;
+            const entityId   = task.metadata.entityId   || '__none__';
+            const entityName = task.metadata.entityName || 'Other';
+            const key        = `${bucketId}||${entityId}`;
+
+            if (!entityDataMap.has(key)) {
+                entityDataMap.set(key, {
+                    key, bucketId, entityId, entityName,
+                    tasks: [], totalHours: 0, totalLogged: 0,
+                    minStart: null, maxEnd: null,
+                });
+            }
+            const eg = entityDataMap.get(key);
+            eg.tasks.push(task);
+            eg.totalHours  += task.metadata.hoursHigh   || 0;
+            eg.totalLogged += task.metadata.hoursLogged || 0;
+            if (task.startDate && (!eg.minStart || task.startDate < eg.minStart)) eg.minStart = task.startDate;
+            if (task.endDate   && (!eg.maxEnd   || task.endDate   > eg.maxEnd))   eg.maxEnd   = task.endDate;
+        });
+
+        // ── Step 3: Build bucket header synthetic rows ────────────────────────
+        const bucketHeaderRows = [];
+
+        PRIORITY_BUCKETS.forEach((bucket) => {
+            const bTasks = leafTasks.filter((t) => t.metadata.priorityGroup === bucket.id);
+            if (bTasks.length === 0) return;
+
+            const totalHours  = bTasks.reduce((s, t) => s + (t.metadata.hoursHigh   || 0), 0);
+            const totalLogged = bTasks.reduce((s, t) => s + (t.metadata.hoursLogged || 0), 0);
+            const minStart    = bTasks.filter((t) => t.startDate)
+                                      .reduce((mn, t) => (!mn || t.startDate < mn ? t.startDate : mn), null);
+            const maxEnd      = bTasks.filter((t) => t.endDate)
+                                      .reduce((mx, t) => (!mx || t.endDate   > mx ? t.endDate   : mx), null);
+            if (!minStart || !maxEnd) return; // need valid date range for timeline bar
+
+            bucketHeaderRows.push({
+                id:         `__bucket_header__${bucket.id}`,
+                title:      bucket.label,
+                name:       bucket.label,
+                hoursLabel: `${bTasks.length} · ${totalHours}h`,
+                startDate:  minStart,
+                endDate:    maxEnd,
+                progress:   totalHours > 0 ? totalLogged / totalHours : 0,
+                color:      bucket.color,
+                sortOrder:  bucket.order,
+                metadata:   { __bucketHeader: true, bucketId: bucket.id, hoursHigh: totalHours },
+            });
+        });
+
+        // ── Step 4: Build entity group rows + assign task parentIds ───────────
+        const entityGroupRows = [];
+
+        entityDataMap.forEach((eg) => {
+            const bucket = PRIORITY_BUCKETS.find((b) => b.id === eg.bucketId);
+            if (!bucket) return;
+
+            // Only create entity row if there's a valid date range for the bar
+            const hasDates = eg.minStart && eg.maxEnd;
+            const entityRowId = `__entity__${eg.key}`;
+
+            if (hasDates) {
+                entityGroupRows.push({
+                    id:         entityRowId,
+                    title:      eg.entityName,
+                    name:       eg.entityName,
+                    hoursLabel: eg.totalHours > 0 ? `${eg.totalHours}h` : '',
+                    startDate:  eg.minStart,
+                    endDate:    eg.maxEnd,
+                    progress:   eg.totalHours > 0 ? eg.totalLogged / eg.totalHours : 0,
+                    color:      bucket.bgTint,
+                    parentId:   `__bucket_header__${eg.bucketId}`,
+                    metadata:   { entityId: eg.entityId, bucketId: eg.bucketId, hoursHigh: eg.totalHours },
+                });
+            }
+
+            // Assign root-level tasks (no existing parentWorkItemId) to entity row
+            // Sub-tasks that already have parentId pointing to another task keep that relationship.
+            eg.tasks.forEach((task) => {
+                if (!task.parentId) {
+                    task.parentId = hasDates
+                        ? entityRowId
+                        : `__bucket_header__${eg.bucketId}`;
+                }
+            });
+        });
+
+        // ── Step 5: Combine and render — no PriorityGroupingPlugin ────────────
+        // PriorityGroupingPlugin would overwrite ALL parentIds, destroying the
+        // Bucket → Entity → Task hierarchy built above.
+        const allTasks = [...bucketHeaderRows, ...entityGroupRows, ...leafTasks];
+
+        const { NimbusGantt } = window.NimbusGantt;
 
         this._gantt = new NimbusGantt(container, {
-            tasks,
+            tasks:         allTasks,
             dependencies,
             columns:       GANTT_COLUMNS,
             theme:         V3_MATCH_THEME,
@@ -258,19 +366,11 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             onTaskResize:  (task, startDate, endDate) => this.handleTaskDateChange(task, startDate, endDate),
         });
 
-        this._gantt.use(
-            PriorityGroupingPlugin({
-                buckets:           PRIORITY_BUCKETS,
-                getBucket:         (task) => (task.metadata && task.metadata.priorityGroup) || task.groupId || null,
-                getBucketProgress: hoursWeightedProgress,
-            })
-        );
-
-        this._gantt.setData(tasks, dependencies);
+        this._gantt.setData(allTasks, dependencies);
         try { this._gantt.expandAll(); } catch (e) { /* swallow */ }
 
-        // Inject v5 CSS overrides — goes into the container's light DOM children
-        // so it overrides nimbus-gantt's injected defaults for bucket headers, etc.
+        // Inject v5 CSS overrides into the container's light DOM so they win
+        // over nimbus-gantt's injected defaults.
         this.injectV5Styles(container);
     }
 
@@ -284,7 +384,8 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     }
 
     handleTaskClick(task) {
-        if (!task || !task.id || task.id.startsWith('__bucket_header__')) return;
+        if (!task || !task.id) return;
+        if (task.id.startsWith('__bucket_header__') || task.id.startsWith('__entity__')) return;
         // Use 'ganttnavigate' (not 'navigate') to avoid collision with platform
         // Lightning Out global handlers that intercept the bare 'navigate' event
         // and attempt a page redirect (causing Salesforce's redirect-block page).
@@ -304,7 +405,8 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     }
 
     async handleTaskDateChange(task, startDate, endDate) {
-        if (!task || !task.id || task.id.startsWith('__bucket_header__')) return;
+        if (!task || !task.id) return;
+        if (task.id.startsWith('__bucket_header__') || task.id.startsWith('__entity__')) return;
         try {
             await updateWorkItemDates({ workItemId: task.id, startDate, endDate });
             if (this._scriptLoaded) await this.loadData();
@@ -314,7 +416,8 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     }
 
     async handleBucketChange(task, newBucketId) {
-        if (!task || !task.id || task.id.startsWith('__bucket_header__')) return;
+        if (!task || !task.id) return;
+        if (task.id.startsWith('__bucket_header__') || task.id.startsWith('__entity__')) return;
         try {
             await updateWorkItemPriorityGroup({ workItemId: task.id, priorityGroup: newBucketId });
             if (this._scriptLoaded) await this.loadData();
