@@ -9,8 +9,8 @@
     flex-direction: column;
     height: 100%;
     background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    border: none;
+    border-radius: 0;
     overflow: hidden;
 }
 
@@ -18,29 +18,32 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid #e5e7eb;
-    background: #f9fafb;
+    background: #ffffff;
     flex-shrink: 0;
+    gap: 1rem;
 }
 
 .toolbar-title {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
+    flex-shrink: 0;
 }
 
 .title-text {
-    font-weight: 700;
+    font-weight: 600;
     font-size: 0.875rem;
-    color: #0f172a;
+    color: #1f2937;
+    letter-spacing: -0.01em;
 }
 
 .title-subtitle {
     font-size: 0.6875rem;
-    color: #64748b;
+    color: #6b7280;
     letter-spacing: 0.02em;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .toolbar-actions {
@@ -54,10 +57,11 @@
     border: 1px solid #d1d5db;
     border-radius: 4px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .zoom-btn {
-    padding: 0.25rem 0.625rem;
+    padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 500;
     background: #ffffff;
@@ -66,7 +70,8 @@
     cursor: pointer;
     color: #374151;
     line-height: 1.5;
-    transition: background 0.1s;
+    transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
 .zoom-btn:last-child {
@@ -76,17 +81,59 @@
 .zoom-btn[data-active="true"] {
     background: #0176d3;
     color: #ffffff;
+    font-weight: 600;
 }
 
 .zoom-btn:hover:not([data-active="true"]) {
     background: #f3f4f6;
+    color: #1f2937;
 }
+
+/* ── Standalone toolbar (no SLDS — used on the VF no-chrome page) ──────── */
+.toolbar--standalone {
+    padding: 0.375rem 0.75rem;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.sa-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sa-toggle input[type="checkbox"] {
+    accent-color: #0176d3;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.sa-btn {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.sa-btn:hover { background: #f3f4f6; }
 
 .gantt-container {
     flex: 1 1 auto;
     min-height: 0;
     position: relative;
     overflow: hidden;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
 }
 
 .loading,
