@@ -332,6 +332,26 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
+     * @description Saves the priority bucket when a user drags a task into a
+     *              different group in the PriorityGroupingPlugin. Writes
+     *              PriorityGroupPk__c so the bucket persists across reloads
+     *              instead of reverting to the server-side derivation.
+     * @param workItemId   The Salesforce record Id.
+     * @param priorityGroup One of: top-priority, active, follow-on, proposed, deferred.
+     */
+    @AuraEnabled
+    public static void updateWorkItemPriorityGroup(String workItemId, String priorityGroup) {
+        try {
+            WorkItem__c item = new WorkItem__c(Id = workItemId, PriorityGroupPk__c = priorityGroup);
+            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
      * @description Updates the sort order of a work item after a drag-to-reorder
      *              action in the Gantt chart.
      * @param workItemId The Salesforce record Id.

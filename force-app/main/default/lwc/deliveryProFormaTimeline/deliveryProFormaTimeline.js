@@ -21,6 +21,9 @@ import { loadScript } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
+import getGanttDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttDependencies';
+import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
+import updateWorkItemPriorityGroup from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemPriorityGroup';
 
 // ─── Bucket palette — must match CLOUD_NIMBUS_PRIORITY_BUCKETS in ───────────
 // nimbus-gantt/packages/core/src/plugins/PriorityGroupingPlugin.ts and in
@@ -58,6 +61,8 @@ const STAGE_COLORS = {
     'Blocked':                  '#ef4444',
 };
 
+const ZOOM_LEVELS = ['day', 'week', 'month', 'quarter'];
+
 export default class DeliveryProFormaTimeline extends LightningElement {
     @api showCompleted = false;
 
@@ -69,6 +74,19 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     _gantt = null;
     /** Tracks whether loadScript has resolved so we don't double-construct. */
     _scriptLoaded = false;
+    /** Current zoom level — persisted so re-renders keep the same zoom. */
+    _zoomLevel = 'week';
+    /** Dependency rows fetched in parallel with task data. */
+    _deps = [];
+
+    get zoomOptions() {
+        return ZOOM_LEVELS.map((level) => ({
+            level,
+            label: level.charAt(0).toUpperCase() + level.slice(1),
+            isActive: level === this._zoomLevel,
+            variant: level === this._zoomLevel ? 'brand' : 'neutral',
+        }));
+    }
 
     get isEmpty() {
         return !this.isLoading && !this.errorMessage && this.rows.length === 0;
@@ -95,8 +113,13 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         this.isLoading = true;
         this.errorMessage = null;
         try {
-            const data = await getProFormaTimelineData({ showCompleted: this.showCompleted });
+            // Fetch tasks + dependencies in parallel — both are cacheable reads.
+            const [data, deps] = await Promise.all([
+                getProFormaTimelineData({ showCompleted: this.showCompleted }),
+                getGanttDependencies({ showCompleted: this.showCompleted }),
+            ]);
             this.rows = data || [];
+            this._deps = deps || [];
             // Render in next microtask so the container div exists in the DOM
             // (template rerenders on isLoading flip).
             Promise.resolve().then(() => this.renderGantt());
@@ -123,6 +146,14 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             container.innerHTML = '';
             return;
         }
+
+        // Map dependency DTOs → GanttDependency[]
+        const dependencies = this._deps.map((d) => ({
+            id: d.id,
+            source: d.source,
+            target: d.target,
+            type: d.dependencyType || 'FS',
+        }));
 
         // Map DTO rows → GanttTask[] with plugin-aware metadata
         const tasks = this.rows.map((row) => ({
@@ -152,18 +183,20 @@ export default class DeliveryProFormaTimeline extends LightningElement {
 
         this._gantt = new NimbusGantt(container, {
             tasks,
-            dependencies: [],
+            dependencies,
             rowHeight: 32,
             barHeight: 20,
             headerHeight: 32,
             gridWidth: 295,
-            zoomLevel: 'week',
+            zoomLevel: this._zoomLevel,
             showToday: true,
             showWeekends: true,
             showProgress: true,
             colorMap: STAGE_COLORS,
             readOnly: false,
             onTaskClick: (task) => this.handleTaskClick(task),
+            onTaskMove: (task, startDate, endDate) => this.handleTaskDateChange(task, startDate, endDate),
+            onTaskResize: (task, startDate, endDate) => this.handleTaskDateChange(task, startDate, endDate),
         });
 
         // Install the priority grouping plugin — reads PriorityGroupPk__c from
@@ -182,7 +215,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         // Re-dispatch data after plugin install so middleware processes the
         // initial load — same gotcha as cloudnimbusllc.com's NimbusGanttChart
         // wrapper (see reference_nimbus_gantt_plugin_rowinjection.md).
-        this._gantt.setData(tasks, []);
+        this._gantt.setData(tasks, dependencies);
         try { this._gantt.expandAll(); } catch (e) { /* swallow */ }
     }
 
@@ -209,6 +242,50 @@ export default class DeliveryProFormaTimeline extends LightningElement {
     handleRefresh() {
         if (this._scriptLoaded) {
             this.loadData();
+        }
+    }
+
+    /**
+     * Shared handler for onTaskMove + onTaskResize. Writes back to Apex then
+     * reloads so the gantt reflects any date-chain side effects (ETA, fallback
+     * bars, etc.). Bucket-header synthetic rows are ignored.
+     */
+    async handleTaskDateChange(task, startDate, endDate) {
+        if (!task || !task.id || task.id.startsWith('__bucket_header__')) return;
+        try {
+            await updateWorkItemDates({ workItemId: task.id, startDate, endDate });
+            if (this._scriptLoaded) {
+                await this.loadData();
+            }
+        } catch (error) {
+            this.handleError('Failed to save date change', error);
+        }
+    }
+
+    /**
+     * Called when the user drags a task into a different priority bucket.
+     * Saves the new PriorityGroupPk__c so the grouping persists across reloads.
+     * Wire this to PriorityGroupingPlugin's onBucketChange callback once V8
+     * exposes it (the Apex method is ready — just needs the plugin event).
+     */
+    async handleBucketChange(task, newBucketId) {
+        if (!task || !task.id || task.id.startsWith('__bucket_header__')) return;
+        try {
+            await updateWorkItemPriorityGroup({ workItemId: task.id, priorityGroup: newBucketId });
+            if (this._scriptLoaded) {
+                await this.loadData();
+            }
+        } catch (error) {
+            this.handleError('Failed to save priority group change', error);
+        }
+    }
+
+    handleZoomChange(event) {
+        const level = event.currentTarget.dataset.zoom;
+        if (!level || level === this._zoomLevel) return;
+        this._zoomLevel = level;
+        if (this._gantt) {
+            this._gantt.setZoom(level);
         }
     }
 

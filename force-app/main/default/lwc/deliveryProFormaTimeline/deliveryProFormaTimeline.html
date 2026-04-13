@@ -7,6 +7,17 @@
                 <span class="title-subtitle">NOW · NEXT · PLANNED · PROPOSED · HOLD</span>
             </div>
             <div class="toolbar-actions">
+                <div class="zoom-group">
+                    <template for:each={zoomOptions} for:item="opt">
+                        <button
+                            key={opt.level}
+                            class="zoom-btn"
+                            data-zoom={opt.level}
+                            data-active={opt.isActive}
+                            onclick={handleZoomChange}
+                        >{opt.label}</button>
+                    </template>
+                </div>
                 <lightning-input
                     type="toggle"
                     label="Show completed"
