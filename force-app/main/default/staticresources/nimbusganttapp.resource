@@ -1148,8 +1148,12 @@ var NimbusGanttApp = function(exports) {
       container.innerHTML = "";
     }
   }
-  exports.IIFEApp = IIFEApp;
+  const NimbusGanttApp2 = {
+    mount: (container, options) => IIFEApp.mount(container, options),
+    unmount: (container) => IIFEApp.unmount(container)
+  };
+  exports.NimbusGanttApp = NimbusGanttApp2;
   Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
   return exports;
 }({});
-typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp);
+typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp.NimbusGanttApp || NimbusGanttApp);
