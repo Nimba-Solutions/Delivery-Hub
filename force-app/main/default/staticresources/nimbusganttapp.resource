@@ -252,7 +252,7 @@ var NimbusGanttApp = function(exports) {
     }
     return r;
   }
-  function stageToCategory(stage) {
+  function stageToCategory$1(stage) {
     const s = stage || "";
     if (STAGE_TO_CATEGORY_COLOR[s] === "#10b981") return "In Flight";
     if (STAGE_TO_CATEGORY_COLOR[s] === "#3b82f6") return "Next Up";
@@ -288,7 +288,7 @@ var NimbusGanttApp = function(exports) {
       if (t.priorityGroup && Object.prototype.hasOwnProperty.call(counts, t.priorityGroup)) {
         counts[t.priorityGroup]++;
       }
-      const cat = stageToCategory(t.stage || "");
+      const cat = stageToCategory$1(t.stage || "");
       categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
     });
     return { total: active.length, scheduled: sched, needDates, est: Math.round(est), estLow: Math.round(estLow), logged: Math.round(logged * 10) / 10, counts, categoryCounts };
@@ -1109,6 +1109,9 @@ var NimbusGanttApp = function(exports) {
   const CLS_SIDEBAR_HEADER = "px-3 py-2 border-b border-slate-200 flex-shrink-0";
   const CLS_SIDEBAR_LABEL_BIG = "text-[10px] font-bold text-slate-500 uppercase tracking-wide";
   const CLS_SIDEBAR_LABEL_SM = "text-[9px] text-slate-400 mt-0.5";
+  const CLS_SIDEBAR_RESET = "text-[9px] font-bold text-rose-500 hover:text-rose-700 uppercase px-2 py-1 rounded hover:bg-rose-50 transition-colors";
+  const CLS_CAPACITY_INPUT = "w-14 text-[10px] font-mono bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-center";
+  const CLS_SIDEBAR_AUTO_BTN = "w-full text-[10px] font-bold uppercase px-2 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors";
   const CLS_SIDEBAR_SCROLL = "flex-1 overflow-y-auto";
   const CLS_BUCKET_HEADER = "px-3 py-1.5 flex items-center justify-between";
   const CLS_BUCKET_LABEL = "text-[9px] font-bold uppercase tracking-wider";
@@ -1118,6 +1121,17 @@ var NimbusGanttApp = function(exports) {
   const CLS_CAT_DOT = "w-2 h-2 rounded-full flex-shrink-0";
   const CLS_ITEM_TITLE = "text-[10px] text-slate-700 truncate flex-1 min-w-0";
   const CLS_ITEM_HOURS = "text-[9px] text-slate-400 font-mono flex-shrink-0";
+  const CLS_SIDEBAR_HEADER_ROW = "flex items-center justify-between";
+  const CLS_SIDEBAR_CTRLS = "mt-2 space-y-1.5";
+  const CLS_SIDEBAR_CAP_ROW = "flex items-center gap-2";
+  const CLS_SIDEBAR_CAP_LBL = "text-[9px] text-slate-500";
+  const CLS_SIDEBAR_CAP_SUF = "text-[9px] text-slate-400";
+  const CLS_BUCKET_SECTION_BASE = "border-b transition-colors";
+  const CLS_BUCKET_EMPTY_TEXT = "px-3 py-3 text-[10px] text-slate-400 italic";
+  const CLS_BUCKET_EMPTY_INDICATOR_BASE = "mx-2 my-1 h-0.5 rounded transition-all";
+  const CLS_BUCKET_EMPTY_INDICATOR_ON = "bg-blue-400 opacity-100";
+  const CLS_BUCKET_EMPTY_INDICATOR_OFF = "bg-transparent opacity-0";
+  const CLS_BUCKET_INDICATOR = "mx-2 h-0.5 bg-blue-500 rounded pointer-events-none";
   const CLS_CONTENT_OUTER = "nga-content-outer flex-1 flex overflow-hidden min-w-0 min-h-0";
   const CLS_SIDEBAR_WRAP = "flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto overflow-x-hidden";
   const CLS_RESIZER = "w-1 flex-shrink-0 bg-slate-200 hover:bg-blue-400 cursor-col-resize transition-colors";
@@ -1133,10 +1147,9 @@ var NimbusGanttApp = function(exports) {
   const CLS_AUDIT_INPUT = "flex-1 min-w-[200px] text-[11px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-fuchsia-500";
   const CLS_AUDIT_SUBMIT = "text-[11px] font-bold px-3 py-1 rounded bg-fuchsia-600 text-white hover:bg-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed";
   const CLS_AUDIT_RESET = "text-[11px] font-bold px-3 py-1 rounded bg-white text-slate-700 border border-slate-300 hover:border-rose-400 hover:text-rose-600";
-  const CLS_HRSWK = "nga-hrswkstrip bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-end gap-1 overflow-x-auto";
+  const CLS_HRSWK = "nga-hrswkstrip bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-end gap-1 overflow-x-auto flex-shrink-0";
   const CLS_HRSWK_LABEL = "text-[9px] font-bold text-slate-400 uppercase tracking-wide mr-1 shrink-0 self-center";
   const CLS_HRSWK_COL = "flex flex-col items-center gap-0.5 shrink-0 w-12";
-  const CLS_HRSWK_TRACK = "w-full rounded-sm overflow-hidden bg-slate-200 h-2";
   const BUCKET_META = {
     "top-priority": { label: "Now", text: "text-red-700", bg: "bg-red-50", border: "border-red-200", activeBg: "bg-red-100" },
     "active": { label: "Next", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", activeBg: "bg-amber-100" },
@@ -1170,14 +1183,37 @@ var NimbusGanttApp = function(exports) {
   }
   const ZOOMS$2 = ["day", "week", "month", "quarter"];
   const GROUPS = ["priority", "epic"];
+  const CLS_GROUP_BOTH = "bg-indigo-600 text-white border-indigo-600";
+  const CLS_GROUP_GANTT = "bg-indigo-100 text-indigo-700 border-indigo-400";
+  const CLS_GROUP_SIDE = "bg-blue-100 text-blue-700 border-blue-400";
+  const CLS_GROUP_NEITHER = "bg-white text-slate-500 border-slate-200 hover:border-indigo-300";
+  const CLS_RIGHT_UNPIN_ON = "bg-amber-500 text-white border-amber-500";
+  const CLS_RIGHT_UNPIN_OFF = "bg-white text-slate-500 border-slate-200 hover:border-amber-300";
+  const CLS_RIGHT_FS_ON = "bg-slate-700 text-white border-slate-700";
+  const CLS_RIGHT_FS_OFF = "bg-white text-slate-500 border-slate-200 hover:border-slate-400";
+  const CLS_RIGHT_ADMIN_ON = "bg-rose-500 text-white border-rose-500";
+  const CLS_RIGHT_ADMIN_OFF = "bg-white text-slate-400 border-slate-200 hover:border-rose-300";
+  const CLS_RIGHT_ADVISOR_ON = "bg-indigo-600 text-white border-indigo-600";
+  const CLS_RIGHT_ADVISOR_OFF = "bg-white text-indigo-500 border-indigo-200 hover:border-indigo-400";
+  const CLS_GROUP_LABEL = "text-[9px] text-slate-400";
+  const CLS_V3_LINK = "text-[9px] text-slate-400 hover:text-blue-500";
+  const CLS_SUPER_TAG = "ml-0.5 text-[8px] opacity-60";
   function mkSep$1() {
     const s = el$1("span", CLS_SEP);
     s.textContent = "|";
     return s;
   }
+  function monthsToComplete(hours, hoursPerMonth) {
+    if (!hoursPerMonth || hoursPerMonth <= 0) return Infinity;
+    return hours / hoursPerMonth;
+  }
   function TitleBarVanilla$1(initial) {
     const root = el$1("div", CLS_TITLEBAR);
     root.setAttribute("data-slot", "TitleBar");
+    let currentProps = initial;
+    let adminOn = false;
+    let advisorOn = false;
+    let unpinOn = false;
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
@@ -1192,7 +1228,10 @@ var NimbusGanttApp = function(exports) {
         const on = state.viewMode === v.id;
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_VIOLET : CLS_PILL_BTN_IDLE_VIOLET);
         const btn = el$1("button", cls);
-        btn.innerHTML = '<span class="mr-1">' + v.icon + "</span>" + v.label;
+        const ico = el$1("span", "mr-1");
+        ico.textContent = v.icon;
+        btn.appendChild(ico);
+        btn.appendChild(document.createTextNode(v.label));
         btn.addEventListener("click", () => dispatch({ type: "SET_VIEW", mode: v.id }));
         root.appendChild(btn);
       });
@@ -1220,33 +1259,103 @@ var NimbusGanttApp = function(exports) {
       });
       if (config.features.groupByToggle) {
         root.appendChild(mkSep$1());
+        const gLbl = el$1("span", CLS_GROUP_LABEL);
+        gLbl.textContent = "Group:";
+        gLbl.title = "Left-click = Gantt · Right-click = Sidebar";
+        root.appendChild(gLbl);
         GROUPS.forEach((g) => {
-          const on = state.groupBy === g;
-          const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_SLATE : CLS_PILL_BTN_IDLE_SLATE);
+          const isGantt = state.groupBy === g;
+          const isSide = state.groupBy === g;
+          let variant = CLS_GROUP_NEITHER;
+          if (isGantt && isSide) variant = CLS_GROUP_BOTH;
+          else if (isGantt) variant = CLS_GROUP_GANTT;
+          else if (isSide) variant = CLS_GROUP_SIDE;
+          const cls = CLS_PILL_BTN_BASE + " " + variant;
           const b = el$1("button", cls);
           b.textContent = g === "priority" ? "Priority" : "Epics";
+          b.title = "Left-click: Gantt → " + g + " · Right-click: Sidebar → " + g;
+          if (isGantt && !isSide) {
+            const sup = el$1("span", CLS_SUPER_TAG);
+            sup.textContent = "G";
+            b.appendChild(sup);
+          } else if (isSide && !isGantt) {
+            const sup = el$1("span", CLS_SUPER_TAG);
+            sup.textContent = "S";
+            b.appendChild(sup);
+          }
           b.addEventListener("click", () => dispatch({ type: "SET_GROUP_BY", groupBy: g }));
+          b.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            dispatch({ type: "SET_GROUP_BY", groupBy: g });
+          });
           root.appendChild(b);
         });
       }
       const fill = el$1("div", CLS_TB_FILL);
       root.appendChild(fill);
-      const fsLabel = state.fullscreen ? "↙ Exit Fullscreen" : "↗ Fullscreen";
+      const hoursHigh = data.stats.est;
+      const hoursLow = data.stats.estLow || data.stats.est;
+      const totalCap = CLOUD_NIMBUS_POOL.reduce((s, m) => s + (m.active !== false ? m.hoursPerMonth : 0), 0);
+      const mLow = monthsToComplete(hoursLow, totalCap);
+      const mHigh = monthsToComplete(hoursHigh, totalCap);
+      const mLowS = isFinite(mLow) ? mLow.toFixed(1) : "∞";
+      const mHighS = isFinite(mHigh) ? mHigh.toFixed(1) : "∞";
+      const summary = el$1("span", CLS_TB_SUMMARY);
+      summary.textContent = data.stats.scheduled + " scheduled · " + hoursLow + "–" + hoursHigh + "h · " + mLowS + "–" + mHighS + " mo";
+      root.appendChild(summary);
+      const unpinBtn = el$1(
+        "button",
+        CLS_PILL_BTN_BASE + " " + (unpinOn ? CLS_RIGHT_UNPIN_ON : CLS_RIGHT_UNPIN_OFF)
+      );
+      unpinBtn.textContent = unpinOn ? "Pin" : "Unpin";
+      unpinBtn.title = unpinOn ? "Pin toolbar" : "Unpin toolbar";
+      unpinBtn.addEventListener("click", () => {
+        unpinOn = !unpinOn;
+        console.log("[TitleBar] unpin toggled →", unpinOn);
+        render(currentProps);
+      });
+      root.appendChild(unpinBtn);
       const fsBtn = el$1(
         "button",
-        CLS_PILL_BTN_BASE + " " + (state.fullscreen ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE)
+        CLS_PILL_BTN_BASE + " " + (state.fullscreen ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
       );
-      fsBtn.textContent = fsLabel;
+      fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
       fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
       root.appendChild(fsBtn);
-      const summary = el$1("span", CLS_TB_SUMMARY);
-      summary.textContent = data.stats.scheduled + " scheduled · " + (data.stats.est || 0) + "h";
-      root.appendChild(summary);
+      const adminBtn = el$1(
+        "button",
+        CLS_PILL_BTN_BASE + " " + (adminOn ? CLS_RIGHT_ADMIN_ON : CLS_RIGHT_ADMIN_OFF)
+      );
+      adminBtn.textContent = "Admin";
+      adminBtn.title = "Advanced feature toggles";
+      adminBtn.addEventListener("click", () => {
+        adminOn = !adminOn;
+        console.log("[TitleBar] admin toggled →", adminOn);
+        render(currentProps);
+      });
+      root.appendChild(adminBtn);
+      const advisorBtn = el$1(
+        "button",
+        CLS_PILL_BTN_BASE + " " + (advisorOn ? CLS_RIGHT_ADVISOR_ON : CLS_RIGHT_ADVISOR_OFF)
+      );
+      advisorBtn.textContent = "Advisor";
+      advisorBtn.title = "Scope advisor — local analysis, no API needed";
+      advisorBtn.addEventListener("click", () => {
+        advisorOn = !advisorOn;
+        console.log("[TitleBar] advisor toggled →", advisorOn);
+        render(currentProps);
+      });
+      root.appendChild(advisorBtn);
+      const v3 = el$1("a", CLS_V3_LINK);
+      v3.href = "#";
+      v3.textContent = "v3 (Canvas)";
+      root.appendChild(v3);
     }
     render(initial);
     return {
       el: root,
       update(p) {
+        currentProps = p;
         render(p);
       },
       destroy() {
@@ -1290,10 +1399,13 @@ var NimbusGanttApp = function(exports) {
     root.setAttribute("data-slot", "FilterBar");
     const inner = el$1("div", CLS_FILTERBAR_INNER);
     root.appendChild(inner);
+    const searchInput = el$1("input", CLS_SEARCH_INPUT);
+    searchInput.setAttribute("data-testid", "gantt-search-input");
+    searchInput.type = "text";
+    searchInput.placeholder = "Search T-NNNN, title, owner…";
     function render(p) {
       clear(inner);
       const { config, state, dispatch, data } = p;
-      const totalH = CLOUD_NIMBUS_POOL.reduce((s, m) => s + m.hoursPerMonth, 0);
       const viewLbl = el$1("span", CLS_FILTERBAR_LABEL);
       viewLbl.textContent = "View:";
       inner.appendChild(viewLbl);
@@ -1310,16 +1422,16 @@ var NimbusGanttApp = function(exports) {
       const icon = el$1("span", CLS_SEARCH_ICON);
       icon.textContent = "🔎";
       sw.appendChild(icon);
-      const input = el$1("input", CLS_SEARCH_INPUT);
-      input.setAttribute("data-testid", "gantt-search-input");
-      input.type = "text";
-      input.placeholder = "Search T-NNNN, title, owner…";
-      input.value = state.search;
-      input.addEventListener("input", (e) => dispatch({ type: "SET_SEARCH", q: e.target.value }));
-      sw.appendChild(input);
+      if (searchInput.value !== state.search) {
+        searchInput.value = state.search;
+      }
+      searchInput.oninput = (e) => dispatch({ type: "SET_SEARCH", q: e.target.value });
+      sw.appendChild(searchInput);
       if (state.search) {
         const clr = el$1("button", CLS_SEARCH_CLEAR);
         clr.textContent = "×";
+        clr.title = "Clear search";
+        clr.setAttribute("aria-label", "Clear search");
         clr.addEventListener("click", () => dispatch({ type: "SET_SEARCH", q: "" }));
         sw.appendChild(clr);
       }
@@ -1341,19 +1453,30 @@ var NimbusGanttApp = function(exports) {
         inner.appendChild(chip);
       });
       inner.appendChild(mkSep());
+      const active = CLOUD_NIMBUS_POOL.filter((m) => m.active !== false);
+      const totalH = active.reduce((s, m) => s + m.hoursPerMonth, 0);
+      const teamWrap = el$1("span", "inline-flex items-center gap-1");
       const teamBtn = el$1("button", CLS_TEAM_PILL);
+      teamBtn.title = "Edit team resource capacity";
       const tLbl = document.createElement("span");
       tLbl.textContent = "Team";
       teamBtn.appendChild(tLbl);
-      const tCnt = document.createElement("span");
-      tCnt.textContent = " " + CLOUD_NIMBUS_POOL.length + "×";
+      const tCnt = el$1("span", "font-mono text-indigo-500");
+      tCnt.textContent = active.length + "×";
       teamBtn.appendChild(tCnt);
-      inner.appendChild(teamBtn);
+      teamBtn.addEventListener("click", () => {
+        console.log("[FilterBar] open resource panel (placeholder)");
+      });
+      teamWrap.appendChild(teamBtn);
       const cap = el$1("span", CLS_CAPACITY_TEXT);
       cap.textContent = totalH + "h/mo";
-      inner.appendChild(cap);
+      teamWrap.appendChild(cap);
+      inner.appendChild(teamWrap);
       const autoBtn = el$1("button", CLS_AUTO_SCHED_BTN);
       autoBtn.textContent = "Auto-Schedule";
+      autoBtn.addEventListener("click", () => {
+        console.log("[FilterBar] auto-schedule (placeholder)");
+      });
       inner.appendChild(autoBtn);
       const spacer = el$1("div", "flex-1");
       inner.appendChild(spacer);
@@ -1394,24 +1517,27 @@ var NimbusGanttApp = function(exports) {
     return card;
   }
   function StatsPanelVanilla(initial) {
-    const root = el$1("div", CLS_STATS_PANEL);
+    const root = el$1("div", CLS_STATS_PANEL + " flex-shrink-0");
     root.setAttribute("data-slot", "StatsPanel");
     const grid = el$1("div", CLS_STATS_GRID);
     root.appendChild(grid);
+    let hoursPerMonth = 120;
     function render(p) {
       root.style.display = p.state.statsOpen ? "" : "none";
       clear(grid);
       if (!p.state.statsOpen) return;
       const s = p.data.stats;
+      const visibleCount = p.data.visibleTasks ? p.data.visibleTasks.length : s.total;
       const hrsLow = s.estLow;
       const hrsHigh = s.est;
       const logged = s.logged;
-      const hpm = 120;
-      const moLow = hrsLow > 0 ? (hrsLow / hpm).toFixed(1) : "0";
-      const moHigh = hrsHigh > 0 ? (hrsHigh / hpm).toFixed(1) : "0";
+      const needDates = s.needDates;
+      const moLow = hrsLow > 0 ? (hrsLow / hoursPerMonth).toFixed(1) : "0.0";
+      const moHigh = hrsHigh > 0 ? (hrsHigh / hoursPerMonth).toFixed(1) : "0.0";
       const hrsRange = hrsLow < hrsHigh && hrsLow > 0 ? hrsLow + "–" + hrsHigh + "h" : hrsHigh + "h";
-      grid.appendChild(kpiCard("Items in View", String(s.total), "slate"));
-      grid.appendChild(kpiCard("Active (scheduled)", String(s.scheduled), "emerald"));
+      const activeHint = needDates > 0 ? needDates + " need dates" : "all scheduled";
+      grid.appendChild(kpiCard("Items in View", String(visibleCount), "slate"));
+      grid.appendChild(kpiCard("Active (scheduled)", String(s.scheduled), "emerald", activeHint));
       grid.appendChild(kpiCard("Scheduled", String(s.scheduled), "blue", "of " + s.total + " total"));
       grid.appendChild(kpiCard("Hours Logged", logged + "h", "purple", "Actuals"));
       grid.appendChild(kpiCard("Hours Range", hrsRange, "amber", "Estimate envelope"));
@@ -1422,17 +1548,29 @@ var NimbusGanttApp = function(exports) {
       const mval = el$1("p", CLS_KPI_VALUE + " text-indigo-700");
       mval.textContent = moLow + "–" + moHigh;
       mcard.appendChild(mval);
-      const mhint = el$1("div", "mt-0.5 flex items-center gap-1");
+      const row = el$1("div", "mt-0.5 flex items-center gap-1");
       const atSpan = el$1("span", "text-[9px] text-indigo-700");
       atSpan.textContent = "at";
-      const num = el$1("span", "text-[10px] font-mono font-bold text-indigo-700");
-      num.textContent = String(hpm);
-      const u = el$1("span", "text-[9px] text-indigo-700");
-      u.textContent = "h/mo";
-      mhint.appendChild(atSpan);
-      mhint.appendChild(num);
-      mhint.appendChild(u);
-      mcard.appendChild(mhint);
+      const input = el$1(
+        "input",
+        "w-12 text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-1 py-0.5 text-center"
+      );
+      input.type = "number";
+      input.min = "1";
+      input.value = String(hoursPerMonth);
+      input.addEventListener("input", () => {
+        const n = Math.max(1, Number(input.value) || 120);
+        hoursPerMonth = n;
+        const newLow = hrsLow > 0 ? (hrsLow / hoursPerMonth).toFixed(1) : "0.0";
+        const newHigh = hrsHigh > 0 ? (hrsHigh / hoursPerMonth).toFixed(1) : "0.0";
+        mval.textContent = newLow + "–" + newHigh;
+      });
+      const unit = el$1("span", "text-[9px] text-indigo-700");
+      unit.textContent = "h/mo";
+      row.appendChild(atSpan);
+      row.appendChild(input);
+      row.appendChild(unit);
+      mcard.appendChild(row);
       grid.appendChild(mcard);
     }
     render(initial);
@@ -1445,27 +1583,214 @@ var NimbusGanttApp = function(exports) {
       }
     };
   }
+  function stageToCategory(stage) {
+    const s = (stage || "").toLowerCase();
+    if (s.indexOf("backlog") === 0) return "backlog";
+    if (s.indexOf("paused") === 0) return "paused";
+    if (s.indexOf("done") === 0) return "done";
+    if (s.indexOf("next") === 0) return "next-up";
+    if (s.indexOf("expansion") === 0) return "expansion";
+    return "in-flight";
+  }
   function SidebarVanilla(initial) {
     const root = el$1("aside", CLS_SIDEBAR);
     root.setAttribute("data-slot", "Sidebar");
+    let capacity = 120;
+    let currentProps = initial;
+    let hoverGroup = null;
+    let indicatorBeforeId = null;
+    let indicatorGroup = null;
+    let dragItemId = null;
+    let ghost = null;
+    let startX = 0;
+    let startY = 0;
+    let hasMoved = false;
+    const THRESHOLD = 5;
+    function getGroupAtY(clientY) {
+      const groupEls = Array.from(root.querySelectorAll("[data-group-id]"));
+      let best = currentProps.config.buckets.length > 0 ? currentProps.config.buckets[currentProps.config.buckets.length - 1].id : "deferred";
+      for (const gel of groupEls) {
+        const rect = gel.getBoundingClientRect();
+        if (clientY >= rect.top) best = gel.getAttribute("data-group-id") || best;
+        if (clientY < rect.bottom) break;
+      }
+      return best;
+    }
+    function getDropPosition(clientY, targetGroup) {
+      const groupEl = root.querySelector('[data-group-id="' + targetGroup + '"]');
+      if (!groupEl) return { index: 0, insertBeforeId: null };
+      const itemEls = Array.from(groupEl.querySelectorAll("[data-item-id]"));
+      let idx = 0;
+      let insertBeforeId = null;
+      for (const iel of itemEls) {
+        const r = iel.getBoundingClientRect();
+        const mid = r.top + r.height / 2;
+        if (clientY < mid) {
+          insertBeforeId = iel.getAttribute("data-item-id");
+          break;
+        }
+        idx++;
+      }
+      return { index: idx, insertBeforeId };
+    }
+    function createGhost(title, x, y) {
+      ghost = document.createElement("div");
+      ghost.style.cssText = [
+        "position:fixed;z-index:99999;pointer-events:none;",
+        "left:" + (x + 12) + "px;top:" + (y - 14) + "px;",
+        "max-width:220px;",
+        "background:#eff6ff;border:2px solid #3b82f6;border-radius:6px;",
+        "box-shadow:0 8px 24px rgba(59,130,246,0.35);",
+        "padding:5px 10px;font-size:11px;font-weight:600;color:#1e40af;",
+        "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;",
+        "display:flex;align-items:center;gap:6px;",
+        "cursor:grabbing;user-select:none;"
+      ].join("");
+      const t = (title || "").slice(0, 40);
+      ghost.innerHTML = '<span style="font-size:13px;opacity:0.7">⣿</span><span></span>';
+      const last = ghost.lastChild;
+      if (last) last.textContent = t;
+      document.body.appendChild(ghost);
+    }
+    function cleanupDrag() {
+      if (ghost) {
+        ghost.remove();
+        ghost = null;
+      }
+      dragItemId = null;
+      hasMoved = false;
+      document.body.style.cursor = "";
+      hoverGroup = null;
+      indicatorBeforeId = null;
+      indicatorGroup = null;
+      render(currentProps);
+    }
+    function onMouseDown(e) {
+      if (e.button !== 0) return;
+      const handle = e.target.closest("[data-drag-handle]");
+      if (!handle) return;
+      const itemEl = handle.closest("[data-item-id]");
+      if (!itemEl) return;
+      dragItemId = itemEl.getAttribute("data-item-id");
+      if (!dragItemId) return;
+      startX = e.clientX;
+      startY = e.clientY;
+      hasMoved = false;
+      document.body.style.cursor = "grabbing";
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    function onMouseMove(e) {
+      if (!dragItemId) return;
+      if (!hasMoved) {
+        const dx = Math.abs(e.clientX - startX);
+        const dy = Math.abs(e.clientY - startY);
+        if (dx < THRESHOLD && dy < THRESHOLD) return;
+        hasMoved = true;
+        const itemEl = root.querySelector('[data-item-id="' + dragItemId + '"]');
+        const title = (itemEl == null ? void 0 : itemEl.getAttribute("data-item-title")) || dragItemId || "";
+        createGhost(title, e.clientX, e.clientY);
+      }
+      if (ghost) {
+        ghost.style.left = e.clientX + 12 + "px";
+        ghost.style.top = e.clientY - 14 + "px";
+      }
+      const targetGroup = getGroupAtY(e.clientY);
+      const { insertBeforeId } = getDropPosition(e.clientY, targetGroup);
+      const prevHover = hoverGroup;
+      const prevBefore = indicatorBeforeId;
+      const prevGroup = indicatorGroup;
+      hoverGroup = targetGroup;
+      indicatorGroup = targetGroup;
+      indicatorBeforeId = insertBeforeId;
+      if (prevHover !== hoverGroup || prevBefore !== indicatorBeforeId || prevGroup !== indicatorGroup) {
+        render(currentProps);
+      }
+    }
+    function onMouseUp(e) {
+      if (!dragItemId || !hasMoved) {
+        cleanupDrag();
+        return;
+      }
+      const targetGroup = getGroupAtY(e.clientY);
+      const { index } = getDropPosition(e.clientY, targetGroup);
+      const savedId = dragItemId;
+      const dispatch = currentProps.dispatch;
+      cleanupDrag();
+      const patchEvent = {
+        type: "PATCH",
+        patch: { id: savedId, priorityGroup: targetGroup, sortOrder: index }
+      };
+      dispatch(patchEvent);
+    }
+    root.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("mousemove", onMouseMove, true);
+    window.addEventListener("mouseup", onMouseUp, true);
     function render(p) {
+      currentProps = p;
       clear(root);
-      const { config, data, dispatch } = p;
+      const { config, data, dispatch, state } = p;
+      const isDirty = state.pendingPatchCount > 0;
       const hdr = el$1("div", CLS_SIDEBAR_HEADER);
+      const hdrRow = el$1("div", CLS_SIDEBAR_HEADER_ROW);
+      const titleWrap = el$1("div");
       const big = el$1("p", CLS_SIDEBAR_LABEL_BIG);
       big.textContent = "Priority Groups";
-      hdr.appendChild(big);
+      titleWrap.appendChild(big);
       const sm = el$1("p", CLS_SIDEBAR_LABEL_SM);
       sm.textContent = "Drag ☰ to move between buckets";
-      hdr.appendChild(sm);
+      titleWrap.appendChild(sm);
+      hdrRow.appendChild(titleWrap);
+      if (isDirty) {
+        const rst = el$1("button", CLS_SIDEBAR_RESET);
+        rst.textContent = "Reset";
+        rst.addEventListener("click", () => dispatch({ type: "RESET_PATCHES" }));
+        hdrRow.appendChild(rst);
+      }
+      hdr.appendChild(hdrRow);
+      const ctrls = el$1("div", CLS_SIDEBAR_CTRLS);
+      const capRow = el$1("div", CLS_SIDEBAR_CAP_ROW);
+      const capLbl = el$1("span", CLS_SIDEBAR_CAP_LBL);
+      capLbl.textContent = "Capacity";
+      capRow.appendChild(capLbl);
+      const capInput = el$1("input", CLS_CAPACITY_INPUT);
+      capInput.type = "number";
+      capInput.min = "1";
+      capInput.value = String(capacity);
+      capInput.addEventListener("input", (ev) => {
+        const v = Math.max(1, Number(ev.target.value) || 120);
+        capacity = v;
+      });
+      capRow.appendChild(capInput);
+      const capSuf = el$1("span", CLS_SIDEBAR_CAP_SUF);
+      capSuf.textContent = "h/mo";
+      capRow.appendChild(capSuf);
+      ctrls.appendChild(capRow);
+      const autoBtn = el$1("button", CLS_SIDEBAR_AUTO_BTN);
+      autoBtn.textContent = "Auto-Schedule";
+      autoBtn.addEventListener("click", () => {
+        dispatch({ type: "TOGGLE_STATS" });
+        dispatch({ type: "TOGGLE_STATS" });
+      });
+      ctrls.appendChild(autoBtn);
+      hdr.appendChild(ctrls);
       root.appendChild(hdr);
       const scroll = el$1("div", CLS_SIDEBAR_SCROLL);
       root.appendChild(scroll);
       config.buckets.forEach((b) => {
-        const members = data.tasks.filter((t) => t.priorityGroup === b.id && !t.parentWorkItemId);
-        const totalHours = members.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0);
+        const members = data.tasks.filter(
+          (t) => t.priorityGroup === b.id && !t.parentWorkItemId
+        );
+        const totalHours = members.reduce(
+          (s, t) => s + (Number(t.estimatedHours) || 0),
+          0
+        );
         const meta = BUCKET_META[b.id] || BUCKET_META.deferred;
-        const sec = el$1("div", "border-b " + meta.border + " transition-colors");
+        const isHover = hoverGroup === b.id;
+        const sec = el$1(
+          "div",
+          CLS_BUCKET_SECTION_BASE + " " + meta.border + (isHover ? " " + meta.activeBg : "")
+        );
         sec.setAttribute("data-group-id", b.id);
         const bhdr = el$1("div", CLS_BUCKET_HEADER + " " + meta.bg);
         const blbl = el$1("span", CLS_BUCKET_LABEL + " " + meta.text);
@@ -1476,21 +1801,37 @@ var NimbusGanttApp = function(exports) {
         bhdr.appendChild(bcnt);
         sec.appendChild(bhdr);
         if (members.length === 0) {
-          const empty = el$1("div", "px-3 py-3 text-[10px] text-slate-400 italic");
-          empty.textContent = "Drop items here";
-          sec.appendChild(empty);
+          const emptyInd = el$1(
+            "div",
+            CLS_BUCKET_EMPTY_INDICATOR_BASE + " " + (isHover ? CLS_BUCKET_EMPTY_INDICATOR_ON : CLS_BUCKET_EMPTY_INDICATOR_OFF)
+          );
+          sec.appendChild(emptyInd);
+          if (!isHover) {
+            const empty = el$1("div", CLS_BUCKET_EMPTY_TEXT);
+            empty.textContent = "Drop items here";
+            sec.appendChild(empty);
+          }
         } else {
           members.forEach((it) => {
-            const stage = (it.stage || "").toLowerCase();
-            const cat = stage.indexOf("backlog") === 0 ? "backlog" : stage.indexOf("paused") === 0 ? "paused" : stage.indexOf("done") === 0 ? "done" : "in-flight";
+            const itemId = String(it.id);
+            if (indicatorGroup === b.id && indicatorBeforeId === itemId) {
+              const indLine = el$1("div", CLS_BUCKET_INDICATOR);
+              sec.appendChild(indLine);
+            }
+            const cat = stageToCategory(it.stage);
             const dotColor = CATEGORY_DOT[cat] || "#94a3b8";
             const row = el$1("div", CLS_ITEM_ROW);
-            row.setAttribute("data-item-id", String(it.id));
+            row.setAttribute("data-item-id", itemId);
             row.setAttribute("data-item-title", it.title);
-            row.addEventListener("click", () => dispatch({ type: "TOGGLE_DETAIL", taskId: String(it.id) }));
+            row.addEventListener("click", (ev) => {
+              const tgt = ev.target;
+              if (tgt.closest("[data-drag-handle]")) return;
+              dispatch({ type: "TOGGLE_DETAIL", taskId: itemId });
+            });
             const handle = el$1("span", CLS_DRAG_HANDLE);
             handle.setAttribute("data-drag-handle", "1");
-            handle.textContent = "☰";
+            handle.setAttribute("title", "Drag to reorder or move to a different bucket");
+            handle.innerHTML = "&#x2630;";
             row.appendChild(handle);
             const dot = el$1("span", CLS_CAT_DOT);
             dot.style.background = dotColor;
@@ -1503,6 +1844,10 @@ var NimbusGanttApp = function(exports) {
             row.appendChild(hrs);
             sec.appendChild(row);
           });
+          if (indicatorGroup === b.id && indicatorBeforeId === null) {
+            const trailInd = el$1("div", CLS_BUCKET_INDICATOR);
+            sec.appendChild(trailInd);
+          }
         }
         scroll.appendChild(sec);
       });
@@ -1510,8 +1855,15 @@ var NimbusGanttApp = function(exports) {
     render(initial);
     return {
       el: root,
-      update: render,
+      update: (p) => render(p),
       destroy() {
+        root.removeEventListener("mousedown", onMouseDown, true);
+        window.removeEventListener("mousemove", onMouseMove, true);
+        window.removeEventListener("mouseup", onMouseUp, true);
+        if (ghost) {
+          ghost.remove();
+          ghost = null;
+        }
         clear(root);
         if (root.parentNode) root.parentNode.removeChild(root);
       }
@@ -1601,8 +1953,10 @@ var NimbusGanttApp = function(exports) {
     root.setAttribute("data-slot", "AuditPanel");
     root.setAttribute("data-testid", "audit-panel");
     let note = "";
+    let inputEl = null;
     function render(p) {
       clear(root);
+      inputEl = null;
       const dirty = p.state.pendingPatchCount > 0;
       const inner = el$1("div", "flex flex-wrap items-center gap-2");
       const lbl = el$1("span", CLS_AUDIT_LABEL);
@@ -1611,6 +1965,7 @@ var NimbusGanttApp = function(exports) {
       const stat = el$1("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
       stat.textContent = dirty ? "unsaved changes" : "clean";
       inner.appendChild(stat);
+      const submitBtn = el$1("button", CLS_AUDIT_SUBMIT);
       const input = el$1("input", CLS_AUDIT_INPUT);
       input.type = "text";
       input.placeholder = "commit note (optional)";
@@ -1618,23 +1973,28 @@ var NimbusGanttApp = function(exports) {
       input.setAttribute("data-testid", "audit-note-input");
       input.addEventListener("input", (e) => {
         note = e.target.value;
+        submitBtn.disabled = note.length === 0 && !dirty;
       });
+      inputEl = input;
       inner.appendChild(input);
-      const submit = el$1("button", CLS_AUDIT_SUBMIT);
-      submit.textContent = "📤 Submit + commit";
-      submit.setAttribute("data-testid", "audit-submit-btn");
-      submit.disabled = !dirty;
-      submit.addEventListener("click", () => {
+      submitBtn.type = "button";
+      submitBtn.textContent = "📤 Submit + commit";
+      submitBtn.setAttribute("data-testid", "audit-submit-btn");
+      submitBtn.disabled = note.length === 0 && !dirty;
+      submitBtn.addEventListener("click", () => {
         p.dispatch({ type: "RESET_PATCHES" });
         note = "";
-        render(p);
+        if (inputEl) inputEl.value = "";
+        submitBtn.disabled = true;
       });
-      inner.appendChild(submit);
+      inner.appendChild(submitBtn);
       const rst = el$1("button", CLS_AUDIT_RESET);
+      rst.type = "button";
       rst.textContent = "↺ Reset";
       rst.setAttribute("data-testid", "audit-reset-btn");
       rst.addEventListener("click", () => {
         note = "";
+        if (inputEl) inputEl.value = "";
         p.dispatch({ type: "RESET_PATCHES" });
       });
       inner.appendChild(rst);
@@ -1682,7 +2042,7 @@ var NimbusGanttApp = function(exports) {
         detailInst.destroy();
         detailInst = null;
       }
-      if (p.state.auditPanelOpen && p.config.features.auditPanel) {
+      if (p.config.features.auditPanel) {
         if (!auditInst) auditInst = AuditPanelVanilla(p);
         else auditInst.update(p);
         root.appendChild(auditInst.el);
@@ -1707,7 +2067,8 @@ var NimbusGanttApp = function(exports) {
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const DAY_MS = 24 * 3600 * 1e3;
   const WEEK_MS = 7 * DAY_MS;
-  const NUM_WEEKS = 8;
+  const NUM_WEEKS = 16;
+  const TRACK_PX = 32;
   function computeWeeks(tasks) {
     const now = /* @__PURE__ */ new Date();
     const dow = now.getDay();
@@ -1720,7 +2081,7 @@ var NimbusGanttApp = function(exports) {
       weeks.push({
         startMs: s.getTime(),
         endMs: s.getTime() + WEEK_MS,
-        label: MON[s.getMonth()] + String(s.getDate()),
+        label: MON[s.getMonth()] + " " + String(s.getDate()),
         hours: 0,
         isCurrent: i === 0
       });
@@ -1746,22 +2107,30 @@ var NimbusGanttApp = function(exports) {
     function render(p) {
       clear(root);
       const weeks = computeWeeks(p.data.tasks);
+      const totalHours = weeks.reduce((s, w) => s + w.hours, 0);
       const maxH = Math.max(1, ...weeks.map((w) => w.hours));
       const lbl = el$1("span", CLS_HRSWK_LABEL);
-      lbl.textContent = "Hrs/wk";
+      lbl.textContent = "HRS/WK";
       root.appendChild(lbl);
+      if (totalHours === 0) {
+        const empty = el$1("span", "text-[9px] text-slate-400 italic ml-2");
+        empty.textContent = "No scheduled hours";
+        root.appendChild(empty);
+        return;
+      }
       weeks.forEach((w) => {
         const pct = Math.round(w.hours / maxH * 100);
         const col = el$1("div", CLS_HRSWK_COL);
-        const hrsLbl = el$1("span", "text-[9px] font-bold " + (w.isCurrent ? "text-indigo-600" : "text-slate-500"));
+        const hrsLbl = el$1("span", "text-[9px] font-mono " + (w.isCurrent ? "text-indigo-600 font-bold" : "text-slate-500"));
         hrsLbl.textContent = w.hours + "h";
         col.appendChild(hrsLbl);
-        const track = el$1("div", CLS_HRSWK_TRACK);
-        const fill = el$1("div", "h-full rounded-sm " + (w.isCurrent ? "bg-indigo-500" : "bg-slate-400"));
-        fill.style.width = pct + "%";
+        const track = el$1("div", "w-full rounded-sm overflow-hidden bg-slate-200 relative");
+        track.style.height = TRACK_PX + "px";
+        const fill = el$1("div", "absolute bottom-0 left-0 right-0 rounded-sm " + (w.isCurrent ? "bg-indigo-500" : "bg-slate-400"));
+        fill.style.height = pct + "%";
         track.appendChild(fill);
         col.appendChild(track);
-        const dLbl = el$1("span", "text-[8px] " + (w.isCurrent ? "text-indigo-500 font-semibold" : "text-slate-400"));
+        const dLbl = el$1("span", "text-[9px] " + (w.isCurrent ? "text-indigo-500 font-semibold" : "text-slate-500"));
         dLbl.textContent = w.label;
         col.appendChild(dLbl);
         root.appendChild(col);
