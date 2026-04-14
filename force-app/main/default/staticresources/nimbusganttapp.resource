@@ -1624,24 +1624,32 @@ var NimbusGanttApp = function(exports) {
         });
         inner.appendChild(autoBtn);
         const allVisible = applyFilter(allTasks, filter, searchQ);
+        const BUCKET_HDR = {
+          "top-priority": { bg: "#fef2f2", text: "#b91c1c", border: "#fecaca" },
+          "active": { bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
+          "follow-on": { bg: "#ecfdf5", text: "#047857", border: "#a7f3d0" },
+          "proposed": { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
+          "deferred": { bg: "#f8fafc", text: "#94a3b8", border: "#e2e8f0" }
+        };
         buckets.forEach((b) => {
           const members = allVisible.filter((t) => t.priorityGroup === b.id && !isBucketId(t.id));
           if (!members.length) return;
           const bHrs = members.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0);
+          const hdrColors = BUCKET_HDR[b.id] || { bg: "#f1f5f9", text: "#374151", border: "#e2e8f0" };
           const bHdr = el("div", [
             "display:flex;align-items:center;justify-content:space-between;",
-            "padding:4px 8px;background:#f1f5f9;",
-            "border:1px solid #e2e8f0;border-bottom:none;",
+            "padding:4px 8px;background:" + hdrColors.bg + ";",
+            "border:1px solid " + hdrColors.border + ";border-bottom:none;",
             "border-radius:6px 6px 0 0;margin-top:8px;flex-shrink:0"
           ].join(""));
-          const bLbl = el("span", "font-size:10px;font-weight:700;color:#374151");
+          const bLbl = el("span", "font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:" + hdrColors.text);
           bLbl.textContent = b.label;
-          const bMeta = el("span", "font-size:9px;color:#94a3b8");
+          const bMeta = el("span", "font-size:9px;color:#94a3b8;font-family:monospace");
           bMeta.textContent = members.length + " · " + bHrs + "h";
           bHdr.appendChild(bLbl);
           bHdr.appendChild(bMeta);
           inner.appendChild(bHdr);
-          const taskList = el("div", "border:1px solid #e2e8f0;border-radius:0 0 6px 6px;overflow:hidden;flex-shrink:0");
+          const taskList = el("div", "border:1px solid " + hdrColors.border + ";border-radius:0 0 6px 6px;overflow:hidden;flex-shrink:0");
           members.forEach((t, idx) => {
             const catColor = STAGE_TO_CATEGORY_COLOR[t.stage || ""] || "#94a3b8";
             const taskHrs = Number(t.estimatedHours) || 0;
@@ -1773,9 +1781,9 @@ var NimbusGanttApp = function(exports) {
           hLbl.textContent = w.hours + "h";
           col.appendChild(hLbl);
           const track = el("div", "width:100%;border-radius:2px;overflow:hidden;background:#e2e8f0;height:8px;flex-shrink:0");
-          const fill = el("div", "height:100%;border-radius:2px;background:#6366f1;transition:width .3s");
+          const fill = el("div", "height:100%;border-radius:2px;transition:width .3s");
+          fill.style.background = isCur ? "#6366f1" : "#94a3b8";
           fill.style.width = pct + "%";
-          if (!isCur) fill.style.opacity = "0.55";
           track.appendChild(fill);
           col.appendChild(track);
           const dLbl = el("div", "font-size:8px;text-align:center;white-space:nowrap");
