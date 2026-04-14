@@ -8,7 +8,7 @@
  *              updateWorkItemDates: saves date changes from drag-to-reschedule.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity')
 public with sharing class DeliveryGanttController {
 
     /**
@@ -324,6 +324,45 @@ public with sharing class DeliveryGanttController {
                 deps.add(dep);
             }
             return deps;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Saves the priority bucket when a user drags a task into a
+     *              different group in the PriorityGroupingPlugin. Writes
+     *              PriorityGroupPk__c so the bucket persists across reloads
+     *              instead of reverting to the server-side derivation.
+     * @param workItemId   The Salesforce record Id.
+     * @param priorityGroup One of: top-priority, active, follow-on, proposed, deferred.
+     */
+    @AuraEnabled
+    public static void updateWorkItemPriorityGroup(String workItemId, String priorityGroup) {
+        try {
+            WorkItem__c item = new WorkItem__c(Id = workItemId, PriorityGroupPk__c = priorityGroup);
+            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Updates the parent work item after a drag-reparent action.
+     *              Pass null to clear the parent (promote to root level).
+     * @param workItemId The Salesforce record Id.
+     * @param parentId   The new parent WorkItem__c Id, or null to make root-level.
+     */
+    @AuraEnabled
+    public static void updateWorkItemParent(String workItemId, String parentId) {
+        try {
+            WorkItem__c item = new WorkItem__c(Id = workItemId);
+            item.ParentWorkItemLookup__c = String.isNotBlank(parentId) ? parentId : null;
+            update item; //NOPMD
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());

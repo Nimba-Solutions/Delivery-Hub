@@ -4,6 +4,7 @@
  * @description Unit tests for DeliveryGanttController.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity')
 @IsTest
 private class DeliveryGanttControllerTest {
 
@@ -351,6 +352,54 @@ private class DeliveryGanttControllerTest {
             Test.stopTest();
 
             System.assertNotEquals(null, deps, 'Should return an empty list, not null.');
+        }
+    }
+
+    // ── updateWorkItemParent ─────────────────────────────────────────
+
+    @IsTest
+    static void testUpdateWorkItemParent() {
+        System.runAs(testUser) {
+            WorkItem__c parent = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Build login page' LIMIT 1];
+            WorkItem__c child  = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Fix export bug' LIMIT 1];
+            Test.startTest();
+            DeliveryGanttController.updateWorkItemParent(child.Id, parent.Id);
+            Test.stopTest();
+            WorkItem__c updated = [SELECT ParentWorkItemLookup__c FROM WorkItem__c WHERE Id = :child.Id];
+            System.assertEquals(parent.Id, updated.ParentWorkItemLookup__c, 'Parent should be set');
+        }
+    }
+
+    // ── updateWorkItemPriorityGroup ──────────────────────────────────
+
+    @IsTest
+    static void testUpdateWorkItemPriorityGroup() {
+        System.runAs(testUser) {
+            WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Build login page' LIMIT 1];
+
+            Test.startTest();
+            DeliveryGanttController.updateWorkItemPriorityGroup(item.Id, 'top-priority');
+            Test.stopTest();
+
+            WorkItem__c updated = [SELECT PriorityGroupPk__c FROM WorkItem__c WHERE Id = :item.Id];
+            System.assertEquals('top-priority', updated.PriorityGroupPk__c,
+                'PriorityGroupPk__c should be saved to the specified bucket.');
+        }
+    }
+
+    @IsTest
+    static void testUpdateWorkItemPriorityGroupInvalidId() {
+        System.runAs(testUser) {
+            Boolean caught = false;
+            Test.startTest();
+            try {
+                DeliveryGanttController.updateWorkItemPriorityGroup('bogusId', 'active');
+            } catch (AuraHandledException e) {
+                caught = true;
+            }
+            Test.stopTest();
+
+            System.assert(caught, 'Should throw AuraHandledException for invalid Id.');
         }
     }
 

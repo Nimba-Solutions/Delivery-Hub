@@ -1,229 +1,170 @@
 /**
  * @name         Delivery Hub — deliveryProFormaTimeline
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Priority-grouped delivery timeline powered by nimbus-gantt's
- *               PriorityGroupingPlugin. Ports the cloudnimbusllc.com v5 page
- *               (/mf/delivery-timeline-v5) to a DH LWC that consumes real
- *               WorkItem__c records via DeliveryGanttController.getProFormaTimelineData.
- *
- *               Buckets: NOW (top-priority) · NEXT (active) · PLANNED (follow-on) ·
- *               PROPOSED (proposed) · HOLD (deferred). Assignment reads
- *               WorkItem__c.PriorityGroupPk__c first; falls back to server-side
- *               derivation when the picklist is blank. Users can override the
- *               derived bucket by setting the picklist directly on the record.
- *
- *               Replaces the throwaway deliveryNimbusGantt demo LWC on
- *               DeliveryHubHome.flexipage + DeliveryHubAdminHome.flexipage.
+ * @description  Thin Salesforce shell for the cloudnimbusllc.com v8 delivery timeline.
+ *               Fetches WorkItem__c data via Apex, loads the React bundle as a static
+ *               resource, and mounts the full v8 UI (toolbar, gantt, sidebar, audit,
+ *               canvas views) into a container div. Write-backs (drag/sort/bucket/dates)
+ *               route back to Apex via the onPatch callback.
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, api } from 'lwc';
+import { LightningElement } from 'lwc';
 import { loadScript } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
+import NIMBUS_GANTT_APP from '@salesforce/resourceUrl/nimbusganttapp';
+import CLOUDNIMBUS_CSS from '@salesforce/resourceUrl/cloudnimbustemplatecss';
+import DELIVERY_TIMELINE from '@salesforce/resourceUrl/deliverytimeline';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
-
-// ─── Bucket palette — must match CLOUD_NIMBUS_PRIORITY_BUCKETS in ───────────
-// nimbus-gantt/packages/core/src/plugins/PriorityGroupingPlugin.ts and in
-// cloudnimbusllc.com/src/lib/nimbus-gantt/PriorityGroupingPlugin.ts. Kept
-// inline so the LWC doesn't need to import from the static resource's
-// exported constants (we instantiate the plugin through window.NimbusGantt).
-const PRIORITY_BUCKETS = [
-    { id: 'top-priority', label: 'NOW',      color: '#dc2626', bgTint: '#fef2f2', order: 0 },
-    { id: 'active',       label: 'NEXT',     color: '#d97706', bgTint: '#fffbeb', order: 1 },
-    { id: 'follow-on',    label: 'PLANNED',  color: '#059669', bgTint: '#ecfdf5', order: 2 },
-    { id: 'proposed',     label: 'PROPOSED', color: '#2563eb', bgTint: '#eff6ff', order: 3 },
-    { id: 'deferred',     label: 'HOLD',     color: '#94a3b8', bgTint: '#f8fafc', order: 4 },
-];
-
-// Stage color map for real task bars (non-header). Mirrors the subset of
-// stages v5 colors. Unmapped stages fall back to the framework default.
-const STAGE_COLORS = {
-    'Backlog':                  '#64748b',
-    'Scoping In Progress':      '#64748b',
-    'Ready for Sizing':         '#3b82f6',
-    'Ready for Development':    '#22c55e',
-    'In Development':           '#22c55e',
-    'Ready for QA':             '#a855f7',
-    'QA In Progress':           '#a855f7',
-    'Ready for Client UAT':     '#14b8a6',
-    'In Client UAT':            '#14b8a6',
-    'Ready for UAT Sign-off':   '#14b8a6',
-    'Ready for Deployment':     '#f97316',
-    'Deploying':                '#f97316',
-    'Done':                     '#9ca3af',
-    'Deployed to Prod':         '#9ca3af',
-    'Cancelled':                '#cbd5e1',
-    'Paused':                   '#94a3b8',
-    'On Hold':                  '#94a3b8',
-    'Blocked':                  '#ef4444',
-};
+import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
+import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
+import updateWorkItemPriorityGroup from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemPriorityGroup';
+import updateWorkItemParent from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemParent';
 
 export default class DeliveryProFormaTimeline extends LightningElement {
-    @api showCompleted = false;
 
-    isLoading = true;
-    errorMessage = null;
-    rows = [];
-
-    /** Live NimbusGantt instance — null until the static resource loads. */
-    _gantt = null;
-    /** Tracks whether loadScript has resolved so we don't double-construct. */
     _scriptLoaded = false;
-
-    get isEmpty() {
-        return !this.isLoading && !this.errorMessage && this.rows.length === 0;
-    }
+    _mounted = false;
+    _tasks = [];
 
     async connectedCallback() {
+        // Load nimbusgantt first so window.NimbusGantt is available when the
+        // delivery-timeline bundle runs. Locker Service may reject loadScript
+        // even when the script actually executed — catch and continue.
         try {
             await loadScript(this, NIMBUS_GANTT);
-            this._scriptLoaded = true;
-            await this.loadData();
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] nimbusgantt script warning (may be Locker Service):', e && e.message);
+        }
+        try {
+            await loadScript(this, NIMBUS_GANTT_APP);
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] nimbusganttapp script warning (may be Locker Service):', e && e.message);
+        }
+        try {
+            await loadScript(this, DELIVERY_TIMELINE);
         } catch (error) {
-            this.handleError('Failed to load nimbus-gantt static resource', error);
+            // Locker Service may reject loadScript with a security warning
+            // even though the script executed and set window.DeliveryTimeline.
+            // Log the warning but do not bail — check if the bundle loaded anyway.
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] loadScript warning (may be Locker Service):', error && error.message);
+        }
+        this._scriptLoaded = true;
+        if (window.DeliveryTimeline) {
+            await this._loadAndMount();
+        } else {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] window.DeliveryTimeline not set after script load — bundle may have failed');
+            this._showError('Timeline bundle failed to load', new Error('window.DeliveryTimeline not defined'));
         }
     }
 
     disconnectedCallback() {
-        if (this._gantt) {
-            try { this._gantt.destroy(); } catch (e) { /* swallow */ }
-            this._gantt = null;
+        if (this._mounted) {
+            try {
+                const container = this.template.querySelector('.timeline-container');
+                if (container && window.DeliveryTimeline) {
+                    window.DeliveryTimeline.unmount(container);
+                }
+            } catch (e) { /* swallow */ }
+            this._mounted = false;
         }
     }
 
-    async loadData() {
-        this.isLoading = true;
-        this.errorMessage = null;
+    async _loadAndMount() {
         try {
-            const data = await getProFormaTimelineData({ showCompleted: this.showCompleted });
-            this.rows = data || [];
-            // Render in next microtask so the container div exists in the DOM
-            // (template rerenders on isLoading flip).
-            Promise.resolve().then(() => this.renderGantt());
+            const data = await getProFormaTimelineData({ showCompleted: false });
+            this._tasks = data || [];
+            // Give DOM a tick to render the container
+            await new Promise(resolve => setTimeout(resolve, 0));
+            this._mount();
         } catch (error) {
-            this.handleError('Failed to load work items', error);
-        } finally {
-            this.isLoading = false;
+            this._showError('Failed to load work items', error);
         }
     }
 
-    renderGantt() {
-        const container = this.refs.ganttContainer;
-        if (!container || !window.NimbusGantt) {
+    _mount() {
+        const container = this.template.querySelector('.timeline-container');
+        if (!container) {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] Container element not found in template');
+            return;
+        }
+        if (!window.DeliveryTimeline) {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] window.DeliveryTimeline not set — static resource may have failed to load');
             return;
         }
 
-        // Tear down any previous instance before re-rendering
-        if (this._gantt) {
-            try { this._gantt.destroy(); } catch (e) { /* swallow */ }
-            this._gantt = null;
-        }
-
-        if (this.rows.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-
-        // Map DTO rows → GanttTask[] with plugin-aware metadata
-        const tasks = this.rows.map((row) => ({
-            id: row.id,
-            name: row.title || row.name,
-            startDate: row.startDate,
-            endDate: row.endDate,
-            progress: row.progress != null ? Number(row.progress) : 0,
-            status: row.stage,
-            priority: row.priority,
-            // groupId is the plugin's default read; we use the metadata path
-            // instead so the bucket comes from PriorityGroupPk__c (with fallback)
-            groupId: row.priorityGroup || null,
-            assignee: row.developerName || '',
-            parentId: row.parentWorkItemId || undefined,
-            color: STAGE_COLORS[row.stage] || undefined,
-            metadata: {
-                priorityGroup: row.priorityGroup,
-                hoursHigh: row.estimatedHours != null ? Number(row.estimatedHours) : 0,
-                hoursLogged: row.loggedHours != null ? Number(row.loggedHours) : 0,
-                entityId: row.entityId,
-                entityName: row.entityName,
-            },
+        // Map Apex DTOs to SFTask shape the React bundle expects
+        const tasks = this._tasks.map(r => ({
+            id: r.id,
+            title: r.title || r.name,
+            priorityGroup: r.priorityGroup || 'follow-on',
+            stage: r.stage || '',
+            priority: r.priority || 'Medium',
+            startDate: r.startDate || null,
+            endDate: r.endDate || null,
+            estimatedHours: Number(r.estimatedHours) || 0,
+            loggedHours: Number(r.loggedHours) || 0,
+            developerName: r.developerName || '',
+            entityName: r.entityName || '',
+            parentWorkItemId: r.parentWorkItemId || null,
+            sortOrder: Number(r.sortOrder) || 0,
+            isInactive: !!r.isInactive,
         }));
 
-        const { NimbusGantt, PriorityGroupingPlugin, hoursWeightedProgress } = window.NimbusGantt;
-
-        this._gantt = new NimbusGantt(container, {
-            tasks,
-            dependencies: [],
-            rowHeight: 32,
-            barHeight: 20,
-            headerHeight: 32,
-            gridWidth: 295,
-            zoomLevel: 'week',
-            showToday: true,
-            showWeekends: true,
-            showProgress: true,
-            colorMap: STAGE_COLORS,
-            readOnly: false,
-            onTaskClick: (task) => this.handleTaskClick(task),
-        });
-
-        // Install the priority grouping plugin — reads PriorityGroupPk__c from
-        // metadata, falls back to derived bucket via task.groupId (populated
-        // server-side). Hours-weighted progress reads metadata.hoursHigh +
-        // hoursLogged.
-        this._gantt.use(
-            PriorityGroupingPlugin({
-                buckets: PRIORITY_BUCKETS,
-                getBucket: (task) =>
-                    (task.metadata && task.metadata.priorityGroup) || task.groupId || null,
-                getBucketProgress: hoursWeightedProgress,
-            })
-        );
-
-        // Re-dispatch data after plugin install so middleware processes the
-        // initial load — same gotcha as cloudnimbusllc.com's NimbusGanttChart
-        // wrapper (see reference_nimbus_gantt_plugin_rowinjection.md).
-        this._gantt.setData(tasks, []);
-        try { this._gantt.expandAll(); } catch (e) { /* swallow */ }
-    }
-
-    handleTaskClick(task) {
-        if (!task || !task.id) return;
-        // Synthetic bucket headers are handled by the plugin (collapse toggle)
-        if (task.id.startsWith('__bucket_header__')) return;
-        // Real task → navigate to the WorkItem__c record
-        const navigateEvent = new CustomEvent('navigate', {
-            bubbles: true,
-            composed: true,
-            detail: { recordId: task.id, objectApiName: 'WorkItem__c' },
-        });
-        this.dispatchEvent(navigateEvent);
-    }
-
-    handleShowCompletedChange(event) {
-        this.showCompleted = event.target.checked;
-        if (this._scriptLoaded) {
-            this.loadData();
+        try {
+            window.DeliveryTimeline.mount(container, {
+                tasks,
+                onPatch: (patch) => this._handlePatch(patch),
+                cssUrl: CLOUDNIMBUS_CSS,
+            });
+            this._mounted = true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error('[DeliveryTimeline] mount() threw — Locker Service container issue or bundle error:', error);
+            this._showError('Timeline failed to render', error);
         }
     }
 
-    handleRefresh() {
-        if (this._scriptLoaded) {
-            this.loadData();
+    async _handlePatch(patch) {
+        const { id, sortOrder, priorityGroup, parentId, startDate, endDate } = patch;
+        const ops = [];
+
+        if (sortOrder !== undefined) {
+            ops.push(updateWorkItemSortOrder({ workItemId: id, sortOrder }));
+        }
+        if (priorityGroup !== undefined) {
+            ops.push(updateWorkItemPriorityGroup({ workItemId: id, priorityGroup }));
+        }
+        if ('parentId' in patch) {
+            ops.push(updateWorkItemParent({ workItemId: id, parentId: parentId || '' }));
+        }
+        if (startDate !== undefined || endDate !== undefined) {
+            ops.push(updateWorkItemDates({
+                workItemId: id,
+                startDate: startDate || null,
+                endDate: endDate || null,
+            }));
+        }
+
+        try {
+            await Promise.all(ops);
+        } catch (error) {
+            this._showError('Failed to save change', error);
         }
     }
 
-    handleError(prefix, error) {
+    _showError(prefix, error) {
         const msg = (error && error.body && error.body.message) || (error && error.message) || 'Unknown error';
-        this.errorMessage = `${prefix}: ${msg}`;
-        this.isLoading = false;
         // eslint-disable-next-line no-console
         console.error('[deliveryProFormaTimeline]', prefix, error);
-        this.dispatchEvent(
-            new ShowToastEvent({
-                title: 'Timeline error',
-                message: this.errorMessage,
-                variant: 'error',
-            })
-        );
+        this.dispatchEvent(new ShowToastEvent({
+            title: prefix, message: msg, variant: 'error',
+        }));
     }
 }
