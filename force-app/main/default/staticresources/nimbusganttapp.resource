@@ -1215,8 +1215,8 @@ var NimbusGanttApp = function(exports) {
         kpiPanel.appendChild(card);
       });
       container.appendChild(kpiPanel);
-      const filterBar = el("div", "background:#fff;border-bottom:1px solid #e5e7eb;padding:5px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap");
-      const fLabel = el("span", "font-size:11px;color:#64748b;white-space:nowrap");
+      const filterBar = el("div", "background:#fff;border-bottom:1px solid #f1f5f9;padding:6px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap");
+      const fLabel = el("span", "font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap");
       fLabel.textContent = "View:";
       filterBar.appendChild(fLabel);
       const filterOpts = [
@@ -1233,7 +1233,11 @@ var NimbusGanttApp = function(exports) {
         btn.textContent = f.label;
         function styleBtn() {
           const on = f.id === filter;
-          btn.style.cssText = "padding:2px 9px;font-size:11px;border-radius:10px;cursor:pointer;border:1px solid " + (on ? "#3b82f6" : "#e5e7eb") + ";background:" + (on ? "#eff6ff" : "#fff") + ";color:" + (on ? "#2563eb" : "#374151") + ";font-weight:" + (on ? "600" : "400");
+          btn.style.cssText = [
+            "font-size:10px;font-weight:600;padding:4px 10px;border-radius:9999px;",
+            "border:1px solid;cursor:pointer;white-space:nowrap;transition:all .15s;",
+            on ? "background:#2563eb;color:#fff;border-color:#2563eb;" : "background:#fff;color:#475569;border-color:#e2e8f0;"
+          ].join("");
         }
         styleBtn();
         btn.addEventListener("click", () => {
@@ -1244,7 +1248,8 @@ var NimbusGanttApp = function(exports) {
         filterStylers.push(styleBtn);
         filterBar.appendChild(btn);
       });
-      const fbsep = el("div", "width:1px;height:18px;background:#e5e7eb;flex-shrink:0");
+      const fbsep = el("span", "color:#e2e8f0;margin:0 4px;flex-shrink:0");
+      fbsep.textContent = "|";
       filterBar.appendChild(fbsep);
       const sw = el("div", "position:relative;display:inline-flex;align-items:center");
       const si = el("span", "position:absolute;left:8px;font-size:11px;color:#94a3b8;pointer-events:none");
@@ -1299,9 +1304,9 @@ var NimbusGanttApp = function(exports) {
       CATEGORY_DISPLAY.forEach((cat) => {
         const chip = el("span", "display:inline-flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0");
         const dot = el("span");
-        dot.style.cssText = "width:9px;height:9px;border-radius:3px;background:" + cat.color + ";display:inline-block;flex-shrink:0";
+        dot.style.cssText = "width:12px;height:12px;border-radius:3px;background:" + cat.color + ";display:inline-block;flex-shrink:0";
         chip.appendChild(dot);
-        const txt = el("span", "font-size:9px;color:#374151");
+        const txt = el("span", "font-size:9px;color:#475569");
         txt.textContent = cat.label;
         chip.appendChild(txt);
         catChipTxts[cat.label] = txt;
