@@ -1065,12 +1065,30 @@ var NimbusGanttApp = function(exports) {
       let allTasks = options.tasks || [];
       const _rawOnPatch = options.onPatch || (() => {
       });
+      const pendingPatchCountRef = { pending: 0, badge: null };
+      let _patchRefreshTimer = null;
       const onPatch = (patch) => {
+        const idx = allTasks.findIndex((t) => t.id === patch.id);
+        if (idx !== -1) {
+          const t = allTasks[idx];
+          let updated = { ...t };
+          if (patch.sortOrder !== void 0) updated = { ...updated, sortOrder: patch.sortOrder };
+          if (patch.priorityGroup !== void 0) updated = { ...updated, priorityGroup: patch.priorityGroup };
+          if ("parentId" in patch) updated = { ...updated, parentWorkItemId: patch.parentId ?? null };
+          if (patch.startDate !== void 0) updated = { ...updated, startDate: patch.startDate };
+          if (patch.endDate !== void 0) updated = { ...updated, endDate: patch.endDate };
+          allTasks[idx] = updated;
+          depthMap = buildDepthMap(allTasks);
+        }
         _rawOnPatch(patch);
         pendingPatchCountRef.pending++;
         if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "inline";
+        if (_patchRefreshTimer) clearTimeout(_patchRefreshTimer);
+        _patchRefreshTimer = setTimeout(() => {
+          _patchRefreshTimer = null;
+          refresh();
+        }, 50);
       };
-      const pendingPatchCountRef = { pending: 0, badge: null };
       const auditInputRef = { el: null };
       let viewMode = "gantt";
       let filter = "active";
