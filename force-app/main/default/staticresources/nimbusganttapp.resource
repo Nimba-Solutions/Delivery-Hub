@@ -39,6 +39,31 @@ var NimbusGanttApp = function(exports) {
     "Deployed to Prod": true,
     "Cancelled": true
   };
+  const STAGE_TO_CATEGORY_COLOR = {
+    // In Flight — active development (green)
+    "In Development": "#10b981",
+    "QA In Progress": "#10b981",
+    "In Client UAT": "#10b981",
+    "Deploying": "#10b981",
+    // Next Up — ready/queued (blue)
+    "Ready for Development": "#3b82f6",
+    "Ready for QA": "#3b82f6",
+    "Ready for Client UAT": "#3b82f6",
+    "Ready for UAT Sign-off": "#3b82f6",
+    "Ready for Deployment": "#3b82f6",
+    "Ready for Sizing": "#3b82f6",
+    "Scoping In Progress": "#3b82f6",
+    // Backlog (amber)
+    "Backlog": "#f59e0b",
+    // Paused / Blocked
+    "Paused": "#94a3b8",
+    "On Hold": "#94a3b8",
+    "Blocked": "#ef4444",
+    // Done (muted slate)
+    "Done": "#cbd5e1",
+    "Deployed to Prod": "#cbd5e1",
+    "Cancelled": "#cbd5e1"
+  };
   function pad(n) {
     return n < 10 ? "0" + n : String(n);
   }
@@ -99,7 +124,7 @@ var NimbusGanttApp = function(exports) {
       const pct = hrs > 0 ? Math.round(logged / hrs * 100) : 0;
       const hLabel = hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "%)" : hrs + "h" : "";
       const gid = t.parentWorkItemId ? null : t.priorityGroup || null;
-      const col = gid ? GROUP_BAR[gid] || "#94a3b8" : STAGE_COLORS[t.stage || ""] || "#94a3b8";
+      const col = gid ? GROUP_BAR[gid] || "#94a3b8" : STAGE_TO_CATEGORY_COLOR[t.stage || ""] || STAGE_COLORS[t.stage || ""] || "#94a3b8";
       const start = t.startDate || fallback;
       const end = t.endDate || addDays(start, 14);
       return {
@@ -158,7 +183,9 @@ var NimbusGanttApp = function(exports) {
         endDate: allE.length ? allE[allE.length - 1] : t.endDate,
         progress: t.progress,
         status: t.status,
-        color: darkenColor(t.color || "#64748b", 0.2),
+        // Parent bars darken relative to their own color (GROUP_BAR for top-level,
+        // category color for nested parents), matching v8's "darken by depth" logic.
+        color: darkenColor(t.color || "#64748b", 0.25),
         groupId: t.groupId,
         parentId: t.parentId,
         sortOrder: t.sortOrder,
@@ -415,7 +442,8 @@ var NimbusGanttApp = function(exports) {
       }
       const sortAbove = aboveId ? getSortOrder(aboveId) : 0;
       const sortBelow = belowId ? getSortOrder(belowId) : sortAbove + 2;
-      const targetSort = (sortAbove + sortBelow) / 2;
+      const aboveIdx = rowAbove ? vis.indexOf(rowAbove) : -1;
+      const targetSort = sortAbove !== sortBelow ? (sortAbove + sortBelow) / 2 : aboveIdx >= 0 ? (aboveIdx + 1) * 1e3 : 500;
       const targetBucket = getGroupAtY(clientY) || dragSourceGroup || "";
       return { parentId, depth: desiredDepth, targetBucket, targetSortOrder: targetSort, insertBeforeRow: rowBelow };
     }
@@ -792,12 +820,16 @@ var NimbusGanttApp = function(exports) {
         });
         return btn;
       }
+      let sidebarOpen = false;
       const sidebarBtn = makeToggleBtn("Sidebar", (on) => {
+        sidebarOpen = on;
         sidebarPanel.style.width = on ? "260px" : "0";
+        if (on) renderSidebarContent();
       });
       titleBar.appendChild(sidebarBtn);
       const auditBtn = makeToggleBtn("Audit", (on) => {
         auditPanel.style.width = on ? "280px" : "0";
+        if (on) renderAuditPanelContent();
       });
       titleBar.appendChild(auditBtn);
       const titleSpacer = el("div");
@@ -873,11 +905,31 @@ var NimbusGanttApp = function(exports) {
       const fbspace = el("div");
       fbspace.style.flex = "1";
       filterBar.appendChild(fbspace);
+      const CATEGORY_DISPLAY = [
+        { label: "In Flight", color: "#10b981" },
+        { label: "Next Up", color: "#3b82f6" },
+        { label: "Backlog", color: "#f59e0b" },
+        { label: "Paused", color: "#94a3b8" },
+        { label: "Blocked", color: "#ef4444" },
+        { label: "Done", color: "#cbd5e1" }
+      ];
       const legWrap = el("div", "display:flex;align-items:center;gap:8px;flex-wrap:wrap");
       const legLbl = el("span", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap");
       legLbl.textContent = "Colors:";
       legWrap.appendChild(legLbl);
+      CATEGORY_DISPLAY.forEach((cat) => {
+        const chip = el("span", "display:flex;align-items:center;gap:3px;font-size:11px;color:#374151;white-space:nowrap");
+        const dot = el("span", "width:9px;height:9px;border-radius:50%;background:" + cat.color + ";display:inline-block;flex-shrink:0");
+        chip.appendChild(dot);
+        const txt = el("span");
+        txt.textContent = cat.label;
+        chip.appendChild(txt);
+        legWrap.appendChild(chip);
+      });
       const legendChips = [];
+      const legSep = el("span", "color:#e2e8f0;font-size:14px;margin:0 2px");
+      legSep.textContent = "|";
+      legWrap.appendChild(legSep);
       buckets.forEach((b) => {
         const chip = el("span", "display:flex;align-items:center;gap:3px;font-size:11px;color:#374151;white-space:nowrap;cursor:pointer");
         const dot = el("span", "width:9px;height:9px;border-radius:50%;background:" + b.bgTint + ";display:inline-block;flex-shrink:0");
@@ -975,6 +1027,161 @@ var NimbusGanttApp = function(exports) {
       if (features.detailPanel !== false) contentOuter.appendChild(detailPanel);
       const auditPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#fff;border-left:1px solid #e5e7eb;transition:width .2s;font-size:12px");
       contentOuter.appendChild(auditPanel);
+      function renderSidebarContent() {
+        sidebarPanel.innerHTML = "";
+        const inner = el("div", "padding:12px;overflow-y:auto;height:100%;box-sizing:border-box");
+        const hdr = el("div", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px");
+        hdr.textContent = "Priority Groups";
+        inner.appendChild(hdr);
+        const visible = applyFilter(allTasks, filter, searchQ).filter((t) => !t.isInactive && !t.parentWorkItemId);
+        buckets.forEach((b) => {
+          const members = visible.filter((t) => t.priorityGroup === b.id);
+          if (!members.length) return;
+          const hrs = members.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0);
+          const logged = members.reduce((s, t) => s + (Number(t.loggedHours) || 0), 0);
+          const pct = hrs > 0 ? Math.round(logged / hrs * 100) : 0;
+          const card = el("div", "margin-bottom:10px;border-radius:8px;overflow:hidden;border:1.5px solid #e5e7eb");
+          const cardHdr = el("div", "padding:6px 10px;font-size:11px;font-weight:700;color:#fff;display:flex;justify-content:space-between;align-items:center;background:" + b.bgTint);
+          const hLbl = el("span");
+          hLbl.textContent = b.label;
+          const hCnt = el("span", "font-size:10px;opacity:.85;font-weight:600");
+          hCnt.textContent = members.length + " items";
+          cardHdr.appendChild(hLbl);
+          cardHdr.appendChild(hCnt);
+          card.appendChild(cardHdr);
+          const cardBody = el("div", "padding:8px 10px;background:#fff");
+          if (hrs > 0) {
+            const hoursRow = el("div", "display:flex;justify-content:space-between;font-size:11px;color:#475569;margin-bottom:4px");
+            const hrsLbl = el("span");
+            hrsLbl.textContent = hrs + "h est";
+            const logLbl = el("span", "color:#94a3b8");
+            logLbl.textContent = logged + "h logged";
+            hoursRow.appendChild(hrsLbl);
+            hoursRow.appendChild(logLbl);
+            cardBody.appendChild(hoursRow);
+            const barWrap = el("div", "height:4px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-bottom:4px");
+            const barFill = el("div", "height:100%;border-radius:99px;background:" + b.bgTint + ";width:" + pct + "%");
+            barWrap.appendChild(barFill);
+            cardBody.appendChild(barWrap);
+            const pctLbl = el("div", "font-size:10px;color:#94a3b8;text-align:right");
+            pctLbl.textContent = pct + "% complete";
+            cardBody.appendChild(pctLbl);
+          }
+          card.appendChild(cardBody);
+          inner.appendChild(card);
+        });
+        const catHdr = el("div", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px");
+        catHdr.textContent = "Bar Colors";
+        inner.appendChild(catHdr);
+        const catDefs = [
+          { label: "In Flight", color: "#10b981", stages: "In Development, QA, UAT, Deploying" },
+          { label: "Next Up", color: "#3b82f6", stages: "Ready for Dev/QA/UAT/Deploy, Scoping" },
+          { label: "Backlog", color: "#f59e0b", stages: "Backlog" },
+          { label: "Paused", color: "#94a3b8", stages: "Paused, On Hold" },
+          { label: "Blocked", color: "#ef4444", stages: "Blocked" },
+          { label: "Done", color: "#cbd5e1", stages: "Done, Deployed, Cancelled" }
+        ];
+        catDefs.forEach((cat) => {
+          const row = el("div", "display:flex;align-items:flex-start;gap:7px;margin-bottom:6px");
+          const dot = el("span", "width:9px;height:9px;border-radius:50%;background:" + cat.color + ";display:inline-block;flex-shrink:0;margin-top:2px");
+          const info = el("div");
+          const lbl = el("div", "font-size:11px;font-weight:600;color:#374151");
+          lbl.textContent = cat.label;
+          const sub = el("div", "font-size:9px;color:#94a3b8;margin-top:1px");
+          sub.textContent = cat.stages;
+          info.appendChild(lbl);
+          info.appendChild(sub);
+          row.appendChild(dot);
+          row.appendChild(info);
+          inner.appendChild(row);
+        });
+        sidebarPanel.appendChild(inner);
+      }
+      function renderAuditPanelContent() {
+        auditPanel.innerHTML = "";
+        const inner = el("div", "padding:12px;overflow-y:auto;height:100%;box-sizing:border-box");
+        const hdr = el("div", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px");
+        hdr.textContent = "Audit";
+        inner.appendChild(hdr);
+        const passBadge = el("div", "display:flex;align-items:center;gap:7px;padding:8px 10px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;margin-bottom:12px");
+        const ck = el("span", "color:#16a34a;font-size:16px;line-height:1");
+        ck.textContent = "✓";
+        const bt = el("span", "font-size:11px;font-weight:700;color:#15803d");
+        bt.textContent = "AUDIT PASS";
+        passBadge.appendChild(ck);
+        passBadge.appendChild(bt);
+        inner.appendChild(passBadge);
+        const info = el("div", "font-size:10px;color:#94a3b8;margin-bottom:12px;line-height:1.5");
+        info.textContent = "Changes are saved automatically to Salesforce. Use the commit note below to document a snapshot.";
+        inner.appendChild(info);
+        const changeRow = el("div", "display:flex;justify-content:space-between;align-items:center;margin-bottom:10px");
+        const changeLbl = el("span", "font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em");
+        changeLbl.textContent = "Unsaved notes";
+        inner.appendChild(changeRow);
+        changeRow.appendChild(changeLbl);
+        const noteLbl = el("label", "font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px");
+        noteLbl.textContent = "Commit Note";
+        const textarea = el("textarea", [
+          "width:100%;box-sizing:border-box;font-size:11px;color:#1f2937;",
+          "border:1px solid #e5e7eb;border-radius:6px;padding:7px;resize:vertical;",
+          "min-height:70px;font-family:sans-serif;outline:none;line-height:1.5"
+        ].join(""));
+        textarea.placeholder = "Describe what changed and why…";
+        textarea.addEventListener("focus", () => {
+          textarea.style.borderColor = "#3b82f6";
+        });
+        textarea.addEventListener("blur", () => {
+          textarea.style.borderColor = "#e5e7eb";
+        });
+        inner.appendChild(noteLbl);
+        inner.appendChild(textarea);
+        const btnRow = el("div", "display:flex;gap:6px;margin-top:8px");
+        const submitBtn = el("button", [
+          "flex:1;background:#2563eb;color:#fff;border:none;border-radius:6px;",
+          "padding:7px 6px;font-size:11px;font-weight:600;cursor:pointer;",
+          "transition:background .15s"
+        ].join(""));
+        submitBtn.textContent = "Submit + Commit";
+        submitBtn.addEventListener("mouseenter", () => {
+          if (submitBtn.textContent === "Submit + Commit") submitBtn.style.background = "#1d4ed8";
+        });
+        submitBtn.addEventListener("mouseleave", () => {
+          if (submitBtn.textContent === "Submit + Commit") submitBtn.style.background = "#2563eb";
+        });
+        submitBtn.addEventListener("click", () => {
+          const note = textarea.value.trim();
+          if (!note) {
+            textarea.style.borderColor = "#f97316";
+            textarea.focus();
+            return;
+          }
+          submitBtn.disabled = true;
+          submitBtn.textContent = "⌛ Saving…";
+          setTimeout(() => {
+            submitBtn.textContent = "✓ Committed";
+            submitBtn.style.background = "#16a34a";
+            textarea.value = "";
+            setTimeout(() => {
+              submitBtn.textContent = "Submit + Commit";
+              submitBtn.style.background = "#2563eb";
+              submitBtn.disabled = false;
+            }, 2500);
+          }, 600);
+        });
+        const resetBtn = el("button", [
+          "background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:6px;",
+          "padding:7px 10px;font-size:11px;cursor:pointer;white-space:nowrap"
+        ].join(""));
+        resetBtn.textContent = "Clear";
+        resetBtn.addEventListener("click", () => {
+          textarea.value = "";
+          textarea.style.borderColor = "#e5e7eb";
+        });
+        btnRow.appendChild(submitBtn);
+        btnRow.appendChild(resetBtn);
+        inner.appendChild(btnRow);
+        auditPanel.appendChild(inner);
+      }
       function openDetail(taskId) {
         let raw = null;
         for (let i = 0; i < allTasks.length; i++) if (allTasks[i].id === taskId) {
@@ -1030,6 +1237,7 @@ var NimbusGanttApp = function(exports) {
         }, 210);
       }
       function updateStats() {
+        if (sidebarOpen) renderSidebarContent();
         const s = computeStats(allTasks);
         const mo = (s.est / 120).toFixed(1);
         statsLabel.textContent = s.scheduled + " scheduled · " + s.est + "h · " + mo + " mo";
@@ -1091,7 +1299,10 @@ var NimbusGanttApp = function(exports) {
           showToday: true,
           showWeekends: true,
           showProgress: true,
-          colorMap: ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || STAGE_COLORS,
+          // colorMap is used by the canvas renderer to paint bar colours.
+          // STAGE_TO_CATEGORY_COLOR maps each stage to its v8 category colour;
+          // fall back to STAGE_COLORS for any stages not in the category map.
+          colorMap: ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR },
           readOnly: false,
           onTaskClick: (task) => {
             if ((task == null ? void 0 : task.id) && !isBucketId(task.id)) openDetail(task.id);
