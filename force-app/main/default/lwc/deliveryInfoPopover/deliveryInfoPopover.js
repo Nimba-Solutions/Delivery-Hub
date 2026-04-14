@@ -182,14 +182,14 @@ const INFO_REGISTRY = {
         keyFields:
             'WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.DeveloperLookup__c'
     },
-    deliveryNimbusGantt: {
+    deliveryProFormaTimeline: {
         dataSource:
-            'Calls DeliveryGanttController.getGanttData to load active WorkItem__c records with start/end dates and dependencies. Dependency arrows are loaded via getGanttDependencies. Drag-to-move and drag-to-resize update dates via updateWorkItemDates. Supports entity filtering and completed-item toggling.',
+            'Calls DeliveryGanttController.getProFormaTimelineData to load WorkItem__c records with priority group + estimated hours. Drag-to-reparent, drag-to-reorder, and drag-to-reschedule dispatch write-backs via updateWorkItemDates / updateWorkItemSortOrder / updateWorkItemPriorityGroup / updateWorkItemParent.',
         description:
-            'Interactive Gantt timeline built on the Nimbus Gantt canvas library. Five visualization modes: Gantt (timeline bars with dependencies), Treemap (rectangles sized by hours), Bubbles (scatter by timeline/entity/effort), Calendar (GitHub-style heatmap), and Flow (stage distribution). Supports drag-to-reschedule, zoom levels (day/week/month/quarter), dark mode, critical path highlighting, and phone remote control via Platform Events.',
-        friendlyName: 'Project Timeline',
+            'Pro Forma Timeline — template-driven gantt built on the @nimbus-gantt/app framework (v10). Renders six views (Gantt, List, Treemap, Bubbles, Calendar, Flow) with priority-group buckets (NOW / NEXT / PLANNED / PROPOSED / HOLD), drag-to-reparent, depth shading, and a fullscreen toggle that escapes the Salesforce chrome. Same template ships to cloudnimbusllc.com for cross-platform parity.',
+        friendlyName: 'Pro Forma Timeline',
         keyFields:
-            'WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.DeveloperLookup__c, WorkItem__c.EstimatedHoursNumber__c, WorkItemDependency__c'
+            'WorkItem__c.PriorityGroupPk__c, WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ParentWorkItemLookup__c, WorkItem__c.SortOrderNumber__c'
     }
 };
 
