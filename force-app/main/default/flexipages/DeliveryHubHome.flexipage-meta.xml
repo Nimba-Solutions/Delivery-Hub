@@ -37,12 +37,6 @@
         <type>Region</type>
     </flexiPageRegions>
     <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryProFormaTimeline</componentName>
-                <identifier>c_deliveryProFormaTimeline</identifier>
-            </componentInstance>
-        </itemInstances>
         <name>bottomLeft</name>
         <type>Region</type>
     </flexiPageRegions>
