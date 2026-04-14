@@ -194,10 +194,23 @@ var NimbusGanttApp = function(exports) {
       };
     });
   }
+  const PROPOSAL_STAGES = {
+    "Backlog": true,
+    "Scoping In Progress": true,
+    "Ready for Sizing": true,
+    "Ready for Development": true
+  };
   function applyFilter(tasks, filter, q) {
     let r = tasks;
-    if (filter === "active") r = r.filter((t) => !DONE_STAGES[t.stage || ""] && !t.isInactive);
-    else if (filter === "done") r = r.filter((t) => !!DONE_STAGES[t.stage || ""]);
+    if (filter === "active") {
+      r = r.filter((t) => !DONE_STAGES[t.stage || ""] && !t.isInactive);
+    } else if (filter === "proposal") {
+      r = r.filter((t) => PROPOSAL_STAGES[t.stage || ""] || t.priorityGroup === "proposed");
+    } else if (filter === "done") {
+      r = r.filter((t) => !!DONE_STAGES[t.stage || ""]);
+    } else if (filter === "workstreams") {
+      r = r.filter((t) => !!(t.id && t.id.indexOf("WS-") === 0));
+    }
     if (q) {
       const ql = q.toLowerCase();
       r = r.filter((t) => t.title && t.title.toLowerCase().indexOf(ql) !== -1);
@@ -725,7 +738,11 @@ var NimbusGanttApp = function(exports) {
       }
       const viewDefs = [
         { id: "gantt", icon: "▤", label: "Gantt" },
-        { id: "list", icon: "☰", label: "List" }
+        { id: "list", icon: "☰", label: "List" },
+        { id: "treemap", icon: "▦", label: "Treemap" },
+        { id: "bubbles", icon: "◉", label: "Bubbles" },
+        { id: "calendar", icon: "▥", label: "Calendar" },
+        { id: "flow", icon: "⟿", label: "Flow" }
       ];
       const viewBtns = [];
       titleBar.appendChild(lsep());
@@ -762,6 +779,27 @@ var NimbusGanttApp = function(exports) {
         kpiBtn.style.color = showKpis ? "#fff" : "#64748b";
       });
       if (features.statsPanel !== false) titleBar.appendChild(kpiBtn);
+      function makeToggleBtn(label, onToggle) {
+        let on = false;
+        const btn = el("button", "background:#fff;border:1px solid #e2e8f0;cursor:pointer;padding:4px 8px;font-size:10px;border-radius:9999px;color:#64748b;font-weight:600;white-space:nowrap");
+        btn.textContent = label;
+        btn.addEventListener("click", () => {
+          on = !on;
+          btn.style.background = on ? "#2563eb" : "#fff";
+          btn.style.borderColor = on ? "#2563eb" : "#e2e8f0";
+          btn.style.color = on ? "#fff" : "#64748b";
+          onToggle(on);
+        });
+        return btn;
+      }
+      const sidebarBtn = makeToggleBtn("Sidebar", (on) => {
+        sidebarPanel.style.width = on ? "260px" : "0";
+      });
+      titleBar.appendChild(sidebarBtn);
+      const auditBtn = makeToggleBtn("Audit", (on) => {
+        auditPanel.style.width = on ? "280px" : "0";
+      });
+      titleBar.appendChild(auditBtn);
       const titleSpacer = el("div");
       titleSpacer.style.flex = "1";
       titleBar.appendChild(titleSpacer);
@@ -795,8 +833,10 @@ var NimbusGanttApp = function(exports) {
       filterBar.appendChild(fLabel);
       const filterOpts = [
         { id: "active", label: "Active" },
-        { id: "all", label: "All" },
-        { id: "done", label: "Done" }
+        { id: "proposal", label: "Proposal & Expansion" },
+        { id: "done", label: "Done" },
+        { id: "workstreams", label: "Workstreams" },
+        { id: "all", label: "Everything" }
       ];
       const filterStylers = [];
       filterOpts.forEach((f) => {
@@ -834,8 +874,8 @@ var NimbusGanttApp = function(exports) {
       fbspace.style.flex = "1";
       filterBar.appendChild(fbspace);
       const legWrap = el("div", "display:flex;align-items:center;gap:8px;flex-wrap:wrap");
-      const legLbl = el("span", "font-size:11px;color:#64748b;white-space:nowrap");
-      legLbl.textContent = "Groups:";
+      const legLbl = el("span", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap");
+      legLbl.textContent = "Colors:";
       legWrap.appendChild(legLbl);
       const legendChips = [];
       buckets.forEach((b) => {
@@ -927,10 +967,14 @@ var NimbusGanttApp = function(exports) {
       container.appendChild(ctrlBar);
       const contentOuter = el("div", "flex:1 1 auto;min-height:0;display:flex;overflow:hidden");
       container.appendChild(contentOuter);
+      const sidebarPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#f8fafc;border-right:1px solid #e5e7eb;transition:width .2s;font-size:12px");
+      contentOuter.appendChild(sidebarPanel);
       const contentEl = el("div", "flex:1 1 auto;min-height:0;position:relative;overflow:hidden");
       contentOuter.appendChild(contentEl);
       const detailPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#fff;border-left:1px solid #e5e7eb;transition:width .2s;font-family:sans-serif;font-size:12px;position:relative");
       if (features.detailPanel !== false) contentOuter.appendChild(detailPanel);
+      const auditPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#fff;border-left:1px solid #e5e7eb;transition:width .2s;font-size:12px");
+      contentOuter.appendChild(auditPanel);
       function openDetail(taskId) {
         let raw = null;
         for (let i = 0; i < allTasks.length; i++) if (allTasks[i].id === taskId) {
@@ -1003,15 +1047,22 @@ var NimbusGanttApp = function(exports) {
       }
       function initGantt() {
         var _a2;
-        const NG = window["NimbusGantt"];
-        if (!NG) {
-          contentEl.style.cssText = "padding:20px;color:#b91c1c;font-size:13px";
-          contentEl.textContent = "nimbus-gantt not loaded";
-          return;
+        let Ctor, PGP, hwp;
+        if (options.engine) {
+          Ctor = options.engine.NimbusGantt;
+          PGP = options.engine.PriorityGroupingPlugin;
+          hwp = options.engine.hoursWeightedProgress;
+        } else {
+          const NG = window["NimbusGantt"];
+          if (!NG) {
+            contentEl.style.cssText = "padding:20px;color:#b91c1c;font-size:13px";
+            contentEl.textContent = "nimbus-gantt not loaded";
+            return;
+          }
+          Ctor = NG["NimbusGantt"];
+          PGP = NG["PriorityGroupingPlugin"];
+          hwp = NG["hoursWeightedProgress"];
         }
-        const Ctor = NG["NimbusGantt"];
-        const PGP = NG["PriorityGroupingPlugin"];
-        const hwp = NG["hoursWeightedProgress"];
         const ganttEl = el("div", "height:100%;width:100%;position:absolute;inset:0");
         contentEl.appendChild(ganttEl);
         let filtered = applyFilter(allTasks, filter, searchQ);
