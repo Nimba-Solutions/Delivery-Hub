@@ -118,6 +118,18 @@ var NimbusGanttApp = function(exports) {
   function buildTasks(tasks) {
     const today = todayISO();
     const fallback = addMonths(today, -1);
+    const byId = {};
+    tasks.forEach((t) => {
+      byId[t.id] = t;
+    });
+    function resolveRootGroup(id, visited = {}) {
+      if (visited[id]) return null;
+      visited[id] = true;
+      const t = byId[id];
+      if (!t) return null;
+      if (!t.parentWorkItemId || !byId[t.parentWorkItemId]) return t.priorityGroup || null;
+      return resolveRootGroup(t.parentWorkItemId, visited);
+    }
     const mapped = tasks.map((t) => {
       const hrs = t.estimatedHours ? Math.round(Number(t.estimatedHours)) : 0;
       const logged = t.loggedHours ? Number(t.loggedHours) : 0;
@@ -174,6 +186,8 @@ var NimbusGanttApp = function(exports) {
       const dd = descDates(t.id);
       const allS = [t.startDate].concat(dd.s).filter(Boolean).sort();
       const allE = [t.endDate].concat(dd.e).filter(Boolean).sort();
+      const rootGroup = resolveRootGroup(t.id);
+      const parentBaseColor = rootGroup ? GROUP_BAR[rootGroup] || "#94a3b8" : t.color || "#64748b";
       return {
         id: t.id,
         title: t.title,
@@ -183,9 +197,8 @@ var NimbusGanttApp = function(exports) {
         endDate: allE.length ? allE[allE.length - 1] : t.endDate,
         progress: t.progress,
         status: t.status,
-        // Parent bars darken relative to their own color (GROUP_BAR for top-level,
-        // category color for nested parents), matching v8's "darken by depth" logic.
-        color: darkenColor(t.color || "#64748b", 0.25),
+        // Darken the root bucket's bar color — all parent bars share the same hue family
+        color: darkenColor(parentBaseColor, 0.25),
         groupId: t.groupId,
         parentId: t.parentId,
         sortOrder: t.sortOrder,
@@ -244,11 +257,23 @@ var NimbusGanttApp = function(exports) {
     }
     return r;
   }
+  function stageToCategory(stage) {
+    const s = stage || "";
+    if (STAGE_TO_CATEGORY_COLOR[s] === "#10b981") return "In Flight";
+    if (STAGE_TO_CATEGORY_COLOR[s] === "#3b82f6") return "Next Up";
+    if (STAGE_TO_CATEGORY_COLOR[s] === "#f59e0b") return "Backlog";
+    if (STAGE_TO_CATEGORY_COLOR[s] === "#ef4444") return "Blocked";
+    if (STAGE_TO_CATEGORY_COLOR[s] === "#cbd5e1") return "Done";
+    if (STAGE_TO_CATEGORY_COLOR[s] === "#94a3b8") return "Paused";
+    return "Paused";
+  }
   function computeStats(tasks) {
     const active = tasks.filter((t) => !t.isInactive);
     const est = active.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0);
+    const estLow = active.reduce((s, t) => s + (Number(t.estimatedHoursLow ?? t.estimatedHours) || 0), 0);
     const logged = active.reduce((s, t) => s + (Number(t.loggedHours) || 0), 0);
     const sched = active.filter((t) => t.startDate && t.endDate).length;
+    const needDates = active.filter((t) => !t.startDate || !t.endDate).length;
     const counts = {
       "top-priority": 0,
       "active": 0,
@@ -256,12 +281,22 @@ var NimbusGanttApp = function(exports) {
       "proposed": 0,
       "deferred": 0
     };
+    const categoryCounts = {
+      "In Flight": 0,
+      "Next Up": 0,
+      "Backlog": 0,
+      "Paused": 0,
+      "Blocked": 0,
+      "Done": 0
+    };
     active.forEach((t) => {
       if (t.priorityGroup && Object.prototype.hasOwnProperty.call(counts, t.priorityGroup)) {
         counts[t.priorityGroup]++;
       }
+      const cat = stageToCategory(t.stage || "");
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
     });
-    return { total: active.length, scheduled: sched, est: Math.round(est), logged: Math.round(logged * 10) / 10, counts };
+    return { total: active.length, scheduled: sched, needDates, est: Math.round(est), estLow: Math.round(estLow), logged: Math.round(logged * 10) / 10, counts, categoryCounts };
   }
   function startDepthShading(ganttContainer, depthMap) {
     const applied = [];
@@ -722,6 +757,294 @@ var NimbusGanttApp = function(exports) {
     wrap.appendChild(row);
     (childMap[t.id] || []).forEach((c) => appendListRow(wrap, c, childMap, depth + 1));
   }
+  function renderFlow(container, tasks) {
+    container.innerHTML = "";
+    const wrap = el("div", "height:100%;overflow-x:auto;display:flex;gap:10px;padding:10px;font-family:sans-serif;font-size:12px;background:#f8fafc;box-sizing:border-box");
+    const cols = [
+      { label: "Backlog", dotColor: "#f59e0b", hdrBg: "#fef3c7", hdrColor: "#92400e", match: (c) => c === "#f59e0b" },
+      { label: "Next Up", dotColor: "#3b82f6", hdrBg: "#dbeafe", hdrColor: "#1d4ed8", match: (c) => c === "#3b82f6" },
+      { label: "In Flight", dotColor: "#10b981", hdrBg: "#d1fae5", hdrColor: "#065f46", match: (c) => c === "#10b981" },
+      { label: "Paused", dotColor: "#94a3b8", hdrBg: "#f1f5f9", hdrColor: "#475569", match: (c) => c === "#94a3b8" },
+      { label: "Blocked", dotColor: "#ef4444", hdrBg: "#fee2e2", hdrColor: "#991b1b", match: (c) => c === "#ef4444" },
+      { label: "Done", dotColor: "#cbd5e1", hdrBg: "#f8fafc", hdrColor: "#64748b", match: (c) => c === "#cbd5e1" }
+    ];
+    const leaves = tasks.filter((t) => !t.isParent);
+    cols.forEach((col) => {
+      const members = leaves.filter((t) => col.match(t.color || ""));
+      const colEl = el("div", "flex-shrink:0;width:220px;display:flex;flex-direction:column;max-height:100%");
+      const hdr = el("div", "padding:7px 10px;border-radius:8px 8px 0 0;background:" + col.hdrBg + ";border:1.5px solid " + col.dotColor + "55;border-bottom:none;display:flex;justify-content:space-between;align-items:center");
+      const hLbl = el("span", "font-size:11px;font-weight:700;color:" + col.hdrColor);
+      hLbl.textContent = col.label;
+      const hCnt = el("span", "font-size:10px;font-weight:600;padding:1px 7px;border-radius:9999px;background:" + col.dotColor + "22;color:" + col.hdrColor);
+      hCnt.textContent = String(members.length);
+      hdr.appendChild(hLbl);
+      hdr.appendChild(hCnt);
+      colEl.appendChild(hdr);
+      const cards = el("div", "display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;padding:5px;background:" + col.hdrBg + "66;border:1.5px solid " + col.dotColor + "55;border-top:none;border-radius:0 0 8px 8px;min-height:60px");
+      members.forEach((t) => {
+        const card = el("div", "background:#fff;border:1.5px solid #e5e7eb;border-left:3px solid " + (t.color || "#94a3b8") + ";border-radius:6px;padding:7px 9px;cursor:default");
+        card.addEventListener("mouseenter", () => {
+          card.style.boxShadow = "0 2px 8px rgba(0,0,0,.07)";
+        });
+        card.addEventListener("mouseleave", () => {
+          card.style.boxShadow = "";
+        });
+        const ttl = el("div", "font-size:11px;font-weight:600;color:#1f2937;line-height:1.35;margin-bottom:3px");
+        ttl.textContent = t.title;
+        card.appendChild(ttl);
+        if (t.hoursLabel) {
+          const hrs = el("div", "font-size:9px;color:#94a3b8;font-family:monospace");
+          hrs.textContent = t.hoursLabel;
+          card.appendChild(hrs);
+        }
+        if (t.status) {
+          const stg = el("div", "font-size:9px;color:#94a3b8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap");
+          stg.textContent = t.status;
+          card.appendChild(stg);
+        }
+        cards.appendChild(card);
+      });
+      if (!members.length) {
+        const empty = el("div", "font-size:10px;color:#cbd5e1;text-align:center;padding:16px 0;font-style:italic");
+        empty.textContent = "empty";
+        cards.appendChild(empty);
+      }
+      colEl.appendChild(cards);
+      wrap.appendChild(colEl);
+    });
+    container.appendChild(wrap);
+  }
+  function renderCalendar(container, tasks) {
+    container.innerHTML = "";
+    const wrap = el("div", "height:100%;overflow:auto;font-family:sans-serif;font-size:12px;background:#f8fafc;padding:10px;box-sizing:border-box");
+    const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const today = /* @__PURE__ */ new Date();
+    const monday = new Date(today);
+    const dow = today.getDay();
+    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    monday.setHours(0, 0, 0, 0);
+    const WEEK_MS = 7 * 24 * 3600 * 1e3;
+    const NUM_WEEKS = 14;
+    let lastMonth = -1;
+    for (let i = 0; i < NUM_WEEKS; i++) {
+      const wkStart = new Date(monday.getTime() + i * WEEK_MS);
+      const wkEnd = new Date(wkStart.getTime() + WEEK_MS);
+      const mo2 = wkStart.getMonth();
+      if (mo2 !== lastMonth) {
+        const mhdr = el("div", "font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin:8px 0 4px 80px");
+        mhdr.textContent = MON[mo2] + " " + wkStart.getFullYear();
+        wrap.appendChild(mhdr);
+        lastMonth = mo2;
+      }
+      const wkTasks = tasks.filter((t) => {
+        if (!t.startDate || !t.endDate) return false;
+        const tS = (/* @__PURE__ */ new Date(t.startDate + "T00:00:00")).getTime();
+        const tE = (/* @__PURE__ */ new Date(t.endDate + "T00:00:00")).getTime();
+        return tE > wkStart.getTime() && tS < wkEnd.getTime();
+      });
+      const row = el("div", "display:flex;gap:0;margin-bottom:3px;border-radius:6px;overflow:hidden;border:1px solid #e5e7eb;min-height:34px");
+      const isCurrentWeek = wkStart.getTime() <= today.getTime() && today.getTime() < wkEnd.getTime();
+      const lbl = el("div", "width:72px;flex-shrink:0;padding:6px 8px;background:" + (isCurrentWeek ? "#eff6ff" : "#f1f5f9") + ";border-right:1px solid #e5e7eb;display:flex;flex-direction:column;justify-content:center;" + (isCurrentWeek ? "border-left:2px solid #3b82f6;" : ""));
+      const moEl = el("div", "font-size:8px;font-weight:700;color:" + (isCurrentWeek ? "#2563eb" : "#94a3b8") + ";text-transform:uppercase;letter-spacing:.05em");
+      moEl.textContent = MON[wkStart.getMonth()];
+      const dyEl = el("div", "font-size:14px;font-weight:800;color:" + (isCurrentWeek ? "#2563eb" : "#1e293b") + ";line-height:1");
+      dyEl.textContent = String(wkStart.getDate());
+      lbl.appendChild(moEl);
+      lbl.appendChild(dyEl);
+      row.appendChild(lbl);
+      const pills = el("div", "display:flex;flex-wrap:wrap;gap:3px;padding:5px 8px;flex:1;align-items:center;background:#fff");
+      const visible = wkTasks.slice(0, 12);
+      visible.forEach((t) => {
+        const pill = el("span", "display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:600;background:" + (t.color || "#94a3b8") + "22;color:#374151;border:1px solid " + (t.color || "#94a3b8") + "44;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis");
+        const dot = el("span", "width:5px;height:5px;border-radius:50%;background:" + (t.color || "#94a3b8") + ";flex-shrink:0;display:inline-block");
+        pill.appendChild(dot);
+        pill.appendChild(document.createTextNode(t.title.slice(0, 22) + (t.title.length > 22 ? "…" : "")));
+        pills.appendChild(pill);
+      });
+      if (wkTasks.length > 12) {
+        const more = el("span", "font-size:9px;color:#94a3b8;white-space:nowrap;padding:2px 6px");
+        more.textContent = "+" + (wkTasks.length - 12) + " more";
+        pills.appendChild(more);
+      }
+      if (!wkTasks.length) {
+        const mt = el("span", "font-size:9px;color:#e2e8f0;font-style:italic");
+        mt.textContent = "nothing scheduled";
+        pills.appendChild(mt);
+      }
+      row.appendChild(pills);
+      wrap.appendChild(row);
+    }
+    container.appendChild(wrap);
+  }
+  function renderTreemap(container, tasks, buckets) {
+    container.innerHTML = "";
+    const wrap = el("div", "height:100%;overflow:hidden;position:relative;font-family:sans-serif;background:#f8fafc;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px");
+    const leaves = tasks.filter((t) => {
+      var _a;
+      return !t.isParent && (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) > 0;
+    });
+    const totalHrs = leaves.reduce((s, t) => {
+      var _a;
+      return s + (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0);
+    }, 0);
+    if (!totalHrs) {
+      const mt = el("div", "text-align:center;color:#94a3b8;padding:40px;font-size:13px;font-style:italic");
+      mt.textContent = "No tasks with estimated hours";
+      wrap.appendChild(mt);
+      container.appendChild(wrap);
+      return;
+    }
+    const grouped = {};
+    leaves.forEach((t) => {
+      const g = t.groupId || "other";
+      if (!grouped[g]) grouped[g] = [];
+      grouped[g].push(t);
+    });
+    buckets.forEach((b) => {
+      const members = grouped[b.id] || [];
+      if (!members.length) return;
+      const bucketHrs = members.reduce((s, t) => {
+        var _a;
+        return s + (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0);
+      }, 0);
+      const hdrPct = Math.round(bucketHrs / totalHrs * 100);
+      const section = el("div", "flex-shrink:0");
+      const hdr = el("div", "font-size:10px;font-weight:700;color:#fff;padding:3px 8px;border-radius:4px;display:inline-flex;align-items:center;gap:6px;margin-bottom:3px;background:" + b.bgTint);
+      hdr.textContent = b.label + "  " + bucketHrs + "h (" + hdrPct + "%)";
+      section.appendChild(hdr);
+      const tileRow = el("div", "display:flex;flex-wrap:wrap;gap:3px");
+      members.sort((a, b2) => {
+        var _a, _b;
+        return (((_a = b2.metadata) == null ? void 0 : _a.hoursHigh) || 0) - (((_b = a.metadata) == null ? void 0 : _b.hoursHigh) || 0);
+      }).forEach((t) => {
+        var _a, _b, _c;
+        const pct = Math.max(0.5, (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) / bucketHrs * 100);
+        const w = Math.round(Math.sqrt(pct) * 28);
+        const tile = el("div", "display:flex;flex-direction:column;justify-content:center;align-items:center;border-radius:5px;overflow:hidden;cursor:default;transition:opacity .15s;background:" + (t.color || "#94a3b8") + "44;border:1.5px solid " + (t.color || "#94a3b8") + "88");
+        tile.style.width = Math.max(40, w * 1.8) + "px";
+        tile.style.minHeight = Math.max(28, w) + "px";
+        tile.style.padding = "4px 6px";
+        tile.title = t.title + "\n" + (((_b = t.metadata) == null ? void 0 : _b.hoursHigh) || 0) + "h";
+        tile.addEventListener("mouseenter", () => {
+          tile.style.opacity = "0.85";
+        });
+        tile.addEventListener("mouseleave", () => {
+          tile.style.opacity = "";
+        });
+        const tLbl = el("div", "font-size:9px;font-weight:700;color:#1f2937;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%");
+        tLbl.textContent = t.title.slice(0, 20);
+        const hLbl = el("div", "font-size:8px;color:#374151;text-align:center;opacity:.8");
+        hLbl.textContent = (((_c = t.metadata) == null ? void 0 : _c.hoursHigh) || 0) + "h";
+        tile.appendChild(tLbl);
+        tile.appendChild(hLbl);
+        tileRow.appendChild(tile);
+      });
+      section.appendChild(tileRow);
+      wrap.appendChild(section);
+    });
+    container.appendChild(wrap);
+  }
+  function renderBubbles(container, tasks) {
+    container.innerHTML = "";
+    const leaves = tasks.filter((t) => {
+      var _a;
+      return !t.isParent && (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) > 0;
+    });
+    const maxHrs = Math.max(1, ...leaves.map((t) => {
+      var _a;
+      return ((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0;
+    }));
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.style.cssText = "width:100%;height:100%;font-family:sans-serif;background:#f8fafc";
+    const W = 900, H = 600;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    const COLS = Math.ceil(Math.sqrt(leaves.length * 1.5));
+    const CELL_W = W / COLS;
+    const CELL_H = H / Math.ceil(leaves.length / COLS);
+    leaves.forEach((t, i) => {
+      var _a, _b, _c;
+      const col = i % COLS;
+      const row = Math.floor(i / COLS);
+      const cx = col * CELL_W + CELL_W / 2;
+      const cy = row * CELL_H + CELL_H / 2;
+      const r = Math.max(12, Math.min(CELL_W / 2 - 4, Math.sqrt((((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) / maxHrs) * Math.min(CELL_W, CELL_H) * 0.48));
+      const col2 = t.color || "#94a3b8";
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.style.cursor = "default";
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", String(cx));
+      circle.setAttribute("cy", String(cy));
+      circle.setAttribute("r", String(r));
+      circle.setAttribute("fill", col2 + "55");
+      circle.setAttribute("stroke", col2);
+      circle.setAttribute("stroke-width", "1.5");
+      const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      txt.setAttribute("x", String(cx));
+      txt.setAttribute("y", String(cy - 3));
+      txt.setAttribute("text-anchor", "middle");
+      txt.setAttribute("font-size", Math.min(10, r * 0.55) + "");
+      txt.setAttribute("fill", "#1f2937");
+      txt.setAttribute("font-weight", "600");
+      txt.textContent = t.title.slice(0, Math.max(4, Math.floor(r / 5)));
+      const hrs = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      hrs.setAttribute("x", String(cx));
+      hrs.setAttribute("y", String(cy + 11));
+      hrs.setAttribute("text-anchor", "middle");
+      hrs.setAttribute("font-size", Math.min(9, r * 0.5) + "");
+      hrs.setAttribute("fill", "#475569");
+      hrs.textContent = (((_b = t.metadata) == null ? void 0 : _b.hoursHigh) || 0) + "h";
+      const ttl = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      ttl.textContent = t.title + "\n" + (((_c = t.metadata) == null ? void 0 : _c.hoursHigh) || 0) + "h · " + (t.status || "");
+      g.appendChild(circle);
+      g.appendChild(txt);
+      g.appendChild(hrs);
+      g.appendChild(ttl);
+      svg.appendChild(g);
+    });
+    if (!leaves.length) {
+      const mt = el("div", "height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-family:sans-serif;font-size:13px;font-style:italic");
+      mt.textContent = "No tasks with estimated hours";
+      container.appendChild(mt);
+      return;
+    }
+    container.appendChild(svg);
+  }
+  function computeWeeklyCapacity(tasks, numWeeks) {
+    const now = /* @__PURE__ */ new Date();
+    const dow = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+    monday.setHours(0, 0, 0, 0);
+    const WEEK_MS = 7 * 24 * 3600 * 1e3;
+    const DAY_MS = 24 * 3600 * 1e3;
+    const MON_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const weeks = [];
+    for (let i = 0; i < numWeeks; i++) {
+      const s = new Date(monday.getTime() + i * WEEK_MS);
+      const e = new Date(s.getTime() + WEEK_MS);
+      weeks.push({
+        startMs: s.getTime(),
+        endMs: e.getTime(),
+        label: MON_ABBR[s.getMonth()] + String(s.getDate()),
+        hours: 0
+      });
+    }
+    tasks.forEach((t) => {
+      const hrs = Number(t.estimatedHours) || 0;
+      if (!hrs || !t.startDate || !t.endDate || t.isInactive) return;
+      const tStart = (/* @__PURE__ */ new Date(t.startDate + "T00:00:00")).getTime();
+      const tEnd = (/* @__PURE__ */ new Date(t.endDate + "T00:00:00")).getTime();
+      const tDays = Math.max(1, (tEnd - tStart) / DAY_MS);
+      const hpd = hrs / tDays;
+      weeks.forEach((w) => {
+        const oS = Math.max(tStart, w.startMs);
+        const oE = Math.min(tEnd, w.endMs);
+        if (oE > oS) w.hours += hpd * (oE - oS) / DAY_MS;
+      });
+    });
+    return weeks.map((w) => ({ label: w.label, hours: Math.round(w.hours) }));
+  }
   const registry = [];
   function getEntry(c) {
     return registry.find((e) => e.container === c) || null;
@@ -739,8 +1062,14 @@ var NimbusGanttApp = function(exports) {
       const appVersion = ((_c = options.config) == null ? void 0 : _c.version) || "v5 · Nimbus Gantt";
       const features = ((_d = options.config) == null ? void 0 : _d.features) || {};
       let allTasks = options.tasks || [];
-      const onPatch = options.onPatch || (() => {
+      const _rawOnPatch = options.onPatch || (() => {
       });
+      const onPatch = (patch) => {
+        _rawOnPatch(patch);
+        pendingPatchCountRef.pending++;
+        if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "inline";
+      };
+      const pendingPatchCountRef = { pending: 0, badge: null };
       let viewMode = "gantt";
       let filter = "active";
       let searchQ = "";
@@ -827,9 +1156,15 @@ var NimbusGanttApp = function(exports) {
         if (on) renderSidebarContent();
       });
       titleBar.appendChild(sidebarBtn);
-      const auditBtn = makeToggleBtn("Audit", (on) => {
-        auditPanel.style.width = on ? "280px" : "0";
-        if (on) renderAuditPanelContent();
+      let auditBtnOn = true;
+      const auditBtn = el("button", "background:#2563eb;border:1px solid #2563eb;cursor:pointer;padding:4px 8px;font-size:10px;border-radius:9999px;color:#fff;font-weight:600;white-space:nowrap");
+      auditBtn.textContent = "Audit";
+      auditBtn.addEventListener("click", () => {
+        auditBtnOn = !auditBtnOn;
+        auditBtn.style.background = auditBtnOn ? "#2563eb" : "#fff";
+        auditBtn.style.borderColor = auditBtnOn ? "#2563eb" : "#e2e8f0";
+        auditBtn.style.color = auditBtnOn ? "#fff" : "#64748b";
+        if (auditBtn._strip) auditBtn._strip.style.display = auditBtnOn ? "flex" : "none";
       });
       titleBar.appendChild(auditBtn);
       const titleSpacer = el("div");
@@ -915,8 +1250,9 @@ var NimbusGanttApp = function(exports) {
       ];
       const legWrap = el("div", "display:flex;align-items:center;gap:8px;flex-wrap:wrap");
       const legLbl = el("span", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap");
-      legLbl.textContent = "Colors:";
+      legLbl.textContent = "COLORS:";
       legWrap.appendChild(legLbl);
+      const catChipTxts = {};
       CATEGORY_DISPLAY.forEach((cat) => {
         const chip = el("span", "display:flex;align-items:center;gap:3px;font-size:11px;color:#374151;white-space:nowrap");
         const dot = el("span", "width:9px;height:9px;border-radius:50%;background:" + cat.color + ";display:inline-block;flex-shrink:0");
@@ -924,6 +1260,7 @@ var NimbusGanttApp = function(exports) {
         const txt = el("span");
         txt.textContent = cat.label;
         chip.appendChild(txt);
+        catChipTxts[cat.label] = txt;
         legWrap.appendChild(chip);
       });
       const legendChips = [];
@@ -1014,9 +1351,105 @@ var NimbusGanttApp = function(exports) {
       const ctrlSpacer = el("div");
       ctrlSpacer.style.flex = "1";
       ctrlBar.appendChild(ctrlSpacer);
+      const countRow = el("div", "display:flex;align-items:center;gap:6px;flex-shrink:0");
       const countLbl = el("span", "font-size:11px;color:#64748b;white-space:nowrap");
-      ctrlBar.appendChild(countLbl);
+      const auditInputRef = { el: null };
+      const resetChangesBtn = el("button", [
+        "font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;",
+        "padding:0;text-decoration:underline;white-space:nowrap;flex-shrink:0"
+      ].join(""));
+      resetChangesBtn.textContent = "Reset changes";
+      resetChangesBtn.addEventListener("click", () => {
+        pendingPatchCountRef.pending = 0;
+        if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "none";
+        if (auditInputRef.el) auditInputRef.el.value = "";
+      });
+      countRow.appendChild(countLbl);
+      countRow.appendChild(resetChangesBtn);
+      ctrlBar.appendChild(countRow);
       container.appendChild(ctrlBar);
+      const hrsWkStrip = el("div", [
+        "background:#fff;border-bottom:1px solid #e5e7eb;padding:4px 14px 2px;",
+        "display:flex;align-items:flex-end;gap:4px;flex-shrink:0;overflow:hidden;min-height:48px"
+      ].join(""));
+      const hrsWkHeading = el("span", [
+        "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;",
+        "letter-spacing:.05em;white-space:nowrap;margin-right:6px;align-self:center;flex-shrink:0"
+      ].join(""));
+      hrsWkHeading.textContent = "HRS/WK";
+      hrsWkStrip.appendChild(hrsWkHeading);
+      const hrsWkBarsEl = el("div", "display:flex;align-items:flex-end;gap:3px;flex:1;height:42px;overflow:hidden");
+      hrsWkStrip.appendChild(hrsWkBarsEl);
+      container.appendChild(hrsWkStrip);
+      const auditStrip = el("div", [
+        "background:#fdf4ff;border-bottom:1.5px solid #e9d5ff;padding:6px 14px;",
+        "display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap"
+      ].join(""));
+      const auditPassLbl = el("span", "font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;flex-shrink:0");
+      auditPassLbl.textContent = "📤 Audit pass";
+      auditStrip.appendChild(auditPassLbl);
+      const unsavedBadge = el("span", [
+        "font-size:10px;font-weight:600;padding:2px 8px;border-radius:9999px;",
+        "background:#fef3c7;color:#92400e;display:none;white-space:nowrap;flex-shrink:0"
+      ].join(""));
+      unsavedBadge.textContent = "unsaved changes";
+      auditStrip.appendChild(unsavedBadge);
+      pendingPatchCountRef.badge = unsavedBadge;
+      const auditNoteInput = el("input", [
+        "flex:1;min-width:180px;font-size:11px;padding:4px 8px;",
+        "border:1px solid #d8b4fe;border-radius:6px;outline:none;color:#1f2937;background:#fff"
+      ].join(""));
+      auditNoteInput.type = "text";
+      auditNoteInput.placeholder = "commit note (optional)";
+      auditNoteInput.addEventListener("focus", () => {
+        auditNoteInput.style.borderColor = "#7c3aed";
+      });
+      auditNoteInput.addEventListener("blur", () => {
+        auditNoteInput.style.borderColor = "#d8b4fe";
+      });
+      auditStrip.appendChild(auditNoteInput);
+      auditInputRef.el = auditNoteInput;
+      const auditSubmitBtn = el("button", [
+        "font-size:11px;font-weight:700;padding:4px 12px;border-radius:6px;",
+        "background:#7c3aed;color:#fff;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0"
+      ].join(""));
+      auditSubmitBtn.textContent = "📤 Submit + commit";
+      auditSubmitBtn.addEventListener("mouseenter", () => {
+        if (!auditSubmitBtn.disabled) auditSubmitBtn.style.background = "#6d28d9";
+      });
+      auditSubmitBtn.addEventListener("mouseleave", () => {
+        if (!auditSubmitBtn.disabled) auditSubmitBtn.style.background = "#7c3aed";
+      });
+      auditSubmitBtn.addEventListener("click", () => {
+        auditSubmitBtn.disabled = true;
+        auditSubmitBtn.textContent = "⌛ Saving…";
+        setTimeout(() => {
+          auditSubmitBtn.textContent = "✓ Committed";
+          auditSubmitBtn.style.background = "#16a34a";
+          auditNoteInput.value = "";
+          pendingPatchCountRef.pending = 0;
+          unsavedBadge.style.display = "none";
+          setTimeout(() => {
+            auditSubmitBtn.textContent = "📤 Submit + commit";
+            auditSubmitBtn.style.background = "#7c3aed";
+            auditSubmitBtn.disabled = false;
+          }, 2500);
+        }, 600);
+      });
+      auditStrip.appendChild(auditSubmitBtn);
+      const auditResetBtn = el("button", [
+        "font-size:11px;padding:4px 10px;border-radius:6px;background:#fff;",
+        "color:#7c3aed;border:1.5px solid #d8b4fe;cursor:pointer;white-space:nowrap;flex-shrink:0"
+      ].join(""));
+      auditResetBtn.textContent = "↺ Reset";
+      auditResetBtn.addEventListener("click", () => {
+        auditNoteInput.value = "";
+        pendingPatchCountRef.pending = 0;
+        unsavedBadge.style.display = "none";
+      });
+      auditStrip.appendChild(auditResetBtn);
+      container.appendChild(auditStrip);
+      auditBtn._strip = auditStrip;
       const contentOuter = el("div", "flex:1 1 auto;min-height:0;display:flex;overflow:hidden");
       container.appendChild(contentOuter);
       const sidebarPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#f8fafc;border-right:1px solid #e5e7eb;transition:width .2s;font-size:12px");
@@ -1025,8 +1458,7 @@ var NimbusGanttApp = function(exports) {
       contentOuter.appendChild(contentEl);
       const detailPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#fff;border-left:1px solid #e5e7eb;transition:width .2s;font-family:sans-serif;font-size:12px;position:relative");
       if (features.detailPanel !== false) contentOuter.appendChild(detailPanel);
-      const auditPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#fff;border-left:1px solid #e5e7eb;transition:width .2s;font-size:12px");
-      contentOuter.appendChild(auditPanel);
+      el("div", "display:none");
       function renderSidebarContent() {
         sidebarPanel.innerHTML = "";
         const inner = el("div", "padding:12px;overflow-y:auto;height:100%;box-sizing:border-box");
@@ -1097,91 +1529,6 @@ var NimbusGanttApp = function(exports) {
         });
         sidebarPanel.appendChild(inner);
       }
-      function renderAuditPanelContent() {
-        auditPanel.innerHTML = "";
-        const inner = el("div", "padding:12px;overflow-y:auto;height:100%;box-sizing:border-box");
-        const hdr = el("div", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px");
-        hdr.textContent = "Audit";
-        inner.appendChild(hdr);
-        const passBadge = el("div", "display:flex;align-items:center;gap:7px;padding:8px 10px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;margin-bottom:12px");
-        const ck = el("span", "color:#16a34a;font-size:16px;line-height:1");
-        ck.textContent = "✓";
-        const bt = el("span", "font-size:11px;font-weight:700;color:#15803d");
-        bt.textContent = "AUDIT PASS";
-        passBadge.appendChild(ck);
-        passBadge.appendChild(bt);
-        inner.appendChild(passBadge);
-        const info = el("div", "font-size:10px;color:#94a3b8;margin-bottom:12px;line-height:1.5");
-        info.textContent = "Changes are saved automatically to Salesforce. Use the commit note below to document a snapshot.";
-        inner.appendChild(info);
-        const changeRow = el("div", "display:flex;justify-content:space-between;align-items:center;margin-bottom:10px");
-        const changeLbl = el("span", "font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em");
-        changeLbl.textContent = "Unsaved notes";
-        inner.appendChild(changeRow);
-        changeRow.appendChild(changeLbl);
-        const noteLbl = el("label", "font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px");
-        noteLbl.textContent = "Commit Note";
-        const textarea = el("textarea", [
-          "width:100%;box-sizing:border-box;font-size:11px;color:#1f2937;",
-          "border:1px solid #e5e7eb;border-radius:6px;padding:7px;resize:vertical;",
-          "min-height:70px;font-family:sans-serif;outline:none;line-height:1.5"
-        ].join(""));
-        textarea.placeholder = "Describe what changed and why…";
-        textarea.addEventListener("focus", () => {
-          textarea.style.borderColor = "#3b82f6";
-        });
-        textarea.addEventListener("blur", () => {
-          textarea.style.borderColor = "#e5e7eb";
-        });
-        inner.appendChild(noteLbl);
-        inner.appendChild(textarea);
-        const btnRow = el("div", "display:flex;gap:6px;margin-top:8px");
-        const submitBtn = el("button", [
-          "flex:1;background:#2563eb;color:#fff;border:none;border-radius:6px;",
-          "padding:7px 6px;font-size:11px;font-weight:600;cursor:pointer;",
-          "transition:background .15s"
-        ].join(""));
-        submitBtn.textContent = "Submit + Commit";
-        submitBtn.addEventListener("mouseenter", () => {
-          if (submitBtn.textContent === "Submit + Commit") submitBtn.style.background = "#1d4ed8";
-        });
-        submitBtn.addEventListener("mouseleave", () => {
-          if (submitBtn.textContent === "Submit + Commit") submitBtn.style.background = "#2563eb";
-        });
-        submitBtn.addEventListener("click", () => {
-          const note = textarea.value.trim();
-          if (!note) {
-            textarea.style.borderColor = "#f97316";
-            textarea.focus();
-            return;
-          }
-          submitBtn.disabled = true;
-          submitBtn.textContent = "⌛ Saving…";
-          setTimeout(() => {
-            submitBtn.textContent = "✓ Committed";
-            submitBtn.style.background = "#16a34a";
-            textarea.value = "";
-            setTimeout(() => {
-              submitBtn.textContent = "Submit + Commit";
-              submitBtn.style.background = "#2563eb";
-              submitBtn.disabled = false;
-            }, 2500);
-          }, 600);
-        });
-        const resetBtn = el("button", [
-          "background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:6px;",
-          "padding:7px 10px;font-size:11px;cursor:pointer;white-space:nowrap"
-        ].join(""));
-        resetBtn.textContent = "Clear";
-        resetBtn.addEventListener("click", () => {
-          textarea.value = "";
-          textarea.style.borderColor = "#e5e7eb";
-        });
-        btnRow.appendChild(submitBtn);
-        btnRow.appendChild(resetBtn);
-        inner.appendChild(btnRow);
-        auditPanel.appendChild(inner);
-      }
       function openDetail(taskId) {
         let raw = null;
         for (let i = 0; i < allTasks.length; i++) if (allTasks[i].id === taskId) {
@@ -1239,14 +1586,48 @@ var NimbusGanttApp = function(exports) {
       function updateStats() {
         if (sidebarOpen) renderSidebarContent();
         const s = computeStats(allTasks);
-        const mo = (s.est / 120).toFixed(1);
-        statsLabel.textContent = s.scheduled + " scheduled · " + s.est + "h · " + mo + " mo";
+        const moHigh = s.est > 0 ? (s.est / 120).toFixed(1) : "0";
+        const moLow = s.estLow > 0 ? (s.estLow / 120).toFixed(1) : "0";
+        const hasRange = s.estLow < s.est && s.estLow > 0;
+        const hrsStr = hasRange ? s.estLow + "–" + s.est + "h" : s.est + "h";
+        const moStr = hasRange ? moLow + "–" + moHigh + " mo" : moHigh + " mo";
+        statsLabel.textContent = s.scheduled + " scheduled · " + hrsStr + " · " + moStr;
+        CATEGORY_DISPLAY.forEach((cat) => {
+          const txt = catChipTxts[cat.label];
+          if (txt) {
+            const n = s.categoryCounts[cat.label] || 0;
+            txt.textContent = n > 0 ? cat.label + " (" + n + ")" : cat.label;
+          }
+        });
         legendChips.forEach((c) => {
           const b = buckets.find((bk) => bk.id === c.bid);
           c.txt.textContent = (b ? b.label : c.bid) + " (" + (s.counts[c.bid] || 0) + ")";
         });
         const vs = computeStats(applyFilter(allTasks, filter, searchQ));
-        countLbl.textContent = vs.total + " items · " + vs.scheduled + " scheduled";
+        countLbl.textContent = vs.total + " items · " + vs.scheduled + " scheduled · " + vs.needDates + " need dates";
+        const filteredForHrs = applyFilter(allTasks, filter, searchQ).filter((t) => cb.checked || !DONE_STAGES[t.stage || ""]);
+        const weekData = computeWeeklyCapacity(filteredForHrs, 16);
+        const maxHrs = Math.max(1, ...weekData.map((w) => w.hours));
+        hrsWkBarsEl.innerHTML = "";
+        weekData.forEach((w) => {
+          if (w.hours === 0) return;
+          const col = el("div", "display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex-shrink:0;min-width:32px;max-width:48px");
+          const barH = Math.max(3, Math.round(w.hours / maxHrs * 30));
+          const bar = el("div", "background:#3b82f6;border-radius:3px 3px 0 0;width:100%;box-sizing:border-box;opacity:0.75;transition:opacity .15s");
+          bar.style.height = barH + "px";
+          bar.title = w.hours + "h";
+          bar.addEventListener("mouseenter", () => {
+            bar.style.opacity = "1";
+          });
+          bar.addEventListener("mouseleave", () => {
+            bar.style.opacity = "0.75";
+          });
+          const lbl = el("div", "font-size:8px;color:#94a3b8;white-space:nowrap;text-align:center;margin-top:2px;line-height:1.3");
+          lbl.textContent = w.hours + "h " + w.label;
+          col.appendChild(bar);
+          col.appendChild(lbl);
+          hrsWkBarsEl.appendChild(col);
+        });
         if (kpiEls.total) kpiEls.total.textContent = String(s.total);
         if (kpiEls.sched) kpiEls.sched.textContent = String(s.scheduled);
         if (kpiEls.est) kpiEls.est.textContent = s.est + "h";
@@ -1357,8 +1738,13 @@ var NimbusGanttApp = function(exports) {
             } catch (_) {
             }
           }
-        } else if (viewMode === "list") {
-          renderList(contentEl, buildTasks(filtered), buckets);
+        } else {
+          const mapped = buildTasks(filtered);
+          if (viewMode === "flow") renderFlow(contentEl, mapped);
+          else if (viewMode === "calendar") renderCalendar(contentEl, mapped);
+          else if (viewMode === "treemap") renderTreemap(contentEl, mapped, buckets);
+          else if (viewMode === "bubbles") renderBubbles(contentEl, mapped);
+          else renderList(contentEl, mapped, buckets);
         }
         updateStats();
       }
@@ -1379,8 +1765,14 @@ var NimbusGanttApp = function(exports) {
           ganttInst = null;
         }
         contentEl.innerHTML = "";
+        const filtered = applyFilter(allTasks, filter, searchQ).filter((t) => cb.checked || !DONE_STAGES[t.stage || ""]);
+        const mapped = buildTasks(filtered);
         if (viewMode === "gantt") initGantt();
-        else renderList(contentEl, buildTasks(applyFilter(allTasks, filter, searchQ)), buckets);
+        else if (viewMode === "flow") renderFlow(contentEl, mapped);
+        else if (viewMode === "calendar") renderCalendar(contentEl, mapped);
+        else if (viewMode === "treemap") renderTreemap(contentEl, mapped, buckets);
+        else if (viewMode === "bubbles") renderBubbles(contentEl, mapped);
+        else renderList(contentEl, mapped, buckets);
         updateStats();
       }
       cb.addEventListener("change", () => {
