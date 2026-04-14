@@ -248,6 +248,8 @@ var NimbusGanttApp = function(exports) {
       r = r.filter((t) => PROPOSAL_STAGES[t.stage || ""] || t.priorityGroup === "proposed");
     } else if (filter === "done") {
       r = r.filter((t) => !!DONE_STAGES[t.stage || ""]);
+    } else if (filter === "real") {
+      r = r.filter((t) => !!(t.id && t.id.indexOf("T-") === 0));
     } else if (filter === "workstreams") {
       r = r.filter((t) => !!(t.id && t.id.indexOf("WS-") === 0));
     }
@@ -521,8 +523,7 @@ var NimbusGanttApp = function(exports) {
       if (tag === "input" || tag === "button" || tag === "select" || tag === "textarea") return;
       const taskId = row.getAttribute("data-task-id");
       if (!taskId) return;
-      const grp = getGroup(taskId);
-      if (!grp) return;
+      const grp = getGroup(taskId) || getGroupAtY(e.clientY) || "";
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
@@ -602,7 +603,7 @@ var NimbusGanttApp = function(exports) {
       }
       const savedId = dragTaskId, savedGroup = dragSourceGroup, savedMoved = hasMoved, ip = pendingIP;
       cleanupDrag();
-      if (!savedId || !savedGroup) return;
+      if (!savedId) return;
       if (!savedMoved) return;
       if (!ip) return;
       if (ip.targetBucket && ip.targetBucket !== savedGroup) {
@@ -829,12 +830,12 @@ var NimbusGanttApp = function(exports) {
     for (let i = 0; i < NUM_WEEKS; i++) {
       const wkStart = new Date(monday.getTime() + i * WEEK_MS);
       const wkEnd = new Date(wkStart.getTime() + WEEK_MS);
-      const mo2 = wkStart.getMonth();
-      if (mo2 !== lastMonth) {
+      const mo = wkStart.getMonth();
+      if (mo !== lastMonth) {
         const mhdr = el("div", "font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin:8px 0 4px 80px");
-        mhdr.textContent = MON[mo2] + " " + wkStart.getFullYear();
+        mhdr.textContent = MON[mo] + " " + wkStart.getFullYear();
         wrap.appendChild(mhdr);
-        lastMonth = mo2;
+        lastMonth = mo;
       }
       const wkTasks = tasks.filter((t) => {
         if (!t.startDate || !t.endDate) return false;
@@ -1070,11 +1071,13 @@ var NimbusGanttApp = function(exports) {
         if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "inline";
       };
       const pendingPatchCountRef = { pending: 0, badge: null };
+      const auditInputRef = { el: null };
       let viewMode = "gantt";
       let filter = "active";
       let searchQ = "";
       let zoomLevel = "week";
       let groupBy = "priority";
+      let capacityHrsPerMonth = 120;
       let ganttInst = null;
       let depthMap = buildDepthMap(allTasks);
       let cleanupShading = null;
@@ -1202,7 +1205,8 @@ var NimbusGanttApp = function(exports) {
         { id: "active", label: "Active" },
         { id: "proposal", label: "Proposal & Expansion" },
         { id: "done", label: "Done" },
-        { id: "workstreams", label: "Workstreams" },
+        { id: "real", label: "Real T-NNNN tickets" },
+        { id: "workstreams", label: "Workstream rollups" },
         { id: "all", label: "Everything" }
       ];
       const filterStylers = [];
@@ -1230,16 +1234,13 @@ var NimbusGanttApp = function(exports) {
       sw.appendChild(si);
       const sinput = el("input", "border:none;outline:none;font-size:11px;color:#374151;background:transparent;width:140px");
       sinput.type = "text";
-      sinput.placeholder = "Search title…";
+      sinput.placeholder = "Search T-NNNN, title…";
       sinput.addEventListener("input", () => {
         searchQ = sinput.value.trim();
         refresh();
       });
       sw.appendChild(sinput);
       filterBar.appendChild(sw);
-      const fbspace = el("div");
-      fbspace.style.flex = "1";
-      filterBar.appendChild(fbspace);
       const CATEGORY_DISPLAY = [
         { label: "In Flight", color: "#10b981" },
         { label: "Next Up", color: "#3b82f6" },
@@ -1278,6 +1279,43 @@ var NimbusGanttApp = function(exports) {
         legWrap.appendChild(chip);
       });
       filterBar.appendChild(legWrap);
+      const fbSpace2 = el("div");
+      fbSpace2.style.flex = "1";
+      filterBar.appendChild(fbSpace2);
+      const countRow = el("div", "display:flex;align-items:center;gap:6px;flex-shrink:0");
+      const countLbl = el("span", "font-size:10px;font-weight:600;color:#64748b;white-space:nowrap");
+      countRow.appendChild(countLbl);
+      const autoSchedBtn = el("button", [
+        "font-size:9px;font-weight:700;color:#fff;background:#6366f1;",
+        "border:none;cursor:pointer;padding:3px 10px;border-radius:9999px;white-space:nowrap;flex-shrink:0"
+      ].join(""));
+      autoSchedBtn.textContent = "Auto-Schedule";
+      autoSchedBtn.title = "Auto-schedule unscheduled tasks";
+      autoSchedBtn.addEventListener("mouseenter", () => {
+        autoSchedBtn.style.background = "#4f46e5";
+      });
+      autoSchedBtn.addEventListener("mouseleave", () => {
+        autoSchedBtn.style.background = "#6366f1";
+      });
+      if (features.autoSchedule !== false) countRow.appendChild(autoSchedBtn);
+      const resetChangesBtn = el("button", [
+        "font-size:9px;color:#f43f5e;background:none;border:none;cursor:pointer;",
+        "padding:0;text-decoration:underline;white-space:nowrap;flex-shrink:0"
+      ].join(""));
+      resetChangesBtn.textContent = "Reset changes";
+      resetChangesBtn.addEventListener("mouseenter", () => {
+        resetChangesBtn.style.color = "#e11d48";
+      });
+      resetChangesBtn.addEventListener("mouseleave", () => {
+        resetChangesBtn.style.color = "#f43f5e";
+      });
+      resetChangesBtn.addEventListener("click", () => {
+        pendingPatchCountRef.pending = 0;
+        if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "none";
+        if (auditInputRef.el) auditInputRef.el.value = "";
+      });
+      countRow.appendChild(resetChangesBtn);
+      filterBar.appendChild(countRow);
       container.appendChild(filterBar);
       const ctrlBar = el("div", "background:#fff;border-bottom:1px solid #e5e7eb;padding:4px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0");
       const zDefs = [
@@ -1351,34 +1389,18 @@ var NimbusGanttApp = function(exports) {
       const ctrlSpacer = el("div");
       ctrlSpacer.style.flex = "1";
       ctrlBar.appendChild(ctrlSpacer);
-      const countRow = el("div", "display:flex;align-items:center;gap:6px;flex-shrink:0");
-      const countLbl = el("span", "font-size:11px;color:#64748b;white-space:nowrap");
-      const auditInputRef = { el: null };
-      const resetChangesBtn = el("button", [
-        "font-size:11px;color:#2563eb;background:none;border:none;cursor:pointer;",
-        "padding:0;text-decoration:underline;white-space:nowrap;flex-shrink:0"
-      ].join(""));
-      resetChangesBtn.textContent = "Reset changes";
-      resetChangesBtn.addEventListener("click", () => {
-        pendingPatchCountRef.pending = 0;
-        if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "none";
-        if (auditInputRef.el) auditInputRef.el.value = "";
-      });
-      countRow.appendChild(countLbl);
-      countRow.appendChild(resetChangesBtn);
-      ctrlBar.appendChild(countRow);
       container.appendChild(ctrlBar);
       const hrsWkStrip = el("div", [
-        "background:#fff;border-bottom:1px solid #e5e7eb;padding:4px 14px 2px;",
-        "display:flex;align-items:flex-end;gap:4px;flex-shrink:0;overflow:hidden;min-height:48px"
+        "background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:6px 14px;",
+        "display:flex;align-items:flex-end;gap:4px;flex-shrink:0;overflow-x:auto;"
       ].join(""));
       const hrsWkHeading = el("span", [
         "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;",
-        "letter-spacing:.05em;white-space:nowrap;margin-right:6px;align-self:center;flex-shrink:0"
+        "letter-spacing:.05em;white-space:nowrap;margin-right:4px;align-self:center;flex-shrink:0"
       ].join(""));
       hrsWkHeading.textContent = "HRS/WK";
       hrsWkStrip.appendChild(hrsWkHeading);
-      const hrsWkBarsEl = el("div", "display:flex;align-items:flex-end;gap:3px;flex:1;height:42px;overflow:hidden");
+      const hrsWkBarsEl = el("div", "display:flex;align-items:flex-end;gap:4px;overflow:visible");
       hrsWkStrip.appendChild(hrsWkBarsEl);
       container.appendChild(hrsWkStrip);
       const auditStrip = el("div", [
@@ -1461,71 +1483,128 @@ var NimbusGanttApp = function(exports) {
       el("div", "display:none");
       function renderSidebarContent() {
         sidebarPanel.innerHTML = "";
-        const inner = el("div", "padding:12px;overflow-y:auto;height:100%;box-sizing:border-box");
-        const hdr = el("div", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px");
-        hdr.textContent = "Priority Groups";
-        inner.appendChild(hdr);
-        const visible = applyFilter(allTasks, filter, searchQ).filter((t) => !t.isInactive && !t.parentWorkItemId);
-        buckets.forEach((b) => {
-          const members = visible.filter((t) => t.priorityGroup === b.id);
-          if (!members.length) return;
-          const hrs = members.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0);
-          const logged = members.reduce((s, t) => s + (Number(t.loggedHours) || 0), 0);
-          const pct = hrs > 0 ? Math.round(logged / hrs * 100) : 0;
-          const card = el("div", "margin-bottom:10px;border-radius:8px;overflow:hidden;border:1.5px solid #e5e7eb");
-          const cardHdr = el("div", "padding:6px 10px;font-size:11px;font-weight:700;color:#fff;display:flex;justify-content:space-between;align-items:center;background:" + b.bgTint);
-          const hLbl = el("span");
-          hLbl.textContent = b.label;
-          const hCnt = el("span", "font-size:10px;opacity:.85;font-weight:600");
-          hCnt.textContent = members.length + " items";
-          cardHdr.appendChild(hLbl);
-          cardHdr.appendChild(hCnt);
-          card.appendChild(cardHdr);
-          const cardBody = el("div", "padding:8px 10px;background:#fff");
-          if (hrs > 0) {
-            const hoursRow = el("div", "display:flex;justify-content:space-between;font-size:11px;color:#475569;margin-bottom:4px");
-            const hrsLbl = el("span");
-            hrsLbl.textContent = hrs + "h est";
-            const logLbl = el("span", "color:#94a3b8");
-            logLbl.textContent = logged + "h logged";
-            hoursRow.appendChild(hrsLbl);
-            hoursRow.appendChild(logLbl);
-            cardBody.appendChild(hoursRow);
-            const barWrap = el("div", "height:4px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-bottom:4px");
-            const barFill = el("div", "height:100%;border-radius:99px;background:" + b.bgTint + ";width:" + pct + "%");
-            barWrap.appendChild(barFill);
-            cardBody.appendChild(barWrap);
-            const pctLbl = el("div", "font-size:10px;color:#94a3b8;text-align:right");
-            pctLbl.textContent = pct + "% complete";
-            cardBody.appendChild(pctLbl);
-          }
-          card.appendChild(cardBody);
-          inner.appendChild(card);
+        const inner = el("div", "padding:10px 10px 16px;overflow-y:auto;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0");
+        const hdrRow = el("div", "display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;flex-shrink:0");
+        const hdrLbl = el("div", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em");
+        hdrLbl.textContent = "Priority Groups";
+        const resetBtn = el("button", [
+          "font-size:9px;font-weight:700;color:#ef4444;background:none;",
+          "border:1px solid #fecaca;border-radius:4px;padding:1px 7px;cursor:pointer;",
+          "line-height:1.5;flex-shrink:0"
+        ].join(""));
+        resetBtn.textContent = "RESET";
+        resetBtn.addEventListener("mouseenter", () => {
+          resetBtn.style.background = "#fff1f2";
         });
-        const catHdr = el("div", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px");
-        catHdr.textContent = "Bar Colors";
-        inner.appendChild(catHdr);
-        const catDefs = [
-          { label: "In Flight", color: "#10b981", stages: "In Development, QA, UAT, Deploying" },
-          { label: "Next Up", color: "#3b82f6", stages: "Ready for Dev/QA/UAT/Deploy, Scoping" },
-          { label: "Backlog", color: "#f59e0b", stages: "Backlog" },
-          { label: "Paused", color: "#94a3b8", stages: "Paused, On Hold" },
-          { label: "Blocked", color: "#ef4444", stages: "Blocked" },
-          { label: "Done", color: "#cbd5e1", stages: "Done, Deployed, Cancelled" }
-        ];
-        catDefs.forEach((cat) => {
-          const row = el("div", "display:flex;align-items:flex-start;gap:7px;margin-bottom:6px");
-          const dot = el("span", "width:9px;height:9px;border-radius:50%;background:" + cat.color + ";display:inline-block;flex-shrink:0;margin-top:2px");
-          const info = el("div");
-          const lbl = el("div", "font-size:11px;font-weight:600;color:#374151");
-          lbl.textContent = cat.label;
-          const sub = el("div", "font-size:9px;color:#94a3b8;margin-top:1px");
-          sub.textContent = cat.stages;
-          info.appendChild(lbl);
-          info.appendChild(sub);
-          row.appendChild(dot);
-          row.appendChild(info);
-          inner.appendChild(row);
+        resetBtn.addEventListener("mouseleave", () => {
+          resetBtn.style.background = "none";
+        });
+        resetBtn.addEventListener("click", () => {
+          pendingPatchCountRef.pending = 0;
+          if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "none";
+          if (auditInputRef.el) auditInputRef.el.value = "";
+        });
+        hdrRow.appendChild(hdrLbl);
+        hdrRow.appendChild(resetBtn);
+        inner.appendChild(hdrRow);
+        const sub = el("div", "font-size:9px;color:#94a3b8;margin-bottom:10px;flex-shrink:0");
+        sub.textContent = "Drag ≡ to move between buckets";
+        inner.appendChild(sub);
+        const capRow = el("div", [
+          "display:flex;align-items:center;gap:6px;margin-bottom:8px;",
+          "padding:5px 8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;flex-shrink:0"
+        ].join(""));
+        const capLbl = el("span", "font-size:10px;color:#64748b;flex:1");
+        capLbl.textContent = "Capacity";
+        const capInput = el("input", [
+          "width:44px;font-size:11px;font-weight:700;color:#1f2937;border:none;",
+          "background:transparent;text-align:right;outline:none;padding:0"
+        ].join(""));
+        capInput.type = "number";
+        capInput.value = String(capacityHrsPerMonth);
+        capInput.min = "1";
+        capInput.max = "9999";
+        capInput.addEventListener("change", () => {
+          const v = parseInt(capInput.value, 10);
+          if (!isNaN(v) && v > 0) {
+            capacityHrsPerMonth = v;
+          }
+        });
+        const capUnit = el("span", "font-size:10px;color:#94a3b8;flex-shrink:0");
+        capUnit.textContent = "h/mo";
+        capRow.appendChild(capLbl);
+        capRow.appendChild(capInput);
+        capRow.appendChild(capUnit);
+        inner.appendChild(capRow);
+        const autoBtn = el("button", [
+          "width:100%;font-size:11px;font-weight:700;color:#fff;background:#6366f1;",
+          "border:none;border-radius:8px;padding:7px 0;cursor:pointer;",
+          "margin-bottom:14px;letter-spacing:.03em;flex-shrink:0"
+        ].join(""));
+        autoBtn.textContent = "AUTO-SCHEDULE";
+        autoBtn.addEventListener("mouseenter", () => {
+          autoBtn.style.background = "#4f46e5";
+        });
+        autoBtn.addEventListener("mouseleave", () => {
+          autoBtn.style.background = "#6366f1";
+        });
+        autoBtn.addEventListener("click", () => {
+          autoBtn.textContent = "Scheduling…";
+          autoBtn.disabled = true;
+          setTimeout(() => {
+            autoBtn.textContent = "AUTO-SCHEDULE";
+            autoBtn.disabled = false;
+          }, 1200);
+        });
+        inner.appendChild(autoBtn);
+        const allVisible = applyFilter(allTasks, filter, searchQ);
+        buckets.forEach((b) => {
+          const members = allVisible.filter((t) => t.priorityGroup === b.id && !isBucketId(t.id));
+          if (!members.length) return;
+          const bHrs = members.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0);
+          const bHdr = el("div", [
+            "display:flex;align-items:center;justify-content:space-between;",
+            "padding:4px 8px;background:#f1f5f9;",
+            "border:1px solid #e2e8f0;border-bottom:none;",
+            "border-radius:6px 6px 0 0;margin-top:8px;flex-shrink:0"
+          ].join(""));
+          const bLbl = el("span", "font-size:10px;font-weight:700;color:#374151");
+          bLbl.textContent = b.label;
+          const bMeta = el("span", "font-size:9px;color:#94a3b8");
+          bMeta.textContent = members.length + " · " + bHrs + "h";
+          bHdr.appendChild(bLbl);
+          bHdr.appendChild(bMeta);
+          inner.appendChild(bHdr);
+          const taskList = el("div", "border:1px solid #e2e8f0;border-radius:0 0 6px 6px;overflow:hidden;flex-shrink:0");
+          members.forEach((t, idx) => {
+            const catColor = STAGE_TO_CATEGORY_COLOR[t.stage || ""] || "#94a3b8";
+            const taskHrs = Number(t.estimatedHours) || 0;
+            const rowEl = el("div", [
+              "display:flex;align-items:center;gap:5px;padding:4px 7px;",
+              "font-size:10px;cursor:grab;background:#fff;",
+              idx > 0 ? "border-top:1px solid #f1f5f9" : ""
+            ].join(""));
+            rowEl.addEventListener("mouseenter", () => {
+              rowEl.style.background = "#f8fafc";
+            });
+            rowEl.addEventListener("mouseleave", () => {
+              rowEl.style.background = "#fff";
+            });
+            const handle = el("span", "color:#cbd5e1;font-size:12px;flex-shrink:0;line-height:1;user-select:none;cursor:grab");
+            handle.textContent = "≡";
+            const dot = el("span");
+            dot.style.cssText = "width:7px;height:7px;border-radius:50%;flex-shrink:0;background:" + catColor;
+            const titleEl = el("span", "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#374151;font-size:10px");
+            titleEl.textContent = t.title || t.name || t.id;
+            const hrsEl = el("span", "font-size:9px;color:#94a3b8;flex-shrink:0;white-space:nowrap;font-weight:600");
+            if (taskHrs > 0) hrsEl.textContent = taskHrs + "h";
+            rowEl.appendChild(handle);
+            rowEl.appendChild(dot);
+            rowEl.appendChild(titleEl);
+            rowEl.appendChild(hrsEl);
+            taskList.appendChild(rowEl);
+          });
+          inner.appendChild(taskList);
         });
         sidebarPanel.appendChild(inner);
       }
@@ -1606,33 +1685,43 @@ var NimbusGanttApp = function(exports) {
         const vs = computeStats(applyFilter(allTasks, filter, searchQ));
         countLbl.textContent = vs.total + " items · " + vs.scheduled + " scheduled · " + vs.needDates + " need dates";
         const filteredForHrs = applyFilter(allTasks, filter, searchQ).filter((t) => cb.checked || !DONE_STAGES[t.stage || ""]);
-        const weekData = computeWeeklyCapacity(filteredForHrs, 16);
+        const weekData = computeWeeklyCapacity(filteredForHrs, 14);
         const maxHrs = Math.max(1, ...weekData.map((w) => w.hours));
+        const _now = /* @__PURE__ */ new Date();
+        const _dow = _now.getDay();
+        const _mon = new Date(_now);
+        _mon.setDate(_now.getDate() - (_dow === 0 ? 6 : _dow - 1));
+        const MON_ABBR2 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const curWkLabel = MON_ABBR2[_mon.getMonth()] + String(_mon.getDate());
         hrsWkBarsEl.innerHTML = "";
         weekData.forEach((w) => {
           if (w.hours === 0) return;
-          const col = el("div", "display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex-shrink:0;min-width:32px;max-width:48px");
-          const barH = Math.max(3, Math.round(w.hours / maxHrs * 30));
-          const bar = el("div", "background:#3b82f6;border-radius:3px 3px 0 0;width:100%;box-sizing:border-box;opacity:0.75;transition:opacity .15s");
-          bar.style.height = barH + "px";
-          bar.title = w.hours + "h";
-          bar.addEventListener("mouseenter", () => {
-            bar.style.opacity = "1";
-          });
-          bar.addEventListener("mouseleave", () => {
-            bar.style.opacity = "0.75";
-          });
-          const lbl = el("div", "font-size:8px;color:#94a3b8;white-space:nowrap;text-align:center;margin-top:2px;line-height:1.3");
-          lbl.textContent = w.hours + "h " + w.label;
-          col.appendChild(bar);
-          col.appendChild(lbl);
+          const isCur = w.label === curWkLabel;
+          const pct = Math.max(4, Math.round(w.hours / maxHrs * 100));
+          const txtCol = isCur ? "#6366f1" : "#94a3b8";
+          const col = el("div", "display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;width:48px");
+          const hLbl = el("div", "font-size:9px;font-weight:700;text-align:center;white-space:nowrap");
+          hLbl.style.color = txtCol;
+          hLbl.textContent = w.hours + "h";
+          col.appendChild(hLbl);
+          const track = el("div", "width:100%;border-radius:2px;overflow:hidden;background:#e2e8f0;height:8px;flex-shrink:0");
+          const fill = el("div", "height:100%;border-radius:2px;background:#6366f1;transition:width .3s");
+          fill.style.width = pct + "%";
+          if (!isCur) fill.style.opacity = "0.55";
+          track.appendChild(fill);
+          col.appendChild(track);
+          const dLbl = el("div", "font-size:8px;text-align:center;white-space:nowrap");
+          dLbl.style.color = txtCol;
+          dLbl.style.fontWeight = isCur ? "600" : "400";
+          dLbl.textContent = w.label;
+          col.appendChild(dLbl);
           hrsWkBarsEl.appendChild(col);
         });
         if (kpiEls.total) kpiEls.total.textContent = String(s.total);
         if (kpiEls.sched) kpiEls.sched.textContent = String(s.scheduled);
         if (kpiEls.est) kpiEls.est.textContent = s.est + "h";
         if (kpiEls.logged) kpiEls.logged.textContent = s.logged + "h";
-        if (kpiEls.months) kpiEls.months.textContent = mo + "mo";
+        if (kpiEls.months) kpiEls.months.textContent = moHigh + "mo";
       }
       function initGantt() {
         var _a2;
