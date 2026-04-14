@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Horizontal Gantt-style timeline of active work items grouped by entity</description>
+    <description>Pro Forma Timeline — template-framework gantt (v10 · Nimbus Gantt).</description>
     <label>Timeline</label>
-    <lwcComponent>deliveryNimbusGantt</lwcComponent>
+    <lwcComponent>deliveryProFormaTimeline</lwcComponent>
     <motif>Custom67: Gears</motif>
 </CustomTab>
