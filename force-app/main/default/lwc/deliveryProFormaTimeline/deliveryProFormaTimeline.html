@@ -1,54 +1,5 @@
 <template>
     <div class="timeline-root">
-        <!-- Header toolbar -->
-        <div class="toolbar">
-            <div class="toolbar-title">
-                <span class="title-text">Delivery Timeline</span>
-                <span class="title-subtitle">NOW · NEXT · PLANNED · PROPOSED · HOLD</span>
-            </div>
-            <div class="toolbar-actions">
-                <lightning-input
-                    type="toggle"
-                    label="Show completed"
-                    checked={showCompleted}
-                    onchange={handleShowCompletedChange}
-                    variant="label-hidden"
-                    message-toggle-active="Showing completed"
-                    message-toggle-inactive="Active only"
-                ></lightning-input>
-                <lightning-button
-                    label="Refresh"
-                    icon-name="utility:refresh"
-                    onclick={handleRefresh}
-                    variant="neutral"
-                ></lightning-button>
-            </div>
-        </div>
-
-        <!-- Loading state -->
-        <template lwc:if={isLoading}>
-            <div class="loading">
-                <lightning-spinner alternative-text="Loading timeline"></lightning-spinner>
-            </div>
-        </template>
-
-        <!-- Error state -->
-        <template lwc:if={errorMessage}>
-            <div class="error">
-                <lightning-icon icon-name="utility:error" variant="error" size="small"></lightning-icon>
-                <span>{errorMessage}</span>
-            </div>
-        </template>
-
-        <!-- Empty state -->
-        <template lwc:if={isEmpty}>
-            <div class="empty">
-                <lightning-icon icon-name="utility:info" size="small"></lightning-icon>
-                <span>No work items to display. Toggle "Show completed" to include inactive items.</span>
-            </div>
-        </template>
-
-        <!-- Gantt container — populated by nimbus-gantt on connectedCallback -->
-        <div class="gantt-container" lwc:ref="ganttContainer"></div>
+        <div class="timeline-container" lwc:dom="manual"></div>
     </div>
 </template>
