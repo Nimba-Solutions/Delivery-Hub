@@ -1228,19 +1228,43 @@ var NimbusGanttApp = function(exports) {
       });
       const fbsep = el("div", "width:1px;height:18px;background:#e5e7eb;flex-shrink:0");
       filterBar.appendChild(fbsep);
-      const sw = el("div", "display:flex;align-items:center;gap:4px;border:1px solid #e5e7eb;border-radius:6px;padding:2px 8px;background:#fff");
-      const si = el("span", "font-size:12px;color:#94a3b8");
+      const sw = el("div", "position:relative;display:inline-flex;align-items:center");
+      const si = el("span", "position:absolute;left:8px;font-size:11px;color:#94a3b8;pointer-events:none");
       si.textContent = "🔎";
       sw.appendChild(si);
-      const sinput = el("input", "border:none;outline:none;font-size:11px;color:#374151;background:transparent;width:140px");
+      const sinput = el("input", [
+        "font-size:10px;padding:4px 24px 4px 24px;border-radius:9999px;",
+        "border:1px solid #e5e7eb;background:#fff;color:#374151;outline:none;width:192px"
+      ].join(""));
       sinput.type = "text";
-      sinput.placeholder = "Search T-NNNN, title…";
+      sinput.placeholder = "Search T-NNNN, title, owner…";
       sinput.addEventListener("input", () => {
         searchQ = sinput.value.trim();
         refresh();
       });
+      sinput.addEventListener("focus", () => {
+        sinput.style.borderColor = "#93c5fd";
+      });
+      sinput.addEventListener("blur", () => {
+        sinput.style.borderColor = "#e5e7eb";
+      });
       sw.appendChild(sinput);
+      const sclear = el("button", "position:absolute;right:8px;font-size:13px;color:#94a3b8;background:none;border:none;cursor:pointer;padding:0;line-height:1;display:none");
+      sclear.textContent = "×";
+      sclear.addEventListener("click", () => {
+        sinput.value = "";
+        searchQ = "";
+        sclear.style.display = "none";
+        refresh();
+      });
+      sinput.addEventListener("input", () => {
+        sclear.style.display = sinput.value ? "block" : "none";
+      });
+      sw.appendChild(sclear);
       filterBar.appendChild(sw);
+      const fbsep2 = el("span", "color:#e2e8f0;font-size:14px;margin:0 4px;flex-shrink:0");
+      fbsep2.textContent = "|";
+      filterBar.appendChild(fbsep2);
       const CATEGORY_DISPLAY = [
         { label: "In Flight", color: "#10b981" },
         { label: "Next Up", color: "#3b82f6" },
@@ -1249,42 +1273,50 @@ var NimbusGanttApp = function(exports) {
         { label: "Blocked", color: "#ef4444" },
         { label: "Done", color: "#cbd5e1" }
       ];
-      const legWrap = el("div", "display:flex;align-items:center;gap:8px;flex-wrap:wrap");
-      const legLbl = el("span", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap");
-      legLbl.textContent = "COLORS:";
-      legWrap.appendChild(legLbl);
+      const colorsLbl = el("span", "font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;flex-shrink:0");
+      colorsLbl.textContent = "Colors:";
+      filterBar.appendChild(colorsLbl);
       const catChipTxts = {};
+      const catChipEls = {};
       CATEGORY_DISPLAY.forEach((cat) => {
-        const chip = el("span", "display:flex;align-items:center;gap:3px;font-size:11px;color:#374151;white-space:nowrap");
-        const dot = el("span", "width:9px;height:9px;border-radius:50%;background:" + cat.color + ";display:inline-block;flex-shrink:0");
+        const chip = el("span", "display:inline-flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0");
+        const dot = el("span");
+        dot.style.cssText = "width:9px;height:9px;border-radius:3px;background:" + cat.color + ";display:inline-block;flex-shrink:0";
         chip.appendChild(dot);
-        const txt = el("span");
+        const txt = el("span", "font-size:9px;color:#374151");
         txt.textContent = cat.label;
         chip.appendChild(txt);
         catChipTxts[cat.label] = txt;
-        legWrap.appendChild(chip);
+        catChipEls[cat.label] = chip;
+        chip.style.display = "none";
+        filterBar.appendChild(chip);
       });
-      const legendChips = [];
-      const legSep = el("span", "color:#e2e8f0;font-size:14px;margin:0 2px");
-      legSep.textContent = "|";
-      legWrap.appendChild(legSep);
-      buckets.forEach((b) => {
-        const chip = el("span", "display:flex;align-items:center;gap:3px;font-size:11px;color:#374151;white-space:nowrap;cursor:pointer");
-        const dot = el("span", "width:9px;height:9px;border-radius:50%;background:" + b.bgTint + ";display:inline-block;flex-shrink:0");
-        chip.appendChild(dot);
-        const txt = el("span");
-        txt.textContent = b.label;
-        chip.appendChild(txt);
-        legendChips.push({ bid: b.id, txt });
-        legWrap.appendChild(chip);
+      const fbsep3 = el("span", "color:#e2e8f0;font-size:14px;margin:0 4px;flex-shrink:0");
+      fbsep3.textContent = "|";
+      filterBar.appendChild(fbsep3);
+      const teamChipWrap = el("span", "display:inline-flex;align-items:center;gap:4px;flex-shrink:0");
+      const teamBtn = el("button", [
+        "display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:600;",
+        "color:#4f46e5;border:1px solid #c7d2fe;background:#eef2ff;",
+        "border-radius:4px;padding:1px 7px;cursor:pointer;white-space:nowrap"
+      ].join(""));
+      const teamLbl = el("span");
+      teamLbl.textContent = "Team";
+      const teamCount = el("span", "font-family:monospace;color:#6366f1");
+      teamCount.textContent = "1×";
+      teamBtn.appendChild(teamLbl);
+      teamBtn.appendChild(teamCount);
+      teamBtn.addEventListener("mouseenter", () => {
+        teamBtn.style.background = "#e0e7ff";
       });
-      filterBar.appendChild(legWrap);
-      const fbSpace2 = el("div");
-      fbSpace2.style.flex = "1";
-      filterBar.appendChild(fbSpace2);
-      const countRow = el("div", "display:flex;align-items:center;gap:6px;flex-shrink:0");
-      const countLbl = el("span", "font-size:10px;font-weight:600;color:#64748b;white-space:nowrap");
-      countRow.appendChild(countLbl);
+      teamBtn.addEventListener("mouseleave", () => {
+        teamBtn.style.background = "#eef2ff";
+      });
+      const capacityDisplay = el("span", "font-size:9px;color:#94a3b8;font-family:monospace");
+      capacityDisplay.textContent = capacityHrsPerMonth + "h/mo";
+      teamChipWrap.appendChild(teamBtn);
+      teamChipWrap.appendChild(capacityDisplay);
+      filterBar.appendChild(teamChipWrap);
       const autoSchedBtn = el("button", [
         "font-size:9px;font-weight:700;color:#fff;background:#6366f1;",
         "border:none;cursor:pointer;padding:3px 10px;border-radius:9999px;white-space:nowrap;flex-shrink:0"
@@ -1297,10 +1329,15 @@ var NimbusGanttApp = function(exports) {
       autoSchedBtn.addEventListener("mouseleave", () => {
         autoSchedBtn.style.background = "#6366f1";
       });
-      if (features.autoSchedule !== false) countRow.appendChild(autoSchedBtn);
+      filterBar.appendChild(autoSchedBtn);
+      const fbSpace2 = el("div");
+      fbSpace2.style.flex = "1";
+      filterBar.appendChild(fbSpace2);
+      const countLbl = el("span", "font-size:10px;font-weight:600;color:#64748b;white-space:nowrap;flex-shrink:0");
+      filterBar.appendChild(countLbl);
       const resetChangesBtn = el("button", [
         "font-size:9px;color:#f43f5e;background:none;border:none;cursor:pointer;",
-        "padding:0;text-decoration:underline;white-space:nowrap;flex-shrink:0"
+        "padding:0;text-decoration:underline;white-space:nowrap;flex-shrink:0;display:none"
       ].join(""));
       resetChangesBtn.textContent = "Reset changes";
       resetChangesBtn.addEventListener("mouseenter", () => {
@@ -1311,11 +1348,17 @@ var NimbusGanttApp = function(exports) {
       });
       resetChangesBtn.addEventListener("click", () => {
         pendingPatchCountRef.pending = 0;
+        resetChangesBtn.style.display = "none";
         if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "none";
         if (auditInputRef.el) auditInputRef.el.value = "";
       });
-      countRow.appendChild(resetChangesBtn);
-      filterBar.appendChild(countRow);
+      filterBar.appendChild(resetChangesBtn);
+      const legendChips = [];
+      buckets.forEach((b) => {
+        const txt = el("span");
+        txt.textContent = b.label;
+        legendChips.push({ bid: b.id, txt });
+      });
       container.appendChild(filterBar);
       const ctrlBar = el("div", "background:#fff;border-bottom:1px solid #e5e7eb;padding:4px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0");
       const zDefs = [
@@ -1672,16 +1715,18 @@ var NimbusGanttApp = function(exports) {
         const moStr = hasRange ? moLow + "–" + moHigh + " mo" : moHigh + " mo";
         statsLabel.textContent = s.scheduled + " scheduled · " + hrsStr + " · " + moStr;
         CATEGORY_DISPLAY.forEach((cat) => {
+          const n = s.categoryCounts[cat.label] || 0;
           const txt = catChipTxts[cat.label];
-          if (txt) {
-            const n = s.categoryCounts[cat.label] || 0;
-            txt.textContent = n > 0 ? cat.label + " (" + n + ")" : cat.label;
-          }
+          const chipEl = catChipEls[cat.label];
+          if (txt) txt.textContent = cat.label + (n > 0 ? " (" + n + ")" : "");
+          if (chipEl) chipEl.style.display = n > 0 ? "inline-flex" : "none";
         });
         legendChips.forEach((c) => {
           const b = buckets.find((bk) => bk.id === c.bid);
           c.txt.textContent = (b ? b.label : c.bid) + " (" + (s.counts[c.bid] || 0) + ")";
         });
+        capacityDisplay.textContent = capacityHrsPerMonth + "h/mo";
+        resetChangesBtn.style.display = pendingPatchCountRef.pending > 0 ? "inline" : "none";
         const vs = computeStats(applyFilter(allTasks, filter, searchQ));
         countLbl.textContent = vs.total + " items · " + vs.scheduled + " scheduled · " + vs.needDates + " need dates";
         const filteredForHrs = applyFilter(allTasks, filter, searchQ).filter((t) => cb.checked || !DONE_STAGES[t.stage || ""]);
