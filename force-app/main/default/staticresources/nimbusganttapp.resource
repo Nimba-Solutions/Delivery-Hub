@@ -1056,7 +1056,7 @@ var NimbusGanttApp = function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a, _b, _c, _d;
+      var _a, _b, _c, _d, _e;
       IIFEApp.unmount(container);
       const buckets = ((_a = options.config) == null ? void 0 : _a.buckets) || DEFAULT_PRIORITY_BUCKETS;
       const appTitle = ((_b = options.config) == null ? void 0 : _b.title) || "Pro Forma Timeline";
@@ -1065,6 +1065,7 @@ var NimbusGanttApp = function(exports) {
       let allTasks = options.tasks || [];
       const _rawOnPatch = options.onPatch || (() => {
       });
+      const sessionPatchLog = [];
       const pendingPatchCountRef = { pending: 0, badge: null };
       let _patchRefreshTimer = null;
       const onPatch = (patch) => {
@@ -1081,12 +1082,14 @@ var NimbusGanttApp = function(exports) {
           depthMap = buildDepthMap(allTasks);
         }
         const task = allTasks.find((t) => t.id === patch.id);
-        task && (task.title || task.name) || patch.id;
+        const taskTitle = task && (task.title || task.name) || patch.id;
         const parts = [];
         if (patch.priorityGroup) parts.push("→ " + patch.priorityGroup);
         if (patch.parentId !== void 0) parts.push("parent " + (patch.parentId || "none"));
         if (patch.sortOrder !== void 0) parts.push("reordered");
         if (patch.startDate || patch.endDate) parts.push("dates updated");
+        if (parts.length) sessionPatchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: taskTitle + ": " + parts.join(", ") });
+        if (sessionPatchLog.length > 50) sessionPatchLog.pop();
         _rawOnPatch(patch);
         pendingPatchCountRef.pending++;
         if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "inline";
@@ -1094,15 +1097,21 @@ var NimbusGanttApp = function(exports) {
         _patchRefreshTimer = setTimeout(() => {
           _patchRefreshTimer = null;
           refresh();
+          if (auditPanelOpen) renderAuditHistory();
         }, 50);
       };
       const auditInputRef = { el: null };
+      const POOL_MEMBERS = ((_e = options.config) == null ? void 0 : _e.poolMembers) || [
+        { name: "Glen", hoursPerMonth: 80 },
+        { name: "Mahi", hoursPerMonth: 50 },
+        { name: "Antima", hoursPerMonth: 40 }
+      ];
       let viewMode = "gantt";
       let filter = "active";
       let searchQ = "";
       let zoomLevel = "week";
       let groupBy = "priority";
-      let capacityHrsPerMonth = 120;
+      let capacityHrsPerMonth = POOL_MEMBERS.reduce((s, m) => s + m.hoursPerMonth, 0);
       let ganttInst = null;
       let depthMap = buildDepthMap(allTasks);
       let cleanupShading = null;
@@ -1184,16 +1193,9 @@ var NimbusGanttApp = function(exports) {
         if (on) renderSidebarContent();
       });
       titleBar.appendChild(sidebarBtn);
-      let auditBtnOn = true;
+      let auditPanelOpen = false;
       const auditBtn = el("button", "background:#2563eb;border:1px solid #2563eb;cursor:pointer;padding:4px 8px;font-size:10px;border-radius:9999px;color:#fff;font-weight:600;white-space:nowrap");
       auditBtn.textContent = "Audit";
-      auditBtn.addEventListener("click", () => {
-        auditBtnOn = !auditBtnOn;
-        auditBtn.style.background = auditBtnOn ? "#2563eb" : "#fff";
-        auditBtn.style.borderColor = auditBtnOn ? "#2563eb" : "#e2e8f0";
-        auditBtn.style.color = auditBtnOn ? "#fff" : "#64748b";
-        if (auditBtn._strip) auditBtn._strip.style.display = auditBtnOn ? "flex" : "none";
-      });
       titleBar.appendChild(auditBtn);
       const titleSpacer = el("div");
       titleSpacer.style.flex = "1";
@@ -1333,7 +1335,7 @@ var NimbusGanttApp = function(exports) {
       const teamLbl = el("span");
       teamLbl.textContent = "Team";
       const teamCount = el("span", "font-family:monospace;color:#6366f1");
-      teamCount.textContent = "1×";
+      teamCount.textContent = POOL_MEMBERS.length + "×";
       teamBtn.appendChild(teamLbl);
       teamBtn.appendChild(teamCount);
       teamBtn.addEventListener("mouseenter", () => {
@@ -1516,18 +1518,24 @@ var NimbusGanttApp = function(exports) {
         if (!auditSubmitBtn.disabled) auditSubmitBtn.style.background = "#7c3aed";
       });
       auditSubmitBtn.addEventListener("click", () => {
+        const note = auditNoteInput.value.trim();
+        const patchCount = pendingPatchCountRef.pending;
         auditSubmitBtn.disabled = true;
         auditSubmitBtn.textContent = "⌛ Saving…";
         setTimeout(() => {
+          var _a2;
+          (_a2 = auditSubmitBtn._logCommit) == null ? void 0 : _a2.call(auditSubmitBtn, note, patchCount);
           auditSubmitBtn.textContent = "✓ Committed";
           auditSubmitBtn.style.background = "#16a34a";
           auditNoteInput.value = "";
           pendingPatchCountRef.pending = 0;
           unsavedBadge.style.display = "none";
+          sessionPatchLog.length = 0;
           setTimeout(() => {
             auditSubmitBtn.textContent = "📤 Submit + commit";
             auditSubmitBtn.style.background = "#7c3aed";
             auditSubmitBtn.disabled = false;
+            if (auditPanelOpen) renderAuditHistory();
           }, 2500);
         }, 600);
       });
@@ -1544,7 +1552,6 @@ var NimbusGanttApp = function(exports) {
       });
       auditStrip.appendChild(auditResetBtn);
       container.appendChild(auditStrip);
-      auditBtn._strip = auditStrip;
       const contentOuter = el("div", "flex:1 1 auto;min-height:0;display:flex;overflow:hidden");
       container.appendChild(contentOuter);
       const sidebarPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#f8fafc;border-right:1px solid #e5e7eb;transition:width .2s;font-size:12px");
@@ -1553,6 +1560,75 @@ var NimbusGanttApp = function(exports) {
       contentOuter.appendChild(contentEl);
       const detailPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#fff;border-left:1px solid #e5e7eb;transition:width .2s;font-family:sans-serif;font-size:12px;position:relative");
       if (features.detailPanel !== false) contentOuter.appendChild(detailPanel);
+      const auditHistoryPanel = el("div", "width:0;flex-shrink:0;overflow:hidden;background:#fdf4ff;border-left:1.5px solid #e9d5ff;transition:width .2s;font-family:sans-serif;font-size:12px;display:flex;flex-direction:column");
+      contentOuter.appendChild(auditHistoryPanel);
+      const commitLog = [];
+      function renderAuditHistory() {
+        auditHistoryPanel.innerHTML = "";
+        const inner = el("div", "padding:10px;overflow-y:auto;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:0;width:220px");
+        const hdr = el("div", "font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;flex-shrink:0");
+        hdr.textContent = "📜 Session History";
+        inner.appendChild(hdr);
+        const info = el("div", "font-size:9px;color:#94a3b8;line-height:1.45;margin-bottom:10px;flex-shrink:0");
+        info.textContent = "Changes are saved to Salesforce automatically. This log shows your session activity.";
+        inner.appendChild(info);
+        const uncommitted = sessionPatchLog.filter(() => true);
+        if (uncommitted.length > 0) {
+          const ucHdr = el("div", "font-size:9px;font-weight:700;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:3px 7px;margin-bottom:4px;flex-shrink:0");
+          ucHdr.textContent = "⏳ Unsaved — " + uncommitted.length + " change" + (uncommitted.length === 1 ? "" : "s");
+          inner.appendChild(ucHdr);
+          uncommitted.forEach((entry) => {
+            const row = el("div", "padding:3px 6px;font-size:9px;color:#475569;border-bottom:1px solid #f5f3ff;display:flex;gap:4px;align-items:flex-start");
+            const time = el("span", "font-size:8px;color:#a78bfa;flex-shrink:0;font-family:monospace;margin-top:1px");
+            const h = entry.ts.getHours();
+            const m = entry.ts.getMinutes();
+            time.textContent = (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+            const desc = el("span", "flex:1;line-height:1.35");
+            desc.textContent = entry.desc;
+            row.appendChild(time);
+            row.appendChild(desc);
+            inner.appendChild(row);
+          });
+        } else {
+          const empty = el("div", "font-size:9px;color:#c4b5fd;font-style:italic;padding:4px 0;margin-bottom:8px");
+          empty.textContent = "No changes this session";
+          inner.appendChild(empty);
+        }
+        if (commitLog.length > 0) {
+          const sep2 = el("div", "border-top:1px solid #e9d5ff;margin:8px 0 6px;flex-shrink:0");
+          inner.appendChild(sep2);
+          const cHdr = el("div", "font-size:9px;font-weight:700;color:#7c3aed;margin-bottom:6px;flex-shrink:0");
+          cHdr.textContent = "✓ Committed";
+          inner.appendChild(cHdr);
+          commitLog.slice().reverse().forEach((commit) => {
+            const cRow = el("div", "padding:5px 7px;background:#fff;border:1px solid #e9d5ff;border-radius:5px;margin-bottom:4px;flex-shrink:0");
+            const cTime = el("div", "font-size:8px;color:#a78bfa;font-family:monospace;margin-bottom:1px");
+            const ch = commit.ts.getHours();
+            const cm = commit.ts.getMinutes();
+            cTime.textContent = commit.ts.toLocaleDateString() + " " + (ch < 10 ? "0" : "") + ch + ":" + (cm < 10 ? "0" : "") + cm;
+            const cNote = el("div", "font-size:9px;color:#374151;font-weight:600;line-height:1.35");
+            cNote.textContent = commit.note || "(no note)";
+            const cMeta = el("div", "font-size:8px;color:#94a3b8;margin-top:1px");
+            cMeta.textContent = commit.patchCount + " patch" + (commit.patchCount === 1 ? "" : "es") + " saved to Salesforce";
+            cRow.appendChild(cTime);
+            cRow.appendChild(cNote);
+            cRow.appendChild(cMeta);
+            inner.appendChild(cRow);
+          });
+        }
+        auditHistoryPanel.appendChild(inner);
+      }
+      auditSubmitBtn._logCommit = (note, patchCount) => {
+        commitLog.push({ ts: /* @__PURE__ */ new Date(), note, patchCount });
+      };
+      auditBtn.addEventListener("click", () => {
+        auditPanelOpen = !auditPanelOpen;
+        auditBtn.style.background = auditPanelOpen ? "#2563eb" : "#fff";
+        auditBtn.style.borderColor = auditPanelOpen ? "#2563eb" : "#e2e8f0";
+        auditBtn.style.color = auditPanelOpen ? "#fff" : "#64748b";
+        auditHistoryPanel.style.width = auditPanelOpen ? "220px" : "0";
+        if (auditPanelOpen) renderAuditHistory();
+      });
       el("div", "display:none");
       function renderSidebarContent() {
         sidebarPanel.innerHTML = "";
@@ -1763,14 +1839,8 @@ var NimbusGanttApp = function(exports) {
           const b = buckets.find((bk) => bk.id === c.bid);
           c.txt.textContent = (b ? b.label : c.bid) + " (" + (s.counts[c.bid] || 0) + ")";
         });
-        const devNames = /* @__PURE__ */ new Set();
-        allTasks.forEach((t) => {
-          if (t.developerName && !t.isInactive) devNames.add(t.developerName);
-        });
-        const teamSz = Math.max(1, devNames.size);
-        teamCount.textContent = teamSz + "×";
-        const totalCapacity = teamSz * capacityHrsPerMonth;
-        capacityDisplay.textContent = totalCapacity + "h/mo";
+        teamCount.textContent = POOL_MEMBERS.length + "×";
+        capacityDisplay.textContent = capacityHrsPerMonth + "h/mo";
         resetChangesBtn.style.display = pendingPatchCountRef.pending > 0 ? "inline" : "none";
         const vs = computeStats(applyFilter(allTasks, filter, searchQ));
         countLbl.textContent = vs.total + " items · " + vs.scheduled + " scheduled · " + vs.needDates + " need dates";
