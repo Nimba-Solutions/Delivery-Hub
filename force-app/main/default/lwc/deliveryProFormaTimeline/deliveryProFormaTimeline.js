@@ -13,6 +13,7 @@ import { loadScript } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
 import NIMBUS_GANTT_APP from '@salesforce/resourceUrl/nimbusganttapp';
+import CLOUDNIMBUS_CSS from '@salesforce/resourceUrl/cloudnimbustemplatecss';
 import DELIVERY_TIMELINE from '@salesforce/resourceUrl/deliverytimeline';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
@@ -120,6 +121,7 @@ export default class DeliveryProFormaTimeline extends LightningElement {
             window.DeliveryTimeline.mount(container, {
                 tasks,
                 onPatch: (patch) => this._handlePatch(patch),
+                cssUrl: CLOUDNIMBUS_CSS,
             });
             this._mounted = true;
         } catch (error) {
