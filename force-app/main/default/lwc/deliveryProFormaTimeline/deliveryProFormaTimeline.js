@@ -12,6 +12,7 @@ import { LightningElement } from 'lwc';
 import { loadScript } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
+import NIMBUS_GANTT_APP from '@salesforce/resourceUrl/nimbusganttapp';
 import DELIVERY_TIMELINE from '@salesforce/resourceUrl/deliverytimeline';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
@@ -34,6 +35,12 @@ export default class DeliveryProFormaTimeline extends LightningElement {
         } catch (e) {
             // eslint-disable-next-line no-console
             console.warn('[DeliveryTimeline] nimbusgantt script warning (may be Locker Service):', e && e.message);
+        }
+        try {
+            await loadScript(this, NIMBUS_GANTT_APP);
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] nimbusganttapp script warning (may be Locker Service):', e && e.message);
         }
         try {
             await loadScript(this, DELIVERY_TIMELINE);
