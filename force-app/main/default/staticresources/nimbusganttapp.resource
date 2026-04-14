@@ -618,23 +618,33 @@ var NimbusGanttApp = function(exports) {
       cleanupDrag();
     };
   }
-  const registry$1 = /* @__PURE__ */ new Map();
+  const registry$1 = [];
+  function findIndex(name) {
+    for (let i = 0; i < registry$1.length; i++) {
+      if (registry$1[i].name === name) return i;
+    }
+    return -1;
+  }
   function registerTemplate(template) {
     if (!template || !template.name) {
       throw new Error("Template.name is required");
     }
-    registry$1.set(template.name, template);
+    const idx = findIndex(template.name);
+    if (idx >= 0) registry$1[idx].template = template;
+    else registry$1.push({ name: template.name, template });
   }
   function getTemplate(name) {
-    const t = registry$1.get(name);
-    if (!t) throw new Error("Unknown template: '" + name + "'");
-    return t;
+    const idx = findIndex(name);
+    if (idx < 0) throw new Error("Unknown template: '" + name + "'");
+    return registry$1[idx].template;
   }
   function hasTemplate(name) {
-    return registry$1.has(name);
+    return findIndex(name) >= 0;
   }
   function listTemplates() {
-    return Array.from(registry$1.keys());
+    const names = [];
+    for (let i = 0; i < registry$1.length; i++) names.push(registry$1[i].name);
+    return names;
   }
   function defineTemplate(template) {
     return template;
