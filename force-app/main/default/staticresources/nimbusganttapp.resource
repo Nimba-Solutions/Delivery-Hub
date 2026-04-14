@@ -824,6 +824,7 @@ var NimbusGanttApp = function(exports) {
     statsOpen: false,
     detailOpen: false,
     auditPanelOpen: false,
+    fullscreen: false,
     selectedTaskId: null,
     pendingPatchCount: 0
   };
@@ -853,6 +854,8 @@ var NimbusGanttApp = function(exports) {
         };
       case "TOGGLE_AUDIT_PANEL":
         return { ...state, auditPanelOpen: !state.auditPanelOpen };
+      case "TOGGLE_FULLSCREEN":
+        return { ...state, fullscreen: !state.fullscreen };
       case "SELECT_TASK":
         return { ...state, selectedTaskId: event.taskId };
       case "PATCH":
@@ -1228,6 +1231,14 @@ var NimbusGanttApp = function(exports) {
       }
       const fill = el$1("div", CLS_TB_FILL);
       root.appendChild(fill);
+      const fsLabel = state.fullscreen ? "↙ Exit Fullscreen" : "↗ Fullscreen";
+      const fsBtn = el$1(
+        "button",
+        CLS_PILL_BTN_BASE + " " + (state.fullscreen ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE)
+      );
+      fsBtn.textContent = fsLabel;
+      fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+      root.appendChild(fsBtn);
       const summary = el$1("span", CLS_TB_SUMMARY);
       summary.textContent = data.stats.scheduled + " scheduled · " + (data.stats.est || 0) + "h";
       root.appendChild(summary);
@@ -1827,6 +1838,8 @@ var NimbusGanttApp = function(exports) {
 \r
 /* Semantic chrome class layout fallbacks (in case nga-* class layouts depend on Tailwind specificity) */\r
 .nga-root { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }\r
+/* Fullscreen escape — covers Salesforce header/nav/footer with one click */\r
+.nga-fullscreen { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #f8fafc !important; }\r
 .nga-titlebar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 6px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }\r
 .nga-filterbar { display: block; padding: 6px 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }\r
 .nga-zoombar { display: flex; align-items: center; gap: 0.5rem; }\r
@@ -3049,6 +3062,8 @@ var NimbusGanttApp = function(exports) {
         const stateChanged = nextState !== state;
         state = nextState;
         if (stateChanged) {
+          if (state.fullscreen) container.classList.add("nga-fullscreen");
+          else container.classList.remove("nga-fullscreen");
           renderSlots();
           if (ev.type === "SET_VIEW" || ev.type === "SET_GROUP_BY" || ev.type === "SET_FILTER" || ev.type === "SET_SEARCH" || ev.type === "TOGGLE_HIDE_COMPLETED") {
             rebuildView();
