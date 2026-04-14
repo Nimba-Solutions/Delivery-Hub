@@ -1,0 +1,52 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="false"
+           applyHtmlTag="false" applyBodyTag="false" docType="html-5.0"
+           lightningStylesheets="false">
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Delivery Timeline</title>
+    <!-- SLDS for base lightning-* components inside Lightning Out -->
+    <apex:slds />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+        }
+        #gantt-root {
+            width: 100vw;
+            height: 100vh;
+        }
+        #gantt-loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9fafb;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+    </style>
+    <apex:includeLightning />
+</head>
+<body>
+    <div id="gantt-loading">Loading timeline&hellip;</div>
+    <div id="gantt-root"></div>
+    <script>
+        $Lightning.use('c:DeliveryTimelineOut', function() {
+            document.getElementById('gantt-loading').style.display = 'none';
+            $Lightning.createComponent(
+                'c:deliveryProFormaTimeline',
+                { showCompleted: false, standalone: true },
+                'gantt-root',
+                function(cmp) { /* mounted */ }
+            );
+        });
+    </script>
+</body>
+</html>
+</apex:page>
