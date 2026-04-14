@@ -619,9 +619,6 @@ var NimbusGanttApp = function(exports) {
     if (css) e.style.cssText = css;
     return e;
   }
-  function sep() {
-    return el("span", "width:1px;height:20px;background:#1e293b;margin:0 10px;flex-shrink:0");
-  }
   function renderList(container, tasks, buckets) {
     container.innerHTML = "";
     const wrap = el("div", "height:100%;overflow:auto;font-family:sans-serif;font-size:12px");
@@ -714,49 +711,61 @@ var NimbusGanttApp = function(exports) {
       let cleanupDrag = null;
       injectStyles();
       container.style.cssText = "height:100%;display:flex;flex-direction:column;font-family:sans-serif;background:#f8fafc;overflow:hidden";
-      const titleBar = el("div", "background:#0f172a;color:#f8fafc;padding:0 14px;display:flex;align-items:center;gap:0;flex-shrink:0;height:38px");
-      const titleTxt = el("span", "font-size:13px;font-weight:600;color:#f8fafc;letter-spacing:.01em;margin-right:14px;white-space:nowrap");
+      const titleBar = el("div", "background:#fff;border-bottom:1px solid #e2e8f0;padding:0 12px;display:flex;align-items:center;gap:2px;flex-shrink:0;min-height:36px;flex-wrap:wrap");
+      const titleTxt = el("span", "font-size:14px;font-weight:700;color:#0f172a;margin-right:8px;white-space:nowrap");
       titleTxt.textContent = appTitle;
       titleBar.appendChild(titleTxt);
-      const badge = el("span", "font-size:10px;font-weight:700;color:#a78bfa;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);border-radius:9999px;padding:1px 7px;margin-right:14px;white-space:nowrap");
+      const badge = el("span", "font-size:9px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;border-radius:9999px;padding:2px 8px;margin-right:8px;white-space:nowrap");
       badge.textContent = appVersion;
       titleBar.appendChild(badge);
+      function lsep() {
+        const s = el("span", "color:#e2e8f0;font-size:14px;margin:0 6px;flex-shrink:0;user-select:none");
+        s.textContent = "|";
+        return s;
+      }
       const viewDefs = [
         { id: "gantt", icon: "▤", label: "Gantt" },
         { id: "list", icon: "☰", label: "List" }
       ];
       const viewBtns = [];
-      titleBar.appendChild(sep());
+      titleBar.appendChild(lsep());
       viewDefs.forEach((v) => {
-        const btn = el("button", "background:none;border:none;cursor:pointer;padding:4px 10px;font-size:12px;border-radius:4px;color:" + (v.id === viewMode ? "#fff" : "#94a3b8") + ";font-weight:" + (v.id === viewMode ? "600" : "400") + ";display:flex;align-items:center;gap:4px;height:28px;white-space:nowrap");
+        const isActive = v.id === viewMode;
+        const btn = el("button", [
+          "cursor:pointer;padding:4px 8px;font-size:10px;font-weight:600;",
+          "border-radius:9999px;border:1px solid;display:flex;align-items:center;gap:4px;white-space:nowrap;line-height:1.4;",
+          isActive ? "background:#7c3aed;color:#fff;border-color:#7c3aed;" : "background:#fff;color:#64748b;border-color:#e2e8f0;"
+        ].join(""));
         btn.innerHTML = "<span>" + v.icon + "</span><span>" + v.label + "</span>";
         btn.addEventListener("click", () => {
           viewMode = v.id;
           viewBtns.forEach((b) => {
-            b.btn.style.color = b.id === viewMode ? "#fff" : "#94a3b8";
-            b.btn.style.fontWeight = b.id === viewMode ? "600" : "400";
+            const a = b.id === viewMode;
+            b.btn.style.background = a ? "#7c3aed" : "#fff";
+            b.btn.style.color = a ? "#fff" : "#64748b";
+            b.btn.style.borderColor = a ? "#7c3aed" : "#e2e8f0";
           });
           rebuildView();
         });
         viewBtns.push({ id: v.id, btn });
         titleBar.appendChild(btn);
       });
-      titleBar.appendChild(sep());
+      titleBar.appendChild(lsep());
       let showKpis = false;
-      const kpiBtn = el("button", "background:none;border:1px solid #1e293b;cursor:pointer;padding:2px 9px;font-size:11px;border-radius:9999px;color:#94a3b8;font-weight:500;white-space:nowrap");
+      const kpiBtn = el("button", "background:#fff;border:1px solid #e2e8f0;cursor:pointer;padding:4px 8px;font-size:10px;border-radius:9999px;color:#64748b;font-weight:600;white-space:nowrap");
       kpiBtn.textContent = "Stats";
       kpiBtn.addEventListener("click", () => {
         showKpis = !showKpis;
         kpiPanel.style.display = showKpis ? "flex" : "none";
-        kpiBtn.style.background = showKpis ? "#3b82f6" : "none";
-        kpiBtn.style.borderColor = showKpis ? "#3b82f6" : "#1e293b";
-        kpiBtn.style.color = showKpis ? "#fff" : "#94a3b8";
+        kpiBtn.style.background = showKpis ? "#2563eb" : "#fff";
+        kpiBtn.style.borderColor = showKpis ? "#2563eb" : "#e2e8f0";
+        kpiBtn.style.color = showKpis ? "#fff" : "#64748b";
       });
       if (features.statsPanel !== false) titleBar.appendChild(kpiBtn);
       const titleSpacer = el("div");
       titleSpacer.style.flex = "1";
       titleBar.appendChild(titleSpacer);
-      const statsLabel = el("span", "font-size:11px;color:#64748b;white-space:nowrap");
+      const statsLabel = el("span", "font-size:11px;color:#94a3b8;white-space:nowrap");
       titleBar.appendChild(statsLabel);
       container.appendChild(titleBar);
       const kpiPanel = el("div", "display:none;background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 14px;gap:12px;flex-wrap:wrap;flex-shrink:0");
@@ -842,7 +851,6 @@ var NimbusGanttApp = function(exports) {
       filterBar.appendChild(legWrap);
       container.appendChild(filterBar);
       const ctrlBar = el("div", "background:#fff;border-bottom:1px solid #e5e7eb;padding:4px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0");
-      const zg = el("div", "display:flex;border:1px solid #d1d5db;border-radius:4px;overflow:hidden");
       const zDefs = [
         { label: "Day", zoom: "day" },
         { label: "Week", zoom: "week" },
@@ -850,51 +858,60 @@ var NimbusGanttApp = function(exports) {
         { label: "Quarter", zoom: "quarter" }
       ];
       const zBtns = [];
-      zDefs.forEach((z, idx) => {
-        const btn = el("button", "");
-        btn.textContent = z.label;
+      zDefs.forEach((z) => {
         const act = z.zoom === zoomLevel;
-        btn.style.cssText = "padding:3px 10px;font-size:11px;font-weight:500;background:" + (act ? "#1e293b" : "#fff") + ";color:" + (act ? "#fff" : "#374151") + ";border:none;border-right:" + (idx < zDefs.length - 1 ? "1px solid #d1d5db" : "none") + ";cursor:pointer;line-height:1.6";
+        const btn = el("button", [
+          "padding:4px 8px;font-size:10px;font-weight:600;cursor:pointer;",
+          "border-radius:9999px;border:1px solid;line-height:1.4;white-space:nowrap;",
+          act ? "background:#1e293b;color:#fff;border-color:#1e293b;" : "background:#fff;color:#64748b;border-color:#e2e8f0;"
+        ].join(""));
+        btn.textContent = z.label;
         btn.addEventListener("click", () => {
           zoomLevel = z.zoom;
           zBtns.forEach((b) => {
-            b.el.style.background = b.zoom === zoomLevel ? "#1e293b" : "#fff";
-            b.el.style.color = b.zoom === zoomLevel ? "#fff" : "#374151";
+            const a = b.zoom === zoomLevel;
+            b.el.style.background = a ? "#1e293b" : "#fff";
+            b.el.style.color = a ? "#fff" : "#64748b";
+            b.el.style.borderColor = a ? "#1e293b" : "#e2e8f0";
           });
           if (ganttInst && typeof ganttInst.setZoom === "function") ganttInst.setZoom(zoomLevel);
         });
         zBtns.push({ el: btn, zoom: z.zoom });
-        zg.appendChild(btn);
+        ctrlBar.appendChild(btn);
       });
-      ctrlBar.appendChild(zg);
       if (features.groupByToggle !== false) {
-        const gbSep = el("div", "width:1px;height:18px;background:#e5e7eb;flex-shrink:0;margin:0 4px");
+        const gbSep = el("span", "color:#e2e8f0;font-size:14px;margin:0 6px;flex-shrink:0");
+        gbSep.textContent = "|";
         ctrlBar.appendChild(gbSep);
-        const gbLabel = el("span", "font-size:11px;color:#64748b;white-space:nowrap;margin-right:4px");
+        const gbLabel = el("span", "font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;margin-right:4px");
         gbLabel.textContent = "Group:";
         ctrlBar.appendChild(gbLabel);
-        const gbGroup = el("div", "display:flex;border:1px solid #d1d5db;border-radius:4px;overflow:hidden");
         const gbDefs = [
           { id: "priority", label: "Priority" },
           { id: "epic", label: "Epics" }
         ];
         const gbBtns = [];
-        gbDefs.forEach((g, idx) => {
-          const btn = el("button", "");
+        gbDefs.forEach((g) => {
+          const act = g.id === groupBy;
+          const btn = el("button", [
+            "padding:4px 8px;font-size:10px;font-weight:600;cursor:pointer;",
+            "border-radius:9999px;border:1px solid;line-height:1.4;white-space:nowrap;margin-right:2px;",
+            act ? "background:#1e293b;color:#fff;border-color:#1e293b;" : "background:#fff;color:#64748b;border-color:#e2e8f0;"
+          ].join(""));
           btn.textContent = g.label;
-          btn.style.cssText = "padding:3px 9px;font-size:11px;font-weight:500;background:" + (g.id === groupBy ? "#1e293b" : "#fff") + ";color:" + (g.id === groupBy ? "#fff" : "#374151") + ";border:none;border-right:" + (idx < gbDefs.length - 1 ? "1px solid #d1d5db" : "none") + ";cursor:pointer;line-height:1.6";
           btn.addEventListener("click", () => {
             groupBy = g.id;
             gbBtns.forEach((b) => {
-              b.el.style.background = b.id === groupBy ? "#1e293b" : "#fff";
-              b.el.style.color = b.id === groupBy ? "#fff" : "#374151";
+              const a = b.id === groupBy;
+              b.el.style.background = a ? "#1e293b" : "#fff";
+              b.el.style.color = a ? "#fff" : "#64748b";
+              b.el.style.borderColor = a ? "#1e293b" : "#e2e8f0";
             });
             rebuildView();
           });
           gbBtns.push({ id: g.id, el: btn });
-          gbGroup.appendChild(btn);
+          ctrlBar.appendChild(btn);
         });
-        ctrlBar.appendChild(gbGroup);
       }
       const cbLabel = el("label", "display:flex;align-items:center;gap:4px;font-size:11px;color:#374151;cursor:pointer;white-space:nowrap;margin-left:8px");
       const cb = el("input", "");
