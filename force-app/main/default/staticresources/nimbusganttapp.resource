@@ -1080,6 +1080,13 @@ var NimbusGanttApp = function(exports) {
           allTasks[idx] = updated;
           depthMap = buildDepthMap(allTasks);
         }
+        const task = allTasks.find((t) => t.id === patch.id);
+        task && (task.title || task.name) || patch.id;
+        const parts = [];
+        if (patch.priorityGroup) parts.push("→ " + patch.priorityGroup);
+        if (patch.parentId !== void 0) parts.push("parent " + (patch.parentId || "none"));
+        if (patch.sortOrder !== void 0) parts.push("reordered");
+        if (patch.startDate || patch.endDate) parts.push("dates updated");
         _rawOnPatch(patch);
         pendingPatchCountRef.pending++;
         if (pendingPatchCountRef.badge) pendingPatchCountRef.badge.style.display = "inline";
@@ -1756,7 +1763,14 @@ var NimbusGanttApp = function(exports) {
           const b = buckets.find((bk) => bk.id === c.bid);
           c.txt.textContent = (b ? b.label : c.bid) + " (" + (s.counts[c.bid] || 0) + ")";
         });
-        capacityDisplay.textContent = capacityHrsPerMonth + "h/mo";
+        const devNames = /* @__PURE__ */ new Set();
+        allTasks.forEach((t) => {
+          if (t.developerName && !t.isInactive) devNames.add(t.developerName);
+        });
+        const teamSz = Math.max(1, devNames.size);
+        teamCount.textContent = teamSz + "×";
+        const totalCapacity = teamSz * capacityHrsPerMonth;
+        capacityDisplay.textContent = totalCapacity + "h/mo";
         resetChangesBtn.style.display = pendingPatchCountRef.pending > 0 ? "inline" : "none";
         const vs = computeStats(applyFilter(allTasks, filter, searchQ));
         countLbl.textContent = vs.total + " items · " + vs.scheduled + " scheduled · " + vs.needDates + " need dates";
