@@ -2228,7 +2228,6 @@ var NimbusGanttApp = function(exports) {
  * for pixel parity between v10 (Next.js) and Salesforce deployments.\r
  * No Tailwind runtime dependency. */\r
 \r
-@layer components;\r
 @media (prefers-reduced-motion:reduce){.cloud,.cloud:before,.cloud:after{animation:none!important}}\r
 \r
 \r
