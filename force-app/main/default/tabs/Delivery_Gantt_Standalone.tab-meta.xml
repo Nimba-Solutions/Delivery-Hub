@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Standalone, chromeless entry point for the Pro Forma Timeline gantt. Surfaced only via the Delivery Gantt Standalone app — URL-addressable at /lightning/n/Delivery_Gantt_Standalone.</description>
+    <flexiPage>Delivery_Gantt_Standalone</flexiPage>
+    <label>Gantt</label>
+    <motif>Custom67: Gears</motif>
+</CustomTab>

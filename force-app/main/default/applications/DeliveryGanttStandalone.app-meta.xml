@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <brand>
+        <headerColor>#1A2D4A</headerColor>
+        <shouldOverrideOrgTheme>true</shouldOverrideOrgTheme>
+    </brand>
+    <description>Minimum-chrome standalone Lightning App for the Pro Forma Timeline gantt. No utility bar, no secondary tabs. URL: /lightning/n/Delivery_Gantt_Standalone.</description>
+    <formFactors>Large</formFactors>
+    <isNavAutoTempTabsDisabled>true</isNavAutoTempTabsDisabled>
+    <isNavPersonalizationDisabled>true</isNavPersonalizationDisabled>
+    <isNavTabPersistenceDisabled>true</isNavTabPersistenceDisabled>
+    <isOmniPinnedViewEnabled>false</isOmniPinnedViewEnabled>
+    <label>Delivery Gantt Standalone</label>
+    <navType>Standard</navType>
+    <tabs>Delivery_Gantt_Standalone</tabs>
+    <uiType>Lightning</uiType>
+</CustomApplication>
