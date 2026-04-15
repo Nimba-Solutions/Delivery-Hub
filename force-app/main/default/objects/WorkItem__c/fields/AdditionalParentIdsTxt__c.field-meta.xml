@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AdditionalParentIdsTxt__c</fullName>
+    <description>DAG: JSON array of additional parent WorkItem Ids beyond ParentWorkItemLookup__c. Enables a single work item to roll up under multiple logical parents (e.g. multiple proposals/groupings). Not a lookup — stored as a JSON array of 18-char Ids because Salesforce multi-select lookups to self require a junction object.</description>
+    <inlineHelpText>JSON array of WorkItem Ids, e.g. ["a0B...","a0B..."]. Used by the Gantt framework to roll up this item under multiple proposal parents. Leave blank for items with a single parent.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Additional Parent Ids</label>
+    <length>4000</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
