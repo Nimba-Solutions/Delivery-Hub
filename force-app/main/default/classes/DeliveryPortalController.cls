@@ -440,15 +440,15 @@ global without sharing class DeliveryPortalController {
      * Salesforce Ids are passed through; other entries are dropped silently so malformed
      * input can't poison the REST response. Returns an empty list when the field is blank
      * or parsing fails.
-     * @param json Raw JSON array string from AdditionalParentIdsTxt__c.
+     * @param jsonText Raw JSON array string from AdditionalParentIdsTxt__c.
      * @return List of valid SF Id strings; empty if blank, malformed, or no valid Ids found.
      */
-    private static List<String> parseAdditionalParents(String json) {
-        if (String.isBlank(json)) {
+    private static List<String> parseAdditionalParents(String jsonText) {
+        if (String.isBlank(jsonText)) {
             return new List<String>();
         }
         try {
-            Object parsed = JSON.deserializeUntyped(json);
+            Object parsed = JSON.deserializeUntyped(jsonText);
             if (!(parsed instanceof List<Object>)) {
                 return new List<String>();
             }
