@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Priority-grouped pro forma delivery timeline (NOW · NEXT · PLANNED · PROPOSED · HOLD)</description>
-    <label>Pro Forma Timeline</label>
-    <lwcComponent>deliveryProFormaTimeline</lwcComponent>
-    <motif>Custom67: Gears</motif>
-</CustomTab>
