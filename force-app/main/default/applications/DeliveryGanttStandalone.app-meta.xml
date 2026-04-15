@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <brand>
+        <headerColor>#1A2D4A</headerColor>
+        <shouldOverrideOrgTheme>true</shouldOverrideOrgTheme>
+    </brand>
+    <description>Standalone Lightning App that surfaces only the Pro Forma Timeline gantt. No utility bar, no secondary tabs, no App Launcher clutter — minimum Salesforce chrome for a near-fullscreen Gantt experience. Combined with the in-app Fullscreen toggle, this gives users a bookmarkable URL to land directly on the timeline.</description>
+    <formFactors>Large</formFactors>
+    <isNavAutoTempTabsDisabled>true</isNavAutoTempTabsDisabled>
+    <isNavPersonalizationDisabled>true</isNavPersonalizationDisabled>
+    <isNavTabPersistenceDisabled>true</isNavTabPersistenceDisabled>
+    <isOmniPinnedViewEnabled>false</isOmniPinnedViewEnabled>
+    <label>Delivery Gantt Standalone</label>
+    <navType>Standard</navType>
+    <tabs>Delivery_Gantt_Standalone</tabs>
+    <uiType>Lightning</uiType>
+</CustomApplication>
