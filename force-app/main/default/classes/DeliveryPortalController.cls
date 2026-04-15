@@ -156,7 +156,7 @@ global without sharing class DeliveryPortalController {
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
                        ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
                        DeveloperLookup__c, DeveloperLookup__r.Name,
-                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ParentWorkItemLookup__c, AdditionalParentIdsTxt__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 AND StageNamePk__c IN :terminalStages
@@ -171,7 +171,7 @@ global without sharing class DeliveryPortalController {
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
                        ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
                        DeveloperLookup__c, DeveloperLookup__r.Name,
-                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ParentWorkItemLookup__c, AdditionalParentIdsTxt__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 AND StageNamePk__c IN :attentionStages
@@ -186,7 +186,7 @@ global without sharing class DeliveryPortalController {
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
                        ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
                        DeveloperLookup__c, DeveloperLookup__r.Name,
-                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ParentWorkItemLookup__c, AdditionalParentIdsTxt__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 AND StageNamePk__c NOT IN :terminalStages
@@ -201,7 +201,7 @@ global without sharing class DeliveryPortalController {
                        CreatedDate, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
                        ProjectedUATReadyDate__c, EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
                        DeveloperLookup__c, DeveloperLookup__r.Name,
-                       ParentWorkItemLookup__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
+                       ParentWorkItemLookup__c, AdditionalParentIdsTxt__c, TagsTxt__c, EpicTxt__c, SLATargetDate__c
                 FROM WorkItem__c
                 WHERE ClientNetworkEntityLookup__c = :networkEntityId
                 WITH SYSTEM_MODE
@@ -227,6 +227,7 @@ global without sharing class DeliveryPortalController {
             m.put('loggedHours', wi.TotalLoggedHoursSum__c);
             m.put('developerName', wi.DeveloperLookup__c != null ? wi.DeveloperLookup__r.Name : null);
             m.put('parentWorkItemId', wi.ParentWorkItemLookup__c);
+            m.put('additionalParentIds', parseAdditionalParents(wi.AdditionalParentIdsTxt__c));
             m.put('tags', wi.TagsTxt__c);
             m.put('epic', wi.EpicTxt__c);
             result.add(m);
@@ -434,6 +435,38 @@ global without sharing class DeliveryPortalController {
      * @param maxLength Maximum character length
      * @return Truncated plain text string
      */
+    /**
+     * @description Parse AdditionalParentIdsTxt__c into a List<String>. Only 15- or 18-char
+     * Salesforce Ids are passed through; other entries are dropped silently so malformed
+     * input can't poison the REST response. Returns an empty list when the field is blank
+     * or parsing fails.
+     * @param jsonText Raw JSON array string from AdditionalParentIdsTxt__c.
+     * @return List of valid SF Id strings; empty if blank, malformed, or no valid Ids found.
+     */
+    private static List<String> parseAdditionalParents(String jsonText) {
+        if (String.isBlank(jsonText)) {
+            return new List<String>();
+        }
+        try {
+            Object parsed = JSON.deserializeUntyped(jsonText);
+            if (!(parsed instanceof List<Object>)) {
+                return new List<String>();
+            }
+            List<String> out = new List<String>();
+            for (Object o : (List<Object>) parsed) {
+                if (o instanceof String) {
+                    String s = (String) o;
+                    if (s.length() == 15 || s.length() == 18) {
+                        out.add(s);
+                    }
+                }
+            }
+            return out;
+        } catch (Exception e) {
+            return new List<String>();
+        }
+    }
+
     private static String truncateText(String text, Integer maxLength) {
         if (String.isBlank(text)) {
             return '';
