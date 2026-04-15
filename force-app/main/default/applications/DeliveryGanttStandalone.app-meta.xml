@@ -4,7 +4,7 @@
         <headerColor>#1A2D4A</headerColor>
         <shouldOverrideOrgTheme>true</shouldOverrideOrgTheme>
     </brand>
-    <description>Standalone Lightning App that surfaces only the Pro Forma Timeline gantt. No utility bar, no secondary tabs, no App Launcher clutter — minimum Salesforce chrome for a near-fullscreen Gantt experience. Combined with the in-app Fullscreen toggle, this gives users a bookmarkable URL to land directly on the timeline.</description>
+    <description>Minimum-chrome standalone Lightning App for the Pro Forma Timeline gantt. No utility bar, no secondary tabs. URL: /lightning/n/Delivery_Gantt_Standalone.</description>
     <formFactors>Large</formFactors>
     <isNavAutoTempTabsDisabled>true</isNavAutoTempTabsDisabled>
     <isNavPersonalizationDisabled>true</isNavPersonalizationDisabled>
