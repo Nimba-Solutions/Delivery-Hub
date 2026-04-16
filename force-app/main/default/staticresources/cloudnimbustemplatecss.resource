@@ -1,3 +1,79 @@
+
+/* === LWS-safe Tailwind v4 token defaults (replaces stripped @property regs) === */
+:root, .nga-root {
+  --spacing: 0.25rem;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --container-md: 28rem;
+  --blur-sm: 8px;
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --text-xs: 0.75rem;       --text-xs--line-height: calc(1 / 0.75);
+  --text-sm: 0.875rem;      --text-sm--line-height: calc(1.25 / 0.875);
+  --text-base: 1rem;        --text-base--line-height: 1.5;
+  --text-lg: 1.125rem;      --text-lg--line-height: calc(1.75 / 1.125);
+  --text-xl: 1.25rem;       --text-xl--line-height: calc(1.75 / 1.25);
+  --text-2xl: 1.5rem;       --text-2xl--line-height: calc(2 / 1.5);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  /* --font-geist-sans / --font-geist-mono intentionally NOT set here so the
+     host page's :root declaration (globals.css loads Geist on cloudnimbusllc.com)
+     wins. For Salesforce/LWS and standalone HTML where Geist isn't loaded, the
+     :where(:root) fallback block further down supplies a system-font default. */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --tw-border-style: solid;
+  --tw-divide-y-reverse: 0;
+  --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0;
+  --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1;
+  --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ;
+  --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgba(59, 130, 246, 0.5); --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000;
+  --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ;
+  --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ;
+  --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ;
+  --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ;
+  --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ;
+  --tw-content: '';
+}
+
+/* Semantic chrome class layout fallbacks (in case nga-* class layouts depend on Tailwind specificity) */
+.nga-root { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }
+/* Fullscreen escape — covers Salesforce header/nav/footer with one click */
+.nga-fullscreen { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #f8fafc !important; }
+.nga-titlebar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 6px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.nga-filterbar { display: block; padding: 6px 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
+.nga-zoombar { display: flex; align-items: center; gap: 0.5rem; }
+.nga-stats { padding: 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
+.nga-sidebar { display: flex; flex-direction: column; height: 100%; background: #fff; border-right: 1px solid #e2e8f0; }
+.nga-content-outer { flex: 1 1 auto; display: flex; overflow: hidden; min-width: 0; min-height: 0; }
+.nga-content { flex: 1 1 auto; position: relative; min-width: 0; min-height: 0; }
+.nga-detail { position: fixed; z-index: 9999; background: #fff; border: 2px solid #e2e8f0; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; }
+.nga-audit { padding: 8px 12px; background: rgba(253, 244, 255, 0.6); border-bottom: 1px solid #f5d0fe; }
+.nga-hrswkstrip { display: flex; align-items: flex-end; gap: 4px; padding: 6px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; overflow-x: auto; flex-shrink: 0; }
+
 /* === nimbus-gantt cloudnimbus template.css ===
  * Extracted from cloudnimbusllc.com Next.js build output (Tailwind v4).
  * Contains the reset + theme variables + only the utilities used by
@@ -6,85 +82,84 @@
  * for pixel parity between v10 (Next.js) and Salesforce deployments.
  * No Tailwind runtime dependency. */
 
-@layer components;
 @media (prefers-reduced-motion:reduce){.cloud,.cloud:before,.cloud:after{animation:none!important}}
-@property --tw-translate-x{syntax:"*";inherits:false;initial-value:0}
-@property --tw-translate-y{syntax:"*";inherits:false;initial-value:0}
-@property --tw-translate-z{syntax:"*";inherits:false;initial-value:0}
-@property --tw-scale-x{syntax:"*";inherits:false;initial-value:1}
-@property --tw-scale-y{syntax:"*";inherits:false;initial-value:1}
-@property --tw-scale-z{syntax:"*";inherits:false;initial-value:1}
-@property --tw-rotate-x{syntax:"*";inherits:false}
-@property --tw-rotate-y{syntax:"*";inherits:false}
-@property --tw-rotate-z{syntax:"*";inherits:false}
-@property --tw-skew-x{syntax:"*";inherits:false}
-@property --tw-skew-y{syntax:"*";inherits:false}
-@property --tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}
-@property --tw-divide-x-reverse{syntax:"*";inherits:false;initial-value:0}
-@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid}
-@property --tw-divide-y-reverse{syntax:"*";inherits:false;initial-value:0}
-@property --tw-gradient-position{syntax:"*";inherits:false}
-@property --tw-gradient-from{syntax:"<color>";inherits:false;initial-value:#0000}
-@property --tw-gradient-via{syntax:"<color>";inherits:false;initial-value:#0000}
-@property --tw-gradient-to{syntax:"<color>";inherits:false;initial-value:#0000}
-@property --tw-gradient-stops{syntax:"*";inherits:false}
-@property --tw-gradient-via-stops{syntax:"*";inherits:false}
-@property --tw-gradient-from-position{syntax:"<length-percentage>";inherits:false;initial-value:0%}
-@property --tw-gradient-via-position{syntax:"<length-percentage>";inherits:false;initial-value:50%}
-@property --tw-gradient-to-position{syntax:"<length-percentage>";inherits:false;initial-value:100%}
-@property --tw-leading{syntax:"*";inherits:false}
-@property --tw-font-weight{syntax:"*";inherits:false}
-@property --tw-tracking{syntax:"*";inherits:false}
-@property --tw-ordinal{syntax:"*";inherits:false}
-@property --tw-slashed-zero{syntax:"*";inherits:false}
-@property --tw-numeric-figure{syntax:"*";inherits:false}
-@property --tw-numeric-spacing{syntax:"*";inherits:false}
-@property --tw-numeric-fraction{syntax:"*";inherits:false}
-@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
-@property --tw-shadow-color{syntax:"*";inherits:false}
-@property --tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}
-@property --tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
-@property --tw-inset-shadow-color{syntax:"*";inherits:false}
-@property --tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}
-@property --tw-ring-color{syntax:"*";inherits:false}
-@property --tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
-@property --tw-inset-ring-color{syntax:"*";inherits:false}
-@property --tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
-@property --tw-ring-inset{syntax:"*";inherits:false}
-@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}
-@property --tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff}
-@property --tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
-@property --tw-outline-style{syntax:"*";inherits:false;initial-value:solid}
-@property --tw-blur{syntax:"*";inherits:false}
-@property --tw-brightness{syntax:"*";inherits:false}
-@property --tw-contrast{syntax:"*";inherits:false}
-@property --tw-grayscale{syntax:"*";inherits:false}
-@property --tw-hue-rotate{syntax:"*";inherits:false}
-@property --tw-invert{syntax:"*";inherits:false}
-@property --tw-opacity{syntax:"*";inherits:false}
-@property --tw-saturate{syntax:"*";inherits:false}
-@property --tw-sepia{syntax:"*";inherits:false}
-@property --tw-drop-shadow{syntax:"*";inherits:false}
-@property --tw-drop-shadow-color{syntax:"*";inherits:false}
-@property --tw-drop-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}
-@property --tw-drop-shadow-size{syntax:"*";inherits:false}
-@property --tw-backdrop-blur{syntax:"*";inherits:false}
-@property --tw-backdrop-brightness{syntax:"*";inherits:false}
-@property --tw-backdrop-contrast{syntax:"*";inherits:false}
-@property --tw-backdrop-grayscale{syntax:"*";inherits:false}
-@property --tw-backdrop-hue-rotate{syntax:"*";inherits:false}
-@property --tw-backdrop-invert{syntax:"*";inherits:false}
-@property --tw-backdrop-opacity{syntax:"*";inherits:false}
-@property --tw-backdrop-saturate{syntax:"*";inherits:false}
-@property --tw-backdrop-sepia{syntax:"*";inherits:false}
-@property --tw-duration{syntax:"*";inherits:false}
-@property --tw-ease{syntax:"*";inherits:false}
-@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-translate-x:0;--tw-translate-y:0;--tw-translate-z:0;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1;--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-space-y-reverse:0;--tw-divide-x-reverse:0;--tw-border-style:solid;--tw-divide-y-reverse:0;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-ordinal:initial;--tw-slashed-zero:initial;--tw-numeric-figure:initial;--tw-numeric-spacing:initial;--tw-numeric-fraction:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-outline-style:solid;--tw-blur:initial;--tw-brightness:initial;--tw-contrast:initial;--tw-grayscale:initial;--tw-hue-rotate:initial;--tw-invert:initial;--tw-opacity:initial;--tw-saturate:initial;--tw-sepia:initial;--tw-drop-shadow:initial;--tw-drop-shadow-color:initial;--tw-drop-shadow-alpha:100%;--tw-drop-shadow-size:initial;--tw-backdrop-blur:initial;--tw-backdrop-brightness:initial;--tw-backdrop-contrast:initial;--tw-backdrop-grayscale:initial;--tw-backdrop-hue-rotate:initial;--tw-backdrop-invert:initial;--tw-backdrop-opacity:initial;--tw-backdrop-saturate:initial;--tw-backdrop-sepia:initial;--tw-duration:initial;--tw-ease:initial}}}
-@layer theme {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-translate-x:0;--tw-translate-y:0;--tw-translate-z:0;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1;--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-space-y-reverse:0;--tw-divide-x-reverse:0;--tw-border-style:solid;--tw-divide-y-reverse:0;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-ordinal:initial;--tw-slashed-zero:initial;--tw-numeric-figure:initial;--tw-numeric-spacing:initial;--tw-numeric-fraction:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-outline-style:solid;--tw-blur:initial;--tw-brightness:initial;--tw-contrast:initial;--tw-grayscale:initial;--tw-hue-rotate:initial;--tw-invert:initial;--tw-opacity:initial;--tw-saturate:initial;--tw-sepia:initial;--tw-drop-shadow:initial;--tw-drop-shadow-color:initial;--tw-drop-shadow-alpha:100%;--tw-drop-shadow-size:initial;--tw-backdrop-blur:initial;--tw-backdrop-brightness:initial;--tw-backdrop-contrast:initial;--tw-backdrop-grayscale:initial;--tw-backdrop-hue-rotate:initial;--tw-backdrop-invert:initial;--tw-backdrop-opacity:initial;--tw-backdrop-saturate:initial;--tw-backdrop-sepia:initial;--tw-duration:initial;--tw-ease:initial}}
+
 :root,:host{--color-red-50:#fef2f2;--color-red-500:#fb2c36;--color-red-600:#e40014;--color-orange-50:#fff7ed;--color-orange-600:#f05100;--color-amber-50:#fffbeb;--color-amber-100:#fef3c6;--color-amber-300:#ffd236;--color-amber-500:#f99c00;--color-amber-600:#dd7400;--color-amber-700:#b75000;--color-amber-800:#953d00;--color-emerald-50:#ecfdf5;--color-emerald-100:#d0fae5;--color-emerald-200:#a4f4cf;--color-emerald-500:#00bb7f;--color-emerald-600:#009767;--color-emerald-700:#007956;--color-emerald-800:#005f46;--color-sky-50:#f0f9ff;--color-sky-100:#dff2fe;--color-sky-600:#0084cc;--color-sky-700:#0069a4;--color-blue-50:#eff6ff;--color-blue-100:#dbeafe;--color-blue-200:#bedbff;--color-blue-300:#90c5ff;--color-blue-400:#54a2ff;--color-blue-500:#3080ff;--color-blue-600:#155dfc;--color-blue-700:#1447e6;--color-blue-800:#193cb8;--color-indigo-50:#eef2ff;--color-indigo-100:#e0e7ff;--color-indigo-200:#c7d2ff;--color-indigo-300:#a4b3ff;--color-indigo-400:#7d87ff;--color-indigo-500:#625fff;--color-indigo-600:#4f39f6;--color-indigo-700:#432dd7;--color-violet-50:#f5f3ff;--color-violet-200:#ddd6ff;--color-violet-300:#c4b4ff;--color-violet-600:#7f22fe;--color-purple-50:#faf5ff;--color-purple-100:#f3e8ff;--color-purple-200:#e9d5ff;--color-purple-300:#d9b3ff;--color-purple-500:#ac4bff;--color-purple-600:#9810fa;--color-purple-700:#8200da;--color-purple-800:#6e11b0;--color-fuchsia-50:#fdf4ff;--color-fuchsia-200:#f6cfff;--color-fuchsia-500:#e12afb;--color-fuchsia-600:#c600db;--color-fuchsia-700:#a600b5;--color-rose-50:#fff1f2;--color-rose-100:#ffe4e6;--color-rose-200:#ffccd3;--color-rose-300:#ffa2ae;--color-rose-400:#ff667f;--color-rose-500:#ff2357;--color-rose-600:#e70044;--color-rose-700:#c20039;--color-rose-800:#a30037;--color-slate-50:#f8fafc;--color-slate-100:#f1f5f9;--color-slate-200:#e2e8f0;--color-slate-300:#cad5e2;--color-slate-400:#90a1b9;--color-slate-500:#62748e;--color-slate-600:#45556c;--color-slate-700:#314158;--color-slate-800:#1d293d;--color-slate-900:#0f172b;--color-white:#fff;--spacing:.25rem;--container-md:28rem;--container-2xl:42rem;--container-3xl:48rem;--container-4xl:56rem;--text-xs:.75rem;--text-xs--line-height:calc(1/.75);--text-sm:.875rem;--text-sm--line-height:calc(1.25/.875);--text-lg:1.125rem;--text-lg--line-height:calc(1.75/1.125);--text-xl:1.25rem;--text-xl--line-height:calc(1.75/1.25);--font-weight-normal:400;--font-weight-medium:500;--font-weight-semibold:600;--font-weight-bold:700;--tracking-wide:.025em;--tracking-wider:.05em;--leading-relaxed:1.625;--radius-sm:.25rem;--radius-md:.375rem;--radius-lg:.5rem;--radius-xl:.75rem;--ease-in-out:cubic-bezier(.4,0,.2,1);--blur-sm:8px;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4,0,.2,1);--default-font-family:var(--font-geist-sans);}
-}
-@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab,currentcolor 50%,transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}
-@layer utilities {
+
+*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:currentColor){::placeholder{color:currentColor}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}
+
 .pointer-events-none{pointer-events:none}
 .absolute{position:absolute}
 .fixed{position:fixed}
@@ -219,7 +294,7 @@
 .overflow-x-hidden{overflow-x:hidden}
 .overflow-y-auto{overflow-y:auto}
 .rounded{border-radius:.25rem}
-.rounded-full{border-radius:3.40282e38px}
+.rounded-full{border-radius:9999px}
 .rounded-lg{border-radius:var(--radius-lg)}
 .rounded-md{border-radius:var(--radius-md)}
 .rounded-sm{border-radius:var(--radius-sm)}
@@ -262,12 +337,12 @@
 .bg-blue-600{background-color:var(--color-blue-600)}
 .bg-emerald-50{background-color:var(--color-emerald-50)}
 .bg-emerald-50\/30{background-color:#ecfdf54d}
-@supports (color:color-mix(in lab, red, red)){.bg-emerald-50\/30{background-color:color-mix(in oklab,var(--color-emerald-50)30%,transparent)}}
+@supports (color:currentColor){.bg-emerald-50\/30{background-color:var(--color-emerald-50)}}
 .bg-emerald-100{background-color:var(--color-emerald-100)}
 .bg-emerald-500{background-color:var(--color-emerald-500)}
 .bg-emerald-600{background-color:var(--color-emerald-600)}
 .bg-fuchsia-50\/60{background-color:#fdf4ff99}
-@supports (color:color-mix(in lab, red, red)){.bg-fuchsia-50\/60{background-color:color-mix(in oklab,var(--color-fuchsia-50)60%,transparent)}}
+@supports (color:currentColor){.bg-fuchsia-50\/60{background-color:var(--color-fuchsia-50)}}
 .bg-fuchsia-600{background-color:var(--color-fuchsia-600)}
 .bg-indigo-50{background-color:var(--color-indigo-50)}
 .bg-indigo-500{background-color:var(--color-indigo-500)}
@@ -278,9 +353,9 @@
 .bg-red-500{background-color:var(--color-red-500)}
 .bg-rose-50{background-color:var(--color-rose-50)}
 .bg-rose-50\/30{background-color:#fff1f24d}
-@supports (color:color-mix(in lab, red, red)){.bg-rose-50\/30{background-color:color-mix(in oklab,var(--color-rose-50)30%,transparent)}}
+@supports (color:currentColor){.bg-rose-50\/30{background-color:var(--color-rose-50)}}
 .bg-rose-50\/50{background-color:#fff1f280}
-@supports (color:color-mix(in lab, red, red)){.bg-rose-50\/50{background-color:color-mix(in oklab,var(--color-rose-50)50%,transparent)}}
+@supports (color:currentColor){.bg-rose-50\/50{background-color:var(--color-rose-50)}}
 .bg-rose-100{background-color:var(--color-rose-100)}
 .bg-rose-500{background-color:var(--color-rose-500)}
 .bg-sky-50{background-color:var(--color-sky-50)}
@@ -292,10 +367,10 @@
 .bg-slate-700{background-color:var(--color-slate-700)}
 .bg-slate-800{background-color:var(--color-slate-800)}
 .bg-slate-800\/80{background-color:#1d293dcc}
-@supports (color:color-mix(in lab, red, red)){.bg-slate-800\/80{background-color:color-mix(in oklab,var(--color-slate-800)80%,transparent)}}
+@supports (color:currentColor){.bg-slate-800\/80{background-color:var(--color-slate-800)}}
 .bg-slate-900{background-color:var(--color-slate-900)}
 .bg-slate-900\/60{background-color:#0f172b99}
-@supports (color:color-mix(in lab, red, red)){.bg-slate-900\/60{background-color:color-mix(in oklab,var(--color-slate-900)60%,transparent)}}
+@supports (color:currentColor){.bg-slate-900\/60{background-color:var(--color-slate-900)}}
 .bg-transparent{background-color:#0000}
 .bg-violet-50{background-color:var(--color-violet-50)}
 .bg-violet-600{background-color:var(--color-violet-600)}
@@ -390,9 +465,9 @@
 .text-violet-600{color:var(--color-violet-600)}
 .text-white{color:var(--color-white)}
 .text-white\/70{color:#ffffffb3}
-@supports (color:color-mix(in lab, red, red)){.text-white\/70{color:color-mix(in oklab,var(--color-white)70%,transparent)}}
+@supports (color:currentColor){.text-white\/70{color:var(--color-white)}}
 .text-white\/80{color:#fffc}
-@supports (color:color-mix(in lab, red, red)){.text-white\/80{color:color-mix(in oklab,var(--color-white)80%,transparent)}}
+@supports (color:currentColor){.text-white\/80{color:var(--color-white)}}
 .uppercase{text-transform:uppercase}
 .italic{font-style:italic}
 .line-through{text-decoration-line:line-through}
@@ -446,7 +521,7 @@
 .hover\:bg-slate-700:hover{background-color:var(--color-slate-700)}
 .hover\:bg-slate-800:hover{background-color:var(--color-slate-800)}
 .hover\:bg-white\/20:hover{background-color:#fff3}
-@supports (color:color-mix(in lab, red, red)){.hover\:bg-white\/20:hover{background-color:color-mix(in oklab,var(--color-white)20%,transparent)}}
+@supports (color:currentColor){.hover\:bg-white\/20:hover{background-color:var(--color-white)}}
 .hover\:text-blue-500:hover{color:var(--color-blue-500)}
 .hover\:text-blue-800:hover{color:var(--color-blue-800)}
 .hover\:text-fuchsia-600:hover{color:var(--color-fuchsia-600)}
@@ -479,7 +554,7 @@
 @media (min-width:48rem){.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .md\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (min-width:64rem){.lg\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
-}
+
 
 /* === Default font stack + fallback vars (Salesforce-safe) === */
 /* Override font families for environments where the Geist font isn't loaded
